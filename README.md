@@ -50,22 +50,19 @@ once it's been published](https://docs.npmjs.com/policies/unpublish).
 Each version in the dependency tree is set to an exact version, by
 specifying it like `"packagename": "=1.0.0"`. Carefully audit all files
 in `node_modules`. Check that in `package.json` the version numbers are
-indeed exact (in npm an exact version is with an `=` sign or a bare
-version number - I've used an equal sign because in cargo, a bare version
-number is not exact, but instead also supports a patch version, the
-equivalent of starting with a `^`). Once audited, make a note of the
-package name and version number.
+indeed exact. Once audited, make a note of the package name and version
+number.
 
 The program `view-md` starts a simple HTTP server on a random port, and
 gives you a link to view it in the browser. It shows the content of
 README.md neatly formatted. 
 
 `view-md` is intentionally quite simple, so it can easily be audited. It
-only supports small documents on a small subset of Markdown. As Macchiato
-grows, it will include tools for loading more complex Markdown documents.
-However, many Macchiato tools only support subsets of formats, and they
-will show an error rather than attempt to process a document that it
-doesn't know how to process.
+only supports small documents on a small subset of Markdown. This ensures
+performance. As Macchiato grows, it will include tools for loading more
+complex Markdown documents. However, many Macchiato tools only support
+subsets of formats, and they will show an error rather than attempt to
+process a document that it doesn't know how to process.
 
 It prevents exfiltration of data by making it so links can't be opened
 but have to be copied and pasted, unless they are allowed by passing a
