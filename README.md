@@ -58,9 +58,7 @@ package name and version number.
 
 The program `view-md` starts a simple HTTP server on a random port, and
 gives you a link to view it in the browser. It shows the content of
-README.md neatly formatted. It prevents accidentally following links, by
-having you approve them after clicking them, and once approved, allowing
-you to simply click the link to go to the destination.
+README.md neatly formatted. 
 
 `view-md` is intentionally quite simple, so it can easily be audited. It
 only supports small documents on a small subset of Markdown. As Macchiato
@@ -69,8 +67,17 @@ However, many Macchiato tools only support subsets of formats, and they
 will show an error rather than attempt to process a document that it
 doesn't know how to process.
 
-Having it require clicking on a link to follow it is to prevent exfiltration.
-This enables some sandboxing workflows.
+It prevents exfiltration of data by making it so links can't be opened
+but have to be copied and pasted, unless they are allowed by passing a
+parameter to the server. It warns if a link appears likely to have a
+significant amount of data embedded in it, and the parameters to allow
+links by hostname also default to only allowing simple links. It does the
+same with images, though with images the copying and pasting is going to
+be clunkier, and for a good experience allowing them using a parameter
+will be more important.
+
+As said earlier, this is to prevent exfiltration, which enables some
+sandboxing workflows.
 
 Picture this scenario:
 
@@ -96,9 +103,9 @@ link could be designed to look interesting, and upon clicking it, the
 base64 data would show up in the server's logs, and the person with access
 to the server could decode it and they would then have the private data!
 
-Now, this may seem unlikely, but it's because we avoid running untrusted
-code! However, if we could run untrusted code, that unlocks more
-possiblities. Data processing tools could be more easily crowdsourced.
-You could run the program and see if the output is interesting, and only
-if you see potential go through the trouble of auditing the code before
-using the output.
+This may seem unlikely, but it's because we avoid running untrusted code!
+However, if we could run untrusted code, that unlocks more possiblities.
+Data processing tools could be more easily crowdsourced. You could run the
+program and see if the output is interesting, and only if you see
+potential go through the trouble of auditing the code before using the
+output.
