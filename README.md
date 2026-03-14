@@ -66,15 +66,39 @@ process a document that it doesn't know how to process.
 
 It prevents exfiltration of data by making it so links can't be opened
 but have to be copied and pasted, unless they are allowed by passing a
-parameter to the server. It warns if a link appears likely to have a
-significant amount of data embedded in it, and the parameters to allow
-links by hostname also default to only allowing simple links. It does the
-same with images, though with images the copying and pasting is going to
-be clunkier, and for a good experience allowing them using a parameter
-will be more important.
+parameter when running `view-md`. It handles links that appear likely
+to have a significant amount of data embedded in them differently.
+The parameters to allow a link to be opened on click accept a pattern
+for the link, such as a hostname or a hostname with a path, but require
+an additional prefix to allow long links to be opened on click. These
+long links can still be opened manually through copying and pasting.
+The same options are available in programmatic usage of the viewer.
 
-As said earlier, this is to prevent exfiltration, which enables some
-sandboxing workflows.
+It also does the same with image URLs, though with images the copying
+and pasting is going to be clunkier, and for a good experience allowing
+them using a parameter will be more important. There is a parameter for
+allowing them to load after clicking a button that is shown next to the
+image URL. Images are often more demanding on exfiltration prevention
+because they more commonly have long IDs in the URLs which can be used
+to hide data, so embedding the images is encouraged. A fenced code
+block with base64 data can be used, with newlines, for pure markdown
+that is viewable using a text editor. This is built into view-md,
+though by default it requires clicking to view the content. Other tools
+will support more efficient ways of embedding images, such as CBOR,
+zip, tar, or a binary format based on Markdown (`.mcb`, Markdown
+container binary).
+
+The viewing of links and images works by updating the inline
+representation of the link with a name, using the index of the block
+as well as the index of the inline element, and showing details after
+the block. The details will include a copy and pastable URL. If an
+option to allow loading images in place is given, a button to load the
+iamge is shown. The detail view can be closed simply by clicking an X
+which will also set the inline reference back to what it was. The
+details will also show the title and alt text. This will make it copy
+and pastable.
+
+This exfiltration prevention enables some sandboxing workflows.
 
 Picture this scenario:
 
