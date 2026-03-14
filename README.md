@@ -130,3 +130,38 @@ Data processing tools could be more easily crowdsourced. You could run the
 program and see if the output is interesting, and only if you see
 potential go through the trouble of auditing the code before using the
 output.
+
+# First implementation
+
+To start the implementation, pre-release packages are being written so it
+can be used to render a website from Markdown.
+
+This is composed of these packages:
+
+- parse-layout: parses layout info from a subset of Markdown
+- render-layout: creates/updates layout in the DOM using output from
+  parse-layout
+- parse-prose: parses prose from a subset of Markdown
+- render-prose: creates/updates prose in the DOM using output from
+  parse-prose
+- build-static: provides a partial DOM for the renderers on the server
+  side and renders it statically
+
+These will be under `packages/`. There will also be examples under
+`examples/`.
+
+The protocol between parse and render will be contextual instructions in
+a format inspired by MessagePack: hypertokens and hypertables. In
+MessagePack there is [a table with a meaning of the first byte](
+https://github.com/msgpack/msgpack/blob/master/spec.md#overview). This
+will build and update in memory structures. For instance in the layout it
+could have a code in the table for starting the title, and the next code
+for starting a string with the length. However, being called hypertokens
+instead of embedding a full string in memory, it could build it from
+tokens. And if a sequence of tokens isn't reused, the sequence could be
+preserved in the token definition, and the first token and the length
+could be used, to use the tokens separated by spaces. So if I said
+*frolicking purple narwhals* storing the tokens next to each other and
+rendering them sequentially would be better than having to specify the
+ID of each token individually. And this would also work for "sauté the
+rutabaga" but with a special command that templates it with "the".
