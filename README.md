@@ -4,7 +4,7 @@
 > The `view-md` program hasn't been implemented or published yet.
 
 This is a system, composed of various npm modules in the
-[@macchiato-dev](https://www.npmjs.com/org/macchiato-dev)
+[@macchiato-dev][@macchiato-dev]
 npm organization, for document-driven workflows.
 
 These documents are structured, semi-structured, or even unstructured files
@@ -46,7 +46,7 @@ You can audit it once and be confident that if you install it with the
 same version again, it won't change, because I've taken care to make sure
 the versions are exact for each dependency in the dependency tree for
 `view-md@0.0.1`, and npm [doesn't allow the code for a version to change
-once it's been published](https://docs.npmjs.com/policies/unpublish).
+once it's been published][npm-unpublish].
 Each version in the dependency tree is set to an exact version, by
 specifying it like `"packagename": "=1.0.0"`. Carefully audit all files
 in `node_modules`. Check that in `package.json` the version numbers are
@@ -55,7 +55,7 @@ number.
 
 The program `view-md` starts a simple HTTP server on a random port, and
 gives you a link to view it in the browser. It shows the content of
-README.md neatly formatted. 
+README.md neatly formatted.
 
 `view-md` is intentionally quite simple, so it can easily be audited. It
 only supports small documents on a small subset of Markdown. This ensures
@@ -113,7 +113,7 @@ Picture this scenario:
 Let's assume that the program written by the freelancer is untrusted code,
 and that's why you're running it in the sandbox. We've already established
 that the data is private. That meets two conditions of [The Lethal
-Trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)! The
+Trifecta][lethal-trifecta]! The
 third is the ability to externally communicate. For this, you have to ask
 how the untrusted code could communicate externally. In this case, it could
 be by linking to a server, with private data included in the link. Remember
@@ -138,23 +138,34 @@ can be used to render a website from Markdown.
 
 This is composed of these packages:
 
-- parse-layout: parses layout info from a subset of Markdown
-- render-layout: creates/updates layout in the DOM using output from
-  parse-layout
-- parse-prose: parses prose from a subset of Markdown
-- render-prose: creates/updates prose in the DOM using output from
-  parse-prose
-- build-static: provides a partial DOM for the renderers on the server
-  side and renders it statically
+- [parse-layout](packages/parse-layout/README.md): parses layout info from a
+  subset of Markdown
+- [render-layout](packages/render-layout/README.md): creates/updates layout
+  in the DOM using output from parse-layout
+- [parse-prose](packages/parse-prose/README.md): parses prose from a subset
+  of Markdown
+- [render-prose](packages/render-prose/README.md): creates/updates prose in
+  the DOM using output from parse-prose
+- [build-static](packages/build-static/README.md): provides a partial DOM
+  for the renderers on the server side and renders it statically
 
 These will be under `packages/`. There will also be examples under
 `examples/`.
 
+The title of the page comes from the prose — for instance, the top-level
+heading of the content document. The layout is for things that are shared
+across the site. render-layout will receive the title from the prose and
+apply it. parse-prose will have title data left over after parsing, which
+gets passed along for the layout to use. The layout config can specify a
+title prefix, a title suffix, or a fallback title for when the prose does
+not supply one. The setting in the layout config that controls this merging
+will likely be called `title`. This and similar design decisions will
+eventually move to a dedicated design doc.
+
 The protocol between parse and render will be contextual instructions in
 a format inspired by MessagePack: hypertokens and hypertables. In
-MessagePack there is [a table with a meaning of the first byte](
-https://github.com/msgpack/msgpack/blob/master/spec.md#overview). This
-will build and update in memory structures. For instance in the layout it
+MessagePack there is [a table with a meaning of the first byte][msgpack-spec].
+This will build and update in memory structures. For instance in the layout it
 could have a code in the table for starting the title, and the next code
 for starting a string with the length. However, being called hypertokens
 instead of embedding a full string in memory, it could build it from
@@ -164,4 +175,21 @@ could be used, to use the tokens separated by spaces. So if I said
 *frolicking purple narwhals* storing the tokens next to each other and
 rendering them sequentially would be better than having to specify the
 ID of each token individually. And this would also work for "sauté the
-rutabaga" but with a special command that templates it with "the".
+rutabaga" but with a special command that templates it with two words
+separated by "the". Whether to share these word tokens with the layout
+for things like the title is to be determined. However this will be using
+these word tokens for the prose at first, so as to be putting the
+hypertokens into practice. Another thing is that the renderer is
+responsible for the sanitization, so it will need to provide its own
+string table because it can't rely on the strings needed in sanitization
+being provided by the content.
+
+So the renderer will have its own bytestring (Uint8Array) of data, an
+the parser will send a bytestring of data, and both will be used to build
+the initial hypertable at the start of the program, and will be used to
+build and modify hypertables as needed.
+
+[@macchiato-dev]: https://www.npmjs.com/org/macchiato-dev
+[npm-unpublish]: https://docs.npmjs.com/policies/unpublish
+[lethal-trifecta]: https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
+[msgpack-spec]: https://github.com/msgpack/msgpack/blob/master/spec.md#overview
