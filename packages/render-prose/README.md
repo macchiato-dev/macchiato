@@ -3,4 +3,35 @@
 Creates/updates prose in the DOM using output from
 [@macchiato-dev/parse-prose][parse-prose].
 
+When it encounters an h1, it forwards the heading text to
+[@macchiato-dev/render-layout][render-layout] as a `content_title` token.
+
+## Hypertoken table
+
+The input is a `Uint8Array`. The meaning of each byte is determined
+by its bit pattern:
+
+| First byte    | Pattern    | Meaning                                   |
+|---------------|------------|-------------------------------------------|
+| `0x00`        | `00000000` | Paragraph — following tokens are its      |
+|               |            | content                                   |
+| `0x08`–`0x0F` | `00001xxx` | Header — the lower 3 bits store the level |
+|               |            | minus one, giving levels 1–8; following   |
+|               |            | tokens are its content. Levels 7–8 are    |
+|               |            | non-standard extended headings            |
+| `0xA0`–`0xBF` | `101xxxxx` | Short string — the lower 5 bits store the |
+|               |            | length minus one, giving a range of 1–32  |
+|               |            | bytes, followed by that many UTF-8 bytes  |
+| `0xC0`        | `11000000` | String8 — the next byte is the length     |
+|               |            | (0–255), followed by that many UTF-8      |
+|               |            | bytes                                     |
+| `0xC1`        | `11000001` | String16 — the next 2 bytes are the       |
+|               |            | length (big-endian, 0–65535), followed by |
+|               |            | that many UTF-8 bytes                     |
+
+This is the canonical definition of the hypertoken table for prose. In
+code, the table is defined independently in both the parser and the
+renderer — readers and writers each maintain their own copy.
+
 [parse-prose]: https://github.com/macchiato-dev/macchiato/tree/main/packages/parse-prose
+[render-layout]: https://github.com/macchiato-dev/macchiato/tree/main/packages/render-layout

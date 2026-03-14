@@ -158,9 +158,17 @@ across the site. render-layout will receive the title from the prose and
 apply it. parse-prose will have title data left over after parsing, which
 gets passed along for the layout to use. The layout config can specify a
 title prefix, a title suffix, or a fallback title for when the prose does
-not supply one. The setting in the layout config that controls this merging
-will likely be called `title`. This and similar design decisions will
-eventually move to a dedicated design doc.
+not supply one. This is expressed as a key-value entry in a Markdown list:
+
+```markdown
+- title: My Site
+```
+
+The key-value list format uses `- key: value`. This will typically appear
+in a `.macchiato.dev` file, but by the time parse-layout processes it, it
+only sees the Markdown list — it has no knowledge of the file it came from.
+This and similar design decisions will eventually move to a dedicated
+design doc.
 
 The protocol between parse and render will be contextual instructions in
 a format inspired by MessagePack: hypertokens and hypertables. In
