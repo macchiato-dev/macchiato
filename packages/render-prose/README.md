@@ -33,5 +33,23 @@ This is the canonical definition of the hypertoken table for prose. In
 code, the table is defined independently in both the parser and the
 renderer — readers and writers each maintain their own copy.
 
+## Supported elements
+
+- [x] Headings
+- [x] Paragraphs
+- [x] Title
+- [ ] Links
+- [ ] Link references
+- [ ] Bold, italics
+- [ ] Images and iframes
+
+## Supported configuration
+
+- [ ] Allowed link, image, and iframe hosts
+- [ ] Allow URLs likely to contain embedded data
+- [ ] Advanced matching (pathname, query regexes) in allowed URLs
+- [ ] Pluggable renderers for fenced code blocks (allowing advanced iframe
+  renderer with overlay support)
+
 [parse-prose]: https://github.com/macchiato-dev/macchiato/tree/main/packages/parse-prose
 [render-layout]: https://github.com/macchiato-dev/macchiato/tree/main/packages/render-layout

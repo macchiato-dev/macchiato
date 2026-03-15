@@ -3,6 +3,11 @@
 Creates/updates layout in the DOM using output from
 [@macchiato-dev/parse-layout][parse-layout].
 
+This layout will be configurable enough to support a wide variety of
+pages while still being constrained. It will sanitize not just the
+schema but the behavior. For instance it will support customizing the
+background but will require contrast.
+
 Also receives `content_title` from [@macchiato-dev/render-prose][render-prose]
 when that renderer encounters an h1.
 

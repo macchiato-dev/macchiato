@@ -1,0 +1,15 @@
+{
+  "name": "@macchiato-dev/example-simple-page",
+  "version": "0.0.1-pre.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/build-static": "file:../../packages/build-static",
+    "@macchiato-dev/parse-prose": "file:../../packages/parse-prose",
+    "@macchiato-dev/render-layout": "file:../../packages/render-layout",
+    "@macchiato-dev/render-prose": "file:../../packages/render-prose"
+  }
+}
