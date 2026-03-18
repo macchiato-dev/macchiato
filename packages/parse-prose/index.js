@@ -35,28 +35,65 @@ export class ProseParser {
   /**
    * Parses the input string and writes hypertokens into the internal buffer.
    * Token format is defined in @macchiato-dev/render-prose.
+   *
+   * A single regex drives the whole scan. Named groups identify the token
+   * type. \k<fence> lets the engine match the closing fence without any
+   * manual character-counting loop. Blank lines are consumed in-place so
+   * the regex never has to skip over them separately.
    */
   parse() {
     this.#offset = 0;
+    const src = this.#input;
 
-    const blocks = this.#input.split(/\n\s*\n/);
+    // Regex constructed as a string to keep backticks out of regex literals,
+    // which confuses editors that track template-literal state.
+    const bt = '`';
+    const tokenRe = new RegExp(
+      // Blank line (skip)
+      '(?<blank>[ \\t]*\\n)' +
+      // Fenced code block — closed: \k<fence> matches the closing fence
+      '|(?<fence>' + bt + '{3,}|~{3,})(?<lang>[^\\n]*)\\n(?<content>[\\s\\S]*?)\\n?\\k<fence>[^\\n]*(?:\\n|$)' +
+      // Header: 1–8 # chars followed by whitespace
+      '|(?<hashes>#{1,8})[ \\t]+(?<htxt>[^\\n]*)(?:\\n|$)' +
+      // Paragraph: one or more non-blank lines; the negative lookahead prevents
+      // fence openings from being consumed here so they fall to the catch-all
+      '|(?<para>(?!' + bt + '{3,}|~{3,})[^\\n]*\\S[^\\n]*(?:\\n(?!' + bt + '{3,}|~{3,})[^\\n]*\\S[^\\n]*)*(?:\\n|$))' +
+      // Catch-all: no named group — anything reaching here is invalid.
+      // Requires at least one non-newline char to avoid matching empty string at EOF.
+      '|[^\\n]+(?:\\n|$)',
+      'g',
+    );
 
-    for (let block of blocks) {
-      block = block.trim();
-      if (!block) continue;
+    // Used only when the catch-all fires, to produce a descriptive error.
+    const invalidRe = new RegExp(
+      '(?<unclosedFence>' + bt + '{3,}|~{3,})',
+    );
 
-      // Supports h1-h8; h7 and h8 are non-standard extended headings
-      const headerMatch = block.match(/^(#{1,8})\s+(.*)/s);
+    let m;
+    while ((m = tokenRe.exec(src)) !== null) {
+      const { blank, fence, lang, content, hashes, htxt, para } = m.groups;
 
-      if (headerMatch) {
+      if (blank !== undefined) {
+        continue;
+      } else if (fence !== undefined) {
+        // Fenced code block: 0x01 + lang string + content string
+        this.#writeUint8(0x01);
+        this.#writeString(lang.trim());
+        this.#writeString(content);
+      } else if (hashes !== undefined) {
         // Header: 00001xxx (lower 3 bits = level - 1)
-        const level = headerMatch[1].length;
-        this.#writeUint8(0x08 | (level - 1));
-        this.#writeString(headerMatch[2]);
-      } else {
+        this.#writeUint8(0x08 | (hashes.length - 1));
+        this.#writeString(htxt);
+      } else if (para !== undefined) {
         // Paragraph: 0x00
         this.#writeUint8(0x00);
-        this.#writeString(block);
+        this.#writeString(para.trim());
+      } else {
+        // Catch-all fired: classify and throw
+        if (invalidRe.test(m[0])) {
+          throw new Error('Unclosed code fence');
+        }
+        throw new Error('Unexpected input at position ' + m.index);
       }
     }
   }
@@ -78,6 +115,12 @@ export class ProseParser {
   #writeString(text) {
     const bytes = this.#encoder.encode(text);
     const len = bytes.length;
+
+    if (len === 0) {
+      // Empty string: 0x9F
+      this.#writeUint8(0x9f);
+      return;
+    }
 
     if (len >= 1 && len <= 32) {
       // Short string: 101xxxxx (lower 5 bits = len - 1)

@@ -13,12 +13,16 @@ by its bit pattern:
 
 | First byte    | Pattern    | Meaning                                   |
 |---------------|------------|-------------------------------------------|
-| `0x00`        | `00000000` | Paragraph — following tokens are its      |
-|               |            | content                                   |
+| `0x00`        | `00000000` | Paragraph — followed by one string token  |
+|               |            | containing its text content               |
+| `0x01`        | `00000001` | Fenced code block — followed by two       |
+|               |            | string tokens: the language identifier    |
+|               |            | (may be empty) and the code content       |
 | `0x08`–`0x0F` | `00001xxx` | Header — the lower 3 bits store the level |
-|               |            | minus one, giving levels 1–8; following   |
-|               |            | tokens are its content. Levels 7–8 are    |
+|               |            | minus one, giving levels 1–8; followed by |
+|               |            | one string token. Levels 7–8 are          |
 |               |            | non-standard extended headings            |
+| `0x9F`        | `10011111` | Empty string — zero UTF-8 bytes           |
 | `0xA0`–`0xBF` | `101xxxxx` | Short string — the lower 5 bits store the |
 |               |            | length minus one, giving a range of 1–32  |
 |               |            | bytes, followed by that many UTF-8 bytes  |
@@ -37,6 +41,7 @@ renderer — readers and writers each maintain their own copy.
 
 - [x] Headings
 - [x] Paragraphs
+- [x] Fenced code blocks
 - [x] Title
 - [ ] Links
 - [ ] Link references

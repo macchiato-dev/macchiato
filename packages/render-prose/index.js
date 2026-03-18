@@ -131,6 +131,17 @@ export class ProseRenderer {
         i += consumed;
         if (this.#sanitize) assertSanitized(text);
         this.#renderParagraph(text);
+      } else if (byte === 0x01) {
+        // Fenced code block: 0x01 + lang string + content string
+        const [lang, langConsumed] = this.#readString(input, i);
+        i += langConsumed;
+        const [content, contentConsumed] = this.#readString(input, i);
+        i += contentConsumed;
+        if (this.#sanitize) {
+          assertSanitized(lang);
+          assertSanitized(content);
+        }
+        this.#renderFencedCode(lang, content);
       } else if ((byte & 0xf8) === 0x08) {
         // Header: 00001xxx (lower 3 bits = level - 1)
         const level = (byte & 0x07) + 1;
@@ -166,6 +177,33 @@ export class ProseRenderer {
   }
 
   /**
+   * @param {string} lang - Language identifier, may be empty.
+   * @param {string} safe - Code content, already checked.
+   * @private
+   */
+  #renderFencedCode(lang, safe) {
+    if (++this.#blockCount > this.#maxBlocksPerPage) {
+      throw new Error(`Exceeded limit of ${this.#maxBlocksPerPage} blocks per page`);
+    }
+    if (safe.length > this.#maxCharsPerBlock) {
+      throw new Error(`Exceeded limit of ${this.#maxCharsPerBlock} characters per block`);
+    }
+    const pre = this.#document.createElement('pre');
+    const code = this.#document.createElement('code');
+    if (lang) {
+      code.setAttribute('class', `language-${lang}`);
+    }
+    code.textContent = safe;
+    pre.appendChild(code);
+    this.#layout.main.appendChild(pre);
+
+    // TODO: when lang is 'iframe', parse the content for a URL and the size and
+    // render as a sandboxed <iframe> if the host appears in this.#allowedIframeHosts.
+    // (Consider providing a way to set the size of images as well - perhaps allowing
+    // <img> tags)
+  }
+
+  /**
    * @param {number} level - Heading level 1–8.
    * @param {string} safe - Heading text, already checked.
    * @private
@@ -187,13 +225,6 @@ export class ProseRenderer {
     if (level === 1) {
       this.#layout.setContentTitle(safe);
     }
-
-    // TODO: fenced code blocks are not yet implemented. When a fenced code
-    // block has the language identifier `iframe`, it will be parsed for a
-    // URL and rendered as a sandboxed <iframe> if the host appears in
-    // this.#allowedIframeHosts. Using a fenced code block (rather than
-    // embedded HTML) keeps the raw source readable on GitHub and elsewhere.
-    // The iframe will have a restrictive sandbox attribute.
   }
 
   /**
@@ -206,6 +237,11 @@ export class ProseRenderer {
    */
   #readString(input, offset) {
     const first = input[offset];
+
+    if (first === 0x9f) {
+      // Empty string
+      return ['', 1];
+    }
 
     if ((first & 0xe0) === 0xa0) {
       // Short string: 101xxxxx (lower 5 bits = len - 1)
