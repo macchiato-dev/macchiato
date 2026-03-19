@@ -126,11 +126,18 @@ export class ProseRenderer {
       const byte = input[i++];
 
       if (byte === 0x00) {
-        // Paragraph: 0x00
-        const [text, consumed] = this.#readString(input, i);
-        i += consumed;
-        if (this.#sanitize) assertSanitized(text);
-        this.#renderParagraph(text);
+        // Paragraph: 0x00 followed by inline token sequence
+        if (++this.#blockCount > this.#maxBlocksPerPage) {
+          throw new Error(`Exceeded limit of ${this.#maxBlocksPerPage} blocks per page`);
+        }
+        const el = this.#document.createElement('p');
+        i = this.#renderInlineContent(input, i, el);
+        const text = el.textContent;
+        if (text.length > this.#maxCharsPerBlock) {
+          throw new Error(`Exceeded limit of ${this.#maxCharsPerBlock} characters per block`);
+        }
+        checkWordLength(text, this.#maxWordCodepoints);
+        this.#layout.main.appendChild(el);
       } else if (byte === 0x01) {
         // Fenced code block: 0x01 + lang string + content string
         const [lang, langConsumed] = this.#readString(input, i);
@@ -143,37 +150,69 @@ export class ProseRenderer {
         }
         this.#renderFencedCode(lang, content);
       } else if ((byte & 0xf8) === 0x08) {
-        // Header: 00001xxx (lower 3 bits = level - 1)
+        // Header: 00001xxx (lower 3 bits = level - 1), followed by inline sequence
+        if (++this.#blockCount > this.#maxBlocksPerPage) {
+          throw new Error(`Exceeded limit of ${this.#maxBlocksPerPage} blocks per page`);
+        }
         const level = (byte & 0x07) + 1;
-        const [text, consumed] = this.#readString(input, i);
-        i += consumed;
-        if (this.#sanitize) assertSanitized(text);
-        this.#renderHeader(level, text);
+        const el = this.#document.createElement(level <= 6 ? `h${level}` : 'p');
+        if (level > 6) el.setAttribute('data-heading-level', level);
+        i = this.#renderInlineContent(input, i, el);
+        const text = el.textContent;
+        if (text.length > this.#maxCharsPerHeader) {
+          throw new Error(`Exceeded limit of ${this.#maxCharsPerHeader} characters per header`);
+        }
+        checkWordLength(text, this.#maxWordCodepoints);
+        this.#layout.main.appendChild(el);
+        if (level === 1) this.#layout.setContentTitle(text);
       }
     }
   }
 
   /**
-   * @param {string} safe - Paragraph text, already checked.
+   * Reads an inline token sequence into a container element, until 0x02
+   * (end-of-inline). Maintains an element stack so that open/close tokens
+   * build a proper DOM tree. Text segments are appended as text nodes.
+   * @param {Uint8Array} input
+   * @param {number} i - Starting offset (first byte of the inline sequence)
+   * @param {import('@macchiato-dev/build-static').VElement} container
+   * @returns {number} Offset after the consumed inline sequence
    * @private
    */
-  #renderParagraph(safe) {
-    if (++this.#blockCount > this.#maxBlocksPerPage) {
-      throw new Error(`Exceeded limit of ${this.#maxBlocksPerPage} blocks per page`);
-    }
-    if (safe.length > this.#maxCharsPerBlock) {
-      throw new Error(`Exceeded limit of ${this.#maxCharsPerBlock} characters per block`);
-    }
-    checkWordLength(safe, this.#maxWordCodepoints);
-    const el = this.#document.createElement('p');
-    el.textContent = safe;
-    this.#layout.main.appendChild(el);
+  #renderInlineContent(input, i, container) {
+    const stack = [container]; // innermost current element is always last
 
-    // TODO: inline tokens within paragraphs (links, images, inline code,
-    // bold, italic) are not yet implemented. Links will check
-    // this.#allowedLinkHosts to determine whether they open on click.
-    // Images will check this.#allowedImageHosts; disallowed image hosts
-    // require a click to reveal. Inline code will be rendered as <code>.
+    while (i < input.length) {
+      const byte = input[i];
+
+      if (byte === 0x02) { i++; break; } // end-of-inline
+
+      if (byte === 0x10) {
+        i++;
+        const em = this.#document.createElement('em');
+        stack[stack.length - 1].appendChild(em);
+        stack.push(em);
+      } else if (byte === 0x11) {
+        i++;
+        if (stack.length > 1) stack.pop(); // em close
+      } else if (byte === 0x18) {
+        i++;
+        const strong = this.#document.createElement('strong');
+        stack[stack.length - 1].appendChild(strong);
+        stack.push(strong);
+      } else if (byte === 0x19) {
+        i++;
+        if (stack.length > 1) stack.pop(); // strong close
+      } else {
+        // String token
+        const [text, consumed] = this.#readString(input, i);
+        i += consumed;
+        if (this.#sanitize) assertSanitized(text);
+        stack[stack.length - 1].appendChild(this.#document.createTextNode(text));
+      }
+    }
+
+    return i;
   }
 
   /**
@@ -201,30 +240,6 @@ export class ProseRenderer {
     // render as a sandboxed <iframe> if the host appears in this.#allowedIframeHosts.
     // (Consider providing a way to set the size of images as well - perhaps allowing
     // <img> tags)
-  }
-
-  /**
-   * @param {number} level - Heading level 1–8.
-   * @param {string} safe - Heading text, already checked.
-   * @private
-   */
-  #renderHeader(level, safe) {
-    if (++this.#blockCount > this.#maxBlocksPerPage) {
-      throw new Error(`Exceeded limit of ${this.#maxBlocksPerPage} blocks per page`);
-    }
-    if (safe.length > this.#maxCharsPerHeader) {
-      throw new Error(`Exceeded limit of ${this.#maxCharsPerHeader} characters per header`);
-    }
-    checkWordLength(safe, this.#maxWordCodepoints);
-    const el = this.#document.createElement(level <= 6 ? `h${level}` : 'p');
-    if (level > 6) {
-      el.setAttribute('data-heading-level', level);
-    }
-    el.textContent = safe;
-    this.#layout.main.appendChild(el);
-    if (level === 1) {
-      this.#layout.setContentTitle(safe);
-    }
   }
 
   /**

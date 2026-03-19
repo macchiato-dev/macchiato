@@ -13,15 +13,22 @@ by its bit pattern:
 
 | First byte    | Pattern    | Meaning                                   |
 |---------------|------------|-------------------------------------------|
-| `0x00`        | `00000000` | Paragraph — followed by one string token  |
-|               |            | containing its text content               |
+| `0x00`        | `00000000` | Paragraph — followed by an inline token   |
+|               |            | sequence terminated by `0x02`             |
 | `0x01`        | `00000001` | Fenced code block — followed by two       |
 |               |            | string tokens: the language identifier    |
 |               |            | (may be empty) and the code content       |
+| `0x02`        | `00000010` | End-of-inline — terminates the inline     |
+|               |            | token sequence of a paragraph or header   |
 | `0x08`–`0x0F` | `00001xxx` | Header — the lower 3 bits store the level |
 |               |            | minus one, giving levels 1–8; followed by |
-|               |            | one string token. Levels 7–8 are          |
-|               |            | non-standard extended headings            |
+|               |            | an inline token sequence terminated by    |
+|               |            | `0x02`. Levels 7–8 are non-standard       |
+|               |            | extended headings                         |
+| `0x10`        | `00010000` | Open `<em>` (italic)                      |
+| `0x11`        | `00010001` | Close `</em>`                             |
+| `0x18`        | `00011000` | Open `<strong>` (bold)                    |
+| `0x19`        | `00011001` | Close `</strong>`                         |
 | `0x9F`        | `10011111` | Empty string — zero UTF-8 bytes           |
 | `0xA0`–`0xBF` | `101xxxxx` | Short string — the lower 5 bits store the |
 |               |            | length minus one, giving a range of 1–32  |
@@ -45,7 +52,7 @@ renderer — readers and writers each maintain their own copy.
 - [x] Title
 - [ ] Links
 - [ ] Link references
-- [ ] Bold, italics
+- [x] Bold, italics
 - [ ] Images and iframes
 
 ## Supported configuration

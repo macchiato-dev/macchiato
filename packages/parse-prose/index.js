@@ -83,11 +83,11 @@ export class ProseParser {
       } else if (hashes !== undefined) {
         // Header: 00001xxx (lower 3 bits = level - 1)
         this.#writeUint8(0x08 | (hashes.length - 1));
-        this.#writeString(htxt);
+        this.#parseInline(htxt);
       } else if (para !== undefined) {
         // Paragraph: 0x00
         this.#writeUint8(0x00);
-        this.#writeString(para.trim());
+        this.#parseInline(para.trim());
       } else {
         // Catch-all fired: classify and throw
         if (invalidRe.test(m[0])) {
@@ -96,6 +96,50 @@ export class ProseParser {
         throw new Error('Unexpected input at position ' + m.index);
       }
     }
+  }
+
+  /**
+   * Emits an inline token sequence for text containing bold/italic markers,
+   * terminated by 0x02 (end-of-inline). Uses a stack to enforce well-formed
+   * (properly nested) spans — a closing marker only fires when it matches the
+   * innermost open span; otherwise it is treated as an opener, which the
+   * auto-close at the end will close. This mirrors how the DOM works: the
+   * structure is always a tree, never crossing spans.
+   * @param {string} text
+   * @private
+   */
+  #parseInline(text) {
+    const stack = []; // 'em' | 'strong'
+    // \\[*_] handles CommonMark escaping: \* and \_ become literal characters.
+    // ** and __ must be tried before * and _ so the longer token wins.
+    const inlineRe = /\\[*_]|\*\*|__|\*|_|[^*_\\]+/g;
+    let m;
+    while ((m = inlineRe.exec(text)) !== null) {
+      const tok = m[0];
+      if (tok[0] === '\\') {
+        // Escaped delimiter — emit the literal character
+        this.#writeString(tok[1]);
+      } else {
+        const type = (tok === '**' || tok === '__') ? 'strong'
+                   : (tok === '*'  || tok === '_')  ? 'em'
+                   : null;
+        if (type) {
+          if (stack.length > 0 && stack[stack.length - 1] === type) {
+            stack.pop();
+            this.#writeUint8(type === 'strong' ? 0x19 : 0x11); // close
+          } else {
+            stack.push(type);
+            this.#writeUint8(type === 'strong' ? 0x18 : 0x10); // open
+          }
+        } else {
+          this.#writeString(tok);
+        }
+      }
+    }
+    if (stack.length > 0) {
+      throw new Error(`Unclosed ${stack[stack.length - 1]} in inline content`);
+    }
+    this.#writeUint8(0x02); // end-of-inline
   }
 
   /**
