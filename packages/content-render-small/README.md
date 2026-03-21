@@ -1,10 +1,10 @@
-# @macchiato-dev/render-prose
+# @macchiato-dev/content-render-small
 
 Creates/updates prose in the DOM using output from
-[@macchiato-dev/parse-prose][parse-prose].
+[@macchiato-dev/content-parse-small][content-parse-small].
 
 When it encounters an h1, it forwards the heading text to
-[@macchiato-dev/render-layout][render-layout] as a `content_title` token.
+[@macchiato-dev/layout-render-small][layout-render-small] as a `content_title` token.
 
 ## Hypertoken table
 
@@ -63,5 +63,5 @@ renderer — readers and writers each maintain their own copy.
 - [ ] Pluggable renderers for fenced code blocks (allowing advanced iframe
   renderer with overlay support)
 
-[parse-prose]: https://github.com/macchiato-dev/macchiato/tree/main/packages/parse-prose
-[render-layout]: https://github.com/macchiato-dev/macchiato/tree/main/packages/render-layout
+[content-parse-small]: https://github.com/macchiato-dev/macchiato/tree/main/packages/content-parse-small
+[layout-render-small]: https://github.com/macchiato-dev/macchiato/tree/main/packages/layout-render-small

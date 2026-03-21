@@ -1,8 +1,8 @@
-# @macchiato-dev/parse-layout
+# @macchiato-dev/layout-parse-small
 
 Parses layout info from a subset of Markdown.
 
-parse-layout will accept a markdown list that contains information to
+layout-parse-small will accept a markdown list that contains information to
 set up the layout, such as the site title, colors, fonts, and a footer
 The footer elements will be in nested list items.
 
@@ -13,9 +13,9 @@ existing web page which it will update. Currently, only the site title
 is extracted output as a title token followed by a string token.
 
 The output is a `Uint8Array` hypertoken stream. The definition of the
-token table is in [render-layout][render-layout-hypertokens].
+token table is in [layout-render-small][layout-render-small-hypertokens].
 
 ## Planned
 
 
-[render-layout-hypertokens]: https://github.com/macchiato-dev/macchiato/tree/main/packages/render-layout#hypertoken-table
+[layout-render-small-hypertokens]: https://github.com/macchiato-dev/macchiato/tree/main/packages/layout-render-small#hypertoken-table

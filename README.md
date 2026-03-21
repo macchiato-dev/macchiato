@@ -138,16 +138,54 @@ can be used to render a website from Markdown.
 
 This is composed of these packages:
 
-- [parse-layout](packages/parse-layout/README.md): parses layout info from a
-  subset of Markdown
-- [render-layout](packages/render-layout/README.md): creates/updates layout
-  in the DOM using output from parse-layout
-- [parse-prose](packages/parse-prose/README.md): parses prose from a subset
-  of Markdown
-- [render-prose](packages/render-prose/README.md): creates/updates prose in
-  the DOM using output from parse-prose
-- [build-static](packages/build-static/README.md): provides a partial DOM
-  for the renderers on the server side and renders it statically
+- [layout-parse-small](packages/layout-parse-small/README.md): parses layout
+  info from a subset of Markdown
+- [layout-render-small](packages/layout-render-small/README.md):
+  creates/updates layout in the DOM using output from layout-parse-small
+- [content-parse-small](packages/content-parse-small/README.md): parses prose
+  from a subset of Markdown
+- [content-render-small](packages/content-render-small/README.md):
+  creates/updates prose in the DOM using output from content-parse-small
+- [content-parse-tiny](packages/content-parse-tiny/README.md): like
+  content-parse-small but without links, images, or iframes
+- [content-render-tiny](packages/content-render-tiny/README.md): like
+  content-render-small but without links, images, or iframes
+- [dom-tiny](packages/dom-tiny/README.md): minimal virtual DOM used by the
+  renderers; compatible with server, edge, and browser environments
+- [render-html](packages/render-html/README.md): serialises a dom-tiny
+  virtual DOM tree to an HTML string
+
+### Package sizes
+
+Packages come in `small` and `tiny` sizes. `tiny` omits links, images, and
+iframes; `small` includes them. Each size is downwards compatible — `small`
+can be used anywhere `tiny` is expected. The split exists to lower the amount
+of code that needs to be brought to the browser or to an edge runtime, and to
+make it easier to audit the subset of code that runs in the most constrained
+environments.
+
+The DOM and serialisation packages are split for the same reason: code that
+only builds a DOM tree (renderers, tests) can avoid pulling in the HTML
+serialiser.
+
+### Tokens
+
+`token-tiny` and `token-small` packages are planned that will allow defining
+tokens for things like syllables, words, and phrases, so that repeated strings
+do not need to be repeated in the hypertoken stream. Tokens can also carry
+formatting. This is inspired by MessagePack and the design described above.
+
+### Apps, servers, and extensibility
+
+Macchiato is intended to support apps on the frontend and the backend, as well
+as servers, with multiple apps able to run in the same program. For instance,
+a server could run a content app and a separate tool side-by-side within the
+same process.
+
+There will also be ways to add custom code, but having most functionality
+included in shared modules — in a very modular and carefully contained design —
+should make it easier to audit the code you are running. Custom code is an
+extension point, not the default path.
 
 These will be under `packages/`. There will also be examples under
 `examples/`.

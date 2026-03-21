@@ -1,5 +1,5 @@
 /**
- * @macchiato-dev/parse-prose
+ * @macchiato-dev/content-parse-small
  * A low-level Markdown parser that writes hypertokens directly to a shared buffer.
  */
 export class ProseParser {
@@ -34,7 +34,7 @@ export class ProseParser {
 
   /**
    * Parses the input string and writes hypertokens into the internal buffer.
-   * Token format is defined in @macchiato-dev/render-prose.
+   * Token format is defined in @macchiato-dev/content-render-small.
    *
    * A single regex drives the whole scan. Named groups identify the token
    * type. \k<fence> lets the engine match the closing fence without any

@@ -1,28 +1,9 @@
 /**
- * @macchiato-dev/build-static
- * Minimal partial VDOM for server-side rendering on Node and Deno.
- * Exports a document compatible with render-layout and render-prose.
+ * @macchiato-dev/dom-tiny
+ * Minimal virtual DOM for server-side rendering and testing.
+ * Provides VText, VElement, and VDocument — a DOM-like API
+ * compatible with content and layout renderers.
  */
-
-/**
- * @param {string} str
- * @returns {string}
- */
-function escapeText(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/**
- * @param {string} str
- * @returns {string}
- */
-function escapeAttr(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
 
 export class VText {
   /** @type {string} */
@@ -36,11 +17,6 @@ export class VText {
   /** @returns {string} */
   get textContent() {
     return this.#text;
-  }
-
-  /** @returns {string} */
-  toHTML() {
-    return escapeText(this.#text);
   }
 }
 
@@ -57,6 +33,31 @@ export class VElement {
   /** @param {string} tagName */
   constructor(tagName) {
     this.#tagName = tagName;
+  }
+
+  /** @returns {string} */
+  get tagName() {
+    return this.#tagName;
+  }
+
+  /** @returns {Map<string, string>} */
+  get attributes() {
+    return this.#attributes;
+  }
+
+  /** @returns {(VElement | VText)[]} */
+  get childNodes() {
+    return this.#children;
+  }
+
+  /**
+   * The raw text string when textContent setter was used; null when in
+   * children mode. Needed by render-html to distinguish text mode from
+   * children mode.
+   * @returns {string | null}
+   */
+  get ownTextContent() {
+    return this.#text;
   }
 
   /**
@@ -96,17 +97,6 @@ export class VElement {
   get textContent() {
     if (this.#text !== null) return this.#text;
     return this.#children.map(c => c.textContent).join('');
-  }
-
-  /** @returns {string} */
-  toHTML() {
-    const attrs = [...this.#attributes]
-      .map(([k, v]) => ` ${k}="${escapeAttr(v)}"`)
-      .join('');
-    const content = this.#text !== null
-      ? escapeText(this.#text)
-      : this.#children.map(c => c.toHTML()).join('');
-    return `<${this.#tagName}${attrs}>${content}</${this.#tagName}>`;
   }
 }
 
@@ -150,17 +140,4 @@ export class VDocument {
   get title() {
     return this.#titleEl.textContent;
   }
-
-  /** @returns {string} */
-  toHTML() {
-    return (
-      '<!DOCTYPE html>\n' +
-      '<html>\n' +
-      this.head.toHTML() + '\n' +
-      this.body.toHTML() + '\n' +
-      '</html>\n'
-    );
-  }
 }
-
-export const document = new VDocument();

@@ -1,5 +1,5 @@
 /**
- * @macchiato-dev/render-prose
+ * @macchiato-dev/content-render-tiny
  * Reads a hypertoken stream and renders prose into the DOM.
  * Token format is defined in this package's README.
  */
@@ -55,16 +55,10 @@ function checkWordLength(text, limit) {
 export class ProseRenderer {
   /** @type {Document} */
   #document;
-  /** @type {import('@macchiato-dev/render-layout').LayoutRenderer} */
+  /** @type {import('@macchiato-dev/layout-render-small').LayoutRenderer} */
   #layout;
   /** @type {boolean} */
   #sanitize;
-  /** @type {string[]} */
-  #allowedLinkHosts;
-  /** @type {string[]} */
-  #allowedImageHosts;
-  /** @type {string[]} */
-  #allowedIframeHosts;
   /** @type {TextDecoder} */
   #decoder = new TextDecoder();
   /** @type {number} */
@@ -81,23 +75,14 @@ export class ProseRenderer {
   /**
    * @param {object} params
    * @param {Document} params.document
-   * @param {import('@macchiato-dev/render-layout').LayoutRenderer} params.layout
+   * @param {import('@macchiato-dev/layout-render-small').LayoutRenderer} params.layout
    * @param {boolean} [params.sanitize=true] - Strip characters that can break
    *   layouts or pose security risks. Disable only for trusted input.
-   * @param {string[]} [params.allowedLinkHosts=[]] - Hostnames whose links
-   *   may be opened on click. Others are copy-only.
-   * @param {string[]} [params.allowedImageHosts=[]] - Hostnames from which
-   *   images may be loaded. Others require a click to reveal.
-   * @param {string[]} [params.allowedIframeHosts=[]] - Hostnames from which
-   *   sandboxed iframes may be embedded via fenced code blocks.
    */
   constructor({
     document,
     layout,
     sanitize: doSanitize = true,
-    allowedLinkHosts = [],
-    allowedImageHosts = [],
-    allowedIframeHosts = [],
     maxBlocksPerPage = MAX_BLOCKS_PER_PAGE,
     maxCharsPerBlock = MAX_CHARS_PER_BLOCK,
     maxCharsPerHeader = MAX_CHARS_PER_HEADER,
@@ -106,9 +91,6 @@ export class ProseRenderer {
     this.#document = document;
     this.#layout = layout;
     this.#sanitize = doSanitize;
-    this.#allowedLinkHosts = allowedLinkHosts;
-    this.#allowedImageHosts = allowedImageHosts;
-    this.#allowedIframeHosts = allowedIframeHosts;
     this.#maxBlocksPerPage = maxBlocksPerPage;
     this.#maxCharsPerBlock = maxCharsPerBlock;
     this.#maxCharsPerHeader = maxCharsPerHeader;
@@ -175,7 +157,7 @@ export class ProseRenderer {
    * build a proper DOM tree. Text segments are appended as text nodes.
    * @param {Uint8Array} input
    * @param {number} i - Starting offset (first byte of the inline sequence)
-   * @param {import('@macchiato-dev/build-static').VElement} container
+   * @param {import('@macchiato-dev/dom-tiny').VElement} container
    * @returns {number} Offset after the consumed inline sequence
    * @private
    */
@@ -235,11 +217,6 @@ export class ProseRenderer {
     code.textContent = safe;
     pre.appendChild(code);
     this.#layout.main.appendChild(pre);
-
-    // TODO: when lang is 'iframe', parse the content for a URL and the size and
-    // render as a sandboxed <iframe> if the host appears in this.#allowedIframeHosts.
-    // (Consider providing a way to set the size of images as well - perhaps allowing
-    // <img> tags)
   }
 
   /**

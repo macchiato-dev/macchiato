@@ -1,5 +1,5 @@
 {
-  "name": "@macchiato-dev/parse-prose",
+  "name": "@macchiato-dev/content-parse-tiny",
   "version": "0.0.1-pre.0",
   "license": "MIT",
   "type": "module",

@@ -1,0 +1,13 @@
+{
+  "name": "@macchiato-dev/render-html",
+  "version": "0.0.1-pre.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@macchiato-dev/dom-tiny": "file:../dom-tiny"
+  }
+}

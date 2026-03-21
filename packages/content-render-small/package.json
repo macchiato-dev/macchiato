@@ -1,0 +1,16 @@
+{
+  "name": "@macchiato-dev/content-render-small",
+  "version": "0.0.1-pre.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@macchiato-dev/dom-tiny": "file:../dom-tiny",
+    "@macchiato-dev/render-html": "file:../render-html",
+    "@macchiato-dev/content-parse-small": "file:../content-parse-small",
+    "@macchiato-dev/layout-render-small": "file:../layout-render-small"
+  }
+}

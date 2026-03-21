@@ -1,14 +1,14 @@
-# @macchiato-dev/render-layout
+# @macchiato-dev/layout-render-small
 
 Creates/updates layout in the DOM using output from
-[@macchiato-dev/parse-layout][parse-layout].
+[@macchiato-dev/layout-parse-small][layout-parse-small].
 
 This layout will be configurable enough to support a wide variety of
 pages while still being constrained. It will sanitize not just the
 schema but the behavior. For instance it will support customizing the
 background but will require contrast.
 
-Also receives `content_title` from [@macchiato-dev/render-prose][render-prose]
+Also receives `content_title` from [@macchiato-dev/content-render-small][content-render-small]
 when that renderer encounters an h1.
 
 ## Current behavior
@@ -29,7 +29,7 @@ by its bit pattern:
 |               |            | from the layout config                    |
 | `0x01`        | `00000001` | Content title — the next token is the     |
 |               |            | title from the prose (e.g. the h1),       |
-|               |            | forwarded by render-prose                 |
+|               |            | forwarded by content-render-small         |
 | `0xC0`–`0xFF` | `11XXXXXX` | Inline string — the lower 6 bits store    |
 |               |            | the length minus one, giving a range of   |
 |               |            | 1–64 bytes, followed by that many UTF-8   |
@@ -55,5 +55,5 @@ This is a shared description of the hypertoken table for layout. In
 code, the table is defined independently in both the parser and the
 renderer — readers and writers each maintain their own copy.
 
-[parse-layout]: https://github.com/macchiato-dev/macchiato/tree/main/packages/parse-layout
-[render-prose]: https://github.com/macchiato-dev/macchiato/tree/main/packages/render-prose
+[layout-parse-small]: https://github.com/macchiato-dev/macchiato/tree/main/packages/layout-parse-small
+[content-render-small]: https://github.com/macchiato-dev/macchiato/tree/main/packages/content-render-small

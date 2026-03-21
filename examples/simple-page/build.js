@@ -1,10 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ProseParser } from '@macchiato-dev/parse-prose';
-import { LayoutRenderer } from '@macchiato-dev/render-layout';
-import { VDocument } from '@macchiato-dev/build-static';
-import { ProseRenderer } from '@macchiato-dev/render-prose';
+import { ProseParser } from '@macchiato-dev/content-parse-small';
+import { LayoutRenderer } from '@macchiato-dev/layout-render-small';
+import { VDocument } from '@macchiato-dev/dom-tiny';
+import { renderDocument } from '@macchiato-dev/render-html';
+import { ProseRenderer } from '@macchiato-dev/content-render-small';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const md = readFileSync(join(__dirname, 'page.md'), 'utf8');
@@ -25,4 +26,4 @@ try {
 
 const distDir = join(__dirname, 'dist');
 mkdirSync(distDir);
-writeFileSync(join(distDir, 'index.html'), document.toHTML());
+writeFileSync(join(distDir, 'index.html'), renderDocument(document));
