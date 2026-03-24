@@ -29,6 +29,9 @@ by its bit pattern:
 | `0x11`        | `00010001` | Close `</em>`                             |
 | `0x18`        | `00011000` | Open `<strong>` (bold)                    |
 | `0x19`        | `00011001` | Close `</strong>`                         |
+| `0x20`        | `00100000` | Inline code — followed by a single string |
+|               |            | token containing the verbatim content;    |
+|               |            | rendered as `<code>`                      |
 | `0x9F`        | `10011111` | Empty string — zero UTF-8 bytes           |
 | `0xA0`–`0xBF` | `101xxxxx` | Short string — the lower 5 bits store the |
 |               |            | length minus one, giving a range of 1–32  |
@@ -53,6 +56,7 @@ renderer — readers and writers each maintain their own copy.
 - [ ] Links
 - [ ] Link references
 - [x] Bold, italics
+- [x] Inline code
 - [ ] Images and iframes
 
 ## Supported configuration

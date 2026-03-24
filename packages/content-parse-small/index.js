@@ -45,26 +45,55 @@ export class ProseParser {
     this.#offset = 0;
     const src = this.#input;
 
-    // Regex constructed as a string to keep backticks out of regex literals,
-    // which confuses editors that track template-literal state.
+    // Constructed as a string so that backtick characters never appear inside a
+    // regex literal — editors that track template-literal depth miscolour
+    // everything after an unmatched backtick in a regex.
     const bt = '`';
+
+    // One regex drives the entire block scan.  Each alternative uses a named
+    // group so the dispatch below can identify which token was matched.
+    //
+    //  blank   [ \t]*\n
+    //          A line that is empty or contains only spaces/tabs.  Consumed
+    //          silently; blank lines separate blocks but carry no tokens.
+    //
+    //  fence   (`{3,}|~{3,})
+    //          Opening fence: three or more backticks or tildes captured as
+    //          <fence>.  The same string is referenced later by \k<fence>, so
+    //          the engine itself finds the matching closing fence — no manual
+    //          character-counting loop required.  [\s\S]*? is a lazy dotall
+    //          span that lets the fence backreference stop at the first valid
+    //          close, which means blank lines inside the block are matched
+    //          correctly.  The trailing [^\n]*(?:\n|$) discards any info-string
+    //          on the closing fence line.
+    //
+    //  hashes  #{1,8}
+    //          ATX heading marker.  The level is encoded in the byte token as
+    //          (count - 1) in the lower three bits.
+    //
+    //  para    (?!`{3,}|~{3,})[^\n]*\S[^\n]*
+    //          One or more non-blank lines.  The negative lookahead at the
+    //          start of each line prevents a fence opening from being swallowed
+    //          into a paragraph — it falls to the catch-all instead and errors.
+    //          \S inside the line pattern ensures the line contains at least one
+    //          non-whitespace character (blank lines are already handled above).
+    //
+    //  (catch-all)  [^\n]+(?:\n|$)
+    //          No named group.  Anything that reaches here is invalid input.
+    //          The + (not *) prevents an empty match at EOF after all valid
+    //          tokens have been consumed.
     const tokenRe = new RegExp(
-      // Blank line (skip)
       '(?<blank>[ \\t]*\\n)' +
-      // Fenced code block — closed: \k<fence> matches the closing fence
       '|(?<fence>' + bt + '{3,}|~{3,})(?<lang>[^\\n]*)\\n(?<content>[\\s\\S]*?)\\n?\\k<fence>[^\\n]*(?:\\n|$)' +
-      // Header: 1–8 # chars followed by whitespace
       '|(?<hashes>#{1,8})[ \\t]+(?<htxt>[^\\n]*)(?:\\n|$)' +
-      // Paragraph: one or more non-blank lines; the negative lookahead prevents
-      // fence openings from being consumed here so they fall to the catch-all
       '|(?<para>(?!' + bt + '{3,}|~{3,})[^\\n]*\\S[^\\n]*(?:\\n(?!' + bt + '{3,}|~{3,})[^\\n]*\\S[^\\n]*)*(?:\\n|$))' +
-      // Catch-all: no named group — anything reaching here is invalid.
-      // Requires at least one non-newline char to avoid matching empty string at EOF.
       '|[^\\n]+(?:\\n|$)',
       'g',
     );
 
-    // Used only when the catch-all fires, to produce a descriptive error.
+    // Applied only when the catch-all fires, to produce a specific error
+    // message.  Kept separate rather than added as a named group in tokenRe
+    // so it does not interfere with the main scan.
     const invalidRe = new RegExp(
       '(?<unclosedFence>' + bt + '{3,}|~{3,})',
     );
@@ -110,15 +139,63 @@ export class ProseParser {
    */
   #parseInline(text) {
     const stack = []; // 'em' | 'strong'
-    // \\[*_] handles CommonMark escaping: \* and \_ become literal characters.
-    // ** and __ must be tried before * and _ so the longer token wins.
-    const inlineRe = /\\[*_]|\*\*|__|\*|_|[^*_\\]+/g;
+    const bt = '`';
+
+    // Alternatives are tried left-to-right; order matters:
+    //
+    //  \\[*_`]
+    //          CommonMark backslash escape.  The character after the backslash
+    //          is emitted literally.  Tried first so \* \_ \` are never seen
+    //          by the delimiter alternatives below.
+    //
+    //  `[^`]+`
+    //          Single-backtick code span.  Content must be non-empty ([^`]+
+    //          rather than [^`]*) so that `` (two adjacent backticks) does NOT
+    //          match here and falls to the error alternative instead.  This
+    //          subset only supports single-backtick delimiters; multi-backtick
+    //          spans (CommonMark's way to include a literal backtick inside
+    //          code) belong in a larger variant and are rejected here.
+    //
+    //  `+
+    //          Error sentinel: one or more consecutive backticks that were not
+    //          consumed by the code-span alternative.  This covers unclosed
+    //          spans, empty spans (``), and multi-backtick delimiters (`` `` ``).
+    //
+    //  **  __  *  _
+    //          Bold and italic delimiters.  ** and __ must precede * and _ so
+    //          the two-character token wins over two adjacent single-character
+    //          tokens.
+    //
+    //  [^*_\\`]+
+    //          Plain text run.  Excludes every character that opens an
+    //          alternative above, so the run ends as soon as a delimiter is
+    //          encountered.
+    const inlineRe = new RegExp(
+      '\\\\[*_' + bt + ']' +
+      '|' + bt + '[^' + bt + ']+' + bt +
+      '|' + bt + '+' +
+      '|\\*\\*|__' +
+      '|\\*|_' +
+      '|[^*_\\\\' + bt + ']+',
+      'g',
+    );
     let m;
     while ((m = inlineRe.exec(text)) !== null) {
       const tok = m[0];
       if (tok[0] === '\\') {
-        // Escaped delimiter — emit the literal character
+        // Escaped delimiter — emit the literal character after the backslash
         this.#writeString(tok[1]);
+      } else if (tok[0] === bt) {
+        // Matched either `[^`]+` (valid) or `+ (error).  Distinguish by
+        // checking that the token has content between the two delimiting
+        // backticks: length >= 3 and the second character is not a backtick
+        // (which would mean the opening delimiter is more than one backtick).
+        if (tok.length >= 3 && tok[1] !== bt) {
+          this.#writeUint8(0x20);
+          this.#writeString(tok.slice(1, -1));
+        } else {
+          throw new Error('Invalid backtick sequence in inline content');
+        }
       } else {
         const type = (tok === '**' || tok === '__') ? 'strong'
                    : (tok === '*'  || tok === '_')  ? 'em'

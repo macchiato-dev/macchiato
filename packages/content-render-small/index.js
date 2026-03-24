@@ -203,6 +203,15 @@ export class ProseRenderer {
       } else if (byte === 0x19) {
         i++;
         if (stack.length > 1) stack.pop(); // strong close
+      } else if (byte === 0x20) {
+        // Inline code — verbatim text, no nested markup
+        i++;
+        const [text, consumed] = this.#readString(input, i);
+        i += consumed;
+        if (this.#sanitize) assertSanitized(text);
+        const code = this.#document.createElement('code');
+        code.textContent = text;
+        stack[stack.length - 1].appendChild(code);
       } else {
         // String token
         const [text, consumed] = this.#readString(input, i);

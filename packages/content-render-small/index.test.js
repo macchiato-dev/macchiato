@@ -130,6 +130,44 @@ test('escaped ** renders as two literal asterisks', () => {
   assert.ok(renderDocument(document).includes('** not bold'));
 });
 
+test('renders inline code in a paragraph', () => {
+  const document = build('Use `foo()` here.');
+  assert.ok(renderDocument(document).includes('<code>foo()</code>'));
+});
+
+test('renders inline code in a heading', () => {
+  const document = build('# The `main` function');
+  assert.ok(renderDocument(document).includes('<h1>The <code>main</code> function</h1>'));
+});
+
+test('inline code does not interpret bold markers inside it', () => {
+  const document = build('try `**not bold**` here');
+  const html = renderDocument(document);
+  assert.ok(html.includes('<code>**not bold**</code>'));
+  assert.ok(!html.includes('<strong>'));
+});
+
+test('inline code alongside bold and italic', () => {
+  const document = build('*em* and `code` and **bold**');
+  const html = renderDocument(document);
+  assert.ok(html.includes('<em>em</em>'));
+  assert.ok(html.includes('<code>code</code>'));
+  assert.ok(html.includes('<strong>bold</strong>'));
+});
+
+test('escaped backtick renders as literal backtick', () => {
+  const document = build('price: \\`5');
+  assert.ok(renderDocument(document).includes('price: `5'));
+});
+
+test('throws on unclosed backtick', () => {
+  assert.throws(() => build('foo `bar'), /invalid backtick/i);
+});
+
+test('throws on double-backtick delimiter — not supported in small', () => {
+  assert.throws(() => build('foo ``bar`` baz'), /invalid backtick/i);
+});
+
 test('throws on disallowed characters', () => {
   assert.throws(() => build('\u200B sneaky'));
 });
