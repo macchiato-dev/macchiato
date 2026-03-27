@@ -170,10 +170,18 @@ serialiser.
 
 ### Tokens
 
-`token-tiny` and `token-small` packages are planned that will allow defining
-tokens for things like syllables, words, and phrases, so that repeated strings
-do not need to be repeated in the hypertoken stream. Tokens can also carry
-formatting. This is inspired by MessagePack and the design described above.
+- [token-collect-tiny](packages/token-collect-tiny/README.md): scans strings
+  and builds a token dictionary of recurring words and phrases
+- [token-parse-tiny](packages/token-parse-tiny/README.md): encodes a string
+  as a hypertoken stream using a dictionary, replacing repeated substrings
+  with compact index references
+- [token-render-tiny](packages/token-render-tiny/README.md): decodes a
+  hypertoken stream back into a string
+
+These allow repeated strings — syllables, words, phrases — to be referenced
+by a single byte rather than repeated in full. A `small` variant with a wider
+index range is planned. Tokens can also carry formatting, enabling shared
+markup vocabulary across a document.
 
 ### Apps, servers, and extensibility
 
