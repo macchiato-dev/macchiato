@@ -24,12 +24,12 @@ let port = 8080;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
-  if (arg === "--host" || arg === "-H") {
+  if (arg === "--host" || arg === "-H" || arg === "-b") {
     host = args[++i] ?? host;
   } else if (arg === "--port" || arg === "-p") {
     port = parseInt(args[++i] ?? String(port), 10);
   } else if (arg === "--help" || arg === "-h") {
-    console.log("Usage: macchiato-app [--host <host>] [--port <port>]");
+    console.log("Usage: macchiato-app [-b|--host <host>] [--port <port>]");
     process.exit(0);
   }
 }
