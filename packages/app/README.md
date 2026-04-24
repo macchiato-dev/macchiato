@@ -20,10 +20,10 @@ Deno requires only network access to the chosen port:
 deno run --allow-net=:8765 src/index.ts
 ```
 
-To bind to all interfaces:
+To bind to all interfaces (dual-stack, needed for containers):
 
 ```bash
-deno run --allow-net=:8765 src/index.ts -b 0.0.0.0
+deno run --allow-net=[::]:8765 src/index.ts -b 0.0.0.0
 ```
 
 ## Node.js
