@@ -41,6 +41,12 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
   res.end(`<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`);
 });
 
-server.listen(port, host, () => {
-  console.log(`Server running on http://${host}:${port}`);
-});
+if (host === "0.0.0.0") {
+  server.listen(port, () => {
+    console.log(`Server running on http://0.0.0.0:${port}`);
+  });
+} else {
+  server.listen(port, host, () => {
+    console.log(`Server running on http://${host}:${port}`);
+  });
+}
