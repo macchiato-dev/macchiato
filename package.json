@@ -1,0 +1,7 @@
+{
+  "name": "macchiato",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
+}
