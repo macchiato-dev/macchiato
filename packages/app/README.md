@@ -5,7 +5,7 @@ Cross-runtime HTTP server. Serves a page per subdomain.
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net 8765 src/index.ts
+deno run --allow-net=8765 src/index.ts
 ```
 
 Then open `http://example.localhost:8765`.
@@ -17,13 +17,13 @@ You should see `<h1>example</h1>`.
 Deno requires only network access to the chosen port:
 
 ```bash
-deno run --allow-net 8765 src/index.ts
+deno run --allow-net=8765 src/index.ts
 ```
 
 To bind to all interfaces:
 
 ```bash
-deno run --allow-net 8765 src/index.ts -b 0.0.0.0
+deno run --allow-net=8765 src/index.ts -b 0.0.0.0
 ```
 
 ## Node.js
