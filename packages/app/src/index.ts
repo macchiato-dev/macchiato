@@ -34,19 +34,37 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-  const hostHeader = req.headers.host || "localhost";
+function respond(hostHeader: string): Response {
   const subdomain = getSubdomain(hostHeader);
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(`<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`);
-});
+  return new Response(
+    `<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`,
+    { headers: { "content-type": "text/html; charset=utf-8" } }
+  );
+}
 
-if (host === "0.0.0.0") {
-  server.listen(port, () => {
-    console.log(`Server running on http://0.0.0.0:${port}`);
-  });
+if ("Deno" in globalThis) {
+  const denoHost = host === "0.0.0.0" ? "::" : host;
+  console.log(`Server running on http://${host === "0.0.0.0" ? "0.0.0.0" : denoHost}:${port}`);
+  (globalThis as unknown as { Deno: { serve: (options: { port: number; hostname: string }, handler: (req: Request) => Response) => void } }).Deno.serve(
+    { port, hostname: denoHost },
+    (req: Request) => respond(req.headers.get("host") || "localhost")
+  );
 } else {
-  server.listen(port, host, () => {
-    console.log(`Server running on http://${host}:${port}`);
+  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+    const response = respond(req.headers.host || "localhost");
+    response.text().then((body) => {
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(body);
+    });
   });
+
+  if (host === "0.0.0.0") {
+    server.listen(port, () => {
+      console.log(`Server running on http://0.0.0.0:${port}`);
+    });
+  } else {
+    server.listen(port, host, () => {
+      console.log(`Server running on http://${host}:${port}`);
+    });
+  }
 }
