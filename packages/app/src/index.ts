@@ -20,7 +20,7 @@ function getSubdomain(host: string): string {
 }
 
 let host = "127.0.0.1";
-let port = 8080;
+let port = 8765;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
