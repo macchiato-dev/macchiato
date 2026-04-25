@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer } from "node:http";
 import { runInSandbox } from "./index.js";
 
 const args = "Deno" in globalThis
-  ? (globalThis as unknown as { Deno: { args: string[] } }).Deno.args
+  ? globalThis.Deno.args
   : process.argv.slice(2);
 
 let host = "127.0.0.1";
@@ -21,7 +21,7 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-function htmlPage(): string {
+function htmlPage() {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -64,15 +64,19 @@ function htmlPage(): string {
 </html>`;
 }
 
-async function readBody(req: IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
+/**
+ * @param {import("node:http").IncomingMessage} req
+ * @returns {Promise<string>}
+ */
+async function readBody(req) {
+  const chunks = [];
   for await (const chunk of req) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString("utf-8");
 }
 
-const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+const server = createServer(async (req, res) => {
   try {
     if (req.url === "/" || req.url === "/index.html") {
       res.writeHead(200, { "content-type": "text/html" });

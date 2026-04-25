@@ -1,17 +1,21 @@
-import { getQuickJS, QuickJSRuntime, QuickJSContext } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 
-export interface SandboxResult {
-  ok: boolean;
-  value?: unknown;
-  error?: string;
-}
+/**
+ * @typedef {Object} SandboxResult
+ * @property {boolean} ok - Whether execution succeeded
+ * @property {unknown} [value] - The returned value on success
+ * @property {string} [error] - Error message on failure
+ */
 
 export class Sandbox {
-  private runtime: QuickJSRuntime | null = null;
-  private context: QuickJSContext | null = null;
-  private disposed = false;
+  /** @type {import("quickjs-emscripten").QuickJSRuntime | null} */
+  runtime = null;
+  /** @type {import("quickjs-emscripten").QuickJSContext | null} */
+  context = null;
+  /** @type {boolean} */
+  disposed = false;
 
-  async init(): Promise<void> {
+  async init() {
     if (this.disposed) throw new Error("Sandbox has been disposed");
     if (this.runtime) return;
 
@@ -20,7 +24,11 @@ export class Sandbox {
     this.context = this.runtime.newContext();
   }
 
-  run(code: string): SandboxResult {
+  /**
+   * @param {string} code - JavaScript code to evaluate
+   * @returns {SandboxResult}
+   */
+  run(code) {
     if (!this.context) {
       throw new Error("Sandbox not initialized. Call init() first.");
     }
@@ -41,7 +49,7 @@ export class Sandbox {
     return { ok: true, value };
   }
 
-  dispose(): void {
+  dispose() {
     this.disposed = true;
     this.context?.dispose();
     this.runtime?.dispose();
@@ -50,7 +58,11 @@ export class Sandbox {
   }
 }
 
-export async function runInSandbox(code: string): Promise<SandboxResult> {
+/**
+ * @param {string} code - JavaScript code to evaluate
+ * @returns {Promise<SandboxResult>}
+ */
+export async function runInSandbox(code) {
   const sandbox = new Sandbox();
   try {
     await sandbox.init();
