@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
+import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -43,11 +44,17 @@ for (let i = 0; i < args.length; i++) {
 }
 
 /**
- * @param {string} hostHeader
- * @returns {Response}
+ * @param {Request} request
+ * @returns {Promise<Response>}
  */
-function respond(hostHeader) {
+async function route(request) {
+  const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
+
+  if (subdomain === "macchiato-quickjs-emscripten-sandbox") {
+    return sandboxHandler(request);
+  }
+
   return new Response(
     `<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`,
     { headers: { "content-type": "text/html; charset=utf-8" } }
@@ -59,14 +66,34 @@ if ("Deno" in globalThis) {
   console.log(`Server running on http://${host === "0.0.0.0" ? "0.0.0.0" : denoHost}:${port}`);
   globalThis.Deno.serve(
     { port, hostname: denoHost },
-    (req) => respond(req.headers.get("host") || "localhost")
+    (req) => route(req)
   );
 } else {
-  const server = createServer((req, res) => {
-    respond(req.headers.host || "localhost").text().then((body) => {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(body);
-    });
+  const server = createServer(async (req, res) => {
+    try {
+      const hostHeader = req.headers.host || "localhost";
+      const body = req.method !== "GET" && req.method !== "HEAD"
+        ? await new Promise((resolve, reject) => {
+            const chunks = [];
+            req.on("data", (c) => chunks.push(c));
+            req.on("end", () => resolve(Buffer.concat(chunks)));
+            req.on("error", reject);
+          })
+        : undefined;
+
+      const request = new Request(`http://${hostHeader}${req.url}`, {
+        method: req.method,
+        headers: new Headers(Object.entries(req.headers).map(([k, v]) => [k, String(v)])),
+        body,
+      });
+
+      const response = await route(request);
+      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.end(Buffer.from(await response.arrayBuffer()));
+    } catch (err) {
+      res.writeHead(500, { "content-type": "text/plain" });
+      res.end(String(err));
+    }
   });
 
   if (host === "0.0.0.0") {

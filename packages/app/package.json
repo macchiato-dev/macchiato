@@ -7,6 +7,9 @@
   "bin": {
     "macchiato-app": "./src/index.js"
   },
+  "dependencies": {
+    "@macchiato-dev/quickjs-emscripten-sandbox": "0.1.0"
+  },
   "files": [
     "src"
   ]

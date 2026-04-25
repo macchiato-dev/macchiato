@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
-import { runInSandbox } from "./index.js";
+import { sandboxHandler } from "./handler.js";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -21,75 +21,30 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-function htmlPage() {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>QuickJS Sandbox</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-    textarea { width: 100%; height: 200px; font-family: monospace; font-size: 14px; }
-    button { padding: 0.5rem 1rem; font-size: 16px; margin-top: 0.5rem; }
-    pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
-    .error { color: #c00; }
-  </style>
-</head>
-<body>
-  <h1>QuickJS Sandbox</h1>
-  <textarea id="code">1 + 1</textarea>
-  <br>
-  <button onclick="run()">Run</button>
-  <pre id="output"></pre>
-  <script>
-    async function run() {
-      const code = document.getElementById('code').value;
-      const res = await fetch('/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: code
-      });
-      const data = await res.json();
-      const out = document.getElementById('output');
-      if (data.ok) {
-        out.className = '';
-        out.textContent = JSON.stringify(data.value, null, 2);
-      } else {
-        out.className = 'error';
-        out.textContent = data.error;
-      }
-    }
-  </script>
-</body>
-</html>`;
-}
+async function toFetchResponse(req) {
+  const hostHeader = req.headers.host || "localhost";
+  const body = req.method !== "GET" && req.method !== "HEAD"
+    ? await new Promise((resolve, reject) => {
+        const chunks = [];
+        req.on("data", (c) => chunks.push(c));
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+        req.on("error", reject);
+      })
+    : undefined;
 
-/**
- * @param {import("node:http").IncomingMessage} req
- * @returns {Promise<string>}
- */
-async function readBody(req) {
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf-8");
+  return new Request(`http://${hostHeader}${req.url}`, {
+    method: req.method,
+    headers: new Headers(Object.entries(req.headers).map(([k, v]) => [k, String(v)])),
+    body,
+  });
 }
 
 const server = createServer(async (req, res) => {
   try {
-    if (req.url === "/" || req.url === "/index.html") {
-      res.writeHead(200, { "content-type": "text/html" });
-      res.end(htmlPage());
-    } else if (req.url === "/run" && req.method === "POST") {
-      const code = await readBody(req);
-      const result = await runInSandbox(code);
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(result));
-    } else {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end("Not found");
-    }
+    const request = await toFetchResponse(req);
+    const response = await sandboxHandler(request);
+    res.writeHead(response.status, Object.fromEntries(response.headers));
+    res.end(Buffer.from(await response.arrayBuffer()));
   } catch (err) {
     res.writeHead(500, { "content-type": "text/plain" });
     res.end(String(err));

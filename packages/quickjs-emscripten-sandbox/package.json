@@ -4,6 +4,10 @@
   "description": "Sandboxed JavaScript execution with QuickJS",
   "type": "module",
   "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./handler": "./src/handler.js"
+  },
   "bin": {
     "macchiato-quickjs-emscripten-sandbox": "./src/server.js"
   },
