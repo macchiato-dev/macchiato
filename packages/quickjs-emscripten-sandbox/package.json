@@ -1,0 +1,25 @@
+{
+  "name": "@macchiato-dev/quickjs-emscripten-sandbox",
+  "version": "0.1.0",
+  "description": "Sandboxed JavaScript execution with QuickJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "macchiato-quickjs-emscripten-sandbox": "./dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "quickjs-emscripten": "0.32.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.17",
+    "typescript": "5.9.3"
+  },
+  "files": [
+    "dist"
+  ]
+}
