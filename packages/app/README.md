@@ -5,7 +5,7 @@ Cross-runtime HTTP server. Serves a page per subdomain.
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net=:8765 src/index.ts
+deno run --allow-net=:8765 src/index.js
 ```
 
 Then open `http://example.localhost:8765`.
@@ -17,13 +17,13 @@ You should see `<h1>example</h1>`.
 Deno requires only network access to the chosen port:
 
 ```bash
-deno run --allow-net=:8765 src/index.ts
+deno run --allow-net=:8765 src/index.js
 ```
 
 To bind to all interfaces (dual-stack, needed for containers):
 
 ```bash
-deno run --allow-net=[::]:8765 src/index.ts -b 0.0.0.0
+deno run --allow-net=[::]:8765 src/index.js -b 0.0.0.0
 ```
 
 ## Node.js
@@ -31,17 +31,14 @@ deno run --allow-net=[::]:8765 src/index.ts -b 0.0.0.0
 Requires Node 22+ with `--experimental-strip-types` or a build step.
 
 ```bash
-# Run TypeScript directly
-node --experimental-strip-types src/index.ts
-
-# Or use the built output
-node dist/index.js
+# Run directly
+node src/index.js
 ```
 
 ## Bun
 
 ```bash
-bun run src/index.ts
+bun run src/index.js
 ```
 
 ## Options
@@ -54,8 +51,6 @@ bun run src/index.ts
 ## Publishing
 
 ```bash
-npm install
-npm run build
 npm publish --access public
 ```
 

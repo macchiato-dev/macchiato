@@ -3,20 +3,11 @@
   "version": "0.1.0",
   "description": "Cross-runtime HTTP server",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.js",
   "bin": {
-    "macchiato-app": "./dist/index.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "macchiato-app": "./src/index.js"
   },
   "files": [
-    "dist"
+    "src"
   ]
 }

@@ -1,11 +1,15 @@
 #!/usr/bin/env node
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer } from "node:http";
 
 const args = "Deno" in globalThis
-  ? (globalThis as unknown as { Deno: { args: string[] } }).Deno.args
+  ? globalThis.Deno.args
   : process.argv.slice(2);
 
-function escapeHtml(str: string): string {
+/**
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -14,7 +18,11 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function getSubdomain(host: string): string {
+/**
+ * @param {string} host
+ * @returns {string}
+ */
+function getSubdomain(host) {
   const name = host.split(":")[0];
   return name.split(".")[0] || "default";
 }
@@ -34,7 +42,11 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-function respond(hostHeader: string): Response {
+/**
+ * @param {string} hostHeader
+ * @returns {Response}
+ */
+function respond(hostHeader) {
   const subdomain = getSubdomain(hostHeader);
   return new Response(
     `<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`,
@@ -45,15 +57,14 @@ function respond(hostHeader: string): Response {
 if ("Deno" in globalThis) {
   const denoHost = host === "0.0.0.0" ? "::" : host;
   console.log(`Server running on http://${host === "0.0.0.0" ? "0.0.0.0" : denoHost}:${port}`);
-  (globalThis as unknown as { Deno: { serve: (options: { port: number; hostname: string }, handler: (req: Request) => Response) => void } }).Deno.serve(
+  globalThis.Deno.serve(
     { port, hostname: denoHost },
-    (req: Request) => respond(req.headers.get("host") || "localhost")
+    (req) => respond(req.headers.get("host") || "localhost")
   );
 } else {
-  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    const response = respond(req.headers.host || "localhost");
-    response.text().then((body) => {
-      res.writeHead(response.status, Object.fromEntries(response.headers));
+  const server = createServer((req, res) => {
+    respond(req.headers.host || "localhost").text().then((body) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       res.end(body);
     });
   });
