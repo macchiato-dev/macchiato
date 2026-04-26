@@ -1,4 +1,5 @@
-import { getQuickJS } from "quickjs-emscripten";
+import { newQuickJSWASMModuleFromVariant } from "quickjs-emscripten-core";
+import singlefileVariant from "@jitl/quickjs-singlefile-browser-release-sync";
 
 /**
  * @typedef {Object} SandboxResult
@@ -7,10 +8,20 @@ import { getQuickJS } from "quickjs-emscripten";
  * @property {string} [error] - Error message on failure
  */
 
+/** @type {import("quickjs-emscripten-core").QuickJSWASMModule | null} */
+let wasmModule = null;
+
+async function getModule() {
+  if (!wasmModule) {
+    wasmModule = await newQuickJSWASMModuleFromVariant(singlefileVariant);
+  }
+  return wasmModule;
+}
+
 export class Sandbox {
-  /** @type {import("quickjs-emscripten").QuickJSRuntime | null} */
+  /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
   runtime = null;
-  /** @type {import("quickjs-emscripten").QuickJSContext | null} */
+  /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
   context = null;
   /** @type {boolean} */
   disposed = false;
@@ -19,8 +30,8 @@ export class Sandbox {
     if (this.disposed) throw new Error("Sandbox has been disposed");
     if (this.runtime) return;
 
-    const QuickJS = await getQuickJS();
-    this.runtime = QuickJS.newRuntime();
+    const mod = await getModule();
+    this.runtime = mod.newRuntime();
     this.context = this.runtime.newContext();
   }
 

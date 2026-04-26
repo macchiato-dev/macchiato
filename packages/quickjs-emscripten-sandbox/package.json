@@ -12,7 +12,8 @@
     "macchiato-quickjs-emscripten-sandbox": "./src/server.js"
   },
   "dependencies": {
-    "quickjs-emscripten": "0.32.0"
+    "@jitl/quickjs-singlefile-browser-release-sync": "0.32.0",
+    "quickjs-emscripten-core": "0.32.0"
   },
   "files": [
     "src"

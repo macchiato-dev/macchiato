@@ -5,7 +5,7 @@ Sandboxed JavaScript execution via QuickJS.
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net=:8765 --allow-read src/server.js
+deno run --allow-net=:8765 src/server.js
 ```
 
 Then open `http://macchiato-quickjs-emscripten-sandbox.localhost:8765`.
@@ -13,7 +13,7 @@ Then open `http://macchiato-quickjs-emscripten-sandbox.localhost:8765`.
 To bind to all interfaces (containers):
 
 ```bash
-deno run --allow-net=[::]:8765 --allow-read src/server.js -b 0.0.0.0
+deno run --allow-net=[::]:8765 src/server.js -b 0.0.0.0
 ```
 
 ## API
