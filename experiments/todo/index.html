@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Todo — Guest DOM Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+    padding: 2rem 1rem;
+    color: #333;
+  }
+  .todoapp {
+    max-width: 550px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 25px 50px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  h1 {
+    text-align: center;
+    font-size: 4rem;
+    font-weight: 200;
+    color: rgba(175, 47, 47, 0.15);
+    margin: 0.5rem 0;
+    letter-spacing: -2px;
+  }
+  .header {
+    position: relative;
+    border-bottom: 1px solid #e6e6e6;
+  }
+  .toggle-all {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    opacity: 0;
+    z-index: 2;
+  }
+  .toggle-all + label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-size: 22px;
+    color: #949494;
+    cursor: pointer;
+    z-index: 1;
+    transition: color 0.2s;
+    user-select: none;
+  }
+  .toggle-all:checked + label,
+  .toggle-all + label:hover {
+    color: #484848;
+  }
+  .new-todo {
+    width: 100%;
+    padding: 16px 16px 16px 60px;
+    font-size: 24px;
+    font-weight: 300;
+    border: none;
+    outline: none;
+    background: rgba(0,0,0,0.003);
+    box-shadow: inset 0 -2px 1px rgba(0,0,0,0.03);
+    color: inherit;
+  }
+  .new-todo::placeholder {
+    font-style: italic;
+    font-weight: 300;
+    color: #d9d9d9;
+  }
+  .todo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .todo-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid #ededed;
+    font-size: 24px;
+    font-weight: 300;
+    transition: background 0.2s;
+  }
+  .todo-item:hover {
+    background: #fafafa;
+  }
+  .todo-item.dragging {
+    opacity: 0.5;
+    background: #f0f0f0;
+  }
+  .todo-item.over {
+    border-top: 2px solid #af2f2f;
+  }
+  .drag-handle {
+    width: 40px;
+    height: 100%;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #d9d9d9;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .todo-item:hover .drag-handle {
+    opacity: 1;
+  }
+  .drag-handle:hover {
+    color: #999;
+  }
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+  .todo-item .toggle {
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    appearance: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .todo-item .toggle:checked {
+    border-color: #5dc2af;
+  }
+  .todo-item .toggle:checked::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 6px;
+    width: 10px;
+    height: 18px;
+    border: solid #5dc2af;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .todo-item label {
+    flex: 1;
+    padding: 15px 15px 15px 5px;
+    word-break: break-all;
+    cursor: text;
+    transition: color 0.2s;
+  }
+  .todo-item.completed label {
+    text-decoration: line-through;
+    color: #d9d9d9;
+  }
+  .todo-item .edit {
+    display: none;
+    flex: 1;
+    padding: 14px 15px 14px 5px;
+    font-size: 24px;
+    font-weight: 300;
+    border: 1px solid #999;
+    box-shadow: inset 0 -1px 5px rgba(0,0,0,0.1);
+    outline: none;
+    color: inherit;
+    margin: 0;
+  }
+  .todo-item.editing .edit {
+    display: block;
+  }
+  .todo-item.editing label {
+    display: none;
+  }
+  .todo-item .destroy {
+    width: 40px;
+    height: 40px;
+    font-size: 30px;
+    color: #cc9a9a;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .todo-item:hover .destroy {
+    opacity: 1;
+  }
+  .destroy:hover {
+    color: #af5b5b;
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-top: 1px solid #e6e6e6;
+    color: #777;
+    font-size: 14px;
+  }
+  .todo-count strong {
+    font-weight: 600;
+    color: #333;
+  }
+  .filters {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .filters a {
+    color: inherit;
+    text-decoration: none;
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: border-color 0.2s;
+  }
+  .filters a:hover {
+    border-color: rgba(175, 47, 47, 0.1);
+  }
+  .filters a.selected {
+    border-color: rgba(175, 47, 47, 0.2);
+  }
+  .clear-completed {
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    transition: color 0.2s, text-decoration 0.2s;
+  }
+  .clear-completed:hover {
+    text-decoration: underline;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+// ===================== GUEST DOM SIMULATION =====================
+class GuestNode {
+  constructor() {
+    this.parentNode = null;
+    /** @type {GuestNode[]} */
+    this.children = [];
+  }
+  appendChild(child) {
+    if (child.parentNode) child.parentNode.removeChild(child);
+    child.parentNode = this;
+    this.children.push(child);
+    return child;
+  }
+  removeChild(child) {
+    const idx = this.children.indexOf(child);
+    if (idx !== -1) {
+      this.children.splice(idx, 1);
+      child.parentNode = null;
+    }
+    return child;
+  }
+  insertBefore(newNode, refNode) {
+    if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
+    const idx = refNode ? this.children.indexOf(refNode) : -1;
+    if (idx === -1) {
+      this.children.push(newNode);
+    } else {
+      this.children.splice(idx, 0, newNode);
+    }
+    newNode.parentNode = this;
+    return newNode;
+  }
+}
+
+class GuestElement extends GuestNode {
+  constructor(tagName) {
+    super();
+    this.tagName = tagName;
+    this.attributes = {};
+    this._classList = new Set();
+    this._style = {};
+    this._listeners = {};
+    this._textContent = '';
+  }
+  get id() { return this.attributes.id || ''; }
+  set id(v) { if (v) this.attributes.id = v; else delete this.attributes.id; }
+  get className() { return Array.from(this._classList).join(' '); }
+  set className(v) { this._classList = new Set(String(v).split(/\s+/).filter(Boolean)); }
+  get textContent() { return this._textContent; }
+  set textContent(v) {
+    this._textContent = String(v);
+    this.children = [];
+  }
+  get classList() {
+    const self = this;
+    return {
+      add(...c) { c.forEach(x => x && self._classList.add(x)); },
+      remove(...c) { c.forEach(x => self._classList.delete(x)); },
+      toggle(c) { self._classList.has(c) ? self._classList.delete(c) : self._classList.add(c); },
+      contains(c) { return self._classList.has(c); },
+    };
+  }
+  get style() {
+    const self = this;
+    return new Proxy(self._style, {
+      set(t, p, v) { t[p] = v; return true; }
+    });
+  }
+  setAttribute(n, v) { this.attributes[n] = String(v); }
+  getAttribute(n) { return this.attributes[n]; }
+  removeAttribute(n) { delete this.attributes[n]; }
+  addEventListener(event, handler) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(handler);
+  }
+  removeEventListener(event, handler) {
+    if (!this._listeners[event]) return;
+    this._listeners[event] = this._listeners[event].filter(h => h !== handler);
+  }
+}
+
+class GuestDocument {
+  constructor() {
+    this.body = this.createElement('body');
+  }
+  createElement(tagName) { return new GuestElement(tagName); }
+  createTextNode(text) {
+    const el = new GuestElement('__text__');
+    el.textContent = text;
+    return el;
+  }
+  getElementById(id) { return this._findId(this.body, id); }
+  _findId(node, id) {
+    if (node.attributes && node.attributes.id === id) return node;
+    for (const c of node.children) { const f = this._findId(c, id); if (f) return f; }
+    return null;
+  }
+}
+
+// ===================== HOST RENDERER =====================
+class HostRenderer {
+  constructor(realDoc) {
+    this.realDoc = realDoc;
+    this.map = new WeakMap();
+  }
+  render(guest) {
+    if (guest.tagName === '__text__') {
+      return this.realDoc.createTextNode(guest.textContent);
+    }
+    const real = this.realDoc.createElement(guest.tagName);
+    this.map.set(guest, real);
+    for (const [k, v] of Object.entries(guest.attributes)) real.setAttribute(k, v);
+    if (guest._classList.size) real.className = Array.from(guest._classList).join(' ');
+    for (const [k, v] of Object.entries(guest._style)) real.style[k] = v;
+    for (const [evt, handlers] of Object.entries(guest._listeners)) {
+      handlers.forEach(h => real.addEventListener(evt, e => {
+        const ge = {
+          target: { value: e.target.value, checked: e.target.checked, dataset: e.target.dataset },
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+          key: e.key,
+          dataTransfer: e.dataTransfer ? {
+            getData: t => e.dataTransfer.getData(t),
+            setData: (t, d) => e.dataTransfer.setData(t, d),
+            effectAllowed: e.dataTransfer.effectAllowed,
+          } : null,
+        };
+        h(ge);
+      }));
+    }
+    for (const c of guest.children) real.appendChild(this.render(c));
+    if (!guest.children.length && guest._textContent) real.textContent = guest._textContent;
+    return real;
+  }
+  sync(guestRoot, realParent) {
+    realParent.innerHTML = '';
+    realParent.appendChild(this.render(guestRoot));
+  }
+}
+
+// ===================== TODO APP =====================
+let state = {
+  todos: JSON.parse(localStorage.getItem('guest-todos') || '[]'),
+  filter: 'all',
+  editingId: null,
+};
+
+function save() {
+  localStorage.setItem('guest-todos', JSON.stringify(state.todos));
+}
+
+function setState(patch) {
+  state = { ...state, ...patch };
+  save();
+  render();
+}
+
+function nextId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
+const doc = new GuestDocument();
+const renderer = new HostRenderer(document);
+
+function buildApp() {
+  const filtered = state.todos.filter(t =>
+    state.filter === 'all' ? true :
+    state.filter === 'active' ? !t.completed :
+    t.completed
+  );
+  const activeCount = state.todos.filter(t => !t.completed).length;
+  const allCompleted = state.todos.length > 0 && activeCount === 0;
+
+  const app = doc.createElement('div');
+  app.className = 'todoapp';
+
+  const header = doc.createElement('header');
+  header.className = 'header';
+
+  const h1 = doc.createElement('h1');
+  h1.textContent = 'todos';
+  header.appendChild(h1);
+
+  const toggleAll = doc.createElement('input');
+  toggleAll.setAttribute('type', 'checkbox');
+  toggleAll.className = 'toggle-all';
+  toggleAll.id = 'toggle-all';
+  if (allCompleted) toggleAll.setAttribute('checked', 'checked');
+  toggleAll.addEventListener('change', () => {
+    const target = !allCompleted;
+    setState({ todos: state.todos.map(t => ({ ...t, completed: target })) });
+  });
+  header.appendChild(toggleAll);
+
+  const toggleLabel = doc.createElement('label');
+  toggleLabel.setAttribute('for', 'toggle-all');
+  toggleLabel.textContent = '❯';
+  header.appendChild(toggleLabel);
+
+  const input = doc.createElement('input');
+  input.className = 'new-todo';
+  input.setAttribute('placeholder', 'What needs to be done?');
+  input.setAttribute('autofocus', 'true');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const text = e.target.value.trim();
+      if (text) {
+        setState({ todos: [...state.todos, { id: nextId(), text, completed: false, order: state.todos.length }] });
+      }
+      e.target.value = '';
+    }
+  });
+  header.appendChild(input);
+  app.appendChild(header);
+
+  if (state.todos.length) {
+    const list = doc.createElement('ul');
+    list.className = 'todo-list';
+    list.id = 'todo-list';
+
+    filtered.forEach((todo, index) => {
+      const item = doc.createElement('li');
+      item.className = 'todo-item' + (todo.completed ? ' completed' : '') + (state.editingId === todo.id ? ' editing' : '');
+      item.setAttribute('draggable', 'true');
+      item.setAttribute('data-id', todo.id);
+      item.setAttribute('data-index', String(index));
+
+      const handle = doc.createElement('span');
+      handle.className = 'drag-handle';
+      handle.textContent = '⋮⋮';
+      handle.setAttribute('title', 'Drag to reorder');
+      item.appendChild(handle);
+
+      const toggle = doc.createElement('input');
+      toggle.className = 'toggle';
+      toggle.setAttribute('type', 'checkbox');
+      if (todo.completed) toggle.setAttribute('checked', 'checked');
+      toggle.addEventListener('change', () => {
+        setState({
+          todos: state.todos.map(t => t.id === todo.id ? { ...t, completed: !t.completed } : t)
+        });
+      });
+      item.appendChild(toggle);
+
+      const label = doc.createElement('label');
+      label.textContent = todo.text;
+      label.addEventListener('dblclick', () => setState({ editingId: todo.id }));
+      item.appendChild(label);
+
+      const edit = doc.createElement('input');
+      edit.className = 'edit';
+      edit.setAttribute('value', todo.text);
+      edit.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          const text = e.target.value.trim();
+          if (text) {
+            setState({
+              todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
+              editingId: null,
+            });
+          }
+        } else if (e.key === 'Escape') {
+          setState({ editingId: null });
+        }
+      });
+      edit.addEventListener('blur', e => {
+        const text = e.target.value.trim();
+        if (text) {
+          setState({
+            todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
+            editingId: null,
+          });
+        }
+      });
+      item.appendChild(edit);
+
+      const destroy = doc.createElement('button');
+      destroy.className = 'destroy';
+      destroy.textContent = '×';
+      destroy.addEventListener('click', () => {
+        setState({ todos: state.todos.filter(t => t.id !== todo.id) });
+      });
+      item.appendChild(destroy);
+
+      // Drag events
+      item.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', todo.id);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId === todo.id) return;
+        const fromIdx = state.todos.findIndex(t => t.id === draggedId);
+        const toIdx = state.todos.findIndex(t => t.id === todo.id);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const next = [...state.todos];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        setState({ todos: next });
+      });
+
+      list.appendChild(item);
+    });
+    app.appendChild(list);
+
+    const footer = doc.createElement('footer');
+    footer.className = 'footer';
+
+    const count = doc.createElement('span');
+    count.className = 'todo-count';
+    count.innerHTML = `<strong>${activeCount}</strong> item${activeCount !== 1 ? 's' : ''} left`;
+    footer.appendChild(count);
+
+    const filters = doc.createElement('ul');
+    filters.className = 'filters';
+    const filtersData = [
+      { label: 'All', val: 'all' },
+      { label: 'Active', val: 'active' },
+      { label: 'Completed', val: 'completed' },
+    ];
+    filtersData.forEach(f => {
+      const li = doc.createElement('li');
+      const a = doc.createElement('a');
+      a.textContent = f.label;
+      if (state.filter === f.val) a.className = 'selected';
+      a.addEventListener('click', () => setState({ filter: f.val }));
+      li.appendChild(a);
+      filters.appendChild(li);
+    });
+    footer.appendChild(filters);
+
+    const clearBtn = doc.createElement('button');
+    clearBtn.className = 'clear-completed';
+    clearBtn.textContent = 'Clear completed';
+    if (!state.todos.some(t => t.completed)) clearBtn.className += ' hidden';
+    clearBtn.addEventListener('click', () => {
+      setState({ todos: state.todos.filter(t => !t.completed) });
+    });
+    footer.appendChild(clearBtn);
+
+    app.appendChild(footer);
+  }
+
+  return app;
+}
+
+function render() {
+  const guestRoot = buildApp();
+  const realApp = document.getElementById('app');
+  renderer.sync(guestRoot, realApp);
+  if (state.editingId) {
+    const input = realApp.querySelector('.todo-item.editing .edit');
+    if (input) {
+      input.focus();
+      input.selectionStart = input.selectionEnd = input.value.length;
+    }
+  }
+}
+
+render();
+</script>
+</body>
+</html>
