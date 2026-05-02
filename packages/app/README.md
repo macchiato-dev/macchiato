@@ -1,37 +1,30 @@
 # @macchiato-dev/app
 
-Cross-runtime HTTP server. Serves a page per subdomain.
+Cross-runtime HTTP server. Serves a page per subdomain with SQLite-backed site routing.
 
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net=:8765 src/index.js
+deno run --allow-net=:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js
 ```
 
 Then open `http://example.localhost:8765`.
 
-You should see `<h1>example</h1>`.
-
 ### Minimal permissions
 
-Deno requires only network access to the chosen port:
-
 ```bash
-deno run --allow-net=:8765 src/index.js
+deno run --allow-net=:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js
 ```
 
-To bind to all interfaces (dual-stack, needed for containers):
+To bind to all interfaces (containers):
 
 ```bash
-deno run --allow-net=[::]:8765 src/index.js -b 0.0.0.0
+deno run --allow-net=[::]:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js -b 0.0.0.0
 ```
 
 ## Node.js
 
-Requires Node 22+ with `--experimental-strip-types` or a build step.
-
 ```bash
-# Run directly
 node src/index.js
 ```
 
@@ -47,6 +40,20 @@ bun run src/index.js
 |------|-------------|
 | `-b`, `--host` | Bind address (default: `127.0.0.1`) |
 | `-p`, `--port` | Port (default: `8765`) |
+| `-d`, `--db` | SQLite database path (default: `macchiato.sqlite3`) |
+
+## Site routing
+
+Subdomains are looked up in the `sites` table. If a row matches, `index.html` is served from the mapped directory.
+
+```sql
+CREATE TABLE sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL);
+INSERT INTO sites VALUES ('todo', './experiments/todo');
+```
+
+Unmatched subdomains fall back to `<h1>subdomain</h1>`.
+
+The database uses SQLite in WAL mode.
 
 ## Publishing
 

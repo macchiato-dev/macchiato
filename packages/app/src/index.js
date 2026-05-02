@@ -1,15 +1,37 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
   : process.argv.slice(2);
 
-/**
- * @param {string} str
- * @returns {string}
- */
+let host = "127.0.0.1";
+let port = 8765;
+let dbPath = "macchiato.sqlite3";
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--host" || arg === "-H" || arg === "-b") {
+    host = args[++i] ?? host;
+  } else if (arg === "--port" || arg === "-p") {
+    port = parseInt(args[++i] ?? String(port), 10);
+  } else if (arg === "--db" || arg === "-d") {
+    dbPath = args[++i] ?? dbPath;
+  } else if (arg === "--help" || arg === "-h") {
+    console.log("Usage: macchiato-app [-b|--host <host>] [--port <port>] [--db <path>]");
+    process.exit(0);
+  }
+}
+
+const db = new DatabaseSync(dbPath);
+db.exec("PRAGMA journal_mode = WAL");
+db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL)");
+
+const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, "&amp;")
@@ -19,34 +41,23 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-/**
- * @param {string} host
- * @returns {string}
- */
-function getSubdomain(host) {
-  const name = host.split(":")[0];
+function getSubdomain(hostHeader) {
+  const name = hostHeader.split(":")[0];
   return name.split(".")[0] || "default";
 }
 
-let host = "127.0.0.1";
-let port = 8765;
-
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === "--host" || arg === "-H" || arg === "-b") {
-    host = args[++i] ?? host;
-  } else if (arg === "--port" || arg === "-p") {
-    port = parseInt(args[++i] ?? String(port), 10);
-  } else if (arg === "--help" || arg === "-h") {
-    console.log("Usage: macchiato-app [-b|--host <host>] [--port <port>]");
-    process.exit(0);
+async function serveIndex(directory) {
+  const filePath = directory.endsWith("/") ? directory + "index.html" : directory + "/index.html";
+  try {
+    const content = await readFile(filePath);
+    return new Response(content, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
   }
 }
 
-/**
- * @param {Request} request
- * @returns {Promise<Response>}
- */
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
@@ -55,9 +66,14 @@ async function route(request) {
     return sandboxHandler(request);
   }
 
+  const row = getSite.get(subdomain);
+  if (row) {
+    return serveIndex(row.directory);
+  }
+
   return new Response(
     `<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`,
-    { headers: { "content-type": "text/html; charset=utf-8" } }
+    { headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }
 
@@ -66,7 +82,7 @@ if ("Deno" in globalThis) {
   console.log(`Server running on http://${host === "0.0.0.0" ? "0.0.0.0" : denoHost}:${port}`);
   globalThis.Deno.serve(
     { port, hostname: denoHost },
-    (req) => route(req)
+    (req) => route(req),
   );
 } else {
   const server = createServer(async (req, res) => {
