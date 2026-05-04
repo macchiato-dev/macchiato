@@ -6,6 +6,14 @@ No default data directory is provided. You must specify one explicitly.
 
 ## Quick start (Deno)
 
+Create the data directory first:
+
+```bash
+mkdir -p ~/macchiato-dev-data
+```
+
+Then run the server:
+
 ```bash
 deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js --data-dir $HOME/macchiato-dev-data
 ```
@@ -15,6 +23,7 @@ Then open `http://example.localhost:8765`.
 ### Bind to all interfaces (containers)
 
 ```bash
+mkdir -p ~/macchiato-dev-data
 deno run --allow-net=[::]:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js -b 0.0.0.0 --data-dir $HOME/macchiato-dev-data
 ```
 
@@ -37,6 +46,7 @@ db.close();
 Use a `testdata/` directory for ephemeral test databases. It is gitignored by convention:
 
 ```bash
+mkdir -p testdata
 deno run --allow-net=:8765 --allow-read=testdata,../../experiments/todo --allow-write=testdata src/index.js --data-dir testdata
 ```
 
