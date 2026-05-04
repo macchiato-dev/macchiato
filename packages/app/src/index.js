@@ -12,7 +12,8 @@ const args = "Deno" in globalThis
 
 let host = "127.0.0.1";
 let port = 8765;
-let dbPath = "data/macchiato.sqlite3";
+let dbPath = "";
+let dataDir = "";
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -21,11 +22,24 @@ for (let i = 0; i < args.length; i++) {
   } else if (arg === "--port" || arg === "-p") {
     port = parseInt(args[++i] ?? String(port), 10);
   } else if (arg === "--db" || arg === "-d") {
-    dbPath = args[++i] ?? dbPath;
+    dbPath = args[++i] ?? "";
+  } else if (arg === "--data-dir") {
+    dataDir = args[++i] ?? "";
   } else if (arg === "--help" || arg === "-h") {
-    console.log("Usage: macchiato-app [-b|--host <host>] [--port <port>] [--db <path>]");
+    console.log("Usage: macchiato-app --data-dir <dir> [--host <host>] [--port <port>]");
+    console.log("       macchiato-app --db <path> [--host <host>] [--port <port>]");
     process.exit(0);
   }
+}
+
+if (dbPath) {
+  // exact path specified
+} else if (dataDir) {
+  dbPath = dataDir.endsWith("/") ? dataDir + "macchiato.sqlite3" : dataDir + "/macchiato.sqlite3";
+} else {
+  console.error("Error: --data-dir <dir> or --db <path> is required");
+  console.error("Example: macchiato-app --data-dir ~/macchiato-dev-data");
+  process.exit(1);
 }
 
 mkdirSync(dirname(dbPath), { recursive: true });

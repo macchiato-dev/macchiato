@@ -2,38 +2,31 @@
 
 Cross-runtime HTTP server. Serves a page per subdomain with SQLite-backed site routing.
 
+No default data directory is provided. You must specify one explicitly.
+
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net=:8765 --allow-read=data,../../experiments/todo --allow-write=data src/index.js
+deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js --data-dir $HOME/macchiato-dev-data
 ```
 
 Then open `http://example.localhost:8765`.
 
-### Minimal permissions
-
-The `data/` directory holds the SQLite database and its WAL files:
+### Bind to all interfaces (containers)
 
 ```bash
-deno run --allow-net=:8765 --allow-read=data,../../experiments/todo --allow-write=data src/index.js
-```
-
-To bind to all interfaces (containers):
-
-```bash
-deno run --allow-net=[::]:8765 --allow-read=data,../../experiments/todo --allow-write=data src/index.js -b 0.0.0.0
+deno run --allow-net=[::]:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js -b 0.0.0.0 --data-dir $HOME/macchiato-dev-data
 ```
 
 ## Manage sites (Deno REPL)
 
 ```bash
-cd packages/app
-deno repl --allow-read=data --allow-write=data
+deno repl --allow-read=$HOME/macchiato-dev-data --allow-write=$HOME/macchiato-dev-data
 ```
 
 ```javascript
 import { DatabaseSync } from "node:sqlite";
-const db = new DatabaseSync("data/macchiato.sqlite3");
+const db = new DatabaseSync("/root/macchiato-dev-data/macchiato.sqlite3");
 const stmt = db.prepare("INSERT INTO sites VALUES (?, ?)");
 stmt.run("todo", "../../experiments/todo");
 db.close();
@@ -41,31 +34,38 @@ db.close();
 
 ## Test database
 
-Use a separate database for testing:
+Use a separate data directory for testing:
 
 ```bash
-deno run --allow-net=:8765 --allow-read=data,../../experiments/todo --allow-write=data src/index.js --db data/test.sqlite3
+deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data/test,../../experiments/todo --allow-write=$HOME/macchiato-dev-data/test src/index.js --data-dir $HOME/macchiato-dev-data/test
+```
+
+Or point directly to a specific SQLite file:
+
+```bash
+deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data/test.sqlite3,../../experiments/todo --allow-write=$HOME/macchiato-dev-data/test.sqlite3 src/index.js --db $HOME/macchiato-dev-data/test.sqlite3
 ```
 
 ## Node.js
 
 ```bash
-node src/index.js
+node src/index.js --data-dir ~/macchiato-dev-data
 ```
 
 ## Bun
 
 ```bash
-bun run src/index.js
+bun run src/index.js --data-dir ~/macchiato-dev-data
 ```
 
 ## Options
 
 | Flag | Description |
 |------|-------------|
+| `--data-dir` | Base directory for the SQLite database (required unless `--db` is used) |
+| `--db` | Exact SQLite database path (required unless `--data-dir` is used) |
 | `-b`, `--host` | Bind address (default: `127.0.0.1`) |
 | `-p`, `--port` | Port (default: `8765`) |
-| `-d`, `--db` | SQLite database path (default: `data/macchiato.sqlite3`) |
 
 ## Site routing
 
@@ -78,7 +78,11 @@ INSERT INTO sites VALUES ('todo', './experiments/todo');
 
 Unmatched subdomains fall back to `<h1>subdomain</h1>`.
 
-The database uses SQLite in WAL mode. The `-wal` and `-shm` files live in the same directory and are managed automatically.
+The database uses SQLite in WAL mode. The `-wal` and `-shm` files live next to the database file and are managed automatically.
+
+## Prior art
+
+Prometheus uses `--storage.tsdb.path` to explicitly specify where its time-series database lives. Bitcoin Core uses `-datadir`. Following the same pattern, this server requires `--data-dir` or `--db` so the operator always knows where data is stored.
 
 ## Publishing
 
@@ -89,5 +93,5 @@ npm publish --access public
 After publishing, use via `npx`:
 
 ```bash
-npx @macchiato-dev/app -b 0.0.0.0
+npx @macchiato-dev/app --data-dir ~/macchiato-dev-data
 ```
