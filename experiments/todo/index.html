@@ -49,7 +49,7 @@
   .new-todo::placeholder {
     font-style: italic;
     font-weight: 300;
-    color: #777788;
+    color: #555566;
   }
   .add-btn {
     position: absolute;
@@ -135,7 +135,7 @@
     transition: border-color 0.2s;
   }
   .todo-item .toggle:checked {
-    border-color: #9b7ed8;
+    border-color: #5a7a5a;
   }
   .todo-item .toggle:checked::after {
     content: '';
@@ -144,7 +144,7 @@
     top: 50%;
     width: 10px;
     height: 18px;
-    border: solid #9b7ed8;
+    border: solid #5a7a5a;
     border-width: 0 2px 2px 0;
     transform: translate(-50%, -60%) rotate(45deg);
   }
@@ -228,6 +228,8 @@
     border: 1px solid transparent;
     border-radius: 3px;
     transition: border-color 0.2s;
+    cursor: pointer;
+    user-select: none;
   }
   .filters a:hover {
     border-color: rgba(155, 126, 216, 0.2);
