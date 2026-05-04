@@ -8,16 +8,16 @@
   *, *::before, *::after { box-sizing: border-box; }
   body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f5f5f5;
+    background: #4a306d;
     margin: 0;
     padding: 2rem 1rem;
-    color: #333;
+    color: #e0e0e0;
   }
   .todoapp {
     max-width: 550px;
     margin: 0 auto;
-    background: #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 25px 50px rgba(0,0,0,0.05);
+    background: #1e1e24;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 25px 50px rgba(0,0,0,0.2);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -25,56 +25,52 @@
     text-align: center;
     font-size: 4rem;
     font-weight: 200;
-    color: rgba(175, 47, 47, 0.15);
+    color: rgba(255, 255, 255, 0.06);
     margin: 0.5rem 0;
     letter-spacing: -2px;
   }
   .header {
     position: relative;
-    border-bottom: 1px solid #e6e6e6;
-  }
-  .toggle-all {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    opacity: 0;
-    z-index: 2;
-  }
-  .toggle-all + label {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%) rotate(90deg);
-    font-size: 22px;
-    color: #949494;
-    cursor: pointer;
-    z-index: 1;
-    transition: color 0.2s;
-    user-select: none;
-  }
-  .toggle-all:checked + label,
-  .toggle-all + label:hover {
-    color: #484848;
+    border-bottom: 1px solid #333340;
   }
   .new-todo {
     width: 100%;
-    padding: 16px 16px 16px 60px;
+    padding: 16px 70px 16px 16px;
     font-size: 24px;
     font-weight: 300;
     border: none;
     outline: none;
-    background: rgba(0,0,0,0.003);
-    box-shadow: inset 0 -2px 1px rgba(0,0,0,0.03);
-    color: inherit;
+    background: #1e1e24;
+    box-shadow: inset 0 -2px 1px rgba(0,0,0,0.2);
+    color: #e0e0e0;
   }
   .new-todo::placeholder {
     font-style: italic;
     font-weight: 300;
-    color: #d9d9d9;
+    color: #777788;
+  }
+  .add-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #7c5cc7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, background 0.2s;
+  }
+  .add-btn:hover {
+    background: #8d6dd8;
+  }
+  .new-todo:not(:placeholder-shown) + .add-btn {
+    opacity: 1;
+    pointer-events: auto;
   }
   .todo-list {
     list-style: none;
@@ -86,20 +82,21 @@
     display: flex;
     align-items: center;
     padding: 0;
-    border-bottom: 1px solid #ededed;
+    border-bottom: 1px solid #333340;
     font-size: 24px;
     font-weight: 300;
     transition: background 0.2s;
+    background: #1e1e24;
   }
   .todo-item:hover {
-    background: #fafafa;
+    background: #2a2a38;
   }
   .todo-item.dragging {
     opacity: 0.5;
-    background: #f0f0f0;
+    background: #2a2a38;
   }
   .todo-item.over {
-    border-top: 2px solid #af2f2f;
+    border-top: 2px solid #9b7ed8;
   }
   .drag-handle {
     width: 40px;
@@ -109,7 +106,7 @@
     align-items: center;
     justify-content: center;
     cursor: grab;
-    color: #d9d9d9;
+    color: #4a4a5a;
     opacity: 0;
     transition: opacity 0.2s, color 0.2s;
     flex-shrink: 0;
@@ -118,7 +115,7 @@
     opacity: 1;
   }
   .drag-handle:hover {
-    color: #999;
+    color: #777788;
   }
   .drag-handle:active {
     cursor: grabbing;
@@ -126,28 +123,28 @@
   .todo-item .toggle {
     width: 40px;
     height: 40px;
-    margin: 0;
+    margin: 0 6px 0 0;
     cursor: pointer;
     flex-shrink: 0;
     appearance: none;
-    border: 1px solid #ddd;
+    border: 1px solid #4a4a5a;
     border-radius: 50%;
     position: relative;
     transition: border-color 0.2s;
   }
   .todo-item .toggle:checked {
-    border-color: #5dc2af;
+    border-color: #9b7ed8;
   }
   .todo-item .toggle:checked::after {
     content: '';
     position: absolute;
-    left: 12px;
-    top: 6px;
+    left: 50%;
+    top: 50%;
     width: 10px;
     height: 18px;
-    border: solid #5dc2af;
+    border: solid #9b7ed8;
     border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    transform: translate(-50%, -60%) rotate(45deg);
   }
   .todo-item label {
     flex: 1;
@@ -155,10 +152,11 @@
     word-break: break-all;
     cursor: text;
     transition: color 0.2s;
+    color: #e0e0e0;
   }
   .todo-item.completed label {
     text-decoration: line-through;
-    color: #d9d9d9;
+    color: #555566;
   }
   .todo-item .edit {
     display: none;
@@ -166,10 +164,11 @@
     padding: 14px 15px 14px 5px;
     font-size: 24px;
     font-weight: 300;
-    border: 1px solid #999;
-    box-shadow: inset 0 -1px 5px rgba(0,0,0,0.1);
+    border: 1px solid #4a4a5a;
+    box-shadow: inset 0 -1px 5px rgba(0,0,0,0.3);
     outline: none;
-    color: inherit;
+    color: #e0e0e0;
+    background: #1e1e24;
     margin: 0;
   }
   .todo-item.editing .edit {
@@ -182,7 +181,7 @@
     width: 40px;
     height: 40px;
     font-size: 30px;
-    color: #cc9a9a;
+    color: #888899;
     background: none;
     border: none;
     cursor: pointer;
@@ -198,20 +197,20 @@
     opacity: 1;
   }
   .destroy:hover {
-    color: #af5b5b;
+    color: #e57373;
   }
   .footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 15px;
-    border-top: 1px solid #e6e6e6;
-    color: #777;
+    border-top: 1px solid #333340;
+    color: #888899;
     font-size: 14px;
   }
   .todo-count strong {
     font-weight: 600;
-    color: #333;
+    color: #e0e0e0;
   }
   .filters {
     display: flex;
@@ -229,10 +228,10 @@
     transition: border-color 0.2s;
   }
   .filters a:hover {
-    border-color: rgba(175, 47, 47, 0.1);
+    border-color: rgba(155, 126, 216, 0.2);
   }
   .filters a.selected {
-    border-color: rgba(175, 47, 47, 0.2);
+    border-color: rgba(155, 126, 216, 0.4);
   }
   .clear-completed {
     color: inherit;
@@ -416,6 +415,12 @@ function nextId() {
 const doc = new GuestDocument();
 const renderer = new HostRenderer(document);
 
+function addTodo(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  setState({ todos: [...state.todos, { id: nextId(), text: trimmed, completed: false, order: state.todos.length }] });
+}
+
 function buildApp() {
   const filtered = state.todos.filter(t =>
     state.filter === 'all' ? true :
@@ -423,7 +428,6 @@ function buildApp() {
     t.completed
   );
   const activeCount = state.todos.filter(t => !t.completed).length;
-  const allCompleted = state.todos.length > 0 && activeCount === 0;
 
   const app = doc.createElement('div');
   app.className = 'todoapp';
@@ -435,36 +439,30 @@ function buildApp() {
   h1.textContent = 'todos';
   header.appendChild(h1);
 
-  const toggleAll = doc.createElement('input');
-  toggleAll.setAttribute('type', 'checkbox');
-  toggleAll.className = 'toggle-all';
-  toggleAll.id = 'toggle-all';
-  if (allCompleted) toggleAll.setAttribute('checked', 'checked');
-  toggleAll.addEventListener('change', () => {
-    const target = !allCompleted;
-    setState({ todos: state.todos.map(t => ({ ...t, completed: target })) });
-  });
-  header.appendChild(toggleAll);
-
-  const toggleLabel = doc.createElement('label');
-  toggleLabel.setAttribute('for', 'toggle-all');
-  toggleLabel.textContent = '❯';
-  header.appendChild(toggleLabel);
-
   const input = doc.createElement('input');
   input.className = 'new-todo';
   input.setAttribute('placeholder', 'What needs to be done?');
   input.setAttribute('autofocus', 'true');
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
-      const text = e.target.value.trim();
-      if (text) {
-        setState({ todos: [...state.todos, { id: nextId(), text, completed: false, order: state.todos.length }] });
-      }
+      addTodo(e.target.value);
       e.target.value = '';
     }
   });
   header.appendChild(input);
+
+  const addBtn = doc.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.textContent = 'Add';
+  addBtn.addEventListener('click', () => {
+    const realInput = document.querySelector('.new-todo');
+    if (realInput) {
+      addTodo(realInput.value);
+      realInput.value = '';
+    }
+  });
+  header.appendChild(addBtn);
+
   app.appendChild(header);
 
   if (state.todos.length) {
