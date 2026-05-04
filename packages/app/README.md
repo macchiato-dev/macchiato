@@ -5,21 +5,38 @@ Cross-runtime HTTP server. Serves a page per subdomain with SQLite-backed site r
 ## Quick start (Deno)
 
 ```bash
-deno run --allow-net=:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js
+deno run --allow-net=:8765 --allow-read=. --allow-write=. src/index.js
 ```
 
 Then open `http://example.localhost:8765`.
 
 ### Minimal permissions
 
+Directory-level permissions cover the database and any WAL files SQLite creates alongside it:
+
 ```bash
-deno run --allow-net=:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js
+deno run --allow-net=:8765 --allow-read=. --allow-write=. src/index.js
 ```
 
 To bind to all interfaces (containers):
 
 ```bash
-deno run --allow-net=[::]:8765 --allow-read=macchiato.sqlite3,./sites --allow-write=macchiato.sqlite3 src/index.js -b 0.0.0.0
+deno run --allow-net=[::]:8765 --allow-read=. --allow-write=. src/index.js -b 0.0.0.0
+```
+
+## Manage sites (Deno REPL)
+
+```bash
+cd packages/app
+deno repl --allow-read=. --allow-write=.
+```
+
+```javascript
+import { DatabaseSync } from "node:sqlite";
+const db = new DatabaseSync("macchiato.sqlite3");
+const stmt = db.prepare("INSERT INTO sites VALUES (?, ?)");
+stmt.run("todo", "../../experiments/todo");
+db.close();
 ```
 
 ## Node.js
@@ -53,7 +70,7 @@ INSERT INTO sites VALUES ('todo', './experiments/todo');
 
 Unmatched subdomains fall back to `<h1>subdomain</h1>`.
 
-The database uses SQLite in WAL mode.
+The database uses SQLite in WAL mode. The `-wal` and `-shm` files live next to the main database file and are managed automatically.
 
 ## Publishing
 
