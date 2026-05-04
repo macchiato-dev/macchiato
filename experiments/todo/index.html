@@ -30,8 +30,10 @@
     letter-spacing: -2px;
   }
   .header {
-    position: relative;
     border-bottom: 1px solid #333340;
+  }
+  .input-wrap {
+    position: relative;
   }
   .new-todo {
     width: 100%;
@@ -439,6 +441,9 @@ function buildApp() {
   h1.textContent = 'todos';
   header.appendChild(h1);
 
+  const inputWrap = doc.createElement('div');
+  inputWrap.className = 'input-wrap';
+
   const input = doc.createElement('input');
   input.className = 'new-todo';
   input.setAttribute('placeholder', 'What needs to be done?');
@@ -449,7 +454,7 @@ function buildApp() {
       e.target.value = '';
     }
   });
-  header.appendChild(input);
+  inputWrap.appendChild(input);
 
   const addBtn = doc.createElement('button');
   addBtn.className = 'add-btn';
@@ -461,7 +466,9 @@ function buildApp() {
       realInput.value = '';
     }
   });
-  header.appendChild(addBtn);
+  inputWrap.appendChild(addBtn);
+
+  header.appendChild(inputWrap);
 
   app.appendChild(header);
 
