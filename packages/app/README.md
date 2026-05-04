@@ -34,10 +34,10 @@ db.close();
 
 ## Test database
 
-Use a separate data directory for testing:
+Use a `testdata/` directory for ephemeral test databases. It is gitignored by convention:
 
 ```bash
-deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data/test,../../experiments/todo --allow-write=$HOME/macchiato-dev-data/test src/index.js --data-dir $HOME/macchiato-dev-data/test
+deno run --allow-net=:8765 --allow-read=testdata,../../experiments/todo --allow-write=testdata src/index.js --data-dir testdata
 ```
 
 Or point directly to a specific SQLite file:
