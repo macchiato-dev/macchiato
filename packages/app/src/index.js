@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 
@@ -10,7 +12,7 @@ const args = "Deno" in globalThis
 
 let host = "127.0.0.1";
 let port = 8765;
-let dbPath = "macchiato.sqlite3";
+let dbPath = "data/macchiato.sqlite3";
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -25,6 +27,8 @@ for (let i = 0; i < args.length; i++) {
     process.exit(0);
   }
 }
+
+mkdirSync(dirname(dbPath), { recursive: true });
 
 const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode = WAL");
