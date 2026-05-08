@@ -1,6 +1,6 @@
 # macchiato
 
-A monorepo.
+A self-hosted app platform.
 
 ## Dependency Policy
 
@@ -12,3 +12,64 @@ expose its transitive dependency tree over the network.
 
 This policy is pragmatic, not dogmatic — exceptions may exist where
 strict exact-version pinning would create unnecessary friction.
+
+## Running with Deno
+
+`deno install` grants permissions — it cannot preset environment variables.
+Use CLI flags or the SQLite database for runtime configuration.
+
+### Install the server directly (tightest permissions)
+
+Best for running just the HTTP server without the interactive shell:
+
+```bash
+deno install \
+  --allow-net=[::]:3030 \
+  --allow-read=$HOME/.macchiato/default \
+  --allow-write=$HOME/.macchiato/default \
+  --allow-env=HOME,USERPROFILE \
+  -n macchiato-app \
+  ./packages/app/src/index.js
+```
+
+Then run it on port 3030:
+
+```bash
+macchiato-app --port 3030
+```
+
+### Install the full CLI (includes interactive shell)
+
+The `macchiato` CLI can start and stop the server from an interactive shell.
+In Deno this requires `--allow-run` to spawn the server process:
+
+```bash
+deno install \
+  --allow-net=[::]:3030 \
+  --allow-read=$HOME/.macchiato/default \
+  --allow-write=$HOME/.macchiato/default \
+  --allow-env=HOME,USERPROFILE \
+  --allow-run=deno \
+  -n macchiato \
+  ./packages/macchiato/src/index.js
+```
+
+Then:
+
+```bash
+macchiato                          # enter interactive shell
+macchiato> server start --port 3030
+macchiato> site add todo ../../experiments/todo
+```
+
+### Permission notes
+
+| Flag | What it allows |
+|------|---------------|
+| `--allow-net=[::]:3030` | Bind the server to port 3030 on all interfaces (IPv6 dual-stack) |
+| `--allow-read=$HOME/.macchiato/default` | Read the SQLite database |
+| `--allow-write=$HOME/.macchiato/default` | Write the SQLite database (WAL creates `-wal` and `-shm` siblings) |
+| `--allow-env=HOME,USERPROFILE` | Resolve the `~/.macchiato/default` data directory |
+| `--allow-run=deno` | *(CLI only)* Spawn the server as a subprocess |
+
+If you only need localhost (not `0.0.0.0`), replace `[::]:3030` with `127.0.0.1:3030`.
