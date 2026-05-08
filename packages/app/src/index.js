@@ -5,6 +5,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
+import { dashboardHandler } from "@macchiato-dev/dashboard";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -101,6 +102,10 @@ async function serveIndex(directory) {
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
+
+  if (subdomain === "macchiato") {
+    return dashboardHandler(request);
+  }
 
   if (subdomain === "macchiato-quickjs-emscripten-sandbox") {
     return sandboxHandler(request);

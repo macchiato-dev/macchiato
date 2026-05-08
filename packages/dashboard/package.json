@@ -1,0 +1,8 @@
+{
+  "name": "@macchiato-dev/dashboard",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/handler.js"
+  }
+}
