@@ -1,7 +1,7 @@
 import { createCommands } from "./commands.js";
 
 export async function startShell() {
-  console.log("Macchiato 0.1.0 — Local development server shell.");
+  console.log("Macchiato 0.1.0 — A guest-host web sandbox.");
   console.log("Type 'help' for commands.\n");
   const commands = createCommands({ blocking: false });
 
