@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 
@@ -24,20 +26,44 @@ for (let i = 0; i < args.length; i++) {
   } else if (arg === "--data-dir") {
     dataDir = args[++i] ?? "";
   } else if (arg === "--help" || arg === "-h") {
-    console.log("Usage: macchiato-app --data-dir <dir> [--host <host>] [--port <port>]");
+    console.log("Usage: macchiato-app [--data-dir <dir>] [--host <host>] [--port <port>]");
     console.log("       macchiato-app --db <path> [--host <host>] [--port <port>]");
     process.exit(0);
   }
 }
 
+function getHomeDir() {
+  if ("Deno" in globalThis) {
+    return globalThis.Deno.env.get("HOME") || globalThis.Deno.env.get("USERPROFILE") || "";
+  }
+  return process.env.HOME || process.env.USERPROFILE || "";
+}
+
 if (dbPath) {
-  // exact path specified
+  // exact path specified — user manages parent directory
 } else if (dataDir) {
-  dbPath = dataDir.endsWith("/") ? dataDir + "macchiato.sqlite3" : dataDir + "/macchiato.sqlite3";
+  dbPath = join(dataDir, "macchiato.sqlite3");
 } else {
-  console.error("Error: --data-dir <dir> or --db <path> is required");
-  console.error("Example: macchiato-app --data-dir ~/macchiato-dev-data");
-  process.exit(1);
+  const home = getHomeDir();
+  if (!home) {
+    console.error("Error: could not determine home directory. Set HOME or use --data-dir <dir>");
+    process.exit(1);
+  }
+  dataDir = join(home, ".macchiato", "default");
+  dbPath = join(dataDir, "macchiato.sqlite3");
+}
+
+if (dataDir) {
+  try {
+    mkdirSync(dataDir, { recursive: true });
+  } catch (err) {
+    console.error(`Error: cannot create data directory ${dataDir}`);
+    console.error(`  ${err.message}`);
+    console.error("Create it manually:");
+    console.error(`  mkdir -p ${dataDir}`);
+    console.error("Or specify a different location with --data-dir <dir>");
+    process.exit(1);
+  }
 }
 
 const db = new DatabaseSync(dbPath);
