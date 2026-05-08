@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "macchiato": "./src/index.js"
+    "macchiato": "./src/macchiato.js"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/macchiato.js"
   },
   "dependencies": {
     "@macchiato-dev/app": "*"

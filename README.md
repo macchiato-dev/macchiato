@@ -28,7 +28,6 @@ deno install \
   --allow-read=$HOME/.macchiato/default \
   --allow-write=$HOME/.macchiato/default \
   --allow-env=HOME,USERPROFILE \
-  -n macchiato-app \
   ./packages/app/src/index.js
 ```
 
@@ -50,8 +49,7 @@ deno install \
   --allow-write=$HOME/.macchiato/default \
   --allow-env=HOME,USERPROFILE \
   --allow-run=deno \
-  -n macchiato \
-  ./packages/macchiato/src/index.js
+  ./packages/macchiato/src/macchiato.js
 ```
 
 Then:
