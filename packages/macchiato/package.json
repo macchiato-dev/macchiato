@@ -1,0 +1,14 @@
+{
+  "name": "@macchiato-dev/macchiato",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "macchiato": "./src/index.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/app": "*"
+  }
+}
