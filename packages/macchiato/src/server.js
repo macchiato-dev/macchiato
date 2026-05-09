@@ -1,8 +1,8 @@
 let serverProc = null;
 
-async function resolveAppPath() {
-  const resolved = import.meta.resolve("@macchiato-dev/app/src/index.js");
-  return resolved.startsWith("file://") ? resolved.slice(7) : resolved;
+function resolveAppPath() {
+  const url = new URL("../../app/src/index.js", import.meta.url);
+  return url.pathname;
 }
 
 export function isRunning() {
@@ -15,7 +15,7 @@ export async function startServer(opts = {}) {
     return;
   }
 
-  const appPath = await resolveAppPath();
+  const appPath = resolveAppPath();
   const args = [appPath];
   if (opts.port) args.push("--port", String(opts.port));
   if (opts.host) args.push("--host", opts.host);

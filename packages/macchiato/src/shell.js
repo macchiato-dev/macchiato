@@ -1,13 +1,21 @@
 import { createCommands } from "./commands.js";
 
+import { stopServer } from "./server.js";
+
+function cleanup() {
+  stopServer();
+}
+
 export async function startShell() {
   console.log("Macchiato 0.1.0 — A self-hosted app platform.");
   console.log("Type 'help' for commands.\n");
   const commands = createCommands({ blocking: false });
 
   if ("Deno" in globalThis) {
+    Deno.addSignalListener("SIGINT", () => { cleanup(); Deno.exit(0); });
     await denoShell(commands);
   } else {
+    process.on("SIGINT", () => { cleanup(); process.exit(0); });
     await nodeShell(commands);
   }
 }

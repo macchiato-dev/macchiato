@@ -29,9 +29,9 @@ export function createCommands({ blocking = false } = {}) {
       console.log("  site remove <subdomain>       Remove a site");
     },
 
-    exit() { exit(0); },
-    quit() { exit(0); },
-    q() { exit(0); },
+    exit() { stopServer(); exit(0); },
+    quit() { stopServer(); exit(0); },
+    q() { stopServer(); exit(0); },
 
     async "server start"(args) {
       const opts = parseServerOpts(args);
