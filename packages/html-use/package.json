@@ -1,13 +1,12 @@
 {
   "name": "@macchiato-dev/html-use",
   "version": "0.1.0",
-  "description": "Sandboxed innerHTML / outerHTML backend — parse, generate, hydrate",
+  "description": "HTML parser, serializer, and sanitizer — used by dom-use",
   "type": "module",
   "exports": {
     ".": "./src/index.js"
   },
   "dependencies": {
-    "@macchiato-dev/dom-use": "0.1.0",
     "@macchiato-dev/style-use": "0.1.0"
   }
 }
