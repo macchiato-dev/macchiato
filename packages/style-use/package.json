@@ -1,0 +1,10 @@
+{
+  "name": "@macchiato-dev/style-use",
+  "version": "0.1.0",
+  "description": "Govern permitted CSS styles — inline and stylesheet",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {}
+}
