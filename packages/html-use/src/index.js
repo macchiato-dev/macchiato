@@ -1,61 +1,59 @@
 /**
  * @macchiato-dev/html-use
  *
- * Sandboxed innerHTML / outerHTML backend — parse, generate, hydrate.
+ * HTML parser, serializer, and sanitizer — used by dom-use.
+ *
+ * html-use does NOT depend on dom-use. Instead, dom-use passes its
+ * createElement factory and schema into html-use at runtime.
  */
 
-import { DomUse } from "@macchiato-dev/dom-use";
+import { StyleUse } from "@macchiato-dev/style-use";
 
-export class HtmlUse {
-  /**
-   * @param {DomUse} domUse
-   */
-  constructor(domUse) {
-    this.domUse = domUse;
-  }
+/**
+ * Parse an HTML string into a tree of guest nodes.
+ *
+ * @param {string} html
+ * @param {object} options
+ * @param {(tagName: string) => object} options.createElement — factory from dom-use
+ * @param {object} [options.schema] — dom-use schema for validation
+ * @param {StyleUse} [options.styleUse] — for CSS validation
+ * @returns {object} root fragment node
+ */
+export function parseHTML(html, { createElement, schema, styleUse }) {
+  // TODO: implement HTML parsing, use createElement to build nodes,
+  // validate against schema, delegate style validation to styleUse
+  void html;
+  void createElement;
+  void schema;
+  void styleUse;
+  return { children: [] };
+}
 
-  /**
-   * Parse an HTML string and set it as a node's children.
-   * Invalid nodes/attributes are stripped.
-   * @param {object} node — guest DOM node
-   * @param {string} html
-   */
-  setInnerHTML(node, html) {
-    // TODO: parse html, validate against domUse schema, attach children
-    void node;
-    void html;
-  }
+/**
+ * Serialize a guest node tree to an HTML string.
+ *
+ * @param {object} node — guest DOM node
+ * @returns {string}
+ */
+export function serializeHTML(node) {
+  // TODO: implement serialization
+  void node;
+  return "";
+}
 
-  /**
-   * Serialize a node's children to an HTML string.
-   * @param {object} node — guest DOM node
-   * @returns {string}
-   */
-  getInnerHTML(node) {
-    // TODO: serialize children
-    void node;
-    return "";
-  }
-
-  /**
-   * Serialize a node and its children to an HTML string.
-   * @param {object} node — guest DOM node
-   * @returns {string}
-   */
-  getOuterHTML(node) {
-    // TODO: serialize node + children
-    void node;
-    return "";
-  }
-
-  /**
-   * Hydrate a guest document from an HTML string.
-   * @param {string} html
-   * @returns {object} guest document
-   */
-  hydrate(html) {
-    // TODO: parse full document
-    void html;
-    return { body: { children: [] } };
-  }
+/**
+ * Parse, validate against a schema, and return a clean HTML string.
+ *
+ * @param {string} html
+ * @param {object} options
+ * @param {object} [options.schema]
+ * @param {StyleUse} [options.styleUse]
+ * @returns {string} sanitized HTML
+ */
+export function sanitizeHTML(html, { schema, styleUse }) {
+  // TODO: parse -> validate -> serialize
+  void html;
+  void schema;
+  void styleUse;
+  return "";
 }
