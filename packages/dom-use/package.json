@@ -1,0 +1,12 @@
+{
+  "name": "@macchiato-dev/dom-use",
+  "version": "0.1.0",
+  "description": "Structured DOM access according to a schema",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/style-use": "0.1.0"
+  }
+}
