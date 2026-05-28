@@ -2,7 +2,7 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 import { dashboardHandler } from "@macchiato-dev/dashboard";
@@ -73,6 +73,16 @@ db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
 
+const CONTENT_TYPES = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".map": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
+};
+
 function escapeHtml(str) {
   return str
     .replace(/&/g, "&amp;")
@@ -87,21 +97,54 @@ function getSubdomain(hostHeader) {
   return name.split(".")[0] || "default";
 }
 
-async function serveIndex(directory) {
-  const filePath = directory.endsWith("/") ? directory + "index.html" : directory + "/index.html";
+function contentTypeFor(filePath) {
+  return CONTENT_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
+}
+
+function safeJoin(root, pathname) {
+  const relative = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
+  const target = resolve(root, relative.replace(/^[/\\]+/, ""));
+  const resolvedRoot = resolve(root);
+  if (target !== resolvedRoot && !target.startsWith(`${resolvedRoot}/`)) {
+    throw new Error("Path escapes root");
+  }
+  return target;
+}
+
+async function serveFile(directory, pathname = "/index.html") {
+  const localPath = pathname === "/" ? "/index.html" : pathname;
+  const filePath = safeJoin(directory, localPath);
   try {
     const content = await readFile(filePath);
     return new Response(content, {
-      headers: { "content-type": "text/html; charset=utf-8" },
+      headers: { "content-type": contentTypeFor(filePath) },
     });
   } catch {
     return new Response("Not found", { status: 404 });
   }
 }
 
+async function serveWorkspaceModule(pathname) {
+  if (!pathname.startsWith("/@macchiato-dev/")) return null;
+
+  const parts = pathname.split("/").filter(Boolean);
+  const packageName = parts[1];
+  const rest = parts.slice(2).join("/");
+  if (!packageName || !rest || !rest.endsWith(".js")) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const repoRoot = new URL("../../..", import.meta.url).pathname;
+  return serveFile(join(repoRoot, "packages", packageName), `/${rest}`);
+}
+
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
+  const url = new URL(request.url);
+
+  const workspaceModule = await serveWorkspaceModule(url.pathname);
+  if (workspaceModule) return workspaceModule;
 
   if (subdomain === "macchiato") {
     return dashboardHandler(request);
@@ -113,7 +156,7 @@ async function route(request) {
 
   const row = getSite.get(subdomain);
   if (row) {
-    return serveIndex(row.directory);
+    return serveFile(row.directory, url.pathname);
   }
 
   return new Response(
