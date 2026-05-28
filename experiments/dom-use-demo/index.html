@@ -26,20 +26,20 @@
       <button id="reset" type="button">Reset</button>
     </header>
 
-    <form id="add-card" class="controls">
+    <form id="add-note" class="controls">
       <label>
-        <span>Card text</span>
-        <input id="card-text" value="A schema-bound guest node" autocomplete="off">
+        <span>List item</span>
+        <input id="note-text" value="A new item created through the guest DOM API" autocomplete="off">
       </label>
       <label>
         <span>Accent</span>
-        <select id="card-color">
+        <select id="note-color">
           <option value="#2f7d6d">green</option>
           <option value="#8d5a2b">amber</option>
           <option value="#4f6f9f">blue</option>
         </select>
       </label>
-      <button type="submit">Add card</button>
+      <button type="submit">Add item</button>
     </form>
 
     <div class="surface" id="host-render"></div>
@@ -48,6 +48,8 @@
   <aside class="inspector">
     <h2>Serialized guest DOM</h2>
     <pre id="serialized"></pre>
+    <h2>Schema</h2>
+    <pre id="schema"></pre>
     <h2>Capability checks</h2>
     <ul id="checks"></ul>
   </aside>

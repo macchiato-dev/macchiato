@@ -3,9 +3,11 @@ import { StyleUse } from "@macchiato-dev/style-use";
 
 const schema = {
   nodes: {
-    div: { attrs: ["class", "id", "data-*", "style"], children: ["h2", "div", "p", "strong", "span", "#text"] },
+    div: { attrs: ["class", "id", "data-*", "style"], children: ["h2", "p", "ul", "li", "strong", "span", "#text"] },
     h2: { attrs: ["class"], children: ["#text"] },
-    p: { attrs: ["class"], children: ["strong", "span", "#text"] },
+    p: { attrs: ["class", "style"], children: ["strong", "span", "#text"] },
+    ul: { attrs: ["class"], children: ["li"] },
+    li: { attrs: ["class", "data-*", "style"], children: ["strong", "span", "#text"] },
     strong: { attrs: ["class"], children: ["#text"] },
     span: { attrs: ["class"], children: ["#text"] },
   },
@@ -22,9 +24,10 @@ const styleUse = new StyleUse({
 const domUse = new DomUse(schema, styleUse);
 const doc = domUse.createDocument();
 const state = {
-  cards: [
-    { text: "Guest nodes are created by dom-use", color: "#2f7d6d" },
-    { text: "HTML strings are sanitized before insertion", color: "#8d5a2b" },
+  notes: [
+    { text: "Only tags listed in the schema can be created.", color: "#2f7d6d" },
+    { text: "Attributes are checked per node type before they are stored.", color: "#8d5a2b" },
+    { text: "Inline styles go through style-use before host rendering.", color: "#4f6f9f" },
   ],
 };
 
@@ -45,31 +48,46 @@ function renderGuestToHost(guest, realDocument) {
 }
 
 function buildGuestTree() {
-  const board = doc.createElement("div");
-  board.className = "guest-board";
+  const article = doc.createElement("div");
+  article.className = "guest-article";
 
   const title = doc.createElement("h2");
   title.className = "guest-title";
-  title.textContent = "Rendered from a schema-bound guest DOM";
-  board.appendChild(title);
+  title.textContent = "A schema-bound article";
+  article.appendChild(title);
 
-  const grid = doc.createElement("div");
-  grid.className = "guest-grid";
+  const intro = doc.createElement("p");
+  intro.className = "guest-lede";
+  domUse.setInnerHTML(
+    intro,
+    "This content is not written directly to the page. Guest code builds a <strong>constrained tree</strong>, then the host renders that tree into real DOM.",
+  );
+  article.appendChild(intro);
 
-  state.cards.forEach((card, index) => {
-    const item = doc.createElement("p");
-    item.className = "guest-card";
-    item.style.color = card.color;
-    item.style.borderColor = card.color;
+  const list = doc.createElement("ul");
+  list.className = "guest-list";
+
+  state.notes.forEach((note, index) => {
+    const item = doc.createElement("li");
+    item.className = "guest-list-item";
+    item.setAttribute("data-index", String(index + 1));
+    item.style.color = note.color;
+    item.style.borderColor = note.color;
     domUse.setInnerHTML(
       item,
-      `<strong>Card ${index + 1}</strong><span>${escapeHtml(card.text)}</span><script>ignored()</script>`,
+      `<strong>${index + 1}.</strong><span>${escapeHtml(note.text)}</span><script>ignored()</script>`,
     );
-    grid.appendChild(item);
+    list.appendChild(item);
   });
 
-  board.appendChild(grid);
-  return board;
+  article.appendChild(list);
+
+  const outro = doc.createElement("p");
+  outro.className = "guest-copy";
+  outro.textContent = "Try adding another list item. The serialized tree updates from the guest DOM, not from the host DOM.";
+  article.appendChild(outro);
+
+  return article;
 }
 
 function escapeHtml(value) {
@@ -111,22 +129,33 @@ function render() {
   host.replaceChildren(renderGuestToHost(guestTree, document));
 
   document.getElementById("serialized").textContent = domUse.getOuterHTML(guestTree);
+  document.getElementById("schema").textContent = explainSchema(schema);
   document.getElementById("checks").innerHTML = runCapabilityChecks()
     .map((check) => `<li>${escapeHtml(check)}</li>`)
     .join("");
 }
 
-document.getElementById("add-card").addEventListener("submit", (event) => {
+function explainSchema(value) {
+  return Object.entries(value.nodes)
+    .map(([tag, rule]) => {
+      const attrs = rule.attrs?.join(", ") || "none";
+      const children = rule.children?.join(", ") || "none";
+      return `${tag}\n  attrs: ${attrs}\n  children: ${children}`;
+    })
+    .join("\n\n") + `\n\nmaxDepth: ${value.maxDepth}`;
+}
+
+document.getElementById("add-note").addEventListener("submit", (event) => {
   event.preventDefault();
-  const text = document.getElementById("card-text").value.trim();
-  const color = document.getElementById("card-color").value;
+  const text = document.getElementById("note-text").value.trim();
+  const color = document.getElementById("note-color").value;
   if (!text) return;
-  state.cards.push({ text, color });
+  state.notes.push({ text, color });
   render();
 });
 
 document.getElementById("reset").addEventListener("click", () => {
-  state.cards.splice(2);
+  state.notes.splice(3);
   render();
 });
 
