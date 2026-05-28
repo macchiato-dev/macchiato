@@ -60,6 +60,27 @@ macchiato> server start --port 3030
 macchiato> site add todo ../../experiments/todo
 ```
 
+## dom-use end-to-end demo
+
+The `experiments/dom-use-demo` app exercises the schema-bound guest DOM in a
+browser. It is served like any other Macchiato app: add a row to the SQLite
+site table, start the app server, and open the subdomain.
+
+```bash
+node packages/macchiato/src/macchiato.js site add dom-use-demo /root/macchiato/experiments/dom-use-demo
+node packages/app/src/index.js
+```
+
+Then open:
+
+```text
+http://dom-use-demo.localhost:8765
+```
+
+The demo imports the workspace `@macchiato-dev/dom-use` package through the
+app server, builds a guest tree, renders it into the real DOM, serializes the
+guest tree, and shows blocked element, attribute, and style operations.
+
 ### Permission notes
 
 | Flag | What it allows |
