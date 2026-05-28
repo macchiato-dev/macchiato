@@ -1,0 +1,176 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #202124;
+  background: #f4f1ea;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button, input, select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  background: #252525;
+  color: #fff;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #111;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  min-height: 100vh;
+}
+
+.workspace {
+  padding: 2rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  color: #6f6253;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+h1, h2 {
+  margin: 0;
+  font-weight: 650;
+}
+
+h1 {
+  font-size: 1.8rem;
+}
+
+h2 {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 150px auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+label span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #5f574e;
+  font-size: 0.85rem;
+}
+
+input, select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d2c8ba;
+  border-radius: 6px;
+  background: #fffaf3;
+  color: #202124;
+  padding: 0.55rem 0.65rem;
+}
+
+.surface {
+  min-height: 420px;
+  border: 1px solid #d8cfbf;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,0.035) 1px, transparent 1px),
+    linear-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
+    #fffaf3;
+  background-size: 28px 28px;
+  padding: 1.25rem;
+}
+
+.guest-board {
+  max-width: 760px;
+}
+
+.guest-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.guest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.guest-card {
+  min-height: 120px;
+  border: 1px solid #d8cfbf;
+  border-left: 6px solid currentColor;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.85rem;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
+
+.guest-card strong {
+  display: block;
+  margin-bottom: 0.45rem;
+}
+
+.guest-card span {
+  color: #5f574e;
+}
+
+.inspector {
+  border-left: 1px solid #d8cfbf;
+  background: #24272a;
+  color: #f4f1ea;
+  padding: 2rem 1.25rem;
+}
+
+pre {
+  min-height: 210px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #151719;
+  color: #d8eadf;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+
+ul {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .inspector {
+    border-left: 0;
+    border-top: 1px solid #d8cfbf;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dom-use demo</title>
+<script type="importmap">
+{
+  "imports": {
+    "@macchiato-dev/dom-use": "/@macchiato-dev/dom-use/src/index.js",
+    "@macchiato-dev/html-use": "/@macchiato-dev/html-use/src/index.js",
+    "@macchiato-dev/style-use": "/@macchiato-dev/style-use/src/index.js"
+  }
+}
+</script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="layout">
+  <section class="workspace">
+    <header>
+      <div>
+        <p class="eyebrow">Macchiato capability demo</p>
+        <h1>dom-use guest tree</h1>
+      </div>
+      <button id="reset" type="button">Reset</button>
+    </header>
+
+    <form id="add-card" class="controls">
+      <label>
+        <span>Card text</span>
+        <input id="card-text" value="A schema-bound guest node" autocomplete="off">
+      </label>
+      <label>
+        <span>Accent</span>
+        <select id="card-color">
+          <option value="#2f7d6d">green</option>
+          <option value="#8d5a2b">amber</option>
+          <option value="#4f6f9f">blue</option>
+        </select>
+      </label>
+      <button type="submit">Add card</button>
+    </form>
+
+    <div class="surface" id="host-render"></div>
+  </section>
+
+  <aside class="inspector">
+    <h2>Serialized guest DOM</h2>
+    <pre id="serialized"></pre>
+    <h2>Capability checks</h2>
+    <ul id="checks"></ul>
+  </aside>
+</main>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
