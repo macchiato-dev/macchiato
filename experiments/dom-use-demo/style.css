@@ -100,38 +100,55 @@ input, select {
   padding: 1.25rem;
 }
 
-.guest-board {
+.guest-article {
   max-width: 760px;
-}
-
-.guest-title {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-
-.guest-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-}
-
-.guest-card {
-  min-height: 120px;
   border: 1px solid #d8cfbf;
-  border-left: 6px solid currentColor;
-  border-radius: 8px;
   background: #fff;
-  padding: 0.85rem;
+  padding: 1.25rem;
   box-shadow: 0 1px 0 rgba(0,0,0,0.06);
 }
 
-.guest-card strong {
-  display: block;
-  margin-bottom: 0.45rem;
+.guest-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.45rem;
 }
 
-.guest-card span {
+.guest-lede, .guest-copy {
+  margin: 0 0 1rem;
+  color: #4e463f;
+  line-height: 1.6;
+}
+
+.guest-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.guest-list-item {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  border: 1px solid #d8cfbf;
+  border-left: 6px solid currentColor;
+  border-radius: 8px;
+  background: #fffaf3;
+  padding: 0.75rem;
+}
+
+.guest-list-item strong {
+  flex: 0 0 auto;
+}
+
+.guest-list-item span {
   color: #5f574e;
+  line-height: 1.45;
+}
+
+.guest-copy {
+  margin-bottom: 0;
 }
 
 .inspector {
@@ -142,7 +159,8 @@ input, select {
 }
 
 pre {
-  min-height: 210px;
+  min-height: 170px;
+  max-height: 310px;
   overflow: auto;
   border-radius: 8px;
   background: #151719;
