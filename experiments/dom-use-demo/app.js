@@ -132,6 +132,12 @@ function render() {
   document.getElementById("checks").innerHTML = runCapabilityChecks()
     .map((check) => `<li>${escapeHtml(check)}</li>`)
     .join("");
+  setRuntimeStatus("Guest runtime rendered through dom-use.");
+}
+
+function setRuntimeStatus(message) {
+  const status = document.getElementById("runtime-status");
+  if (status) status.textContent = message;
 }
 
 document.getElementById("add-note").addEventListener("submit", (event) => {
@@ -148,4 +154,9 @@ document.getElementById("reset").addEventListener("click", () => {
   render();
 });
 
-render();
+try {
+  render();
+} catch (err) {
+  setRuntimeStatus(`Runtime error: ${err.message}`);
+  throw err;
+}
