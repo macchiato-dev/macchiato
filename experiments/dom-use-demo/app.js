@@ -25,9 +25,9 @@ const domUse = new DomUse(schema, styleUse);
 const doc = domUse.createDocument();
 const state = {
   notes: [
-    { text: "Only tags listed in the schema can be created.", color: "#2f7d6d" },
-    { text: "Attributes are checked per node type before they are stored.", color: "#8d5a2b" },
-    { text: "Inline styles go through style-use before host rendering.", color: "#4f6f9f" },
+    { text: "The guest can create article-shaped content without touching the host DOM directly.", color: "#2f7d6d" },
+    { text: "Unsupported nodes and attributes are rejected by the capability before rendering.", color: "#8d5a2b" },
+    { text: "Allowed inline styles pass through style-use and are copied by the host renderer.", color: "#4f6f9f" },
   ],
 };
 
@@ -129,20 +129,9 @@ function render() {
   host.replaceChildren(renderGuestToHost(guestTree, document));
 
   document.getElementById("serialized").textContent = domUse.getOuterHTML(guestTree);
-  document.getElementById("schema").textContent = explainSchema(schema);
   document.getElementById("checks").innerHTML = runCapabilityChecks()
     .map((check) => `<li>${escapeHtml(check)}</li>`)
     .join("");
-}
-
-function explainSchema(value) {
-  return Object.entries(value.nodes)
-    .map(([tag, rule]) => {
-      const attrs = rule.attrs?.join(", ") || "none";
-      const children = rule.children?.join(", ") || "none";
-      return `${tag}\n  attrs: ${attrs}\n  children: ${children}`;
-    })
-    .join("\n\n") + `\n\nmaxDepth: ${value.maxDepth}`;
 }
 
 document.getElementById("add-note").addEventListener("submit", (event) => {
