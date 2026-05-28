@@ -42,6 +42,7 @@
       <button type="submit">Add item</button>
     </form>
 
+    <p class="runtime-status" id="runtime-status">Loading guest runtime...</p>
     <div class="surface" id="host-render"></div>
   </section>
 
@@ -52,6 +53,16 @@
     <ul id="checks"></ul>
   </aside>
 </main>
-<script type="module" src="/app.js"></script>
+<script>
+window.addEventListener('error', (event) => {
+  const status = document.getElementById('runtime-status');
+  if (status) status.textContent = `Runtime error: ${event.message}`;
+});
+window.addEventListener('unhandledrejection', (event) => {
+  const status = document.getElementById('runtime-status');
+  if (status) status.textContent = `Runtime error: ${event.reason?.message || event.reason}`;
+});
+</script>
+<script type="module" src="/app.js?v=runtime-status"></script>
 </body>
 </html>
