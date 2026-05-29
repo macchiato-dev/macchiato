@@ -1,7 +1,9 @@
 import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
 
-const schema = {
+// HTML/DOM schema: host-owned policy for which guest nodes, attributes, and
+// parent-child relationships are allowed before rendering.
+const domSchema = {
   nodes: {
     div: { attrs: ["class", "id", "data-*", "style"], children: ["h2", "p", "ul", "li", "strong", "span", "#text"] },
     h2: { attrs: ["class"], children: ["#text"] },
@@ -14,22 +16,24 @@ const schema = {
   maxDepth: 8,
 };
 
-const styleUse = new StyleUse({
+// CSS schema: host-owned policy for inline style properties and accepted value
+// shapes. style-use rejects anything outside this allowlist.
+const cssSchema = {
   properties: {
     color: /^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$/,
     "border-color": /^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$/,
   },
-});
-
-const domUse = new DomUse(schema, styleUse);
-const doc = domUse.createDocument();
-const state = {
-  notes: [
-    { text: "The guest can create article-shaped content without touching the host DOM directly.", color: "#2f7d6d" },
-    { text: "Unsupported nodes and attributes are rejected by the capability before rendering.", color: "#8d5a2b" },
-    { text: "Allowed inline styles pass through style-use and are copied by the host renderer.", color: "#4f6f9f" },
-  ],
 };
+
+const styleUse = new StyleUse(cssSchema);
+
+const domUse = new DomUse(domSchema, styleUse);
+const doc = domUse.createDocument();
+const notes = [
+  { text: "The guest can create article-shaped content without touching the host DOM directly.", color: "#2f7d6d" },
+  { text: "Unsupported nodes and attributes are rejected by the capability before rendering.", color: "#8d5a2b" },
+  { text: "Allowed inline styles pass through style-use and are copied by the host renderer.", color: "#4f6f9f" },
+];
 
 function renderGuestToHost(guest, realDocument) {
   if (guest.tagName === "#text") return realDocument.createTextNode(guest.textContent);
@@ -67,7 +71,7 @@ function buildGuestTree() {
   const list = doc.createElement("ul");
   list.className = "guest-list";
 
-  state.notes.forEach((note, index) => {
+  notes.forEach((note, index) => {
     const item = doc.createElement("li");
     item.className = "guest-list-item";
     item.setAttribute("data-index", String(index + 1));
@@ -84,7 +88,7 @@ function buildGuestTree() {
 
   const outro = doc.createElement("p");
   outro.className = "guest-copy";
-  outro.textContent = "Try adding another list item. The serialized tree updates from the guest DOM, not from the host DOM.";
+  outro.textContent = "This demo is intentionally non-interactive. Event handling belongs in the next QuickJS bridge layer.";
   article.appendChild(outro);
 
   return article;
@@ -132,27 +136,20 @@ function render() {
   document.getElementById("checks").innerHTML = runCapabilityChecks()
     .map((check) => `<li>${escapeHtml(check)}</li>`)
     .join("");
-  setRuntimeStatus("Guest runtime rendered through dom-use.");
 }
 
 function setRuntimeStatus(message) {
   const status = document.getElementById("runtime-status");
-  if (status) status.textContent = message;
+  if (status) {
+    status.textContent = message;
+    return;
+  }
+  const next = document.createElement("p");
+  next.className = "runtime-status";
+  next.id = "runtime-status";
+  next.textContent = message;
+  document.querySelector(".workspace").insertBefore(next, document.getElementById("host-render"));
 }
-
-document.getElementById("add-note").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const text = document.getElementById("note-text").value.trim();
-  const color = document.getElementById("note-color").value;
-  if (!text) return;
-  state.notes.push({ text, color });
-  render();
-});
-
-document.getElementById("reset").addEventListener("click", () => {
-  state.notes.splice(3);
-  render();
-});
 
 try {
   render();
