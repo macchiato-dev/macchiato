@@ -46,7 +46,7 @@ function parseAttributes(source) {
 function appendText(parent, text, createTextNode) {
   if (!text) return;
   const decoded = decodeEntities(text);
-  if (!decoded) return;
+  if (!decoded || decoded.trim() === "") return;
   parent.appendChild(createTextNode ? createTextNode(decoded) : { tagName: "#text", textContent: decoded });
 }
 

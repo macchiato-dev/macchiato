@@ -57,29 +57,32 @@ Then:
 ```bash
 macchiato                          # enter interactive shell
 macchiato> server start --port 3030
-macchiato> site add todo ../../experiments/todo
+macchiato> site add todo ../../examples/todo
 ```
 
-## dom-use end-to-end demo
+## dom-use SQLite page example
 
-The `experiments/dom-use-demo` app exercises the schema-bound guest DOM in a
-browser. It is served like any other Macchiato app: add a row to the SQLite
-site table, start the app server, and open the subdomain.
+The `examples/dom-use-demo` example is configured as a SQLite-backed page. Its
+HTML fragment, CSS, DOM schema, CSS schema, and sandbox flag are stored in the
+database. The browser receives only the rendered HTML and CSS.
 
 ```bash
-node packages/macchiato/src/macchiato.js site add dom-use-demo /root/macchiato/experiments/dom-use-demo
+node packages/macchiato/src/macchiato.js site add-page \
+  dom-use \
+  examples/dom-use-demo/page.html \
+  examples/dom-use-demo/style.css \
+  examples/dom-use-demo/dom.schema.json \
+  examples/dom-use-demo/css.schema.json \
+  --title "Neighborhood Library"
+
 node packages/app/src/index.js
 ```
 
 Then open:
 
 ```text
-http://dom-use-demo.localhost:8765
+http://dom-use.localhost:8765
 ```
-
-The demo imports the workspace `@macchiato-dev/dom-use` package through the
-app server, builds a guest tree, renders it into the real DOM, serializes the
-guest tree, and shows blocked element, attribute, and style operations.
 
 ### Permission notes
 

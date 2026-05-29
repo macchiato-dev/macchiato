@@ -1,5 +1,6 @@
 import { startServer, stopServer, runServer, isRunning } from "./server.js";
 import { withDb } from "./db.js";
+import { readFileSync } from "node:fs";
 
 function parseServerOpts(args) {
   const opts = {};
@@ -8,6 +9,26 @@ function parseServerOpts(args) {
     else if (args[i] === "--host" || args[i] === "-b") opts.host = args[++i];
   }
   return opts;
+}
+
+function parsePageOpts(args) {
+  const opts = {
+    sandboxed: true,
+    title: "",
+  };
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--title") opts.title = args[++i] ?? "";
+    else if (arg === "--unsandboxed") opts.sandboxed = false;
+    else if (arg === "--sandboxed") opts.sandboxed = true;
+    else positional.push(arg);
+  }
+  return { opts, positional };
+}
+
+function readText(path) {
+  return readFileSync(path, "utf-8");
 }
 
 function exit(code = 0) {
@@ -25,6 +46,7 @@ export function createCommands({ blocking = false } = {}) {
       console.log("  server stop                   Stop the HTTP server");
       console.log("  server status                 Check server status");
       console.log("  site add <subdomain> <dir>    Add a site");
+      console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site list                     List sites");
       console.log("  site remove <subdomain>       Remove a site");
     },
@@ -63,14 +85,46 @@ export function createCommands({ blocking = false } = {}) {
     },
 
     "site list"() {
-      const rows = withDb((db) => db.prepare("SELECT subdomain, directory FROM sites").all());
+      const rows = withDb((db) => [
+        ...db.prepare("SELECT subdomain, 'directory' AS kind, directory, NULL AS sandboxed FROM sites").all(),
+        ...db.prepare("SELECT subdomain, 'page' AS kind, NULL AS directory, sandboxed FROM site_pages").all(),
+      ]);
       if (rows.length === 0) {
         console.log("No sites configured");
         return;
       }
       for (const row of rows) {
-        console.log(`  ${row.subdomain} -> ${row.directory}`);
+        if (row.kind === "page") {
+          console.log(`  ${row.subdomain} -> sqlite page (${row.sandboxed ? "sandboxed" : "unsandboxed"})`);
+        } else {
+          console.log(`  ${row.subdomain} -> ${row.directory}`);
+        }
       }
+    },
+
+    "site add-page"(args) {
+      const { opts, positional } = parsePageOpts(args);
+      const [subdomain, htmlPath, cssPath, domSchemaPath, cssSchemaPath] = positional;
+      if (!subdomain || !htmlPath || !cssPath || !domSchemaPath || !cssSchemaPath) {
+        console.log("Usage: site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
+        return;
+      }
+
+      const html = readText(htmlPath);
+      const css = readText(cssPath);
+      const domSchema = readText(domSchemaPath);
+      const cssSchema = readText(cssSchemaPath);
+      JSON.parse(domSchema);
+      JSON.parse(cssSchema);
+
+      withDb((db) => {
+        db.prepare(`
+          INSERT OR REPLACE INTO site_pages
+            (subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(subdomain, opts.title || subdomain, html, css, domSchema, cssSchema, opts.sandboxed ? 1 : 0);
+      });
+      console.log(`Added SQLite page: ${subdomain} (${opts.sandboxed ? "sandboxed" : "unsandboxed"})`);
     },
 
     "site remove"(args) {
@@ -81,6 +135,7 @@ export function createCommands({ blocking = false } = {}) {
       }
       withDb((db) => {
         db.prepare("DELETE FROM sites WHERE subdomain = ?").run(subdomain);
+        db.prepare("DELETE FROM site_pages WHERE subdomain = ?").run(subdomain);
       });
       console.log(`Removed site: ${subdomain}`);
     },

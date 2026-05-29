@@ -15,7 +15,7 @@ mkdir -p ~/macchiato-dev-data
 Then run the server:
 
 ```bash
-deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js --data-dir $HOME/macchiato-dev-data
+deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data,../../examples/todo --allow-write=$HOME/macchiato-dev-data src/index.js --data-dir $HOME/macchiato-dev-data
 ```
 
 Then open `http://example.localhost:8765`.
@@ -24,7 +24,7 @@ Then open `http://example.localhost:8765`.
 
 ```bash
 mkdir -p ~/macchiato-dev-data
-deno run --allow-net=[::]:8765 --allow-read=$HOME/macchiato-dev-data,../../experiments/todo --allow-write=$HOME/macchiato-dev-data src/index.js -b 0.0.0.0 --data-dir $HOME/macchiato-dev-data
+deno run --allow-net=[::]:8765 --allow-read=$HOME/macchiato-dev-data,../../examples/todo --allow-write=$HOME/macchiato-dev-data src/index.js -b 0.0.0.0 --data-dir $HOME/macchiato-dev-data
 ```
 
 ## Manage sites (Deno REPL)
@@ -37,7 +37,7 @@ deno repl --allow-read=$HOME/macchiato-dev-data --allow-write=$HOME/macchiato-de
 import { DatabaseSync } from "node:sqlite";
 const db = new DatabaseSync("/root/macchiato-dev-data/macchiato.sqlite3");
 const stmt = db.prepare("INSERT INTO sites VALUES (?, ?)");
-stmt.run("todo", "../../experiments/todo");
+stmt.run("todo", "../../examples/todo");
 db.close();
 ```
 
@@ -47,13 +47,13 @@ Use a `testdata/` directory for ephemeral test databases. It is gitignored by co
 
 ```bash
 mkdir -p testdata
-deno run --allow-net=:8765 --allow-read=testdata,../../experiments/todo --allow-write=testdata src/index.js --data-dir testdata
+deno run --allow-net=:8765 --allow-read=testdata,../../examples/todo --allow-write=testdata src/index.js --data-dir testdata
 ```
 
 Or point directly to a specific SQLite file:
 
 ```bash
-deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data/test.sqlite3,../../experiments/todo --allow-write=$HOME/macchiato-dev-data/test.sqlite3 src/index.js --db $HOME/macchiato-dev-data/test.sqlite3
+deno run --allow-net=:8765 --allow-read=$HOME/macchiato-dev-data/test.sqlite3,../../examples/todo --allow-write=$HOME/macchiato-dev-data/test.sqlite3 src/index.js --db $HOME/macchiato-dev-data/test.sqlite3
 ```
 
 ## Node.js
@@ -79,11 +79,24 @@ bun run src/index.js --data-dir ~/macchiato-dev-data
 
 ## Site routing
 
-Subdomains are looked up in the `sites` table. If a row matches, `index.html` is served from the mapped directory.
+Subdomains are first looked up in `site_pages`. These rows store HTML, CSS,
+DOM schema JSON, CSS schema JSON, and a sandbox flag in SQLite. If no
+`site_pages` row matches, the server falls back to the older `sites` directory
+table.
 
 ```sql
+CREATE TABLE site_pages (
+  subdomain TEXT PRIMARY KEY,
+  title TEXT NOT NULL DEFAULT '',
+  html TEXT NOT NULL,
+  css TEXT NOT NULL DEFAULT '',
+  dom_schema_json TEXT NOT NULL,
+  css_schema_json TEXT NOT NULL,
+  sandboxed INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE TABLE sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL);
-INSERT INTO sites VALUES ('todo', './experiments/todo');
+INSERT INTO sites VALUES ('todo', './examples/todo');
 ```
 
 Unmatched subdomains fall back to `<h1>subdomain</h1>`.

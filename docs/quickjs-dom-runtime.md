@@ -17,12 +17,13 @@ Current pieces:
   caller-provided element factory.
 - `@macchiato-dev/style-use` validates allowed CSS properties and rejects
   dangerous style values.
-- `experiments/dom-use-demo` manually builds a guest tree in browser JavaScript
-  and copies that tree into the real DOM.
+- `examples/dom-use-demo` stores a page fragment, stylesheet, DOM schema, and
+  CSS schema that can be imported into SQLite and served as a sandboxed page.
 
 Missing pieces:
 
-- Hosted HTML is not parsed into a managed runtime document.
+- Hosted HTML can be loaded from SQLite and sanitized with `dom-use`; full app
+  documents are not yet managed as live runtime documents.
 - `<script>` tags are not extracted and run in QuickJS.
 - Guest scripts do not receive a DOM capability inside QuickJS.
 - Browser events are not forwarded into QuickJS.

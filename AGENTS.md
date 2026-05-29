@@ -52,8 +52,14 @@ node packages/macchiato/src/macchiato.js site list
 Add a site with:
 
 ```bash
-node packages/macchiato/src/macchiato.js site add dom-use-demo /path/to/macchiato/experiments/dom-use-demo
+node packages/macchiato/src/macchiato.js site add-page \
+  dom-use \
+  examples/dom-use-demo/page.html \
+  examples/dom-use-demo/style.css \
+  examples/dom-use-demo/dom.schema.json \
+  examples/dom-use-demo/css.schema.json \
+  --title "Neighborhood Library"
 ```
 
-The app server routes by subdomain, so a `dom-use-demo` row is served at
-`http://dom-use-demo.localhost:<port>`.
+The app server routes by subdomain, so a `dom-use` row is served at
+`http://dom-use.localhost:<port>`.

@@ -6,6 +6,9 @@ import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 import { dashboardHandler } from "@macchiato-dev/dashboard";
+import { DomUse } from "@macchiato-dev/dom-use";
+import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
+import { StyleUse } from "@macchiato-dev/style-use";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -70,8 +73,24 @@ if (dataDir) {
 const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode = WAL");
 db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL)");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS site_pages (
+    subdomain TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT '',
+    html TEXT NOT NULL,
+    css TEXT NOT NULL DEFAULT '',
+    dom_schema_json TEXT NOT NULL,
+    css_schema_json TEXT NOT NULL,
+    sandboxed INTEGER NOT NULL DEFAULT 1
+  )
+`);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
+const getSitePage = db.prepare(`
+  SELECT subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed
+  FROM site_pages
+  WHERE subdomain = ?
+`);
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -90,6 +109,65 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function hydrateCssSchema(schema) {
+  const properties = {};
+  for (const [name, rule] of Object.entries(schema.properties || {})) {
+    properties[name] = typeof rule === "string" ? new RegExp(rule) : rule;
+  }
+  return {
+    ...schema,
+    properties,
+    selectors: typeof schema.selectors === "string" ? new RegExp(schema.selectors) : schema.selectors,
+  };
+}
+
+function renderStoredPage(row) {
+  let body = row.html;
+  const css = row.css || "";
+
+  if (row.sandboxed) {
+    const domSchema = JSON.parse(row.dom_schema_json);
+    const cssSchema = hydrateCssSchema(JSON.parse(row.css_schema_json));
+    const styleUse = new StyleUse(cssSchema);
+    styleUse.validateStylesheet(css);
+    const domUse = new DomUse(domSchema, styleUse);
+    const doc = domUse.createDocument();
+    const fragment = parseHTML(body, {
+      createElement: (tag) => doc.createElement(tag),
+      createTextNode: (text) => doc.createTextNode(text),
+      schema: domSchema,
+      styleUse,
+    });
+    body = serializeHTML(fragment);
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>${escapeHtml(row.title || row.subdomain)}</title>
+<style>
+${css}
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
+}
+
+function serveStoredPage(row) {
+  try {
+    return new Response(renderStoredPage(row), {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  } catch (err) {
+    return new Response(`Sandbox error: ${err.message}`, {
+      status: 500,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
 }
 
 function getSubdomain(hostHeader) {
@@ -152,6 +230,14 @@ async function route(request) {
 
   if (subdomain === "macchiato-quickjs-emscripten-sandbox") {
     return sandboxHandler(request);
+  }
+
+  const page = getSitePage.get(subdomain);
+  if (page && (url.pathname === "/" || url.pathname === "/index.html")) {
+    return serveStoredPage(page);
+  }
+  if (page) {
+    return new Response("Not found", { status: 404 });
   }
 
   const row = getSite.get(subdomain);

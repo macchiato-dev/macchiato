@@ -1,4 +1,4 @@
-# experiments/todo
+# examples/todo
 
 Prototype of a guest-side DOM simulation with host-side rendering.
 
