@@ -21,28 +21,10 @@
     <header>
       <div>
         <p class="eyebrow">Macchiato capability demo</p>
-        <h1>dom-use guest tree</h1>
+        <h1>Constrained document rendering</h1>
       </div>
-      <button id="reset" type="button">Reset</button>
     </header>
 
-    <form id="add-note" class="controls">
-      <label>
-        <span>List item</span>
-        <input id="note-text" value="A new item created through the guest DOM API" autocomplete="off">
-      </label>
-      <label>
-        <span>Accent</span>
-        <select id="note-color">
-          <option value="#2f7d6d">green</option>
-          <option value="#8d5a2b">amber</option>
-          <option value="#4f6f9f">blue</option>
-        </select>
-      </label>
-      <button type="submit">Add item</button>
-    </form>
-
-    <p class="runtime-status" id="runtime-status">Loading guest runtime...</p>
     <div class="surface" id="host-render"></div>
   </section>
 
@@ -53,16 +35,6 @@
     <ul id="checks"></ul>
   </aside>
 </main>
-<script>
-window.addEventListener('error', (event) => {
-  const status = document.getElementById('runtime-status');
-  if (status) status.textContent = `Runtime error: ${event.message}`;
-});
-window.addEventListener('unhandledrejection', (event) => {
-  const status = document.getElementById('runtime-status');
-  if (status) status.textContent = `Runtime error: ${event.reason?.message || event.reason}`;
-});
-</script>
-<script type="module" src="/app.js?v=runtime-status"></script>
+<script type="module" src="/app.js?v=static-article"></script>
 </body>
 </html>
