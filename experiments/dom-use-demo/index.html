@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dom-use demo</title>
-<script type="importmap">
-{
-  "imports": {
-    "@macchiato-dev/dom-use": "/@macchiato-dev/dom-use/src/index.js",
-    "@macchiato-dev/html-use": "/@macchiato-dev/html-use/src/index.js",
-    "@macchiato-dev/style-use": "/@macchiato-dev/style-use/src/index.js"
-  }
-}
-</script>
+<title>Neighborhood Library</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<main class="layout">
-  <section class="workspace">
-    <header>
-      <div>
-        <p class="eyebrow">Macchiato capability demo</p>
-        <h1>Constrained document rendering</h1>
-      </div>
-    </header>
-
-    <div class="surface" id="host-render"></div>
-  </section>
-
-  <aside class="inspector">
-    <h2>Serialized guest DOM</h2>
-    <pre id="serialized"></pre>
-    <h2>Capability checks</h2>
-    <ul id="checks"></ul>
-  </aside>
+<main class="page">
+  <h1>Neighborhood Library</h1>
+  <p>A quiet place for reading, research, community classes, and after-school study.</p>
+  <h2>Hours</h2>
+  <ul>
+    <li><strong>Monday-Friday:</strong> 9:00 AM to 7:00 PM</li>
+    <li><strong>Saturday:</strong> 10:00 AM to 5:00 PM</li>
+    <li><strong>Sunday:</strong> 12:00 PM to 4:00 PM</li>
+  </ul>
+  <h2>Services</h2>
+  <ul>
+    <li><strong>Computers:</strong> public workstations and printing</li>
+    <li><strong>Events:</strong> story time, workshops, and book groups</li>
+    <li><strong>Help desk:</strong> research support and account questions</li>
+  </ul>
 </main>
-<script type="module" src="/app.js?v=static-article"></script>
 </body>
 </html>
