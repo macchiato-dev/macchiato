@@ -37,7 +37,7 @@ Useful local URLs:
 
 ```text
 http://macchiato.localhost:8765
-http://dom-use-demo.localhost:8765
+http://dom-use.localhost:8765
 http://todo.localhost:8765
 ```
 
