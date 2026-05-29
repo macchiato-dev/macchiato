@@ -8,7 +8,7 @@ The source that demonstrates how the output was produced with `dom-use` and
 `style-use` lives outside this served directory:
 
 ```text
-experiments/dom-use-demo-source/render.mjs
+experiments/dom-use-demo-source/render.js
 ```
 
 That source file marks the host-owned HTML/DOM schema and CSS schema near the
