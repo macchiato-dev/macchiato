@@ -2,10 +2,18 @@
 
 End-to-end `dom-use` demo for Macchiato.
 
-This app imports the workspace `@macchiato-dev/dom-use` and
-`@macchiato-dev/style-use` packages in the browser, builds a schema-bound guest
-DOM tree, serializes it, and renders it into the real DOM through a tiny host
-renderer.
+The served app is static HTML and CSS. It sends no JavaScript to the browser.
+
+The source that demonstrates how the output was produced with `dom-use` and
+`style-use` lives outside this served directory:
+
+```text
+experiments/dom-use-demo-source/render.mjs
+```
+
+That source file marks the host-owned HTML/DOM schema and CSS schema near the
+top of the file. The static page in this directory shows the rendered result,
+the serialized guest DOM, and the capability checks.
 
 Run it through the Macchiato app server after registering the site:
 
