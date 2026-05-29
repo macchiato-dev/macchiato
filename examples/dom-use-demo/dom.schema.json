@@ -1,0 +1,33 @@
+{
+  "nodes": {
+    "main": {
+      "attrs": ["class"],
+      "children": ["h1", "h2", "p", "ul"]
+    },
+    "h1": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "h2": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "p": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "ul": {
+      "attrs": [],
+      "children": ["li"]
+    },
+    "li": {
+      "attrs": [],
+      "children": ["strong", "#text"]
+    },
+    "strong": {
+      "attrs": [],
+      "children": ["#text"]
+    }
+  },
+  "maxDepth": 8
+}
