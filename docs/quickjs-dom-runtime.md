@@ -171,6 +171,101 @@ Suggested first pass:
 - run scripts in source order inside one QuickJS context;
 - expose only the installed runtime globals.
 
+## Schema Source and Resolution
+
+Schema names such as `@macchiato-dev/dom-use@0.0.1/article.json` should be
+treated as package-addressed resources, not arbitrary labels. The name says:
+
+- package scope and name: `@macchiato-dev/dom-use`;
+- schema package version: `0.0.1`;
+- resource path inside that package: `article.json`.
+
+The source of truth should be the package artifact. In a Node install this will
+usually mean resolving the resource from `node_modules`, for example:
+
+```text
+node_modules/@macchiato-dev/dom-use/article.json
+```
+
+The SQLite `schemas` table can then act as a controlled mirror/cache of package
+schema resources. This keeps runtime page rows stable and auditable while still
+letting schemas originate from versioned source packages.
+
+Suggested lifecycle:
+
+1. Install or otherwise make a schema-providing package available.
+2. Resolve a schema reference against trusted package sources.
+3. Validate and normalize the schema document.
+4. Store the normalized JSON in SQLite under its fully qualified schema name.
+5. Store page rows with schema references, not copied schema bodies, when the
+   page wants package-managed policy.
+6. Resolve page schema references from SQLite at request time.
+
+The resolver should avoid loading arbitrary files from the app directory. It
+should only read from trusted schema package locations or from a separate
+administrator-controlled schema store. This keeps app content, schemas, and
+runtime code under different authority levels.
+
+## Schema Package Control
+
+Schema packages are security policy, not ordinary app assets. The implementation
+should eventually move schema resolution into a small, tightly controlled module
+with a narrow API:
+
+```javascript
+resolveSchema("@macchiato-dev/dom-use@0.0.1/article.json")
+```
+
+That module can enforce:
+
+- allowed package scopes;
+- exact version parsing;
+- resource paths ending in `.json`;
+- package integrity checks where available;
+- schema JSON validation before import;
+- no transitive file serving to the browser;
+- no fallback to app-owned paths unless explicitly configured by an operator.
+
+The current SQLite `schemas` table is a practical first step, but the long-term
+resolver should preserve a faithful mirror of package schema resources and make
+their provenance clear.
+
+## Schema Compatibility and Security Patches
+
+A newer schema package may need to stand in for older schema versions. This is
+useful when the newer package contains a security patch and can safely validate
+content written for an older schema.
+
+The compatibility rule should be explicit data, not an implicit semver guess.
+For example, a schema package could declare that
+`@macchiato-dev/dom-use@0.0.2/article.json` is valid for pages requesting
+`@macchiato-dev/dom-use@0.0.1/article.json`.
+
+Possible compatibility metadata:
+
+```json
+{
+  "name": "@macchiato-dev/dom-use@0.0.2/article.json",
+  "replaces": [
+    "@macchiato-dev/dom-use@0.0.1/article.json"
+  ],
+  "reason": "security patch for allowed attribute handling"
+}
+```
+
+Resolution policy should be conservative:
+
+- exact schema name wins when present and allowed;
+- replacement must be declared by the newer trusted schema package;
+- replacement should only tighten or preserve behavior, not broaden it;
+- the resolved effective schema name should be recorded for audit/debugging;
+- operators should be able to pin an exact old schema if they knowingly accept
+  that risk, but safe defaults should prefer patched replacements.
+
+This means a Macchiato install does not have to download or store every historic
+schema file forever. It can store a newer package plus compatibility metadata,
+then satisfy older page rows through a patched effective schema.
+
 ## Sanitization Boundary
 
 There should be one mutation path:
@@ -207,6 +302,8 @@ untrusted or semi-trusted apps:
   loop abstraction?
 - How should app files declare their schema: database row, manifest file, or
   host-owned default policy?
+- What metadata format should schema packages use to declare replacement
+  compatibility for older schema names?
 - Should the runtime support multiple isolated app instances on one host page?
 
 ## Incremental Plan
@@ -220,4 +317,7 @@ untrusted or semi-trusted apps:
 6. Parse registered app HTML, extract scripts, and run them in source order.
 7. Add mutation patches instead of full rerendering.
 8. Move schema selection into host-owned app configuration.
-9. Add resource limits and teardown tests.
+9. Resolve schema names from package-backed schema sources and mirror them into
+   SQLite.
+10. Add explicit schema replacement metadata for security-patched versions.
+11. Add resource limits and teardown tests.
