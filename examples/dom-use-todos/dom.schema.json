@@ -1,0 +1,64 @@
+{
+  "nodes": {
+    "div": {
+      "attrs": ["class"],
+      "children": ["header", "ul", "footer", "input", "button"]
+    },
+    "header": {
+      "attrs": ["class"],
+      "children": ["h1", "div"]
+    },
+    "h1": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "input": {
+      "attrs": ["class", "type", "placeholder", "value", "checked", "data-node-id"],
+      "children": []
+    },
+    "button": {
+      "attrs": ["class", "data-node-id"],
+      "children": ["#text"]
+    },
+    "ul": {
+      "attrs": ["class", "id"],
+      "children": ["li"]
+    },
+    "li": {
+      "attrs": ["class", "data-id"],
+      "children": ["input", "label", "button", "a"]
+    },
+    "label": {
+      "attrs": ["data-node-id"],
+      "children": ["#text"]
+    },
+    "footer": {
+      "attrs": ["class"],
+      "children": ["span", "ul", "button"]
+    },
+    "span": {
+      "attrs": ["class"],
+      "children": ["strong", "#text"]
+    },
+    "strong": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "a": {
+      "attrs": ["class", "data-node-id"],
+      "children": ["#text"]
+    }
+  },
+  "urls": false,
+  "maxDepth": 10,
+  "limits": {
+    "maxTextLength": 200,
+    "maxAttributeNameLength": 64,
+    "maxAttributeValueLength": 200,
+    "maxAttributes": 8,
+    "maxNodes": 300
+  },
+  "content": {
+    "allowedPattern": "^[A-Za-z0-9 .,:'?\\\\-]+$"
+  }
+}

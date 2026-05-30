@@ -9,6 +9,7 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 import { StyleUse } from "@macchiato-dev/style-use";
+import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -285,6 +286,10 @@ async function route(request) {
 
   if (subdomain === "macchiato-quickjs-emscripten-sandbox") {
     return sandboxHandler(request);
+  }
+
+  if (subdomain === "dom-use-todos") {
+    return domUseTodosHandler(request);
   }
 
   const page = getSitePage.get(subdomain);
