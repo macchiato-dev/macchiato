@@ -49,6 +49,14 @@ List configured SQLite-backed sites with:
 node packages/macchiato/src/macchiato.js site list
 ```
 
+Use `--data-dir <dir>` before the command when you want an explicit SQLite
+directory, for example:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./macchiato-dev-data site list
+node packages/app/src/index.js --data-dir ./macchiato-dev-data --host 127.0.0.1 --port 8765
+```
+
 Add a site with:
 
 ```bash

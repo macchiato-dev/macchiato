@@ -6,10 +6,10 @@ function cleanup() {
   stopServer();
 }
 
-export async function startShell() {
+export async function startShell(options = {}) {
   console.log("Macchiato 0.1.0 — A self-hosted app platform.");
   console.log("Type 'help' for commands.\n");
-  const commands = createCommands({ blocking: false });
+  const commands = createCommands({ blocking: false, ...options });
 
   if ("Deno" in globalThis) {
     Deno.addSignalListener("SIGINT", () => { cleanup(); Deno.exit(0); });

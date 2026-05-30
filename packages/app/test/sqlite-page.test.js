@@ -94,20 +94,21 @@ async function stopChild(child) {
 }
 
 test("serves a sandboxed SQLite page from an isolated test database", async (t) => {
-  const home = await tempDir();
-  const dataDir = join(home, ".macchiato", "default");
+  const dataDir = await tempDir();
   const dbPath = join(dataDir, "macchiato.sqlite3");
-  const env = { ...process.env, HOME: home };
+  const env = { ...process.env };
   const port = await getPort();
   let app;
 
   t.after(async () => {
     if (app) await stopChild(app.child);
-    await rm(home, { recursive: true, force: true });
+    await rm(dataDir, { recursive: true, force: true });
   });
 
   await runNode([
     macchiatoCli,
+    "--data-dir",
+    dataDir,
     "schema",
     "add",
     "@macchiato-dev/dom-use@0.0.1/article.json",
@@ -115,6 +116,8 @@ test("serves a sandboxed SQLite page from an isolated test database", async (t) 
   ], env);
   await runNode([
     macchiatoCli,
+    "--data-dir",
+    dataDir,
     "schema",
     "add",
     "@macchiato-dev/style-use@0.0.1/basic.json",
@@ -122,6 +125,8 @@ test("serves a sandboxed SQLite page from an isolated test database", async (t) 
   ], env);
   await runNode([
     macchiatoCli,
+    "--data-dir",
+    dataDir,
     "site",
     "add-page",
     "dom-use",

@@ -43,12 +43,16 @@ function exit(code = 0) {
   else process.exit(code);
 }
 
-export function createCommands({ blocking = false } = {}) {
+export function createCommands({ blocking = false, dataDir = "", dbPath = "" } = {}) {
+  const dbOptions = { dataDir, dbPath };
+
   return {
     help() {
       console.log("Commands:");
       console.log("  help                          Show this help");
       console.log("  exit, quit, q                 Exit the shell");
+      console.log("  --data-dir <dir>              Use a specific SQLite data directory");
+      console.log("  --db <path>                   Use a specific SQLite database path");
       console.log("  server start [opts]           Start the HTTP server");
       console.log("  server stop                   Stop the HTTP server");
       console.log("  server status                 Check server status");
@@ -66,6 +70,8 @@ export function createCommands({ blocking = false } = {}) {
 
     async "server start"(args) {
       const opts = parseServerOpts(args);
+      if (dataDir) opts.dataDir = dataDir;
+      if (dbPath) opts.dbPath = dbPath;
       if (blocking) {
         await runServer(opts);
       } else {
@@ -91,12 +97,12 @@ export function createCommands({ blocking = false } = {}) {
       JSON.parse(json);
       withDb((db) => {
         db.prepare("INSERT OR REPLACE INTO schemas VALUES (?, ?)").run(name, json);
-      });
+      }, dbOptions);
       console.log(`Added schema: ${name}`);
     },
 
     "schema list"() {
-      const rows = withDb((db) => db.prepare("SELECT name FROM schemas ORDER BY name").all());
+      const rows = withDb((db) => db.prepare("SELECT name FROM schemas ORDER BY name").all(), dbOptions);
       if (rows.length === 0) {
         console.log("No schemas configured");
         return;
@@ -112,7 +118,7 @@ export function createCommands({ blocking = false } = {}) {
       }
       withDb((db) => {
         db.prepare("INSERT OR REPLACE INTO sites VALUES (?, ?)").run(subdomain, directory);
-      });
+      }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
     },
 
@@ -120,7 +126,7 @@ export function createCommands({ blocking = false } = {}) {
       const rows = withDb((db) => [
         ...db.prepare("SELECT subdomain, 'directory' AS kind, directory, NULL AS sandboxed FROM sites").all(),
         ...db.prepare("SELECT subdomain, 'page' AS kind, NULL AS directory, sandboxed FROM site_pages").all(),
-      ]);
+      ], dbOptions);
       if (rows.length === 0) {
         console.log("No sites configured");
         return;
@@ -153,7 +159,7 @@ export function createCommands({ blocking = false } = {}) {
             (subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `).run(subdomain, opts.title || subdomain, html, css, domSchema, cssSchema, opts.sandboxed ? 1 : 0);
-      });
+      }, dbOptions);
       console.log(`Added SQLite page: ${subdomain} (${opts.sandboxed ? "sandboxed" : "unsandboxed"})`);
     },
 
@@ -166,7 +172,7 @@ export function createCommands({ blocking = false } = {}) {
       withDb((db) => {
         db.prepare("DELETE FROM sites WHERE subdomain = ?").run(subdomain);
         db.prepare("DELETE FROM site_pages WHERE subdomain = ?").run(subdomain);
-      });
+      }, dbOptions);
       console.log(`Removed site: ${subdomain}`);
     },
   };
