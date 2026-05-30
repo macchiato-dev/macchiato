@@ -53,6 +53,8 @@ Guest code should not be able to:
   APIs unless explicitly granted;
 - inspect or replace the schema/policy object;
 - bypass `dom-use`, `html-use`, or `style-use` mutation checks;
+- load external resources through DOM URL attributes or CSS `url(...)` unless
+  the schema explicitly allows that URL shape;
 - create arbitrary host objects or retain host references after teardown.
 
 ## Proposed Architecture
@@ -277,6 +279,12 @@ guest script -> QuickJS bridge -> dom-use/html-use/style-use -> guest tree -> ho
 No guest-controlled string should be assigned to the real DOM directly. Host
 debug UI may inspect internals during development, but production-like demos
 should avoid showing the schema object to guest-visible code.
+
+URL-bearing sinks are part of the sanitization boundary. `dom-use` should deny
+URL attributes such as `href`, `src`, `srcset`, `action`, and `formaction` by
+default. `style-use` should deny CSS `url(...)` and `@import` by default. A
+schema may opt in to specific URL patterns, but the baseline must be no imports
+and zero unintentional exfiltration.
 
 ## Resource Limits
 

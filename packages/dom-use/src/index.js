@@ -10,6 +10,20 @@
 import { StyleUse } from "@macchiato-dev/style-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 
+const URL_ATTRS = new Set([
+  "action",
+  "background",
+  "cite",
+  "data",
+  "formaction",
+  "href",
+  "icon",
+  "manifest",
+  "poster",
+  "src",
+  "srcset",
+]);
+
 class GuestNode {
   constructor(owner) {
     this.ownerDocument = owner;
@@ -213,6 +227,49 @@ export class DomUse {
     return false;
   }
 
+  urlRuleFor(tagName, attr) {
+    const tag = String(tagName).toLowerCase();
+    const name = String(attr).toLowerCase();
+    const nodes = this.schema.nodes || {};
+    const nodeUrls = nodes[tag]?.urls || {};
+    const globalUrls = this.schema.urls || {};
+
+    if (nodeUrls === true || nodeUrls === false) return nodeUrls;
+    if (globalUrls === true || globalUrls === false) return globalUrls;
+    if (nodeUrls[name] !== undefined) return nodeUrls[name];
+    if (globalUrls[name] !== undefined) return globalUrls[name];
+    if (nodeUrls["*"] !== undefined) return nodeUrls["*"];
+    if (globalUrls["*"] !== undefined) return globalUrls["*"];
+    return undefined;
+  }
+
+  attrUrls(attr, value) {
+    const name = String(attr).toLowerCase();
+    const text = String(value).trim();
+    if (name === "srcset") {
+      return text
+        .split(",")
+        .map((part) => part.trim().split(/\s+/)[0])
+        .filter(Boolean);
+    }
+    return [text];
+  }
+
+  validateAttrUrl(tagName, attr, value) {
+    const rule = this.urlRuleFor(tagName, attr);
+    if (rule === undefined || rule === false) {
+      throw new Error(`URL attribute not allowed on ${tagName}: ${attr}`);
+    }
+    for (const url of this.attrUrls(attr, value)) {
+      if (!this.styleUse.rejectDangerousValue(url)) {
+        throw new Error(`Disallowed URL on ${tagName}.${attr}`);
+      }
+      if (rule !== true && !this.styleUse.isAllowedByRule(rule, url, `${tagName}.${attr}`)) {
+        throw new Error(`URL not allowed on ${tagName}.${attr}: ${url}`);
+      }
+    }
+  }
+
   allowedChild(parentTag, childTag) {
     const nodes = this.schema.nodes || {};
     if (String(parentTag) === "#fragment") return true;
@@ -231,6 +288,9 @@ export class DomUse {
   assertAllowedAttr(tagName, attr, value) {
     if (!this.allowedAttr(tagName, attr, value)) {
       throw new Error(`Attribute not allowed on ${tagName}: ${attr}`);
+    }
+    if (URL_ATTRS.has(String(attr).toLowerCase())) {
+      this.validateAttrUrl(tagName, attr, value);
     }
   }
 

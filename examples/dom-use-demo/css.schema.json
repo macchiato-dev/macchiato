@@ -9,5 +9,6 @@
     "max-width": "^\\d+(\\.\\d+)?(rem|px)$",
     "padding-left": "^\\d+(\\.\\d+)?(rem|px)$"
   },
+  "urls": false,
   "selectors": "^[a-zA-Z0-9_.#,\\-\\s]+$"
 }

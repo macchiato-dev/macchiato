@@ -29,5 +29,6 @@
       "children": ["#text"]
     }
   },
+  "urls": false,
   "maxDepth": 8
 }

@@ -12,6 +12,9 @@ Files:
 - `dom.schema.json` stores the allowed HTML/DOM schema.
 - `css.schema.json` stores the allowed CSS schema.
 
+Both schemas explicitly deny URL loading. This is also the default: no DOM URL
+attributes or CSS `url(...)` imports are allowed unless a schema opts in.
+
 Import it into the default SQLite database as a sandboxed page:
 
 ```bash
