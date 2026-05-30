@@ -94,8 +94,9 @@ http://dom-use.localhost:8765
 
 ## dom-use QuickJS todo example
 
-The `examples/dom-use-todos` example runs the todo app inside QuickJS with a
-minimal DOM wrapper and validates rendered output through `dom-use`.
+The `examples/dom-use-todos` example passes `examples/todo/index.html`
+unchanged into QuickJS. A guest-side parser and DOM wrapper run the inline
+module there while host-owned `dom-use` validates each DOM operation.
 
 ```bash
 node packages/app/src/index.js

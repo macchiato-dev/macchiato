@@ -56,6 +56,19 @@ class GuestNode {
     return child;
   }
 
+  insertBefore(newNode, referenceNode) {
+    if (referenceNode === null || referenceNode === undefined) {
+      return this.appendChild(newNode);
+    }
+    const index = this.children.indexOf(referenceNode);
+    if (index === -1) throw new Error("Reference child not found");
+    this.ownerDocument.domUse.validateAppend(this, newNode);
+    if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
+    newNode.parentNode = this;
+    this.children.splice(index, 0, newNode);
+    return newNode;
+  }
+
   removeChild(child) {
     const index = this.children.indexOf(child);
     if (index === -1) throw new Error("Child not found");
@@ -167,6 +180,35 @@ class GuestElement extends GuestNode {
 
   removeAttribute(name) {
     delete this.attributes[name];
+  }
+
+  addClass(...classes) {
+    const next = new Set(this.className.split(/\s+/).filter(Boolean));
+    for (const className of classes) if (className) next.add(String(className));
+    this.className = Array.from(next).join(" ");
+  }
+
+  removeClass(...classes) {
+    const next = new Set(this.className.split(/\s+/).filter(Boolean));
+    for (const className of classes) next.delete(String(className));
+    this.className = Array.from(next).join(" ");
+  }
+
+  toggleClass(className) {
+    const next = new Set(this.className.split(/\s+/).filter(Boolean));
+    const value = String(className);
+    if (next.has(value)) {
+      next.delete(value);
+      this.className = Array.from(next).join(" ");
+      return false;
+    }
+    next.add(value);
+    this.className = Array.from(next).join(" ");
+    return true;
+  }
+
+  hasClass(className) {
+    return this.className.split(/\s+/).filter(Boolean).includes(String(className));
   }
 }
 

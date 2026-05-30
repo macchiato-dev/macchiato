@@ -1,8 +1,12 @@
 {
   "nodes": {
+    "body": {
+      "attrs": [],
+      "children": ["div"]
+    },
     "div": {
-      "attrs": ["class"],
-      "children": ["header", "ul", "footer", "input", "button"]
+      "attrs": ["class", "id"],
+      "children": ["div", "header", "ul", "footer", "input", "button"]
     },
     "header": {
       "attrs": ["class"],
@@ -13,7 +17,7 @@
       "children": ["#text"]
     },
     "input": {
-      "attrs": ["class", "type", "placeholder", "value", "checked", "data-node-id"],
+      "attrs": ["class", "type", "placeholder", "value", "checked", "autofocus", "data-node-id"],
       "children": []
     },
     "button": {
@@ -25,8 +29,8 @@
       "children": ["li"]
     },
     "li": {
-      "attrs": ["class", "data-id"],
-      "children": ["input", "label", "button", "a"]
+      "attrs": ["class", "data-id", "data-index", "data-node-id", "draggable"],
+      "children": ["span", "input", "label", "button", "a"]
     },
     "label": {
       "attrs": ["data-node-id"],
@@ -37,7 +41,7 @@
       "children": ["span", "ul", "button"]
     },
     "span": {
-      "attrs": ["class"],
+      "attrs": ["class", "data-node-id", "title"],
       "children": ["strong", "#text"]
     },
     "strong": {
@@ -59,6 +63,6 @@
     "maxNodes": 300
   },
   "content": {
-    "allowedPattern": "^[A-Za-z0-9 .,:'?\\\\-]+$"
+    "rejectPattern": "[<>]"
   }
 }

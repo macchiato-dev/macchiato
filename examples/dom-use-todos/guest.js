@@ -1,32 +1,30 @@
-const storage = new Map();
-
-const localStorage = {
-  getItem(key) {
-    return storage.has(key) ? storage.get(key) : null;
-  },
-  setItem(key, value) {
-    storage.set(String(key), String(value));
-  },
-};
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+function host(op, data = {}) {
+  const result = JSON.parse(globalThis.__macchiatoHost(JSON.stringify({ op, ...data })));
+  if (result && result.__error) throw new Error(result.__error);
+  return result;
 }
 
-function escapeAttr(value) {
-  return escapeHtml(value).replace(/"/g, "&quot;");
+const elementsById = new Map();
+const listenersByNode = new Map();
+
+function attrsFromSource(source) {
+  const attrs = [];
+  const re = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  for (const match of source.matchAll(re)) {
+    attrs.push([match[1], match[2] ?? match[3] ?? match[4] ?? ""]);
+  }
+  return attrs;
 }
 
-class GuestNode {
-  constructor() {
+class HostNode {
+  constructor(id) {
+    this.__hostNodeId = String(id);
     this.parentNode = null;
     this.children = [];
   }
 
   appendChild(child) {
+    host("appendChild", { parentId: this.__hostNodeId, childId: child.__hostNodeId });
     if (child.parentNode) child.parentNode.removeChild(child);
     child.parentNode = this;
     this.children.push(child);
@@ -34,17 +32,21 @@ class GuestNode {
   }
 
   removeChild(child) {
+    host("removeChild", { parentId: this.__hostNodeId, childId: child.__hostNodeId });
     const index = this.children.indexOf(child);
-    if (index !== -1) {
-      this.children.splice(index, 1);
-      child.parentNode = null;
-    }
+    if (index !== -1) this.children.splice(index, 1);
+    child.parentNode = null;
     return child;
   }
 
-  insertBefore(newNode, refNode) {
+  insertBefore(newNode, referenceNode) {
+    host("insertBefore", {
+      parentId: this.__hostNodeId,
+      childId: newNode.__hostNodeId,
+      referenceId: referenceNode?.__hostNodeId || null,
+    });
     if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
-    const index = refNode ? this.children.indexOf(refNode) : -1;
+    const index = referenceNode ? this.children.indexOf(referenceNode) : -1;
     if (index === -1) this.children.push(newNode);
     else this.children.splice(index, 0, newNode);
     newNode.parentNode = this;
@@ -52,24 +54,34 @@ class GuestNode {
   }
 }
 
-class GuestText extends GuestNode {
+class HostText extends HostNode {
   constructor(text) {
-    super();
-    this.tagName = "#text";
-    this.textContent = String(text);
+    super(host("createTextNode", { text }).id);
+    this.nodeType = 3;
+    this._textContent = String(text);
+  }
+
+  get textContent() {
+    return this._textContent;
+  }
+
+  set textContent(value) {
+    this._textContent = String(value);
+    host("setTextContent", { id: this.__hostNodeId, value: this._textContent });
   }
 }
 
-class GuestElement extends GuestNode {
+class HostElement extends HostNode {
   constructor(tagName) {
-    super();
+    super(host("createElement", { tagName }).id);
+    this.nodeType = 1;
     this.tagName = String(tagName).toLowerCase();
     this.attributes = {};
-    this._classList = new Set();
-    this._listeners = {};
     this._textContent = "";
+    this._className = "";
     this._value = "";
     this.checked = false;
+    this.dataset = {};
   }
 
   get id() {
@@ -77,28 +89,36 @@ class GuestElement extends GuestNode {
   }
 
   set id(value) {
-    if (value) this.attributes.id = String(value);
-    else delete this.attributes.id;
+    this.setAttribute("id", value);
   }
 
   get className() {
-    return Array.from(this._classList).join(" ");
+    return this._className;
   }
 
   set className(value) {
-    this._classList = new Set(String(value).split(/\s+/).filter(Boolean));
+    this._className = String(value);
+    this.setAttribute("class", this._className);
   }
 
   get textContent() {
-    if (this.children.length) {
-      return this.children.map((child) => child.textContent || "").join("");
-    }
+    if (this.children.length) return this.children.map((child) => child.textContent || "").join("");
     return this._textContent;
   }
 
   set textContent(value) {
     this._textContent = String(value);
     this.children = [];
+    host("setTextContent", { id: this.__hostNodeId, value: this._textContent });
+  }
+
+  get innerHTML() {
+    return "";
+  }
+
+  set innerHTML(value) {
+    this.children = [];
+    host("setInnerHTML", { id: this.__hostNodeId, html: String(value) });
   }
 
   get value() {
@@ -107,59 +127,31 @@ class GuestElement extends GuestNode {
 
   set value(value) {
     this._value = String(value);
-    if (this.tagName === "input") this.attributes.value = this._value;
+    if (this.tagName === "input") this.setAttribute("value", this._value);
   }
 
-  get dataset() {
-    const result = {};
-    for (const [name, value] of Object.entries(this.attributes)) {
-      if (!name.startsWith("data-")) continue;
-      const key = name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-      result[key] = value;
-    }
-    return result;
-  }
-
-  get classList() {
-    return {
-      add: (...classes) => {
-        for (const className of classes) if (className) this._classList.add(className);
-      },
-      remove: (...classes) => {
-        for (const className of classes) this._classList.delete(className);
-      },
-      toggle: (className) => {
-        if (this._classList.has(className)) {
-          this._classList.delete(className);
-          return false;
-        }
-        this._classList.add(className);
+  get style() {
+    return new Proxy({}, {
+      set: (_target, property, value) => {
+        host("setStyle", { id: this.__hostNodeId, property: String(property), value: String(value) });
         return true;
       },
-      contains: (className) => this._classList.has(className),
-    };
-  }
-
-  set innerHTML(value) {
-    this.children = [];
-    const source = String(value);
-    const strong = source.match(/^<strong>(.*?)<\/strong>(.*)$/);
-    if (strong) {
-      const node = new GuestElement("strong");
-      node.textContent = strong[1];
-      this.appendChild(node);
-      if (strong[2]) this.appendChild(new GuestText(strong[2]));
-      return;
-    }
-    this.appendChild(new GuestText(source));
+    });
   }
 
   setAttribute(name, value) {
     const key = String(name);
     const text = String(value);
     this.attributes[key] = text;
+    if (key === "id") elementsById.set(text, this);
+    if (key === "class") this._className = text;
     if (key === "value") this._value = text;
     if (key === "checked") this.checked = true;
+    if (key.startsWith("data-")) {
+      const datasetKey = key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      this.dataset[datasetKey] = text;
+    }
+    host("setAttribute", { id: this.__hostNodeId, name: key, value: text });
   }
 
   getAttribute(name) {
@@ -167,275 +159,112 @@ class GuestElement extends GuestNode {
   }
 
   removeAttribute(name) {
-    delete this.attributes[String(name)];
+    const key = String(name);
+    delete this.attributes[key];
+    host("removeAttribute", { id: this.__hostNodeId, name: key });
   }
 
   addEventListener(event, handler) {
     const name = String(event);
-    if (!this._listeners[name]) this._listeners[name] = [];
-    this._listeners[name].push(handler);
+    const listeners = listenersByNode.get(this.__hostNodeId) || {};
+    if (!listeners[name]) listeners[name] = [];
+    listeners[name].push(handler);
+    listenersByNode.set(this.__hostNodeId, listeners);
+    host("addEventListener", { id: this.__hostNodeId, event: name });
   }
 
   removeEventListener(event, handler) {
-    const name = String(event);
-    if (!this._listeners[name]) return;
-    this._listeners[name] = this._listeners[name].filter((entry) => entry !== handler);
-  }
-}
-
-class GuestDocument {
-  constructor() {
-    this.body = this.createElement("body");
+    const listeners = listenersByNode.get(this.__hostNodeId);
+    if (!listeners?.[event]) return;
+    listeners[event] = listeners[event].filter((entry) => entry !== handler);
   }
 
-  createElement(tagName) {
-    return new GuestElement(tagName);
-  }
-
-  createTextNode(text) {
-    return new GuestText(text);
-  }
-
-  getElementById(id) {
-    return this.find((node) => node.id === id);
+  matches(selector) {
+    if (selector.startsWith(".")) return this.className.split(/\s+/).includes(selector.slice(1));
+    if (selector.startsWith("#")) return this.id === selector.slice(1);
+    return this.tagName === selector.toLowerCase();
   }
 
   querySelector(selector) {
-    if (!this.body) return null;
-    if (selector.startsWith(".")) {
-      const className = selector.slice(1);
-      return this.find((node) => node.classList?.contains(className));
-    }
-    return this.find((node) => node.tagName === selector.toLowerCase());
+    return find(this, (node) => node instanceof HostElement && node.matches(selector));
   }
 
-  find(predicate, node = this.body) {
-    if (predicate(node)) return node;
-    for (const child of node.children || []) {
-      const found = this.find(predicate, child);
-      if (found) return found;
-    }
-    return null;
-  }
+  focus() {}
 }
 
-const doc = new GuestDocument();
-let currentRoot = null;
-let eventTargets = {};
-let nextNodeId = 1;
-let nextTodoId = 1;
+function find(node, predicate) {
+  for (const child of node.children || []) {
+    if (predicate(child)) return child;
+    const found = find(child, predicate);
+    if (found) return found;
+  }
+  return null;
+}
 
-let state = {
-  todos: JSON.parse(localStorage.getItem("guest-todos") || "[]"),
-  filter: "all",
-  editingId: null,
+const document = {
+  body: null,
+  createElement(tagName) {
+    return new HostElement(tagName);
+  },
+  createTextNode(text) {
+    return new HostText(text);
+  },
+  getElementById(id) {
+    return elementsById.get(String(id)) || null;
+  },
+  querySelector(selector) {
+    return this.body?.querySelector(selector) || null;
+  },
 };
 
-function save() {
-  localStorage.setItem("guest-todos", JSON.stringify(state.todos));
-}
+const localStorage = {
+  getItem(key) {
+    return host("storageGet", { key }).value;
+  },
+  setItem(key, value) {
+    host("storageSet", { key, value: String(value) });
+  },
+};
 
-function setState(patch) {
-  state = { ...state, ...patch };
-  save();
-}
+globalThis.document = document;
+globalThis.localStorage = localStorage;
 
-function nextId() {
-  return `todo-${nextTodoId++}`;
-}
+function parseInitialHtml(source) {
+  const scripts = [];
+  host("resetDom");
+  elementsById.clear();
+  listenersByNode.clear();
 
-function addTodo(text) {
-  const trimmed = String(text || "").trim();
-  if (!trimmed) return;
-  setState({
-    todos: [...state.todos, { id: nextId(), text: trimmed, completed: false }],
-  });
-}
+  const body = document.createElement("body");
+  document.body = body;
+  const stack = [body];
+  const tagRe = /<script\b([^>]*)>([\s\S]*?)<\/script>|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
 
-function buildApp() {
-  const filtered = state.todos.filter((todo) => (
-    state.filter === "all" ? true : state.filter === "active" ? !todo.completed : todo.completed
-  ));
-  const activeCount = state.todos.filter((todo) => !todo.completed).length;
-
-  const app = doc.createElement("div");
-  app.className = "todoapp";
-
-  const header = doc.createElement("header");
-  header.className = "header";
-
-  const h1 = doc.createElement("h1");
-  h1.textContent = "todos";
-  header.appendChild(h1);
-
-  const inputWrap = doc.createElement("div");
-  inputWrap.className = "input-wrap";
-
-  const input = doc.createElement("input");
-  input.className = "new-todo";
-  input.setAttribute("placeholder", "What needs to be done?");
-  input.setAttribute("type", "text");
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") addTodo(event.target.value);
-  });
-  inputWrap.appendChild(input);
-
-  const addButton = doc.createElement("button");
-  addButton.className = "add-btn";
-  addButton.textContent = "Add";
-  addButton.addEventListener("click", (event) => {
-    addTodo(event.target.value);
-  });
-  inputWrap.appendChild(addButton);
-  header.appendChild(inputWrap);
-  app.appendChild(header);
-
-  if (state.todos.length) {
-    const list = doc.createElement("ul");
-    list.className = "todo-list";
-    list.id = "todo-list";
-
-    filtered.forEach((todo) => {
-      const item = doc.createElement("li");
-      item.className = `todo-item${todo.completed ? " completed" : ""}${state.editingId === todo.id ? " editing" : ""}`;
-      item.setAttribute("data-id", todo.id);
-
-      const toggle = doc.createElement("input");
-      toggle.className = "toggle";
-      toggle.setAttribute("type", "checkbox");
-      if (todo.completed) toggle.setAttribute("checked", "checked");
-      toggle.addEventListener("change", () => {
-        setState({
-          todos: state.todos.map((entry) => (
-            entry.id === todo.id ? { ...entry, completed: !entry.completed } : entry
-          )),
-        });
-      });
-      item.appendChild(toggle);
-
-      const label = doc.createElement("label");
-      label.textContent = todo.text;
-      label.addEventListener("dblclick", () => setState({ editingId: todo.id }));
-      item.appendChild(label);
-
-      const edit = doc.createElement("input");
-      edit.className = "edit";
-      edit.setAttribute("type", "text");
-      edit.setAttribute("value", todo.text);
-      edit.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          const text = event.target.value.trim();
-          if (text) {
-            setState({
-              todos: state.todos.map((entry) => (entry.id === todo.id ? { ...entry, text } : entry)),
-              editingId: null,
-            });
-          }
-        } else if (event.key === "Escape") {
-          setState({ editingId: null });
-        }
-      });
-      edit.addEventListener("blur", (event) => {
-        const text = event.target.value.trim();
-        if (text) {
-          setState({
-            todos: state.todos.map((entry) => (entry.id === todo.id ? { ...entry, text } : entry)),
-            editingId: null,
-          });
-        }
-      });
-      item.appendChild(edit);
-
-      const destroy = doc.createElement("button");
-      destroy.className = "destroy";
-      destroy.textContent = "x";
-      destroy.addEventListener("click", () => {
-        setState({ todos: state.todos.filter((entry) => entry.id !== todo.id) });
-      });
-      item.appendChild(destroy);
-
-      list.appendChild(item);
-    });
-
-    app.appendChild(list);
-
-    const footer = doc.createElement("footer");
-    footer.className = "footer";
-
-    const count = doc.createElement("span");
-    count.className = "todo-count";
-    count.innerHTML = `<strong>${activeCount}</strong> item${activeCount === 1 ? "" : "s"} left`;
-    footer.appendChild(count);
-
-    const filters = doc.createElement("ul");
-    filters.className = "filters";
-    for (const filter of [
-      { label: "All", value: "all" },
-      { label: "Active", value: "active" },
-      { label: "Completed", value: "completed" },
-    ]) {
-      const li = doc.createElement("li");
-      const anchor = doc.createElement("a");
-      anchor.textContent = filter.label;
-      if (state.filter === filter.value) anchor.className = "selected";
-      anchor.addEventListener("click", () => setState({ filter: filter.value }));
-      li.appendChild(anchor);
-      filters.appendChild(li);
+  for (const match of source.matchAll(tagRe)) {
+    if (match[0].startsWith("<script")) {
+      scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });
+      continue;
     }
-    footer.appendChild(filters);
-
-    const clearButton = doc.createElement("button");
-    clearButton.className = state.todos.some((todo) => todo.completed)
-      ? "clear-completed"
-      : "clear-completed hidden";
-    clearButton.textContent = "Clear completed";
-    clearButton.addEventListener("click", () => {
-      setState({ todos: state.todos.filter((todo) => !todo.completed) });
-    });
-    footer.appendChild(clearButton);
-    app.appendChild(footer);
+    const tagName = match[3]?.toLowerCase();
+    if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "title" || tagName === "style") {
+      continue;
+    }
+    if (match[0].startsWith("</")) {
+      while (stack.length > 1) {
+        const node = stack.pop();
+        if (node.tagName === tagName) break;
+      }
+      continue;
+    }
+    const node = document.createElement(tagName);
+    for (const [name, value] of attrsFromSource(match[4] || "")) node.setAttribute(name, value);
+    stack[stack.length - 1].appendChild(node);
+    if (!["br", "input", "hr", "img", "meta", "link"].includes(tagName)) stack.push(node);
   }
 
-  return app;
-}
-
-function serialize(node) {
-  if (node.tagName === "#text") return escapeHtml(node.textContent);
-
-  let nodeId = "";
-  if (Object.keys(node._listeners || {}).length) {
-    nodeId = String(nextNodeId++);
-    eventTargets[nodeId] = node;
-  }
-
-  const attrs = { ...node.attributes };
-  if (node.className) attrs.class = node.className;
-  if (nodeId) attrs["data-node-id"] = nodeId;
-  if (node.tagName === "input" && node.value) attrs.value = node.value;
-  if (node.tagName === "input" && node.checked) attrs.checked = "checked";
-
-  const attrText = Object.entries(attrs)
-    .filter(([, value]) => value !== false && value !== null && value !== undefined)
-    .map(([name, value]) => value === true || value === ""
-      ? ` ${name}`
-      : ` ${name}="${escapeAttr(value)}"`)
-    .join("");
-
-  if (node.tagName === "input") return `<input${attrText}>`;
-
-  const children = node.children.length
-    ? node.children.map(serialize).join("")
-    : escapeHtml(node._textContent || "");
-  return `<${node.tagName}${attrText}>${children}</${node.tagName}>`;
-}
-
-function render() {
-  nextNodeId = 1;
-  eventTargets = {};
-  currentRoot = buildApp();
-  doc.body.replaceChildren?.(currentRoot);
-  doc.body.children = [currentRoot];
-  return serialize(currentRoot);
+  const app = document.getElementById("app");
+  host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId });
+  return scripts;
 }
 
 function makeEvent(target, payload) {
@@ -454,15 +283,27 @@ function makeEvent(target, payload) {
   };
 }
 
-globalThis.__macchiatoRender = () => render();
+globalThis.__macchiatoBoot = (source) => {
+  try {
+    return JSON.stringify(parseInitialHtml(source));
+  } catch (err) {
+    return JSON.stringify({ error: err.message });
+  }
+};
 
 globalThis.__macchiatoDispatch = (json) => {
-  const event = JSON.parse(json);
-  const target = eventTargets[String(event.nodeId)];
-  if (!target) return render();
-
-  const handlers = target._listeners[event.type] || [];
-  const guestEvent = makeEvent(target, event.payload || {});
-  for (const handler of handlers) handler(guestEvent);
-  return render();
+  try {
+    const event = JSON.parse(json);
+    const listeners = listenersByNode.get(String(event.nodeId))?.[event.type] || [];
+    const target = host("nodeTag", { id: event.nodeId }).tagName
+      ? find(document.body, (node) => node.__hostNodeId === String(event.nodeId))
+      : null;
+    if (target) {
+      const guestEvent = makeEvent(target, event.payload || {});
+      for (const listener of listeners) listener(guestEvent);
+    }
+    return host("serializeApp").html;
+  } catch (err) {
+    return `__MACCHIATO_ERROR__${err.message}`;
+  }
 };
