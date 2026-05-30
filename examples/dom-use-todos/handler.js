@@ -68,7 +68,7 @@ function page() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Todos</title>
-<style>
+<style id="macchiato-loading-style">
 html,
 body {
   min-height: 100%;

@@ -234,6 +234,7 @@ function eventTargetFor(target, type) {
 function render(html) {
   app.innerHTML = html;
   app.removeAttribute("data-status");
+  document.getElementById("macchiato-loading-style")?.remove();
 }
 
 function dispatch(context, event) {
