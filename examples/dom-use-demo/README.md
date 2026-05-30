@@ -9,11 +9,14 @@ Files:
 
 - `page.html` stores the HTML fragment.
 - `style.css` stores the stylesheet.
-- `dom.schema.json` stores the allowed HTML/DOM schema.
-- `css.schema.json` stores the allowed CSS schema.
+- `dom.schema.json` stores the allowed HTML/DOM schema, including content and
+  size limits.
+- `css.schema.json` stores the allowed CSS schema, including stylesheet limits.
 
 Both schemas explicitly deny URL loading. This is also the default: no DOM URL
 attributes or CSS `url(...)` imports are allowed unless a schema opts in.
+They also cap text, attributes, node count, and stylesheet size so stored pages
+fail closed instead of growing without bounds.
 
 Import it into the default SQLite database as a sandboxed page:
 

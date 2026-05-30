@@ -30,5 +30,15 @@
     }
   },
   "urls": false,
-  "maxDepth": 8
+  "maxDepth": 8,
+  "limits": {
+    "maxTextLength": 500,
+    "maxAttributeNameLength": 64,
+    "maxAttributeValueLength": 200,
+    "maxAttributes": 4,
+    "maxNodes": 64
+  },
+  "content": {
+    "allowedPattern": "^[A-Za-z0-9 .,:'\\\\-]+$"
+  }
 }

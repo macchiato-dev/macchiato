@@ -10,5 +10,12 @@
     "padding-left": "^\\d+(\\.\\d+)?(rem|px)$"
   },
   "urls": false,
-  "selectors": "^[a-zA-Z0-9_.#,\\-\\s]+$"
+  "selectors": "^[a-zA-Z0-9_.#,\\-\\s]+$",
+  "limits": {
+    "maxStylesheetLength": 4000,
+    "maxPropertyLength": 64,
+    "maxValueLength": 160,
+    "maxUrlLength": 200,
+    "maxImports": 0
+  }
 }

@@ -4,6 +4,23 @@
  * Govern permitted CSS styles — inline and stylesheet.
  */
 
+const DEFAULT_LIMITS = {
+  maxStylesheetLength: 100000,
+  maxPropertyLength: 128,
+  maxValueLength: 4096,
+  maxUrlLength: 2048,
+  maxImports: 32,
+};
+
+const TROUBLESOME_CONTENT_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
+
+function patternMatches(pattern, value) {
+  if (pattern instanceof RegExp) return pattern.test(value);
+  if (typeof pattern === "string") return new RegExp(pattern).test(value);
+  if (typeof pattern === "function") return pattern(value);
+  return false;
+}
+
 export class StyleUse {
   /**
    * @param {object} schema
@@ -17,6 +34,24 @@ export class StyleUse {
       .replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
       .trim()
       .toLowerCase();
+  }
+
+  limits() {
+    return { ...DEFAULT_LIMITS, ...(this.schema.limits || {}) };
+  }
+
+  validateContent(value, kind) {
+    const text = String(value);
+    const content = this.schema.content || {};
+    if (content.allowTroublesomeSpecialCharacters !== true && TROUBLESOME_CONTENT_RE.test(text)) {
+      throw new Error(`Troublesome special character in CSS ${kind}`);
+    }
+    if (content.rejectPattern && patternMatches(content.rejectPattern, text)) {
+      throw new Error(`Rejected CSS ${kind}`);
+    }
+    if (content.allowedPattern && !patternMatches(content.allowedPattern, text)) {
+      throw new Error(`CSS ${kind} not allowed`);
+    }
   }
 
   isAllowedByRule(rule, value, property) {
@@ -39,6 +74,11 @@ export class StyleUse {
 
   validateUrl(url, property = "url") {
     const value = String(url).trim();
+    const maxUrlLength = this.limits().maxUrlLength;
+    if (maxUrlLength && value.length > maxUrlLength) {
+      throw new Error(`CSS URL exceeds maxUrlLength ${maxUrlLength}`);
+    }
+    this.validateContent(value, "URL");
     if (!value) throw new Error(`Empty CSS URL for ${property}`);
     if (!this.rejectDangerousValue(value)) {
       throw new Error(`Disallowed CSS URL for ${property}`);
@@ -82,6 +122,15 @@ export class StyleUse {
   validateInline(property, value) {
     const prop = this.normalizeProperty(property);
     const val = String(value).trim();
+    const { maxPropertyLength, maxValueLength } = this.limits();
+    if (maxPropertyLength && prop.length > maxPropertyLength) {
+      throw new Error(`CSS property exceeds maxPropertyLength ${maxPropertyLength}`);
+    }
+    if (maxValueLength && val.length > maxValueLength) {
+      throw new Error(`CSS value exceeds maxValueLength ${maxValueLength}`);
+    }
+    this.validateContent(prop, "property");
+    this.validateContent(val, "value");
     if (!prop || !val) throw new Error("Style property and value are required");
     if (!this.rejectDangerousValue(val)) {
       throw new Error(`Disallowed CSS value for ${prop}`);
@@ -109,10 +158,18 @@ export class StyleUse {
    */
   validateStylesheet(css) {
     const text = String(css);
+    const { maxStylesheetLength, maxImports } = this.limits();
+    if (maxStylesheetLength && text.length > maxStylesheetLength) {
+      throw new Error(`Stylesheet exceeds maxStylesheetLength ${maxStylesheetLength}`);
+    }
+    this.validateContent(text, "stylesheet");
     if (!this.rejectDangerousValue(text)) {
       throw new Error("Disallowed CSS value in stylesheet");
     }
     const imports = this.extractImportUrls(text);
+    if (maxImports !== undefined && imports.length > maxImports) {
+      throw new Error(`Stylesheet exceeds maxImports ${maxImports}`);
+    }
     if (imports.length > 0) {
       if (this.schema.imports !== true) {
         throw new Error("CSS imports are not allowed");

@@ -1,6 +1,9 @@
 {
   "name": "macchiato",
   "private": true,
+  "scripts": {
+    "test": "node --test \"packages/*/test/*.test.js\""
+  },
   "workspaces": [
     "packages/*"
   ]

@@ -24,6 +24,23 @@ const URL_ATTRS = new Set([
   "srcset",
 ]);
 
+const DEFAULT_LIMITS = {
+  maxTextLength: 10000,
+  maxAttributeNameLength: 128,
+  maxAttributeValueLength: 2048,
+  maxAttributes: 32,
+  maxNodes: 1000,
+};
+
+const TROUBLESOME_CONTENT_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
+
+function patternMatches(pattern, value) {
+  if (pattern instanceof RegExp) return pattern.test(value);
+  if (typeof pattern === "string") return new RegExp(pattern).test(value);
+  if (typeof pattern === "function") return pattern(value);
+  return false;
+}
+
 class GuestNode {
   constructor(owner) {
     this.ownerDocument = owner;
@@ -58,7 +75,17 @@ class GuestText extends GuestNode {
   constructor(owner, text) {
     super(owner);
     this.tagName = "#text";
-    this.textContent = String(text);
+    this._textContent = "";
+    this.textContent = text;
+  }
+
+  get textContent() {
+    return this._textContent;
+  }
+
+  set textContent(value) {
+    this.ownerDocument.domUse.validateText(value);
+    this._textContent = String(value);
   }
 }
 
@@ -79,6 +106,7 @@ class GuestElement extends GuestNode {
   }
 
   set textContent(value) {
+    this.ownerDocument.domUse.validateText(value);
     this._textContent = String(value);
     for (const child of this.children) child.parentNode = null;
     this.children = [];
@@ -122,6 +150,7 @@ class GuestElement extends GuestNode {
 
   setAttribute(name, value) {
     this.ownerDocument.domUse.assertAllowedAttr(this.tagName, name, value);
+    this.ownerDocument.domUse.assertAttributeBudget(this, name);
     if (String(name).toLowerCase() === "style") {
       for (const decl of String(value).split(";")) {
         const [property, ...rest] = decl.split(":");
@@ -144,6 +173,7 @@ class GuestElement extends GuestNode {
 class GuestDocument {
   constructor(domUse) {
     this.domUse = domUse;
+    this.createdNodes = 0;
     this.body = new GuestElement(this, "body");
   }
 
@@ -152,6 +182,7 @@ class GuestDocument {
   }
 
   createTextNode(text) {
+    this.domUse.trackNode(this);
     return new GuestText(this, text);
   }
 }
@@ -174,7 +205,61 @@ export class DomUse {
     const tag = String(tagName).toLowerCase();
     this.assertAllowedNode(tag);
     const owner = ownerDocument || new GuestDocument(this);
+    this.trackNode(owner);
     return new GuestElement(owner, tag);
+  }
+
+  limits() {
+    return { ...DEFAULT_LIMITS, ...(this.schema.limits || {}) };
+  }
+
+  trackNode(ownerDocument) {
+    const maxNodes = this.limits().maxNodes;
+    if (maxNodes && ownerDocument.createdNodes + 1 > maxNodes) {
+      throw new Error(`DOM document exceeds maxNodes ${maxNodes}`);
+    }
+    ownerDocument.createdNodes += 1;
+  }
+
+  validateContent(value, kind) {
+    const text = String(value);
+    const content = this.schema.content || {};
+    if (content.allowTroublesomeSpecialCharacters !== true && TROUBLESOME_CONTENT_RE.test(text)) {
+      throw new Error(`Troublesome special character in ${kind}`);
+    }
+    if (content.rejectPattern && patternMatches(content.rejectPattern, text)) {
+      throw new Error(`Rejected content in ${kind}`);
+    }
+    if (content.allowedPattern && !patternMatches(content.allowedPattern, text)) {
+      throw new Error(`Content not allowed in ${kind}`);
+    }
+  }
+
+  validateText(value) {
+    const text = String(value);
+    const maxTextLength = this.limits().maxTextLength;
+    if (maxTextLength && text.length > maxTextLength) {
+      throw new Error(`Text exceeds maxTextLength ${maxTextLength}`);
+    }
+    this.validateContent(text, "text");
+  }
+
+  validateAttributeName(name) {
+    const attr = String(name);
+    const maxAttributeNameLength = this.limits().maxAttributeNameLength;
+    if (maxAttributeNameLength && attr.length > maxAttributeNameLength) {
+      throw new Error(`Attribute name exceeds maxAttributeNameLength ${maxAttributeNameLength}`);
+    }
+    this.validateContent(attr, "attribute name");
+  }
+
+  validateAttributeValue(value) {
+    const attrValue = String(value);
+    const maxAttributeValueLength = this.limits().maxAttributeValueLength;
+    if (maxAttributeValueLength && attrValue.length > maxAttributeValueLength) {
+      throw new Error(`Attribute value exceeds maxAttributeValueLength ${maxAttributeValueLength}`);
+    }
+    this.validateContent(attrValue, "attribute value");
   }
 
   /**
@@ -212,6 +297,8 @@ export class DomUse {
   }
 
   allowedAttr(tagName, attr, value) {
+    this.validateAttributeName(attr);
+    this.validateAttributeValue(value);
     const nodes = this.schema.nodes || {};
     if (Object.keys(nodes).length === 0) return true;
     const tag = String(tagName).toLowerCase();
@@ -291,6 +378,18 @@ export class DomUse {
     }
     if (URL_ATTRS.has(String(attr).toLowerCase())) {
       this.validateAttrUrl(tagName, attr, value);
+    }
+  }
+
+  assertAttributeBudget(node, attr) {
+    const maxAttributes = this.limits().maxAttributes;
+    const name = String(attr);
+    if (
+      maxAttributes
+      && !Object.prototype.hasOwnProperty.call(node.attributes, name)
+      && Object.keys(node.attributes).length >= maxAttributes
+    ) {
+      throw new Error(`Element exceeds maxAttributes ${maxAttributes}`);
     }
   }
 

@@ -128,6 +128,16 @@ function hydrateCssSchema(schema) {
     properties,
     selectors: typeof schema.selectors === "string" ? new RegExp(schema.selectors) : schema.selectors,
     urls: hydrateUrlRules(schema.urls),
+    content: hydrateContentRules(schema.content),
+  };
+}
+
+function hydrateContentRules(rules) {
+  if (!rules || typeof rules !== "object") return rules;
+  return {
+    ...rules,
+    allowedPattern: typeof rules.allowedPattern === "string" ? new RegExp(rules.allowedPattern) : rules.allowedPattern,
+    rejectPattern: typeof rules.rejectPattern === "string" ? new RegExp(rules.rejectPattern) : rules.rejectPattern,
   };
 }
 
@@ -154,6 +164,7 @@ function hydrateDomSchema(schema) {
     ...schema,
     nodes,
     urls: hydrateUrlRules(schema.urls),
+    content: hydrateContentRules(schema.content),
   };
 }
 
