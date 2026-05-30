@@ -79,7 +79,11 @@ test("dom-use-todos works in a real browser", async (t) => {
   const page = await browser.newPage();
 
   await page.goto(`http://dom-use-todos.localhost:${port}/`);
-  await page.getByPlaceholder("What needs to be done?").fill("Buy milk");
+  const input = page.getByPlaceholder("What needs to be done?");
+  await input.click();
+  assert.equal(await input.evaluate((node) => document.activeElement === node), true);
+  await page.keyboard.type("Buy milk");
+  await assert.equal(await input.inputValue(), "Buy milk");
   await page.keyboard.press("Enter");
 
   await assert.doesNotReject(async () => {
