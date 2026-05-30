@@ -1,0 +1,38 @@
+{
+  "properties": {
+    "align-items": true,
+    "background": true,
+    "border": true,
+    "border-bottom": true,
+    "border-color": true,
+    "border-radius": true,
+    "color": true,
+    "cursor": true,
+    "display": true,
+    "flex": true,
+    "font-family": true,
+    "font-size": true,
+    "font-weight": true,
+    "gap": true,
+    "justify-content": true,
+    "list-style": true,
+    "margin": true,
+    "max-width": true,
+    "min-width": true,
+    "overflow": true,
+    "overflow-wrap": true,
+    "padding": true,
+    "text-align": true,
+    "text-decoration": true,
+    "word-break": true
+  },
+  "urls": false,
+  "selectors": true,
+  "limits": {
+    "maxStylesheetLength": 8000,
+    "maxPropertyLength": 64,
+    "maxValueLength": 200,
+    "maxUrlLength": 200,
+    "maxImports": 0
+  }
+}
