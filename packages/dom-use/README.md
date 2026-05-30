@@ -27,7 +27,7 @@ stays acyclic and the public API surface remains at dom-use.
 ## Concepts
 
 - **DomSchema** — a declarative graph describing permitted node types,
-  attributes, parent-child relationships, and depth limits
+  attributes, parent-child relationships, URL rules, content rules, and limits
 - **DomUse** — a runtime capability bound to a schema; wraps guest DOM
   operations and enforces boundaries
 - **NodeValidator** — validates that a proposed node conforms to the schema
@@ -40,6 +40,14 @@ denied by default, even when the attribute name is otherwise listed in `attrs`.
 Schemas must explicitly add URL allow rules through `urls` before those
 attributes can load or point at external resources. The default posture is zero
 unintentional exfiltration.
+
+`dom-use` also applies resource and content defaults. By default, a document can
+create up to 1000 guest nodes, text nodes can contain up to 10000 characters,
+attribute values up to 2048 characters, attribute names up to 128 characters,
+and each element can hold up to 32 attributes. Text and attribute content reject
+control characters, bidi override/isolate characters, and Unicode noncharacters
+unless the schema explicitly opts out. Override these through `limits` and
+`content`.
 
 ## Example
 
@@ -54,6 +62,15 @@ const domUse = new DomUse({
   },
   urls: false,
   maxDepth: 10,
+  limits: {
+    maxTextLength: 500,
+    maxAttributeValueLength: 200,
+    maxAttributes: 8,
+    maxNodes: 100,
+  },
+  content: {
+    allowedPattern: /^[a-z0-9 .,:'-]+$/i,
+  },
 });
 
 const doc = domUse.createDocument();

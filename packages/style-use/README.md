@@ -13,6 +13,12 @@ unless imports are explicitly enabled. This prevents accidental imports,
 tracking pixels, font/image loads, and other unintentional exfiltration through
 CSS.
 
+Styles also have default resource and content limits. Stylesheets are capped at
+100000 characters, CSS values at 4096 characters, properties at 128 characters,
+URLs at 2048 characters, and imports at 32 once imports are explicitly enabled.
+CSS text rejects control characters, bidi override/isolate characters, and
+Unicode noncharacters unless the schema explicitly opts out.
+
 ## Concepts
 
 - **StyleSchema** — a whitelist of permitted CSS properties and value patterns
@@ -32,6 +38,11 @@ const styleUse = new StyleUse({
     "font-size": /^\d+(px|em|rem|%)$/,
   },
   urls: false,
+  limits: {
+    maxStylesheetLength: 4000,
+    maxValueLength: 160,
+    maxImports: 0,
+  },
   selectors: /^[a-zA-Z0-9_\-\s\.:>\[\]="]+$/,
 });
 

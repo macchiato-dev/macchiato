@@ -286,6 +286,12 @@ default. `style-use` should deny CSS `url(...)` and `@import` by default. A
 schema may opt in to specific URL patterns, but the baseline must be no imports
 and zero unintentional exfiltration.
 
+Schemas should also carry host-enforced resource limits. The current DOM/CSS
+validators cap text length, attribute name/value length, attribute count, node
+count, stylesheet length, CSS value length, URL length, and import count, with
+defaults in place even when a schema omits `limits`. Text, attributes, and CSS
+also reject troublesome control/bidi/noncharacter code points by default.
+
 ## Resource Limits
 
 The QuickJS runtime should enforce limits before this becomes usable for
