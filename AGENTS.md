@@ -52,12 +52,20 @@ node packages/macchiato/src/macchiato.js site list
 Add a site with:
 
 ```bash
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  examples/dom-use-demo/dom.schema.json
+
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/style-use@0.0.1/basic.json \
+  examples/dom-use-demo/css.schema.json
+
 node packages/macchiato/src/macchiato.js site add-page \
   dom-use \
   examples/dom-use-demo/page.html \
   examples/dom-use-demo/style.css \
-  examples/dom-use-demo/dom.schema.json \
-  examples/dom-use-demo/css.schema.json \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  @macchiato-dev/style-use@0.0.1/basic.json \
   --title "Neighborhood Library"
 ```
 

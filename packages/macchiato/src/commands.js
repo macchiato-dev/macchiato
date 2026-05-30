@@ -31,6 +31,13 @@ function readText(path) {
   return readFileSync(path, "utf-8");
 }
 
+function readSchemaArg(value) {
+  if (String(value).startsWith("@")) return value;
+  const text = readText(value);
+  JSON.parse(text);
+  return text;
+}
+
 function exit(code = 0) {
   if ("Deno" in globalThis) globalThis.Deno.exit(code);
   else process.exit(code);
@@ -45,6 +52,8 @@ export function createCommands({ blocking = false } = {}) {
       console.log("  server start [opts]           Start the HTTP server");
       console.log("  server stop                   Stop the HTTP server");
       console.log("  server status                 Check server status");
+      console.log("  schema add <name> <json>      Add a named schema");
+      console.log("  schema list                   List named schemas");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site list                     List sites");
@@ -70,6 +79,29 @@ export function createCommands({ blocking = false } = {}) {
 
     "server status"() {
       console.log(isRunning() ? "Server is running" : "Server is not running");
+    },
+
+    "schema add"(args) {
+      const [name, path] = args;
+      if (!name || !path) {
+        console.log("Usage: schema add <name> <json>");
+        return;
+      }
+      const json = readText(path);
+      JSON.parse(json);
+      withDb((db) => {
+        db.prepare("INSERT OR REPLACE INTO schemas VALUES (?, ?)").run(name, json);
+      });
+      console.log(`Added schema: ${name}`);
+    },
+
+    "schema list"() {
+      const rows = withDb((db) => db.prepare("SELECT name FROM schemas ORDER BY name").all());
+      if (rows.length === 0) {
+        console.log("No schemas configured");
+        return;
+      }
+      for (const row of rows) console.log(`  ${row.name}`);
     },
 
     "site add"(args) {
@@ -112,10 +144,8 @@ export function createCommands({ blocking = false } = {}) {
 
       const html = readText(htmlPath);
       const css = readText(cssPath);
-      const domSchema = readText(domSchemaPath);
-      const cssSchema = readText(cssSchemaPath);
-      JSON.parse(domSchema);
-      JSON.parse(cssSchema);
+      const domSchema = readSchemaArg(domSchemaPath);
+      const cssSchema = readSchemaArg(cssSchemaPath);
 
       withDb((db) => {
         db.prepare(`
