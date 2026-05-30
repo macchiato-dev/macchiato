@@ -127,6 +127,33 @@ function hydrateCssSchema(schema) {
     ...schema,
     properties,
     selectors: typeof schema.selectors === "string" ? new RegExp(schema.selectors) : schema.selectors,
+    urls: hydrateUrlRules(schema.urls),
+  };
+}
+
+function hydrateUrlRules(rules) {
+  if (rules === undefined || typeof rules === "boolean") return rules;
+  if (typeof rules === "string") return new RegExp(rules);
+  if (Array.isArray(rules)) return rules.map((rule) => typeof rule === "string" ? new RegExp(rule) : rule);
+  const hydrated = {};
+  for (const [name, rule] of Object.entries(rules)) {
+    hydrated[name] = hydrateUrlRules(rule);
+  }
+  return hydrated;
+}
+
+function hydrateDomSchema(schema) {
+  const nodes = {};
+  for (const [tag, rule] of Object.entries(schema.nodes || {})) {
+    nodes[tag] = {
+      ...rule,
+      urls: hydrateUrlRules(rule.urls),
+    };
+  }
+  return {
+    ...schema,
+    nodes,
+    urls: hydrateUrlRules(schema.urls),
   };
 }
 
@@ -145,7 +172,7 @@ function renderStoredPage(row) {
   const css = row.css || "";
 
   if (row.sandboxed) {
-    const domSchema = parseSchemaDocument(row.dom_schema_json);
+    const domSchema = hydrateDomSchema(parseSchemaDocument(row.dom_schema_json));
     const cssSchema = hydrateCssSchema(parseSchemaDocument(row.css_schema_json));
     const styleUse = new StyleUse(cssSchema);
     styleUse.validateStylesheet(css);

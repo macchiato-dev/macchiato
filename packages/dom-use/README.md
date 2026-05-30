@@ -35,6 +35,12 @@ stays acyclic and the public API surface remains at dom-use.
 - **innerHTML / outerHTML** — delegated to `html-use` with dom-use's schema
   and element factory injected at call time
 
+URL-bearing DOM attributes such as `href`, `src`, `srcset`, and `action` are
+denied by default, even when the attribute name is otherwise listed in `attrs`.
+Schemas must explicitly add URL allow rules through `urls` before those
+attributes can load or point at external resources. The default posture is zero
+unintentional exfiltration.
+
 ## Example
 
 ```javascript
@@ -46,6 +52,7 @@ const domUse = new DomUse({
     p: { attrs: ["class"], children: ["span", "#text"] },
     span: { attrs: ["class"], children: ["#text"] },
   },
+  urls: false,
   maxDepth: 10,
 });
 
@@ -61,6 +68,19 @@ div.appendChild(doc.createElement("script")); // throws — script not in schema
 // with dom-use's createElement and schema injected:
 domUse.setInnerHTML(div, '<p>safe</p><script>evil()</script>');
 console.log(domUse.getInnerHTML(div)); // "<p>safe</p>"
+```
+
+To allow URL attributes, opt in explicitly:
+
+```javascript
+new DomUse({
+  nodes: {
+    a: { attrs: ["href"], children: ["#text"] },
+  },
+  urls: {
+    href: /^https:\/\/example\.test\//,
+  },
+});
 ```
 
 ## Layer above: hydration and dynamic loading
