@@ -92,6 +92,14 @@ Then open:
 http://dom-use.localhost:8765
 ```
 
+To use a specific SQLite directory instead of the default
+`~/.macchiato/default`, pass the same data directory to both commands:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./macchiato-dev-data site list
+node packages/app/src/index.js --data-dir ./macchiato-dev-data
+```
+
 ### Permission notes
 
 | Flag | What it allows |

@@ -14,8 +14,14 @@ export function getDbPath() {
   return join(home, ".macchiato", "default", "macchiato.sqlite3");
 }
 
-export function withDb(fn) {
-  const dbPath = getDbPath();
+export function getDbPathForOptions(options = {}) {
+  if (options.dbPath) return options.dbPath;
+  if (options.dataDir) return join(options.dataDir, "macchiato.sqlite3");
+  return getDbPath();
+}
+
+export function withDb(fn, options = {}) {
+  const dbPath = getDbPathForOptions(options);
   mkdirSync(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
   db.exec("PRAGMA journal_mode = WAL");

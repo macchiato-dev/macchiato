@@ -19,6 +19,8 @@ export async function startServer(opts = {}) {
   const args = [appPath];
   if (opts.port) args.push("--port", String(opts.port));
   if (opts.host) args.push("--host", opts.host);
+  if (opts.dataDir) args.push("--data-dir", String(opts.dataDir));
+  if (opts.dbPath) args.push("--db", String(opts.dbPath));
 
   const runtime = "Deno" in globalThis ? "deno" : process.execPath;
   const runtimeArgs = "Deno" in globalThis
