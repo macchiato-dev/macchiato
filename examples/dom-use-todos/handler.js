@@ -68,6 +68,41 @@ function page() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Todos</title>
+<style>
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  background: #181a1f;
+}
+
+#app[data-status="loading"] {
+  padding-top: 2rem;
+  color: #c9d6df;
+  font-family: system-ui, sans-serif;
+  font-size: 3rem;
+  font-weight: 300;
+  text-align: center;
+}
+
+#app[data-status="loading"]::before {
+  content: "Loading...";
+  display: block;
+  font-size: 3rem;
+  opacity: 0;
+  animation: macchiato-loading-fade 0.35s ease 0.5s forwards;
+}
+
+#app[data-status="loading"] {
+  font-size: 0;
+}
+
+@keyframes macchiato-loading-fade {
+  to {
+    opacity: 1;
+  }
+}
+</style>
 <script type="importmap">
 {
   "imports": {
@@ -82,7 +117,7 @@ function page() {
 </script>
 </head>
 <body>
-<div id="app" data-status="loading">Loading...</div>
+<div id="app" data-status="loading" aria-label="Loading"></div>
 <script type="module" src="/client.js"></script>
 </body>
 </html>`;
