@@ -17,11 +17,11 @@
       "children": ["#text"]
     },
     "input": {
-      "attrs": ["class", "type", "placeholder", "value", "checked", "autofocus", "data-node-id"],
+      "attrs": ["class", "type", "placeholder", "value", "checked", "autofocus", "data-node-id", "data-events"],
       "children": []
     },
     "button": {
-      "attrs": ["class", "data-node-id"],
+      "attrs": ["class", "data-node-id", "data-events"],
       "children": ["#text"]
     },
     "ul": {
@@ -29,11 +29,11 @@
       "children": ["li"]
     },
     "li": {
-      "attrs": ["class", "data-id", "data-index", "data-node-id", "draggable"],
+      "attrs": ["class", "data-id", "data-index", "data-node-id", "data-events", "draggable"],
       "children": ["span", "input", "label", "button", "a"]
     },
     "label": {
-      "attrs": ["data-node-id"],
+      "attrs": ["data-node-id", "data-events"],
       "children": ["#text"]
     },
     "footer": {
@@ -41,7 +41,7 @@
       "children": ["span", "ul", "button"]
     },
     "span": {
-      "attrs": ["class", "data-node-id", "title"],
+      "attrs": ["class", "data-node-id", "data-events", "title"],
       "children": ["strong", "#text"]
     },
     "strong": {
@@ -49,7 +49,7 @@
       "children": ["#text"]
     },
     "a": {
-      "attrs": ["class", "data-node-id"],
+      "attrs": ["class", "data-node-id", "data-events"],
       "children": ["#text"]
     }
   },
