@@ -80,11 +80,16 @@ bun run src/index.js --data-dir ~/macchiato-dev-data
 ## Site routing
 
 Subdomains are first looked up in `site_pages`. These rows store HTML, CSS,
-DOM schema JSON, CSS schema JSON, and a sandbox flag in SQLite. If no
-`site_pages` row matches, the server falls back to the older `sites` directory
-table.
+DOM schema JSON or schema names, CSS schema JSON or schema names, and a sandbox
+flag in SQLite. If no `site_pages` row matches, the server falls back to the
+older `sites` directory table.
 
 ```sql
+CREATE TABLE schemas (
+  name TEXT PRIMARY KEY,
+  json TEXT NOT NULL
+);
+
 CREATE TABLE site_pages (
   subdomain TEXT PRIMARY KEY,
   title TEXT NOT NULL DEFAULT '',

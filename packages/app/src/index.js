@@ -74,6 +74,12 @@ const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode = WAL");
 db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL)");
 db.exec(`
+  CREATE TABLE IF NOT EXISTS schemas (
+    name TEXT PRIMARY KEY,
+    json TEXT NOT NULL
+  )
+`);
+db.exec(`
   CREATE TABLE IF NOT EXISTS site_pages (
     subdomain TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
@@ -86,6 +92,7 @@ db.exec(`
 `);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
+const getSchema = db.prepare("SELECT json FROM schemas WHERE name = ?");
 const getSitePage = db.prepare(`
   SELECT subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed
   FROM site_pages
@@ -123,13 +130,23 @@ function hydrateCssSchema(schema) {
   };
 }
 
+function parseSchemaDocument(value) {
+  const text = String(value || "").trim();
+  if (text.startsWith("@")) {
+    const row = getSchema.get(text);
+    if (!row) throw new Error(`Schema not found: ${text}`);
+    return JSON.parse(row.json);
+  }
+  return JSON.parse(text);
+}
+
 function renderStoredPage(row) {
   let body = row.html;
   const css = row.css || "";
 
   if (row.sandboxed) {
-    const domSchema = JSON.parse(row.dom_schema_json);
-    const cssSchema = hydrateCssSchema(JSON.parse(row.css_schema_json));
+    const domSchema = parseSchemaDocument(row.dom_schema_json);
+    const cssSchema = hydrateCssSchema(parseSchemaDocument(row.css_schema_json));
     const styleUse = new StyleUse(cssSchema);
     styleUse.validateStylesheet(css);
     const domUse = new DomUse(domSchema, styleUse);

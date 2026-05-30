@@ -19,6 +19,8 @@ Current pieces:
   dangerous style values.
 - `examples/dom-use-demo` stores a page fragment, stylesheet, DOM schema, and
   CSS schema that can be imported into SQLite and served as a sandboxed page.
+  Schemas may be stored inline on the page row or referenced by name, such as
+  `@macchiato-dev/dom-use@0.0.1/article.json`.
 
 Missing pieces:
 
