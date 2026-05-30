@@ -80,6 +80,8 @@ test("dom-use-todos works in a real browser", async (t) => {
 
   await page.goto(`http://dom-use-todos.localhost:${port}/`);
   const input = page.getByPlaceholder("What needs to be done?");
+  await input.waitFor();
+  assert.equal(await page.locator("#macchiato-loading-style").count(), 0);
   await input.click();
   assert.equal(await input.evaluate((node) => document.activeElement === node), true);
   await page.keyboard.type("Buy milk");
@@ -89,8 +91,31 @@ test("dom-use-todos works in a real browser", async (t) => {
   await assert.doesNotReject(async () => {
     await page.getByText("Buy milk").waitFor();
   });
+  await page.locator(".destroy").click({ force: true });
+  await assert.doesNotReject(async () => {
+    await page.getByPlaceholder("What needs to be done?").waitFor();
+  });
+  assert.equal(await page.locator(".todoapp").count(), 1);
+  assert.equal(await page.locator(".todo-item").count(), 0);
+
+  await page.getByPlaceholder("What needs to be done?").click();
+  await page.keyboard.type("Buy milk");
+  await page.keyboard.press("Enter");
+  await page.getByText("Buy milk").waitFor();
   await page.locator(".toggle").check();
   await assert.doesNotReject(async () => {
     await page.locator(".todo-item.completed").waitFor();
   });
+
+  const clearCompleted = page.locator(".clear-completed:not(.hidden)");
+  await assert.doesNotReject(async () => {
+    await clearCompleted.waitFor();
+  });
+  await clearCompleted.click();
+  await assert.doesNotReject(async () => {
+    await page.getByPlaceholder("What needs to be done?").waitFor();
+  });
+  assert.equal(await page.locator(".todoapp").count(), 1);
+  assert.equal(await page.locator(".todo-item").count(), 0);
+  assert.equal(await page.locator("#app[data-status='error']").count(), 0);
 });
