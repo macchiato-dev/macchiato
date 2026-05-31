@@ -1,14 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { domUseBrowserAssets } from "@macchiato-dev/dom-use/browser-assets";
+import { htmlUseBrowserAssets } from "@macchiato-dev/html-use/browser-assets";
+import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-emscripten-sandbox/browser-assets";
+import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
-const nodeModulesRoot = join(repoRoot, "node_modules");
-const SERVED_NODE_MODULES = [
-  "@jitl/quickjs-ffi-types/",
-  "@jitl/quickjs-singlefile-browser-release-sync/",
-  "quickjs-emscripten-core/",
+const BROWSER_ASSET_SETS = [
+  quickJsEmscriptenSandboxBrowserAssets,
+  domUseBrowserAssets,
+  htmlUseBrowserAssets,
+  styleUseBrowserAssets,
 ];
 
 let assetsPromise = null;
@@ -23,18 +27,60 @@ function contentType(pathname) {
   return "application/octet-stream";
 }
 
-async function serveNodeModule(pathname) {
-  if (!pathname.startsWith("/node_modules/")) return null;
-  const relative = pathname.slice("/node_modules/".length);
-  if (!SERVED_NODE_MODULES.some((prefix) => relative.startsWith(prefix))) {
-    return new Response("Not found", { status: 404 });
+function assetUrl(set, publicPath) {
+  return `/-/${set.namespace}/${publicPath}`;
+}
+
+function importMap() {
+  const imports = {};
+  for (const set of BROWSER_ASSET_SETS) {
+    for (const [specifier, publicPath] of Object.entries(set.imports || {})) {
+      imports[specifier] = assetUrl(set, publicPath);
+    }
   }
-  if (relative.includes("..") || relative.includes("\\")) {
-    return new Response("Not found", { status: 404 });
+  return JSON.stringify({ imports }, null, 2);
+}
+
+function providerAsset(pathname) {
+  if (!pathname.startsWith("/-/")) return null;
+  const relative = pathname.slice("/-/".length);
+  if (relative.includes("..") || relative.includes("\\")) return null;
+
+  for (const set of BROWSER_ASSET_SETS) {
+    if (!relative.startsWith(`${set.namespace}/`)) continue;
+    const publicPath = relative.slice(set.namespace.length + 1);
+    for (const asset of set.files || []) {
+      if (publicPath === asset.publicPath) return { asset };
+      if (asset.sourceMapPath && publicPath === `${asset.publicPath}.map`) {
+        return { asset: { ...asset, filePath: asset.sourceMapPath, rewrites: null, sourceMapPath: null } };
+      }
+    }
   }
+
+  return null;
+}
+
+function rewriteAsset(content, asset) {
+  let rewritten = content;
+  for (const [from, to] of Object.entries(asset.rewrites || {})) {
+    rewritten = rewritten.replaceAll(from, to);
+  }
+  if (asset.sourceMapPath) {
+    rewritten = rewritten.replace(
+      /\/\/# sourceMappingURL=.*$/m,
+      `//# sourceMappingURL=${asset.publicPath}.map`,
+    );
+  }
+  return rewritten;
+}
+
+async function serveProviderAsset(pathname) {
+  const match = providerAsset(pathname);
+  if (!match) return null;
   try {
-    const content = await readFile(join(nodeModulesRoot, relative));
-    return new Response(content, {
+    const content = await readFile(match.asset.filePath, "utf8");
+    const body = pathname.endsWith(".js") ? rewriteAsset(content, match.asset) : content;
+    return new Response(body, {
       headers: { "content-type": contentType(pathname) },
     });
   } catch {
@@ -104,16 +150,7 @@ body {
 }
 </style>
 <script type="importmap">
-{
-  "imports": {
-    "@jitl/quickjs-ffi-types": "/node_modules/@jitl/quickjs-ffi-types/dist/index.mjs",
-    "@jitl/quickjs-singlefile-browser-release-sync": "/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs",
-    "@macchiato-dev/dom-use": "/@macchiato-dev/dom-use/src/index.js",
-    "@macchiato-dev/html-use": "/@macchiato-dev/html-use/src/index.js",
-    "@macchiato-dev/style-use": "/@macchiato-dev/style-use/src/index.js",
-    "quickjs-emscripten-core": "/node_modules/quickjs-emscripten-core/dist/index.mjs"
-  }
-}
+${importMap()}
 </script>
 </head>
 <body>
@@ -125,8 +162,8 @@ body {
 
 export async function domUseTodosHandler(request) {
   const url = new URL(request.url);
-  const nodeModule = await serveNodeModule(url.pathname);
-  if (nodeModule) return nodeModule;
+  const providerAsset = await serveProviderAsset(url.pathname);
+  if (providerAsset) return providerAsset;
 
   const loaded = await assets();
 

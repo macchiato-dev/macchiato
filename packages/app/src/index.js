@@ -258,27 +258,10 @@ async function serveFile(directory, pathname = "/index.html") {
   }
 }
 
-async function serveWorkspaceModule(pathname) {
-  if (!pathname.startsWith("/@macchiato-dev/")) return null;
-
-  const parts = pathname.split("/").filter(Boolean);
-  const packageName = parts[1];
-  const rest = parts.slice(2).join("/");
-  if (!packageName || !rest || !rest.endsWith(".js")) {
-    return new Response("Not found", { status: 404 });
-  }
-
-  const repoRoot = new URL("../../..", import.meta.url).pathname;
-  return serveFile(join(repoRoot, "packages", packageName), `/${rest}`);
-}
-
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
   const url = new URL(request.url);
-
-  const workspaceModule = await serveWorkspaceModule(url.pathname);
-  if (workspaceModule) return workspaceModule;
 
   if (subdomain === "macchiato") {
     return dashboardHandler(request);

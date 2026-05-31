@@ -4,7 +4,8 @@
   "description": "Structured DOM access according to a schema — the top-level capability",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./browser-assets": "./src/browser-assets.js"
   },
   "dependencies": {
     "@macchiato-dev/style-use": "0.1.0",
