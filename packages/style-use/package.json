@@ -4,7 +4,8 @@
   "description": "Govern permitted CSS styles — inline and stylesheet",
   "type": "module",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./browser-assets": "./src/browser-assets.js"
   },
   "dependencies": {}
 }

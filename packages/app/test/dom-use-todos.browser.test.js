@@ -79,6 +79,11 @@ test("dom-use-todos works in a real browser", async (t) => {
   const page = await browser.newPage();
 
   await page.goto(`http://dom-use-todos.localhost:${port}/`);
+  const oldWorkspaceModule = await page.request.get(
+    `http://dom-use-todos.localhost:${port}/@macchiato-dev/dom-use/src/index.js`,
+  );
+  assert.equal(oldWorkspaceModule.status(), 404);
+
   const input = page.getByPlaceholder("What needs to be done?");
   await input.waitFor();
   assert.equal(await page.locator("#macchiato-loading-style").count(), 0);

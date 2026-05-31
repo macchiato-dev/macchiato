@@ -17,7 +17,10 @@ test("dom-use-todos serves a client-side QuickJS shell", async () => {
 
   assert.equal(response.status, 200);
   assert.match(text, /<script type="importmap">/);
-  assert.match(text, /quickjs-emscripten-core/);
+  assert.match(text, /"quickjs-emscripten-core": "\/-\/quickjs-emscripten-sandbox\/quickjs-core\.js"/);
+  assert.match(text, /"@macchiato-dev\/dom-use": "\/-\/@macchiato-dev\/dom-use\/index\.js"/);
+  assert.doesNotMatch(text, /node_modules/);
+  assert.doesNotMatch(text, /index\.mjs/);
   assert.match(text, /<script type="module" src="\/client\.js"><\/script>/);
   assert.doesNotMatch(text, /\/event/);
 });
@@ -43,6 +46,26 @@ test("dom-use-todos serves client runtime and schemas", async () => {
   assert.match(guest.text, /__macchiatoBoot/);
   assert.deepEqual(JSON.parse(domSchema.text).urls, false);
   assert.deepEqual(JSON.parse(cssSchema.text).urls, false);
+});
+
+test("dom-use-todos serves provider assets through module namespaces", async () => {
+  const quickjs = await request("/-/quickjs-emscripten-sandbox/quickjs-core.js");
+  const quickjsMap = await request("/-/quickjs-emscripten-sandbox/quickjs-core.js.map");
+  const ffiTypes = await request("/-/quickjs-emscripten-sandbox/ffi-types.js");
+  const domUse = await request("/-/@macchiato-dev/dom-use/index.js");
+  const oldNodeModulesPath = await request("/node_modules/quickjs-emscripten-core/dist/index.mjs");
+
+  assert.equal(quickjs.response.status, 200);
+  assert.match(quickjs.text, /from"\.\/quickjs-async-runtime\.js"/);
+  assert.match(quickjs.text, /sourceMappingURL=quickjs-core\.js\.map/);
+  assert.doesNotMatch(quickjs.text, /chunk-[A-Z0-9]+\.mjs/);
+  assert.equal(quickjsMap.response.status, 200);
+  assert.equal(JSON.parse(quickjsMap.text).version, 3);
+  assert.equal(ffiTypes.response.status, 200);
+  assert.match(ffiTypes.text, /sourceMappingURL=ffi-types\.js\.map/);
+  assert.equal(domUse.response.status, 200);
+  assert.match(domUse.text, /export class DomUse/);
+  assert.equal(oldNodeModulesPath.response.status, 404);
 });
 
 test("dom-use-todos does not expose backend event dispatch", async () => {

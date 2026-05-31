@@ -6,6 +6,7 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./browser-assets": "./src/browser-assets.js",
     "./handler": "./src/handler.js"
   },
   "bin": {
