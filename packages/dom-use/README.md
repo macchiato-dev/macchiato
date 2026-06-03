@@ -102,15 +102,23 @@ new DomUse({
 
 ## Layer above: hydration and dynamic loading
 
-A future package (possibly `page-use` or `app-use`) will sit above `dom-use`
+`dom-use` now provides the reusable pieces needed to build that layer:
+
+- `@macchiato-dev/dom-use/bridge` — host-side node registry, schema-enforced
+  DOM operation dispatch, event target lookup, event payload shaping, and
+  bounded localStorage capability plumbing
+- `@macchiato-dev/dom-use/guest-runtime` — guest-side minimal DOM wrapper,
+  source HTML parser, inline module runner hooks, and event dispatcher
+
+A future package (possibly `page-use` or `app-use`) can sit above these pieces
 and handle concerns like:
 
 - Hydrating server-rendered HTML into a live guest DOM
 - HTMX-style partial page updates (swapping fragments via `dom-use`)
 - Event delegation and lifecycle hooks
 
-`dom-use` stays focused: schema-bound node creation, mutation, and tree
-validation. Higher-level orchestration belongs in the layer above.
+`dom-use` stays focused: schema-bound node creation, mutation, event policy,
+and tree validation. Higher-level orchestration belongs in the layer above.
 
 ## Related
 

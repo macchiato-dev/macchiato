@@ -92,13 +92,11 @@ async function assets() {
   if (!assetsPromise) {
     assetsPromise = Promise.all([
       readFile(join(repoRoot, "examples", "todo", "index.html"), "utf8"),
-      readAsset("guest.js"),
       readAsset("client.js"),
       readAsset("dom.schema.json"),
       readAsset("css.schema.json"),
-    ]).then(([sourceHtml, guestJs, clientJs, domSchema, cssSchema]) => ({
+    ]).then(([sourceHtml, clientJs, domSchema, cssSchema]) => ({
       sourceHtml,
-      guestJs,
       clientJs,
       domSchema,
       cssSchema,
@@ -175,12 +173,6 @@ export async function domUseTodosHandler(request) {
 
   if (url.pathname === "/client.js") {
     return new Response(loaded.clientJs, {
-      headers: { "content-type": "application/javascript; charset=utf-8" },
-    });
-  }
-
-  if (url.pathname === "/guest.js") {
-    return new Response(loaded.guestJs, {
       headers: { "content-type": "application/javascript; charset=utf-8" },
     });
   }

@@ -5,6 +5,7 @@ export const domUseBrowserAssets = {
   imports: {
     "@macchiato-dev/dom-use": "index.js",
     "@macchiato-dev/dom-use/bridge": "bridge.js",
+    "@macchiato-dev/dom-use/guest-runtime": "guest-runtime.js",
   },
   files: [
     {
@@ -14,6 +15,10 @@ export const domUseBrowserAssets = {
     {
       publicPath: "bridge.js",
       filePath: fileURLToPath(new URL("./bridge.js", import.meta.url)),
+    },
+    {
+      publicPath: "guest-runtime.js",
+      filePath: fileURLToPath(new URL("./guest-runtime.js", import.meta.url)),
     },
   ],
 };

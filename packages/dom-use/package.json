@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.js",
     "./bridge": "./src/bridge.js",
+    "./guest-runtime": "./src/guest-runtime.js",
     "./browser-assets": "./src/browser-assets.js"
   },
   "dependencies": {

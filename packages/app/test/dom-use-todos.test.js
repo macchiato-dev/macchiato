@@ -37,7 +37,7 @@ test("dom-use-todos serves the original todo source unchanged", async () => {
 
 test("dom-use-todos serves client runtime and schemas", async () => {
   const client = await request("/client.js");
-  const guest = await request("/guest.js");
+  const guest = await request("/-/@macchiato-dev/dom-use/guest-runtime.js");
   const domSchema = await request("/dom.schema.json");
   const cssSchema = await request("/css.schema.json");
 
@@ -46,6 +46,7 @@ test("dom-use-todos serves client runtime and schemas", async () => {
   assert.match(client.text, /DomUseHostCapability/);
   assert.equal(guest.response.status, 200);
   assert.match(guest.text, /__macchiatoBoot/);
+  assert.equal((await request("/guest.js")).response.status, 404);
   assert.deepEqual(JSON.parse(domSchema.text).urls, false);
   assert.deepEqual(JSON.parse(cssSchema.text).urls, false);
 });
@@ -57,6 +58,7 @@ test("dom-use-todos serves provider assets through module namespaces", async () 
   const ffiTypes = await request("/-/quickjs-emscripten-sandbox/ffi-types.js");
   const domUse = await request("/-/@macchiato-dev/dom-use/index.js");
   const domUseBridge = await request("/-/@macchiato-dev/dom-use/bridge.js");
+  const domUseGuestRuntime = await request("/-/@macchiato-dev/dom-use/guest-runtime.js");
   const oldNodeModulesPath = await request("/node_modules/quickjs-emscripten-core/dist/index.mjs");
 
   assert.equal(quickjs.response.status, 200);
@@ -73,6 +75,8 @@ test("dom-use-todos serves provider assets through module namespaces", async () 
   assert.match(domUse.text, /export class DomUse/);
   assert.equal(domUseBridge.response.status, 200);
   assert.match(domUseBridge.text, /export class DomUseHostCapability/);
+  assert.equal(domUseGuestRuntime.response.status, 200);
+  assert.match(domUseGuestRuntime.text, /__macchiatoDispatch/);
   assert.equal(oldNodeModulesPath.response.status, 404);
 });
 
