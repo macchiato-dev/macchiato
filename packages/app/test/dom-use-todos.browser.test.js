@@ -124,6 +124,25 @@ test("dom-use-todos works in a real browser", async (t) => {
   await page.locator(".destroy").first().click({ force: true });
   assert.equal(await page.locator(".todo-item").count(), 0);
 
+  for (const item of ["Alpha", "Beta", "Gamma"]) {
+    await page.getByPlaceholder("What needs to be done?").fill(item);
+    await page.keyboard.press("Enter");
+  }
+  await page.getByText("Alpha").waitFor();
+  await page.locator(".toggle").nth(0).check();
+  await page.locator(".toggle").nth(1).check();
+
+  for (let i = 0; i < 20; i += 1) {
+    await page.locator(".filters a").filter({ hasText: "Active" }).click();
+    await page.locator(".filters a").filter({ hasText: "Completed" }).click();
+    await page.locator(".filters a").filter({ hasText: "All" }).click();
+  }
+  assert.equal(await page.locator("#app[data-status='error']").count(), 0);
+  assert.deepEqual(await page.locator(".todo-item label").allTextContents(), ["Alpha", "Beta", "Gamma"]);
+  await page.locator(".clear-completed:not(.hidden)").click();
+  await page.locator(".destroy").click({ force: true });
+  assert.equal(await page.locator(".todo-item").count(), 0);
+
   await page.getByPlaceholder("What needs to be done?").click();
   await page.keyboard.type("Buy milk");
   await page.keyboard.press("Enter");
