@@ -1,72 +1,26 @@
 {
   "nodes": {
     "main": {
-      "attrs": ["class"],
-      "children": ["section"]
-    },
-    "section": {
-      "attrs": ["class", "id"],
-      "children": ["div", "aside", "ul"]
-    },
-    "div": {
-      "attrs": ["class"],
-      "children": ["p", "h1", "h2", "nav", "div", "article"]
-    },
-    "nav": {
       "attrs": ["class", "aria-label"],
-      "children": ["a"]
+      "children": ["h1"]
     },
-    "aside": {
-      "attrs": ["class", "aria-label"],
-      "children": ["p", "h2"]
-    },
-    "article": {
-      "attrs": ["class"],
-      "children": ["h3", "p"]
-    },
-    "ul": {
-      "attrs": ["class"],
-      "children": ["li"]
-    },
-    "li": {
+    "h1": {
       "attrs": [],
-      "children": ["span", "p"]
+      "children": ["#text", "span"]
     },
     "span": {
       "attrs": [],
       "children": ["#text"]
-    },
-    "a": {
-      "attrs": ["class", "href"],
-      "children": ["#text"]
-    },
-    "h1": {
-      "attrs": [],
-      "children": ["#text"]
-    },
-    "h2": {
-      "attrs": [],
-      "children": ["#text"]
-    },
-    "h3": {
-      "attrs": [],
-      "children": ["#text"]
-    },
-    "p": {
-      "attrs": ["class"],
-      "children": ["#text"]
     }
   },
-  "urls": {
-    "href": "^#[-A-Za-z0-9_]+$"
-  },
-  "maxDepth": 8,
+  "urls": false,
+  "maxDepth": 5,
   "limits": {
-    "maxTextLength": 240,
+    "maxTextLength": 80,
     "maxAttributeNameLength": 64,
     "maxAttributeValueLength": 120,
-    "maxAttributes": 4,
-    "maxNodes": 120
+    "maxAttributes": 3,
+    "maxNodes": 8
   },
   "content": {
     "rejectPattern": "[<>]"
