@@ -1,14 +1,74 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resources.co</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="brand-stage" aria-label="Resources.co">
-    <h1>Resources<span>.co</span></h1>
+<main class="layout">
+
+    <!-- BRAND -->
+    <header class="box brand" data-screen-label="brand">
+      <div class="brand__name">Resources<span class="dot">.co</span></div>
+    </header>
+
+    <!-- THEME TOGGLE -->
+    <section class="box toggle" data-screen-label="toggle">
+      <button id="theme-toggle" class="toggle-btn" role="switch" aria-checked="true" aria-label="Switch to light mode">
+        <svg class="tb-ghost tb-ghost-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle>
+          <line x1="12" y1="2" x2="12" y2="4"></line>
+          <line x1="12" y1="20" x2="12" y2="22"></line>
+          <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line>
+          <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
+          <line x1="2" y1="12" x2="4" y2="12"></line>
+          <line x1="20" y1="12" x2="22" y2="12"></line>
+          <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line>
+          <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
+        </svg>
+        <svg class="tb-ghost tb-ghost-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span class="tb-thumb">
+          <svg class="tb-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle>
+            <line x1="12" y1="2" x2="12" y2="4"></line>
+            <line x1="12" y1="20" x2="12" y2="22"></line>
+            <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line>
+            <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
+            <line x1="2" y1="12" x2="4" y2="12"></line>
+            <line x1="20" y1="12" x2="22" y2="12"></line>
+            <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line>
+            <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
+          </svg>
+          <svg class="tb-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </span>
+      </button>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <div class="main" id="main">
+      <nav class="box crumb" id="crumb" aria-label="Breadcrumb"></nav>
+      <div id="content"><section class="box block"><div class="block__eyebrow">Self-hosted building blocks</div><h1>Infrastructure you own, composed from parts.</h1><p>Resources.co is a startup building self-hostable primitives for the web — containers, components, and usage providers you run on your own stack, wired together however you like.</p><p>Pick a section from the panel on the right to start, or browse the full catalogue.</p></section><section class="box block"><h2>Featured collections</h2><div class="items"><a href="#resources/containers"><span class="it-name">resources/containers</span><span class="it-desc">Self-hostable runtimes for everything you ship.</span></a><a href="#macchiato/components"><span class="it-name">macchiato/components</span><span class="it-desc">Composable UI and service building blocks.</span></a><a href="#resources/usage-providers"><span class="it-name">resources/usage-providers</span><span class="it-desc">DOM, Style, and Navigator state — shared cleanly.</span></a><a href="#halcyon/design-tokens"><span class="it-name">halcyon/design-tokens</span><span class="it-desc">A living spec for color, type, and spacing.</span></a><a href="#northwind/adapters"><span class="it-name">northwind/adapters</span><span class="it-desc">Uniform interfaces to external services and data.</span></a></div></section></div>
+    </div>
+
+    <!-- NAV -->
+    <nav class="box nav" data-screen-label="nav" aria-label="Primary">
+      <a data-section="home" aria-current="page"><span>Home</span></a>
+      <a data-section="browse"><span>Browse</span></a>
+      <a data-section="collections"><span>Collections</span></a>
+      <a data-section="about"><span>About</span></a>
+    </nav>
+
+    <!-- FOOTER -->
+    <footer class="box footer" data-screen-label="footer">
+      <div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div>
+    </footer>
+
   </main>
 </body>
 </html>

@@ -60,15 +60,17 @@ async function stopChild(child) {
   });
 }
 
-test("resources website validates and serves through dom-use", async () => {
+test("resources website serves the static home page", async () => {
   const response = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/"));
   const text = await response.text();
 
   assert.equal(response.status, 200);
   assert.match(text, /<title>Resources\.co<\/title>/);
-  assert.match(text, /<h1>Resources<span>\.co<\/span><\/h1>/);
-  assert.match(text, /<style>/);
+  assert.match(text, /Infrastructure you own, composed from parts\./);
+  assert.match(text, /Featured collections/);
+  assert.match(text, /<link rel="stylesheet" href="styles\.css">/);
   assert.doesNotMatch(text, /<script\b/i);
+  assert.doesNotMatch(text, /__bundler/i);
   assert.doesNotMatch(text, /https?:\/\//i);
 });
 
@@ -82,28 +84,23 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
   const text = await response.text();
 
   assert.equal(response.status, 200);
-  assert.match(text, /Resources\.co/);
+  assert.match(text, /Self-hosted building blocks/);
 
-  const missing = await fetch(`http://resources-website.localhost:${port}/styles.css`);
-  assert.equal(missing.status, 404);
+  const stylesheet = await fetch(`http://resources-website.localhost:${port}/styles.css`);
+  assert.equal(stylesheet.status, 200);
+  assert.match(await stylesheet.text(), /--accent: #30D5C8;/);
+
+  const font = await fetch(`http://resources-website.localhost:${port}/assets/fonts/space-grotesk-latin.woff2`);
+  assert.equal(font.status, 200);
+  assert.equal(font.headers.get("content-type"), "font/woff2");
 });
 
-test("resources website serves refactored Claude export assets", async () => {
-  const loader = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/loader.js"));
-  const manifest = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/manifest.json"));
-  const template = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/template.json"));
-  const thumbnail = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/thumbnail.svg"));
+test("resources website no longer exposes Claude export bundle routes", async () => {
   const exportIndex = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/index.html"));
+  const loader = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/loader.js"));
 
   assert.equal(exportIndex.status, 404);
-  assert.equal(loader.status, 200);
-  assert.match(await loader.text(), /readBundleText\('manifest\.json'\)/);
-  assert.equal(manifest.status, 200);
-  assert.match(await manifest.text(), /1797e8fd-48fe-4348-b7e6-29f022c4c34f/);
-  assert.equal(template.status, 200);
-  assert.match(await template.text(), /Resources\.co/);
-  assert.equal(thumbnail.status, 200);
-  assert.match(await thumbnail.text(), /<tspan fill="#30D5C8">\.co<\/tspan>/);
+  assert.equal(loader.status, 404);
 });
 
 test("resources website renders its index in a real browser", async (t) => {
@@ -120,7 +117,9 @@ test("resources website renders its index in a real browser", async (t) => {
 
   await page.goto(`http://resources-website.localhost:${port}/`, { waitUntil: "networkidle" });
 
-  await assert.doesNotReject(page.locator("h1", { hasText: "Resources.co" }).waitFor());
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  await assert.doesNotReject(page.locator("text=resources/containers").waitFor());
   assert.deepEqual(errors, []);
   assert.equal(await page.locator("#__bundler_err").count(), 0);
+  assert.equal(await page.locator("script").count(), 0);
 });
