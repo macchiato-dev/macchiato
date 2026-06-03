@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
 import test from "node:test";
+import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 
@@ -88,14 +89,13 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
 });
 
 test("resources website serves refactored Claude export assets", async () => {
-  const shell = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/index.html"));
   const loader = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/loader.js"));
   const manifest = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/manifest.json"));
   const template = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/template.json"));
   const thumbnail = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/thumbnail.svg"));
+  const exportIndex = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/index.html"));
 
-  assert.equal(shell.status, 200);
-  assert.match(await shell.text(), /<script src="\/export\/loader\.js"><\/script>/);
+  assert.equal(exportIndex.status, 404);
   assert.equal(loader.status, 200);
   assert.match(await loader.text(), /readBundleText\('manifest\.json'\)/);
   assert.equal(manifest.status, 200);
@@ -104,4 +104,23 @@ test("resources website serves refactored Claude export assets", async () => {
   assert.match(await template.text(), /Resources\.co/);
   assert.equal(thumbnail.status, 200);
   assert.match(await thumbnail.text(), /<tspan fill="#30D5C8">\.co<\/tspan>/);
+});
+
+test("resources website renders its index in a real browser", async (t) => {
+  const port = await getPort();
+  const app = startApp(port);
+  t.after(async () => stopChild(app.child));
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (err) => errors.push(err.message));
+
+  await page.goto(`http://resources-website.localhost:${port}/`, { waitUntil: "networkidle" });
+
+  await assert.doesNotReject(page.locator("h1", { hasText: "Resources.co" }).waitFor());
+  assert.deepEqual(errors, []);
+  assert.equal(await page.locator("#__bundler_err").count(), 0);
 });
