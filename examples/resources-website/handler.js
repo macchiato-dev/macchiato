@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
@@ -8,6 +8,14 @@ import { StyleUse } from "@macchiato-dev/style-use";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let assetsPromise = null;
+
+const CONTENT_TYPES = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+};
 
 async function readAsset(path) {
   return readFile(join(__dirname, path), "utf8");
@@ -36,12 +44,7 @@ function renderPage(loaded) {
     selectors: new RegExp(loaded.cssSchema.selectors),
   });
   styleUse.validateStylesheet(loaded.css);
-  const domUse = new DomUse({
-    ...loaded.domSchema,
-    urls: {
-      href: new RegExp(loaded.domSchema.urls.href),
-    },
-  }, styleUse);
+  const domUse = new DomUse(loaded.domSchema, styleUse);
   const doc = domUse.createDocument();
   const fragment = parseHTML(loaded.pageHtml, {
     createElement: (tag) => doc.createElement(tag),
@@ -67,8 +70,38 @@ ${body}
 </html>`;
 }
 
+function contentType(pathname) {
+  return CONTENT_TYPES[extname(pathname).toLowerCase()] || "application/octet-stream";
+}
+
+function safeJoin(root, pathname) {
+  const relative = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, "");
+  const target = resolve(root, relative.replace(/^[/\\]+/, ""));
+  const resolvedRoot = resolve(root);
+  if (target !== resolvedRoot && !target.startsWith(`${resolvedRoot}/`)) {
+    throw new Error("Path escapes root");
+  }
+  return target;
+}
+
+async function serveExportAsset(pathname) {
+  if (!pathname.startsWith("/export/")) return null;
+  try {
+    const filePath = safeJoin(join(__dirname, "export"), pathname.slice("/export/".length));
+    const content = await readFile(filePath);
+    return new Response(content, {
+      headers: { "content-type": contentType(pathname) },
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+}
+
 export async function resourcesWebsiteHandler(request) {
   const url = new URL(request.url);
+  const exportAsset = await serveExportAsset(url.pathname);
+  if (exportAsset) return exportAsset;
+
   if (url.pathname !== "/" && url.pathname !== "/index.html") {
     return new Response("Not found", { status: 404 });
   }

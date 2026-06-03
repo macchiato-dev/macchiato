@@ -86,3 +86,22 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
   const missing = await fetch(`http://resources-website.localhost:${port}/styles.css`);
   assert.equal(missing.status, 404);
 });
+
+test("resources website serves refactored Claude export assets", async () => {
+  const shell = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/index.html"));
+  const loader = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/loader.js"));
+  const manifest = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/manifest.json"));
+  const template = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/template.json"));
+  const thumbnail = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/thumbnail.svg"));
+
+  assert.equal(shell.status, 200);
+  assert.match(await shell.text(), /<script src="\/export\/loader\.js"><\/script>/);
+  assert.equal(loader.status, 200);
+  assert.match(await loader.text(), /readBundleText\('manifest\.json'\)/);
+  assert.equal(manifest.status, 200);
+  assert.match(await manifest.text(), /1797e8fd-48fe-4348-b7e6-29f022c4c34f/);
+  assert.equal(template.status, 200);
+  assert.match(await template.text(), /Resources\.co/);
+  assert.equal(thumbnail.status, 200);
+  assert.match(await thumbnail.text(), /<tspan fill="#30D5C8">\.co<\/tspan>/);
+});
