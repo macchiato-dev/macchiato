@@ -315,11 +315,16 @@ globalThis.__macchiatoDispatch = (json) => {
       ? find(document.body, (node) => node.__hostNodeId === String(event.nodeId))
       : null;
     if (target) {
-      applyControlState(event.payload?.controls);
-      const guestEvent = makeEvent(target, event.payload || {});
-      for (const listener of listeners) listener(guestEvent);
-      guestEvent.__macchiatoDataTransfer.effectAllowed = guestEvent.dataTransfer.effectAllowed;
-      event.dataTransfer = guestEvent.__macchiatoDataTransfer;
+      host("beginEvent");
+      try {
+        applyControlState(event.payload?.controls);
+        const guestEvent = makeEvent(target, event.payload || {});
+        for (const listener of listeners) listener(guestEvent);
+        guestEvent.__macchiatoDataTransfer.effectAllowed = guestEvent.dataTransfer.effectAllowed;
+        event.dataTransfer = guestEvent.__macchiatoDataTransfer;
+      } finally {
+        host("endEvent");
+      }
     }
     return JSON.stringify({ html: host("serializeApp").html, dataTransfer: event.dataTransfer || null });
   } catch (err) {

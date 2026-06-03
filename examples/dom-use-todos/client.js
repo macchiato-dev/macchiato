@@ -56,12 +56,18 @@ class DomUseCapability {
     this.document = this.domUse.createDocument();
     this.storage = storage;
     this.nodes = new Map();
+    this.nodeIds = new WeakMap();
+    this.pendingPrune = new Set();
+    this.eventDepth = 0;
     this.appRootId = null;
     this.nextId = 1;
   }
 
   resetDom() {
     this.nodes = new Map();
+    this.nodeIds = new WeakMap();
+    this.pendingPrune = new Set();
+    this.eventDepth = 0;
     this.appRootId = null;
     this.nextId = 1;
     this.document = this.domUse.createDocument();
@@ -71,6 +77,7 @@ class DomUseCapability {
   register(node) {
     const id = String(this.nextId++);
     this.nodes.set(id, node);
+    this.nodeIds.set(node, id);
     return id;
   }
 
@@ -106,13 +113,17 @@ class DomUseCapability {
   }
 
   setTextContent(id, value) {
-    this.node(id).textContent = value;
+    const node = this.node(id);
+    this.pruneChildren(node);
+    node.textContent = value;
     return {};
   }
 
   setInnerHTML(id, html) {
-    if (html === "") this.node(id).replaceChildren();
-    else this.domUse.setInnerHTML(this.node(id), html);
+    const node = this.node(id);
+    this.pruneChildren(node);
+    if (html === "") node.replaceChildren();
+    else this.domUse.setInnerHTML(node, html);
     return {};
   }
 
@@ -154,6 +165,41 @@ class DomUseCapability {
     return { tagName: this.node(id).tagName };
   }
 
+  beginEvent() {
+    this.eventDepth += 1;
+    return {};
+  }
+
+  endEvent() {
+    this.eventDepth = Math.max(0, this.eventDepth - 1);
+    if (this.eventDepth === 0) this.flushPrunedNodes();
+    return {};
+  }
+
+  pruneChildren(node) {
+    for (const child of [...(node.children || [])]) this.pruneTree(child);
+  }
+
+  pruneTree(node) {
+    if (this.eventDepth > 0) {
+      this.pendingPrune.add(node);
+      return;
+    }
+    for (const child of [...(node.children || [])]) this.pruneTree(child);
+    const id = this.nodeIds.get(node);
+    if (id) {
+      this.nodes.delete(id);
+      this.nodeIds.delete(node);
+      if (node.ownerDocument?.createdNodes > 0) node.ownerDocument.createdNodes -= 1;
+    }
+  }
+
+  flushPrunedNodes() {
+    const pending = Array.from(this.pendingPrune);
+    this.pendingPrune.clear();
+    for (const node of pending) this.pruneTree(node);
+  }
+
   storageGet(key) {
     return { value: this.storage.getItem(key) };
   }
@@ -180,6 +226,8 @@ class DomUseCapability {
       case "setAppRoot": return this.setAppRoot(message.id);
       case "serializeApp": return this.serializeApp();
       case "nodeTag": return this.nodeTag(message.id);
+      case "beginEvent": return this.beginEvent();
+      case "endEvent": return this.endEvent();
       case "storageGet": return this.storageGet(message.key);
       case "storageSet": return this.storageSet(message.key, message.value);
       default: throw new Error(`Unsupported host operation: ${message.op}`);
