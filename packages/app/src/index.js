@@ -10,6 +10,7 @@ import { DomUse } from "@macchiato-dev/dom-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
+import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -273,6 +274,10 @@ async function route(request) {
 
   if (subdomain === "dom-use-todos") {
     return domUseTodosHandler(request);
+  }
+
+  if (subdomain === "resources-website") {
+    return resourcesWebsiteHandler(request);
   }
 
   const page = getSitePage.get(subdomain);

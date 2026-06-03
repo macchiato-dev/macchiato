@@ -1,0 +1,12 @@
+{
+  "imports": false,
+  "urls": false,
+  "selectors": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()]+$",
+  "limits": {
+    "maxStylesheetLength": 12000,
+    "maxPropertyLength": 64,
+    "maxValueLength": 240,
+    "maxUrlLength": 200,
+    "maxImports": 0
+  }
+}
