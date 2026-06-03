@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.js",
+    "./bridge": "./src/bridge.js",
     "./browser-assets": "./src/browser-assets.js"
   },
   "dependencies": {
