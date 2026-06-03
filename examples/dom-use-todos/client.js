@@ -1,6 +1,5 @@
-import { newQuickJSWASMModuleFromVariant } from "quickjs-emscripten-core";
-import quickjsVariant from "@jitl/quickjs-singlefile-browser-release-sync";
 import { DomUse } from "@macchiato-dev/dom-use";
+import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 import { StyleUse } from "@macchiato-dev/style-use";
 
 const DEFAULT_STORAGE_LIMIT = 10000;
@@ -246,39 +245,6 @@ class DomUseCapability {
   }
 }
 
-function installHostCapability(context, capability) {
-  const hostFunction = context.newFunction("__macchiatoHost", (messageHandle) => {
-    try {
-      const message = JSON.parse(context.getString(messageHandle));
-      return context.newString(JSON.stringify(capability.dispatch(message)));
-    } catch (err) {
-      return context.newString(JSON.stringify({ __error: err.message }));
-    }
-  });
-  context.setProp(context.global, "__macchiatoHost", hostFunction);
-  hostFunction.dispose();
-}
-
-function evalGlobal(context, code, filename) {
-  const result = context.evalCode(code, filename);
-  if (result.error) {
-    const error = context.dump(result.error);
-    result.error.dispose();
-    throw new Error(String(error));
-  }
-  result.value.dispose();
-}
-
-function evalModule(context, code, filename) {
-  const result = context.evalCode(code, filename, { type: "module" });
-  if (result.error) {
-    const error = context.dump(result.error);
-    result.error.dispose();
-    throw new Error(String(error));
-  }
-  result.value.dispose();
-}
-
 function sourceValue(target) {
   if (target.matches(".add-btn")) return app.querySelector(".new-todo")?.value || "";
   return target.value || "";
@@ -315,28 +281,17 @@ function render(html) {
   document.getElementById("macchiato-loading-style")?.remove();
 }
 
-function dispatch(context, event, options = {}) {
+function dispatch(sandbox, event, options = {}) {
   if (!event.nodeId) return;
-  const result = context.evalCode(`__macchiatoDispatch(${JSON.stringify(JSON.stringify(event))})`);
-  if (result.error) {
-    const error = context.dump(result.error);
-    result.error.dispose();
-    throw new Error(String(error));
-  }
-  const html = String(context.dump(result.value));
-  result.value.dispose();
-  if (html.startsWith("__MACCHIATO_ERROR__")) {
-    throw new Error(html.slice("__MACCHIATO_ERROR__".length));
-  }
-  const payload = JSON.parse(html);
+  const payload = sandbox.callJsonFunction("__macchiatoDispatch", event);
   if (payload.dataTransfer) dragDataTransfer = payload.dataTransfer;
   if (options.render !== false) render(payload.html);
 }
 
-function dispatchDomEvent(capability, context, event, type, extraPayload = {}, options = {}) {
+function dispatchDomEvent(capability, sandbox, event, type, extraPayload = {}, options = {}) {
   const nodeId = eventTargetFor(capability, event.target, type);
   if (!nodeId) return;
-  dispatch(context, {
+  dispatch(sandbox, {
     nodeId,
     type,
     payload: eventPayload(capability, type, {
@@ -368,53 +323,44 @@ async function main() {
     limit: DEFAULT_STORAGE_LIMIT,
   });
   const capability = new DomUseCapability(domSchema, styleUse, storage);
-  const QuickJS = await newQuickJSWASMModuleFromVariant(quickjsVariant);
-  const runtime = QuickJS.newRuntime();
-  const context = runtime.newContext();
-  installHostCapability(context, capability);
+  const sandbox = await createSandbox();
+  sandbox.installJsonHostFunction("__macchiatoHost", (message) => capability.dispatch(message));
 
-  evalGlobal(context, guestRuntime, "dom-use-todos-runtime.js");
-  const boot = context.evalCode(`__macchiatoBoot(${JSON.stringify(sourceHtml)})`);
-  if (boot.error) {
-    const error = context.dump(boot.error);
-    boot.error.dispose();
-    throw new Error(String(error));
-  }
-  const scripts = JSON.parse(String(context.dump(boot.value)));
-  boot.value.dispose();
+  sandbox.evalGlobal(guestRuntime, "dom-use-todos-runtime.js");
+  const scripts = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });
   if (scripts.error) throw new Error(scripts.error);
-  scripts.forEach((script, index) => evalModule(context, script.code, `todo-inline-${index}.js`));
+  scripts.forEach((script, index) => sandbox.evalModule(script.code, `todo-inline-${index}.js`));
   render(capability.serializeApp().html);
 
   app.addEventListener("click", (event) => {
-    dispatchDomEvent(capability, context, event, "click");
+    dispatchDomEvent(capability, sandbox, event, "click");
   });
   app.addEventListener("change", (event) => {
-    dispatchDomEvent(capability, context, event, "change");
+    dispatchDomEvent(capability, sandbox, event, "change");
   });
   app.addEventListener("dblclick", (event) => {
-    dispatchDomEvent(capability, context, event, "dblclick");
+    dispatchDomEvent(capability, sandbox, event, "dblclick");
   });
   app.addEventListener("blur", (event) => {
-    dispatchDomEvent(capability, context, event, "blur");
+    dispatchDomEvent(capability, sandbox, event, "blur");
   }, true);
   app.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== "Escape") return;
-    dispatchDomEvent(capability, context, event, "keydown", { key: event.key });
+    dispatchDomEvent(capability, sandbox, event, "keydown", { key: event.key });
   });
   app.addEventListener("dragstart", (event) => {
     dragDataTransfer = { data: {}, effectAllowed: "move" };
-    dispatchDomEvent(capability, context, event, "dragstart", { dataTransfer: dragDataTransfer }, { render: false });
+    dispatchDomEvent(capability, sandbox, event, "dragstart", { dataTransfer: dragDataTransfer }, { render: false });
   });
   app.addEventListener("dragover", (event) => {
     if (!eventTargetFor(capability, event.target, "dragover")) return;
     event.preventDefault();
-    dispatchDomEvent(capability, context, event, "dragover", { dataTransfer: dragDataTransfer }, { render: false });
+    dispatchDomEvent(capability, sandbox, event, "dragover", { dataTransfer: dragDataTransfer }, { render: false });
   });
   app.addEventListener("drop", (event) => {
     if (!eventTargetFor(capability, event.target, "drop")) return;
     event.preventDefault();
-    dispatchDomEvent(capability, context, event, "drop", { dataTransfer: dragDataTransfer });
+    dispatchDomEvent(capability, sandbox, event, "drop", { dataTransfer: dragDataTransfer });
     dragDataTransfer = null;
   });
 }

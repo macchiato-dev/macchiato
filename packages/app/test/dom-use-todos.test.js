@@ -17,6 +17,7 @@ test("dom-use-todos serves a client-side QuickJS shell", async () => {
 
   assert.equal(response.status, 200);
   assert.match(text, /<script type="importmap">/);
+  assert.match(text, /"@macchiato-dev\/quickjs-emscripten-sandbox": "\/-\/quickjs-emscripten-sandbox\/index\.js"/);
   assert.match(text, /"quickjs-emscripten-core": "\/-\/quickjs-emscripten-sandbox\/quickjs-core\.js"/);
   assert.match(text, /"@macchiato-dev\/dom-use": "\/-\/@macchiato-dev\/dom-use\/index\.js"/);
   assert.doesNotMatch(text, /node_modules/);
@@ -40,7 +41,7 @@ test("dom-use-todos serves client runtime and schemas", async () => {
   const cssSchema = await request("/css.schema.json");
 
   assert.equal(client.response.status, 200);
-  assert.match(client.text, /newQuickJSWASMModuleFromVariant/);
+  assert.match(client.text, /createSandbox/);
   assert.match(client.text, /class DomUseCapability/);
   assert.equal(guest.response.status, 200);
   assert.match(guest.text, /__macchiatoBoot/);
@@ -50,12 +51,15 @@ test("dom-use-todos serves client runtime and schemas", async () => {
 
 test("dom-use-todos serves provider assets through module namespaces", async () => {
   const quickjs = await request("/-/quickjs-emscripten-sandbox/quickjs-core.js");
+  const sandbox = await request("/-/quickjs-emscripten-sandbox/index.js");
   const quickjsMap = await request("/-/quickjs-emscripten-sandbox/quickjs-core.js.map");
   const ffiTypes = await request("/-/quickjs-emscripten-sandbox/ffi-types.js");
   const domUse = await request("/-/@macchiato-dev/dom-use/index.js");
   const oldNodeModulesPath = await request("/node_modules/quickjs-emscripten-core/dist/index.mjs");
 
   assert.equal(quickjs.response.status, 200);
+  assert.equal(sandbox.response.status, 200);
+  assert.match(sandbox.text, /export class Sandbox/);
   assert.match(quickjs.text, /from"\.\/quickjs-async-runtime\.js"/);
   assert.match(quickjs.text, /sourceMappingURL=quickjs-core\.js\.map/);
   assert.doesNotMatch(quickjs.text, /chunk-[A-Z0-9]+\.mjs/);
