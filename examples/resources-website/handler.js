@@ -11,7 +11,6 @@ let assetsPromise = null;
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
@@ -86,6 +85,9 @@ function safeJoin(root, pathname) {
 
 async function serveExportAsset(pathname) {
   if (!pathname.startsWith("/export/")) return null;
+  if (pathname === "/export/" || pathname === "/export/index.html") {
+    return new Response("Not found", { status: 404 });
+  }
   try {
     const filePath = safeJoin(join(__dirname, "export"), pathname.slice("/export/".length));
     const content = await readFile(filePath);
