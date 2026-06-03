@@ -1,6 +1,7 @@
 import { startServer, stopServer, runServer, isRunning } from "./server.js";
 import { withDb } from "./db.js";
 import { readFileSync } from "node:fs";
+import { putFontAsset } from "@macchiato-dev/font-use";
 
 function parseServerOpts(args) {
   const opts = {};
@@ -31,6 +32,23 @@ function readText(path) {
   return readFileSync(path, "utf-8");
 }
 
+function parseFontOpts(args) {
+  const opts = {
+    mimeType: "font/woff2",
+    provider: "self",
+    sourceUrl: "",
+  };
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--mime") opts.mimeType = args[++i] ?? opts.mimeType;
+    else if (arg === "--provider") opts.provider = args[++i] ?? opts.provider;
+    else if (arg === "--source-url") opts.sourceUrl = args[++i] ?? opts.sourceUrl;
+    else positional.push(arg);
+  }
+  return { opts, positional };
+}
+
 function readSchemaArg(value) {
   if (String(value).startsWith("@")) return value;
   const text = readText(value);
@@ -58,6 +76,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  server status                 Check server status");
       console.log("  schema add <name> <json>      Add a named schema");
       console.log("  schema list                   List named schemas");
+      console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site list                     List sites");
@@ -108,6 +127,26 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         return;
       }
       for (const row of rows) console.log(`  ${row.name}`);
+    },
+
+    "font add"(args) {
+      const { opts, positional } = parseFontOpts(args);
+      const [name, assetPath, path] = positional;
+      if (!name || !assetPath || !path) {
+        console.log("Usage: font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
+        return;
+      }
+      const content = readFileSync(path);
+      const result = withDb((db) => putFontAsset(db, {
+        name,
+        assetPath,
+        content,
+        mimeType: opts.mimeType,
+        provider: opts.provider,
+        sourceUrl: opts.sourceUrl,
+      }), dbOptions);
+      console.log(`Added font asset: /-/fonts/${result.name}/${result.assetPath}`);
+      console.log(`  sha256 ${result.sha256}`);
     },
 
     "site add"(args) {

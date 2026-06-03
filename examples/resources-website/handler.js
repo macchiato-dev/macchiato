@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { putFontAsset } from "@macchiato-dev/font-use";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -34,6 +36,23 @@ async function serveStaticAsset(pathname) {
     });
   } catch {
     return new Response("Not found", { status: 404 });
+  }
+}
+
+export function seedResourcesWebsiteFonts(db) {
+  const fontRoot = join(__dirname, "assets", "fonts");
+  for (const assetPath of [
+    "space-grotesk-latin.woff2",
+    "space-grotesk-latin-ext.woff2",
+    "space-grotesk-vietnamese.woff2",
+  ]) {
+    putFontAsset(db, {
+      name: "resourcesco-space-grotesk",
+      assetPath,
+      content: readFileSync(join(fontRoot, assetPath)),
+      provider: "self",
+      sourceUrl: "https://github.com/floriankarsten/space-grotesk",
+    });
   }
 }
 

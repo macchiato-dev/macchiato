@@ -102,7 +102,35 @@ CREATE TABLE site_pages (
 
 CREATE TABLE sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL);
 INSERT INTO sites VALUES ('todo', './examples/todo');
+
+CREATE TABLE font_assets (
+  name TEXT NOT NULL,
+  asset_path TEXT NOT NULL,
+  mime_type TEXT NOT NULL,
+  content BLOB NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'self',
+  source_url TEXT NOT NULL DEFAULT '',
+  sha256 TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (name, asset_path)
+);
 ```
+
+Font assets are served from SQLite under `/-/fonts/<name>/<asset-path>`.
+Populate the cache explicitly:
+
+```bash
+node ../macchiato/src/macchiato.js --data-dir ~/macchiato-dev-data \
+  font add resourcesco-space-grotesk space-grotesk-latin.woff2 \
+  ../../examples/resources-website/assets/fonts/space-grotesk-latin.woff2 \
+  --provider self \
+  --source-url https://github.com/floriankarsten/space-grotesk
+```
+
+Provider-backed fetching and non-SQLite storage are intentionally separate
+future policy decisions. The first implementation caches and serves known local
+font bytes from SQLite so pages do not unintentionally contact a font provider.
 
 Unmatched subdomains fall back to `<h1>subdomain</h1>`.
 

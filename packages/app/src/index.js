@@ -7,10 +7,11 @@ import { DatabaseSync } from "node:sqlite";
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { DomUse } from "@macchiato-dev/dom-use";
+import { getFontAsset, initFontCache, parseFontAssetUrl } from "@macchiato-dev/font-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
-import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
+import { resourcesWebsiteHandler, seedResourcesWebsiteFonts } from "../../../examples/resources-website/handler.js";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -92,6 +93,8 @@ db.exec(`
     sandboxed INTEGER NOT NULL DEFAULT 1
   )
 `);
+initFontCache(db);
+seedResourcesWebsiteFonts(db);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
 const getSchema = db.prepare("SELECT json FROM schemas WHERE name = ?");
@@ -109,6 +112,7 @@ const CONTENT_TYPES = {
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
 function escapeHtml(str) {
@@ -259,10 +263,26 @@ async function serveFile(directory, pathname = "/index.html") {
   }
 }
 
+function serveCachedFont(pathname) {
+  const ref = parseFontAssetUrl(pathname);
+  if (!ref) return null;
+  const row = getFontAsset(db, ref.name, ref.assetPath);
+  if (!row) return new Response("Font not found", { status: 404 });
+  return new Response(row.content, {
+    headers: {
+      "content-type": row.mimeType,
+      "cache-control": "public, max-age=31536000, immutable",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
   const url = new URL(request.url);
+  const cachedFont = serveCachedFont(url.pathname);
+  if (cachedFont) return cachedFont;
 
   if (subdomain === "macchiato") {
     return dashboardHandler(request);

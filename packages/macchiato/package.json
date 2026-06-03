@@ -9,6 +9,7 @@
     ".": "./src/macchiato.js"
   },
   "dependencies": {
-    "@macchiato-dev/app": "*"
+    "@macchiato-dev/app": "*",
+    "@macchiato-dev/font-use": "0.1.0"
   }
 }
