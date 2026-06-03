@@ -5,11 +5,16 @@ const npm = (path) => fileURLToPath(new URL(`../../../node_modules/${path}`, imp
 export const quickJsEmscriptenSandboxBrowserAssets = {
   namespace: "quickjs-emscripten-sandbox",
   imports: {
+    "@macchiato-dev/quickjs-emscripten-sandbox": "index.js",
     "@jitl/quickjs-ffi-types": "ffi-types.js",
     "@jitl/quickjs-singlefile-browser-release-sync": "singlefile-browser-release-sync.js",
     "quickjs-emscripten-core": "quickjs-core.js",
   },
   files: [
+    {
+      publicPath: "index.js",
+      filePath: fileURLToPath(new URL("./index.js", import.meta.url)),
+    },
     {
       publicPath: "ffi-types.js",
       filePath: npm("@jitl/quickjs-ffi-types/dist/index.mjs"),
