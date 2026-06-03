@@ -1,73 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DomUse } from "@macchiato-dev/dom-use";
-import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
-import { StyleUse } from "@macchiato-dev/style-use";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-let assetsPromise = null;
-
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".woff2": "font/woff2",
 };
-
-async function readAsset(path) {
-  return readFile(join(__dirname, path), "utf8");
-}
-
-async function assets() {
-  if (!assetsPromise) {
-    assetsPromise = Promise.all([
-      readAsset("page.html"),
-      readAsset("styles.css"),
-      readAsset("dom.schema.json"),
-      readAsset("css.schema.json"),
-    ]).then(([pageHtml, css, domSchema, cssSchema]) => ({
-      pageHtml,
-      css,
-      domSchema: JSON.parse(domSchema),
-      cssSchema: JSON.parse(cssSchema),
-    }));
-  }
-  return assetsPromise;
-}
-
-function renderPage(loaded) {
-  const styleUse = new StyleUse({
-    ...loaded.cssSchema,
-    selectors: new RegExp(loaded.cssSchema.selectors),
-  });
-  styleUse.validateStylesheet(loaded.css);
-  const domUse = new DomUse(loaded.domSchema, styleUse);
-  const doc = domUse.createDocument();
-  const fragment = parseHTML(loaded.pageHtml, {
-    createElement: (tag) => doc.createElement(tag),
-    createTextNode: (text) => doc.createTextNode(text),
-    schema: domUse.schema,
-    styleUse,
-  });
-  const body = serializeHTML(fragment);
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Resources.co</title>
-  <style>
-${loaded.css}
-  </style>
-</head>
-<body>
-${body}
-</body>
-</html>`;
-}
 
 function contentType(pathname) {
   return CONTENT_TYPES[extname(pathname).toLowerCase()] || "application/octet-stream";
@@ -83,13 +25,9 @@ function safeJoin(root, pathname) {
   return target;
 }
 
-async function serveExportAsset(pathname) {
-  if (!pathname.startsWith("/export/")) return null;
-  if (pathname === "/export/" || pathname === "/export/index.html") {
-    return new Response("Not found", { status: 404 });
-  }
+async function serveStaticAsset(pathname) {
   try {
-    const filePath = safeJoin(join(__dirname, "export"), pathname.slice("/export/".length));
+    const filePath = safeJoin(__dirname, pathname.replace(/^\/+/, ""));
     const content = await readFile(filePath);
     return new Response(content, {
       headers: { "content-type": contentType(pathname) },
@@ -101,22 +39,11 @@ async function serveExportAsset(pathname) {
 
 export async function resourcesWebsiteHandler(request) {
   const url = new URL(request.url);
-  const exportAsset = await serveExportAsset(url.pathname);
-  if (exportAsset) return exportAsset;
-
-  if (url.pathname !== "/" && url.pathname !== "/index.html") {
-    return new Response("Not found", { status: 404 });
+  if (url.pathname === "/" || url.pathname === "/index.html") {
+    return serveStaticAsset("/index.html");
   }
-
-  try {
-    const loaded = await assets();
-    return new Response(renderPage(loaded), {
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
-  } catch (err) {
-    return new Response(`Sandbox error: ${err.message}`, {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+  if (url.pathname === "/styles.css" || url.pathname.startsWith("/assets/")) {
+    return serveStaticAsset(url.pathname);
   }
+  return new Response("Not found", { status: 404 });
 }
