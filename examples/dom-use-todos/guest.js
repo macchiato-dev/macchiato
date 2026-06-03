@@ -270,16 +270,23 @@ function parseInitialHtml(source) {
 function makeEvent(target, payload) {
   target.value = payload.value || "";
   target.checked = Boolean(payload.checked);
+  const transferData = { ...(payload.dataTransfer?.data || {}) };
+  const dataTransfer = {
+    getData(type) {
+      return transferData[String(type)] || "";
+    },
+    setData(type, value) {
+      transferData[String(type)] = String(value);
+    },
+    effectAllowed: payload.dataTransfer?.effectAllowed || "move",
+  };
   return {
     target,
     key: payload.key || "",
     preventDefault() {},
     stopPropagation() {},
-    dataTransfer: {
-      getData() { return ""; },
-      setData() {},
-      effectAllowed: "move",
-    },
+    dataTransfer,
+    __macchiatoDataTransfer: { data: transferData, effectAllowed: dataTransfer.effectAllowed },
   };
 }
 
@@ -311,8 +318,10 @@ globalThis.__macchiatoDispatch = (json) => {
       applyControlState(event.payload?.controls);
       const guestEvent = makeEvent(target, event.payload || {});
       for (const listener of listeners) listener(guestEvent);
+      guestEvent.__macchiatoDataTransfer.effectAllowed = guestEvent.dataTransfer.effectAllowed;
+      event.dataTransfer = guestEvent.__macchiatoDataTransfer;
     }
-    return host("serializeApp").html;
+    return JSON.stringify({ html: host("serializeApp").html, dataTransfer: event.dataTransfer || null });
   } catch (err) {
     return `__MACCHIATO_ERROR__${err.message}`;
   }

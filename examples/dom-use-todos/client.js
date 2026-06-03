@@ -6,6 +6,7 @@ import { StyleUse } from "@macchiato-dev/style-use";
 const DEFAULT_STORAGE_LIMIT = 10000;
 
 const app = document.getElementById("app");
+let dragDataTransfer = null;
 
 function extractStyle(source) {
   return source.match(/<style[^>]*>([\s\S]*?)<\/style>/i)?.[1] || "";
@@ -233,10 +234,12 @@ function controlState() {
 }
 
 function eventTargetFor(target, type) {
-  const node = target.closest("[data-node-id]");
-  if (!node) return null;
-  const events = (node.getAttribute("data-events") || "").split(/\s+/).filter(Boolean);
-  return events.includes(type) ? node : null;
+  for (let node = target; node && node !== app; node = node.parentElement) {
+    if (!node.hasAttribute("data-node-id")) continue;
+    const events = (node.getAttribute("data-events") || "").split(/\s+/).filter(Boolean);
+    if (events.includes(type)) return node;
+  }
+  return null;
 }
 
 function render(html) {
@@ -245,7 +248,7 @@ function render(html) {
   document.getElementById("macchiato-loading-style")?.remove();
 }
 
-function dispatch(context, event) {
+function dispatch(context, event, options = {}) {
   if (!event.nodeId) return;
   const result = context.evalCode(`__macchiatoDispatch(${JSON.stringify(JSON.stringify(event))})`);
   if (result.error) {
@@ -258,7 +261,24 @@ function dispatch(context, event) {
   if (html.startsWith("__MACCHIATO_ERROR__")) {
     throw new Error(html.slice("__MACCHIATO_ERROR__".length));
   }
-  render(html);
+  const payload = JSON.parse(html);
+  if (payload.dataTransfer) dragDataTransfer = payload.dataTransfer;
+  if (options.render !== false) render(payload.html);
+}
+
+function dispatchDomEvent(context, event, type, extraPayload = {}, options = {}) {
+  const node = eventTargetFor(event.target, type);
+  if (!node) return;
+  dispatch(context, {
+    nodeId: node.getAttribute("data-node-id"),
+    type,
+    payload: {
+      value: sourceValue(event.target),
+      checked: Boolean(event.target.checked),
+      controls: controlState(),
+      ...extraPayload,
+    },
+  }, options);
 }
 
 async function main() {
@@ -300,50 +320,37 @@ async function main() {
   render(capability.serializeApp().html);
 
   app.addEventListener("click", (event) => {
-    const node = eventTargetFor(event.target, "click");
-    if (!node) return;
-    dispatch(context, {
-      nodeId: node.getAttribute("data-node-id"),
-      type: "click",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
-    });
+    dispatchDomEvent(context, event, "click");
   });
   app.addEventListener("change", (event) => {
-    const node = eventTargetFor(event.target, "change");
-    if (!node) return;
-    dispatch(context, {
-      nodeId: node.getAttribute("data-node-id"),
-      type: "change",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
-    });
+    dispatchDomEvent(context, event, "change");
   });
   app.addEventListener("dblclick", (event) => {
-    const node = eventTargetFor(event.target, "dblclick");
-    if (!node) return;
-    dispatch(context, {
-      nodeId: node.getAttribute("data-node-id"),
-      type: "dblclick",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
-    });
+    dispatchDomEvent(context, event, "dblclick");
   });
   app.addEventListener("blur", (event) => {
-    const node = eventTargetFor(event.target, "blur");
-    if (!node) return;
-    dispatch(context, {
-      nodeId: node.getAttribute("data-node-id"),
-      type: "blur",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
-    });
+    dispatchDomEvent(context, event, "blur");
   }, true);
   app.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== "Escape") return;
-    const node = eventTargetFor(event.target, "keydown");
+    dispatchDomEvent(context, event, "keydown", { key: event.key });
+  });
+  app.addEventListener("dragstart", (event) => {
+    dragDataTransfer = { data: {}, effectAllowed: "move" };
+    dispatchDomEvent(context, event, "dragstart", { dataTransfer: dragDataTransfer }, { render: false });
+  });
+  app.addEventListener("dragover", (event) => {
+    const node = eventTargetFor(event.target, "dragover");
     if (!node) return;
-    dispatch(context, {
-      nodeId: node.getAttribute("data-node-id"),
-      type: "keydown",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), key: event.key, controls: controlState() },
-    });
+    event.preventDefault();
+    dispatchDomEvent(context, event, "dragover", { dataTransfer: dragDataTransfer }, { render: false });
+  });
+  app.addEventListener("drop", (event) => {
+    const node = eventTargetFor(event.target, "drop");
+    if (!node) return;
+    event.preventDefault();
+    dispatchDomEvent(context, event, "drop", { dataTransfer: dragDataTransfer });
+    dragDataTransfer = null;
   });
 }
 
