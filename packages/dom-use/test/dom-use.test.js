@@ -157,3 +157,46 @@ test("supports schema content patterns for stricter pages", () => {
   assert.throws(() => { paragraph.textContent = "Room 2!"; }, /Content not allowed in text/);
   assert.throws(() => paragraph.setAttribute("data-note", "Room 2!"), /Content not allowed in attribute value/);
 });
+
+test("controls event listener registration and payloads by schema policy", () => {
+  const domUse = articleDomUse({
+    nodes: {
+      main: { attrs: [], events: ["click"], children: ["button"] },
+      button: { attrs: [], events: ["keydown"], children: ["#text"] },
+    },
+    limits: {
+      maxTextLength: 12,
+    },
+  });
+  const doc = domUse.createDocument();
+  const main = doc.createElement("main");
+  const button = doc.createElement("button");
+  main.appendChild(button);
+
+  main.addEventListener("click");
+  button.addEventListener("keydown");
+  assert.throws(() => button.addEventListener("click"), /Event not allowed on button: click/);
+  assert.equal(domUse.eventTarget([button, main], "click"), main);
+  assert.equal(domUse.eventTarget([button, main], "keydown"), button);
+  assert.equal(domUse.eventTarget([main], "drop"), null);
+
+  assert.deepEqual(
+    domUse.sanitizeEventPayload("keydown", {
+      key: "Enter",
+      value: "short",
+      checked: true,
+      ignored: "nope",
+      controls: [{ nodeId: "7", value: "field", checked: false }],
+    }),
+    {
+      key: "Enter",
+      value: "short",
+      checked: true,
+      controls: [{ nodeId: "7", value: "field", checked: false }],
+    },
+  );
+  assert.throws(
+    () => domUse.sanitizeEventPayload("keydown", { key: "Enter", value: "too many chars" }),
+    /Text exceeds maxTextLength 12/,
+  );
+});

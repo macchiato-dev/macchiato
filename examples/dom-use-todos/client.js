@@ -143,11 +143,9 @@ class DomUseCapability {
   }
 
   addEventListener(id, event) {
-    this.node(id).setAttribute("data-node-id", String(id));
     const node = this.node(id);
-    const existing = new Set((node.getAttribute("data-events") || "").split(/\s+/).filter(Boolean));
-    existing.add(String(event));
-    node.setAttribute("data-events", Array.from(existing).join(" "));
+    node.addEventListener(event);
+    node.setAttribute("data-node-id", String(id));
     return {};
   }
 
@@ -163,6 +161,17 @@ class DomUseCapability {
 
   nodeTag(id) {
     return { tagName: this.node(id).tagName };
+  }
+
+  eventTarget(nodeIds, event) {
+    const candidates = (nodeIds || []).map((id) => this.nodes.get(String(id))).filter(Boolean);
+    const node = this.domUse.eventTarget(candidates, event);
+    if (!node) return { id: null };
+    return { id: this.nodeIds.get(node) || null };
+  }
+
+  eventPayload(event, payload) {
+    return { payload: this.domUse.sanitizeEventPayload(event, payload) };
   }
 
   beginEvent() {
@@ -226,6 +235,8 @@ class DomUseCapability {
       case "setAppRoot": return this.setAppRoot(message.id);
       case "serializeApp": return this.serializeApp();
       case "nodeTag": return this.nodeTag(message.id);
+      case "eventTarget": return this.eventTarget(message.nodeIds, message.event);
+      case "eventPayload": return this.eventPayload(message.event, message.payload);
       case "beginEvent": return this.beginEvent();
       case "endEvent": return this.endEvent();
       case "storageGet": return this.storageGet(message.key);
@@ -281,13 +292,21 @@ function controlState() {
   }));
 }
 
-function eventTargetFor(target, type) {
+function eventPathNodeIds(target) {
+  const nodeIds = [];
   for (let node = target; node && node !== app; node = node.parentElement) {
-    if (!node.hasAttribute("data-node-id")) continue;
-    const events = (node.getAttribute("data-events") || "").split(/\s+/).filter(Boolean);
-    if (events.includes(type)) return node;
+    if (node.hasAttribute("data-node-id")) nodeIds.push(node.getAttribute("data-node-id"));
   }
-  return null;
+  return nodeIds;
+}
+
+function eventTargetFor(capability, target, type) {
+  const { id } = capability.dispatch({ op: "eventTarget", nodeIds: eventPathNodeIds(target), event: type });
+  return id;
+}
+
+function eventPayload(capability, type, payload) {
+  return capability.dispatch({ op: "eventPayload", event: type, payload }).payload;
 }
 
 function render(html) {
@@ -314,18 +333,18 @@ function dispatch(context, event, options = {}) {
   if (options.render !== false) render(payload.html);
 }
 
-function dispatchDomEvent(context, event, type, extraPayload = {}, options = {}) {
-  const node = eventTargetFor(event.target, type);
-  if (!node) return;
+function dispatchDomEvent(capability, context, event, type, extraPayload = {}, options = {}) {
+  const nodeId = eventTargetFor(capability, event.target, type);
+  if (!nodeId) return;
   dispatch(context, {
-    nodeId: node.getAttribute("data-node-id"),
+    nodeId,
     type,
-    payload: {
+    payload: eventPayload(capability, type, {
       value: sourceValue(event.target),
       checked: Boolean(event.target.checked),
       controls: controlState(),
       ...extraPayload,
-    },
+    }),
   }, options);
 }
 
@@ -368,36 +387,34 @@ async function main() {
   render(capability.serializeApp().html);
 
   app.addEventListener("click", (event) => {
-    dispatchDomEvent(context, event, "click");
+    dispatchDomEvent(capability, context, event, "click");
   });
   app.addEventListener("change", (event) => {
-    dispatchDomEvent(context, event, "change");
+    dispatchDomEvent(capability, context, event, "change");
   });
   app.addEventListener("dblclick", (event) => {
-    dispatchDomEvent(context, event, "dblclick");
+    dispatchDomEvent(capability, context, event, "dblclick");
   });
   app.addEventListener("blur", (event) => {
-    dispatchDomEvent(context, event, "blur");
+    dispatchDomEvent(capability, context, event, "blur");
   }, true);
   app.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== "Escape") return;
-    dispatchDomEvent(context, event, "keydown", { key: event.key });
+    dispatchDomEvent(capability, context, event, "keydown", { key: event.key });
   });
   app.addEventListener("dragstart", (event) => {
     dragDataTransfer = { data: {}, effectAllowed: "move" };
-    dispatchDomEvent(context, event, "dragstart", { dataTransfer: dragDataTransfer }, { render: false });
+    dispatchDomEvent(capability, context, event, "dragstart", { dataTransfer: dragDataTransfer }, { render: false });
   });
   app.addEventListener("dragover", (event) => {
-    const node = eventTargetFor(event.target, "dragover");
-    if (!node) return;
+    if (!eventTargetFor(capability, event.target, "dragover")) return;
     event.preventDefault();
-    dispatchDomEvent(context, event, "dragover", { dataTransfer: dragDataTransfer }, { render: false });
+    dispatchDomEvent(capability, context, event, "dragover", { dataTransfer: dragDataTransfer }, { render: false });
   });
   app.addEventListener("drop", (event) => {
-    const node = eventTargetFor(event.target, "drop");
-    if (!node) return;
+    if (!eventTargetFor(capability, event.target, "drop")) return;
     event.preventDefault();
-    dispatchDomEvent(context, event, "drop", { dataTransfer: dragDataTransfer });
+    dispatchDomEvent(capability, context, event, "drop", { dataTransfer: dragDataTransfer });
     dragDataTransfer = null;
   });
 }
