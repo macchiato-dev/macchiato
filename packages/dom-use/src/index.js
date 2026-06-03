@@ -26,6 +26,7 @@ const URL_ATTRS = new Set([
 
 const DEFAULT_LIMITS = {
   maxTextLength: 10000,
+  maxEventNameLength: 64,
   maxAttributeNameLength: 128,
   maxAttributeValueLength: 2048,
   maxAttributes: 32,
@@ -33,6 +34,16 @@ const DEFAULT_LIMITS = {
 };
 
 const TROUBLESOME_CONTENT_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
+const EVENT_PAYLOAD_FIELDS = {
+  blur: ["value", "checked", "controls"],
+  change: ["value", "checked", "controls"],
+  click: ["value", "checked", "controls"],
+  dblclick: ["value", "checked", "controls"],
+  dragover: ["value", "checked", "controls", "dataTransfer"],
+  dragstart: ["value", "checked", "controls", "dataTransfer"],
+  drop: ["value", "checked", "controls", "dataTransfer"],
+  keydown: ["value", "checked", "controls", "key"],
+};
 
 function patternMatches(pattern, value) {
   if (pattern instanceof RegExp) return pattern.test(value);
@@ -107,6 +118,7 @@ class GuestElement extends GuestNode {
     super(owner);
     this.tagName = String(tagName).toLowerCase();
     this.attributes = {};
+    this.events = new Set();
     this._style = {};
     this._textContent = "";
   }
@@ -180,6 +192,10 @@ class GuestElement extends GuestNode {
 
   removeAttribute(name) {
     delete this.attributes[name];
+  }
+
+  addEventListener(event) {
+    this.ownerDocument.domUse.registerEventListener(this, event);
   }
 
   addClass(...classes) {
@@ -295,6 +311,15 @@ export class DomUse {
     this.validateContent(attr, "attribute name");
   }
 
+  validateEventName(event) {
+    const name = String(event);
+    const maxEventNameLength = this.limits().maxEventNameLength;
+    if (maxEventNameLength && name.length > maxEventNameLength) {
+      throw new Error(`Event name exceeds maxEventNameLength ${maxEventNameLength}`);
+    }
+    this.validateContent(name, "event name");
+  }
+
   validateAttributeValue(value) {
     const attrValue = String(value);
     const maxAttributeValueLength = this.limits().maxAttributeValueLength;
@@ -408,6 +433,83 @@ export class DomUse {
     const child = String(childTag).toLowerCase();
     const allowed = parent.children || [];
     return allowed.includes("*") || allowed.includes(child);
+  }
+
+  allowedEvent(tagName, event) {
+    this.validateEventName(event);
+    const nodes = this.schema.nodes || {};
+    if (Object.keys(nodes).length === 0) return false;
+    const tag = String(tagName).toLowerCase();
+    const name = String(event).toLowerCase();
+    const allowed = [
+      ...(this.schema.globalEvents || []),
+      ...(nodes[tag]?.events || []),
+    ].map((entry) => String(entry).toLowerCase());
+    return allowed.includes("*") || allowed.includes(name);
+  }
+
+  assertAllowedEvent(tagName, event) {
+    if (!this.allowedEvent(tagName, event)) {
+      throw new Error(`Event not allowed on ${tagName}: ${event}`);
+    }
+  }
+
+  registerEventListener(node, event) {
+    const name = String(event).toLowerCase();
+    this.assertAllowedEvent(node.tagName, name);
+    node.events.add(name);
+  }
+
+  eventTarget(candidates, event) {
+    const name = String(event).toLowerCase();
+    this.validateEventName(name);
+    for (const node of candidates) {
+      if (!node?.events?.has(name)) continue;
+      this.assertAllowedEvent(node.tagName, name);
+      return node;
+    }
+    return null;
+  }
+
+  sanitizeEventPayload(event, payload = {}) {
+    const name = String(event).toLowerCase();
+    this.validateEventName(name);
+    const fields = new Set(EVENT_PAYLOAD_FIELDS[name] || ["value", "checked"]);
+    const clean = {};
+    if (fields.has("value")) clean.value = this.sanitizeEventText(payload.value || "", "event value");
+    if (fields.has("checked")) clean.checked = Boolean(payload.checked);
+    if (fields.has("key")) clean.key = this.sanitizeEventText(payload.key || "", "event key");
+    if (fields.has("controls")) clean.controls = this.sanitizeEventControls(payload.controls);
+    if (fields.has("dataTransfer")) clean.dataTransfer = this.sanitizeDataTransfer(payload.dataTransfer);
+    return clean;
+  }
+
+  sanitizeEventText(value, kind) {
+    const text = String(value);
+    this.validateText(text);
+    this.validateContent(text, kind);
+    return text;
+  }
+
+  sanitizeEventControls(controls = []) {
+    if (!Array.isArray(controls)) return [];
+    return controls.map((control) => ({
+      nodeId: this.sanitizeEventText(control.nodeId || "", "event control node id"),
+      value: this.sanitizeEventText(control.value || "", "event control value"),
+      checked: Boolean(control.checked),
+    }));
+  }
+
+  sanitizeDataTransfer(dataTransfer = null) {
+    if (!dataTransfer || typeof dataTransfer !== "object") return null;
+    const data = {};
+    for (const [type, value] of Object.entries(dataTransfer.data || {})) {
+      data[this.sanitizeEventText(type, "dataTransfer type")] = this.sanitizeEventText(value, "dataTransfer value");
+    }
+    return {
+      data,
+      effectAllowed: this.sanitizeEventText(dataTransfer.effectAllowed || "move", "dataTransfer effectAllowed"),
+    };
   }
 
   assertAllowedNode(tagName) {

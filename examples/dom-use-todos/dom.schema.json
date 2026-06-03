@@ -17,11 +17,13 @@
       "children": ["#text"]
     },
     "input": {
-      "attrs": ["class", "type", "placeholder", "value", "checked", "autofocus", "data-node-id", "data-events"],
+      "attrs": ["class", "type", "placeholder", "value", "checked", "autofocus", "data-node-id"],
+      "events": ["keydown", "change", "blur"],
       "children": []
     },
     "button": {
-      "attrs": ["class", "data-node-id", "data-events"],
+      "attrs": ["class", "data-node-id"],
+      "events": ["click"],
       "children": ["#text"]
     },
     "ul": {
@@ -29,11 +31,13 @@
       "children": ["li"]
     },
     "li": {
-      "attrs": ["class", "data-id", "data-index", "data-node-id", "data-events", "draggable"],
+      "attrs": ["class", "data-id", "data-index", "data-node-id", "draggable"],
+      "events": ["dragstart", "dragover", "drop"],
       "children": ["span", "input", "label", "button", "a"]
     },
     "label": {
-      "attrs": ["data-node-id", "data-events"],
+      "attrs": ["data-node-id"],
+      "events": ["dblclick"],
       "children": ["#text"]
     },
     "footer": {
@@ -41,7 +45,7 @@
       "children": ["span", "ul", "button"]
     },
     "span": {
-      "attrs": ["class", "data-node-id", "data-events", "title"],
+      "attrs": ["class", "data-node-id", "title"],
       "children": ["strong", "#text"]
     },
     "strong": {
@@ -49,7 +53,8 @@
       "children": ["#text"]
     },
     "a": {
-      "attrs": ["class", "data-node-id", "data-events"],
+      "attrs": ["class", "data-node-id"],
+      "events": ["click"],
       "children": ["#text"]
     }
   },
