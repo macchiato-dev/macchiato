@@ -283,6 +283,15 @@ function makeEvent(target, payload) {
   };
 }
 
+function applyControlState(controls) {
+  for (const control of controls || []) {
+    const node = find(document.body, (entry) => entry.__hostNodeId === String(control.nodeId));
+    if (!node) continue;
+    node.value = control.value || "";
+    node.checked = Boolean(control.checked);
+  }
+}
+
 globalThis.__macchiatoBoot = (source) => {
   try {
     return JSON.stringify(parseInitialHtml(source));
@@ -299,6 +308,7 @@ globalThis.__macchiatoDispatch = (json) => {
       ? find(document.body, (node) => node.__hostNodeId === String(event.nodeId))
       : null;
     if (target) {
+      applyControlState(event.payload?.controls);
       const guestEvent = makeEvent(target, event.payload || {});
       for (const listener of listeners) listener(guestEvent);
     }

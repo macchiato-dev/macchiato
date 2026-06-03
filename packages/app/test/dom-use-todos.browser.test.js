@@ -103,6 +103,14 @@ test("dom-use-todos works in a real browser", async (t) => {
   assert.equal(await page.locator(".todoapp").count(), 1);
   assert.equal(await page.locator(".todo-item").count(), 0);
 
+  await page.getByPlaceholder("What needs to be done?").fill("Make coffee");
+  await page.getByRole("button", { name: "Add" }).click();
+  await assert.doesNotReject(async () => {
+    await page.getByText("Make coffee").waitFor();
+  });
+  await page.locator(".destroy").click({ force: true });
+  assert.equal(await page.locator(".todo-item").count(), 0);
+
   await page.getByPlaceholder("What needs to be done?").click();
   await page.keyboard.type("Buy milk");
   await page.keyboard.press("Enter");

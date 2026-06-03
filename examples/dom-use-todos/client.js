@@ -224,6 +224,14 @@ function sourceValue(target) {
   return target.value || "";
 }
 
+function controlState() {
+  return Array.from(app.querySelectorAll("input[data-node-id], textarea[data-node-id], select[data-node-id]"), (node) => ({
+    nodeId: node.getAttribute("data-node-id"),
+    value: node.value || "",
+    checked: Boolean(node.checked),
+  }));
+}
+
 function eventTargetFor(target, type) {
   const node = target.closest("[data-node-id]");
   if (!node) return null;
@@ -297,7 +305,7 @@ async function main() {
     dispatch(context, {
       nodeId: node.getAttribute("data-node-id"),
       type: "click",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked) },
+      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
     });
   });
   app.addEventListener("change", (event) => {
@@ -306,7 +314,7 @@ async function main() {
     dispatch(context, {
       nodeId: node.getAttribute("data-node-id"),
       type: "change",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked) },
+      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
     });
   });
   app.addEventListener("dblclick", (event) => {
@@ -315,7 +323,7 @@ async function main() {
     dispatch(context, {
       nodeId: node.getAttribute("data-node-id"),
       type: "dblclick",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked) },
+      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
     });
   });
   app.addEventListener("blur", (event) => {
@@ -324,7 +332,7 @@ async function main() {
     dispatch(context, {
       nodeId: node.getAttribute("data-node-id"),
       type: "blur",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked) },
+      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), controls: controlState() },
     });
   }, true);
   app.addEventListener("keydown", (event) => {
@@ -334,7 +342,7 @@ async function main() {
     dispatch(context, {
       nodeId: node.getAttribute("data-node-id"),
       type: "keydown",
-      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), key: event.key },
+      payload: { value: sourceValue(event.target), checked: Boolean(event.target.checked), key: event.key, controls: controlState() },
     });
   });
 }
