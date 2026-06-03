@@ -20,6 +20,7 @@ test("dom-use-todos serves a client-side QuickJS shell", async () => {
   assert.match(text, /"@macchiato-dev\/quickjs-emscripten-sandbox": "\/-\/quickjs-emscripten-sandbox\/index\.js"/);
   assert.match(text, /"quickjs-emscripten-core": "\/-\/quickjs-emscripten-sandbox\/quickjs-core\.js"/);
   assert.match(text, /"@macchiato-dev\/dom-use": "\/-\/@macchiato-dev\/dom-use\/index\.js"/);
+  assert.match(text, /"@macchiato-dev\/dom-use\/bridge": "\/-\/@macchiato-dev\/dom-use\/bridge\.js"/);
   assert.doesNotMatch(text, /node_modules/);
   assert.doesNotMatch(text, /index\.mjs/);
   assert.match(text, /<script type="module" src="\/client\.js"><\/script>/);
@@ -42,7 +43,7 @@ test("dom-use-todos serves client runtime and schemas", async () => {
 
   assert.equal(client.response.status, 200);
   assert.match(client.text, /createSandbox/);
-  assert.match(client.text, /class DomUseCapability/);
+  assert.match(client.text, /DomUseHostCapability/);
   assert.equal(guest.response.status, 200);
   assert.match(guest.text, /__macchiatoBoot/);
   assert.deepEqual(JSON.parse(domSchema.text).urls, false);
@@ -55,6 +56,7 @@ test("dom-use-todos serves provider assets through module namespaces", async () 
   const quickjsMap = await request("/-/quickjs-emscripten-sandbox/quickjs-core.js.map");
   const ffiTypes = await request("/-/quickjs-emscripten-sandbox/ffi-types.js");
   const domUse = await request("/-/@macchiato-dev/dom-use/index.js");
+  const domUseBridge = await request("/-/@macchiato-dev/dom-use/bridge.js");
   const oldNodeModulesPath = await request("/node_modules/quickjs-emscripten-core/dist/index.mjs");
 
   assert.equal(quickjs.response.status, 200);
@@ -69,6 +71,8 @@ test("dom-use-todos serves provider assets through module namespaces", async () 
   assert.match(ffiTypes.text, /sourceMappingURL=ffi-types\.js\.map/);
   assert.equal(domUse.response.status, 200);
   assert.match(domUse.text, /export class DomUse/);
+  assert.equal(domUseBridge.response.status, 200);
+  assert.match(domUseBridge.text, /export class DomUseHostCapability/);
   assert.equal(oldNodeModulesPath.response.status, 404);
 });
 
