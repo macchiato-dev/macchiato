@@ -130,13 +130,46 @@ test("resources website renders its index in a real browser", async (t) => {
   t.after(async () => browser.close());
   const page = await browser.newPage();
   const errors = [];
+  const consoleErrors = [];
+  const failedRequests = [];
+  const badResponses = [];
+
   page.on("pageerror", (err) => errors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+  page.on("requestfailed", (request) => {
+    failedRequests.push(`${request.url()} ${request.failure()?.errorText || ""}`.trim());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      badResponses.push(`${response.status()} ${response.url()}`);
+    }
+  });
 
   await page.goto(`http://resources-website.localhost:${port}/`, { waitUntil: "networkidle" });
+  const loadedFonts = await page.evaluate(async () => {
+    const weights = ["400", "500", "600", "700"];
+    await Promise.all(weights.map((weight) => document.fonts.load(`${weight} 16px "Space Grotesk"`, "Resources.co")));
+    await document.fonts.ready;
+    return weights.map((weight) => ({
+      weight,
+      loaded: document.fonts.check(`${weight} 16px "Space Grotesk"`, "Resources.co"),
+    }));
+  });
 
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
   await assert.doesNotReject(page.locator("text=resources/containers").waitFor());
   assert.deepEqual(errors, []);
+  assert.deepEqual(consoleErrors, []);
+  assert.deepEqual(failedRequests, []);
+  assert.deepEqual(badResponses, []);
+  assert.deepEqual(loadedFonts, [
+    { weight: "400", loaded: true },
+    { weight: "500", loaded: true },
+    { weight: "600", loaded: true },
+    { weight: "700", loaded: true },
+  ]);
   assert.equal(await page.locator("#__bundler_err").count(), 0);
   assert.equal(await page.locator(".crumb").count(), 0);
   assert.equal(await page.locator("script").count(), 0);
