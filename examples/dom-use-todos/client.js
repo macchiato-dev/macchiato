@@ -50,7 +50,7 @@ function dispatchDomEvent(capability, sandbox, event, type, extraPayload = {}, o
 async function main() {
   const [sourceHtml, guestRuntime, domSchema, cssSchema] = await Promise.all([
     loadText("/source.html"),
-    loadText("/guest.js"),
+    loadText("/-/@macchiato-dev/dom-use/guest-runtime.js"),
     loadJson("/dom.schema.json"),
     loadJson("/css.schema.json"),
   ]);
