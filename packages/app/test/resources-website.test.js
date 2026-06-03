@@ -65,7 +65,7 @@ test("resources website validates and serves through dom-use", async () => {
 
   assert.equal(response.status, 200);
   assert.match(text, /<title>Resources\.co<\/title>/);
-  assert.match(text, /Signal for teams building useful software/);
+  assert.match(text, /<h1>Resources<span>\.co<\/span><\/h1>/);
   assert.match(text, /<style>/);
   assert.doesNotMatch(text, /<script\b/i);
   assert.doesNotMatch(text, /https?:\/\//i);
