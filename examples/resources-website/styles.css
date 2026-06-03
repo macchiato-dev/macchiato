@@ -115,9 +115,9 @@
   /* ============ DARK (default) — electric blue gradient ============ */
   html[data-theme="dark"] {
     --bg:
-      radial-gradient(1200px 820px at 82% -12%, #2f63ff 0%, rgba(47,99,255,0) 55%),
-      radial-gradient(1100px 900px at -12% 112%, rgba(112,64,255,0.50) 0%, rgba(112,64,255,0) 60%),
-      linear-gradient(155deg, #0a1ec9 0%, #1336ec 52%, #0b22de 100%);
+      radial-gradient(1150px 820px at 86% -14%, #6a5bff 0%, rgba(106,91,255,0) 54%),
+      radial-gradient(1000px 860px at -8% 110%, rgba(40,80,255,0.5) 0%, rgba(40,80,255,0) 60%),
+      linear-gradient(152deg, #1a1aa2 0%, #2626d8 52%, #16168e 100%);
 
     --card: rgba(9,15,42,0.52);
     --card-border: rgba(255,255,255,0.12);
