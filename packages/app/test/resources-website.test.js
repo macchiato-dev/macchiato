@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
@@ -21,9 +23,15 @@ function getPort() {
   });
 }
 
-function startApp(port) {
+function tempDir() {
+  return mkdtemp(join(tmpdir(), "macchiato-resources-test-"));
+}
+
+function startApp(port, dataDir) {
   const child = spawn(process.execPath, [
     appCli,
+    "--data-dir",
+    dataDir,
     "--host",
     "127.0.0.1",
     "--port",
@@ -76,8 +84,12 @@ test("resources website serves the static home page", async () => {
 
 test("resources website is mounted on resources-website.localhost", async (t) => {
   const port = await getPort();
-  const app = startApp(port);
-  t.after(async () => stopChild(app.child));
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
 
   await app.waitForReady;
   const response = await fetch(`http://resources-website.localhost:${port}/`);
@@ -90,9 +102,10 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
   assert.equal(stylesheet.status, 200);
   assert.match(await stylesheet.text(), /--accent: #30D5C8;/);
 
-  const font = await fetch(`http://resources-website.localhost:${port}/assets/fonts/space-grotesk-latin.woff2`);
+  const font = await fetch(`http://resources-website.localhost:${port}/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2`);
   assert.equal(font.status, 200);
   assert.equal(font.headers.get("content-type"), "font/woff2");
+  assert.equal(font.headers.get("x-content-type-options"), "nosniff");
 });
 
 test("resources website no longer exposes Claude export bundle routes", async () => {
@@ -105,8 +118,12 @@ test("resources website no longer exposes Claude export bundle routes", async ()
 
 test("resources website renders its index in a real browser", async (t) => {
   const port = await getPort();
-  const app = startApp(port);
-  t.after(async () => stopChild(app.child));
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
 
   await app.waitForReady;
   const browser = await chromium.launch();
