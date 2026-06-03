@@ -121,5 +121,6 @@ test("resources website renders its index in a real browser", async (t) => {
   await assert.doesNotReject(page.locator("text=resources/containers").waitFor());
   assert.deepEqual(errors, []);
   assert.equal(await page.locator("#__bundler_err").count(), 0);
+  assert.equal(await page.locator(".crumb").count(), 0);
   assert.equal(await page.locator("script").count(), 0);
 });
