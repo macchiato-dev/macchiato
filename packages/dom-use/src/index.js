@@ -348,6 +348,7 @@ export class DomUse {
   constructor(schema = {}, styleUse) {
     this.schema = schema;
     this.styleUse = styleUse || new StyleUse();
+    this._gasPolicy = mergeGasConfig(this.schema.gas || {});
   }
 
   createDocument() {
@@ -368,7 +369,7 @@ export class DomUse {
   }
 
   gasPolicy() {
-    return mergeGasConfig(this.schema.gas || {});
+    return this._gasPolicy;
   }
 
   createGasState(lifecycle = "init") {

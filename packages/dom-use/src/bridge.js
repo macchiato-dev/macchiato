@@ -7,7 +7,7 @@ export class LocalStorageBackend {
     this.mode = config.mode || "disabled";
     this.allowedKeys = config.keys ? new Set(config.keys) : null;
     this.limit = config.limit ?? DEFAULT_STORAGE_LIMIT;
-    this.storage = config.storage || globalThis.localStorage;
+    this.storage = config.storage || null;
   }
 
   assertEnabled(key, value = "") {
@@ -22,12 +22,17 @@ export class LocalStorageBackend {
 
   getItem(key) {
     this.assertEnabled(key);
-    return this.storage.getItem(String(key));
+    return this.backend().getItem(String(key));
   }
 
   setItem(key, value) {
     this.assertEnabled(key, value);
-    this.storage.setItem(String(key), String(value));
+    this.backend().setItem(String(key), String(value));
+  }
+
+  backend() {
+    if (!this.storage) this.storage = globalThis.localStorage;
+    return this.storage;
   }
 }
 
@@ -167,15 +172,17 @@ export class DomUseHostCapability {
   }
 
   beginEvent() {
+    if (this.eventDepth === 0) this.domUse.setGasLifecycle(this.document, "event");
     this.eventDepth += 1;
-    this.domUse.setGasLifecycle(this.document, "event");
     return {};
   }
 
   endEvent() {
     this.eventDepth = Math.max(0, this.eventDepth - 1);
-    if (this.eventDepth === 0) this.flushPrunedNodes();
-    if (this.eventDepth === 0) this.domUse.setGasLifecycle(this.document, "idle");
+    if (this.eventDepth === 0) {
+      this.flushPrunedNodes();
+      this.domUse.setGasLifecycle(this.document, "idle");
+    }
     return {};
   }
 

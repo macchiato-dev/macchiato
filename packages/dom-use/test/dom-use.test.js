@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DomUse } from "../src/index.js";
+import { DomUseHostCapability } from "../src/bridge.js";
 
 function articleDomUse(schema = {}) {
   return new DomUse({
@@ -292,4 +293,37 @@ test("charges innerHTML gas from input length and estimated node count", () => {
 
   assert.equal(enoughGas.getInnerHTML(enoughMain), "<h1>Title</h1><p>Body</p>");
   assert.equal(enoughDoc.gas.available, 0);
+});
+
+test("host bridge preserves event lifecycle across nested event scopes", () => {
+  const capability = new DomUseHostCapability({
+    gas: {
+      tank: { init: 100, idle: 20, event: 7 },
+      refill: { amount: 0, intervalMs: 1000 },
+      costs: {},
+    },
+  });
+
+  capability.finishInit();
+  assert.equal(capability.document.gas.lifecycle, "idle");
+  assert.equal(capability.document.gas.capacity, 20);
+
+  capability.beginEvent();
+  assert.equal(capability.document.gas.lifecycle, "event");
+  assert.equal(capability.document.gas.capacity, 7);
+  capability.document.gas.available = 5;
+
+  capability.beginEvent();
+  assert.equal(capability.document.gas.lifecycle, "event");
+  assert.equal(capability.document.gas.capacity, 7);
+
+  capability.endEvent();
+  assert.equal(capability.document.gas.lifecycle, "event");
+  assert.equal(capability.document.gas.capacity, 7);
+  assert.equal(capability.document.gas.available, 5);
+
+  capability.endEvent();
+  assert.equal(capability.document.gas.lifecycle, "idle");
+  assert.equal(capability.document.gas.capacity, 20);
+  assert.equal(capability.document.gas.available, 5);
 });
