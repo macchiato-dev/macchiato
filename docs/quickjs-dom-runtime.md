@@ -26,10 +26,14 @@ Missing pieces:
 
 - Hosted HTML can be loaded from SQLite and sanitized with `dom-use`; full app
   documents are not yet managed as live runtime documents.
+- Server-side rendering and browser hydration do not yet share one app runtime
+  contract.
 - `<script>` tags are not extracted and run in QuickJS.
 - Guest scripts do not receive a DOM capability inside QuickJS.
 - Browser events are not forwarded into QuickJS.
 - Guest DOM mutations are not streamed or batched into a live host renderer.
+- There is no no-WebAssembly browser mode for dynamic pages.
+- Content Security Policy is not yet derived from schema policy.
 - The runtime boundary is not yet strong enough to hide host policy objects from
   guest code.
 
@@ -63,14 +67,19 @@ Guest code should not be able to:
 registered app files
         |
         v
- app loader
+ app loader + schema cascade engine
         |
         +--> parse HTML into guest tree through dom-use
         |
         +--> extract scripts and block browser execution
         |
         v
- QuickJS runtime  <---- safe event records ---- browser host
+ runtime target
+        |
+        +--> server QuickJS, browser QuickJS/WASM, or no-WASM browser policy
+        |
+        v
+ guest execution boundary  <---- safe event records ---- browser host
         |
         v
  DOM capability
@@ -85,20 +94,54 @@ registered app files
  host renderer ---- validated output ---- real DOM
 ```
 
+## Rendering Modes
+
+The runtime contract should not assume WebAssembly exists in the browser. The
+same app and schema should support multiple rendering modes:
+
+- **SSR only**: the server resolves schemas, runs allowed app code if needed,
+  sanitizes the result, and sends inert HTML/CSS. No app JavaScript is sent to
+  the browser.
+- **SSR plus QuickJS hydration**: the server sends the validated initial DOM and
+  a browser QuickJS/WebAssembly runtime. Browser events are delivered to guest
+  code through `dom-use` and mutations are applied through the host renderer.
+- **SSR plus no-WASM hydration**: the server sends validated HTML/CSS plus a
+  host-owned enhancement layer that does not evaluate guest JavaScript in the
+  browser. Any behavior must be expressible as schema-approved host behavior,
+  form submissions, links, or server round trips.
+- **Client-only QuickJS**: useful for demos such as `dom-use-todos`, but not the
+  default shape for public pages that need stable first paint and predictable
+  fallback.
+
+SSR is the common base. Hydration is an enhancement selected by policy and
+capability detection, not a requirement for page correctness. A page should be
+readable and navigable after SSR even when WebAssembly, JavaScript, or hydration
+fails.
+
+The server should record which mode produced a response. That mode belongs in
+debug headers or server logs, not in guest-visible page content.
+
 ## Load Flow
 
-1. Resolve the registered site directory from SQLite.
-2. Read the app entry HTML.
-3. Parse HTML on the host.
-4. Build an initial guest DOM tree through `dom-use`.
-5. Extract script tags instead of serving them to the browser as executable
+1. Resolve the registered site and page configuration from SQLite.
+2. Resolve schema references, package defaults, site policy, page policy, and
+   runtime overrides through the schema cascade engine.
+3. Compile the effective policy into DOM, CSS, runtime, resource, and CSP
+   validators.
+4. Read the app entry HTML.
+5. Parse HTML on the host.
+6. Build an initial guest DOM tree through `dom-use`.
+7. Extract script tags instead of serving them to the browser as executable
    script.
-6. Create a QuickJS context for the app instance.
-7. Install a narrow API surface in QuickJS, such as `document`, timers, and
+8. If SSR execution is enabled, create a server QuickJS context for the app
+   instance.
+9. Install a narrow API surface in QuickJS, such as `document`, timers, and
    event registration.
-8. Execute extracted scripts in dependency order.
-9. Render the initial guest tree into real DOM.
-10. Flush subsequent guest mutations into the host renderer.
+10. Execute extracted scripts in dependency order.
+11. Render the initial guest tree into HTML and CSS.
+12. Emit CSP headers from the effective policy.
+13. If hydration is enabled and available, attach the selected browser runtime.
+14. Flush subsequent guest mutations into the host renderer.
 
 ## DOM Capability Shape
 
@@ -173,6 +216,108 @@ Suggested first pass:
 - run scripts in source order inside one QuickJS context;
 - expose only the installed runtime globals.
 
+No-WASM browser mode should not run guest scripts in the browser. It can still
+serve SSR output and host-owned enhancement code, but that code must not import
+or evaluate app-provided JavaScript. Dynamic behavior in this mode should come
+from one of three places:
+
+- server-rendered navigation and forms;
+- host-owned components selected by schema policy;
+- declarative, schema-validated behavior that the host implements directly.
+
+This keeps the fallback mode useful without recreating a second unsafe JavaScript
+runtime.
+
+## Content Security Policy
+
+CSP should be a compiled output of schema policy, similar to sanitized DOM and
+CSS output. It is not the only protection layer, but it is the browser-enforced
+backstop for no-WASM and partially hydrated modes.
+
+Default posture:
+
+```text
+default-src 'none'
+base-uri 'none'
+object-src 'none'
+frame-ancestors 'none'
+form-action 'self'
+img-src 'self'
+font-src 'self'
+style-src 'self'
+script-src 'none'
+connect-src 'none'
+```
+
+Actual directives should be generated from the effective schema:
+
+- `script-src 'none'` for SSR-only and no-WASM pages that do not need host
+  enhancement code.
+- A nonce or hash-based `script-src` for host-owned hydration/runtime code.
+  Guest script text should not be whitelisted as browser script.
+- `connect-src` should stay `none` unless the schema grants a specific host
+  capability, such as a same-origin event or form endpoint.
+- `font-src` should default to same-origin cached font routes such as
+  `/-/fonts/...`; provider URLs require explicit schema approval.
+- `img-src`, `media-src`, and other URL-bearing directives should be derived
+  from the same URL rules used by `dom-use` and `style-use`.
+- `style-src` should prefer host-served stylesheets. Inline styles require a
+  nonce/hash and still must pass `style-use`.
+- `form-action` should only include allowed submission origins and defaults to
+  same-origin or `none` depending on whether forms are enabled.
+
+The CSP compiler should refuse to generate a broader directive than the DOM/CSS
+schema allows. If a schema says no external URLs but a page config asks for
+`font-src https://fonts.example`, that should be a policy error rather than a
+best-effort warning.
+
+The generated CSP should be testable independently. A good test shape is:
+
+1. compile effective schema into CSP;
+2. render the page in Playwright;
+3. assert no console CSP violations;
+4. assert blocked probes fail, such as inline browser script or disallowed font
+   provider requests;
+5. assert allowed same-origin resources load.
+
+## Hydration Selection
+
+Hydration should be selected by the host from the effective runtime policy and
+the browser capability, not by the app content itself.
+
+Possible policy shape:
+
+```json
+{
+  "runtime": {
+    "ssr": true,
+    "hydrate": "optional",
+    "browserEngines": ["quickjs-wasm", "none"],
+    "fallback": "server-roundtrip"
+  }
+}
+```
+
+Interpretation:
+
+- `ssr: true` means the server can produce the first render.
+- `hydrate: "required"` should be rare because it makes no-WASM browsers unable
+  to use the page.
+- `hydrate: "optional"` allows QuickJS/WebAssembly hydration when available.
+- `browserEngines: ["none"]` means no guest code may run in the browser.
+- `fallback: "server-roundtrip"` means forms, links, and actions should remain
+  usable through server requests.
+
+The host should prefer this order for public pages:
+
+1. SSR response;
+2. optional browser QuickJS hydration when policy and capability allow it;
+3. no-WASM host behavior or server round trips when QuickJS is unavailable.
+
+The Resources.co homepage should fit this model: SSR first, no guest JavaScript
+sent as browser script, with any future interactivity either hydrated through
+the runtime or expressed as policy-approved host behavior.
+
 ## Schema Source and Resolution
 
 Schema names such as `@macchiato-dev/dom-use@0.0.1/article.json` should be
@@ -207,6 +352,69 @@ The resolver should avoid loading arbitrary files from the app directory. It
 should only read from trusted schema package locations or from a separate
 administrator-controlled schema store. This keeps app content, schemas, and
 runtime code under different authority levels.
+
+## Schema Cascade Engine
+
+Schemas will need to cascade like browser policy: broad defaults first, then
+more specific trusted policy, with page-local rules allowed only where the parent
+policy explicitly permits them.
+
+The cascade should compile one effective policy from ordered layers:
+
+1. **Runtime defaults**: safest platform defaults, such as no scripts, no
+   external URLs, conservative size limits, and no browser guest execution.
+2. **Package schema**: versioned policy from trusted schema packages, such as
+   `@macchiato-dev/dom-use@0.0.1/article.json`.
+3. **Compatibility patch**: trusted replacement metadata for older schema names.
+4. **Operator policy**: install-wide allowlists, pinned versions, provider
+   choices, and storage decisions.
+5. **Site policy**: subdomain or app-level choices owned by the site operator.
+6. **Page policy**: page-specific narrowing, such as fewer allowed elements or a
+   lower node limit.
+7. **Runtime request context**: temporary facts such as selected hydration mode,
+   nonce values, and same-origin route mounts.
+
+Each layer should declare whether a field is mergeable, replace-only, or
+non-overridable. Examples:
+
+- `limits.maxNodes` can only become stricter unless an operator policy grants a
+  higher ceiling.
+- `urls` can add allowed patterns only from trusted operator/site layers, not
+  from app-authored HTML.
+- `nodes` can be narrowed by page policy, but broadening requires a trusted
+  schema or operator layer.
+- `events` should be explicit by event type and payload fields; broad wildcard
+  event grants should not cascade from page content.
+- CSP directives are compiled outputs, not arbitrary strings page policy can
+  append to.
+
+The engine should keep provenance for every effective field. When a page can
+load `font-src 'self' /-/fonts/...`, the debug/audit data should answer which
+schema layer allowed fonts, which layer chose the font cache, and which layer
+selected the public route.
+
+The cascade output should be a normalized object consumed by all validators:
+
+```json
+{
+  "dom": {},
+  "css": {},
+  "events": {},
+  "resources": {},
+  "runtime": {},
+  "csp": {},
+  "provenance": {}
+}
+```
+
+`dom-use`, `style-use`, the server renderer, the hydration runtime, and the CSP
+compiler should all consume the same effective policy. This prevents a common
+security bug where CSP allows a URL that `dom-use` rejects, or hydration exposes
+an event that the static sanitizer never approved.
+
+The cascade engine should fail closed. Unknown fields, invalid merge operations,
+or attempts to broaden policy from an untrusted layer should reject the page
+configuration during import or request rendering.
 
 ## Schema Package Control
 
@@ -286,6 +494,11 @@ default. `style-use` should deny CSS `url(...)` and `@import` by default. A
 schema may opt in to specific URL patterns, but the baseline must be no imports
 and zero unintentional exfiltration.
 
+The CSP compiler should use these same URL decisions. There should not be a
+separate CSP allowlist that can accidentally drift wider than the DOM/CSS
+validators. If a resource is allowed by CSP but rejected by `dom-use` or
+`style-use`, the effective policy is inconsistent and should fail validation.
+
 Schemas should also carry host-enforced resource limits. The current DOM/CSS
 validators cap text length, attribute name/value length, attribute count, node
 count, stylesheet length, CSS value length, URL length, and import count, with
@@ -303,6 +516,8 @@ untrusted or semi-trusted apps:
 - maximum event queue depth;
 - maximum serialized string length for `innerHTML`;
 - teardown that disposes QuickJS handles and host object tables.
+- maximum CSP directive length and source expression count;
+- maximum cascade depth and merged policy size.
 
 ## Open Questions
 
@@ -319,6 +534,11 @@ untrusted or semi-trusted apps:
 - What metadata format should schema packages use to declare replacement
   compatibility for older schema names?
 - Should the runtime support multiple isolated app instances on one host page?
+- What is the minimal declarative behavior model for no-WASM browser mode?
+- Which cascade fields can be widened by site policy, and which require
+  operator policy?
+- Should CSP be emitted as a single enforced policy first, or should report-only
+  mode exist for development?
 
 ## Incremental Plan
 
@@ -335,3 +555,10 @@ untrusted or semi-trusted apps:
    SQLite.
 10. Add explicit schema replacement metadata for security-patched versions.
 11. Add resource limits and teardown tests.
+12. Add a schema cascade engine that compiles DOM, CSS, event, resource,
+    runtime, and CSP policy with field provenance.
+13. Add CSP generation and Playwright tests for allowed and blocked resources.
+14. Add SSR-first rendering for Resources.co, with optional hydration selected
+    by effective runtime policy.
+15. Add no-WASM browser mode that uses CSP plus host-owned declarative behavior
+    or server round trips rather than guest browser script execution.
