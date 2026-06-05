@@ -75,6 +75,7 @@ async function main() {
   if (scripts.error) throw new Error(scripts.error);
   scripts.forEach((script, index) => sandbox.evalModule(script.code, `todo-inline-${index}.js`));
   render(capability.serializeApp().html);
+  capability.finishInit();
 
   app.addEventListener("click", (event) => {
     dispatchDomEvent(capability, sandbox, event, "click");

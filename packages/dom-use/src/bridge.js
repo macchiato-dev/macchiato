@@ -55,6 +55,11 @@ export class DomUseHostCapability {
     return {};
   }
 
+  finishInit() {
+    this.domUse.setGasLifecycle(this.document, "idle");
+    return {};
+  }
+
   register(node) {
     const id = String(this.nextId++);
     this.nodes.set(id, node);
@@ -95,16 +100,18 @@ export class DomUseHostCapability {
 
   setTextContent(id, value) {
     const node = this.node(id);
-    this.pruneChildren(node);
+    const previousChildren = [...(node.children || [])];
     node.textContent = value;
+    for (const child of previousChildren) this.pruneTree(child);
     return {};
   }
 
   setInnerHTML(id, html) {
     const node = this.node(id);
-    this.pruneChildren(node);
+    const previousChildren = [...(node.children || [])];
     if (html === "") node.replaceChildren();
     else this.domUse.setInnerHTML(node, html);
+    for (const child of previousChildren) this.pruneTree(child);
     return {};
   }
 
@@ -152,17 +159,23 @@ export class DomUseHostCapability {
   }
 
   eventPayload(event, payload) {
-    return { payload: this.domUse.sanitizeEventPayload(event, payload) };
+    const clean = this.domUse.sanitizeEventPayload(event, payload);
+    this.domUse.spendGas(this.document, "eventPayload", {
+      textLength: JSON.stringify(clean).length,
+    });
+    return { payload: clean };
   }
 
   beginEvent() {
     this.eventDepth += 1;
+    this.domUse.setGasLifecycle(this.document, "event");
     return {};
   }
 
   endEvent() {
     this.eventDepth = Math.max(0, this.eventDepth - 1);
     if (this.eventDepth === 0) this.flushPrunedNodes();
+    if (this.eventDepth === 0) this.domUse.setGasLifecycle(this.document, "idle");
     return {};
   }
 
@@ -202,6 +215,7 @@ export class DomUseHostCapability {
   dispatch(message) {
     switch (message.op) {
       case "resetDom": return this.resetDom();
+      case "finishInit": return this.finishInit();
       case "createElement": return this.createElement(message.tagName);
       case "createTextNode": return this.createTextNode(message.text);
       case "appendChild": return this.appendChild(message.parentId, message.childId);
@@ -258,18 +272,23 @@ export function sourceValue(root, target, options = {}) {
 }
 
 export function dispatchGuestDomEvent(capability, sandbox, root, event, type, extraPayload = {}, options = {}) {
-  const nodeId = eventTargetFor(capability, root, event.target, type);
-  if (!nodeId) return null;
-  const payload = sandbox.callJsonFunction("__macchiatoDispatch", {
-    nodeId,
-    type,
-    payload: eventPayload(capability, type, {
-      value: sourceValue(root, event.target, options),
-      checked: Boolean(event.target.checked),
-      controls: controlState(root),
-      ...extraPayload,
-    }),
-  });
-  if (options.render !== false) root.innerHTML = payload.html;
-  return payload;
+  capability.dispatch({ op: "beginEvent" });
+  try {
+    const nodeId = eventTargetFor(capability, root, event.target, type);
+    if (!nodeId) return null;
+    const payload = sandbox.callJsonFunction("__macchiatoDispatch", {
+      nodeId,
+      type,
+      payload: eventPayload(capability, type, {
+        value: sourceValue(root, event.target, options),
+        checked: Boolean(event.target.checked),
+        controls: controlState(root),
+        ...extraPayload,
+      }),
+    });
+    if (options.render !== false) root.innerHTML = payload.html;
+    return payload;
+  } finally {
+    capability.dispatch({ op: "endEvent" });
+  }
 }

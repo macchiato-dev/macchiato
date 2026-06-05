@@ -200,3 +200,96 @@ test("controls event listener registration and payloads by schema policy", () =>
     /Text exceeds maxTextLength 12/,
   );
 });
+
+test("enforces configurable DOM gas budgets", () => {
+  const domUse = articleDomUse({
+    gas: {
+      tank: { init: 11 },
+      refill: { amount: 0, intervalMs: 1000 },
+      costs: {
+        createElement: 6,
+      },
+    },
+  });
+  const doc = domUse.createDocument();
+
+  doc.createElement("main");
+  assert.equal(doc.gas.available, 5);
+  assert.throws(
+    () => doc.createElement("h1"),
+    /DOM gas exhausted for createElement: need 6, have 5/,
+  );
+});
+
+test("supports lifecycle tank limits and interval gas refill", () => {
+  const domUse = articleDomUse({
+    gas: {
+      tank: { init: 10, idle: 5, event: 3 },
+      refill: { amount: 2, intervalMs: 100 },
+      costs: {
+        createElement: 1,
+      },
+    },
+  });
+  const doc = domUse.createDocument();
+
+  doc.createElement("main");
+  assert.equal(doc.gas.available, 9);
+
+  domUse.setGasLifecycle(doc, "idle", 0);
+  assert.equal(doc.gas.capacity, 5);
+  assert.equal(doc.gas.available, 5);
+
+  doc.gas.available = 1;
+  doc.gas.lastRefill = 0;
+  assert.equal(domUse.gasAvailable(doc, 250), 5);
+
+  domUse.setGasLifecycle(doc, "event", 250);
+  assert.equal(doc.gas.capacity, 3);
+  assert.equal(doc.gas.available, 3);
+});
+
+test("charges innerHTML gas from input length and estimated node count", () => {
+  const html = "<h1>Title</h1><p>Body</p>";
+  const schema = {
+    nodes: {
+      main: { attrs: [], children: ["h1", "p"] },
+      h1: { attrs: [], children: ["#text"] },
+      p: { attrs: [], children: ["#text"] },
+    },
+    gas: {
+      tank: { init: 11 },
+      refill: { amount: 0, intervalMs: 1000 },
+      costs: {
+        createElement: 0,
+        createTextNode: 0,
+        appendChild: 0,
+        replaceChildren: 0,
+        setTextContent: 0,
+        setInnerHTML: { base: 1, perNode: 2, perChar: 1, charUnit: 10 },
+      },
+    },
+  };
+  const domUse = new DomUse(schema);
+  const doc = domUse.createDocument();
+  const main = doc.createElement("main");
+
+  assert.throws(
+    () => domUse.setInnerHTML(main, html),
+    /DOM gas exhausted for setInnerHTML: need 12, have 11/,
+  );
+
+  const enoughGas = new DomUse({
+    ...schema,
+    gas: {
+      ...schema.gas,
+      tank: { init: 12 },
+    },
+  });
+  const enoughDoc = enoughGas.createDocument();
+  const enoughMain = enoughDoc.createElement("main");
+  enoughGas.setInnerHTML(enoughMain, html);
+
+  assert.equal(enoughGas.getInnerHTML(enoughMain), "<h1>Title</h1><p>Body</p>");
+  assert.equal(enoughDoc.gas.available, 0);
+});

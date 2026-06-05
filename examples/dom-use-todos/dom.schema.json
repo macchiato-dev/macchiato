@@ -67,6 +67,34 @@
     "maxAttributes": 8,
     "maxNodes": 300
   },
+  "gas": {
+    "enabled": true,
+    "tank": {
+      "init": 120000,
+      "idle": 60000,
+      "event": 30000
+    },
+    "refill": {
+      "amount": 5000,
+      "intervalMs": 1000
+    },
+    "costs": {
+      "createElement": 4,
+      "createTextNode": 4,
+      "appendChild": 2,
+      "insertBefore": 3,
+      "removeChild": 2,
+      "replaceChildren": 4,
+      "setTextContent": { "base": 2, "perChar": 1, "charUnit": 64 },
+      "setInnerHTML": { "base": 8, "perNode": 3, "perChar": 1, "charUnit": 128 },
+      "setAttribute": { "base": 3, "perChar": 1, "charUnit": 64 },
+      "removeAttribute": 1,
+      "setStyle": { "base": 3, "perChar": 1, "charUnit": 64 },
+      "addEventListener": 2,
+      "eventTarget": 1,
+      "eventPayload": { "base": 2, "perChar": 1, "charUnit": 64 }
+    }
+  },
   "content": {
     "rejectPattern": "[<>]"
   }

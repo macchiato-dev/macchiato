@@ -124,7 +124,8 @@ export function parseHTML(html, { createElement, createTextNode, schema, styleUs
         if (!node.setAttribute) node.attributes = { ...(node.attributes || {}), [name]: value };
       }
       stack[stack.length - 1].appendChild(node);
-    } catch {
+    } catch (err) {
+      if (err?.name === "DomUseGasError") throw err;
       if (!isSelfClosing) skipTag = tagName;
       continue;
     }
