@@ -33,6 +33,35 @@ const DEFAULT_LIMITS = {
   maxNodes: 1000,
 };
 
+const DEFAULT_GAS = {
+  enabled: true,
+  tank: {
+    init: 100000,
+    idle: 20000,
+    event: 8000,
+  },
+  refill: {
+    amount: 1000,
+    intervalMs: 1000,
+  },
+  costs: {
+    createElement: 4,
+    createTextNode: 4,
+    appendChild: 2,
+    insertBefore: 3,
+    removeChild: 2,
+    replaceChildren: 4,
+    setTextContent: { base: 2, perChar: 1, charUnit: 64 },
+    setInnerHTML: { base: 8, perNode: 3, perChar: 1, charUnit: 128 },
+    setAttribute: { base: 3, perChar: 1, charUnit: 64 },
+    removeAttribute: 1,
+    setStyle: { base: 3, perChar: 1, charUnit: 64 },
+    addEventListener: 2,
+    eventTarget: 1,
+    eventPayload: { base: 2, perChar: 1, charUnit: 64 },
+  },
+};
+
 const TROUBLESOME_CONTENT_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
 const EVENT_PAYLOAD_FIELDS = {
   blur: ["value", "checked", "controls"],
@@ -52,6 +81,51 @@ function patternMatches(pattern, value) {
   return false;
 }
 
+function mergeGasConfig(config = {}) {
+  return {
+    ...DEFAULT_GAS,
+    ...config,
+    tank: { ...DEFAULT_GAS.tank, ...(config.tank || {}) },
+    refill: { ...DEFAULT_GAS.refill, ...(config.refill || {}) },
+    costs: { ...DEFAULT_GAS.costs, ...(config.costs || {}) },
+  };
+}
+
+function positiveNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function stringLength(...values) {
+  return values.reduce((sum, value) => sum + String(value ?? "").length, 0);
+}
+
+function treeSize(node) {
+  if (!node) return 0;
+  return 1 + (node.children || []).reduce((sum, child) => sum + treeSize(child), 0);
+}
+
+function estimateHtmlNodeCount(html) {
+  const source = String(html);
+  let count = 0;
+  let lastIndex = 0;
+  const tagRe = /<!--[\s\S]*?-->|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
+  for (const match of source.matchAll(tagRe)) {
+    if (source.slice(lastIndex, match.index).trim()) count++;
+    lastIndex = match.index + match[0].length;
+    if (!match[0].startsWith("<!--") && !match[0].startsWith("</")) count++;
+  }
+  if (source.slice(lastIndex).trim()) count++;
+  return count;
+}
+
+export class DomUseGasError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "DomUseGasError";
+  }
+}
+
 class GuestNode {
   constructor(owner) {
     this.ownerDocument = owner;
@@ -61,6 +135,7 @@ class GuestNode {
 
   appendChild(child) {
     this.ownerDocument.domUse.validateAppend(this, child);
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "appendChild");
     if (child.parentNode) child.parentNode.removeChild(child);
     child.parentNode = this;
     this.children.push(child);
@@ -74,6 +149,7 @@ class GuestNode {
     const index = this.children.indexOf(referenceNode);
     if (index === -1) throw new Error("Reference child not found");
     this.ownerDocument.domUse.validateAppend(this, newNode);
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "insertBefore");
     if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
     newNode.parentNode = this;
     this.children.splice(index, 0, newNode);
@@ -83,12 +159,16 @@ class GuestNode {
   removeChild(child) {
     const index = this.children.indexOf(child);
     if (index === -1) throw new Error("Child not found");
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "removeChild");
     this.children.splice(index, 1);
     child.parentNode = null;
     return child;
   }
 
   replaceChildren(...children) {
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "replaceChildren", {
+      nodes: children.reduce((sum, child) => sum + treeSize(child), 0),
+    });
     for (const child of this.children) child.parentNode = null;
     this.children = [];
     for (const child of children) this.appendChild(child);
@@ -109,6 +189,9 @@ class GuestText extends GuestNode {
 
   set textContent(value) {
     this.ownerDocument.domUse.validateText(value);
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "setTextContent", {
+      textLength: String(value).length,
+    });
     this._textContent = String(value);
   }
 }
@@ -132,6 +215,9 @@ class GuestElement extends GuestNode {
 
   set textContent(value) {
     this.ownerDocument.domUse.validateText(value);
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "setTextContent", {
+      textLength: String(value).length,
+    });
     this._textContent = String(value);
     for (const child of this.children) child.parentNode = null;
     this.children = [];
@@ -156,6 +242,9 @@ class GuestElement extends GuestNode {
   get style() {
     return new Proxy(this._style, {
       set: (target, property, value) => {
+        this.ownerDocument.domUse.spendGas(this.ownerDocument, "setStyle", {
+          textLength: stringLength(property, value),
+        });
         this.ownerDocument.domUse.styleUse.validateInline(property, value);
         target[property] = String(value);
         return true;
@@ -176,6 +265,9 @@ class GuestElement extends GuestNode {
   setAttribute(name, value) {
     this.ownerDocument.domUse.assertAllowedAttr(this.tagName, name, value);
     this.ownerDocument.domUse.assertAttributeBudget(this, name);
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "setAttribute", {
+      textLength: stringLength(name, value),
+    });
     if (String(name).toLowerCase() === "style") {
       for (const decl of String(value).split(";")) {
         const [property, ...rest] = decl.split(":");
@@ -191,6 +283,7 @@ class GuestElement extends GuestNode {
   }
 
   removeAttribute(name) {
+    this.ownerDocument.domUse.spendGas(this.ownerDocument, "removeAttribute");
     delete this.attributes[name];
   }
 
@@ -232,6 +325,7 @@ class GuestDocument {
   constructor(domUse) {
     this.domUse = domUse;
     this.createdNodes = 0;
+    this.gas = domUse.createGasState("init");
     this.body = new GuestElement(this, "body");
   }
 
@@ -240,6 +334,7 @@ class GuestDocument {
   }
 
   createTextNode(text) {
+    this.domUse.spendGas(this, "createTextNode");
     this.domUse.trackNode(this);
     return new GuestText(this, text);
   }
@@ -263,12 +358,87 @@ export class DomUse {
     const tag = String(tagName).toLowerCase();
     this.assertAllowedNode(tag);
     const owner = ownerDocument || new GuestDocument(this);
+    this.spendGas(owner, "createElement");
     this.trackNode(owner);
     return new GuestElement(owner, tag);
   }
 
   limits() {
     return { ...DEFAULT_LIMITS, ...(this.schema.limits || {}) };
+  }
+
+  gasPolicy() {
+    return mergeGasConfig(this.schema.gas || {});
+  }
+
+  createGasState(lifecycle = "init") {
+    const policy = this.gasPolicy();
+    const capacity = this.gasCapacity(lifecycle, policy);
+    return {
+      lifecycle,
+      capacity,
+      available: capacity,
+      lastRefill: Date.now(),
+    };
+  }
+
+  gasCapacity(lifecycle, policy = this.gasPolicy()) {
+    return positiveNumber(policy.tank?.[lifecycle], positiveNumber(policy.tank?.idle, 0));
+  }
+
+  setGasLifecycle(ownerDocument, lifecycle, now = Date.now()) {
+    if (!ownerDocument?.gas) return;
+    this.refillGas(ownerDocument, now);
+    const policy = this.gasPolicy();
+    const capacity = this.gasCapacity(lifecycle, policy);
+    ownerDocument.gas.lifecycle = lifecycle;
+    ownerDocument.gas.capacity = capacity;
+    ownerDocument.gas.available = Math.min(ownerDocument.gas.available, capacity);
+  }
+
+  refillGas(ownerDocument, now = Date.now()) {
+    const policy = this.gasPolicy();
+    if (policy.enabled === false || !ownerDocument?.gas) return;
+    const intervalMs = positiveNumber(policy.refill?.intervalMs, 0);
+    const amount = positiveNumber(policy.refill?.amount, 0);
+    if (!intervalMs || !amount) return;
+    const elapsed = Math.max(0, now - ownerDocument.gas.lastRefill);
+    const intervals = Math.floor(elapsed / intervalMs);
+    if (intervals <= 0) return;
+    ownerDocument.gas.available = Math.min(
+      ownerDocument.gas.capacity,
+      ownerDocument.gas.available + intervals * amount,
+    );
+    ownerDocument.gas.lastRefill += intervals * intervalMs;
+  }
+
+  gasAvailable(ownerDocument, now = Date.now()) {
+    this.refillGas(ownerDocument, now);
+    return ownerDocument?.gas?.available ?? Infinity;
+  }
+
+  gasCost(operation, metrics = {}) {
+    const cost = this.gasPolicy().costs?.[operation];
+    if (typeof cost === "number") return cost;
+    if (!cost || typeof cost !== "object") return 0;
+    const base = Number(cost.base || 0);
+    const perNode = Number(cost.perNode || 0) * Number(metrics.nodes || 0);
+    const charUnit = positiveNumber(cost.charUnit, 1);
+    const perChar = Number(cost.perChar || 0) * Math.ceil(Number(metrics.textLength || 0) / charUnit);
+    return Math.ceil(base + perNode + perChar);
+  }
+
+  spendGas(ownerDocument, operation, metrics = {}, now = Date.now()) {
+    const policy = this.gasPolicy();
+    if (policy.enabled === false || !ownerDocument?.gas) return 0;
+    this.refillGas(ownerDocument, now);
+    const amount = this.gasCost(operation, metrics);
+    if (!amount) return 0;
+    if (ownerDocument.gas.available < amount) {
+      throw new DomUseGasError(`DOM gas exhausted for ${operation}: need ${amount}, have ${ownerDocument.gas.available}`);
+    }
+    ownerDocument.gas.available -= amount;
+    return amount;
   }
 
   trackNode(ownerDocument) {
@@ -334,8 +504,12 @@ export class DomUse {
    * Delegates parsing to html-use with dom-use's factory injected.
    */
   setInnerHTML(node, html) {
+    this.spendGas(node.ownerDocument, "setInnerHTML", {
+      textLength: String(html).length,
+      nodes: estimateHtmlNodeCount(html),
+    });
     const fragment = parseHTML(html, {
-      createElement: (tag) => this.createElement(tag),
+      createElement: (tag) => node.ownerDocument?.createElement(tag) || this.createElement(tag),
       createTextNode: (text) => node.ownerDocument?.createTextNode(text) || { tagName: "#text", textContent: text },
       schema: this.schema,
       styleUse: this.styleUse,
@@ -457,6 +631,7 @@ export class DomUse {
   registerEventListener(node, event) {
     const name = String(event).toLowerCase();
     this.assertAllowedEvent(node.tagName, name);
+    this.spendGas(node.ownerDocument, "addEventListener");
     node.events.add(name);
   }
 
@@ -466,6 +641,7 @@ export class DomUse {
     for (const node of candidates) {
       if (!node?.events?.has(name)) continue;
       this.assertAllowedEvent(node.tagName, name);
+      this.spendGas(node.ownerDocument, "eventTarget");
       return node;
     }
     return null;

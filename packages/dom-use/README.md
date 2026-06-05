@@ -49,6 +49,13 @@ control characters, bidi override/isolate characters, and Unicode noncharacters
 unless the schema explicitly opts out. Override these through `limits` and
 `content`.
 
+`dom-use` also has a gas budget for DOM work. A document starts in the `init`
+lifecycle with a larger tank, can move to `idle`, and uses a smaller `event`
+tank while browser events are being handled. Gas refills by a configured amount
+at a configured interval, capped by the current lifecycle tank. Operation costs
+can be static numbers or formulas based on text length and estimated node count,
+such as `setInnerHTML`.
+
 ## Example
 
 ```javascript
@@ -67,6 +74,23 @@ const domUse = new DomUse({
     maxAttributeValueLength: 200,
     maxAttributes: 8,
     maxNodes: 100,
+  },
+  gas: {
+    tank: {
+      init: 50000,
+      idle: 10000,
+      event: 3000,
+    },
+    refill: {
+      amount: 500,
+      intervalMs: 1000,
+    },
+    costs: {
+      createElement: 4,
+      appendChild: 2,
+      setTextContent: { base: 2, perChar: 1, charUnit: 64 },
+      setInnerHTML: { base: 8, perNode: 3, perChar: 1, charUnit: 128 },
+    },
   },
   content: {
     allowedPattern: /^[a-z0-9 .,:'-]+$/i,
