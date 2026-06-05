@@ -33,7 +33,7 @@ Missing pieces:
 - Browser events are not forwarded into QuickJS.
 - Guest DOM mutations are not streamed or batched into a live host renderer.
 - There is no no-WebAssembly browser mode for dynamic pages.
-- Content Security Policy is not yet derived from schema policy.
+- Authored Content Security Policy is not yet validated against schema policy.
 - The runtime boundary is not yet strong enough to hide host policy objects from
   guest code.
 
@@ -139,7 +139,8 @@ debug headers or server logs, not in guest-visible page content.
    event registration.
 10. Execute extracted scripts in dependency order.
 11. Render the initial guest tree into HTML and CSS.
-12. Emit CSP headers from the effective policy.
+12. Validate the authored CSP against the effective policy and emit it when the
+    host is responsible for the response.
 13. If hydration is enabled and available, attach the selected browser runtime.
 14. Flush subsequent guest mutations into the host renderer.
 
@@ -230,9 +231,20 @@ runtime.
 
 ## Content Security Policy
 
-CSP should be a compiled output of schema policy, similar to sanitized DOM and
-CSS output. It is not the only protection layer, but it is the browser-enforced
-backstop for no-WASM and partially hydrated modes.
+CSP should be hand-written policy owned by the app or operator. Macchiato should
+validate it against the effective schema, not replace it with a separate runtime
+API or require apps to ask Macchiato for generated directives during normal
+operation.
+
+That distinction matters for deployment. A team may use Macchiato as a
+development tool to validate DOM, CSS, resources, and CSP, then ship the same
+HTML, CSS, assets, and CSP headers through ordinary production hosting without
+carrying Macchiato runtime overhead. For SSR deployments where Macchiato owns the
+HTTP response, it can emit the authored CSP header. For static or external
+production deployments, the validated CSP can be copied into the hosting layer.
+
+CSP is not the only protection layer, but it is the browser-enforced backstop
+for no-WASM and partially hydrated modes.
 
 Default posture:
 
@@ -249,7 +261,7 @@ script-src 'none'
 connect-src 'none'
 ```
 
-Actual directives should be generated from the effective schema:
+Authored directives should be validated against the effective schema:
 
 - `script-src 'none'` for SSR-only and no-WASM pages that do not need host
   enhancement code.
@@ -266,19 +278,21 @@ Actual directives should be generated from the effective schema:
 - `form-action` should only include allowed submission origins and defaults to
   same-origin or `none` depending on whether forms are enabled.
 
-The CSP compiler should refuse to generate a broader directive than the DOM/CSS
-schema allows. If a schema says no external URLs but a page config asks for
+CSP validation should refuse a policy broader than the DOM/CSS schema allows. If
+a schema says no external URLs but an authored CSP asks for
 `font-src https://fonts.example`, that should be a policy error rather than a
-best-effort warning.
+best-effort warning. Conversely, a stricter CSP than the schema allows is valid;
+it just means the browser may block resources the schema would have permitted.
 
-The generated CSP should be testable independently. A good test shape is:
+The authored CSP should be testable independently. A good test shape is:
 
-1. compile effective schema into CSP;
-2. render the page in Playwright;
-3. assert no console CSP violations;
-4. assert blocked probes fail, such as inline browser script or disallowed font
+1. load the authored CSP and effective schema;
+2. validate the CSP against the schema;
+3. render the page in Playwright with the CSP enforced;
+4. assert no unexpected console CSP violations;
+5. assert blocked probes fail, such as inline browser script or disallowed font
    provider requests;
-5. assert allowed same-origin resources load.
+6. assert allowed same-origin resources load.
 
 ## Hydration Selection
 
@@ -385,8 +399,9 @@ non-overridable. Examples:
   schema or operator layer.
 - `events` should be explicit by event type and payload fields; broad wildcard
   event grants should not cascade from page content.
-- CSP directives are compiled outputs, not arbitrary strings page policy can
-  append to.
+- CSP directives are authored policy artifacts. The cascade engine validates
+  them against effective resource/runtime policy instead of treating them as
+  arbitrary strings page policy can append to.
 
 The engine should keep provenance for every effective field. When a page can
 load `font-src 'self' /-/fonts/...`, the debug/audit data should answer which
@@ -402,15 +417,15 @@ The cascade output should be a normalized object consumed by all validators:
   "events": {},
   "resources": {},
   "runtime": {},
-  "csp": {},
+  "cspValidation": {},
   "provenance": {}
 }
 ```
 
-`dom-use`, `style-use`, the server renderer, the hydration runtime, and the CSP
-compiler should all consume the same effective policy. This prevents a common
-security bug where CSP allows a URL that `dom-use` rejects, or hydration exposes
-an event that the static sanitizer never approved.
+`dom-use`, `style-use`, the server renderer, the hydration runtime, and CSP
+validation should all consume the same effective policy. This prevents a common
+security bug where the authored CSP allows a URL that `dom-use` rejects, or
+hydration exposes an event that the static sanitizer never approved.
 
 The cascade engine should fail closed. Unknown fields, invalid merge operations,
 or attempts to broaden policy from an untrusted layer should reject the page
@@ -494,10 +509,10 @@ default. `style-use` should deny CSS `url(...)` and `@import` by default. A
 schema may opt in to specific URL patterns, but the baseline must be no imports
 and zero unintentional exfiltration.
 
-The CSP compiler should use these same URL decisions. There should not be a
+CSP validation should use these same URL decisions. There should not be a
 separate CSP allowlist that can accidentally drift wider than the DOM/CSS
-validators. If a resource is allowed by CSP but rejected by `dom-use` or
-`style-use`, the effective policy is inconsistent and should fail validation.
+validators. If a resource is allowed by authored CSP but rejected by `dom-use`
+or `style-use`, the page policy is inconsistent and should fail validation.
 
 Schemas should also carry host-enforced resource limits. The current DOM/CSS
 validators cap text length, attribute name/value length, attribute count, node
@@ -537,8 +552,8 @@ untrusted or semi-trusted apps:
 - What is the minimal declarative behavior model for no-WASM browser mode?
 - Which cascade fields can be widened by site policy, and which require
   operator policy?
-- Should CSP be emitted as a single enforced policy first, or should report-only
-  mode exist for development?
+- How should development mode report authored CSP issues without requiring
+  Macchiato to be the production response path?
 
 ## Incremental Plan
 
@@ -555,9 +570,10 @@ untrusted or semi-trusted apps:
    SQLite.
 10. Add explicit schema replacement metadata for security-patched versions.
 11. Add resource limits and teardown tests.
-12. Add a schema cascade engine that compiles DOM, CSS, event, resource,
-    runtime, and CSP policy with field provenance.
-13. Add CSP generation and Playwright tests for allowed and blocked resources.
+12. Add a schema cascade engine that compiles DOM, CSS, event, resource, and
+    runtime policy with field provenance.
+13. Add authored CSP validation and Playwright tests for allowed and blocked
+    resources.
 14. Add SSR-first rendering for Resources.co, with optional hydration selected
     by effective runtime policy.
 15. Add no-WASM browser mode that uses CSP plus host-owned declarative behavior
