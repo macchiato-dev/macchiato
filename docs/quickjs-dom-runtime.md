@@ -121,6 +121,32 @@ fails.
 The server should record which mode produced a response. That mode belongs in
 debug headers or server logs, not in guest-visible page content.
 
+## Document, Style, and Policy Pass-Through
+
+Normal mode should treat HTML, CSS, and CSP similarly: authored input can pass
+through when it is ordinary, policy-compliant, and easy for Macchiato's small
+parser/serializer components to understand. Unusual input should be rejected
+rather than partially interpreted.
+
+This keeps the first implementation tractable:
+
+- `html-use` can parse and serialize a deliberately small HTML surface.
+- `style-use` can validate common CSS without becoming a full browser CSS
+  engine.
+- CSP validation can check authored directives against schema/resource policy
+  without introducing a second CSP authoring API.
+
+The tradeoff is intentional. Normal mode is for predictable app/page shapes,
+development validation, SSR, and production deployment where the input stays
+inside the supported subset. It should fail closed on syntax or constructs that
+would require browser-grade parsing to understand safely.
+
+Eventually there should be a fuller runtime mode for compatibility with the
+broader web platform. That mode will likely need heavier components, such as
+Servo-derived HTML/CSS parsing, serialization, and policy integration, under its
+own runtime setup. It should not complicate normal mode's small validators or
+change their fail-closed defaults.
+
 ## Load Flow
 
 1. Resolve the registered site and page configuration from SQLite.
@@ -519,6 +545,12 @@ validators cap text length, attribute name/value length, attribute count, node
 count, stylesheet length, CSS value length, URL length, and import count, with
 defaults in place even when a schema omits `limits`. Text, attributes, and CSS
 also reject troublesome control/bidi/noncharacter code points by default.
+
+Normal mode may also reject otherwise valid browser syntax when accepting it
+would require full-fidelity parsing, serialization, or cascade behavior. The
+important contract is that supported input passes through predictably and
+unsupported input is rejected clearly. A future browser-grade mode can broaden
+compatibility without weakening normal mode.
 
 ## Resource Limits
 
