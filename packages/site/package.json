@@ -1,0 +1,10 @@
+{
+  "name": "@macchiato-dev/site",
+  "version": "0.1.0",
+  "description": "SSR site framework with policy-bound page transitions",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {}
+}
