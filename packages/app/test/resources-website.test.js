@@ -249,3 +249,68 @@ test("resources sqlite site transitions between friendly paths in a real browser
   assert.deepEqual(consoleErrors, []);
   assert.deepEqual(badResponses, []);
 });
+
+test("resources sqlite site has a responsive hamburger menu", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  const consoleErrors = [];
+  const badResponses = [];
+
+  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+
+  assert.equal(await page.locator(".nav").isVisible(), false);
+  assert.equal(await page.locator(".toggle").isVisible(), false);
+  assert.equal(await page.locator(".menu").isVisible(), true);
+  assert.equal(await page.locator(".menu-panel").isVisible(), false);
+
+  await page.locator(".menu-button").click();
+  await assert.doesNotReject(page.locator(".menu[data-open='true']").waitFor());
+  assert.equal(await page.locator(".menu-button").getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator(".menu-panel").isVisible(), true);
+
+  await page.waitForFunction(() => getComputedStyle(document.querySelector(".menu-button span:nth-child(2)")).opacity === "0");
+  const middleLine = await page.locator(".menu-button span").nth(1).evaluate((node) => getComputedStyle(node).opacity);
+  assert.equal(middleLine, "0");
+
+  await page.locator(".menu-panel .theme-toggle").click();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
+
+  await page.locator(".menu-nav a[data-section='collections']").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Featured collections" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/collections");
+  assert.equal(await page.locator(".menu").getAttribute("data-open"), "false");
+  assert.equal(await page.locator(".menu-nav a[data-section='collections']").getAttribute("aria-current"), "page");
+
+  const firstCollection = page.locator(".items a").first();
+  const itemLayout = await firstCollection.evaluate((node) => ({
+    direction: getComputedStyle(node).flexDirection,
+    titleTop: node.querySelector(".it-name").getBoundingClientRect().top,
+    descTop: node.querySelector(".it-desc").getBoundingClientRect().top,
+  }));
+  assert.equal(itemLayout.direction, "column");
+  assert.equal(itemLayout.descTop > itemLayout.titleTop, true);
+
+  assert.deepEqual(errors, []);
+  assert.deepEqual(consoleErrors, []);
+  assert.deepEqual(badResponses, []);
+});

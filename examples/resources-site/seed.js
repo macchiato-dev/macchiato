@@ -226,6 +226,136 @@ html:not([data-theme]) {
 .crumb a.home-ic { display: inline-flex; align-items: center; padding: 6px 9px; color: var(--accent); }
 .crumb a.home-ic:hover { color: var(--text); }
 .crumb a svg { width: 16px; height: 16px; display: block; }
+
+.items a {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.items .it-name {
+  flex: 0 1 auto;
+  overflow-wrap: anywhere;
+}
+.items .it-desc {
+  max-width: 58ch;
+}
+
+.menu {
+  grid-area: menu;
+  justify-self: end;
+  display: none;
+  position: relative;
+  z-index: 20;
+  padding: 10px;
+}
+.menu-button {
+  appearance: none;
+  position: relative;
+  width: 48px;
+  height: 42px;
+  border: 1px solid var(--track-border);
+  border-radius: 14px;
+  background: var(--track);
+  color: var(--text);
+  cursor: pointer;
+}
+.menu-button span {
+  position: absolute;
+  left: 13px;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transition: transform .24s ease, opacity .18s ease, top .24s ease;
+}
+.menu-button span:nth-child(1) { top: 13px; }
+.menu-button span:nth-child(2) { top: 20px; }
+.menu-button span:nth-child(3) { top: 27px; }
+.menu[data-open="true"] .menu-button span:nth-child(1) {
+  top: 20px;
+  transform: rotate(45deg);
+}
+.menu[data-open="true"] .menu-button span:nth-child(2) {
+  opacity: 0;
+}
+.menu[data-open="true"] .menu-button span:nth-child(3) {
+  top: 20px;
+  transform: rotate(-45deg);
+}
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: min(280px, calc(100vw - 40px));
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-6px) scale(.98);
+  transform-origin: top right;
+  transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
+}
+.menu[data-open="true"] .menu-panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+.menu-panel .toggle-btn {
+  align-self: flex-end;
+}
+.menu-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.menu-nav a {
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+.menu-nav a:hover { background: var(--hover); }
+.menu-nav a[aria-current="page"] {
+  background: var(--active-bg);
+  color: var(--active-fg);
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand menu"
+      "main main"
+      "footer footer";
+  }
+  .toggle,
+  .nav {
+    display: none;
+  }
+  .menu {
+    display: block;
+  }
+  .brand {
+    min-width: 0;
+    padding: 18px 20px 22px;
+  }
+  .brand__name {
+    overflow-wrap: anywhere;
+  }
+  .main {
+    max-width: none;
+  }
+}
 `;
 }
 
@@ -259,7 +389,7 @@ function homeIcon() {
 function themeToggleHtml() {
   const sun = `<svg class="tb-ghost tb-ghost-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line></svg>`;
   const moon = `<svg class="tb-ghost tb-ghost-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
-  return `<button id="theme-toggle" class="toggle-btn" role="switch" aria-checked="true" aria-label="Switch to light mode">${sun}${moon}<span class="tb-thumb">${sun.replace("tb-ghost tb-ghost-sun", "tb-sun")}${moon.replace("tb-ghost tb-ghost-moon", "tb-moon")}</span></button>`;
+  return `<button class="toggle-btn theme-toggle" role="switch" aria-checked="true" aria-label="Switch to light mode">${sun}${moon}<span class="tb-thumb">${sun.replace("tb-ghost tb-ghost-sun", "tb-sun")}${moon.replace("tb-ghost tb-ghost-moon", "tb-moon")}</span></button>`;
 }
 
 function navHtml(activeKey) {
@@ -268,6 +398,20 @@ function navHtml(activeKey) {
     return `<a href="${item.path}" data-section="${item.key}"${current}><span>${escapeHtml(item.label)}</span></a>`;
   });
   return `<nav class="box nav" data-screen-label="nav" aria-label="Primary">${links.join("")}</nav>`;
+}
+
+function menuHtml(activeKey) {
+  const links = NAV.map((item) => {
+    const current = item.key === activeKey ? ' aria-current="page"' : "";
+    return `<a href="${item.path}" data-section="${item.key}"${current}><span>${escapeHtml(item.label)}</span></a>`;
+  });
+  return `<section class="box menu" data-open="false" data-screen-label="menu">
+    <button class="menu-button" type="button" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>
+    <div class="box menu-panel">
+      ${themeToggleHtml()}
+      <nav class="menu-nav" aria-label="Primary">${links.join("")}</nav>
+    </div>
+  </section>`;
 }
 
 function breadcrumbHtml(trail) {
@@ -343,6 +487,7 @@ function pageHtml(path) {
   return `<main class="layout">
     <header class="box brand" data-screen-label="brand"><div class="brand__name">Resources<span class="dot">.co</span></div></header>
     <section class="box toggle" data-screen-label="toggle">${themeToggleHtml()}</section>
+    ${menuHtml(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content">${route.blocks.map(blockHtml).join("")}</div></div>
     ${navHtml(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">&copy; 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
@@ -353,22 +498,47 @@ function pageHtml(path) {
 function clientScript() {
   return `(() => {
   const root = document.documentElement;
-  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function applyTheme(theme) {
-    const button = document.getElementById("theme-toggle");
-    const thumb = button && button.querySelector(".tb-thumb");
     root.setAttribute("data-theme", theme);
-    if (!button || !thumb) return;
     const dark = theme === "dark";
-    button.setAttribute("aria-checked", dark ? "true" : "false");
-    button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    thumb.style.transform = dark ? "translateX(38px)" : "translateX(0)";
+    document.querySelectorAll(".theme-toggle").forEach((button) => {
+      const thumb = button.querySelector(".tb-thumb");
+      button.setAttribute("aria-checked", dark ? "true" : "false");
+      button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+      if (thumb) thumb.style.transform = dark ? "translateX(38px)" : "translateX(0)";
+    });
+  }
+
+  function setMenuOpen(open) {
+    const menu = document.querySelector(".menu");
+    const button = menu && menu.querySelector(".menu-button");
+    if (!menu || !button) return;
+    menu.dataset.open = open ? "true" : "false";
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  }
+
+  function syncActiveNav(nextDoc) {
+    const active = nextDoc.querySelector("[data-section][aria-current='page']");
+    const activeKey = active && active.getAttribute("data-section");
+    document.querySelectorAll("[data-section]").forEach((link) => {
+      if (activeKey && link.getAttribute("data-section") === activeKey) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
   }
 
   applyTheme(root.getAttribute("data-theme") || "dark");
   document.addEventListener("click", (event) => {
-    const themeButton = event.target.closest("#theme-toggle");
+    const menuButton = event.target.closest(".menu-button");
+    if (menuButton) {
+      const menu = menuButton.closest(".menu");
+      setMenuOpen(menu.dataset.open !== "true");
+      return;
+    }
+    if (!event.target.closest(".menu")) setMenuOpen(false);
+
+    const themeButton = event.target.closest(".theme-toggle");
     if (themeButton) {
       applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
       return;
@@ -378,6 +548,7 @@ function clientScript() {
     const next = new URL(link.href, location.href);
     if (next.origin !== location.origin || next.hash || link.target) return;
     event.preventDefault();
+    setMenuOpen(false);
     navigate(next, "push");
   });
 
@@ -404,10 +575,7 @@ function clientScript() {
     else if (currentCrumb) currentCrumb.remove();
     else if (nextCrumb) document.getElementById("main").prepend(nextCrumb);
     currentContent.replaceChildren(...nextContent.childNodes);
-
-    const currentNav = document.querySelector(".nav");
-    const nextNav = nextDoc.querySelector(".nav");
-    if (currentNav && nextNav) currentNav.replaceWith(nextNav);
+    syncActiveNav(nextDoc);
     applyTheme(root.getAttribute("data-theme") || "dark");
     if (historyMode === "push") history.pushState(null, "", url.pathname);
     scrollTo({ top: 0, behavior: "auto" });
