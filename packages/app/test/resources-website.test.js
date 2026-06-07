@@ -116,6 +116,34 @@ test("resources website no longer exposes Claude export bundle routes", async ()
   assert.equal(loader.status, 404);
 });
 
+test("resources sqlite site is mounted on a subdomain with friendly paths", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const home = await fetch(`http://resources-co.localhost:${port}/`);
+  const homeHtml = await home.text();
+  const collection = await fetch(`http://resources-co.localhost:${port}/resources/containers`);
+  const collectionHtml = await collection.text();
+  const missing = await fetch(`http://resources-co.localhost:${port}/export/index.html`);
+
+  assert.equal(home.status, 200);
+  assert.match(homeHtml, /<title>Resources\.co<\/title>/);
+  assert.match(homeHtml, /href="\/resources\/containers"/);
+  assert.doesNotMatch(homeHtml, /href="#resources\/containers"/);
+  assert.equal(collection.status, 200);
+  assert.match(collectionHtml, /<title>Containers - Resources\.co<\/title>/);
+  assert.match(collectionHtml, /aria-label="Breadcrumb"/);
+  assert.match(collectionHtml, /href="\/resources"/);
+  assert.match(collectionHtml, /<h1>Containers<\/h1>/);
+  assert.equal(missing.status, 404);
+});
+
 test("resources website renders its index in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
@@ -173,4 +201,51 @@ test("resources website renders its index in a real browser", async (t) => {
   assert.equal(await page.locator("#__bundler_err").count(), 0);
   assert.equal(await page.locator(".crumb").count(), 0);
   assert.equal(await page.locator("script").count(), 0);
+});
+
+test("resources sqlite site transitions between friendly paths in a real browser", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  const consoleErrors = [];
+  const badResponses = [];
+
+  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+
+  await page.getByText("resources/containers").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/resources/containers");
+  await assert.doesNotReject(page.locator(".crumb", { hasText: "resources" }).waitFor());
+
+  await page.locator(".crumb a[href='/resources']").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "resources" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/resources");
+
+  await page.locator(".nav a[data-section='home']").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/");
+  assert.equal(await page.locator(".crumb").count(), 0);
+
+  assert.deepEqual(errors, []);
+  assert.deepEqual(consoleErrors, []);
+  assert.deepEqual(badResponses, []);
 });

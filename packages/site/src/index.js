@@ -11,6 +11,23 @@ const DEFAULT_TRANSITION_POLICY = {
 };
 
 const SAFE_HEADER_VALUE = /^[\t\x20-\x7e]*$/;
+const SAFE_ROUTE_PATH = /^\/(?:[a-zA-Z0-9._~-]+\/?)*$/;
+
+export const SITE_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS site_routes (
+    subdomain TEXT NOT NULL,
+    path TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    html TEXT NOT NULL,
+    css TEXT NOT NULL DEFAULT '',
+    head TEXT NOT NULL DEFAULT '',
+    csp TEXT NOT NULL DEFAULT '',
+    nav_json TEXT NOT NULL DEFAULT '[]',
+    transition_json TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (subdomain, path)
+  )
+`;
 
 function escapeHtml(value) {
   return String(value)
@@ -48,6 +65,86 @@ export function createSitePolicy(policy = {}) {
   };
   validateSitePolicy(merged);
   return merged;
+}
+
+export function initSiteDb(db) {
+  db.exec(SITE_SCHEMA);
+}
+
+export function normalizeRoutePath(path = "/") {
+  let value = String(path || "/").trim();
+  if (!value.startsWith("/")) value = `/${value}`;
+  value = value.replace(/\/+/g, "/");
+  if (value.length > 1) value = value.replace(/\/$/, "");
+  if (value.split("/").some((segment) => segment === "." || segment === "..")) {
+    throw new Error(`Invalid site route path: ${path}`);
+  }
+  if (!SAFE_ROUTE_PATH.test(value)) throw new Error(`Invalid site route path: ${path}`);
+  return value;
+}
+
+export function putSiteRoute(db, route) {
+  const subdomain = String(route.subdomain || "").trim();
+  if (!subdomain) throw new Error("Site route requires subdomain");
+  const path = normalizeRoutePath(route.path || "/");
+  const title = route.title || subdomain;
+  const html = String(route.html ?? "");
+  if (!html) throw new Error("Site route requires html");
+  const navJson = JSON.stringify(route.nav || []);
+  const transitionJson = JSON.stringify(route.transition || {});
+
+  db.prepare(`
+    INSERT INTO site_routes
+      (subdomain, path, title, html, css, head, csp, nav_json, transition_json, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(subdomain, path) DO UPDATE SET
+      title = excluded.title,
+      html = excluded.html,
+      css = excluded.css,
+      head = excluded.head,
+      csp = excluded.csp,
+      nav_json = excluded.nav_json,
+      transition_json = excluded.transition_json,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    subdomain,
+    path,
+    title,
+    html,
+    route.css || "",
+    route.head || "",
+    route.csp || "",
+    navJson,
+    transitionJson,
+  );
+  return { subdomain, path };
+}
+
+export function getSiteRoute(db, subdomain, path = "/") {
+  const routePath = normalizeRoutePath(path);
+  return db.prepare(`
+    SELECT subdomain, path, title, html, css, head, csp, nav_json AS navJson, transition_json AS transitionJson
+    FROM site_routes
+    WHERE subdomain = ? AND path = ?
+  `).get(String(subdomain), routePath);
+}
+
+export function hasSiteRoutes(db, subdomain) {
+  const row = db.prepare("SELECT 1 AS found FROM site_routes WHERE subdomain = ? LIMIT 1").get(String(subdomain));
+  return Boolean(row);
+}
+
+export function listSiteRoutes(db, subdomain) {
+  return db.prepare(`
+    SELECT subdomain, path, title
+    FROM site_routes
+    WHERE subdomain = ?
+    ORDER BY path
+  `).all(String(subdomain));
+}
+
+export function deleteSiteRoutes(db, subdomain) {
+  db.prepare("DELETE FROM site_routes WHERE subdomain = ?").run(String(subdomain));
 }
 
 export function validateSitePolicy(policy) {
@@ -130,6 +227,24 @@ ${body}
 ${manifest}
 </body>
 </html>`;
+}
+
+export function renderSiteRoute(row) {
+  const nav = JSON.parse(row.navJson || "[]");
+  const transition = JSON.parse(row.transitionJson || "{}");
+  const head = `${row.css ? `<style>\n${row.css}\n</style>` : ""}
+${row.head || ""}`;
+  return renderDocument({
+    title: row.title || row.subdomain,
+    csp: row.csp || "",
+    head,
+    body: row.html,
+    transitionManifest: {
+      path: row.path,
+      nav,
+      ...transition,
+    },
+  });
 }
 
 function assertHeaderValue(value) {

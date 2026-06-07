@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { initFontCache } from "@macchiato-dev/font-use";
+import { initSiteDb } from "@macchiato-dev/site";
 
 function getHomeDir() {
   if ("Deno" in globalThis) {
@@ -45,6 +46,7 @@ export function withDb(fn, options = {}) {
     )
   `);
   initFontCache(db);
+  initSiteDb(db);
   try {
     return fn(db);
   } finally {
