@@ -43,6 +43,30 @@ The important constraint is write access. The pre-sanitized HTML cache is part
 of the trusted computing base. It should be written only by the sanitizer/build
 pipeline, not by arbitrary app users or broad production roles.
 
+## SQLite Routes
+
+For local development, a site can be mapped by subdomain and served from route
+rows in SQLite. Each row stores a friendly path, title, HTML body, CSS, optional
+head content, optional CSP, and transition metadata.
+
+The Macchiato app resolves the request subdomain first. If rows exist for that
+subdomain in `site_routes`, the request path is matched against those rows and
+rendered as a full SSR document. This supports local routes such as:
+
+- `http://resources-co.localhost:8765/`
+- `http://resources-co.localhost:8765/resources/containers`
+- `http://resources-co.localhost:8765/macchiato/components`
+
+The CLI can load simple local-dev routes:
+
+```sh
+macchiato site add-route resources-co /resources/containers page.html styles.css --title "Containers - Resources.co"
+```
+
+This is deliberately separate from the trusted pre-sanitized cache. SQLite route
+storage is useful for development and small self-hosted sites; production write
+access still needs to be narrow and explicit.
+
 ## Fallback
 
 If the pre-sanitized HTML is not present on the server or cache, and the policy
@@ -59,6 +83,9 @@ The fallback order is:
 ## Current API
 
 - `renderDocument` renders a full SSR HTML document.
+- `initSiteDb` initializes the SQLite route table.
+- `putSiteRoute`, `getSiteRoute`, and `renderSiteRoute` store and render route
+  rows.
 - `createSitePolicy` normalizes transition policy.
 - `chooseTransitionMode` selects the transition strategy for a navigation.
 - `isTrustedTransitionSource` checks configured trusted sources.

@@ -9,9 +9,11 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { getFontAsset, initFontCache, parseFontAssetUrl } from "@macchiato-dev/font-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
+import { getSiteRoute, hasSiteRoutes, initSiteDb, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, seedResourcesWebsiteFonts } from "../../../examples/resources-website/handler.js";
+import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -94,7 +96,9 @@ db.exec(`
   )
 `);
 initFontCache(db);
+initSiteDb(db);
 seedResourcesWebsiteFonts(db);
+seedResourcesSite(db);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
 const getSchema = db.prepare("SELECT json FROM schemas WHERE name = ?");
@@ -231,6 +235,19 @@ function serveStoredPage(row) {
   }
 }
 
+function serveSiteRoute(row) {
+  try {
+    return new Response(renderSiteRoute(row), {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  } catch (err) {
+    return new Response(`Site route error: ${err.message}`, {
+      status: 500,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
+}
+
 function getSubdomain(hostHeader) {
   const name = hostHeader.split(":")[0];
   return name.split(".")[0] || "default";
@@ -298,6 +315,13 @@ async function route(request) {
 
   if (subdomain === "resources-website") {
     return resourcesWebsiteHandler(request);
+  }
+
+  if (hasSiteRoutes(db, subdomain)) {
+    const routePath = url.pathname === "/index.html" ? "/" : url.pathname;
+    const siteRoute = getSiteRoute(db, subdomain, routePath);
+    if (siteRoute) return serveSiteRoute(siteRoute);
+    return new Response("Not found", { status: 404 });
   }
 
   const page = getSitePage.get(subdomain);

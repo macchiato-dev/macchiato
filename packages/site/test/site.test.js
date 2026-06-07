@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import {
   chooseTransitionMode,
   createSitePolicy,
   createTransitionManifest,
+  getSiteRoute,
+  hasSiteRoutes,
+  initSiteDb,
   isTrustedTransitionSource,
+  listSiteRoutes,
+  normalizeRoutePath,
+  putSiteRoute,
   renderDocument,
+  renderSiteRoute,
   validatePresanitizedCache,
 } from "../src/index.js";
 
@@ -121,4 +129,42 @@ test("creates a transition manifest without cache writer metadata", () => {
     wasmFallback: true,
     trustedSources: [{ type: "prefix", value: "https://cdn.example.test/site/" }],
   });
+});
+
+test("normalizes safe route paths and rejects unsafe paths", () => {
+  assert.equal(normalizeRoutePath("browse/"), "/browse");
+  assert.equal(normalizeRoutePath("//resources//containers//"), "/resources/containers");
+  assert.throws(() => normalizeRoutePath("/../secret"), /Invalid site route path/);
+  assert.throws(() => normalizeRoutePath("/search?q=1"), /Invalid site route path/);
+});
+
+test("stores and renders SQLite-backed site routes", () => {
+  const db = new DatabaseSync(":memory:");
+  initSiteDb(db);
+
+  assert.equal(hasSiteRoutes(db, "resources-co"), false);
+  const stored = putSiteRoute(db, {
+    subdomain: "resources-co",
+    path: "resources/containers",
+    title: "Containers",
+    html: '<main id="content"><h1>Containers</h1></main>',
+    css: "body { color: CanvasText; }",
+    nav: [{ path: "/", label: "Home" }],
+    transition: { mode: "same-origin-ssr-swap" },
+  });
+
+  assert.deepEqual(stored, { subdomain: "resources-co", path: "/resources/containers" });
+  assert.equal(hasSiteRoutes(db, "resources-co"), true);
+  assert.deepEqual(listSiteRoutes(db, "resources-co").map((row) => ({ ...row })), [
+    { subdomain: "resources-co", path: "/resources/containers", title: "Containers" },
+  ]);
+
+  const row = getSiteRoute(db, "resources-co", "/resources/containers");
+  const html = renderSiteRoute(row);
+
+  assert.match(html, /<title>Containers<\/title>/);
+  assert.match(html, /<style>\nbody \{ color: CanvasText; \}\n<\/style>/);
+  assert.match(html, /<main id="content"><h1>Containers<\/h1><\/main>/);
+  assert.match(html, /"path":"\/resources\/containers"/);
+  db.close();
 });
