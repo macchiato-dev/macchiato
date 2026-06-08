@@ -6,6 +6,7 @@ vendor/
 dist/
 build/
 target/
+examples/resources-site/exported/
 *.egg-info/
 
 # Environment
