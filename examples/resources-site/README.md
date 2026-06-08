@@ -20,25 +20,20 @@ font assets:
 
 Serve it with any static file server from that directory.
 
-## Bunny Bucket Server
+## Bunny Standalone Edge Script
 
-`bunny-server.ts` is a small Deno server that maps friendly paths to exported
-files. It can serve local files, or fetch the same files from a Bunny bucket or
-pull-zone path.
+`bunny-server.js` is a Bunny standalone edge script that maps friendly paths to
+exported files in a Bunny Storage bucket subdirectory. It uses
+`@bunny.net/edgescript-sdk` and reads configuration through `process.env`.
 
-Local files:
-
-```sh
-deno run --allow-net --allow-read --allow-env examples/resources-site/bunny-server.ts
-```
-
-Bunny-backed files in a bucket or pull-zone subdirectory:
+Bunny Storage bucket files in a subdirectory:
 
 ```sh
 BUNNY_ORIGIN="https://example.b-cdn.net" \
 BUNNY_BUCKET_PREFIX="resources-co" \
-deno run --allow-net --allow-env examples/resources-site/bunny-server.ts
+STORAGE_API_KEY="..." \
+deno run --allow-net --allow-env examples/resources-site/bunny-server.js
 ```
 
-For Bunny Storage API origins that require a key, set `BUNNY_ACCESS_KEY`. For a
-public pull zone, leave it unset.
+`BUNNY_ORIGIN` and `STORAGE_API_KEY` are required. `BUNNY_BUCKET_PREFIX` is the
+subdirectory in the bucket that contains the exported files.
