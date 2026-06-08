@@ -584,10 +584,14 @@ function clientScript() {
 }
 
 export function seedResourcesSite(db) {
+  for (const route of buildResourcesSiteRoutes()) putSiteRoute(db, route);
+}
+
+export function buildResourcesSiteRoutes() {
   const stylesheet = css();
-  for (const path of [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...COLLECTION_ORDER]) {
+  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...COLLECTION_ORDER].map((path) => {
     const route = routeForPath(path);
-    putSiteRoute(db, {
+    return {
       subdomain: SUBDOMAIN,
       path,
       title: route.title,
@@ -595,6 +599,6 @@ export function seedResourcesSite(db) {
       css: stylesheet,
       nav: NAV,
       transition: { mode: "same-origin-ssr-swap", routePath: path },
-    });
-  }
+    };
+  });
 }
