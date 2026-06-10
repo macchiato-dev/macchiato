@@ -49,6 +49,67 @@ test("rejects nodes, children, and attributes outside the schema", () => {
   assert.throws(() => main.appendChild(doc.createElement("strong")), /Child strong not allowed in main/);
 });
 
+test("allows children through named definitions and alternation rules", () => {
+  const domUse = new DomUse({
+    definitions: {
+      layout: {
+        element: "main.layout",
+        attrs: ["class"],
+        children: [
+          { oneOf: ["$brand", "$toggle", "$content"] },
+        ],
+      },
+      brand: {
+        element: "header.brand",
+        attrs: ["class"],
+        children: ["#text"],
+      },
+      toggle: {
+        element: "section.toggle",
+        attrs: ["class"],
+        children: ["button"],
+      },
+      content: {
+        element: "div.content",
+        attrs: ["class", "id"],
+        children: ["h1"],
+      },
+      ambiguousContent: {
+        element: "div.content.featured",
+        attrs: ["class"],
+        children: ["p"],
+      },
+    },
+    nodes: {
+      button: { attrs: [], children: ["#text"] },
+      h1: { attrs: [], children: ["#text"] },
+    },
+  });
+  const doc = domUse.createDocument();
+  const layout = doc.createElement("main");
+  const brand = doc.createElement("header");
+  const toggle = doc.createElement("section");
+  const content = doc.createElement("div");
+  const ambiguous = doc.createElement("div");
+  const heading = doc.createElement("h1");
+
+  layout.setAttribute("class", "layout");
+  brand.setAttribute("class", "brand");
+  toggle.setAttribute("class", "toggle");
+  content.setAttribute("class", "content");
+  content.setAttribute("id", "content");
+  assert.throws(() => ambiguous.setAttribute("class", "content featured"), /Ambiguous DOM definitions/);
+  brand.appendChild(doc.createTextNode("Resources.co"));
+  heading.appendChild(doc.createTextNode("Home"));
+  content.appendChild(heading);
+
+  assert.equal(layout.appendChild(brand), brand);
+  assert.equal(layout.appendChild(toggle), toggle);
+  assert.equal(layout.appendChild(content), content);
+  assert.throws(() => layout.appendChild(doc.createElement("button")), /Child button not allowed in main/);
+  assert.throws(() => brand.setAttribute("id", "brand"), /Attribute not allowed on header: id/);
+});
+
 test("drops invalid markup when setting innerHTML", () => {
   const domUse = articleDomUse();
   const doc = domUse.createDocument();

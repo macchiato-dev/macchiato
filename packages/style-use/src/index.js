@@ -27,6 +27,19 @@ export class StyleUse {
    */
   constructor(schema = {}) {
     this.schema = schema;
+    this.assertUnambiguousDefinitions();
+  }
+
+  assertUnambiguousDefinitions() {
+    const seen = new Map();
+    for (const [name, definition] of Object.entries(this.schema.definitions || {})) {
+      const selector = definition.element || definition.selector;
+      if (!selector) continue;
+      if (seen.has(selector)) {
+        throw new Error(`Ambiguous CSS style definitions for ${selector}: ${seen.get(selector)}, ${name}`);
+      }
+      seen.set(selector, name);
+    }
   }
 
   normalizeProperty(property) {
@@ -38,6 +51,22 @@ export class StyleUse {
 
   limits() {
     return { ...DEFAULT_LIMITS, ...(this.schema.limits || {}) };
+  }
+
+  styleDefinition(name) {
+    const definitions = this.schema.definitions || {};
+    const entry = definitions[String(name)] || {};
+    return entry.properties ? entry.properties : entry;
+  }
+
+  effectiveProperties() {
+    const properties = {};
+    const uses = this.schema.useStyles || this.schema["use-styles"] || [];
+    for (const name of uses) {
+      Object.assign(properties, this.styleDefinition(name));
+    }
+    Object.assign(properties, this.schema.properties || {});
+    return properties;
   }
 
   validateContent(value, kind) {
@@ -139,7 +168,7 @@ export class StyleUse {
       this.validateUrl(url, prop);
     }
 
-    const properties = this.schema.properties || {};
+    const properties = this.effectiveProperties();
     const rule = properties[prop];
     if (rule === undefined) {
       if (Object.keys(properties).length === 0) return true;
