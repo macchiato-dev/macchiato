@@ -331,7 +331,7 @@ async function route(request) {
     return appDirectoryHandler(request);
   }
   if (builtinApp?.handler) {
-    return builtinApp.handler(request);
+    return builtinApp.handler(request, builtinApp);
   }
 
   if (hasSiteRoutes(db, subdomain)) {
