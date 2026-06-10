@@ -4,15 +4,13 @@ import { readFile } from "node:fs/promises";
 import { mkdirSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
-import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { getFontAsset, initFontCache, parseFontAssetUrl } from "@macchiato-dev/font-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 import { getSiteRoute, hasSiteRoutes, initSiteDb, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
-import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
-import { resourcesWebsiteHandler, seedResourcesWebsiteFonts } from "../../../examples/resources-website/handler.js";
+import { appDirectoryHandler } from "./app-directory.js";
+import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
 const args = "Deno" in globalThis
@@ -97,7 +95,7 @@ db.exec(`
 `);
 initFontCache(db);
 initSiteDb(db);
-seedResourcesWebsiteFonts(db);
+setupBuiltinApps(db);
 seedResourcesSite(db);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
@@ -129,17 +127,33 @@ function escapeHtml(str) {
 }
 
 function hydrateCssSchema(schema) {
-  const properties = {};
-  for (const [name, rule] of Object.entries(schema.properties || {})) {
-    properties[name] = typeof rule === "string" ? new RegExp(rule) : rule;
-  }
   return {
     ...schema,
-    properties,
+    properties: hydratePropertyRules(schema.properties),
+    definitions: hydrateStyleDefinitions(schema.definitions),
     selectors: typeof schema.selectors === "string" ? new RegExp(schema.selectors) : schema.selectors,
     urls: hydrateUrlRules(schema.urls),
     content: hydrateContentRules(schema.content),
   };
+}
+
+function hydratePropertyRules(rules = {}) {
+  const properties = {};
+  for (const [name, rule] of Object.entries(rules)) {
+    properties[name] = typeof rule === "string" ? new RegExp(rule) : rule;
+  }
+  return properties;
+}
+
+function hydrateStyleDefinitions(definitions = {}) {
+  const hydrated = {};
+  for (const [name, definition] of Object.entries(definitions)) {
+    hydrated[name] = {
+      ...definition,
+      properties: hydratePropertyRules(definition.properties || definition),
+    };
+  }
+  return hydrated;
 }
 
 function hydrateContentRules(rules) {
@@ -170,9 +184,17 @@ function hydrateDomSchema(schema) {
       urls: hydrateUrlRules(rule.urls),
     };
   }
+  const definitions = {};
+  for (const [name, rule] of Object.entries(schema.definitions || {})) {
+    definitions[name] = {
+      ...rule,
+      urls: hydrateUrlRules(rule.urls),
+    };
+  }
   return {
     ...schema,
     nodes,
+    definitions,
     urls: hydrateUrlRules(schema.urls),
     content: hydrateContentRules(schema.content),
   };
@@ -235,9 +257,10 @@ function serveStoredPage(row) {
   }
 }
 
-function serveSiteRoute(row) {
+function serveSiteRoute(row, status = 200) {
   try {
     return new Response(renderSiteRoute(row), {
+      status,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   } catch (err) {
@@ -250,7 +273,9 @@ function serveSiteRoute(row) {
 
 function getSubdomain(hostHeader) {
   const name = hostHeader.split(":")[0];
-  return name.split(".")[0] || "default";
+  if (name === "localhost" || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(name) || name.includes(":")) return "";
+  if (name.endsWith(".localhost")) return name.slice(0, -".localhost".length);
+  return name.split(".")[0] || "";
 }
 
 function contentTypeFor(filePath) {
@@ -301,26 +326,20 @@ async function route(request) {
   const cachedFont = serveCachedFont(url.pathname);
   if (cachedFont) return cachedFont;
 
-  if (subdomain === "macchiato") {
-    return dashboardHandler(request);
+  const builtinApp = findBuiltinApp(subdomain);
+  if (builtinApp?.directory === false) {
+    return appDirectoryHandler(request);
   }
-
-  if (subdomain === "macchiato-quickjs-emscripten-sandbox") {
-    return sandboxHandler(request);
-  }
-
-  if (subdomain === "dom-use-todos") {
-    return domUseTodosHandler(request);
-  }
-
-  if (subdomain === "resources-website") {
-    return resourcesWebsiteHandler(request);
+  if (builtinApp?.handler) {
+    return builtinApp.handler(request);
   }
 
   if (hasSiteRoutes(db, subdomain)) {
     const routePath = url.pathname === "/index.html" ? "/" : url.pathname;
     const siteRoute = getSiteRoute(db, subdomain, routePath);
     if (siteRoute) return serveSiteRoute(siteRoute);
+    const notFoundRoute = getSiteRoute(db, subdomain, "/404");
+    if (notFoundRoute) return serveSiteRoute(notFoundRoute, 404);
     return new Response("Not found", { status: 404 });
   }
 

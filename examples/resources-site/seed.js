@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { putSiteRoute } from "@macchiato-dev/site";
+import { StyleUse } from "@macchiato-dev/style-use";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUBDOMAIN = "resources-co";
@@ -103,6 +104,65 @@ const COLLECTION_ORDER = [
   "/northwind/adapters",
 ];
 
+function hydrateCssSchema(schema) {
+  return {
+    ...schema,
+    properties: hydratePropertyRules(schema.properties),
+    definitions: hydrateStyleDefinitions(schema.definitions),
+    selectors: typeof schema.selectors === "string" ? new RegExp(schema.selectors) : schema.selectors,
+    urls: hydrateUrlRules(schema.urls),
+    content: hydrateContentRules(schema.content),
+  };
+}
+
+function hydratePropertyRules(rules = {}) {
+  const properties = {};
+  for (const [name, rule] of Object.entries(rules)) {
+    properties[name] = typeof rule === "string" ? new RegExp(rule) : rule;
+  }
+  return properties;
+}
+
+function hydrateStyleDefinitions(definitions = {}) {
+  const hydrated = {};
+  for (const [name, definition] of Object.entries(definitions)) {
+    hydrated[name] = {
+      ...definition,
+      properties: hydratePropertyRules(definition.properties || definition),
+    };
+  }
+  return hydrated;
+}
+
+function hydrateContentRules(rules) {
+  if (!rules || typeof rules !== "object") return rules;
+  return {
+    ...rules,
+    allowedPattern: typeof rules.allowedPattern === "string" ? new RegExp(rules.allowedPattern) : rules.allowedPattern,
+    rejectPattern: typeof rules.rejectPattern === "string" ? new RegExp(rules.rejectPattern) : rules.rejectPattern,
+  };
+}
+
+function hydrateUrlRules(rules) {
+  if (rules === undefined || typeof rules === "boolean") return rules;
+  if (typeof rules === "string") return new RegExp(rules);
+  if (Array.isArray(rules)) return rules.map((rule) => typeof rule === "string" ? new RegExp(rule) : rule);
+  const hydrated = {};
+  for (const [name, rule] of Object.entries(rules)) {
+    hydrated[name] = hydrateUrlRules(rule);
+  }
+  return hydrated;
+}
+
+export function resourcesCssSchema() {
+  const json = readFileSync(join(__dirname, "css.schema.json"), "utf8");
+  return hydrateCssSchema(JSON.parse(json));
+}
+
+export function validateResourcesStylesheet(stylesheet) {
+  return new StyleUse(resourcesCssSchema()).validateStylesheet(stylesheet);
+}
+
 const SECTIONS = {
   "/": {
     navKey: "home",
@@ -184,6 +244,27 @@ const SECTIONS = {
   },
 };
 
+const NOT_FOUND_ROUTE = {
+  navKey: "",
+  title: "Not found - Resources.co",
+  crumb: [{ icon: true, href: "/" }, { label: "Not found" }],
+  blocks: [
+    {
+      eyebrow: "404",
+      h1: "This block has not been composed yet.",
+      paras: [
+        "That route is not in the Resources.co catalogue. It may still be on a workbench somewhere, or it may be a typo.",
+        "Head back home or browse the collections that are already wired up.",
+      ],
+      items: [
+        ["Home", "Return to the Resources.co starting point.", "/"],
+        ["Browse", "Scan the current catalogue of self-hostable parts.", "/browse"],
+        ["Collections", "Open the featured Resources.co collections.", "/collections"],
+      ],
+    },
+  ],
+};
+
 function css() {
   const base = readFileSync(join(__dirname, "..", "resources-website", "styles.css"), "utf8");
   return `${base}
@@ -195,7 +276,7 @@ html:not([data-theme]) {
     linear-gradient(152deg, #1a1aa2 0%, #2626d8 52%, #16168e 100%);
   --card: rgba(9,15,42,0.52);
   --card-border: rgba(255,255,255,0.12);
-  --shadow: 0 14px 44px rgba(2,6,28,0.34);
+  --shadow: 0 12px 28px rgba(2,6,28,0.24);
   --text: #eef2ff;
   --muted: #aeb9e8;
   --accent: #30D5C8;
@@ -330,9 +411,55 @@ html:not([data-theme]) {
   font-weight: 600;
 }
 
+.brand__link {
+  color: inherit;
+  text-decoration: none;
+}
+.brand__link:hover {
+  color: inherit;
+}
+
+.layout {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.content-root[data-loading="true"] {
+  width: 100%;
+}
+.skeleton-block {
+  width: 100%;
+  padding: 30px 34px;
+}
+.skeleton-line {
+  display: block;
+  height: 16px;
+  width: 100%;
+  max-width: 58ch;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: var(--hover);
+  opacity: .72;
+  animation: skeletonPulse 1.1s ease-in-out infinite;
+}
+.skeleton-line:first-child {
+  margin-top: 0;
+  width: 42%;
+}
+.skeleton-line:nth-child(2) {
+  width: 78%;
+  height: 28px;
+}
+.skeleton-line:nth-child(4) {
+  width: 64%;
+}
+@keyframes skeletonPulse {
+  50% { opacity: .38; }
+}
+
 @media (max-width: 760px) {
   .layout {
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas:
       "brand menu"
       "main main"
@@ -449,6 +576,7 @@ function blockHtml(block) {
 }
 
 function routeForPath(path) {
+  if (path === "/404") return NOT_FOUND_ROUTE;
   if (SECTIONS[path]) return SECTIONS[path];
   if (COLLECTIONS[path]) {
     const collection = COLLECTIONS[path];
@@ -485,10 +613,10 @@ function routeForPath(path) {
 function pageHtml(path) {
   const route = routeForPath(path);
   return `<main class="layout">
-    <header class="box brand" data-screen-label="brand"><div class="brand__name">Resources<span class="dot">.co</span></div></header>
+    <header class="box brand" data-screen-label="brand"><a class="brand__link" href="/"><div class="brand__name">Resources<span class="dot">.co</span></div></a></header>
     <section class="box toggle" data-screen-label="toggle">${themeToggleHtml()}</section>
     ${menuHtml(route.navKey)}
-    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content">${route.blocks.map(blockHtml).join("")}</div></div>
+    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
     ${navHtml(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">&copy; 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
   </main>
@@ -498,6 +626,7 @@ function pageHtml(path) {
 function clientScript() {
   return `(() => {
   const root = document.documentElement;
+  const routeCache = new Map();
 
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
@@ -528,7 +657,87 @@ function clientScript() {
     });
   }
 
+  function sameSiteRoute(link) {
+    if (!link || !link.href) return null;
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || url.hash || link.target) return null;
+    return url;
+  }
+
+  async function fetchRoute(url) {
+    const key = url.pathname;
+    if (!routeCache.has(key)) {
+      routeCache.set(key, fetch(key, { headers: { Accept: "text/html" } })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("Route fetch failed");
+          const html = await response.text();
+          return new DOMParser().parseFromString(html, "text/html");
+        })
+        .catch((error) => {
+          routeCache.delete(key);
+          throw error;
+        }));
+    }
+    return routeCache.get(key);
+  }
+
+  function prefetchRoute(link) {
+    const url = sameSiteRoute(link);
+    if (!url || url.pathname === location.pathname) return;
+    if (link.dataset.prefetch === "ready" || link.dataset.prefetch === "pending") return;
+    link.dataset.prefetch = "pending";
+    fetchRoute(url)
+      .then(() => { link.dataset.prefetch = "ready"; })
+      .catch(() => { delete link.dataset.prefetch; });
+  }
+
+  function showSkeleton() {
+    const content = document.getElementById("content");
+    if (!content) return;
+    content.dataset.loading = "true";
+    content.setAttribute("aria-busy", "true");
+    content.replaceChildren(...[0, 1].map(() => {
+      const block = document.createElement("section");
+      block.className = "box skeleton-block";
+      block.setAttribute("aria-hidden", "true");
+      for (let i = 0; i < 4; i += 1) {
+        const line = document.createElement("span");
+        line.className = "skeleton-line";
+        block.appendChild(line);
+      }
+      return block;
+    }));
+  }
+
+  function clearSkeleton() {
+    const content = document.getElementById("content");
+    if (!content) return;
+    delete content.dataset.loading;
+    content.removeAttribute("aria-busy");
+  }
+
+  function preparePrefetching(rootNode = document) {
+    if (window.__resourcesDisablePrefetch) return;
+    const links = Array.from(rootNode.querySelectorAll("a[href]")).filter(sameSiteRoute);
+    links.forEach((link) => {
+      link.addEventListener("pointerenter", () => prefetchRoute(link), { once: true });
+      link.addEventListener("focus", () => prefetchRoute(link), { once: true });
+      link.addEventListener("touchstart", () => prefetchRoute(link), { once: true, passive: true });
+    });
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          observer.unobserve(entry.target);
+          prefetchRoute(entry.target);
+        }
+      }, { rootMargin: "160px" });
+      links.forEach((link) => observer.observe(link));
+    }
+  }
+
   applyTheme(root.getAttribute("data-theme") || "dark");
+  preparePrefetching();
   document.addEventListener("click", (event) => {
     const menuButton = event.target.closest(".menu-button");
     if (menuButton) {
@@ -555,13 +764,15 @@ function clientScript() {
   addEventListener("popstate", () => navigate(new URL(location.href), "replace"));
 
   async function navigate(url, historyMode) {
-    const response = await fetch(url.pathname, { headers: { Accept: "text/html" } });
-    if (!response.ok) {
+    const cached = routeCache.has(url.pathname);
+    if (!cached) showSkeleton();
+    let nextDoc;
+    try {
+      nextDoc = await fetchRoute(url);
+    } catch {
       location.href = url.href;
       return;
     }
-    const html = await response.text();
-    const nextDoc = new DOMParser().parseFromString(html, "text/html");
     const nextContent = nextDoc.getElementById("content");
     const currentContent = document.getElementById("content");
     const currentCrumb = document.getElementById("crumb");
@@ -571,12 +782,14 @@ function clientScript() {
       return;
     }
     document.title = nextDoc.title;
-    if (currentCrumb && nextCrumb) currentCrumb.replaceWith(nextCrumb);
+    if (currentCrumb && nextCrumb) currentCrumb.replaceWith(nextCrumb.cloneNode(true));
     else if (currentCrumb) currentCrumb.remove();
-    else if (nextCrumb) document.getElementById("main").prepend(nextCrumb);
-    currentContent.replaceChildren(...nextContent.childNodes);
+    else if (nextCrumb) document.getElementById("main").prepend(nextCrumb.cloneNode(true));
+    clearSkeleton();
+    currentContent.replaceChildren(...Array.from(nextContent.childNodes).map((node) => node.cloneNode(true)));
     syncActiveNav(nextDoc);
     applyTheme(root.getAttribute("data-theme") || "dark");
+    preparePrefetching(currentContent);
     if (historyMode === "push") history.pushState(null, "", url.pathname);
     scrollTo({ top: 0, behavior: "auto" });
   }
@@ -589,7 +802,8 @@ export function seedResourcesSite(db) {
 
 export function buildResourcesSiteRoutes() {
   const stylesheet = css();
-  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...COLLECTION_ORDER].map((path) => {
+  validateResourcesStylesheet(stylesheet);
+  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...COLLECTION_ORDER, "/404"].map((path) => {
     const route = routeForPath(path);
     return {
       subdomain: SUBDOMAIN,

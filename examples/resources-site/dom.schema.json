@@ -1,0 +1,192 @@
+{
+  "definitions": {
+    "layout": {
+      "element": "main.layout",
+      "attrs": ["class"],
+      "children": [
+        {
+          "oneOf": [
+            "$brand",
+            "$theme-toggle-block",
+            "$mobile-menu",
+            "$main-column",
+            "$primary-nav",
+            "$site-footer"
+          ]
+        }
+      ]
+    },
+    "brand": {
+      "element": "header.box.brand",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["a"]
+    },
+    "theme-toggle-block": {
+      "element": "section.box.toggle",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["button"]
+    },
+    "mobile-menu": {
+      "element": "section.box.menu",
+      "attrs": ["class", "data-open", "data-screen-label"],
+      "children": ["button", "div"]
+    },
+    "main-column": {
+      "element": "div.main",
+      "attrs": ["class", "id"],
+      "children": [
+        {
+          "oneOf": [
+            "$breadcrumb",
+            "$content-root"
+          ]
+        }
+      ]
+    },
+    "breadcrumb": {
+      "element": "nav.box.crumb",
+      "attrs": ["class", "id", "aria-label"],
+      "children": ["a", "span"]
+    },
+    "content-root": {
+      "element": "div.content-root",
+      "attrs": ["class", "id"],
+      "children": ["section"]
+    },
+    "content-block": {
+      "element": "section.box.block",
+      "attrs": ["class"],
+      "children": ["div", "h1", "h2", "p"]
+    },
+    "items-block": {
+      "element": "div.items",
+      "attrs": ["class"],
+      "children": ["a", "span"]
+    },
+    "tags-block": {
+      "element": "div.tags",
+      "attrs": ["class"],
+      "children": ["span"]
+    },
+    "primary-nav": {
+      "element": "nav.box.nav",
+      "attrs": ["class", "data-screen-label", "aria-label"],
+      "children": ["a"]
+    },
+    "menu-panel": {
+      "element": "div.box.menu-panel",
+      "attrs": ["class"],
+      "children": ["button", "nav"]
+    },
+    "menu-nav": {
+      "element": "nav.menu-nav",
+      "attrs": ["class", "aria-label"],
+      "children": ["a"]
+    },
+    "site-footer": {
+      "element": "footer.box.footer",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
+    },
+    "client-script": {
+      "element": "script",
+      "attrs": [],
+      "children": ["#text"]
+    }
+  },
+  "nodes": {
+    "a": {
+      "attrs": ["class", "aria-current", "aria-label", "href", "data-section"],
+      "children": ["#text", "div", "span", "svg"]
+    },
+    "button": {
+      "attrs": ["class", "type", "role", "aria-checked", "aria-expanded", "aria-label"],
+      "children": ["#text", "span", "svg"]
+    },
+    "circle": {
+      "attrs": ["cx", "cy", "r", "fill", "stroke"],
+      "children": []
+    },
+    "div": {
+      "attrs": ["class", "id"],
+      "children": ["#text", "a", "button", "div", "h1", "h2", "nav", "p", "section", "span"]
+    },
+    "footer": {
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
+    },
+    "h1": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "h2": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "header": {
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
+    },
+    "line": {
+      "attrs": ["x1", "x2", "y1", "y2"],
+      "children": []
+    },
+    "main": {
+      "attrs": ["class"],
+      "children": [
+        {
+          "oneOf": [
+            "$brand",
+            "$theme-toggle-block",
+            "$mobile-menu",
+            "$main-column",
+            "$primary-nav",
+            "$site-footer"
+          ]
+        }
+      ]
+    },
+    "nav": {
+      "attrs": ["class", "id", "aria-label", "data-screen-label"],
+      "children": ["a", "span"]
+    },
+    "p": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "path": {
+      "attrs": ["d"],
+      "children": []
+    },
+    "script": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "section": {
+      "attrs": ["class", "data-open", "data-screen-label"],
+      "children": ["button", "div", "h1", "h2", "p"]
+    },
+    "span": {
+      "attrs": ["class"],
+      "children": ["#text", "svg"]
+    },
+    "svg": {
+      "attrs": ["class", "viewBox", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin"],
+      "children": ["circle", "line", "path"]
+    }
+  },
+  "urls": {
+    "href": "^/(?:[A-Za-z0-9._~-]+/?)*$"
+  },
+  "maxDepth": 12,
+  "limits": {
+    "maxTextLength": 12000,
+    "maxAttributeNameLength": 64,
+    "maxAttributeValueLength": 260,
+    "maxAttributes": 10,
+    "maxNodes": 260
+  },
+  "content": {
+    "rejectPattern": "<"
+  }
+}

@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { DomUse } from "@macchiato-dev/dom-use";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
+import { buildResourcesSiteRoutes, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");
+const resourcesSiteDir = resolve(repoRoot, "examples", "resources-site");
 
 function getPort() {
   return new Promise((resolvePort, reject) => {
@@ -108,6 +111,59 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
   assert.equal(font.headers.get("x-content-type-options"), "nosniff");
 });
 
+test("apps directory lists available app subdomains", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const response = await fetch(`http://apps.localhost:${port}/`);
+  const text = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /Macchiato Apps/);
+  assert.match(text, /resources-co\.localhost/);
+  assert.match(text, /resources-website\.localhost/);
+  assert.match(text, /dom-use-todos\.localhost/);
+
+  const rootResponse = await fetch(`http://127.0.0.1:${port}/`);
+  const rootText = await rootResponse.text();
+  assert.equal(rootResponse.status, 200);
+  assert.match(rootText, /Macchiato Apps/);
+});
+
+test("apps directory renders in a real browser", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  const badResponses = [];
+
+  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.goto(`http://apps.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByRole("heading", { name: "Macchiato Apps" }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Resources.co" }).waitFor());
+  assert.deepEqual(errors, []);
+  assert.deepEqual(badResponses, []);
+});
+
 test("resources website no longer exposes Claude export bundle routes", async () => {
   const exportIndex = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/index.html"));
   const loader = await resourcesWebsiteHandler(new Request("http://resources-website.localhost/export/loader.js"));
@@ -131,6 +187,7 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   const collection = await fetch(`http://resources-co.localhost:${port}/resources/containers`);
   const collectionHtml = await collection.text();
   const missing = await fetch(`http://resources-co.localhost:${port}/export/index.html`);
+  const missingHtml = await missing.text();
 
   assert.equal(home.status, 200);
   assert.match(homeHtml, /<title>Resources\.co<\/title>/);
@@ -142,6 +199,50 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   assert.match(collectionHtml, /href="\/resources"/);
   assert.match(collectionHtml, /<h1>Containers<\/h1>/);
   assert.equal(missing.status, 404);
+  assert.match(missingHtml, /This block has not been composed yet\./);
+  assert.match(missingHtml, /href="\/browse"/);
+});
+
+test("resources sqlite site CSS is constrained by its site schema", () => {
+  const css = buildResourcesSiteRoutes()[0].css;
+
+  assert.equal(validateResourcesStylesheet(css), true);
+  assert.throws(
+    () => validateResourcesStylesheet(`${css}\n.evil { filter: blur(4px); }`),
+    /CSS property not allowed: filter/,
+  );
+  assert.throws(
+    () => validateResourcesStylesheet(`${css}\n.evil { src: url("/-/fonts/other/font.woff2"); }`),
+    /CSS URL not allowed/,
+  );
+});
+
+test("resources sqlite site DOM schema composes layout block definitions", async () => {
+  const schema = JSON.parse(await readFile(join(resourcesSiteDir, "dom.schema.json"), "utf8"));
+  const domUse = new DomUse(schema);
+  const doc = domUse.createDocument();
+  const layout = doc.createElement("main");
+  const brand = doc.createElement("header");
+  const toggle = doc.createElement("section");
+  const mainColumn = doc.createElement("div");
+  const nav = doc.createElement("nav");
+  const footer = doc.createElement("footer");
+  const button = doc.createElement("button");
+
+  layout.setAttribute("class", "layout");
+  brand.setAttribute("class", "box brand");
+  toggle.setAttribute("class", "box toggle");
+  mainColumn.setAttribute("class", "main");
+  mainColumn.setAttribute("id", "main");
+  nav.setAttribute("class", "box nav");
+  footer.setAttribute("class", "box footer");
+
+  assert.equal(layout.appendChild(brand), brand);
+  assert.equal(layout.appendChild(toggle), toggle);
+  assert.equal(layout.appendChild(mainColumn), mainColumn);
+  assert.equal(layout.appendChild(nav), nav);
+  assert.equal(layout.appendChild(footer), footer);
+  assert.throws(() => layout.appendChild(button), /Child button not allowed in main/);
 });
 
 test("resources website renders its index in a real browser", async (t) => {
@@ -245,9 +346,111 @@ test("resources sqlite site transitions between friendly paths in a real browser
   assert.equal(new URL(page.url()).pathname, "/");
   assert.equal(await page.locator(".crumb").count(), 0);
 
+  await page.goto(`http://resources-co.localhost:${port}/about`, { waitUntil: "networkidle" });
+  await page.locator(".brand__link").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/");
+
+  await page.locator(".nav a[data-section='browse']").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Browse the catalogue" }).waitFor());
+  await page.locator(".brand__link").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/");
+
   assert.deepEqual(errors, []);
   assert.deepEqual(consoleErrors, []);
   assert.deepEqual(badResponses, []);
+});
+
+test("resources sqlite site uses a moderate consistent box shadow", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  const shadows = await page.locator(".box").evaluateAll((nodes) => [
+    ...new Set(nodes.map((node) => getComputedStyle(node).boxShadow)),
+  ]);
+
+  assert.deepEqual(shadows, ["rgba(2, 6, 28, 0.24) 0px 12px 28px 0px"]);
+});
+
+test("resources sqlite site prefetches internal routes and skips skeleton for cached navigation", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  const link = page.locator(".items a[href='/resources/containers']").first();
+  await link.hover();
+  await assert.doesNotReject(link.evaluate((node) => new Promise((resolve, reject) => {
+    if (node.dataset.prefetch === "ready") {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => reject(new Error("prefetch did not finish")), 3000);
+    const observer = new MutationObserver(() => {
+      if (node.dataset.prefetch === "ready") {
+        clearTimeout(timer);
+        observer.disconnect();
+        resolve();
+      }
+    });
+    observer.observe(node, { attributes: true, attributeFilter: ["data-prefetch"] });
+  })));
+
+  await link.click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
+  assert.equal(await page.locator("#content[data-loading='true']").count(), 0);
+  assert.equal(await page.locator(".skeleton-block").count(), 0);
+});
+
+test("resources sqlite site shows skeletons for uncached internal navigation", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.IntersectionObserver = undefined;
+    window.__resourcesDisablePrefetch = true;
+  });
+  await page.route(`http://resources-co.localhost:${port}/collections`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await route.continue();
+  });
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  await page.locator(".nav a[href='/collections']").click();
+  await assert.doesNotReject(page.locator("#content[data-loading='true']").waitFor());
+  await assert.doesNotReject(page.locator(".skeleton-block").first().waitFor());
+  await assert.doesNotReject(page.locator("h1", { hasText: "Featured collections" }).waitFor());
+  assert.equal(await page.locator("#content[data-loading='true']").count(), 0);
 });
 
 test("resources sqlite site has a responsive hamburger menu", async (t) => {
@@ -313,4 +516,29 @@ test("resources sqlite site has a responsive hamburger menu", async (t) => {
   assert.deepEqual(errors, []);
   assert.deepEqual(consoleErrors, []);
   assert.deepEqual(badResponses, []);
+});
+
+test("resources sqlite site keeps footer near the viewport bottom on sparse pages", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+
+  await page.goto(`http://resources-co.localhost:${port}/resources/containers`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
+  const footerBottomGap = await page.locator(".footer").evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return window.innerHeight - rect.bottom;
+  });
+
+  assert.ok(footerBottomGap >= 20);
+  assert.ok(footerBottomGap < 90);
 });
