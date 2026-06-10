@@ -17,6 +17,65 @@ test("allows configured inline styles and stylesheets", () => {
   assert.equal(styleUse.validateStylesheet("main .notice { color: navy; margin: 0; }"), true);
 });
 
+test("combines named style definitions", () => {
+  const styleUse = new StyleUse({
+    definitions: {
+      layout: {
+        element: "main.layout",
+        properties: {
+          display: /^(grid|flex)$/,
+          gap: /^(\d+px|var\(--gap\))$/,
+        },
+      },
+      type: {
+        element: "p.copy",
+        properties: {
+          color: /^var\(--text\)$/,
+          "font-weight": /^(400|600)$/,
+        },
+      },
+    },
+    useStyles: ["layout", "type"],
+    properties: {
+      margin: /^0$/,
+    },
+  });
+
+  assert.equal(styleUse.validateStylesheet(".layout { display: grid; gap: var(--gap); }"), true);
+  assert.equal(styleUse.validateInline("color", "var(--text)"), true);
+  assert.equal(styleUse.validateInline("margin", "0"), true);
+  assert.throws(() => styleUse.validateInline("position", "fixed"), /CSS property not allowed: position/);
+});
+
+test("combines named style definitions from hyphenated use-styles", () => {
+  const styleUse = new StyleUse({
+    definitions: {
+      block: {
+        element: "section.block",
+        properties: {
+          padding: /^1rem$/,
+        },
+      },
+    },
+    "use-styles": ["block"],
+  });
+
+  assert.equal(styleUse.validateInline("padding", "1rem"), true);
+});
+
+test("rejects ambiguous style definition selectors", () => {
+  assert.throws(
+    () => new StyleUse({
+      definitions: {
+        first: { element: "section.block", properties: { color: true } },
+        second: { element: "section.block", properties: { margin: true } },
+      },
+      useStyles: ["first", "second"],
+    }),
+    /Ambiguous CSS style definitions/,
+  );
+});
+
 test("rejects unconfigured properties and dangerous CSS values", () => {
   const styleUse = new StyleUse({
     properties: {

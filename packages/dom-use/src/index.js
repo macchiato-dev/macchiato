@@ -263,7 +263,7 @@ class GuestElement extends GuestNode {
   }
 
   setAttribute(name, value) {
-    this.ownerDocument.domUse.assertAllowedAttr(this.tagName, name, value);
+    this.ownerDocument.domUse.assertAllowedAttr(this, name, value);
     this.ownerDocument.domUse.assertAttributeBudget(this, name);
     this.ownerDocument.domUse.spendGas(this.ownerDocument, "setAttribute", {
       textLength: stringLength(name, value),
@@ -535,19 +535,89 @@ export class DomUse {
 
   allowedNode(tagName) {
     const nodes = this.schema.nodes || {};
-    return Object.keys(nodes).length === 0 || Boolean(nodes[String(tagName).toLowerCase()]);
+    const tag = String(tagName).toLowerCase();
+    const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+    return !hasNodePolicy
+      || Boolean(nodes[tag])
+      || this.definitionsForTag(tag).length > 0;
   }
 
-  allowedAttr(tagName, attr, value) {
+  definition(name) {
+    return (this.schema.definitions || {})[String(name).replace(/^\$/, "")];
+  }
+
+  parseDefinitionSelector(definition) {
+    const selector = String(definition?.element || definition?.selector || definition?.tag || "").trim();
+    const match = selector.match(/^([a-zA-Z][\w:-]*)(?:((?:\.[a-zA-Z0-9_-]+)*))$/);
+    if (!match) return { tag: selector.toLowerCase(), classes: [] };
+    return {
+      tag: match[1].toLowerCase(),
+      classes: (match[2] || "").split(".").filter(Boolean),
+    };
+  }
+
+  definitionsForTag(tagName) {
+    const tag = String(tagName).toLowerCase();
+    return Object.values(this.schema.definitions || {})
+      .filter((definition) => this.parseDefinitionSelector(definition).tag === tag);
+  }
+
+  nodeClasses(node) {
+    return new Set(String(node?.attributes?.class || "").split(/\s+/).filter(Boolean));
+  }
+
+  definitionMatchesNode(definition, node) {
+    if (!node) return false;
+    const selector = this.parseDefinitionSelector(definition);
+    if (selector.tag !== String(node.tagName).toLowerCase()) return false;
+    if (selector.classes.length === 0) return true;
+    const classes = this.nodeClasses(node);
+    return selector.classes.every((className) => classes.has(className));
+  }
+
+  matchingDefinitionsForNode(node) {
+    return this.definitionsForTag(node?.tagName).filter((definition) => this.definitionMatchesNode(definition, node));
+  }
+
+  assertUnambiguousDefinitions(node, matches = this.matchingDefinitionsForNode(node)) {
+    if (matches.length > 1) {
+      const selectors = matches.map((definition) => definition.element || definition.selector || definition.tag).join(", ");
+      throw new Error(`Ambiguous DOM definitions for ${node.tagName}: ${selectors}`);
+    }
+  }
+
+  nodeRules(nodeOrTagName) {
+    const tag = String(nodeOrTagName?.tagName || nodeOrTagName).toLowerCase();
+    const matches = typeof nodeOrTagName === "object"
+      ? this.matchingDefinitionsForNode(nodeOrTagName)
+      : this.definitionsForTag(tag).filter((definition) => this.parseDefinitionSelector(definition).classes.length === 0);
+    if (typeof nodeOrTagName === "object") this.assertUnambiguousDefinitions(nodeOrTagName, matches);
+    return [
+      this.schema.nodes?.[tag],
+      ...matches,
+    ].filter(Boolean);
+  }
+
+  allowedAttr(tagNameOrNode, attr, value) {
     this.validateAttributeName(attr);
     this.validateAttributeValue(value);
     const nodes = this.schema.nodes || {};
-    if (Object.keys(nodes).length === 0) return true;
-    const tag = String(tagName).toLowerCase();
+    const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+    if (!hasNodePolicy) return true;
+    const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
     const name = String(attr).toLowerCase();
+    let ruleTarget = tagNameOrNode;
+    if (name === "class" && typeof tagNameOrNode === "object") {
+      const nextNode = {
+        ...tagNameOrNode,
+        attributes: { ...tagNameOrNode.attributes, class: String(value) },
+      };
+      this.assertUnambiguousDefinitions(nextNode);
+      ruleTarget = nextNode;
+    }
     const allowed = [
       ...(this.schema.globalAttrs || []),
-      ...(nodes[tag]?.attrs || []),
+      ...this.nodeRules(typeof ruleTarget === "object" ? ruleTarget : tag).flatMap((rule) => rule.attrs || []),
     ];
     if (allowed.includes("*")) return true;
     if (allowed.includes(name)) return true;
@@ -556,18 +626,21 @@ export class DomUse {
     return false;
   }
 
-  urlRuleFor(tagName, attr) {
-    const tag = String(tagName).toLowerCase();
+  urlRuleFor(tagNameOrNode, attr) {
+    const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
     const name = String(attr).toLowerCase();
-    const nodes = this.schema.nodes || {};
-    const nodeUrls = nodes[tag]?.urls || {};
+    const nodeUrlRules = this.nodeRules(tagNameOrNode)
+      .map((rule) => rule.urls)
+      .filter((rule) => rule !== undefined);
     const globalUrls = this.schema.urls || {};
 
-    if (nodeUrls === true || nodeUrls === false) return nodeUrls;
+    for (const nodeUrls of nodeUrlRules) {
+      if (nodeUrls === true || nodeUrls === false) return nodeUrls;
+      if (nodeUrls?.[name] !== undefined) return nodeUrls[name];
+      if (nodeUrls?.["*"] !== undefined) return nodeUrls["*"];
+    }
     if (globalUrls === true || globalUrls === false) return globalUrls;
-    if (nodeUrls[name] !== undefined) return nodeUrls[name];
     if (globalUrls[name] !== undefined) return globalUrls[name];
-    if (nodeUrls["*"] !== undefined) return nodeUrls["*"];
     if (globalUrls["*"] !== undefined) return globalUrls["*"];
     return undefined;
   }
@@ -584,8 +657,9 @@ export class DomUse {
     return [text];
   }
 
-  validateAttrUrl(tagName, attr, value) {
-    const rule = this.urlRuleFor(tagName, attr);
+  validateAttrUrl(tagNameOrNode, attr, value) {
+    const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
+    const rule = this.urlRuleFor(tagNameOrNode, attr);
     if (rule === undefined || rule === false) {
       throw new Error(`URL attribute not allowed on ${tagName}: ${attr}`);
     }
@@ -599,15 +673,43 @@ export class DomUse {
     }
   }
 
-  allowedChild(parentTag, childTag) {
+  allowedChild(parentNodeOrTag, childNodeOrTag) {
     const nodes = this.schema.nodes || {};
-    if (String(parentTag) === "#fragment") return true;
-    if (Object.keys(nodes).length === 0) return true;
-    const parent = nodes[String(parentTag).toLowerCase()];
-    if (!parent) return false;
-    const child = String(childTag).toLowerCase();
-    const allowed = parent.children || [];
-    return allowed.includes("*") || allowed.includes(child);
+    const parentTag = String(parentNodeOrTag?.tagName || parentNodeOrTag);
+    if (parentTag === "#fragment") return true;
+    const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+    if (!hasNodePolicy) return true;
+    const parent = nodes[parentTag.toLowerCase()];
+    const child = String(childNodeOrTag?.tagName || childNodeOrTag).toLowerCase();
+    const allowed = this.nodeRules(parentNodeOrTag).flatMap((rule) => rule.children || []);
+    if (!parent && allowed.length === 0) return false;
+    return allowed.some((entry) => this.childRuleMatches(entry, childNodeOrTag, child));
+  }
+
+  childRuleMatches(entry, childNodeOrTag, childTag = String(childNodeOrTag?.tagName || childNodeOrTag).toLowerCase()) {
+    if (entry === "*") return true;
+    if (typeof entry === "string") {
+      const definition = this.definition(entry);
+      if (definition) {
+        const selector = this.parseDefinitionSelector(definition);
+        if (selector.tag !== childTag) return false;
+        return typeof childNodeOrTag === "object"
+          ? this.definitionMatchesNode(definition, childNodeOrTag)
+          : true;
+      }
+      return entry.toLowerCase() === childTag;
+    }
+    if (!entry || typeof entry !== "object") return false;
+    if (entry.ref) return this.childRuleMatches(entry.ref, childTag);
+    const alternatives = entry.oneOf || entry.anyOf || entry.alternates || entry.alternation;
+    if (Array.isArray(alternatives)) {
+      return alternatives.some((alternative) => this.childRuleMatches(alternative, childNodeOrTag, childTag));
+    }
+    if (entry.tag || entry.element || entry.selector) {
+      const selector = this.parseDefinitionSelector(entry);
+      return selector.tag === childTag;
+    }
+    return false;
   }
 
   allowedEvent(tagName, event) {
@@ -618,7 +720,7 @@ export class DomUse {
     const name = String(event).toLowerCase();
     const allowed = [
       ...(this.schema.globalEvents || []),
-      ...(nodes[tag]?.events || []),
+      ...this.nodeRules(tag).flatMap((rule) => rule.events || []),
     ].map((entry) => String(entry).toLowerCase());
     return allowed.includes("*") || allowed.includes(name);
   }
@@ -693,12 +795,13 @@ export class DomUse {
     if (!this.allowedNode(tagName)) throw new Error(`Node not allowed: ${tagName}`);
   }
 
-  assertAllowedAttr(tagName, attr, value) {
-    if (!this.allowedAttr(tagName, attr, value)) {
+  assertAllowedAttr(tagNameOrNode, attr, value) {
+    const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
+    if (!this.allowedAttr(tagNameOrNode, attr, value)) {
       throw new Error(`Attribute not allowed on ${tagName}: ${attr}`);
     }
     if (URL_ATTRS.has(String(attr).toLowerCase())) {
-      this.validateAttrUrl(tagName, attr, value);
+      this.validateAttrUrl(tagNameOrNode, attr, value);
     }
   }
 
@@ -715,7 +818,7 @@ export class DomUse {
   }
 
   validateAppend(parent, child) {
-    if (!this.allowedChild(parent.tagName, child.tagName)) {
+    if (!this.allowedChild(parent, child)) {
       throw new Error(`Child ${child.tagName} not allowed in ${parent.tagName}`);
     }
     const maxDepth = this.schema.maxDepth;
