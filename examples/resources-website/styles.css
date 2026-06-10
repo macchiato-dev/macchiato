@@ -121,7 +121,7 @@
 
     --card: rgba(9,15,42,0.52);
     --card-border: rgba(255,255,255,0.12);
-    --shadow: 0 14px 44px rgba(2,6,28,0.34);
+    --shadow: 0 12px 28px rgba(2,6,28,0.24);
 
     --text: #eef2ff;
     --muted: #aeb9e8;
@@ -146,7 +146,7 @@
 
     --card: rgba(255,255,255,0.66);
     --card-border: rgba(20,40,130,0.10);
-    --shadow: 0 14px 44px rgba(30,50,140,0.12);
+    --shadow: 0 12px 28px rgba(30,50,140,0.14);
 
     --text: #0c1330;
     --muted: #5a679f;
@@ -219,6 +219,8 @@
     line-height: 1;
   }
   .brand__name .dot { color: var(--accent); }
+  .brand__link { color: inherit; text-decoration: none; }
+  .brand__link:hover { color: inherit; }
 
   /* ---- toggle ---- */
   .toggle {

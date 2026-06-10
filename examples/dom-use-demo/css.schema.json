@@ -1,14 +1,35 @@
 {
-  "properties": {
-    "color": "^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$",
-    "background": "^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$",
-    "font-family": "^[a-zA-Z0-9_,\\-\\s]+$",
-    "line-height": "^\\d+(\\.\\d+)?$",
-    "margin": "^(0|\\d+(\\.\\d+)?(rem|px))(\\s+(0|\\d+(\\.\\d+)?(rem|px))){0,3}$",
-    "margin-top": "^(0|\\d+(\\.\\d+)?(rem|px))$",
-    "max-width": "^\\d+(\\.\\d+)?(rem|px)$",
-    "padding-left": "^\\d+(\\.\\d+)?(rem|px)$"
+  "definitions": {
+    "document": {
+      "element": "body",
+      "properties": {
+        "color": "^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$",
+        "background": "^(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|[a-zA-Z]+)$",
+        "font-family": "^[a-zA-Z0-9_,\\-\\s]+$",
+        "margin": "^(0|\\d+(\\.\\d+)?(rem|px))(\\s+(0|\\d+(\\.\\d+)?(rem|px))){0,3}$"
+      }
+    },
+    "page": {
+      "element": "main.page",
+      "properties": {
+        "line-height": "^\\d+(\\.\\d+)?$",
+        "margin": "^(0|\\d+(\\.\\d+)?(rem|px))(\\s+(0|\\d+(\\.\\d+)?(rem|px))){0,3}$",
+        "margin-top": "^(0|\\d+(\\.\\d+)?(rem|px))$",
+        "max-width": "^\\d+(\\.\\d+)?(rem|px)$"
+      }
+    },
+    "service-list": {
+      "element": "ul.service-list",
+      "properties": {
+        "padding-left": "^\\d+(\\.\\d+)?(rem|px)$"
+      }
+    }
   },
+  "use-styles": [
+    "document",
+    "page",
+    "service-list"
+  ],
   "urls": false,
   "selectors": "^[a-zA-Z0-9_.#,\\-\\s]+$",
   "limits": {

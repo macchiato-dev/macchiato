@@ -1,8 +1,38 @@
 {
+  "definitions": {
+    "page": {
+      "element": "main.page",
+      "attrs": ["class"],
+      "children": [
+        {
+          "oneOf": [
+            "h1",
+            "h2",
+            "p",
+            "$service-list"
+          ]
+        }
+      ]
+    },
+    "service-list": {
+      "element": "ul.service-list",
+      "attrs": ["class"],
+      "children": ["li"]
+    }
+  },
   "nodes": {
     "main": {
       "attrs": ["class"],
-      "children": ["h1", "h2", "p", "ul"]
+      "children": [
+        {
+          "oneOf": [
+            "h1",
+            "h2",
+            "p",
+            "$service-list"
+          ]
+        }
+      ]
     },
     "h1": {
       "attrs": [],
@@ -17,7 +47,7 @@
       "children": ["#text"]
     },
     "ul": {
-      "attrs": [],
+      "attrs": ["class"],
       "children": ["li"]
     },
     "li": {
