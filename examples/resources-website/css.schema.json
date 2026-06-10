@@ -1,12 +1,156 @@
 {
+  "definitions": {
+    "document": {
+      "element": "body",
+      "properties": {
+        "--accent": true,
+        "--active-bg": true,
+        "--active-fg": true,
+        "--bg": true,
+        "--card": true,
+        "--card-border": true,
+        "--gap": true,
+        "--ghost": true,
+        "--hover": true,
+        "--muted": true,
+        "--radius": true,
+        "--shadow": true,
+        "--text": true,
+        "--thumb": true,
+        "--thumb-ic": true,
+        "--track": true,
+        "--track-border": true,
+        "background": true,
+        "background-attachment": true,
+        "box-sizing": true,
+        "color": true,
+        "font-display": true,
+        "font-family": true,
+        "font-style": true,
+        "font-weight": true,
+        "margin": true,
+        "min-height": true,
+        "padding": true,
+        "src": true,
+        "unicode-range": true
+      }
+    },
+    "layout": {
+      "element": "main.layout",
+      "properties": {
+        "align-content": true,
+        "align-items": true,
+        "align-self": true,
+        "display": true,
+        "flex": true,
+        "flex-direction": true,
+        "flex-wrap": true,
+        "gap": true,
+        "grid-area": true,
+        "grid-template-areas": true,
+        "grid-template-columns": true,
+        "grid-template-rows": true,
+        "justify-content": true,
+        "justify-items": true,
+        "justify-self": true,
+        "max-width": true,
+        "min-width": true,
+        "place-items": true,
+        "width": true
+      }
+    },
+    "interface": {
+      "element": "header.box.brand",
+      "properties": {
+        "-webkit-backdrop-filter": true,
+        "appearance": true,
+        "backdrop-filter": true,
+        "background": true,
+        "border": true,
+        "border-color": true,
+        "border-radius": true,
+        "box-shadow": true,
+        "color": true,
+        "cursor": true,
+        "display": true,
+        "font": true,
+        "font-size": true,
+        "font-weight": true,
+        "height": true,
+        "left": true,
+        "letter-spacing": true,
+        "line-height": true,
+        "margin": true,
+        "margin-bottom": true,
+        "margin-top": true,
+        "opacity": true,
+        "outline": true,
+        "padding": true,
+        "position": true,
+        "resize": true,
+        "right": true,
+        "text-decoration": true,
+        "text-transform": true,
+        "top": true,
+        "user-select": true,
+        "width": true
+      }
+    },
+    "content": {
+      "element": "section.box.block",
+      "properties": {
+        "background": true,
+        "border": true,
+        "border-radius": true,
+        "color": true,
+        "display": true,
+        "flex": true,
+        "flex-direction": true,
+        "font-size": true,
+        "font-weight": true,
+        "gap": true,
+        "letter-spacing": true,
+        "line-height": true,
+        "margin": true,
+        "margin-bottom": true,
+        "margin-top": true,
+        "max-width": true,
+        "padding": true,
+        "text-decoration": true,
+        "text-transform": true,
+        "text-wrap": true
+      }
+    },
+    "motion": {
+      "element": "main.layout-motion",
+      "properties": {
+        "animation": true,
+        "animation-delay": true,
+        "transform": true,
+        "transition": true
+      }
+    }
+  },
+  "use-styles": [
+    "document",
+    "layout",
+    "interface",
+    "content",
+    "motion"
+  ],
   "imports": false,
-  "urls": false,
-  "selectors": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()]+$",
+  "urls": {
+    "src": "^/-/fonts/resourcesco-space-grotesk/space-grotesk-(latin|latin-ext|vietnamese)\\.woff2$"
+  },
+  "selectors": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}\\u2014]+$",
   "limits": {
-    "maxStylesheetLength": 12000,
+    "maxStylesheetLength": 18000,
     "maxPropertyLength": 64,
-    "maxValueLength": 240,
-    "maxUrlLength": 200,
+    "maxValueLength": 900,
+    "maxUrlLength": 100,
     "maxImports": 0
+  },
+  "content": {
+    "rejectPattern": "<"
   }
 }

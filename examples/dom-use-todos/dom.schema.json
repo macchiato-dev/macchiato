@@ -1,12 +1,41 @@
 {
+  "definitions": {
+    "layout": {
+      "element": "div.todoapp",
+      "attrs": ["class", "id"],
+      "children": [
+        {
+          "oneOf": [
+            "$core-interface",
+            "$list"
+          ]
+        }
+      ]
+    },
+    "core-interface": {
+      "element": "header.header",
+      "attrs": ["class"],
+      "children": ["h1", "div"]
+    },
+    "list": {
+      "element": "ul.todo-list",
+      "attrs": ["class", "id"],
+      "children": ["li"]
+    },
+    "footer": {
+      "element": "footer.footer",
+      "attrs": ["class"],
+      "children": ["span", "ul", "button"]
+    }
+  },
   "nodes": {
     "body": {
       "attrs": [],
-      "children": ["div"]
+      "children": ["div", "$layout"]
     },
     "div": {
       "attrs": ["class", "id"],
-      "children": ["div", "header", "ul", "footer", "input", "button"]
+      "children": ["$core-interface", "$list", "$footer", "div", "header", "ul", "footer", "input", "button"]
     },
     "header": {
       "attrs": ["class"],

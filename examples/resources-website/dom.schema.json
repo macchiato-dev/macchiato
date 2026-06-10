@@ -1,28 +1,147 @@
 {
+  "definitions": {
+    "layout": {
+      "element": "main.layout",
+      "attrs": ["class"],
+      "children": [
+        {
+          "oneOf": [
+            "$brand",
+            "$theme-toggle-block",
+            "$main-column",
+            "$primary-nav",
+            "$site-footer"
+          ]
+        }
+      ]
+    },
+    "brand": {
+      "element": "header.box.brand",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["a"]
+    },
+    "theme-toggle-block": {
+      "element": "section.box.toggle",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["button"]
+    },
+    "main-column": {
+      "element": "div.main",
+      "attrs": ["class", "id"],
+      "children": ["$content-root"]
+    },
+    "content-root": {
+      "element": "div.content-root",
+      "attrs": ["class", "id"],
+      "children": ["$content-block"]
+    },
+    "content-block": {
+      "element": "section.box.block",
+      "attrs": ["class"],
+      "children": ["div", "h1", "h2", "p"]
+    },
+    "items-block": {
+      "element": "div.items",
+      "attrs": ["class"],
+      "children": ["a"]
+    },
+    "primary-nav": {
+      "element": "nav.box.nav",
+      "attrs": ["class", "data-screen-label", "aria-label"],
+      "children": ["a"]
+    },
+    "site-footer": {
+      "element": "footer.box.footer",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
+    }
+  },
   "nodes": {
-    "main": {
-      "attrs": ["class", "aria-label"],
-      "children": ["h1"]
+    "a": {
+      "attrs": ["class", "href", "data-section", "aria-current"],
+      "children": ["div", "span"]
+    },
+    "button": {
+      "attrs": ["id", "class", "role", "aria-checked", "aria-label"],
+      "children": ["span", "svg"]
+    },
+    "circle": {
+      "attrs": ["cx", "cy", "r", "fill", "stroke"],
+      "children": []
+    },
+    "div": {
+      "attrs": ["class", "id"],
+      "children": ["#text", "a", "h1", "h2", "p", "section", "span"]
+    },
+    "footer": {
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
     },
     "h1": {
       "attrs": [],
-      "children": ["#text", "span"]
+      "children": ["#text"]
     },
-    "span": {
+    "h2": {
       "attrs": [],
       "children": ["#text"]
+    },
+    "header": {
+      "attrs": ["class", "data-screen-label"],
+      "children": ["div"]
+    },
+    "line": {
+      "attrs": ["x1", "x2", "y1", "y2"],
+      "children": []
+    },
+    "main": {
+      "attrs": ["class"],
+      "children": [
+        {
+          "oneOf": [
+            "$brand",
+            "$theme-toggle-block",
+            "$main-column",
+            "$primary-nav",
+            "$site-footer"
+          ]
+        }
+      ]
+    },
+    "nav": {
+      "attrs": ["class", "data-screen-label", "aria-label"],
+      "children": ["a"]
+    },
+    "p": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "path": {
+      "attrs": ["d"],
+      "children": []
+    },
+    "section": {
+      "attrs": ["class", "data-screen-label"],
+      "children": ["button", "div", "h1", "h2", "p"]
+    },
+    "span": {
+      "attrs": ["class"],
+      "children": ["#text", "svg"]
+    },
+    "svg": {
+      "attrs": ["class", "viewBox", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin"],
+      "children": ["circle", "line", "path"]
     }
   },
   "urls": false,
-  "maxDepth": 5,
+  "maxDepth": 12,
   "limits": {
-    "maxTextLength": 80,
+    "maxTextLength": 12000,
     "maxAttributeNameLength": 64,
-    "maxAttributeValueLength": 120,
-    "maxAttributes": 3,
-    "maxNodes": 8
+    "maxAttributeValueLength": 260,
+    "maxAttributes": 10,
+    "maxNodes": 180
   },
   "content": {
-    "rejectPattern": "[<>]"
+    "rejectPattern": "<"
   }
 }
