@@ -129,11 +129,34 @@ test("apps directory lists available app subdomains", async (t) => {
   assert.match(text, /resources-co\.localhost/);
   assert.match(text, /resources-website\.localhost/);
   assert.match(text, /dom-use-todos\.localhost/);
+  assert.match(text, /href="http:\/\/apps\.localhost:\d+\/config\/resources-co"/);
 
   const rootResponse = await fetch(`http://127.0.0.1:${port}/`);
   const rootText = await rootResponse.text();
   assert.equal(rootResponse.status, 200);
   assert.match(rootText, /Macchiato Apps/);
+});
+
+test("apps directory exposes app configuration with schemas", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const response = await fetch(`http://apps.localhost:${port}/config/resources-co`);
+  const text = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /Resources\.co Configuration/);
+  assert.match(text, /&quot;schemas&quot;/);
+  assert.match(text, /&quot;dom&quot;/);
+  assert.match(text, /&quot;css&quot;/);
+  assert.match(text, /site-footer/);
+  assert.match(text, /CSS property not allowed|useStyles|use-styles|definitions/);
 });
 
 test("apps directory renders in a real browser", async (t) => {
