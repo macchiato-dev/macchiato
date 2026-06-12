@@ -63,6 +63,26 @@ test("combines named style definitions from hyphenated use-styles", () => {
   assert.equal(styleUse.validateInline("padding", "1rem"), true);
 });
 
+test("supports named object value rules", () => {
+  const styleUse = new StyleUse({
+    values: {
+      brandColor: { enum: ["#1233f0", "var(--accent)"] },
+      smallLength: { pattern: "^(0|[1-9][0-9]?px)$" },
+    },
+    properties: {
+      color: { $ref: "brandColor" },
+      margin: { anyOf: [{ enum: ["auto"] }, { $ref: "smallLength" }] },
+      padding: { allOf: [{ $ref: "smallLength" }, { not: { enum: ["99px"] } }] },
+    },
+  });
+
+  assert.equal(styleUse.validateInline("color", "#1233f0"), true);
+  assert.equal(styleUse.validateInline("margin", "24px"), true);
+  assert.equal(styleUse.validateInline("margin", "auto"), true);
+  assert.throws(() => styleUse.validateInline("color", "rebeccapurple"), /CSS value not allowed/);
+  assert.throws(() => styleUse.validateInline("padding", "99px"), /CSS value not allowed/);
+});
+
 test("rejects ambiguous style definition selectors", () => {
   assert.throws(
     () => new StyleUse({
