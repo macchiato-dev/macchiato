@@ -1,11 +1,12 @@
 import { sandboxHandler } from "@macchiato-dev/quickjs-emscripten-sandbox/handler";
 import { dashboardHandler } from "@macchiato-dev/dashboard";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
 import { packageBrowserFileAccess, packageBrowserHandler } from "./package-browser.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
+const examplesRoot = join(repoRoot, "examples");
 
 export const BUILTIN_APPS = [
   {
@@ -26,6 +27,9 @@ export const BUILTIN_APPS = [
       ...packageBrowserFileAccess,
       gitRoot: repoRoot,
     },
+    sourceFiles: [
+      "packages/app/src/package-browser.js",
+    ],
   },
   {
     name: "Resources.co",
@@ -33,6 +37,20 @@ export const BUILTIN_APPS = [
     kind: "multi-page site",
     description: "SQLite-backed Resources.co routes with friendly paths and transitions.",
     seededRoute: true,
+    sourceFiles: [
+      "examples/resources-site/seed.js",
+      "examples/resources-site/dom.schema.json",
+      "examples/resources-site/css.schema.json",
+    ],
+    schemas: [
+      { name: "dom", path: join(examplesRoot, "resources-site", "dom.schema.json") },
+      { name: "css", path: join(examplesRoot, "resources-site", "css.schema.json") },
+    ],
+    site: {
+      storage: "sqlite routes",
+      subdomain: "resources-co",
+      routeSource: "examples/resources-site/seed.js",
+    },
   },
   {
     name: "Resources Website",
@@ -41,6 +59,17 @@ export const BUILTIN_APPS = [
     description: "Declarative static Resources.co source page and assets.",
     handler: resourcesWebsiteHandler,
     setup: resourcesWebsiteSite.setup,
+    sourceFiles: [
+      "examples/resources-website/handler.js",
+      "examples/resources-website/declarative-site.js",
+      "examples/resources-website/dom.schema.json",
+      "examples/resources-website/css.schema.json",
+    ],
+    schemas: [
+      { name: "dom", path: join(examplesRoot, "resources-website", "dom.schema.json") },
+      { name: "css", path: join(examplesRoot, "resources-website", "css.schema.json") },
+    ],
+    site: resourcesWebsiteSite,
   },
   {
     name: "DOM Use Todos",
@@ -48,6 +77,20 @@ export const BUILTIN_APPS = [
     kind: "sandboxed app",
     description: "QuickJS guest DOM todo app with schema-bound rendering.",
     handler: domUseTodosHandler,
+    sourceFiles: [
+      "examples/dom-use-todos/handler.js",
+      "examples/dom-use-todos/client.js",
+      "examples/dom-use-todos/dom.schema.json",
+      "examples/dom-use-todos/css.schema.json",
+    ],
+    schemas: [
+      { name: "dom", path: join(examplesRoot, "dom-use-todos", "dom.schema.json") },
+      { name: "css", path: join(examplesRoot, "dom-use-todos", "css.schema.json") },
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM",
+      hostCapabilities: ["dom-use", "style-use", "html-use"],
+    },
   },
   {
     name: "Dashboard",
