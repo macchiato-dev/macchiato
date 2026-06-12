@@ -1,100 +1,469 @@
 {
+  "values": {
+    "color": {
+      "pattern": "^(#[0-9A-Fa-f]{3,8}|rgba?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}(?:\\s*,\\s*(?:0|1|0?\\.\\d+))?\\s*\\)|var\\(--[a-z0-9-]+\\)|inherit|transparent|currentColor)$"
+    },
+    "background": {
+      "pattern": "^(var\\(--[a-z0-9-]+\\)|none|currentColor|transparent|#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|(?:(?:radial|linear)-gradient\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)(?:,\\s*)?)+)$"
+    },
+    "length": {
+      "pattern": "^(0|auto|-?\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|clamp\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|min\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))$"
+    },
+    "spacing": {
+      "pattern": "^(?:0|auto|-?\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|clamp\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))(?:\\s+(?:0|auto|-?\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|clamp\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))){0,3}$"
+    },
+    "border": {
+      "pattern": "^(none|\\d+(?:\\.\\d+)?px\\s+(?:solid|dashed|dotted)\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|var\\(--[a-z0-9-]+\\)|transparent))$"
+    },
+    "radius": {
+      "pattern": "^(0|50%|999px|var\\(--[a-z0-9-]+\\)|\\d+(?:\\.\\d+)?(?:px|rem|%))(?:\\s+(?:0|50%|999px|var\\(--[a-z0-9-]+\\)|\\d+(?:\\.\\d+)?(?:px|rem|%))){0,3}$"
+    },
+    "shadow": {
+      "pattern": "^(none|var\\(--[a-z0-9-]+\\)|(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\))(?:,\\s*(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)))*)$"
+    },
+    "fontFamily": {
+      "pattern": "^(['\"]?[A-Za-z0-9 -]+['\"]?)(?:,\\s*[-A-Za-z0-9 '\"]+)*$"
+    },
+    "fontWeight": {
+      "pattern": "^(normal|bold|[1-9]00)$"
+    },
+    "number": {
+      "pattern": "^(0|1|0?\\.\\d+)$"
+    },
+    "integer": {
+      "pattern": "^-?\\d+$"
+    },
+    "display": {
+      "enum": [
+        "block",
+        "flex",
+        "grid",
+        "inline-flex",
+        "none",
+        "none !important"
+      ]
+    },
+    "flex": {
+      "pattern": "^(none|1|0\\s+0\\s+auto|\\d+(?:\\s+\\d+)?(?:\\s+(?:auto|0|\\d+px|\\d+%))?)$"
+    },
+    "gridArea": {
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "gridTracks": {
+      "pattern": "^([a-z0-9.,%\\s()+\\-/]+|var\\(--[a-z0-9-]+\\))+$"
+    },
+    "gridAreas": {
+      "pattern": "^\"[a-z0-9\\s.-]+\"(?:\\s+\"[a-z0-9\\s.-]+\")*$"
+    },
+    "align": {
+      "enum": [
+        "start",
+        "end",
+        "center",
+        "baseline",
+        "stretch",
+        "flex-start",
+        "flex-end",
+        "space-between"
+      ]
+    },
+    "cursor": {
+      "enum": [
+        "default",
+        "pointer",
+        "text",
+        "grab",
+        "grabbing"
+      ]
+    },
+    "position": {
+      "enum": [
+        "relative",
+        "absolute",
+        "fixed",
+        "sticky",
+        "static"
+      ]
+    },
+    "transform": {
+      "pattern": "^(none|(?:translate(?:X|Y)?|rotate|scale)\\([A-Za-z0-9.,%\\s()+\\-]+\\)(?:\\s+(?:translate(?:X|Y)?|rotate|scale)\\([A-Za-z0-9.,%\\s()+\\-]+\\))*)$"
+    },
+    "transition": {
+      "pattern": "^[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?(?:,\\s*[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?)*$"
+    },
+    "animation": {
+      "pattern": "^[a-zA-Z0-9_-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out)(?:\\s+(?:both|forwards|backwards|infinite|\\d+)){0,2}$"
+    },
+    "time": {
+      "pattern": "^(?:\\d+(?:\\.\\d+)?|\\.\\d+)s$"
+    },
+    "fontSize": {
+      "$ref": "length"
+    },
+    "lineHeight": {
+      "pattern": "^(normal|\\d+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?(?:px|rem|em|%))$"
+    },
+    "letterSpacing": {
+      "pattern": "^-?\\d+(?:\\.\\d+)?(?:px|em|rem)$"
+    },
+    "textDecoration": {
+      "enum": [
+        "none",
+        "underline",
+        "line-through"
+      ]
+    },
+    "textTransform": {
+      "enum": [
+        "none",
+        "uppercase",
+        "lowercase",
+        "capitalize"
+      ]
+    },
+    "boolNone": {
+      "enum": [
+        "none"
+      ]
+    },
+    "fontFaceSrc": {
+      "pattern": "^url\\(\"/-/fonts/resourcesco-space-grotesk/space-grotesk-(?:latin|latin-ext|vietnamese)\\.woff2\"\\) format\\('woff2'\\)$"
+    },
+    "unicodeRange": {
+      "pattern": "^U\\+[0-9A-F?]{2,6}(?:-[0-9A-F]{2,6})?(?:,\\s*U\\+[0-9A-F?]{2,6}(?:-[0-9A-F]{2,6})?)*$"
+    },
+    "filter": {
+      "pattern": "^(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\))(?:\\s+(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\)))*$"
+    },
+    "todoBackground": {
+      "anyOf": [
+        {
+          "$ref": "color"
+        },
+        {
+          "enum": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "todoBorder": {
+      "anyOf": [
+        {
+          "$ref": "border"
+        },
+        {
+          "pattern": "^solid\\s+#[0-9A-Fa-f]{3,8}$"
+        }
+      ]
+    },
+    "todoContent": {
+      "enum": [
+        "''",
+        "\"\""
+      ]
+    }
+  },
   "definitions": {
     "layout": {
       "element": "div.todoapp",
       "properties": {
-        "background": true,
-        "border-radius": true,
-        "box-shadow": true,
-        "box-sizing": true,
-        "color": true,
-        "font-family": true,
-        "margin": true,
-        "max-width": true,
-        "overflow": true,
-        "padding": true
+        "background": {
+          "$ref": "todoBackground"
+        },
+        "border-radius": {
+          "$ref": "radius"
+        },
+        "box-shadow": {
+          "$ref": "shadow"
+        },
+        "box-sizing": {
+          "enum": [
+            "border-box"
+          ]
+        },
+        "color": {
+          "$ref": "color"
+        },
+        "font-family": {
+          "$ref": "fontFamily"
+        },
+        "margin": {
+          "$ref": "spacing"
+        },
+        "max-width": {
+          "$ref": "length"
+        },
+        "overflow": {
+          "enum": [
+            "hidden",
+            "visible",
+            "auto"
+          ]
+        },
+        "padding": {
+          "$ref": "spacing"
+        }
       }
     },
     "core-interface": {
       "element": "header.header",
       "properties": {
-        "align-items": true,
-        "appearance": true,
-        "background": true,
-        "border": true,
-        "border-bottom": true,
-        "border-radius": true,
-        "box-shadow": true,
-        "color": true,
-        "cursor": true,
-        "display": true,
-        "flex": true,
-        "font-size": true,
-        "font-style": true,
-        "font-weight": true,
-        "height": true,
-        "justify-content": true,
-        "left": true,
-        "letter-spacing": true,
-        "line-height": true,
-        "margin": true,
-        "min-width": true,
-        "opacity": true,
-        "outline": true,
-        "padding": true,
-        "pointer-events": true,
-        "position": true,
-        "right": true,
-        "text-align": true,
-        "text-decoration": true,
-        "top": true,
-        "transform": true,
-        "transition": true,
-        "width": true
+        "align-items": {
+          "$ref": "align"
+        },
+        "appearance": {
+          "enum": [
+            "none",
+            "auto"
+          ]
+        },
+        "background": {
+          "$ref": "todoBackground"
+        },
+        "border": {
+          "$ref": "todoBorder"
+        },
+        "border-bottom": {
+          "$ref": "border"
+        },
+        "border-radius": {
+          "$ref": "radius"
+        },
+        "box-shadow": {
+          "$ref": "shadow"
+        },
+        "color": {
+          "$ref": "color"
+        },
+        "cursor": {
+          "$ref": "cursor"
+        },
+        "display": {
+          "$ref": "display"
+        },
+        "flex": {
+          "$ref": "flex"
+        },
+        "font-size": {
+          "$ref": "fontSize"
+        },
+        "font-style": {
+          "enum": [
+            "normal",
+            "italic"
+          ]
+        },
+        "font-weight": {
+          "$ref": "fontWeight"
+        },
+        "height": {
+          "$ref": "length"
+        },
+        "justify-content": {
+          "$ref": "align"
+        },
+        "left": {
+          "$ref": "length"
+        },
+        "letter-spacing": {
+          "$ref": "letterSpacing"
+        },
+        "line-height": {
+          "$ref": "lineHeight"
+        },
+        "margin": {
+          "$ref": "spacing"
+        },
+        "min-width": {
+          "$ref": "length"
+        },
+        "opacity": {
+          "$ref": "number"
+        },
+        "outline": {
+          "enum": [
+            "none"
+          ]
+        },
+        "padding": {
+          "$ref": "spacing"
+        },
+        "pointer-events": {
+          "enum": [
+            "none",
+            "auto"
+          ]
+        },
+        "position": {
+          "$ref": "position"
+        },
+        "right": {
+          "$ref": "length"
+        },
+        "text-align": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "text-decoration": {
+          "$ref": "textDecoration"
+        },
+        "top": {
+          "$ref": "length"
+        },
+        "transform": {
+          "$ref": "transform"
+        },
+        "transition": {
+          "$ref": "transition"
+        },
+        "width": {
+          "$ref": "length"
+        }
       }
     },
     "list": {
       "element": "ul.todo-list",
       "properties": {
-        "align-items": true,
-        "appearance": true,
-        "background": true,
-        "border": true,
-        "border-bottom": true,
-        "border-color": true,
-        "border-radius": true,
-        "border-top": true,
-        "border-width": true,
-        "box-shadow": true,
-        "color": true,
-        "content": true,
-        "cursor": true,
-        "display": true,
-        "flex": true,
-        "flex-shrink": true,
-        "font-size": true,
-        "font-weight": true,
-        "gap": true,
-        "height": true,
-        "justify-content": true,
-        "left": true,
-        "line-height": true,
-        "list-style": true,
-        "margin": true,
-        "min-height": true,
-        "min-width": true,
-        "opacity": true,
-        "outline": true,
-        "overflow-wrap": true,
-        "padding": true,
-        "position": true,
-        "text-decoration": true,
-        "top": true,
-        "transform": true,
-        "transition": true,
-        "user-select": true,
-        "width": true,
-        "word-break": true
+        "align-items": {
+          "$ref": "align"
+        },
+        "appearance": {
+          "enum": [
+            "none",
+            "auto"
+          ]
+        },
+        "background": {
+          "$ref": "todoBackground"
+        },
+        "border": {
+          "$ref": "todoBorder"
+        },
+        "border-bottom": {
+          "$ref": "border"
+        },
+        "border-color": {
+          "$ref": "color"
+        },
+        "border-radius": {
+          "$ref": "radius"
+        },
+        "border-top": {
+          "$ref": "border"
+        },
+        "border-width": {
+          "$ref": "spacing"
+        },
+        "box-shadow": {
+          "$ref": "shadow"
+        },
+        "color": {
+          "$ref": "color"
+        },
+        "content": {
+          "$ref": "todoContent"
+        },
+        "cursor": {
+          "$ref": "cursor"
+        },
+        "display": {
+          "$ref": "display"
+        },
+        "flex": {
+          "$ref": "flex"
+        },
+        "flex-shrink": {
+          "pattern": "^\\d+$"
+        },
+        "font-size": {
+          "$ref": "fontSize"
+        },
+        "font-weight": {
+          "$ref": "fontWeight"
+        },
+        "gap": {
+          "$ref": "spacing"
+        },
+        "height": {
+          "$ref": "length"
+        },
+        "justify-content": {
+          "$ref": "align"
+        },
+        "left": {
+          "$ref": "length"
+        },
+        "line-height": {
+          "$ref": "lineHeight"
+        },
+        "list-style": {
+          "enum": [
+            "none"
+          ]
+        },
+        "margin": {
+          "$ref": "spacing"
+        },
+        "min-height": {
+          "$ref": "length"
+        },
+        "min-width": {
+          "$ref": "length"
+        },
+        "opacity": {
+          "$ref": "number"
+        },
+        "outline": {
+          "enum": [
+            "none"
+          ]
+        },
+        "overflow-wrap": {
+          "enum": [
+            "normal",
+            "break-word",
+            "anywhere"
+          ]
+        },
+        "padding": {
+          "$ref": "spacing"
+        },
+        "position": {
+          "$ref": "position"
+        },
+        "text-decoration": {
+          "$ref": "textDecoration"
+        },
+        "top": {
+          "$ref": "length"
+        },
+        "transform": {
+          "$ref": "transform"
+        },
+        "transition": {
+          "$ref": "transition"
+        },
+        "user-select": {
+          "enum": [
+            "none",
+            "auto",
+            "text"
+          ]
+        },
+        "width": {
+          "$ref": "length"
+        },
+        "word-break": {
+          "enum": [
+            "normal",
+            "break-word",
+            "break-all"
+          ]
+        }
       }
     }
   },
@@ -104,12 +473,17 @@
     "list"
   ],
   "urls": false,
-  "selectors": true,
+  "selectors": {
+    "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}']+$"
+  },
   "limits": {
     "maxStylesheetLength": 8000,
     "maxPropertyLength": 64,
-    "maxValueLength": 200,
+    "maxValueLength": 240,
     "maxUrlLength": 200,
     "maxImports": 0
+  },
+  "content": {
+    "rejectPattern": "<"
   }
 }

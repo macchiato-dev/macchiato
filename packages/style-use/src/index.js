@@ -89,6 +89,23 @@ export class StyleUse {
     if (typeof rule === "function") return rule(value, property);
     if (typeof rule === "string") return rule === value;
     if (Array.isArray(rule)) return rule.some((entry) => this.isAllowedByRule(entry, value, property));
+    if (rule && typeof rule === "object") {
+      if (rule.$ref || rule.ref) {
+        const refName = String(rule.$ref || rule.ref).replace(/^#\/(values|valueDefinitions)\//, "");
+        const ref = this.schema.values?.[refName] ?? this.schema.valueDefinitions?.[refName];
+        if (ref === undefined) throw new Error(`Unknown CSS value rule reference: ${refName}`);
+        return this.isAllowedByRule(ref, value, property);
+      }
+      if (rule.enum) {
+        const normalized = String(value).replace(/\s+/g, " ");
+        return rule.enum.includes(value) || rule.enum.includes(normalized);
+      }
+      if (rule.pattern && !patternMatches(rule.pattern, value)) return false;
+      if (rule.anyOf) return rule.anyOf.some((entry) => this.isAllowedByRule(entry, value, property));
+      if (rule.allOf) return rule.allOf.every((entry) => this.isAllowedByRule(entry, value, property));
+      if (rule.not && this.isAllowedByRule(rule.not, value, property)) return false;
+      return Boolean(rule.pattern || rule.anyOf || rule.allOf || rule.not);
+    }
     return false;
   }
 
@@ -205,7 +222,9 @@ export class StyleUse {
       }
       for (const url of imports) this.validateUrl(url, "import");
     }
-    const declarationText = text.replace(/@import[^;]+;/gi, "");
+    const declarationText = text
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/@import[^;]+;/gi, "");
 
     const selectorRule = this.schema.selectors;
     if (selectorRule) {

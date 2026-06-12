@@ -230,9 +230,19 @@ test("resources sqlite site CSS is constrained by its site schema", () => {
   const css = buildResourcesSiteRoutes()[0].css;
 
   assert.equal(validateResourcesStylesheet(css), true);
+  assert.equal(validateResourcesStylesheet(`${css}\n:root { --accent: #31d6c9; --gap: 24px; }`), true);
+  assert.equal(validateResourcesStylesheet(`${css}\n.block { margin-top: 18px; }`), true);
   assert.throws(
     () => validateResourcesStylesheet(`${css}\n.evil { filter: blur(4px); }`),
     /CSS property not allowed: filter/,
+  );
+  assert.throws(
+    () => validateResourcesStylesheet(`${css}\n.block { color: rebeccapurple; }`),
+    /CSS value not allowed for color/,
+  );
+  assert.throws(
+    () => validateResourcesStylesheet(`${css}\n.box { background: conic-gradient(red, blue); }`),
+    /CSS value not allowed for background/,
   );
   assert.throws(
     () => validateResourcesStylesheet(`${css}\n.evil { src: url("/-/fonts/other/font.woff2"); }`),
