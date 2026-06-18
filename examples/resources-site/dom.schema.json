@@ -19,7 +19,7 @@
     "brand": {
       "element": "header.box.brand",
       "attrs": ["class", "data-screen-label"],
-      "children": ["a"]
+      "children": ["nav"]
     },
     "theme-toggle-block": {
       "element": "section.box.toggle",
@@ -125,7 +125,7 @@
     },
     "header": {
       "attrs": ["class", "data-screen-label"],
-      "children": ["div"]
+      "children": ["nav"]
     },
     "line": {
       "attrs": ["x1", "x2", "y1", "y2"],

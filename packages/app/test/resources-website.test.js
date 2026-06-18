@@ -368,25 +368,29 @@ test("resources sqlite site transitions between friendly paths in a real browser
   await page.getByText("resources/containers").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/resources/containers");
+  assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "resources/containers");
+  assert.equal(await page.locator(".brand__home").count(), 0);
   await assert.doesNotReject(page.locator(".crumb", { hasText: "resources" }).waitFor());
 
-  await page.locator(".crumb a[href='/resources']").click();
+  await page.locator("#brand-path a[href='/resources']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "resources" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/resources");
+  assert.equal((await page.locator("#brand-path").textContent()).trim(), "resources");
 
   await page.locator(".nav a[data-section='home']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/");
   assert.equal(await page.locator(".crumb").count(), 0);
+  assert.equal(await page.locator(".brand__home", { hasText: "Resources.co" }).count(), 1);
 
   await page.goto(`http://resources-co.localhost:${port}/about`, { waitUntil: "networkidle" });
-  await page.locator(".brand__link").click();
+  await page.locator(".brand__home").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/");
 
   await page.locator(".nav a[data-section='browse']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Browse the catalogue" }).waitFor());
-  await page.locator(".brand__link").click();
+  await page.locator(".brand__home").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/");
 

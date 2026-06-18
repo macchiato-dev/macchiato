@@ -411,12 +411,50 @@ html:not([data-theme]) {
   font-weight: 600;
 }
 
-.brand__link {
-  color: inherit;
-  text-decoration: none;
+.brand {
+  min-height: 72px;
+  padding: 15px 23px;
 }
-.brand__link:hover {
+.brand__path {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.brand__home,
+.brand__seg {
+  appearance: none;
+  border: none;
+  background: none;
   color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 0;
+}
+.brand__home:hover,
+.brand__seg:hover {
+  color: inherit;
+}
+.brand__home .dot {
+  color: var(--accent);
+}
+.brand__path--solo {
+  font-size: clamp(22px, 2.7vw, 30px);
+}
+.brand__path--solo .brand__seg {
+  overflow-wrap: anywhere;
+}
+.brand__seg--current {
+  cursor: default;
+}
+.brand__sep {
+  color: var(--muted);
+  margin: 0 9px;
 }
 
 .layout {
@@ -474,9 +512,9 @@ html:not([data-theme]) {
   }
   .brand {
     min-width: 0;
-    padding: 18px 20px 22px;
+    padding: 15px 18px;
   }
-  .brand__name {
+  .brand__path {
     overflow-wrap: anywhere;
   }
   .main {
@@ -556,6 +594,33 @@ function breadcrumbHtml(trail) {
   return `<nav class="box crumb" id="crumb" aria-label="Breadcrumb">${parts.join("")}</nav>`;
 }
 
+function brandSegmentsForPath(path) {
+  if (COLLECTIONS[path]) {
+    const parts = path.split("/").filter(Boolean);
+    return parts.map((part, index) => {
+      const href = index < parts.length - 1 ? `/${parts.slice(0, index + 1).join("/")}` : "";
+      return { label: part, href };
+    });
+  }
+  if (ORGS[path]) return [{ label: path.slice(1), href: "" }];
+  return [];
+}
+
+function brandHeaderHtml(path) {
+  const segments = brandSegmentsForPath(path);
+  if (segments.length === 0) {
+    return `<header class="box brand" data-screen-label="brand"><nav class="brand__path" id="brand-path" aria-label="Resource path"><a class="brand__home" href="/">Resources<span class="dot">.co</span></a></nav></header>`;
+  }
+  const parts = segments.map((segment, index) => {
+    const sep = index === 0 ? "" : `<span class="brand__sep">/</span>`;
+    if (segment.href) {
+      return `${sep}<a class="brand__seg" href="${segment.href}">${escapeHtml(segment.label)}</a>`;
+    }
+    return `${sep}<span class="brand__seg brand__seg--current">${escapeHtml(segment.label)}</span>`;
+  });
+  return `<header class="box brand" data-screen-label="brand"><nav class="brand__path brand__path--solo" id="brand-path" aria-label="Resource path">${parts.join("")}</nav></header>`;
+}
+
 function blockHtml(block) {
   const bits = [`<section class="box block">`];
   if (block.eyebrow) bits.push(`<div class="block__eyebrow">${escapeHtml(block.eyebrow)}</div>`);
@@ -613,7 +678,7 @@ function routeForPath(path) {
 function pageHtml(path) {
   const route = routeForPath(path);
   return `<main class="layout">
-    <header class="box brand" data-screen-label="brand"><a class="brand__link" href="/"><div class="brand__name">Resources<span class="dot">.co</span></div></a></header>
+    ${brandHeaderHtml(path)}
     <section class="box toggle" data-screen-label="toggle">${themeToggleHtml()}</section>
     ${menuHtml(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
@@ -777,11 +842,14 @@ function clientScript() {
     const currentContent = document.getElementById("content");
     const currentCrumb = document.getElementById("crumb");
     const nextCrumb = nextDoc.getElementById("crumb");
+    const currentBrand = document.querySelector("[data-screen-label='brand']");
+    const nextBrand = nextDoc.querySelector("[data-screen-label='brand']");
     if (!nextContent || !currentContent) {
       location.href = url.href;
       return;
     }
     document.title = nextDoc.title;
+    if (currentBrand && nextBrand) currentBrand.replaceWith(nextBrand.cloneNode(true));
     if (currentCrumb && nextCrumb) currentCrumb.replaceWith(nextCrumb.cloneNode(true));
     else if (currentCrumb) currentCrumb.remove();
     else if (nextCrumb) document.getElementById("main").prepend(nextCrumb.cloneNode(true));
