@@ -10,6 +10,8 @@ const DEFAULT_TRANSITION_POLICY = {
   wasmFallback: true,
 };
 
+export { readRepoProjectMetadata, repoMetadataTask } from "./repo-metadata-task.js";
+
 const SAFE_HEADER_VALUE = /^[\t\x20-\x7e]*$/;
 const SAFE_ROUTE_PATH = /^\/(?:[a-zA-Z0-9._~-]+\/?)*$/;
 
