@@ -207,20 +207,20 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   await app.waitForReady;
   const home = await fetch(`http://resources-co.localhost:${port}/`);
   const homeHtml = await home.text();
-  const collection = await fetch(`http://resources-co.localhost:${port}/resources/containers`);
-  const collectionHtml = await collection.text();
+  const project = await fetch(`http://resources-co.localhost:${port}/macchiato/app`);
+  const projectHtml = await project.text();
   const missing = await fetch(`http://resources-co.localhost:${port}/export/index.html`);
   const missingHtml = await missing.text();
 
   assert.equal(home.status, 200);
   assert.match(homeHtml, /<title>Resources\.co<\/title>/);
-  assert.match(homeHtml, /href="\/resources\/containers"/);
-  assert.doesNotMatch(homeHtml, /href="#resources\/containers"/);
-  assert.equal(collection.status, 200);
-  assert.match(collectionHtml, /<title>Containers - Resources\.co<\/title>/);
-  assert.match(collectionHtml, /aria-label="Breadcrumb"/);
-  assert.match(collectionHtml, /href="\/resources"/);
-  assert.match(collectionHtml, /<h1>Containers<\/h1>/);
+  assert.match(homeHtml, /href="\/macchiato\/app"/);
+  assert.doesNotMatch(homeHtml, /href="#macchiato\/app"/);
+  assert.equal(project.status, 200);
+  assert.match(projectHtml, /<title>App - Resources\.co<\/title>/);
+  assert.match(projectHtml, /aria-label="Breadcrumb"/);
+  assert.match(projectHtml, /href="\/macchiato"/);
+  assert.match(projectHtml, /<h1>App<\/h1>/);
   assert.equal(missing.status, 404);
   assert.match(missingHtml, /This block has not been composed yet\./);
   assert.match(missingHtml, /href="\/browse"/);
@@ -365,17 +365,17 @@ test("resources sqlite site transitions between friendly paths in a real browser
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
 
-  await page.getByText("resources/containers").click();
-  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
-  assert.equal(new URL(page.url()).pathname, "/resources/containers");
-  assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "resources/containers");
+  await page.getByText("macchiato/app").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "App" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/macchiato/app");
+  assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "macchiato/app");
   assert.equal(await page.locator(".brand__home").count(), 0);
-  await assert.doesNotReject(page.locator(".crumb", { hasText: "resources" }).waitFor());
+  await assert.doesNotReject(page.locator(".crumb", { hasText: "macchiato" }).waitFor());
 
-  await page.locator("#brand-path a[href='/resources']").click();
-  await assert.doesNotReject(page.locator("h1", { hasText: "resources" }).waitFor());
-  assert.equal(new URL(page.url()).pathname, "/resources");
-  assert.equal((await page.locator("#brand-path").textContent()).trim(), "resources");
+  await page.locator("#brand-path a[href='/macchiato']").click();
+  await assert.doesNotReject(page.locator("h1", { hasText: "macchiato" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/macchiato");
+  assert.equal((await page.locator("#brand-path").textContent()).trim(), "macchiato");
 
   await page.locator(".nav a[data-section='home']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
@@ -436,7 +436,7 @@ test("resources sqlite site prefetches internal routes and skips skeleton for ca
   const page = await browser.newPage();
 
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
-  const link = page.locator(".items a[href='/resources/containers']").first();
+  const link = page.locator(".items a[href='/macchiato/app']").first();
   await link.hover();
   await assert.doesNotReject(link.evaluate((node) => new Promise((resolve, reject) => {
     if (node.dataset.prefetch === "ready") {
@@ -455,7 +455,7 @@ test("resources sqlite site prefetches internal routes and skips skeleton for ca
   })));
 
   await link.click();
-  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
+  await assert.doesNotReject(page.locator("h1", { hasText: "App" }).waitFor());
   assert.equal(await page.locator("#content[data-loading='true']").count(), 0);
   assert.equal(await page.locator(".skeleton-block").count(), 0);
 });
@@ -486,7 +486,7 @@ test("resources sqlite site shows skeletons for uncached internal navigation", a
   await page.locator(".nav a[href='/collections']").click();
   await assert.doesNotReject(page.locator("#content[data-loading='true']").waitFor());
   await assert.doesNotReject(page.locator(".skeleton-block").first().waitFor());
-  await assert.doesNotReject(page.locator("h1", { hasText: "Featured collections" }).waitFor());
+  await assert.doesNotReject(page.locator("h1", { hasText: "Projects" }).waitFor());
   assert.equal(await page.locator("#content[data-loading='true']").count(), 0);
 });
 
@@ -536,7 +536,7 @@ test("resources sqlite site has a responsive hamburger menu", async (t) => {
   assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-theme")), "light");
 
   await page.locator(".menu-nav a[data-section='collections']").click();
-  await assert.doesNotReject(page.locator("h1", { hasText: "Featured collections" }).waitFor());
+  await assert.doesNotReject(page.locator("h1", { hasText: "Projects" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/collections");
   assert.equal(await page.locator(".menu").getAttribute("data-open"), "false");
   assert.equal(await page.locator(".menu-nav a[data-section='collections']").getAttribute("aria-current"), "page");
@@ -569,8 +569,9 @@ test("resources sqlite site keeps footer near the viewport bottom on sparse page
   t.after(async () => browser.close());
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
-  await page.goto(`http://resources-co.localhost:${port}/resources/containers`, { waitUntil: "networkidle" });
-  await assert.doesNotReject(page.locator("h1", { hasText: "Containers" }).waitFor());
+  const response = await page.goto(`http://resources-co.localhost:${port}/not-real`, { waitUntil: "networkidle" });
+  assert.equal(response.status(), 404);
+  await assert.doesNotReject(page.locator("h1", { hasText: "This block has not been composed yet." }).waitFor());
   const footerBottomGap = await page.locator(".footer").evaluate((node) => {
     const rect = node.getBoundingClientRect();
     return window.innerHeight - rect.bottom;

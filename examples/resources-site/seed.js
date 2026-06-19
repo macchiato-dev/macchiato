@@ -1,108 +1,67 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { putSiteRoute } from "@macchiato-dev/site";
+import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(__dirname, "../..");
 const SUBDOMAIN = "resources-co";
 
 const NAV = [
   { path: "/", label: "Home", key: "home" },
   { path: "/browse", label: "Browse", key: "browse" },
-  { path: "/collections", label: "Collections", key: "collections" },
+  { path: "/collections", label: "Projects", key: "collections" },
   { path: "/about", label: "About", key: "about" },
 ];
 
-const COLLECTIONS = {
-  "/resources/containers": {
-    name: "Containers",
-    namespace: "resources",
-    slug: "containers",
-    tagline: "Self-hostable runtimes for everything you ship.",
-    intro: "Lightweight, self-hosted runtimes that boot fast and stay out of your way. Run them on the infrastructure you already have.",
-    items: [
-      ["Edge runtime", "A minimal container that boots in milliseconds."],
-      ["Job container", "Run background work without standing infrastructure."],
-      ["Static host", "Serve assets from your own edge in one command."],
-    ],
-  },
-  "/macchiato/components": {
-    name: "Components",
-    namespace: "macchiato",
-    slug: "components",
-    tagline: "Composable UI and service building blocks.",
-    intro: "Drop-in building blocks for the surface of your app, each one self-contained, themeable, and ready to compose.",
-    items: [
-      ["Data table", "Sorting, paging, and selection out of the box."],
-      ["Command menu", "A keyboard-first launcher you can drop in."],
-      ["Form kit", "Validation and state handled for you."],
-    ],
-  },
-  "/resources/usage-providers": {
-    name: "Usage providers",
-    namespace: "resources",
-    slug: "usage-providers",
-    tagline: "DOM, Style, and Navigator state shared cleanly.",
-    intro: "Providers that expose live browser state to the rest of your app without prop-drilling or duplicated listeners.",
-    items: [
-      ["DOM use", "Subscribe to layout, focus, and visibility state."],
-      ["Style use", "Read and react to computed style and theme."],
-      ["Navigator use", "Connection, locale, and device capabilities."],
-    ],
-  },
-  "/halcyon/design-tokens": {
-    name: "Design tokens",
-    namespace: "halcyon",
-    slug: "design-tokens",
-    tagline: "A living spec for color, type, and spacing.",
-    intro: "One source of truth for your visual language, versioned alongside your code and exported to wherever it needs to go.",
-    items: [
-      ["Token spec", "Color, type, and spacing as a single source of truth."],
-      ["Theme builder", "Compose and preview token sets in the browser."],
-      ["Export targets", "Ship tokens to CSS, JSON, and native."],
-    ],
-  },
-  "/northwind/adapters": {
-    name: "Adapters",
-    namespace: "northwind",
-    slug: "adapters",
-    tagline: "Uniform interfaces to external services and data.",
-    intro: "Thin, swappable interfaces that let you change providers without rewriting the code that depends on them.",
-    items: [
-      ["Storage adapter", "One API across S3, GCS, and local disk."],
-      ["Queue adapter", "Swap brokers without touching your code."],
-      ["Auth adapter", "Plug in any identity provider."],
-    ],
-  },
+const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
+const ORG_COPY = {
+  macchiato: "Open-source packages from the macchiato-dev workspace, mapped into public project paths.",
+  resources: "Packages published under the resources organization on npm.",
 };
 
-const ORGS = {
-  "/resources": {
-    name: "resources",
-    blurb: "The team behind Resources.co, self-hostable primitives for the web.",
-  },
-  "/macchiato": {
-    name: "macchiato",
-    blurb: "A small studio publishing composable UI building blocks.",
-  },
-  "/halcyon": {
-    name: "halcyon",
-    blurb: "Design-systems tooling, versioned alongside your code.",
-  },
-  "/northwind": {
-    name: "northwind",
-    blurb: "Infrastructure adapters that keep your code provider-agnostic.",
-  },
-};
+function titleForProject(project) {
+  return project.slug
+    .split("-")
+    .map((part) => part ? `${part[0].toUpperCase()}${part.slice(1)}` : "")
+    .join(" ");
+}
 
-const COLLECTION_ORDER = [
-  "/resources/containers",
-  "/macchiato/components",
-  "/resources/usage-providers",
-  "/halcyon/design-tokens",
-  "/northwind/adapters",
-];
+function projectItems(project) {
+  const items = [
+    ["npm package", project.npmName],
+    ["source", project.packageDir],
+    ["files", `${project.files} git-visible files`],
+  ];
+  if (project.version) items.push(["version", project.version]);
+  if (project.exports.length) items.push(["exports", project.exports.join(", ")]);
+  if (project.bins.length) items.push(["commands", project.bins.join(", ")]);
+  if (project.dependencies.length) items.push(["workspace deps", project.dependencies.join(", ")]);
+  return items;
+}
+
+const PROJECTS = Object.fromEntries(REPO_PROJECT_METADATA.projects.map((project) => [
+  project.path,
+  {
+    ...project,
+    name: titleForProject(project),
+    namespace: project.namespace,
+    slug: project.slug,
+    tagline: project.description,
+    intro: `${project.description} This ${project.kind} is published as ${project.npmName} from ${project.packageDir}.`,
+    items: projectItems(project),
+  },
+]));
+
+const PROJECT_ORDER = Object.keys(PROJECTS).sort();
+
+const ORGS = Object.fromEntries([...new Set(REPO_PROJECT_METADATA.projects.map((project) => project.namespace))]
+  .sort()
+  .map((namespace) => [`/${namespace}`, {
+    name: namespace,
+    blurb: ORG_COPY[namespace] || `Packages published by ${namespace}.`,
+  }]));
 
 function hydrateCssSchema(schema) {
   return {
@@ -176,7 +135,7 @@ const SECTIONS = {
           "Pick a section from the panel on the right to start, or browse the full catalogue.",
         ],
       },
-      { h2: "Featured collections", items: collectionLinks() },
+      { h2: "Featured projects", items: projectLinks() },
     ],
   },
   "/browse": {
@@ -186,39 +145,22 @@ const SECTIONS = {
     blocks: [
       {
         h1: "Browse the catalogue",
-        paras: ["Everything in Resources.co, grouped by what it does. All self-hostable, all yours to run."],
-        tags: ["Containers", "Components", "Usage providers", "Design tokens"],
+        paras: ["Everything in Resources.co, grouped from the real packages in this repo. All self-hostable, all yours to run."],
+        tags: [...new Set(REPO_PROJECT_METADATA.projects.map((project) => project.kind))],
       },
-      {
-        h2: "Containers",
-        items: [
-          ["Edge runtime", "A minimal container that boots in milliseconds.", "/resources/containers"],
-          ["Job container", "Run background work without standing infrastructure.", "/resources/containers"],
-        ],
-      },
-      {
-        h2: "Components",
-        items: [
-          ["Data table", "Sorting, paging, and selection out of the box.", "/macchiato/components"],
-          ["Command menu", "A keyboard-first launcher you can drop in.", "/macchiato/components"],
-        ],
-      },
-      {
-        h2: "Design tokens",
-        items: [["Token spec", "Color, type, and spacing as a single source of truth.", "/halcyon/design-tokens"]],
-      },
+      ...projectGroups(),
     ],
   },
   "/collections": {
     navKey: "collections",
-    title: "Collections - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Collections" }],
+    title: "Projects - Resources.co",
+    crumb: [{ icon: true, href: "/" }, { label: "Projects" }],
     blocks: [
       {
-        h1: "Featured collections",
-        paras: ["Curated sets of building blocks that work well together. Open one to self-host the whole collection or pick what you need."],
+        h1: "Projects",
+        paras: ["Real packages from this repository, mapped into public project paths like macchiato/dom-use."],
       },
-      { items: collectionLinks() },
+      { items: projectLinks() },
     ],
   },
   "/about": {
@@ -236,8 +178,8 @@ const SECTIONS = {
       {
         h2: "How it fits together",
         paras: [
-          "Every building block is designed to be self-hosted and to compose with the others. Containers run your code, components shape the surface, and usage providers share state cleanly across both.",
-          "Design tokens keep the whole thing visually consistent without locking you in.",
+          "Every building block is designed to be self-hosted and to compose with the others. The project catalogue is generated from package metadata rather than a hand-maintained list.",
+          "Package names become public project paths, so @macchiato-dev/dom-use appears as macchiato/dom-use.",
         ],
       },
     ],
@@ -254,12 +196,12 @@ const NOT_FOUND_ROUTE = {
       h1: "This block has not been composed yet.",
       paras: [
         "That route is not in the Resources.co catalogue. It may still be on a workbench somewhere, or it may be a typo.",
-        "Head back home or browse the collections that are already wired up.",
+        "Head back home or browse the projects that are already wired up.",
       ],
       items: [
         ["Home", "Return to the Resources.co starting point.", "/"],
         ["Browse", "Scan the current catalogue of self-hostable parts.", "/browse"],
-        ["Collections", "Open the featured Resources.co collections.", "/collections"],
+        ["Projects", "Open the generated Resources.co projects.", "/collections"],
       ],
     },
   ],
@@ -524,19 +466,32 @@ html:not([data-theme]) {
 `;
 }
 
-function collectionLinks() {
-  return COLLECTION_ORDER.map((path) => [
+function projectLinks() {
+  return PROJECT_ORDER.map((path) => [
     path.slice(1),
-    COLLECTIONS[path].tagline,
+    PROJECTS[path].tagline,
     path,
   ]);
 }
 
+function projectGroups() {
+  const groups = new Map();
+  for (const path of PROJECT_ORDER) {
+    const project = PROJECTS[path];
+    if (!groups.has(project.kind)) groups.set(project.kind, []);
+    groups.get(project.kind).push([path.slice(1), project.tagline, path]);
+  }
+  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([kind, items]) => ({
+    h2: `${kind[0].toUpperCase()}${kind.slice(1)} packages`,
+    items,
+  }));
+}
+
 function childrenOf(namespacePath) {
   const namespace = namespacePath.slice(1);
-  return COLLECTION_ORDER
-    .filter((path) => COLLECTIONS[path].namespace === namespace)
-    .map((path) => [path.slice(1), COLLECTIONS[path].tagline, path]);
+  return PROJECT_ORDER
+    .filter((path) => PROJECTS[path].namespace === namespace)
+    .map((path) => [path.slice(1), PROJECTS[path].tagline, path]);
 }
 
 function escapeHtml(value) {
@@ -595,7 +550,7 @@ function breadcrumbHtml(trail) {
 }
 
 function brandSegmentsForPath(path) {
-  if (COLLECTIONS[path]) {
+  if (PROJECTS[path]) {
     const parts = path.split("/").filter(Boolean);
     return parts.map((part, index) => {
       const href = index < parts.length - 1 ? `/${parts.slice(0, index + 1).join("/")}` : "";
@@ -643,19 +598,19 @@ function blockHtml(block) {
 function routeForPath(path) {
   if (path === "/404") return NOT_FOUND_ROUTE;
   if (SECTIONS[path]) return SECTIONS[path];
-  if (COLLECTIONS[path]) {
-    const collection = COLLECTIONS[path];
+  if (PROJECTS[path]) {
+    const project = PROJECTS[path];
     return {
       navKey: "collections",
-      title: `${collection.name} - Resources.co`,
+      title: `${project.name} - Resources.co`,
       crumb: [
         { icon: true, href: "/" },
-        { label: collection.namespace, href: `/${collection.namespace}` },
-        { label: collection.slug },
+        { label: project.namespace, href: `/${project.namespace}` },
+        { label: project.slug },
       ],
       blocks: [
-        { h1: collection.name, paras: [collection.intro] },
-        { items: collection.items },
+        { eyebrow: project.npmName, h1: project.name, paras: [project.intro] },
+        { h2: "Metadata", items: project.items },
       ],
     };
   }
@@ -668,7 +623,7 @@ function routeForPath(path) {
       crumb: [{ icon: true, href: "/" }, { label: org.name }],
       blocks: [
         { eyebrow: "Organization", h1: org.name, paras: [org.blurb] },
-        { h2: children.length === 1 ? "1 collection" : `${children.length} collections`, items: children },
+        { h2: children.length === 1 ? "1 project" : `${children.length} projects`, items: children },
       ],
     };
   }
@@ -871,7 +826,7 @@ export function seedResourcesSite(db) {
 export function buildResourcesSiteRoutes() {
   const stylesheet = css();
   validateResourcesStylesheet(stylesheet);
-  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...COLLECTION_ORDER, "/404"].map((path) => {
+  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"].map((path) => {
     const route = routeForPath(path);
     return {
       subdomain: SUBDOMAIN,
