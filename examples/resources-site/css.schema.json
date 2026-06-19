@@ -380,7 +380,7 @@
       }
     },
     "content-block": {
-      "element": "section.box.block",
+      "element": "section.box.block.content-block",
       "properties": {
         "font-size": {
           "$ref": "fontSize"
@@ -416,6 +416,70 @@
             "balance",
             "pretty"
           ]
+        }
+      }
+    },
+    "project-summary-block": {
+      "element": "section.box.block.project-summary",
+      "properties": {
+        "font-size": {
+          "$ref": "fontSize"
+        },
+        "font-weight": {
+          "$ref": "fontWeight"
+        },
+        "letter-spacing": {
+          "$ref": "letterSpacing"
+        },
+        "line-height": {
+          "$ref": "lineHeight"
+        },
+        "max-width": {
+          "anyOf": [
+            {
+              "$ref": "length"
+            },
+            {
+              "enum": [
+                "none"
+              ]
+            }
+          ]
+        },
+        "text-transform": {
+          "$ref": "textTransform"
+        }
+      }
+    },
+    "package-details-block": {
+      "element": "section.box.block.package-details",
+      "properties": {
+        "font-size": {
+          "$ref": "fontSize"
+        },
+        "font-weight": {
+          "$ref": "fontWeight"
+        },
+        "letter-spacing": {
+          "$ref": "letterSpacing"
+        },
+        "line-height": {
+          "$ref": "lineHeight"
+        },
+        "max-width": {
+          "anyOf": [
+            {
+              "$ref": "length"
+            },
+            {
+              "enum": [
+                "none"
+              ]
+            }
+          ]
+        },
+        "text-transform": {
+          "$ref": "textTransform"
         }
       }
     },
@@ -562,6 +626,8 @@
     "brand-block",
     "navigation-block",
     "content-block",
+    "project-summary-block",
+    "package-details-block",
     "form-block",
     "menu-block",
     "position-and-size",
