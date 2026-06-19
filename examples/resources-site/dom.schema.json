@@ -51,10 +51,28 @@
     "content-root": {
       "element": "div.content-root",
       "attrs": ["class", "id"],
-      "children": ["section"]
+      "children": [
+        {
+          "oneOf": [
+            "$content-block",
+            "$project-summary-block",
+            "$package-details-block"
+          ]
+        }
+      ]
     },
     "content-block": {
-      "element": "section.box.block",
+      "element": "section.box.block.content-block",
+      "attrs": ["class"],
+      "children": ["div", "h1", "h2", "p"]
+    },
+    "project-summary-block": {
+      "element": "section.box.block.project-summary",
+      "attrs": ["class"],
+      "children": ["div"]
+    },
+    "package-details-block": {
+      "element": "section.box.block.package-details",
       "attrs": ["class"],
       "children": ["div", "h1", "h2", "p"]
     },

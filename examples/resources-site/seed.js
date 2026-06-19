@@ -41,6 +41,35 @@ function projectItems(project) {
   return items;
 }
 
+function projectFacts(project) {
+  const facts = [
+    ["Organization", project.namespace],
+    ["Package", project.npmName],
+    ["Kind", project.kind],
+    ["Files", `${project.files}`],
+  ];
+  if (project.version) facts.splice(2, 0, ["Version", project.version]);
+  return facts;
+}
+
+function languageSummary(project) {
+  return Object.entries(project.languages)
+    .slice(0, 6)
+    .map(([language, count]) => `${language} ${count}`)
+    .join(", ") || "No tracked source files";
+}
+
+function packageRows(project) {
+  return [
+    ["Source", project.packageDir],
+    ["Package file", project.packageJson],
+    ["Languages", languageSummary(project)],
+    ["Exports", project.exports.join(", ") || "None declared"],
+    ["Commands", project.bins.join(", ") || "None declared"],
+    ["Workspace deps", project.dependencies.join(", ") || "None"],
+  ];
+}
+
 const PROJECTS = Object.fromEntries(REPO_PROJECT_METADATA.projects.map((project) => [
   project.path,
   {
@@ -263,6 +292,62 @@ html:not([data-theme]) {
   max-width: 58ch;
 }
 
+.project-summary {
+  display: grid;
+  gap: 22px;
+  padding: 31px 34px;
+}
+.project-summary__top {
+  display: grid;
+  gap: 12px;
+}
+.project-summary__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.project-summary__fact,
+.package-details__row {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--track);
+}
+.project-summary__fact {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px;
+}
+.project-summary__label,
+.package-details__label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.project-summary__value,
+.package-details__value {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.package-details {
+  display: grid;
+  gap: 16px;
+  padding: 27px 30px 30px;
+}
+.package-details__grid {
+  display: grid;
+  gap: 10px;
+}
+.package-details__row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.36fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 13px 15px;
+}
+
 .menu {
   grid-area: menu;
   justify-self: end;
@@ -459,6 +544,10 @@ html:not([data-theme]) {
   .brand__path {
     overflow-wrap: anywhere;
   }
+  .project-summary__facts,
+  .package-details__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .main {
     max-width: none;
   }
@@ -577,7 +666,9 @@ function brandHeaderHtml(path) {
 }
 
 function blockHtml(block) {
-  const bits = [`<section class="box block">`];
+  if (block.type === "project-summary") return projectSummaryHtml(block);
+  if (block.type === "package-details") return packageDetailsHtml(block);
+  const bits = [`<section class="box block content-block">`];
   if (block.eyebrow) bits.push(`<div class="block__eyebrow">${escapeHtml(block.eyebrow)}</div>`);
   if (block.h1) bits.push(`<h1>${escapeHtml(block.h1)}</h1>`);
   if (block.h2) bits.push(`<h2>${escapeHtml(block.h2)}</h2>`);
@@ -595,6 +686,26 @@ function blockHtml(block) {
   return bits.join("");
 }
 
+function projectSummaryHtml(block) {
+  const facts = block.facts.map(([label, value]) => `<div class="project-summary__fact"><span class="project-summary__label">${escapeHtml(label)}</span><span class="project-summary__value">${escapeHtml(value)}</span></div>`);
+  return `<section class="box block project-summary">
+    <div class="project-summary__top">
+      <div class="block__eyebrow">${escapeHtml(block.eyebrow)}</div>
+      <h1>${escapeHtml(block.h1)}</h1>
+      <p>${escapeHtml(block.intro)}</p>
+    </div>
+    <div class="project-summary__facts">${facts.join("")}</div>
+  </section>`;
+}
+
+function packageDetailsHtml(block) {
+  const rows = block.rows.map(([label, value]) => `<div class="package-details__row"><span class="package-details__label">${escapeHtml(label)}</span><span class="package-details__value">${escapeHtml(value)}</span></div>`);
+  return `<section class="box block package-details">
+    <h2>${escapeHtml(block.h2)}</h2>
+    <div class="package-details__grid">${rows.join("")}</div>
+  </section>`;
+}
+
 function routeForPath(path) {
   if (path === "/404") return NOT_FOUND_ROUTE;
   if (SECTIONS[path]) return SECTIONS[path];
@@ -609,8 +720,8 @@ function routeForPath(path) {
         { label: project.slug },
       ],
       blocks: [
-        { eyebrow: project.npmName, h1: project.name, paras: [project.intro] },
-        { h2: "Metadata", items: project.items },
+        { type: "project-summary", eyebrow: project.npmName, h1: project.name, intro: project.intro, facts: projectFacts(project) },
+        { type: "package-details", h2: "Package metadata", rows: packageRows(project) },
       ],
     };
   }

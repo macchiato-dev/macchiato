@@ -258,6 +258,9 @@ test("resources sqlite site DOM schema composes layout block definitions", async
   const brand = doc.createElement("header");
   const toggle = doc.createElement("section");
   const mainColumn = doc.createElement("div");
+  const contentRoot = doc.createElement("div");
+  const projectSummary = doc.createElement("section");
+  const packageDetails = doc.createElement("section");
   const nav = doc.createElement("nav");
   const footer = doc.createElement("footer");
   const button = doc.createElement("button");
@@ -267,12 +270,19 @@ test("resources sqlite site DOM schema composes layout block definitions", async
   toggle.setAttribute("class", "box toggle");
   mainColumn.setAttribute("class", "main");
   mainColumn.setAttribute("id", "main");
+  contentRoot.setAttribute("class", "content-root");
+  contentRoot.setAttribute("id", "content");
+  projectSummary.setAttribute("class", "box block project-summary");
+  packageDetails.setAttribute("class", "box block package-details");
   nav.setAttribute("class", "box nav");
   footer.setAttribute("class", "box footer");
 
   assert.equal(layout.appendChild(brand), brand);
   assert.equal(layout.appendChild(toggle), toggle);
   assert.equal(layout.appendChild(mainColumn), mainColumn);
+  assert.equal(mainColumn.appendChild(contentRoot), contentRoot);
+  assert.equal(contentRoot.appendChild(projectSummary), projectSummary);
+  assert.equal(contentRoot.appendChild(packageDetails), packageDetails);
   assert.equal(layout.appendChild(nav), nav);
   assert.equal(layout.appendChild(footer), footer);
   assert.throws(() => layout.appendChild(button), /Child button not allowed in main/);
