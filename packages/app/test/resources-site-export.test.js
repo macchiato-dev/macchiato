@@ -18,17 +18,17 @@ test("exports resources site as static files", async (t) => {
 
   const result = await exportResourcesSite({ out });
   const home = await readFile(join(out, "index.html"), "utf8");
-  const collection = await readFile(join(out, "resources", "containers", "index.html"), "utf8");
+  const project = await readFile(join(out, "macchiato", "app", "index.html"), "utf8");
   const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
   const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
 
-  assert.equal(result.routes, 13);
+  assert.equal(result.routes, 15);
   assert.match(home, /<title>Resources\.co<\/title>/);
-  assert.match(home, /href="\/resources\/containers"/);
-  assert.doesNotMatch(home, /href="#resources\/containers"/);
-  assert.match(collection, /<title>Containers - Resources\.co<\/title>/);
-  assert.match(collection, /<h1>Containers<\/h1>/);
+  assert.match(home, /href="\/macchiato\/app"/);
+  assert.doesNotMatch(home, /href="#macchiato\/app"/);
+  assert.match(project, /<title>App - Resources\.co<\/title>/);
+  assert.match(project, /<h1>App<\/h1>/);
   assert.equal(manifest.subdomain, "resources-co");
-  assert.equal(manifest.routes.includes("/resources/containers"), true);
+  assert.equal(manifest.routes.includes("/macchiato/app"), true);
   assert.equal(font.isFile(), true);
 });
