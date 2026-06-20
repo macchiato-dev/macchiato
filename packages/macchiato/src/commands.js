@@ -205,7 +205,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const rows = withDb((db) => [
         ...db.prepare("SELECT subdomain, 'directory' AS kind, directory, NULL AS sandboxed FROM sites").all(),
         ...db.prepare("SELECT subdomain, 'page' AS kind, NULL AS directory, sandboxed FROM site_pages").all(),
-        ...db.prepare("SELECT subdomain, 'raw file' AS kind, file_path AS directory, NULL AS sandboxed FROM site_files").all(),
+        ...db.prepare("SELECT subdomain, 'raw site' AS kind, file_path AS directory, NULL AS sandboxed FROM site_files").all(),
         ...db.prepare("SELECT DISTINCT subdomain, 'routes' AS kind, NULL AS directory, NULL AS sandboxed FROM site_routes").all(),
       ], dbOptions);
       if (rows.length === 0) {
@@ -215,8 +215,8 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       for (const row of rows) {
         if (row.kind === "page") {
           console.log(`  ${row.subdomain} -> sqlite page (${row.sandboxed ? "sandboxed" : "unsandboxed"})`);
-        } else if (row.kind === "raw file") {
-          console.log(`  ${row.subdomain} -> raw file ${row.directory}`);
+        } else if (row.kind === "raw site") {
+          console.log(`  ${row.subdomain} -> raw site ${row.directory}`);
         } else if (row.kind === "routes") {
           console.log(`  ${row.subdomain} -> sqlite routes`);
         } else {
@@ -263,7 +263,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
           VALUES (?, ?, ?, ?, ?, ?)
         `).run(subdomain, opts.title || subdomain, filePath, opts.contentType, opts.csp, opts.clearSiteData);
       }, dbOptions);
-      console.log(`Added raw file site: ${subdomain} -> ${filePath}`);
+      console.log(`Added raw site: ${subdomain} -> ${filePath}`);
     },
 
     "site add-route"(args) {
