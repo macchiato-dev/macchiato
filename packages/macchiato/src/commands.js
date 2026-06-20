@@ -46,6 +46,26 @@ function parseRouteOpts(args) {
   return { opts, positional };
 }
 
+function parseFileSiteOpts(args) {
+  const opts = {
+    title: "",
+    contentType: "",
+    csp: "",
+    clearSiteData: '"cache", "cookies", "storage"',
+  };
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--title") opts.title = args[++i] ?? "";
+    else if (arg === "--content-type") opts.contentType = args[++i] ?? "";
+    else if (arg === "--csp") opts.csp = args[++i] ?? "";
+    else if (arg === "--clear-site-data") opts.clearSiteData = args[++i] ?? opts.clearSiteData;
+    else if (arg === "--no-clear-site-data") opts.clearSiteData = "";
+    else positional.push(arg);
+  }
+  return { opts, positional };
+}
+
 function readText(path) {
   return readFileSync(path, "utf-8");
 }
@@ -97,6 +117,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
+      console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data]");
       console.log("  site add-route <subdomain> <route> <html> <css> [--title <title>] [--csp <policy>] [--head <file>]");
       console.log("  site list                     List sites");
       console.log("  site remove <subdomain>       Remove a site");
@@ -184,6 +205,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const rows = withDb((db) => [
         ...db.prepare("SELECT subdomain, 'directory' AS kind, directory, NULL AS sandboxed FROM sites").all(),
         ...db.prepare("SELECT subdomain, 'page' AS kind, NULL AS directory, sandboxed FROM site_pages").all(),
+        ...db.prepare("SELECT subdomain, 'raw file' AS kind, file_path AS directory, NULL AS sandboxed FROM site_files").all(),
         ...db.prepare("SELECT DISTINCT subdomain, 'routes' AS kind, NULL AS directory, NULL AS sandboxed FROM site_routes").all(),
       ], dbOptions);
       if (rows.length === 0) {
@@ -193,6 +215,8 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       for (const row of rows) {
         if (row.kind === "page") {
           console.log(`  ${row.subdomain} -> sqlite page (${row.sandboxed ? "sandboxed" : "unsandboxed"})`);
+        } else if (row.kind === "raw file") {
+          console.log(`  ${row.subdomain} -> raw file ${row.directory}`);
         } else if (row.kind === "routes") {
           console.log(`  ${row.subdomain} -> sqlite routes`);
         } else {
@@ -222,6 +246,24 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         `).run(subdomain, opts.title || subdomain, html, css, domSchema, cssSchema, opts.sandboxed ? 1 : 0);
       }, dbOptions);
       console.log(`Added SQLite page: ${subdomain} (${opts.sandboxed ? "sandboxed" : "unsandboxed"})`);
+    },
+
+    "site add-file"(args) {
+      const { opts, positional } = parseFileSiteOpts(args);
+      const [subdomain, filePath] = positional;
+      if (!subdomain || !filePath) {
+        console.log("Usage: site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data]");
+        return;
+      }
+
+      withDb((db) => {
+        db.prepare(`
+          INSERT OR REPLACE INTO site_files
+            (subdomain, title, file_path, content_type, csp, clear_site_data)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(subdomain, opts.title || subdomain, filePath, opts.contentType, opts.csp, opts.clearSiteData);
+      }, dbOptions);
+      console.log(`Added raw file site: ${subdomain} -> ${filePath}`);
     },
 
     "site add-route"(args) {
@@ -257,6 +299,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       withDb((db) => {
         db.prepare("DELETE FROM sites WHERE subdomain = ?").run(subdomain);
         db.prepare("DELETE FROM site_pages WHERE subdomain = ?").run(subdomain);
+        db.prepare("DELETE FROM site_files WHERE subdomain = ?").run(subdomain);
         deleteSiteRoutes(db, subdomain);
       }, dbOptions);
       console.log(`Removed site: ${subdomain}`);
