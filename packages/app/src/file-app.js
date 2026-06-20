@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 
 const CONTENT_TYPES = {
@@ -9,8 +9,6 @@ const CONTENT_TYPES = {
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
 };
-
-const fileBodyCache = new Map();
 
 export const DEFAULT_FILE_APP_CSP = [
   "default-src 'none'",
@@ -73,20 +71,9 @@ function expandStandaloneBundle(html) {
 
 async function fileBody(file, method) {
   if (method === "HEAD") return null;
-  const cacheKey = `${file.path}\0${file.renderMode || "raw"}`;
-  const info = await stat(file.path);
-  const cached = fileBodyCache.get(cacheKey);
-  if (cached && cached.mtimeMs === info.mtimeMs && cached.size === info.size) return cached.body;
-
   const body = await readFile(file.path);
   if (file.renderMode !== "expanded-bundle") return body;
-  const expanded = expandStandaloneBundle(body.toString("utf8"));
-  fileBodyCache.set(cacheKey, {
-    body: expanded,
-    mtimeMs: info.mtimeMs,
-    size: info.size,
-  });
-  return expanded;
+  return expandStandaloneBundle(body.toString("utf8"));
 }
 
 function securityHeaders(app) {
