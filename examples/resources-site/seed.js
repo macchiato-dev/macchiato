@@ -483,6 +483,42 @@ html:not([data-theme]) {
   color: var(--muted);
   margin: 0 9px;
 }
+.project-identity {
+  min-height: 72px;
+  padding: 14px 23px;
+}
+.project-identity__path {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: clamp(22px, 2.7vw, 30px);
+  font-weight: 600;
+  line-height: 1.05;
+}
+.project-identity__owner,
+.project-identity__name {
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.project-identity__owner {
+  color: var(--muted);
+}
+.project-identity__owner:hover,
+.project-identity__name:hover {
+  color: var(--text);
+}
+.project-identity__name {
+  color: var(--text);
+}
+.project-identity__name--current {
+  cursor: default;
+}
+.project-identity__sep {
+  color: var(--muted);
+  margin: 0 9px;
+}
 
 .layout {
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -638,19 +674,31 @@ function breadcrumbHtml(trail) {
   return `<nav class="box crumb" id="crumb" aria-label="Breadcrumb">${parts.join("")}</nav>`;
 }
 
+function projectSegmentsForPath(path) {
+  const parts = path.split("/").filter(Boolean);
+  return parts.map((part, index) => {
+    const href = index < parts.length - 1 ? `/${parts.slice(0, index + 1).join("/")}` : "";
+    return { label: part, href, owner: index === 0 };
+  });
+}
+
 function brandSegmentsForPath(path) {
-  if (PROJECTS[path]) {
-    const parts = path.split("/").filter(Boolean);
-    return parts.map((part, index) => {
-      const href = index < parts.length - 1 ? `/${parts.slice(0, index + 1).join("/")}` : "";
-      return { label: part, href };
-    });
-  }
   if (ORGS[path]) return [{ label: path.slice(1), href: "" }];
   return [];
 }
 
 function brandHeaderHtml(path) {
+  if (PROJECTS[path]) {
+    const parts = projectSegmentsForPath(path).map((segment, index) => {
+      const sep = index === 0 ? "" : `<span class="project-identity__sep">/</span>`;
+      const cls = segment.owner ? "project-identity__owner" : "project-identity__name";
+      if (segment.href) {
+        return `${sep}<a class="${cls}" href="${segment.href}">${escapeHtml(segment.label)}</a>`;
+      }
+      return `${sep}<span class="${cls} project-identity__name--current">${escapeHtml(segment.label)}</span>`;
+    });
+    return `<header class="box project-identity" data-screen-label="brand"><nav class="project-identity__path" id="brand-path" aria-label="Project path">${parts.join("")}</nav></header>`;
+  }
   const segments = brandSegmentsForPath(path);
   if (segments.length === 0) {
     return `<header class="box brand" data-screen-label="brand"><nav class="brand__path" id="brand-path" aria-label="Resource path"><a class="brand__home" href="/">Resources<span class="dot">.co</span></a></nav></header>`;
