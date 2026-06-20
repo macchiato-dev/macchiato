@@ -100,15 +100,10 @@ db.exec(`
     title TEXT NOT NULL DEFAULT '',
     file_path TEXT NOT NULL,
     content_type TEXT NOT NULL DEFAULT '',
-    csp TEXT NOT NULL DEFAULT '',
-    clear_site_data TEXT NOT NULL DEFAULT ''
+    csp TEXT NOT NULL DEFAULT ''
   )
 `);
-db.prepare(`
-  UPDATE site_files
-  SET clear_site_data = ''
-  WHERE clear_site_data = ?
-`).run('"cache", "cookies", "storage"');
+dropLegacySiteFileColumns(db);
 initFontCache(db);
 initSiteDb(db);
 setupBuiltinApps(db);
@@ -132,7 +127,7 @@ const getSitePage = db.prepare(`
   WHERE subdomain = ?
 `);
 const getSiteFile = db.prepare(`
-  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp, clear_site_data AS clearSiteData
+  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp
   FROM site_files
   WHERE subdomain = ?
 `);
@@ -147,6 +142,13 @@ const CONTENT_TYPES = {
   ".txt": "text/plain; charset=utf-8",
   ".woff2": "font/woff2",
 };
+
+function dropLegacySiteFileColumns(db) {
+  const columns = db.prepare("PRAGMA table_info(site_files)").all().map((column) => column.name);
+  if (columns.includes("clear_site_data")) {
+    db.exec("ALTER TABLE site_files DROP COLUMN clear_site_data");
+  }
+}
 
 function escapeHtml(str) {
   return str
@@ -391,7 +393,6 @@ async function route(request) {
         path: fileSite.path,
         contentType: fileSite.contentType,
         csp: fileSite.csp,
-        clearSiteData: fileSite.clearSiteData,
       },
     });
   }

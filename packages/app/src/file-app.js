@@ -24,8 +24,6 @@ export const DEFAULT_FILE_APP_CSP = [
   "worker-src 'self' blob:",
 ].join("; ");
 
-export const DEFAULT_CLEAR_SITE_DATA = "";
-
 function contentTypeFor(filePath, configuredType) {
   return configuredType || CONTENT_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
 }
@@ -38,8 +36,6 @@ function securityHeaders(app) {
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
   });
-  const clearSiteData = file.clearSiteData === false ? "" : (file.clearSiteData || DEFAULT_CLEAR_SITE_DATA);
-  if (clearSiteData) headers.set("clear-site-data", clearSiteData);
   return headers;
 }
 
