@@ -160,13 +160,13 @@ test("resources design file is a SQLite raw file site with default security head
   assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
   assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'self' 'unsafe-inline' blob:/);
-  assert.equal(response.headers.get("clear-site-data"), '"cache", "cookies", "storage"');
+  assert.equal(response.headers.get("clear-site-data"), null);
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Design/);
   assert.match(configText, /raw site/);
   assert.match(configText, /persistentLocalStorage/);
-  assert.match(configText, /false/);
+  assert.match(configText, /true/);
   assert.match(configText, /resourcesco-standalone-20260617\.html/);
 });
 

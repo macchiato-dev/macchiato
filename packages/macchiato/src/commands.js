@@ -51,7 +51,7 @@ function parseFileSiteOpts(args) {
     title: "",
     contentType: "",
     csp: "",
-    clearSiteData: '"cache", "cookies", "storage"',
+    clearSiteData: "",
   };
   const positional = [];
   for (let i = 0; i < args.length; i++) {
