@@ -156,8 +156,7 @@ test("resources design file is a SQLite raw file site with default security head
   const configText = await config.text();
 
   assert.equal(response.status, 200);
-  assert.doesNotMatch(text, /__bundler\/manifest/);
-  assert.match(text, /Infrastructure you own, composed from parts\./);
+  assert.match(text, /__bundler\/manifest/);
   assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
   assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'self' 'unsafe-inline' blob:/);
@@ -166,7 +165,6 @@ test("resources design file is a SQLite raw file site with default security head
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Design/);
   assert.match(configText, /raw file site/);
-  assert.match(configText, /expanded-bundle/);
   assert.match(configText, /resourcesco-standalone-20260617\.html/);
 });
 

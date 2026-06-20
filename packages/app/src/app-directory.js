@@ -301,7 +301,7 @@ async function renderConfigPage(app, request) {
 
 function sqliteSiteConfig(db, subdomain) {
   if (!db) return null;
-  const file = db.prepare("SELECT subdomain, title, file_path AS filePath, content_type AS contentType, csp, clear_site_data AS clearSiteData, render_mode AS renderMode FROM site_files WHERE subdomain = ?").get(subdomain);
+  const file = db.prepare("SELECT subdomain, title, file_path AS filePath, content_type AS contentType, csp, clear_site_data AS clearSiteData FROM site_files WHERE subdomain = ?").get(subdomain);
   if (file) {
     return {
       app: {
