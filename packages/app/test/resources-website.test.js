@@ -165,8 +165,7 @@ test("resources design file is a SQLite raw file site with default security head
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Design/);
   assert.match(configText, /raw site/);
-  assert.match(configText, /persistentLocalStorage/);
-  assert.match(configText, /true/);
+  assert.doesNotMatch(configText, /clearSiteData/);
   assert.match(configText, /resourcesco-standalone-20260617\.html/);
 });
 
