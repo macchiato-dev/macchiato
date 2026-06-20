@@ -129,7 +129,7 @@ test("apps directory lists available app subdomains", async (t) => {
   assert.match(text, /resources-co\.localhost/);
   assert.match(text, /resources-website\.localhost/);
   assert.match(text, /resources-design\.localhost/);
-  assert.match(text, /raw file site/);
+  assert.match(text, /raw site/);
   assert.match(text, /dom-use-todos\.localhost/);
   assert.match(text, /href="http:\/\/apps\.localhost:\d+\/config\/resources-co"/);
   assert.match(text, /href="http:\/\/apps\.localhost:\d+\/config\/resources-design"/);
@@ -164,7 +164,9 @@ test("resources design file is a SQLite raw file site with default security head
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Design/);
-  assert.match(configText, /raw file site/);
+  assert.match(configText, /raw site/);
+  assert.match(configText, /persistentLocalStorage/);
+  assert.match(configText, /false/);
   assert.match(configText, /resourcesco-standalone-20260617\.html/);
 });
 

@@ -94,7 +94,7 @@ function sqliteSiteRows(db) {
   if (!db) return [];
   const builtinSubdomains = new Set(visibleBuiltinApps().map((app) => app.subdomain));
   return [
-    ...db.prepare("SELECT subdomain, title, 'raw file site' AS kind, file_path AS source FROM site_files").all(),
+    ...db.prepare("SELECT subdomain, title, 'raw site' AS kind, file_path AS source FROM site_files").all(),
     ...db.prepare("SELECT subdomain, title, 'sqlite page' AS kind, 'site_pages' AS source FROM site_pages").all(),
     ...db.prepare("SELECT DISTINCT subdomain, subdomain AS title, 'sqlite routes' AS kind, 'site_routes' AS source FROM site_routes").all(),
     ...db.prepare("SELECT subdomain, subdomain AS title, 'directory site' AS kind, directory AS source FROM sites").all(),
@@ -307,9 +307,20 @@ function sqliteSiteConfig(db, subdomain) {
       app: {
         name: file.title || file.subdomain,
         subdomain: file.subdomain,
-        kind: "raw file site",
-        description: "SQLite configured raw file site.",
-        file,
+        kind: "raw site",
+        description: "SQLite configured raw site.",
+        mapping: {
+          subdomain: file.subdomain,
+          file: file.filePath,
+        },
+        storage: {
+          persistentLocalStorage: false,
+          clearSiteData: file.clearSiteData,
+        },
+        response: {
+          contentType: file.contentType,
+          csp: file.csp,
+        },
       },
       runtime: {
         directory: true,
