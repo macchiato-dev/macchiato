@@ -7,6 +7,7 @@
         {
           "oneOf": [
             "$brand",
+            "$project-identity",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
@@ -18,6 +19,11 @@
     },
     "brand": {
       "element": "header.box.brand",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["nav"]
+    },
+    "project-identity": {
+      "element": "header.box.project-identity",
       "attrs": ["class", "data-screen-label"],
       "children": ["nav"]
     },
@@ -155,6 +161,7 @@
         {
           "oneOf": [
             "$brand",
+            "$project-identity",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",

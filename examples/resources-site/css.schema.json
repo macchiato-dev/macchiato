@@ -354,6 +354,33 @@
         }
       }
     },
+    "project-identity-block": {
+      "element": "header.box.project-identity",
+      "properties": {
+        "font-size": {
+          "$ref": "fontSize"
+        },
+        "font-weight": {
+          "$ref": "fontWeight"
+        },
+        "letter-spacing": {
+          "$ref": "letterSpacing"
+        },
+        "line-height": {
+          "$ref": "lineHeight"
+        },
+        "overflow-wrap": {
+          "enum": [
+            "normal",
+            "break-word",
+            "anywhere"
+          ]
+        },
+        "text-decoration": {
+          "$ref": "textDecoration"
+        }
+      }
+    },
     "navigation-block": {
       "element": "nav.box.nav",
       "properties": {
@@ -624,6 +651,7 @@
     "layout",
     "box-block",
     "brand-block",
+    "project-identity-block",
     "navigation-block",
     "content-block",
     "project-summary-block",
