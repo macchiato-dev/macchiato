@@ -11,6 +11,7 @@ import { getSiteRoute, hasSiteRoutes, initSiteDb, renderSiteRoute } from "@macch
 import { StyleUse } from "@macchiato-dev/style-use";
 import { appDirectoryHandler } from "./app-directory.js";
 import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
+import { fileAppHandler } from "./file-app.js";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
 const args = "Deno" in globalThis
@@ -93,16 +94,41 @@ db.exec(`
     sandboxed INTEGER NOT NULL DEFAULT 1
   )
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS site_files (
+    subdomain TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT '',
+    file_path TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT '',
+    csp TEXT NOT NULL DEFAULT '',
+    clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"'
+  )
+`);
 initFontCache(db);
 initSiteDb(db);
 setupBuiltinApps(db);
 seedResourcesSite(db);
+db.prepare(`
+  INSERT OR IGNORE INTO site_files
+    (subdomain, title, file_path, content_type)
+  VALUES (?, ?, ?, ?)
+`).run(
+  "resources-design",
+  "Resources.co Design",
+  join(resolve(new URL("../../..", import.meta.url).pathname), "resourcesco-standalone-20260617.html"),
+  "text/html; charset=utf-8",
+);
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
 const getSchema = db.prepare("SELECT json FROM schemas WHERE name = ?");
 const getSitePage = db.prepare(`
   SELECT subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed
   FROM site_pages
+  WHERE subdomain = ?
+`);
+const getSiteFile = db.prepare(`
+  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp, clear_site_data AS clearSiteData
+  FROM site_files
   WHERE subdomain = ?
 `);
 
@@ -328,7 +354,7 @@ async function route(request) {
 
   const builtinApp = findBuiltinApp(subdomain);
   if (builtinApp?.directory === false) {
-    return appDirectoryHandler(request);
+    return appDirectoryHandler(request, { db });
   }
   if (builtinApp?.handler) {
     return builtinApp.handler(request, builtinApp);
@@ -349,6 +375,20 @@ async function route(request) {
   }
   if (page) {
     return new Response("Not found", { status: 404 });
+  }
+
+  const fileSite = getSiteFile.get(subdomain);
+  if (fileSite) {
+    return fileAppHandler(request, {
+      name: fileSite.title || fileSite.subdomain,
+      subdomain: fileSite.subdomain,
+      file: {
+        path: fileSite.path,
+        contentType: fileSite.contentType,
+        csp: fileSite.csp,
+        clearSiteData: fileSite.clearSiteData,
+      },
+    });
   }
 
   const row = getSite.get(subdomain);

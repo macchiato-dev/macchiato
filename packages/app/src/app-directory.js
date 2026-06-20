@@ -90,22 +90,50 @@ async function appConfig(app) {
   });
 }
 
-function renderAppDirectory(request) {
-  const rows = visibleBuiltinApps().map((app) => {
-    const href = appHref(app, request.url);
-    const config = configHref(app, request.url);
-    return `<article class="app-row">
+function sqliteSiteRows(db) {
+  if (!db) return [];
+  const builtinSubdomains = new Set(visibleBuiltinApps().map((app) => app.subdomain));
+  return [
+    ...db.prepare("SELECT subdomain, title, 'raw file site' AS kind, file_path AS source FROM site_files").all(),
+    ...db.prepare("SELECT subdomain, title, 'sqlite page' AS kind, 'site_pages' AS source FROM site_pages").all(),
+    ...db.prepare("SELECT DISTINCT subdomain, subdomain AS title, 'sqlite routes' AS kind, 'site_routes' AS source FROM site_routes").all(),
+    ...db.prepare("SELECT subdomain, subdomain AS title, 'directory site' AS kind, directory AS source FROM sites").all(),
+  ].filter((site) => !builtinSubdomains.has(site.subdomain))
+    .sort((a, b) => String(a.subdomain).localeCompare(String(b.subdomain)));
+}
+
+function renderAppRow({ name, subdomain, kind, description, href, config }) {
+  return `<article class="app-row">
       <div>
-        <h2><a href="${escapeHtml(href)}">${escapeHtml(app.name)}</a></h2>
-        <p>${escapeHtml(app.description)}</p>
+        <h2><a href="${escapeHtml(href)}">${escapeHtml(name)}</a></h2>
+        <p>${escapeHtml(description)}</p>
         <a class="config-link" href="${escapeHtml(config)}">View configuration</a>
       </div>
       <div class="meta">
-        <span>${escapeHtml(app.kind)}</span>
-        <code>${escapeHtml(app.subdomain)}.localhost</code>
+        <span>${escapeHtml(kind)}</span>
+        <code>${escapeHtml(subdomain)}.localhost</code>
       </div>
     </article>`;
-  }).join("");
+}
+
+function renderAppDirectory(request, { db } = {}) {
+  const builtinRows = visibleBuiltinApps().map((app) => renderAppRow({
+    name: app.name,
+    subdomain: app.subdomain,
+    kind: app.kind,
+    description: app.description,
+    href: appHref(app, request.url),
+    config: configHref(app, request.url),
+  }));
+  const siteRows = sqliteSiteRows(db).map((site) => renderAppRow({
+    name: site.title || site.subdomain,
+    subdomain: site.subdomain,
+    kind: site.kind,
+    description: `SQLite configured ${site.kind} from ${site.source}.`,
+    href: appHref(site, request.url),
+    config: configHref(site, request.url),
+  }));
+  const rows = [...builtinRows, ...siteRows].join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -271,19 +299,96 @@ async function renderConfigPage(app, request) {
 </html>`;
 }
 
-export async function appDirectoryHandler(request) {
+function sqliteSiteConfig(db, subdomain) {
+  if (!db) return null;
+  const file = db.prepare("SELECT subdomain, title, file_path AS filePath, content_type AS contentType, csp, clear_site_data AS clearSiteData FROM site_files WHERE subdomain = ?").get(subdomain);
+  if (file) {
+    return {
+      app: {
+        name: file.title || file.subdomain,
+        subdomain: file.subdomain,
+        kind: "raw file site",
+        description: "SQLite configured raw file site.",
+        file,
+      },
+      runtime: {
+        directory: true,
+        handler: "[Function fileAppHandler]",
+      },
+      schemas: {},
+    };
+  }
+  const page = db.prepare("SELECT subdomain, title, sandboxed FROM site_pages WHERE subdomain = ?").get(subdomain);
+  if (page) {
+    return { app: { ...page, kind: "sqlite page" }, runtime: { directory: true }, schemas: {} };
+  }
+  const route = db.prepare("SELECT DISTINCT subdomain FROM site_routes WHERE subdomain = ?").get(subdomain);
+  if (route) {
+    return { app: { ...route, kind: "sqlite routes" }, runtime: { directory: true }, schemas: {} };
+  }
+  const directory = db.prepare("SELECT subdomain, directory FROM sites WHERE subdomain = ?").get(subdomain);
+  if (directory) {
+    return { app: { ...directory, kind: "directory site" }, runtime: { directory: true }, schemas: {} };
+  }
+  return null;
+}
+
+async function renderSqliteConfigPage(config, request) {
+  const site = config.app;
+  const href = appHref(site, request.url);
+  const directory = directoryHref("/", request.url);
+  const json = JSON.stringify(config, null, 2);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(site.name || site.subdomain)} Configuration</title>
+<style>
+  body { margin: 0; color: #1b1e24; background: #f5f7fb; font-family: system-ui, sans-serif; }
+  main { width: min(1080px, calc(100vw - 40px)); margin: 42px auto; }
+  nav { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; font-size: 14px; }
+  a { color: #1638d9; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { margin: 0 0 8px; font-size: 32px; letter-spacing: 0; }
+  p { margin: 0 0 22px; color: #586173; line-height: 1.5; }
+  pre { margin: 0; overflow: auto; padding: 18px; border: 1px solid #dce2ec; border-radius: 8px; color: #202632; background: #ffffff; box-shadow: 0 10px 28px rgba(25, 31, 38, 0.14); font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <nav>
+    <a href="${escapeHtml(directory)}">Apps</a>
+    <a href="${escapeHtml(href)}">Open ${escapeHtml(site.name || site.subdomain)}</a>
+  </nav>
+  <h1>${escapeHtml(site.name || site.subdomain)} Configuration</h1>
+  <p>${escapeHtml(site.description || `${site.kind} configured in SQLite.`)}</p>
+  <pre><code>${escapeHtml(json)}</code></pre>
+</main>
+</body>
+</html>`;
+}
+
+export async function appDirectoryHandler(request, options = {}) {
   const url = new URL(request.url);
   if (url.pathname === "/" || url.pathname === "/index.html") {
-    return new Response(renderAppDirectory(request), {
+    return new Response(renderAppDirectory(request, options), {
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
 
   const match = url.pathname.match(/^\/config\/([^/]+)$/);
   if (match) {
-    const app = findBuiltinApp(decodeURIComponent(match[1]));
-    if (!app || app.directory === false) return new Response("Not found", { status: 404 });
-    return new Response(await renderConfigPage(app, request), {
+    const subdomain = decodeURIComponent(match[1]);
+    const app = findBuiltinApp(subdomain);
+    if (app && app.directory !== false) {
+      return new Response(await renderConfigPage(app, request), {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
+    const siteConfig = sqliteSiteConfig(options.db, subdomain);
+    if (!siteConfig) return new Response("Not found", { status: 404 });
+    return new Response(await renderSqliteConfigPage(siteConfig, request), {
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }

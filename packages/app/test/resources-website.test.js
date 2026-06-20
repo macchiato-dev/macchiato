@@ -128,13 +128,44 @@ test("apps directory lists available app subdomains", async (t) => {
   assert.match(text, /Macchiato Apps/);
   assert.match(text, /resources-co\.localhost/);
   assert.match(text, /resources-website\.localhost/);
+  assert.match(text, /resources-design\.localhost/);
+  assert.match(text, /raw file site/);
   assert.match(text, /dom-use-todos\.localhost/);
   assert.match(text, /href="http:\/\/apps\.localhost:\d+\/config\/resources-co"/);
+  assert.match(text, /href="http:\/\/apps\.localhost:\d+\/config\/resources-design"/);
 
   const rootResponse = await fetch(`http://127.0.0.1:${port}/`);
   const rootText = await rootResponse.text();
   assert.equal(rootResponse.status, 200);
   assert.match(rootText, /Macchiato Apps/);
+});
+
+test("resources design file is a SQLite raw file site with default security headers", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const response = await fetch(`http://resources-design.localhost:${port}/`);
+  const text = await response.text();
+  const config = await fetch(`http://apps.localhost:${port}/config/resources-design`);
+  const configText = await config.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /__bundler\/manifest/);
+  assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
+  assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
+  assert.match(response.headers.get("content-security-policy"), /script-src 'self' 'unsafe-inline' blob:/);
+  assert.equal(response.headers.get("clear-site-data"), '"cache", "cookies", "storage"');
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(config.status, 200);
+  assert.match(configText, /Resources\.co Design/);
+  assert.match(configText, /raw file site/);
+  assert.match(configText, /resourcesco-standalone-20260617\.html/);
 });
 
 test("apps directory exposes app configuration with schemas", async (t) => {
@@ -182,8 +213,43 @@ test("apps directory renders in a real browser", async (t) => {
 
   await page.goto(`http://apps.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: "Macchiato Apps" }).waitFor());
-  await assert.doesNotReject(page.getByRole("link", { name: "Resources.co" }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Resources.co", exact: true }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Resources.co Design" }).waitFor());
   assert.deepEqual(errors, []);
+  assert.deepEqual(badResponses, []);
+});
+
+test("resources design raw file site renders through the server in a real browser", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errors = [];
+  const consoleErrors = [];
+  const badResponses = [];
+
+  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("console", (msg) => {
+    if (msg.type() === "error") consoleErrors.push(msg.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
+  });
+
+  const response = await page.goto(`http://resources-design.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  assert.equal(response.status(), 200);
+  assert.equal(await page.locator("#__bundler_thumbnail").count(), 0);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(consoleErrors, []);
   assert.deepEqual(badResponses, []);
 });
 

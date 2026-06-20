@@ -45,6 +45,16 @@ export function withDb(fn, options = {}) {
       sandboxed INTEGER NOT NULL DEFAULT 1
     )
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS site_files (
+      subdomain TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      file_path TEXT NOT NULL,
+      content_type TEXT NOT NULL DEFAULT '',
+      csp TEXT NOT NULL DEFAULT '',
+      clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"'
+    )
+  `);
   initFontCache(db);
   initSiteDb(db);
   try {
