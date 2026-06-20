@@ -52,9 +52,15 @@ export function withDb(fn, options = {}) {
       file_path TEXT NOT NULL,
       content_type TEXT NOT NULL DEFAULT '',
       csp TEXT NOT NULL DEFAULT '',
-      clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"'
+      clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"',
+      render_mode TEXT NOT NULL DEFAULT 'raw'
     )
   `);
+  try {
+    db.exec("ALTER TABLE site_files ADD COLUMN render_mode TEXT NOT NULL DEFAULT 'raw'");
+  } catch {
+    // Existing databases already have this column.
+  }
   initFontCache(db);
   initSiteDb(db);
   try {

@@ -30,6 +30,52 @@ function contentTypeFor(filePath, configuredType) {
   return configuredType || CONTENT_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
 }
 
+function dataUrl(mime, bytes) {
+  return `data:${mime || "application/octet-stream"};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+function scriptJson(html, type) {
+  const escaped = type.replace("/", "\\/");
+  return html.match(new RegExp(`<script\\s+type="${escaped}"[^>]*>\\s*([\\s\\S]*?)\\s*<\\/script>`))?.[1] || "";
+}
+
+function expandStandaloneBundle(html) {
+  const manifestText = scriptJson(html, "__bundler/manifest");
+  const templateText = scriptJson(html, "__bundler/template");
+  if (!manifestText || !templateText) return html;
+
+  const manifest = JSON.parse(manifestText);
+  let template = JSON.parse(templateText);
+  const urls = {};
+  for (const [uuid, entry] of Object.entries(manifest)) {
+    if (entry.compressed) return html;
+    urls[uuid] = dataUrl(entry.mime, Buffer.from(entry.data, "base64"));
+  }
+  for (const [uuid, url] of Object.entries(urls)) {
+    template = template.split(uuid).join(url);
+  }
+  template = template.replace(/\s+integrity="[^"]*"/gi, "").replace(/\s+crossorigin="[^"]*"/gi, "");
+
+  const extResourcesText = scriptJson(html, "__bundler/ext_resources");
+  const extResources = extResourcesText ? JSON.parse(extResourcesText) : [];
+  const resourceMap = {};
+  for (const entry of extResources) {
+    if (urls[entry.uuid]) resourceMap[entry.id] = urls[entry.uuid];
+  }
+  const resourceScript = `<script>window.__resources = ${JSON.stringify(resourceMap).replaceAll("</script>", "<\\/script>")};</script>`;
+  const headOpen = template.match(/<head[^>]*>/i);
+  if (!headOpen) return `${resourceScript}${template}`;
+  const index = headOpen.index + headOpen[0].length;
+  return template.slice(0, index) + resourceScript + template.slice(index);
+}
+
+async function fileBody(file, method) {
+  if (method === "HEAD") return null;
+  const body = await readFile(file.path);
+  if (file.renderMode !== "expanded-bundle") return body;
+  return expandStandaloneBundle(body.toString("utf8"));
+}
+
 function securityHeaders(app) {
   const file = app.file || {};
   const headers = new Headers({
@@ -52,7 +98,7 @@ export async function fileAppHandler(request, app) {
     return new Response("File app is missing file.path", { status: 500 });
   }
   try {
-    const body = request.method === "HEAD" ? null : await readFile(app.file.path);
+    const body = await fileBody(app.file, request.method);
     return new Response(body, { headers: securityHeaders(app) });
   } catch (err) {
     return new Response(`File app error: ${err.message}`, {

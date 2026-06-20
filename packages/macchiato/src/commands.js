@@ -52,6 +52,7 @@ function parseFileSiteOpts(args) {
     contentType: "",
     csp: "",
     clearSiteData: '"cache", "cookies", "storage"',
+    renderMode: "raw",
   };
   const positional = [];
   for (let i = 0; i < args.length; i++) {
@@ -61,6 +62,7 @@ function parseFileSiteOpts(args) {
     else if (arg === "--csp") opts.csp = args[++i] ?? "";
     else if (arg === "--clear-site-data") opts.clearSiteData = args[++i] ?? opts.clearSiteData;
     else if (arg === "--no-clear-site-data") opts.clearSiteData = "";
+    else if (arg === "--render-mode") opts.renderMode = args[++i] ?? opts.renderMode;
     else positional.push(arg);
   }
   return { opts, positional };
@@ -117,7 +119,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
-      console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data]");
+      console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data] [--render-mode raw|expanded-bundle]");
       console.log("  site add-route <subdomain> <route> <html> <css> [--title <title>] [--csp <policy>] [--head <file>]");
       console.log("  site list                     List sites");
       console.log("  site remove <subdomain>       Remove a site");
@@ -252,16 +254,16 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const { opts, positional } = parseFileSiteOpts(args);
       const [subdomain, filePath] = positional;
       if (!subdomain || !filePath) {
-        console.log("Usage: site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data]");
+        console.log("Usage: site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>] [--clear-site-data <value>|--no-clear-site-data] [--render-mode raw|expanded-bundle]");
         return;
       }
 
       withDb((db) => {
         db.prepare(`
           INSERT OR REPLACE INTO site_files
-            (subdomain, title, file_path, content_type, csp, clear_site_data)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(subdomain, opts.title || subdomain, filePath, opts.contentType, opts.csp, opts.clearSiteData);
+            (subdomain, title, file_path, content_type, csp, clear_site_data, render_mode)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(subdomain, opts.title || subdomain, filePath, opts.contentType, opts.csp, opts.clearSiteData, opts.renderMode);
       }, dbOptions);
       console.log(`Added raw file site: ${subdomain} -> ${filePath}`);
     },

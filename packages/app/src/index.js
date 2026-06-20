@@ -101,22 +101,34 @@ db.exec(`
     file_path TEXT NOT NULL,
     content_type TEXT NOT NULL DEFAULT '',
     csp TEXT NOT NULL DEFAULT '',
-    clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"'
+    clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"',
+    render_mode TEXT NOT NULL DEFAULT 'raw'
   )
 `);
+try {
+  db.exec("ALTER TABLE site_files ADD COLUMN render_mode TEXT NOT NULL DEFAULT 'raw'");
+} catch {
+  // Existing databases already have this column.
+}
 initFontCache(db);
 initSiteDb(db);
 setupBuiltinApps(db);
 seedResourcesSite(db);
 db.prepare(`
-  INSERT OR IGNORE INTO site_files
-    (subdomain, title, file_path, content_type)
-  VALUES (?, ?, ?, ?)
+  INSERT INTO site_files
+    (subdomain, title, file_path, content_type, render_mode)
+  VALUES (?, ?, ?, ?, ?)
+  ON CONFLICT(subdomain) DO UPDATE SET
+    title = excluded.title,
+    file_path = excluded.file_path,
+    content_type = excluded.content_type,
+    render_mode = excluded.render_mode
 `).run(
   "resources-design",
   "Resources.co Design",
   join(resolve(new URL("../../..", import.meta.url).pathname), "resourcesco-standalone-20260617.html"),
   "text/html; charset=utf-8",
+  "expanded-bundle",
 );
 
 const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
@@ -127,7 +139,7 @@ const getSitePage = db.prepare(`
   WHERE subdomain = ?
 `);
 const getSiteFile = db.prepare(`
-  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp, clear_site_data AS clearSiteData
+  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp, clear_site_data AS clearSiteData, render_mode AS renderMode
   FROM site_files
   WHERE subdomain = ?
 `);
@@ -387,6 +399,7 @@ async function route(request) {
         contentType: fileSite.contentType,
         csp: fileSite.csp,
         clearSiteData: fileSite.clearSiteData,
+        renderMode: fileSite.renderMode,
       },
     });
   }
