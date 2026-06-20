@@ -101,9 +101,14 @@ db.exec(`
     file_path TEXT NOT NULL,
     content_type TEXT NOT NULL DEFAULT '',
     csp TEXT NOT NULL DEFAULT '',
-    clear_site_data TEXT NOT NULL DEFAULT '"cache", "cookies", "storage"'
+    clear_site_data TEXT NOT NULL DEFAULT ''
   )
 `);
+db.prepare(`
+  UPDATE site_files
+  SET clear_site_data = ''
+  WHERE clear_site_data = ?
+`).run('"cache", "cookies", "storage"');
 initFontCache(db);
 initSiteDb(db);
 setupBuiltinApps(db);

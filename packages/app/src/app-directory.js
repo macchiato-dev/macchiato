@@ -314,8 +314,8 @@ function sqliteSiteConfig(db, subdomain) {
           file: file.filePath,
         },
         storage: {
-          persistentLocalStorage: false,
-          clearSiteData: file.clearSiteData,
+          persistentLocalStorage: !file.clearSiteData,
+          clearSiteData: file.clearSiteData || null,
         },
         response: {
           contentType: file.contentType,

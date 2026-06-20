@@ -24,7 +24,7 @@ export const DEFAULT_FILE_APP_CSP = [
   "worker-src 'self' blob:",
 ].join("; ");
 
-export const DEFAULT_CLEAR_SITE_DATA = '"cache", "cookies", "storage"';
+export const DEFAULT_CLEAR_SITE_DATA = "";
 
 function contentTypeFor(filePath, configuredType) {
   return configuredType || CONTENT_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
