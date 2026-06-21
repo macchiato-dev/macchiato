@@ -1,0 +1,115 @@
+{
+  "definitions": {
+    "matrix-app": {
+      "element": "main.matrix-app",
+      "attrs": ["class", "id"],
+      "children": [
+        {
+          "oneOf": [
+            "$matrix-entry",
+            "$matrix-board"
+          ]
+        },
+        "script"
+      ]
+    },
+    "matrix-entry": {
+      "element": "section.matrix-entry",
+      "attrs": ["class", "data-view"],
+      "children": ["div"]
+    },
+    "matrix-board": {
+      "element": "section.matrix-board",
+      "attrs": ["class", "data-view", "hidden"],
+      "children": ["div"]
+    },
+    "matrix-grid": {
+      "element": "table.task-grid",
+      "attrs": ["class", "aria-label"],
+      "children": ["thead", "tbody"]
+    },
+    "matrix-actions": {
+      "element": "button.restart-button",
+      "attrs": ["class", "id", "type", "aria-label", "title"],
+      "children": ["#text"]
+    }
+  },
+  "nodes": {
+    "body": {
+      "attrs": [],
+      "children": ["div", "$matrix-app"]
+    },
+    "main": {
+      "attrs": ["class", "id"],
+      "children": ["$matrix-entry", "$matrix-board"]
+    },
+    "section": {
+      "attrs": ["class", "data-view", "hidden"],
+      "children": ["div"]
+    },
+    "div": {
+      "attrs": ["class", "id"],
+      "children": ["$matrix-app", "p", "h1", "textarea", "button", "div", "$matrix-grid", "script"]
+    },
+    "p": {
+      "attrs": ["class"],
+      "children": ["#text"]
+    },
+    "h1": {
+      "attrs": ["id"],
+      "children": ["#text"]
+    },
+    "textarea": {
+      "attrs": ["class", "id", "placeholder"],
+      "children": ["#text"]
+    },
+    "button": {
+      "attrs": ["class", "id", "type", "aria-label", "title", "data-state", "aria-pressed", "data-node-id"],
+      "events": ["click"],
+      "children": ["#text"]
+    },
+    "table": {
+      "attrs": ["class", "aria-label"],
+      "children": ["thead", "tbody"]
+    },
+    "thead": {
+      "attrs": [],
+      "children": ["tr"]
+    },
+    "tbody": {
+      "attrs": [],
+      "children": ["tr"]
+    },
+    "tr": {
+      "attrs": [],
+      "children": ["th", "td"]
+    },
+    "th": {
+      "attrs": [],
+      "children": ["#text"]
+    },
+    "td": {
+      "attrs": [],
+      "children": ["button"]
+    },
+    "script": {
+      "attrs": ["src", "defer"],
+      "urls": {
+        "src": "^/app\\.js$"
+      },
+      "children": []
+    }
+  },
+  "urls": false,
+  "maxDepth": 12,
+  "limits": {
+    "maxTextLength": 500,
+    "maxAttributeNameLength": 64,
+    "maxAttributeValueLength": 500,
+    "maxAttributes": 8,
+    "maxNodes": 800
+  },
+  "content": {
+    "rejectPattern": "[<>]"
+  }
+}
