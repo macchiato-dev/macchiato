@@ -18,6 +18,22 @@ async function getModule() {
   return wasmModule;
 }
 
+function formatQuickJsError(value) {
+  if (value && typeof value === "object") {
+    const parts = [];
+    if (value.name) parts.push(String(value.name));
+    if (value.message) parts.push(String(value.message));
+    if (value.stack && !parts.length) parts.push(String(value.stack));
+    if (parts.length) return parts.join(": ");
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 export class Sandbox {
   /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
   runtime = null;
@@ -52,7 +68,7 @@ export class Sandbox {
     if (result.error) {
       const err = this.context.dump(result.error);
       result.error.dispose();
-      return { ok: false, error: String(err) };
+      return { ok: false, error: formatQuickJsError(err) };
     }
 
     const value = this.context.dump(result.value);
@@ -68,7 +84,7 @@ export class Sandbox {
     if (result.error) {
       const err = this.context.dump(result.error);
       result.error.dispose();
-      throw new Error(String(err));
+      throw new Error(formatQuickJsError(err));
     }
     result.value.dispose();
   }
@@ -81,7 +97,7 @@ export class Sandbox {
     if (result.error) {
       const err = this.context.dump(result.error);
       result.error.dispose();
-      throw new Error(String(err));
+      throw new Error(formatQuickJsError(err));
     }
     result.value.dispose();
   }
@@ -96,7 +112,7 @@ export class Sandbox {
     if (result.error) {
       const err = this.context.dump(result.error);
       result.error.dispose();
-      throw new Error(String(err));
+      throw new Error(formatQuickJsError(err));
     }
     const text = String(this.context.dump(result.value));
     result.value.dispose();

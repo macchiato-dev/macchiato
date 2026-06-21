@@ -1,0 +1,169 @@
+{
+  "values": {
+    "color": {
+      "pattern": "^(#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|var\\(--[a-z0-9-]+\\)|transparent|inherit|currentColor)$"
+    },
+    "background": {
+      "pattern": "^(var\\(--[a-z0-9-]+\\)|transparent|none|#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|(?:(?:radial|linear)-gradient\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)(?:,\\s*)?)+)$"
+    },
+    "length": {
+      "pattern": "^(0|auto|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))$"
+    },
+    "spacing": {
+      "pattern": "^(?:0|auto|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))(?:\\s+(?:0|auto|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))){0,3}$"
+    },
+    "border": {
+      "pattern": "^(none|\\d+(?:\\.\\d+)?px\\s+solid\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|var\\(--[a-z0-9-]+\\)|transparent))$"
+    },
+    "radius": {
+      "pattern": "^(0|50%|999px|var\\(--[a-z0-9-]+\\)|\\d+(?:\\.\\d+)?(?:px|rem|%))$"
+    },
+    "shadow": {
+      "pattern": "^(none|var\\(--[a-z0-9-]+\\)|(?:inset\\s+)?(?:0|\\d+(?:\\.\\d+)?px)\\s+(?:0|\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\))(?:,\\s*(?:inset\\s+)?(?:0|\\d+(?:\\.\\d+)?px)\\s+(?:0|\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)))*)$"
+    },
+    "font": {
+      "pattern": "^[A-Za-z0-9.,%\\s()/\\-\"']+$"
+    },
+    "number": {
+      "pattern": "^(0|1|0?\\.\\d+)$"
+    },
+    "transition": {
+      "pattern": "^[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out)(?:,\\s*[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out))*$"
+    }
+  },
+  "definitions": {
+    "matrix-app-block": {
+      "element": "main.matrix-app",
+      "properties": {
+        "width": { "$ref": "length" },
+        "min-height": { "$ref": "length" },
+        "margin": { "$ref": "spacing" },
+        "padding": { "$ref": "spacing" },
+        "display": { "enum": ["grid", "block", "flex"] },
+        "align-items": { "enum": ["center", "start", "stretch"] }
+      }
+    },
+    "matrix-entry-block": {
+      "element": "section.matrix-entry",
+      "properties": {
+        "width": { "$ref": "length" },
+        "display": { "enum": ["grid", "block", "flex", "none"] },
+        "grid-template-columns": { "pattern": "^[A-Za-z0-9.,%\\s()+\\-/]+$" },
+        "gap": { "$ref": "spacing" },
+        "padding": { "$ref": "spacing" },
+        "border": { "$ref": "border" },
+        "border-radius": { "$ref": "radius" },
+        "background": { "$ref": "background" },
+        "box-shadow": { "$ref": "shadow" }
+      }
+    },
+    "matrix-board-block": {
+      "element": "section.matrix-board",
+      "properties": {
+        "width": { "$ref": "length" },
+        "display": { "enum": ["grid", "block", "flex", "none"] },
+        "gap": { "$ref": "spacing" },
+        "padding": { "$ref": "spacing" },
+        "border": { "$ref": "border" },
+        "border-radius": { "$ref": "radius" },
+        "background": { "$ref": "background" },
+        "box-shadow": { "$ref": "shadow" }
+      }
+    },
+    "matrix-actions-block": {
+      "element": "button.restart-button",
+      "properties": {
+        "appearance": { "enum": ["none", "auto"] },
+        "width": { "$ref": "length" },
+        "height": { "$ref": "length" },
+        "border": { "$ref": "border" },
+        "border-radius": { "$ref": "radius" },
+        "color": { "$ref": "color" },
+        "background": { "$ref": "background" },
+        "cursor": { "enum": ["pointer", "default"] },
+        "font-size": { "$ref": "length" },
+        "line-height": { "pattern": "^(1|\\d+(?:\\.\\d+)?)$" }
+      }
+    }
+  },
+  "use-styles": [
+    "matrix-app-block",
+    "matrix-entry-block",
+    "matrix-board-block",
+    "matrix-actions-block"
+  ],
+  "properties": {
+    "--bg": { "$ref": "color" },
+    "--bg-2": { "$ref": "color" },
+    "--panel": { "$ref": "color" },
+    "--panel-strong": { "$ref": "color" },
+    "--line": { "$ref": "color" },
+    "--text": { "$ref": "color" },
+    "--muted": { "$ref": "color" },
+    "--accent": { "$ref": "color" },
+    "--accent-2": { "$ref": "color" },
+    "--todo": { "$ref": "color" },
+    "--done": { "$ref": "color" },
+    "--shadow": { "$ref": "shadow" },
+    "box-sizing": { "enum": ["border-box"] },
+    "min-height": { "$ref": "length" },
+    "height": { "$ref": "length" },
+    "width": { "$ref": "length" },
+    "min-width": { "$ref": "length" },
+    "max-width": { "$ref": "length" },
+    "margin": { "$ref": "spacing" },
+    "padding": { "$ref": "spacing" },
+    "inset": { "$ref": "spacing" },
+    "resize": { "enum": ["vertical", "none"] },
+    "overflow": { "enum": ["auto", "hidden", "visible"] },
+    "border": { "$ref": "border" },
+    "border-collapse": { "enum": ["collapse", "separate"] },
+    "border-color": { "$ref": "color" },
+    "border-radius": { "$ref": "radius" },
+    "outline": {
+      "anyOf": [
+        { "enum": ["none"] },
+        { "$ref": "border" }
+      ]
+    },
+    "outline-offset": { "$ref": "length" },
+    "box-shadow": { "$ref": "shadow" },
+    "color": { "$ref": "color" },
+    "background": { "$ref": "background" },
+    "font": { "$ref": "font" },
+    "font-size": { "$ref": "length" },
+    "font-weight": { "pattern": "^(normal|bold|[1-9]00)$" },
+    "letter-spacing": { "pattern": "^\\d+(?:\\.\\d+)?em$" },
+    "line-height": { "pattern": "^(1|\\d+(?:\\.\\d+)?)$" },
+    "text-align": { "enum": ["left", "center", "right"] },
+    "text-transform": { "enum": ["uppercase", "none"] },
+    "display": { "enum": ["block", "grid", "flex", "none", "table", "table-row", "table-cell"] },
+    "grid-template-columns": { "pattern": "^[A-Za-z0-9.,%\\s()+\\-/]+$" },
+    "align-items": { "enum": ["center", "start", "stretch"] },
+    "align-content": { "enum": ["center", "start", "stretch"] },
+    "justify-content": { "enum": ["space-between", "center", "start"] },
+    "gap": { "$ref": "spacing" },
+    "flex": { "pattern": "^(none|0\\s+0\\s+auto|1)$" },
+    "position": { "enum": ["fixed", "relative", "static"] },
+    "pointer-events": { "enum": ["none", "auto"] },
+    "content": { "enum": ["\"\""] },
+    "cursor": { "enum": ["pointer", "default", "text"] },
+    "opacity": { "$ref": "number" },
+    "transition": { "$ref": "transition" }
+  },
+  "urls": false,
+  "imports": false,
+  "selectors": {
+    "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_]+$"
+  },
+  "limits": {
+    "maxStylesheetLength": 14000,
+    "maxPropertyLength": 64,
+    "maxValueLength": 260,
+    "maxUrlLength": 80,
+    "maxImports": 0
+  },
+  "content": {
+    "rejectPattern": "<"
+  }
+}

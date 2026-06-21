@@ -30,6 +30,11 @@ export class LocalStorageBackend {
     this.backend().setItem(String(key), String(value));
   }
 
+  removeItem(key) {
+    this.assertEnabled(key);
+    this.backend().removeItem(String(key));
+  }
+
   backend() {
     if (!this.storage) this.storage = globalThis.localStorage;
     return this.storage;
@@ -219,6 +224,11 @@ export class DomUseHostCapability {
     return {};
   }
 
+  storageRemove(key) {
+    this.storage.removeItem(key);
+    return {};
+  }
+
   dispatch(message) {
     switch (message.op) {
       case "resetDom": return this.resetDom();
@@ -243,6 +253,7 @@ export class DomUseHostCapability {
       case "endEvent": return this.endEvent();
       case "storageGet": return this.storageGet(message.key);
       case "storageSet": return this.storageSet(message.key, message.value);
+      case "storageRemove": return this.storageRemove(message.key);
       default: throw new Error(`Unsupported host operation: ${message.op}`);
     }
   }

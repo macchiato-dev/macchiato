@@ -1,0 +1,159 @@
+<div id="app"></div>
+<script type="module">
+const STORAGE_KEY = "todo-matrix-state";
+const SAMPLE = [
+  ["Task", "Design", "Build", "Review", "Ship"],
+  ["Header", "", "", "", ""],
+  ["Schemas", "", "", "", ""],
+  ["Playwright", "", "", "", ""],
+  ["Commit", "", "", "", ""],
+].map((row) => row.join("\t")).join("\n");
+
+let model = load();
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function splitLine(line, delimiter) {
+  return line.split(delimiter).map((cell) => cell.trim());
+}
+
+function parseMatrix(text) {
+  const lines = String(text || SAMPLE).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
+  const rows = lines.map((line) => splitLine(line, delimiter));
+  const width = Math.max(2, ...rows.map((row) => row.length));
+  while (rows.length < 2) rows.push([]);
+  rows.forEach((row) => { while (row.length < width) row.push(""); });
+  const columns = rows[0].slice(1).map((value, index) => value || `Column ${index + 1}`);
+  const rowHeaders = rows.slice(1).map((row, index) => row[0] || `Row ${index + 1}`);
+  const cells = rowHeaders.map((_, rowIndex) => columns.map((__, columnIndex) => {
+    const value = rows[rowIndex + 1][columnIndex + 1].toLowerCase();
+    return value === "x" || value === "1" || value === "yes" || value === "done";
+  }));
+  return { columns, rowHeaders, cells };
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved && saved.columns && saved.rowHeaders && saved.cells) return saved;
+  } catch (_err) {}
+  return null;
+}
+
+function save() {
+  if (model) localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+}
+
+function label(row, column, done) {
+  return `${row} / ${column}: ${done ? "complete" : "open"}`;
+}
+
+function renderEntry(root) {
+  const shell = el("main", "matrix-app");
+  const entry = el("section", "matrix-entry");
+  entry.setAttribute("data-view", "entry");
+
+  const copy = el("div", "entry-copy");
+  copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
+  copy.appendChild(el("h1", "", "Paste a grid"));
+  copy.appendChild(el("p", "", "Use tabs, or commas when the cells themselves do not contain commas. The first row and first column become headers."));
+
+  const panel = el("div", "entry-panel");
+  const textarea = el("textarea", "matrix-source");
+  textarea.id = "matrix-source";
+  textarea.setAttribute("placeholder", "Task\tDesign\tBuild\tShip\nHeader\t\t\t\nDocs\t\t\t");
+  textarea.value = SAMPLE;
+  const go = el("button", "go-button", "Go");
+  go.id = "go-button";
+  go.setAttribute("type", "button");
+  go.addEventListener("click", () => {
+    model = parseMatrix(go.value);
+    save();
+    render();
+  });
+  panel.appendChild(textarea);
+  panel.appendChild(go);
+
+  entry.appendChild(copy);
+  entry.appendChild(panel);
+  shell.appendChild(entry);
+  root.appendChild(shell);
+}
+
+function renderBoard(root) {
+  const shell = el("main", "matrix-app");
+  const board = el("section", "matrix-board");
+  board.setAttribute("data-view", "board");
+  const head = el("div", "board-head");
+  const copy = el("div", "");
+  copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
+  copy.appendChild(el("h1", "", `${model.rowHeaders.length} x ${model.columns.length}`));
+  const restart = el("button", "restart-button", "+");
+  restart.id = "restart-button";
+  restart.setAttribute("type", "button");
+  restart.setAttribute("aria-label", "Start over");
+  restart.setAttribute("title", "Start over");
+  restart.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEY);
+    model = null;
+    render();
+  });
+  head.appendChild(copy);
+  head.appendChild(restart);
+
+  const wrap = el("div", "matrix-wrap");
+  const table = el("table", "task-grid");
+  table.setAttribute("aria-label", "Todo matrix");
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  headRow.appendChild(document.createElement("th"));
+  model.columns.forEach((column) => headRow.appendChild(el("th", "", column)));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  model.rowHeaders.forEach((rowHeader, rowIndex) => {
+    const row = document.createElement("tr");
+    row.appendChild(el("th", "", rowHeader));
+    model.columns.forEach((column, columnIndex) => {
+      const td = document.createElement("td");
+      const done = Boolean(model.cells[rowIndex][columnIndex]);
+      const button = el("button", "cell-toggle");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-state", done ? "done" : "open");
+      button.setAttribute("aria-pressed", done ? "true" : "false");
+      button.setAttribute("aria-label", label(rowHeader, column, done));
+      button.setAttribute("title", label(rowHeader, column, done));
+      button.addEventListener("click", () => {
+        model.cells[rowIndex][columnIndex] = !model.cells[rowIndex][columnIndex];
+        save();
+        render();
+      });
+      td.appendChild(button);
+      row.appendChild(td);
+    });
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  board.appendChild(head);
+  board.appendChild(wrap);
+  shell.appendChild(board);
+  root.appendChild(shell);
+}
+
+function render() {
+  const root = document.getElementById("app");
+  root.innerHTML = "";
+  if (model) renderBoard(root);
+  else renderEntry(root);
+}
+
+render();
+</script>

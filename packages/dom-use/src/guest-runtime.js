@@ -128,6 +128,8 @@ class HostElement extends HostNode {
   set value(value) {
     this._value = String(value);
     if (this.tagName === "input") this.setAttribute("value", this._value);
+    else if (this.tagName === "textarea") this.textContent = this._value;
+    else if (this.tagName === "textarea") this.textContent = this._value;
   }
 
   get style() {
@@ -223,6 +225,9 @@ const localStorage = {
   },
   setItem(key, value) {
     host("storageSet", { key, value: String(value) });
+  },
+  removeItem(key) {
+    host("storageRemove", { key });
   },
 };
 

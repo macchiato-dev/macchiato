@@ -3,6 +3,7 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
+import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { packageBrowserFileAccess, packageBrowserHandler } from "./package-browser.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
@@ -90,6 +91,29 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM",
       hostCapabilities: ["dom-use", "style-use", "html-use"],
+    },
+  },
+  {
+    name: "Todo Matrix",
+    subdomain: "todo-matrix",
+    kind: "sandboxed app",
+    description: "QuickJS todo matrix with schema-bound rendering and localStorage state.",
+    handler: todoMatrixHandler,
+    sourceFiles: [
+      "examples/todo-matrix/handler.js",
+      "examples/todo-matrix/client.js",
+      "examples/todo-matrix/source.html",
+      "examples/todo-matrix/styles.css",
+      "examples/todo-matrix/dom.schema.json",
+      "examples/todo-matrix/css.schema.json",
+    ],
+    schemas: [
+      { name: "dom", path: join(examplesRoot, "todo-matrix", "dom.schema.json") },
+      { name: "css", path: join(examplesRoot, "todo-matrix", "css.schema.json") },
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM",
+      hostCapabilities: ["dom-use", "style-use", "html-use", "localStorage"],
     },
   },
   {

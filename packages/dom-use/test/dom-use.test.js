@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DomUse } from "../src/index.js";
-import { DomUseHostCapability } from "../src/bridge.js";
+import { DomUseHostCapability, LocalStorageBackend } from "../src/bridge.js";
 
 function articleDomUse(schema = {}) {
   return new DomUse({
@@ -387,4 +387,23 @@ test("host bridge preserves event lifecycle across nested event scopes", () => {
   assert.equal(capability.document.gas.lifecycle, "idle");
   assert.equal(capability.document.gas.capacity, 20);
   assert.equal(capability.document.gas.available, 5);
+});
+
+test("localStorage bridge removes allowed keys", () => {
+  const memory = new Map();
+  const storage = new LocalStorageBackend({
+    mode: "passthrough",
+    keys: ["matrix"],
+    storage: {
+      getItem: (key) => memory.get(key) || null,
+      setItem: (key, value) => memory.set(key, value),
+      removeItem: (key) => memory.delete(key),
+    },
+  });
+
+  storage.setItem("matrix", "value");
+  assert.equal(storage.getItem("matrix"), "value");
+  storage.removeItem("matrix");
+  assert.equal(storage.getItem("matrix"), null);
+  assert.throws(() => storage.removeItem("other"), /localStorage key not allowed/);
 });
