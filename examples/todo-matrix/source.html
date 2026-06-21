@@ -113,9 +113,6 @@ function renderBoard(root) {
   const board = el("section", "matrix-board");
   board.setAttribute("data-view", "board");
   const head = el("div", "board-head");
-  const copy = el("div", "");
-  copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
-  copy.appendChild(el("h1", "", "Todo matrix"));
   const restart = el("button", "restart-button");
   restart.id = "restart-button";
   restart.setAttribute("type", "button");
@@ -133,7 +130,6 @@ function renderBoard(root) {
     model = null;
     render();
   });
-  head.appendChild(copy);
   head.appendChild(restart);
 
   const wrap = el("div", "matrix-wrap");
@@ -160,7 +156,6 @@ function renderBoard(root) {
       button.setAttribute("data-state", state);
       button.setAttribute("aria-pressed", state === "open" ? "false" : "true");
       button.setAttribute("aria-label", label(rowHeader, column, state));
-      button.setAttribute("title", label(rowHeader, column, state));
       button.addEventListener("click", () => {
         model.cells[rowIndex][columnIndex] = nextState(model.cells[rowIndex][columnIndex]);
         save();

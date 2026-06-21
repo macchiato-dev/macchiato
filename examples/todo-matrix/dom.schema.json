@@ -30,7 +30,12 @@
     },
     "matrix-actions": {
       "element": "button.restart-button",
-      "attrs": ["class", "id", "type", "aria-label", "title"],
+      "attrs": ["class", "id", "type", "aria-label", "title", "data-node-id"],
+      "children": ["#text", "span"]
+    },
+    "cell-toggle": {
+      "element": "button.cell-toggle",
+      "attrs": ["class", "type", "aria-label", "data-state", "aria-pressed", "data-node-id"],
       "children": ["#text"]
     }
   },
@@ -49,7 +54,7 @@
     },
     "div": {
       "attrs": ["class", "id", "aria-label"],
-      "children": ["$matrix-app", "p", "h1", "textarea", "button", "div", "span", "$matrix-grid", "script"]
+      "children": ["$matrix-app", "p", "h1", "textarea", "button", "$cell-toggle", "div", "span", "$matrix-grid", "script"]
     },
     "p": {
       "attrs": ["class"],
@@ -64,7 +69,7 @@
       "children": ["#text"]
     },
     "button": {
-      "attrs": ["class", "id", "type", "aria-label", "title", "data-state", "aria-pressed", "data-node-id"],
+      "attrs": ["class", "id", "type", "aria-label", "data-state", "aria-pressed", "data-node-id"],
       "events": ["click"],
       "children": ["#text", "span"]
     },

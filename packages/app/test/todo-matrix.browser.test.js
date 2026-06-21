@@ -106,6 +106,7 @@ test("todo-matrix runs in QuickJS and persists matrix state", { timeout: 60000 }
   assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "doing");
   assert.equal(await page.locator(".cell-toggle").first().getAttribute("aria-pressed"), "true");
   assert.match(await page.locator(".cell-toggle").first().getAttribute("aria-label"), /Header \/ Design: under construction/);
+  assert.equal(await page.locator(".cell-toggle").first().getAttribute("title"), null);
   await page.locator(".cell-toggle").first().click();
   assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "done");
   assert.match(await page.locator(".cell-toggle").first().getAttribute("aria-label"), /Header \/ Design: complete/);
