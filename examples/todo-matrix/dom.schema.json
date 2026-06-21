@@ -86,7 +86,7 @@
     },
     "th": {
       "attrs": [],
-      "children": ["#text"]
+      "children": ["#text", "span"]
     },
     "td": {
       "attrs": [],
@@ -98,6 +98,10 @@
         "src": "^/app\\.js$"
       },
       "children": []
+    },
+    "span": {
+      "attrs": ["class"],
+      "children": ["#text"]
     }
   },
   "urls": false,

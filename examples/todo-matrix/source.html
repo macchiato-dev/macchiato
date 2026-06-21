@@ -33,7 +33,9 @@ function parseMatrix(text) {
   const rowHeaders = rows.slice(1).map((row, index) => row[0] || `Row ${index + 1}`);
   const cells = rowHeaders.map((_, rowIndex) => columns.map((__, columnIndex) => {
     const value = rows[rowIndex + 1][columnIndex + 1].toLowerCase();
-    return value === "x" || value === "1" || value === "yes" || value === "done";
+    if (value === "x" || value === "1" || value === "yes" || value === "done" || value === "complete") return "done";
+    if (value === "/" || value === "wip" || value === "doing" || value === "construction" || value === "under construction") return "doing";
+    return "open";
   }));
   return { columns, rowHeaders, cells };
 }
@@ -50,8 +52,28 @@ function save() {
   if (model) localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
 }
 
-function label(row, column, done) {
-  return `${row} / ${column}: ${done ? "complete" : "open"}`;
+function normalizeState(value) {
+  if (value === true || value === "done") return "done";
+  if (value === "doing") return "doing";
+  return "open";
+}
+
+function nextState(value) {
+  const state = normalizeState(value);
+  if (state === "open") return "doing";
+  if (state === "doing") return "done";
+  return "open";
+}
+
+function stateLabel(value) {
+  const state = normalizeState(value);
+  if (state === "done") return "complete";
+  if (state === "doing") return "under construction";
+  return "open";
+}
+
+function label(row, column, state) {
+  return `${row} / ${column}: ${stateLabel(state)}`;
 }
 
 function renderEntry(root) {
@@ -94,7 +116,7 @@ function renderBoard(root) {
   const copy = el("div", "");
   copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
   copy.appendChild(el("h1", "", `${model.rowHeaders.length} x ${model.columns.length}`));
-  const restart = el("button", "restart-button", "+");
+  const restart = el("button", "restart-button");
   restart.id = "restart-button";
   restart.setAttribute("type", "button");
   restart.setAttribute("aria-label", "Start over");
@@ -113,25 +135,31 @@ function renderBoard(root) {
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.appendChild(document.createElement("th"));
-  model.columns.forEach((column) => headRow.appendChild(el("th", "", column)));
+  model.columns.forEach((column) => {
+    const th = document.createElement("th");
+    th.appendChild(el("span", "column-label", column));
+    headRow.appendChild(th);
+  });
   thead.appendChild(headRow);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
   model.rowHeaders.forEach((rowHeader, rowIndex) => {
     const row = document.createElement("tr");
-    row.appendChild(el("th", "", rowHeader));
+    const rowTh = document.createElement("th");
+    rowTh.appendChild(el("span", "row-label", rowHeader));
+    row.appendChild(rowTh);
     model.columns.forEach((column, columnIndex) => {
       const td = document.createElement("td");
-      const done = Boolean(model.cells[rowIndex][columnIndex]);
+      const state = normalizeState(model.cells[rowIndex][columnIndex]);
       const button = el("button", "cell-toggle");
       button.setAttribute("type", "button");
-      button.setAttribute("data-state", done ? "done" : "open");
-      button.setAttribute("aria-pressed", done ? "true" : "false");
-      button.setAttribute("aria-label", label(rowHeader, column, done));
-      button.setAttribute("title", label(rowHeader, column, done));
+      button.setAttribute("data-state", state);
+      button.setAttribute("aria-pressed", state === "open" ? "false" : "true");
+      button.setAttribute("aria-label", label(rowHeader, column, state));
+      button.setAttribute("title", label(rowHeader, column, state));
       button.addEventListener("click", () => {
-        model.cells[rowIndex][columnIndex] = !model.cells[rowIndex][columnIndex];
+        model.cells[rowIndex][columnIndex] = nextState(model.cells[rowIndex][columnIndex]);
         save();
         render();
       });
