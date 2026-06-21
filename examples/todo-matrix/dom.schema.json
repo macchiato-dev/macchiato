@@ -66,7 +66,7 @@
     "button": {
       "attrs": ["class", "id", "type", "aria-label", "title", "data-state", "aria-pressed", "data-node-id"],
       "events": ["click"],
-      "children": ["#text"]
+      "children": ["#text", "span"]
     },
     "table": {
       "attrs": ["class", "aria-label"],
@@ -100,7 +100,7 @@
       "children": []
     },
     "span": {
-      "attrs": ["class"],
+      "attrs": ["class", "aria-hidden"],
       "children": ["#text"]
     }
   },

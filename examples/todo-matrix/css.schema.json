@@ -7,7 +7,10 @@
       "pattern": "^(var\\(--[a-z0-9-]+\\)|transparent|none|#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|(?:(?:radial|linear|repeating-linear)-gradient\\([A-Za-z0-9#.,%\\s()+\\-/]+\\)(?:,\\s*)?)+)$"
     },
     "length": {
-      "pattern": "^(0|auto|max-content|min-content|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))$"
+      "pattern": "^(0|auto|fit-content|max-content|min-content|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))$"
+    },
+    "offset": {
+      "pattern": "^(0|auto|-?\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))$"
     },
     "spacing": {
       "pattern": "^(?:0|auto|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))(?:\\s+(?:0|auto|\\d+(?:\\.\\d+)?(?:px|rem|em|%|vw|vh|ch)|min\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|max\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|calc\\([A-Za-z0-9.,%\\s()+\\-/]+\\)|var\\(--[a-z0-9-]+\\))){0,3}$"
@@ -19,7 +22,7 @@
       "pattern": "^(0|50%|999px|var\\(--[a-z0-9-]+\\)|\\d+(?:\\.\\d+)?(?:px|rem|%))$"
     },
     "shadow": {
-      "pattern": "^(none|var\\(--[a-z0-9-]+\\)|(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\))(?:,\\s*(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)))*)$"
+      "pattern": "^(none|var\\(--[a-z0-9-]+\\)|(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|var\\(--[a-z0-9-]+\\))(?:,\\s*(?:inset\\s+)?(?:0|-?\\d+(?:\\.\\d+)?px)\\s+(?:0|-?\\d+(?:\\.\\d+)?px)(?:\\s+(?:0|-?\\d+(?:\\.\\d+)?px)){0,2}\\s+(?:#[0-9A-Fa-f]{3,8}|rgba?\\([0-9.,\\s]+\\)|var\\(--[a-z0-9-]+\\)))*)$"
     },
     "font": {
       "pattern": "^[A-Za-z0-9.,%\\s()/\\-\"']+$"
@@ -147,12 +150,14 @@
     "align-items": { "enum": ["center", "start", "stretch"] },
     "align-content": { "enum": ["center", "start", "stretch"] },
     "justify-content": { "enum": ["space-between", "center", "start"] },
+    "justify-self": { "enum": ["center", "start", "stretch"] },
     "gap": { "$ref": "spacing" },
     "flex": { "pattern": "^(none|0\\s+0\\s+auto|1)$" },
     "position": { "enum": ["absolute", "fixed", "relative", "static"] },
-    "left": { "$ref": "length" },
-    "right": { "$ref": "length" },
-    "top": { "$ref": "length" },
+    "left": { "$ref": "offset" },
+    "right": { "$ref": "offset" },
+    "top": { "$ref": "offset" },
+    "bottom": { "$ref": "offset" },
     "table-layout": { "enum": ["fixed", "auto"] },
     "vertical-align": { "enum": ["baseline", "bottom", "middle", "top"] },
     "white-space": { "enum": ["normal", "nowrap"] },

@@ -121,6 +121,11 @@ function renderBoard(root) {
   restart.setAttribute("type", "button");
   restart.setAttribute("aria-label", "Start over");
   restart.setAttribute("title", "Start over");
+  const restartIcon = el("span", "restart-icon");
+  restartIcon.setAttribute("aria-hidden", "true");
+  const restartTip = el("span", "restart-tip", "Start over");
+  restart.appendChild(restartIcon);
+  restart.appendChild(restartTip);
   restart.addEventListener("click", () => {
     localStorage.removeItem(STORAGE_KEY);
     model = null;
