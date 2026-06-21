@@ -8,7 +8,6 @@ import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 import { StyleUse } from "@macchiato-dev/style-use";
 
 const app = document.getElementById("app");
-let flashTimer = 0;
 
 async function loadText(path) {
   const response = await fetch(path);
@@ -24,12 +23,6 @@ function render(html) {
   app.innerHTML = html;
   app.removeAttribute("data-status");
   document.getElementById("macchiato-loading-style")?.remove();
-}
-
-function flash() {
-  document.body.classList.add("matrix-flash");
-  clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => document.body.classList.remove("matrix-flash"), 160);
 }
 
 function sourceValue(target) {
@@ -48,14 +41,12 @@ function errorText(error) {
 }
 
 function dispatch(capability, sandbox, event, type) {
-  const before = event.target.matches(".cell-toggle") ? event.target.getAttribute("aria-pressed") : "";
   const payload = dispatchGuestDomEvent(capability, sandbox, app, event, type, {}, {
     render: false,
     sourceValue,
   });
   if (!payload) return;
   render(payload.html);
-  if (type === "click" && before) flash();
 }
 
 async function main() {

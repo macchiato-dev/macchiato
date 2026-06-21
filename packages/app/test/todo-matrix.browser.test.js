@@ -103,9 +103,15 @@ test("todo-matrix runs in QuickJS and persists matrix state", async (t) => {
   assert.deepEqual(await page.locator(".cell-toggle").evaluateAll((nodes) => nodes.map((node) => node.textContent)), ["", "", "", ""]);
 
   await page.locator(".cell-toggle").first().click();
-  assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "done");
+  assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "doing");
   assert.equal(await page.locator(".cell-toggle").first().getAttribute("aria-pressed"), "true");
+  assert.match(await page.locator(".cell-toggle").first().getAttribute("aria-label"), /Header \/ Design: under construction/);
+  await page.locator(".cell-toggle").first().click();
+  assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "done");
   assert.match(await page.locator(".cell-toggle").first().getAttribute("aria-label"), /Header \/ Design: complete/);
+  const firstBox = await page.locator(".cell-toggle").first().boundingBox();
+  assert.ok(firstBox);
+  assert.equal(Math.round(firstBox.width), Math.round(firstBox.height));
   assert.equal(await page.evaluate(() => Boolean(localStorage.getItem("todo-matrix-state"))), true);
 
   await page.reload({ waitUntil: "networkidle" });
@@ -113,7 +119,7 @@ test("todo-matrix runs in QuickJS and persists matrix state", async (t) => {
   assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "done");
 
   const restart = page.getByRole("button", { name: "Start over" });
-  assert.equal(await restart.textContent(), "+");
+  assert.equal(await restart.textContent(), "");
   assert.equal(await restart.getAttribute("title"), "Start over");
   await restart.click();
   await page.locator(".matrix-source").waitFor();
