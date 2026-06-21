@@ -41,10 +41,16 @@ function errorText(error) {
 }
 
 function dispatch(capability, sandbox, event, type) {
-  const payload = dispatchGuestDomEvent(capability, sandbox, app, event, type, {}, {
-    render: false,
-    sourceValue,
-  });
+  let payload;
+  try {
+    payload = dispatchGuestDomEvent(capability, sandbox, app, event, type, {}, {
+      render: false,
+      sourceValue,
+    });
+  } catch (err) {
+    console.warn(`Ignored failed ${type} event: ${errorText(err)}`);
+    return;
+  }
   if (!payload) return;
   render(payload.html);
 }

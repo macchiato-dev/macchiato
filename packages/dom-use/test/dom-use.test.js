@@ -372,6 +372,7 @@ test("host bridge preserves event lifecycle across nested event scopes", () => {
   capability.beginEvent();
   assert.equal(capability.document.gas.lifecycle, "event");
   assert.equal(capability.document.gas.capacity, 7);
+  assert.equal(capability.document.gas.available, 7);
   capability.document.gas.available = 5;
 
   capability.beginEvent();
@@ -386,7 +387,29 @@ test("host bridge preserves event lifecycle across nested event scopes", () => {
   capability.endEvent();
   assert.equal(capability.document.gas.lifecycle, "idle");
   assert.equal(capability.document.gas.capacity, 20);
-  assert.equal(capability.document.gas.available, 5);
+  assert.equal(capability.document.gas.available, 20);
+});
+
+test("host bridge gives each top-level event a fresh gas tank", () => {
+  const capability = new DomUseHostCapability({
+    gas: {
+      tank: { init: 100, idle: 20, event: 7 },
+      refill: { amount: 0, intervalMs: 1000 },
+      costs: {},
+    },
+  });
+
+  capability.finishInit();
+  capability.beginEvent();
+  capability.document.gas.available = 1;
+  capability.endEvent();
+  assert.equal(capability.document.gas.lifecycle, "idle");
+  assert.equal(capability.document.gas.available, 20);
+
+  capability.beginEvent();
+  assert.equal(capability.document.gas.lifecycle, "event");
+  assert.equal(capability.document.gas.available, 7);
+  capability.endEvent();
 });
 
 test("localStorage bridge removes allowed keys", () => {

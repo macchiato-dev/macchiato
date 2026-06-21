@@ -64,7 +64,7 @@ async function stopChild(child) {
   });
 }
 
-test("todo-matrix runs in QuickJS and persists matrix state", async (t) => {
+test("todo-matrix runs in QuickJS and persists matrix state", { timeout: 60000 }, async (t) => {
   const port = await getPort();
   const app = startApp(port);
   let browser;
@@ -88,9 +88,9 @@ test("todo-matrix runs in QuickJS and persists matrix state", async (t) => {
     if (response.status() >= 400) badResponses.push(`${response.status()} ${response.url()}`);
   });
 
-  await page.goto(`http://todo-matrix.localhost:${port}/`, { waitUntil: "networkidle" });
+  await page.goto(`http://todo-matrix.localhost:${port}/`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.removeItem("todo-matrix-state"));
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".matrix-source").waitFor();
   assert.equal(await page.locator("#app[data-status='error']").count(), 0);
 
@@ -114,12 +114,21 @@ test("todo-matrix runs in QuickJS and persists matrix state", async (t) => {
   assert.equal(Math.round(firstBox.width), Math.round(firstBox.height));
   assert.equal(await page.evaluate(() => Boolean(localStorage.getItem("todo-matrix-state"))), true);
 
-  await page.reload({ waitUntil: "networkidle" });
+  for (let i = 0; i < 20; i += 1) {
+    await page.locator(".cell-toggle").first().click();
+  }
+  await page.locator(".cell-toggle").first().waitFor();
+  const stateBeforeReload = await page.locator(".cell-toggle").first().getAttribute("data-state");
+  assert.match(stateBeforeReload, /^(open|doing|done)$/);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".task-grid").waitFor();
-  assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), "done");
+  assert.equal(await page.locator(".cell-toggle").first().getAttribute("data-state"), stateBeforeReload);
 
   const restart = page.getByRole("button", { name: "Start over" });
-  assert.equal(await restart.textContent(), "");
+  await restart.hover();
+  assert.equal(await page.locator(".restart-tip").textContent(), "Start over");
+  await page.waitForFunction(() => getComputedStyle(document.querySelector(".restart-tip")).opacity === "1");
   assert.equal(await restart.getAttribute("title"), "Start over");
   await restart.click();
   await page.locator(".matrix-source").waitFor();

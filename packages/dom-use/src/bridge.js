@@ -177,7 +177,10 @@ export class DomUseHostCapability {
   }
 
   beginEvent() {
-    if (this.eventDepth === 0) this.domUse.setGasLifecycle(this.document, "event");
+    if (this.eventDepth === 0) {
+      this.domUse.setGasLifecycle(this.document, "event");
+      if (this.document?.gas) this.document.gas.available = this.document.gas.capacity;
+    }
     this.eventDepth += 1;
     return {};
   }
@@ -187,6 +190,7 @@ export class DomUseHostCapability {
     if (this.eventDepth === 0) {
       this.flushPrunedNodes();
       this.domUse.setGasLifecycle(this.document, "idle");
+      if (this.document?.gas) this.document.gas.available = this.document.gas.capacity;
     }
     return {};
   }
