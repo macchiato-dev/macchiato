@@ -1,6 +1,7 @@
 {
   "name": "macchiato",
   "private": true,
+  "type": "module",
   "scripts": {
     "export:resources": "node examples/resources-site/export-static.js",
     "test": "node --test \"packages/*/test/*.test.js\""
