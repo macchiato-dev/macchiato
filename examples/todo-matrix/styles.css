@@ -131,13 +131,14 @@ p {
   justify-self: center;
   width: fit-content;
   max-width: 100%;
+  position: relative;
 }
 
 .board-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  display: block;
 }
 
 .restart-button {
