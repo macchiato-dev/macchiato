@@ -24,9 +24,9 @@
       "children": ["div"]
     },
     "matrix-grid": {
-      "element": "table.task-grid",
+      "element": "div.task-grid",
       "attrs": ["class", "aria-label"],
-      "children": ["thead", "tbody"]
+      "children": ["div"]
     },
     "matrix-actions": {
       "element": "button.restart-button",
@@ -48,8 +48,8 @@
       "children": ["div"]
     },
     "div": {
-      "attrs": ["class", "id"],
-      "children": ["$matrix-app", "p", "h1", "textarea", "button", "div", "$matrix-grid", "script"]
+      "attrs": ["class", "id", "aria-label"],
+      "children": ["$matrix-app", "p", "h1", "textarea", "button", "div", "span", "$matrix-grid", "script"]
     },
     "p": {
       "attrs": ["class"],
@@ -101,7 +101,7 @@
     },
     "span": {
       "attrs": ["class", "aria-hidden"],
-      "children": ["#text"]
+      "children": ["#text", "span"]
     }
   },
   "urls": false,

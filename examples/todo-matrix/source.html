@@ -115,7 +115,7 @@ function renderBoard(root) {
   const head = el("div", "board-head");
   const copy = el("div", "");
   copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
-  copy.appendChild(el("h1", "", `${model.rowHeaders.length} x ${model.columns.length}`));
+  copy.appendChild(el("h1", "", "Todo matrix"));
   const restart = el("button", "restart-button");
   restart.id = "restart-button";
   restart.setAttribute("type", "button");
@@ -123,6 +123,8 @@ function renderBoard(root) {
   restart.setAttribute("title", "Start over");
   const restartIcon = el("span", "restart-icon");
   restartIcon.setAttribute("aria-hidden", "true");
+  restartIcon.appendChild(el("span", "restart-page"));
+  restartIcon.appendChild(el("span", "restart-plus"));
   const restartTip = el("span", "restart-tip", "Start over");
   restart.appendChild(restartIcon);
   restart.appendChild(restartTip);
@@ -135,27 +137,23 @@ function renderBoard(root) {
   head.appendChild(restart);
 
   const wrap = el("div", "matrix-wrap");
-  const table = el("table", "task-grid");
-  table.setAttribute("aria-label", "Todo matrix");
-  const thead = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  headRow.appendChild(document.createElement("th"));
+  const grid = el("div", "task-grid");
+  grid.setAttribute("aria-label", "Todo matrix");
+  const headRow = el("div", "matrix-row matrix-head-row");
+  headRow.appendChild(el("div", "matrix-heading matrix-corner"));
   model.columns.forEach((column) => {
-    const th = document.createElement("th");
-    th.appendChild(el("span", "column-label", column));
-    headRow.appendChild(th);
+    const heading = el("div", "matrix-heading matrix-column-heading");
+    heading.appendChild(el("span", "column-label", column));
+    headRow.appendChild(heading);
   });
-  thead.appendChild(headRow);
-  table.appendChild(thead);
+  grid.appendChild(headRow);
 
-  const tbody = document.createElement("tbody");
   model.rowHeaders.forEach((rowHeader, rowIndex) => {
-    const row = document.createElement("tr");
-    const rowTh = document.createElement("th");
-    rowTh.appendChild(el("span", "row-label", rowHeader));
-    row.appendChild(rowTh);
+    const row = el("div", "matrix-row");
+    const rowHeading = el("div", "matrix-heading matrix-row-heading");
+    rowHeading.appendChild(el("span", "row-label", rowHeader));
+    row.appendChild(rowHeading);
     model.columns.forEach((column, columnIndex) => {
-      const td = document.createElement("td");
       const state = normalizeState(model.cells[rowIndex][columnIndex]);
       const button = el("button", "cell-toggle");
       button.setAttribute("type", "button");
@@ -168,13 +166,11 @@ function renderBoard(root) {
         save();
         render();
       });
-      td.appendChild(button);
-      row.appendChild(td);
+      row.appendChild(button);
     });
-    tbody.appendChild(row);
+    grid.appendChild(row);
   });
-  table.appendChild(tbody);
-  wrap.appendChild(table);
+  wrap.appendChild(grid);
   board.appendChild(head);
   board.appendChild(wrap);
   shell.appendChild(board);

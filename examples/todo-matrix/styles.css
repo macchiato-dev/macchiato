@@ -36,9 +36,10 @@ body {
   width: min(1120px, calc(100vw - 36px));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 76px 0 36px;
-  display: grid;
-  align-items: start;
+  padding: 36px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .matrix-entry,
@@ -154,41 +155,57 @@ p {
 
 .restart-icon {
   position: absolute;
-  left: 11px;
-  top: 10px;
-  width: 17px;
-  height: 22px;
-  border: 2px solid var(--text);
-  border-radius: 3px;
+  inset: 0;
 }
 
-.restart-icon::before {
+.restart-page {
+  position: absolute;
+  left: 10px;
+  top: 9px;
+  width: 18px;
+  height: 24px;
+  border: 2px solid var(--text);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.restart-page::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 5px;
-  width: 9px;
+  left: 4px;
+  top: 6px;
+  width: 10px;
   height: 2px;
   background: var(--text);
   box-shadow:
-    0 5px 0 var(--text),
-    0 10px 0 var(--text);
+    0 6px 0 var(--text),
+    0 12px 0 var(--text);
 }
 
-.restart-icon::after {
+.restart-plus {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(94, 241, 214, 0.76);
+  border-radius: 999px;
+  background: rgba(8, 13, 42, 0.96);
+}
+
+.restart-plus::before,
+.restart-plus::after {
   content: "";
   position: absolute;
-  right: -9px;
-  top: -4px;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
+  left: 4px;
+  top: 7px;
+  width: 8px;
+  height: 2px;
   background: var(--accent);
-  box-shadow:
-    0 -6px 0 rgba(94, 241, 214, 0.72),
-    0 6px 0 rgba(94, 241, 214, 0.72),
-    -6px 0 0 rgba(94, 241, 214, 0.72),
-    6px 0 0 rgba(94, 241, 214, 0.72);
+}
+
+.restart-plus::after {
+  transform: rotate(90deg);
 }
 
 .restart-tip {
@@ -227,57 +244,61 @@ p {
   width: max-content;
   max-width: 100%;
   overflow: auto;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 8px;
-  background: rgba(5, 8, 28, 0.38);
+  background: transparent;
 }
 
 .task-grid {
   width: max-content;
-  border-collapse: collapse;
-  table-layout: fixed;
+  display: grid;
+  gap: 0;
 }
 
-.task-grid th,
-.task-grid td {
-  border: 1px solid rgba(184, 198, 255, 0.14);
+.matrix-row {
+  display: grid;
+  grid-template-columns: 152px;
+  grid-auto-columns: 96px;
+  grid-auto-flow: column;
+  gap: 0;
+}
+
+.matrix-heading {
+  color: var(--text);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: visible;
   text-align: left;
 }
 
-.task-grid th {
+.matrix-head-row .matrix-heading {
+  height: 172px;
   padding: 8px;
+  display: grid;
+  align-items: end;
 }
 
-.task-grid th {
-  color: var(--text);
+.matrix-head-row .matrix-corner {
+  background: transparent;
+}
+
+.matrix-column-heading,
+.cell-toggle {
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
+}
+
+.matrix-row-heading {
+  width: 152px;
+  min-width: 152px;
+  max-width: 152px;
+  height: 96px;
+  padding: 8px;
+  display: grid;
+  align-items: center;
   background: var(--panel-strong);
-  font-size: 13px;
-  font-weight: 700;
-  overflow: hidden;
-}
-
-.task-grid thead th {
-  height: 112px;
-  vertical-align: bottom;
-}
-
-.task-grid thead th:first-child,
-.task-grid tbody th {
-  width: 128px;
-  min-width: 128px;
-  max-width: 128px;
-}
-
-.task-grid thead th:not(:first-child),
-.task-grid td {
-  width: 76px;
-  min-width: 76px;
-  max-width: 76px;
-}
-
-.task-grid td {
-  height: 76px;
-  padding: 0;
 }
 
 .row-label {
@@ -285,44 +306,37 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 112px;
+  max-width: 136px;
 }
 
 .column-label {
   display: inline-block;
-  max-width: 116px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transform: rotate(-38deg);
+  overflow: visible;
+  transform: rotate(-45deg);
   transform-origin: left bottom;
   white-space: nowrap;
 }
 
-.task-grid td {
-  background: rgba(17, 20, 58, 0.58);
-}
-
 .cell-toggle {
-  width: 100%;
-  min-width: 76px;
+  min-width: 96px;
   aspect-ratio: 1 / 1;
   height: auto;
   display: block;
   border: 0;
   border-radius: 0;
   background: linear-gradient(135deg, var(--todo), #2f3dc0);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: none;
   cursor: pointer;
 }
 
 .cell-toggle[data-state="doing"] {
   background: repeating-linear-gradient(135deg, #f3c74c 0 10px, #211a09 10px 20px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  box-shadow: none;
 }
 
 .cell-toggle[data-state="done"] {
   background: linear-gradient(135deg, #21865b, #39b878);
-  box-shadow: inset 0 0 0 1px rgba(220, 255, 238, 0.22);
+  box-shadow: none;
 }
 
 .cell-toggle:focus-visible {

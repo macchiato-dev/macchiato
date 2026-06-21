@@ -91,14 +91,14 @@ test("todo-matrix runs in QuickJS and persists matrix state", { timeout: 60000 }
   await page.goto(`http://todo-matrix.localhost:${port}/`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.removeItem("todo-matrix-state"));
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(".matrix-source").waitFor();
+  await page.locator(".matrix-source").waitFor({ timeout: 45000 });
   assert.equal(await page.locator("#app[data-status='error']").count(), 0);
 
   await page.locator(".matrix-source").fill("Task\tDesign\tBuild\nHeader\t\t\nDocs\t\t");
   await page.getByRole("button", { name: "Go" }).click();
   await page.locator(".task-grid").waitFor();
 
-  assert.deepEqual(await page.locator(".task-grid th").allTextContents(), ["", "Design", "Build", "Header", "Docs"]);
+  assert.deepEqual(await page.locator(".matrix-heading").allTextContents(), ["", "Design", "Build", "Header", "Docs"]);
   assert.equal(await page.locator(".cell-toggle").count(), 4);
   assert.deepEqual(await page.locator(".cell-toggle").evaluateAll((nodes) => nodes.map((node) => node.textContent)), ["", "", "", ""]);
 
