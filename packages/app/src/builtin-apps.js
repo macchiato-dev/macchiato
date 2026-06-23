@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
+import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { packageBrowserFileAccess, packageBrowserHandler } from "./package-browser.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
@@ -31,6 +32,24 @@ export const BUILTIN_APPS = [
     sourceFiles: [
       "packages/app/src/package-browser.js",
     ],
+  },
+  {
+    name: "Code Notes",
+    subdomain: "code-notes",
+    kind: "sandboxed browser",
+    description: "Annotate git-visible module code in a QuickJS-rendered interface.",
+    handler: codeAnnotatorHandler,
+    fileAccess: {
+      ...codeAnnotatorFileAccess,
+      gitRoot: repoRoot,
+    },
+    sourceFiles: [
+      "packages/app/src/code-annotator.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM",
+      hostCapabilities: ["git-visible file read", "localStorage", "download"],
+    },
   },
   {
     name: "Resources.co",
