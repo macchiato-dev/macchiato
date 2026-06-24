@@ -182,58 +182,92 @@ function page() {
 <style>
   :root {
     color-scheme: dark;
-    --bg: #0b1020;
-    --panel: #111936;
-    --panel-2: #172046;
+    --bg: #0b0f1a;
+    --panel: #101522;
+    --panel-2: #151b2b;
     --ink: #edf4ff;
     --muted: #a8b4ca;
-    --line: rgba(183, 198, 230, 0.18);
+    --line: #293145;
     --accent: #64d8cb;
     --accent-2: #f2c14e;
     --danger: #ff7d7d;
     --code: #090e1d;
-    --shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
   }
   * { box-sizing: border-box; }
+  html { height: 100%; }
   body {
     margin: 0;
-    min-height: 100vh;
+    height: 100%;
+    overflow: hidden;
     color: var(--ink);
-    background: linear-gradient(145deg, #09101f, #121b42 58%, #17265f);
+    background: var(--bg);
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
-  #app { min-height: 100vh; }
+  #app { height: 100vh; }
   #app[data-status="loading"] {
     display: grid;
     place-items: center;
     color: var(--muted);
   }
   .shell {
-    width: min(1540px, calc(100vw - 32px));
+    width: min(1680px, calc(100vw - 24px));
+    height: 100vh;
     margin: 0 auto;
-    padding: 24px 0;
+    padding: 12px 0;
     display: grid;
-    gap: 16px;
   }
   .workspace {
+    min-height: 0;
     display: grid;
-    grid-template-columns: 260px minmax(0, 1fr) 360px;
-    gap: 14px;
-    align-items: start;
+    grid-template-columns: 300px minmax(0, 1fr) 320px;
+    gap: 8px;
+    align-items: stretch;
   }
   .panel {
     min-width: 0;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    background: rgba(17, 25, 54, 0.92);
-    box-shadow: var(--shadow);
+    border-radius: 4px;
+    background: var(--panel);
   }
-  .module-list, .notes-panel { overflow: hidden; }
+  .file-list-panel, .notes-panel {
+    min-height: 0;
+    overflow: auto;
+  }
+  .file-list-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .package-picker {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+    padding: 10px;
+  }
+  .package-trigger {
+    display: grid;
+    width: 100%;
+    gap: 3px;
+    padding: 8px 10px;
+    text-align: left;
+    background: #131a2a;
+    border-color: var(--line);
+  }
+  .package-menu {
+    position: absolute;
+    z-index: 6;
+    left: 10px;
+    right: 10px;
+    top: calc(100% + 6px);
+    max-height: min(520px, calc(100vh - 120px));
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #0e1422;
+  }
   .module-button, .file-button {
     display: grid;
     width: 100%;
     gap: 4px;
-    padding: 11px 12px;
+    padding: 10px 12px;
     border: 0;
     border-bottom: 1px solid var(--line);
     color: inherit;
@@ -241,16 +275,20 @@ function page() {
     text-align: left;
     cursor: pointer;
   }
-  .file-button { padding-left: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .file-button { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
   .module-button[aria-current="true"], .file-button[aria-current="true"] {
-    background: rgba(100, 216, 203, 0.13);
-    box-shadow: inset 4px 0 0 var(--accent);
+    background: #182133;
+    box-shadow: inset 3px 0 0 var(--accent);
   }
   .name { font-weight: 760; }
   .meta { color: var(--muted); font-size: 12px; }
-  .viewer { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .file-list {
+    min-height: 0;
+    overflow: auto;
+  }
+  .viewer { min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
   .viewer-head, .notes-head {
-    padding: 14px 16px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--line);
     display: flex;
     justify-content: space-between;
@@ -258,20 +296,20 @@ function page() {
     align-items: center;
   }
   h1, h2 { margin: 0; letter-spacing: 0; }
-  h1 { font-size: 22px; }
+  h1 { font-size: 18px; }
   h2 { font-size: 16px; }
   .range-form {
     display: grid;
     grid-template-columns: 72px 72px minmax(180px, 1fr) auto;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--line);
     background: rgba(9, 14, 29, 0.5);
   }
   input, textarea {
     width: 100%;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 3px;
     color: var(--ink);
     background: rgba(7, 11, 24, 0.78);
     font: inherit;
@@ -281,13 +319,13 @@ function page() {
   .note-input { min-height: 36px; resize: vertical; }
   button {
     border: 1px solid rgba(100, 216, 203, 0.46);
-    border-radius: 6px;
+    border-radius: 3px;
     color: var(--ink);
     background: rgba(100, 216, 203, 0.14);
     font-weight: 760;
     cursor: pointer;
   }
-  .code-scroll { max-height: calc(100vh - 190px); overflow: auto; background: var(--code); }
+  .code-scroll { min-height: 0; overflow: auto; background: var(--code); }
   .code-table { width: 100%; border-collapse: collapse; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .line-button {
     width: 100%;
@@ -299,6 +337,7 @@ function page() {
     background: #0d1326;
     text-align: right;
     font: inherit;
+    user-select: none;
   }
   .code-line.is-selected .line-button { color: var(--code); background: var(--accent-2); }
   .code-line.is-annotated .line-button { color: var(--ink); background: rgba(100, 216, 203, 0.28); }
@@ -308,15 +347,51 @@ function page() {
   .tok-com { color: #8b9bb8; }
   .tok-num { color: #bd93f9; }
   .notes-body { display: grid; gap: 12px; padding: 14px; }
-  .annotation { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: rgba(9, 14, 29, 0.55); }
+  .annotation { border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: #0d1322; }
   .annotation code { color: var(--accent); overflow-wrap: anywhere; }
   .annotation p { margin: 7px 0 0; color: var(--muted); }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .secondary { border-color: var(--line); background: rgba(255, 255, 255, 0.06); }
   .danger { border-color: rgba(255, 125, 125, 0.5); color: var(--danger); background: rgba(255, 125, 125, 0.1); }
   .empty { padding: 28px; color: var(--muted); }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(4, 8, 18, 0.68);
+  }
+  .markdown-dialog {
+    width: min(720px, calc(100vw - 48px));
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+  }
+  .dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dialog-body {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+  }
+  #markdown-import {
+    min-height: 220px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
   @media (max-width: 1100px) {
+    body { overflow: auto; }
+    #app, .shell { height: auto; min-height: 100vh; }
     .workspace { grid-template-columns: 1fr; }
+    .file-list-panel, .notes-panel { max-height: 42vh; }
     .code-scroll { max-height: 62vh; }
   }
 </style>
@@ -335,6 +410,8 @@ const clientJs = `import { createSandbox } from "@macchiato-dev/quickjs-emscript
 
 const app = document.querySelector("#app");
 const storageKey = "code-annotator-markdown";
+let dragStartLine = null;
+let dragEndLine = null;
 
 function showError(error) {
   app.dataset.status = "error";
@@ -354,12 +431,57 @@ async function openFile(sandbox, path) {
   render(sandbox.callJsonFunction("__annotatorOpenFile", payload));
 }
 
+async function openSelectedFile(sandbox) {
+  const selected = app.querySelector("[data-file-path][aria-current='true']") || app.querySelector("[data-file-path]");
+  if (selected?.dataset.filePath) await openFile(sandbox, selected.dataset.filePath);
+}
+
 function formPayload() {
   return {
     start: app.querySelector("#range-start")?.value || "",
     end: app.querySelector("#range-end")?.value || "",
     note: app.querySelector("#annotation-note")?.value || "",
   };
+}
+
+function lineAtPoint(x, y) {
+  for (const button of app.querySelectorAll("[data-line]")) {
+    const rect = button.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return Number(button.dataset.line);
+  }
+  return null;
+}
+
+function previewRange(start, end) {
+  const first = Math.min(start, end);
+  const last = Math.max(start, end);
+  const startInput = app.querySelector("#range-start");
+  const endInput = app.querySelector("#range-end");
+  if (startInput) startInput.value = String(first);
+  if (endInput) endInput.value = String(last);
+  for (const row of app.querySelectorAll(".code-line")) {
+    const line = Number(row.querySelector("[data-line]")?.dataset.line);
+    row.classList.toggle("is-selected", line >= first && line <= last);
+  }
+}
+
+function startLineDrag(event, line, extend = false) {
+  dragStartLine = Number(line);
+  dragEndLine = dragStartLine;
+  event.preventDefault();
+  if (extend) {
+    const existingStart = Number(app.querySelector("#range-start")?.value || dragStartLine);
+    dragStartLine = existingStart;
+  }
+  previewRange(dragStartLine, dragEndLine);
+}
+
+function updateLineDrag(x, y) {
+  if (dragStartLine === null) return;
+  const line = lineAtPoint(x, y);
+  if (line === null) return;
+  dragEndLine = line;
+  previewRange(dragStartLine, dragEndLine);
 }
 
 try {
@@ -374,21 +496,22 @@ try {
   const sandbox = await createSandbox();
   sandbox.evalGlobal(sandboxCode, "code-annotator-sandbox.js");
   render(sandbox.callJsonFunction("__annotatorBoot", { manifest, markdown: localStorage.getItem(storageKey) || "" }));
+  await openSelectedFile(sandbox);
 
   app.addEventListener("click", async (event) => {
+    if (event.target.closest("#package-picker")) {
+      render(sandbox.callJsonFunction("__annotatorPackagePicker", { open: true }));
+      return;
+    }
     const moduleButton = event.target.closest("[data-module-dir]");
     if (moduleButton) {
       render(sandbox.callJsonFunction("__annotatorSelectModule", { dir: moduleButton.dataset.moduleDir }));
+      await openSelectedFile(sandbox);
       return;
     }
     const fileButton = event.target.closest("[data-file-path]");
     if (fileButton) {
       await openFile(sandbox, fileButton.dataset.filePath);
-      return;
-    }
-    const lineButton = event.target.closest("[data-line]");
-    if (lineButton) {
-      render(sandbox.callJsonFunction("__annotatorPickLine", { line: Number(lineButton.dataset.line) }));
       return;
     }
     const removeButton = event.target.closest("[data-remove-annotation]");
@@ -398,6 +521,14 @@ try {
     }
     if (event.target.closest("#add-annotation")) {
       render(sandbox.callJsonFunction("__annotatorAdd", formPayload()));
+      return;
+    }
+    if (event.target.closest("#markdown-tools")) {
+      render(sandbox.callJsonFunction("__annotatorMarkdownTools", { open: true }));
+      return;
+    }
+    if (event.target.closest("#close-markdown-tools")) {
+      render(sandbox.callJsonFunction("__annotatorMarkdownTools", { open: false }));
       return;
     }
     if (event.target.closest("#download-markdown")) {
@@ -415,6 +546,60 @@ try {
       render(sandbox.callJsonFunction("__annotatorImport", { markdown: app.querySelector("#markdown-import")?.value || "" }));
     }
   });
+  app.addEventListener("pointerdown", (event) => {
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    startLineDrag(event, lineButton.dataset.line, event.shiftKey);
+  });
+  app.addEventListener("pointerover", (event) => {
+    if (dragStartLine === null) return;
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    dragEndLine = Number(lineButton.dataset.line);
+    previewRange(dragStartLine, dragEndLine);
+  });
+  document.addEventListener("pointermove", (event) => {
+    updateLineDrag(event.clientX, event.clientY);
+  });
+  document.addEventListener("pointerup", () => {
+    if (dragStartLine !== null) {
+      render(sandbox.callJsonFunction("__annotatorDragRange", {
+        start: dragStartLine,
+        end: dragEndLine ?? dragStartLine,
+      }));
+    }
+    dragStartLine = null;
+    dragEndLine = null;
+  });
+  document.addEventListener("pointercancel", () => {
+    dragStartLine = null;
+    dragEndLine = null;
+  });
+  app.addEventListener("mousedown", (event) => {
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    startLineDrag(event, lineButton.dataset.line, event.shiftKey);
+  });
+  app.addEventListener("mouseover", (event) => {
+    if (dragStartLine === null) return;
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    dragEndLine = Number(lineButton.dataset.line);
+    previewRange(dragStartLine, dragEndLine);
+  });
+  document.addEventListener("mousemove", (event) => {
+    updateLineDrag(event.clientX, event.clientY);
+  });
+  document.addEventListener("mouseup", () => {
+    if (dragStartLine !== null) {
+      render(sandbox.callJsonFunction("__annotatorDragRange", {
+        start: dragStartLine,
+        end: dragEndLine ?? dragStartLine,
+      }));
+    }
+    dragStartLine = null;
+    dragEndLine = null;
+  });
 } catch (error) {
   showError(error);
 }
@@ -425,7 +610,10 @@ let selectedModule = "";
 let selectedFile = "";
 let filePayload = null;
 let range = { start: 1, end: 1 };
+let rangeAnchor = 1;
 let annotations = [];
+let markdownToolsOpen = false;
+let packagePickerOpen = false;
 
 function esc(value) {
   return String(value)
@@ -535,6 +723,16 @@ function fileButtons(mod, activePath) {
   }).join("");
 }
 
+function packagePicker(active) {
+  return '<div class="package-picker">' +
+    '<button id="package-picker" class="package-trigger" type="button" aria-label="Choose package">' +
+      '<span class="name">' + esc(active.name) + '</span>' +
+      '<span class="meta">' + esc(active.dir) + ' / ' + active.files.length + ' code files</span>' +
+    '</button>' +
+    (packagePickerOpen ? '<div class="package-menu" role="menu">' + moduleButtons(active) + '</div>' : "") +
+  '</div>';
+}
+
 function lineClass(number) {
   const selected = number >= range.start && number <= range.end;
   const annotated = annotations.some((item) => item.file === selectedFile && number >= item.start && number <= item.end);
@@ -561,6 +759,20 @@ function annotationsHtml() {
   '</article>').join("");
 }
 
+function markdownDialog() {
+  if (!markdownToolsOpen) return "";
+  return '<div class="overlay" role="dialog" aria-modal="true" aria-label="Markdown tools">' +
+    '<section class="markdown-dialog">' +
+      '<div class="dialog-head"><h2>Markdown</h2><button id="close-markdown-tools" class="secondary" type="button">Close</button></div>' +
+      '<div class="dialog-body">' +
+        '<div class="actions"><button id="download-markdown" type="button">Download markdown</button></div>' +
+        '<textarea id="markdown-import" aria-label="Import markdown" placeholder="Paste saved markdown">' + esc(markdown()) + '</textarea>' +
+        '<button id="import-markdown" class="secondary" type="button">Import markdown</button>' +
+      '</div>' +
+    '</section>' +
+  '</div>';
+}
+
 function render() {
   const mod = currentModule();
   if (!mod) return { html: '<section class="shell"><p class="empty">No modules are available.</p></section>', markdown: markdown() };
@@ -570,9 +782,9 @@ function render() {
     markdown: markdown(),
     html: '<section class="shell">' +
       '<div class="workspace">' +
-        '<nav class="panel module-list" aria-label="Modules">' + moduleButtons(mod) + fileButtons(mod, selectedFile) + '</nav>' +
+        '<nav class="panel file-list-panel" aria-label="Files">' + packagePicker(mod) + '<div class="file-list">' + fileButtons(mod, selectedFile) + '</div></nav>' +
         '<section class="panel viewer">' +
-          '<div class="viewer-head"><h1>' + esc(fileTitle) + '</h1><span class="meta">Click line numbers to set a range</span></div>' +
+          '<div class="viewer-head"><h1>' + esc(fileTitle) + '</h1><span class="meta">Drag line numbers to select a range</span></div>' +
           '<div class="range-form">' +
             '<input id="range-start" aria-label="Start line" value="' + range.start + '">' +
             '<input id="range-end" aria-label="End line" value="' + range.end + '">' +
@@ -582,13 +794,11 @@ function render() {
           codeRows() +
         '</section>' +
         '<aside class="panel notes-panel">' +
-          '<div class="notes-head"><h2>Annotations</h2><div class="actions"><button id="download-markdown" type="button">Download</button></div></div>' +
-          '<div class="notes-body">' + annotationsHtml() +
-            '<textarea id="markdown-import" aria-label="Import markdown" placeholder="Paste saved markdown"></textarea>' +
-            '<button id="import-markdown" class="secondary" type="button">Import markdown</button>' +
-          '</div>' +
+          '<div class="notes-head"><h2>Annotations</h2><button id="markdown-tools" class="secondary" type="button">Markdown</button></div>' +
+          '<div class="notes-body">' + annotationsHtml() + '</div>' +
         '</aside>' +
       '</div>' +
+      markdownDialog() +
     '</section>',
   };
 }
@@ -599,6 +809,7 @@ globalThis.__annotatorBoot = (payload) => {
   annotations = parseMarkdown(data.markdown);
   selectedModule = manifest.modules[0]?.dir || "";
   selectedFile = currentModule()?.files[0]?.path || "";
+  rangeAnchor = 1;
   return JSON.stringify(render());
 };
 
@@ -609,6 +820,8 @@ globalThis.__annotatorSelectModule = (payload) => {
     selectedFile = currentModule()?.files[0]?.path || "";
     filePayload = null;
     range = { start: 1, end: 1 };
+    rangeAnchor = 1;
+    packagePickerOpen = false;
   }
   return JSON.stringify(render());
 };
@@ -618,14 +831,30 @@ globalThis.__annotatorOpenFile = (payload) => {
   selectedFile = filePayload.path;
   selectedModule = manifest.modules.find((mod) => mod.files.some((file) => file.path === selectedFile))?.dir || selectedModule;
   range = { start: 1, end: 1 };
+  rangeAnchor = 1;
   return JSON.stringify(render());
 };
 
 globalThis.__annotatorPickLine = (payload) => {
-  const line = Number(JSON.parse(payload).line);
+  const message = JSON.parse(payload);
+  const line = Number(message.line);
   if (!Number.isFinite(line)) return JSON.stringify(render());
-  if (range.start !== range.end) range = { start: line, end: line };
-  else range = { start: Math.min(range.start, line), end: Math.max(range.start, line) };
+  if (message.extend) {
+    range = { start: Math.min(rangeAnchor, line), end: Math.max(rangeAnchor, line) };
+  } else {
+    rangeAnchor = line;
+    range = { start: line, end: line };
+  }
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorDragRange = (payload) => {
+  const message = JSON.parse(payload);
+  const start = Number(message.start);
+  const end = Number(message.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return JSON.stringify(render());
+  rangeAnchor = start;
+  range = { start: Math.min(start, end), end: Math.max(start, end) };
   return JSON.stringify(render());
 };
 
@@ -644,10 +873,21 @@ globalThis.__annotatorRemove = (payload) => {
   return JSON.stringify(render());
 };
 
+globalThis.__annotatorMarkdownTools = (payload) => {
+  markdownToolsOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorPackagePicker = (payload) => {
+  packagePickerOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
 globalThis.__annotatorMarkdown = () => JSON.stringify({ markdown: markdown() });
 
 globalThis.__annotatorImport = (payload) => {
   annotations = parseMarkdown(JSON.parse(payload).markdown);
+  markdownToolsOpen = false;
   return JSON.stringify(render());
 };
 `;

@@ -106,23 +106,41 @@ test("code notes exposes git-visible module code and annotation workflow", { tim
   await page.goto(`http://code-notes.localhost:${port}/`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => localStorage.removeItem("code-annotator-markdown"));
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /@macchiato-dev\/app/ }).click();
+  await assert.doesNotReject(page.locator(".source").first().waitFor());
+  assert.equal(await page.getByText("Select a file to load its code").count(), 0);
+  await page.getByRole("button", { name: "Choose package" }).click();
+  await assert.doesNotReject(page.getByRole("menu").waitFor());
+  await page.getByRole("menu").getByRole("button", { name: /@macchiato-dev\/app/ }).click();
+  await assert.doesNotReject(page.locator(".source").first().waitFor());
   await page.getByRole("button", { name: /src\/code-annotator\.js/ }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "packages/app/src/code-annotator.js" }).waitFor());
 
-  await page.locator("[data-line='1']").click();
-  await page.locator("[data-line='3']").click();
+  const firstLine = page.locator("[data-line='1']");
+  const firstBox = await firstLine.boundingBox();
+  assert.ok(firstBox);
+  await page.mouse.move(firstBox.x + firstBox.width / 2, firstBox.y + firstBox.height / 2);
+  await page.mouse.down();
+  const thirdBox = await page.locator("[data-line='3']").boundingBox();
+  assert.ok(thirdBox);
+  await page.mouse.move(thirdBox.x + thirdBox.width / 2, thirdBox.y + thirdBox.height / 2, { steps: 5 });
+  await page.mouse.up();
+  assert.equal(await page.getByLabel("Start line").inputValue(), "1");
+  assert.equal(await page.getByLabel("End line").inputValue(), "3");
   await page.getByLabel("Annotation note").fill("This module powers the code notes app.");
   await page.getByRole("button", { name: "Add" }).click();
   await assert.doesNotReject(page.getByText("This module powers the code notes app.").waitFor());
   assert.match(await page.evaluate(() => localStorage.getItem("code-annotator-markdown")), /packages\/app\/src\/code-annotator\.js#L1-L3/);
 
+  assert.equal(await page.getByLabel("Import markdown").count(), 0);
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  await assert.doesNotReject(page.getByRole("dialog", { name: "Markdown tools" }).waitFor());
   await page.getByLabel("Import markdown").fill("# Code annotations\n\n### packages/app/src/index.js#L1\n\nImported note");
   await page.getByRole("button", { name: "Import markdown" }).click();
   await assert.doesNotReject(page.getByText("Imported note").waitFor());
 
+  await page.getByRole("button", { name: "Markdown", exact: true }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download" }).click();
+  await page.getByRole("button", { name: "Download markdown" }).click();
   assert.equal((await download).suggestedFilename(), "code-annotations.md");
 
   assert.equal(await page.locator("#app[data-status='error']").count(), 0);
