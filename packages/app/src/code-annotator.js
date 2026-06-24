@@ -304,12 +304,57 @@ function page() {
     gap: 12px;
     align-items: center;
   }
+  .file-title {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .file-title h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-dir {
+    color: var(--muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .head-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+  }
   h1, h2 { margin: 0; letter-spacing: 0; }
-  h1 { font-size: 18px; }
+  h1 { font-size: 15px; }
   h2 { font-size: 16px; }
+  .mode-bar,
+  .search-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    background: #172033;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .search-bar {
+    grid-template-columns: minmax(220px, 1fr) 72px 72px auto auto auto auto;
+  }
   .range-form {
     display: grid;
-    grid-template-columns: 72px 72px minmax(180px, 1fr) auto;
+    grid-template-columns: 62px 62px minmax(180px, 1fr) auto auto auto;
     gap: 8px;
     padding: 10px 12px;
     border-bottom: 1px solid var(--line);
@@ -324,6 +369,14 @@ function page() {
     font: inherit;
   }
   input { height: 36px; padding: 0 9px; }
+  .toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+  }
   textarea { min-height: 86px; padding: 9px; resize: vertical; }
   .note-input { min-height: 36px; resize: vertical; }
   button {
@@ -350,15 +403,55 @@ function page() {
   }
   .code-line.is-selected .line-button { color: var(--code); background: var(--accent-2); }
   .code-line.is-annotated .line-button { color: var(--ink); background: rgba(100, 216, 203, 0.28); }
+  .code-line.is-search .line-button { color: var(--code); background: #89a7ff; }
   .source { padding: 0 14px; white-space: pre; }
+  .inline-note td {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: #11192a;
+  }
+  .inline-box {
+    margin: 8px 14px;
+    padding: 9px 10px;
+    border-left: 3px solid var(--accent);
+    color: var(--muted);
+    background: #0d1322;
+  }
+  .inline-box strong {
+    color: var(--ink);
+  }
   .tok-key { color: #ffb86c; }
   .tok-str { color: #7ee787; }
   .tok-com { color: #8b9bb8; }
   .tok-num { color: #bd93f9; }
   .notes-body { display: grid; gap: 12px; padding: 14px; }
   .annotation { border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: #0d1322; }
+  .annotation[aria-current="true"] {
+    border-color: var(--accent);
+    background: #121d30;
+  }
+  .annotation-button {
+    display: grid;
+    width: 100%;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+  }
   .annotation code { color: var(--accent); overflow-wrap: anywhere; }
   .annotation p { margin: 7px 0 0; color: var(--muted); }
+  .range-list {
+    display: grid;
+    gap: 3px;
+  }
+  .range-line {
+    color: var(--accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .secondary { border-color: var(--line); background: rgba(255, 255, 255, 0.06); }
   .danger { border-color: rgba(255, 125, 125, 0.5); color: var(--danger); background: rgba(255, 125, 125, 0.1); }
@@ -450,6 +543,16 @@ function formPayload() {
     start: app.querySelector("#range-start")?.value || "",
     end: app.querySelector("#range-end")?.value || "",
     note: app.querySelector("#annotation-note")?.value || "",
+    multi: Boolean(app.querySelector("#multi-range")?.checked),
+  };
+}
+
+function searchPayload() {
+  return {
+    query: app.querySelector("#search-query")?.value || "",
+    regex: Boolean(app.querySelector("#search-regex")?.checked),
+    before: app.querySelector("#search-before")?.value || "",
+    after: app.querySelector("#search-after")?.value || "",
   };
 }
 
@@ -526,6 +629,31 @@ try {
     const removeButton = event.target.closest("[data-remove-annotation]");
     if (removeButton) {
       render(sandbox.callJsonFunction("__annotatorRemove", { id: removeButton.dataset.removeAnnotation }));
+      return;
+    }
+    const annotationButton = event.target.closest("[data-select-annotation]");
+    if (annotationButton) {
+      render(sandbox.callJsonFunction("__annotatorSelectAnnotation", { id: annotationButton.dataset.selectAnnotation }));
+      return;
+    }
+    if (event.target.closest("#edit-ranges")) {
+      render(sandbox.callJsonFunction("__annotatorRangeEdit", { active: true }));
+      return;
+    }
+    if (event.target.closest("#cancel-range-edit")) {
+      render(sandbox.callJsonFunction("__annotatorRangeEdit", { active: false }));
+      return;
+    }
+    if (event.target.closest("#search-toggle")) {
+      render(sandbox.callJsonFunction("__annotatorSearchOpen", { open: true }));
+      return;
+    }
+    if (event.target.closest("#search-close")) {
+      render(sandbox.callJsonFunction("__annotatorSearchOpen", { open: false }));
+      return;
+    }
+    if (event.target.closest("#search-run")) {
+      render(sandbox.callJsonFunction("__annotatorSearch", searchPayload()));
       return;
     }
     if (event.target.closest("#add-annotation")) {
@@ -609,6 +737,16 @@ try {
     dragStartLine = null;
     dragEndLine = null;
   });
+  app.addEventListener("change", (event) => {
+    if (event.target.closest("#show-inline")) {
+      render(sandbox.callJsonFunction("__annotatorShowInline", { checked: event.target.checked }));
+      return;
+    }
+    if (event.target.closest("#multi-range")) {
+      render(sandbox.callJsonFunction("__annotatorMultiRange", { checked: event.target.checked }));
+      return;
+    }
+  });
 } catch (error) {
   showError(error);
 }
@@ -623,6 +761,12 @@ let rangeAnchor = 1;
 let annotations = [];
 let markdownToolsOpen = false;
 let packagePickerOpen = false;
+let selectedAnnotationId = "";
+let showInline = true;
+let multiRange = false;
+let rangeEditMode = false;
+let searchOpen = false;
+let searchState = { query: "", regex: false, before: 2, after: 2, matches: [], error: "" };
 
 function esc(value) {
   return String(value)
@@ -652,14 +796,31 @@ function annotationId() {
 function parseMarkdown(markdown) {
   const text = String(markdown || "");
   const parsed = [];
+  const blockRe = /^### Annotation\\n\\n((?:- .+#L\\d+(?:-L\\d+)?\\n)+)\\n([\\s\\S]*?)(?=\\n\\n### |$)/gm;
+  let block;
+  while ((block = blockRe.exec(text))) {
+    const ranges = block[1].trim().split("\\n").map((line) => {
+      const match = line.match(/^- (.+)#L(\\d+)(?:-L(\\d+))?$/);
+      if (!match) return null;
+      return {
+        file: match[1],
+        start: Number(match[2]),
+        end: Number(match[3] || match[2]),
+      };
+    }).filter(Boolean);
+    if (ranges.length) parsed.push({ id: annotationId(), ranges, note: block[2].trim() });
+  }
+  if (parsed.length) return parsed;
   const re = /^### (.+)#L(\\d+)(?:-L(\\d+))?\\n\\n([\\s\\S]*?)(?=\\n\\n### |$)/gm;
   let match;
   while ((match = re.exec(text))) {
     parsed.push({
       id: annotationId(),
-      file: match[1],
-      start: Number(match[2]),
-      end: Number(match[3] || match[2]),
+      ranges: [{
+        file: match[1],
+        start: Number(match[2]),
+        end: Number(match[3] || match[2]),
+      }],
       note: match[4].trim(),
     });
   }
@@ -669,8 +830,11 @@ function parseMarkdown(markdown) {
 function markdown() {
   if (!annotations.length) return "# Code annotations\\n";
   return "# Code annotations\\n\\n" + annotations.map((item) => {
-    const suffix = item.start === item.end ? "#L" + item.start : "#L" + item.start + "-L" + item.end;
-    return "### " + item.file + suffix + "\\n\\n" + item.note.trim();
+    const ranges = item.ranges.map((range) => {
+      const suffix = range.start === range.end ? "#L" + range.start : "#L" + range.start + "-L" + range.end;
+      return "- " + range.file + suffix;
+    }).join("\\n");
+    return "### Annotation\\n\\n" + ranges + "\\n\\n" + item.note.trim();
   }).join("\\n\\n");
 }
 
@@ -744,8 +908,25 @@ function packagePicker(active) {
 
 function lineClass(number) {
   const selected = number >= range.start && number <= range.end;
-  const annotated = annotations.some((item) => item.file === selectedFile && number >= item.start && number <= item.end);
-  return ' class="code-line' + (selected ? " is-selected" : "") + (annotated ? " is-annotated" : "") + '"';
+  const annotated = annotations.some((item) => item.ranges.some((itemRange) => itemRange.file === selectedFile && number >= itemRange.start && number <= itemRange.end));
+  const searched = searchState.matches.some((match) => number >= match.start && number <= match.end);
+  return ' class="code-line' + (selected ? " is-selected" : "") + (annotated ? " is-annotated" : "") + (searched ? " is-search" : "") + '"';
+}
+
+function rangeText(range) {
+  return range.file + "#L" + range.start + (range.end === range.start ? "" : "-L" + range.end);
+}
+
+function selectedAnnotation() {
+  return annotations.find((item) => item.id === selectedAnnotationId) || annotations[0] || null;
+}
+
+function inlineNoteAfter(number) {
+  const item = selectedAnnotation();
+  if (!showInline || !item) return "";
+  const ranges = item.ranges.filter((itemRange) => itemRange.file === selectedFile && itemRange.end === number);
+  if (!ranges.length) return "";
+  return '<tr class="inline-note"><td></td><td><div class="inline-box"><strong>Annotation</strong><br>' + esc(item.note) + '</div></td></tr>';
 }
 
 function codeRows() {
@@ -755,15 +936,17 @@ function codeRows() {
     return '<tr' + lineClass(number) + '>' +
       '<td><button class="line-button" type="button" data-line="' + number + '">' + number + '</button></td>' +
       '<td class="source">' + highlight(line, filePayload.language) + '</td>' +
-      '</tr>';
+      '</tr>' + inlineNoteAfter(number);
   }).join("") + '</tbody></table></div>';
 }
 
 function annotationsHtml() {
   if (!annotations.length) return '<p class="empty">No annotations yet.</p>';
-  return annotations.map((item) => '<article class="annotation">' +
-    '<code>' + esc(item.file) + '#L' + item.start + (item.end === item.start ? "" : '-L' + item.end) + '</code>' +
-    '<p>' + esc(item.note) + '</p>' +
+  return annotations.map((item) => '<article class="annotation" aria-current="' + (item.id === selectedAnnotationId ? "true" : "false") + '">' +
+    '<button class="annotation-button" type="button" data-select-annotation="' + esc(item.id) + '">' +
+      '<span class="range-list">' + item.ranges.map((itemRange) => '<span class="range-line">' + esc(rangeText(itemRange)) + '</span>').join("") + '</span>' +
+      '<span>' + esc(item.note) + '</span>' +
+    '</button>' +
     '<button class="danger" type="button" data-remove-annotation="' + esc(item.id) + '">Remove</button>' +
   '</article>').join("");
 }
@@ -782,22 +965,53 @@ function markdownDialog() {
   '</div>';
 }
 
+function fileParts(path) {
+  const parts = String(path || "").split("/");
+  return {
+    name: parts.pop() || "No file selected",
+    dir: parts.join("/"),
+  };
+}
+
+function searchBar() {
+  if (!searchOpen) return "";
+  return '<div class="search-bar">' +
+    '<input id="search-query" aria-label="Search query" placeholder="Search current file" value="' + esc(searchState.query) + '">' +
+    '<input id="search-before" aria-label="Before context" value="' + esc(searchState.before) + '">' +
+    '<input id="search-after" aria-label="After context" value="' + esc(searchState.after) + '">' +
+    '<label class="toggle"><input id="search-regex" type="checkbox"' + (searchState.regex ? " checked" : "") + '>Regex</label>' +
+    '<button id="search-run" type="button">Find</button>' +
+    '<button id="search-close" class="secondary" type="button">Close</button>' +
+    '<span class="meta">' + (searchState.error ? esc(searchState.error) : searchState.matches.length + " matches") + '</span>' +
+  '</div>';
+}
+
+function rangeEditBar() {
+  if (!rangeEditMode) return "";
+  return '<div class="mode-bar"><span>Drag line numbers to select a new range for the selected annotation.</span><button id="cancel-range-edit" class="secondary" type="button">Cancel</button></div>';
+}
+
 function render() {
   const mod = currentModule();
   if (!mod) return { html: '<section class="shell"><p class="empty">No modules are available.</p></section>', markdown: markdown() };
   const file = currentFile();
   const fileTitle = selectedFile || file?.path || "No file selected";
+  const parts = fileParts(fileTitle);
   return {
     markdown: markdown(),
     html: '<section class="shell">' +
       '<div class="workspace">' +
         '<nav class="panel file-list-panel" aria-label="Files">' + packagePicker(mod) + '<div class="file-list">' + fileButtons(mod, selectedFile) + '</div></nav>' +
         '<section class="panel viewer">' +
-          '<div class="viewer-head"><h1>' + esc(fileTitle) + '</h1><span class="meta">Drag line numbers to select a range</span></div>' +
+          '<div class="viewer-head"><div class="file-title"><h1>' + esc(parts.name) + '</h1><span class="file-dir">' + esc(parts.dir) + '</span></div><div class="head-tools"><label class="toggle"><input id="show-inline" type="checkbox"' + (showInline ? " checked" : "") + '>Show inline</label><button id="search-toggle" class="secondary" type="button">Search</button></div></div>' +
+          searchBar() +
+          rangeEditBar() +
           '<div class="range-form">' +
-            '<input id="range-start" aria-label="Start line" value="' + range.start + '">' +
-            '<input id="range-end" aria-label="End line" value="' + range.end + '">' +
+            '<input id="range-start" aria-label="Start line" value="' + range.start + '" readonly>' +
+            '<input id="range-end" aria-label="End line" value="' + range.end + '" readonly>' +
             '<textarea id="annotation-note" class="note-input" aria-label="Annotation note" placeholder="Annotation"></textarea>' +
+            '<label class="toggle"><input id="multi-range" type="checkbox"' + (multiRange ? " checked" : "") + '>Select multiple ranges</label>' +
+            '<button id="edit-ranges" class="secondary" type="button">Pencil</button>' +
             '<button id="add-annotation" type="button">Add</button>' +
           '</div>' +
           codeRows() +
@@ -816,6 +1030,7 @@ globalThis.__annotatorBoot = (payload) => {
   const data = JSON.parse(payload);
   manifest = data.manifest;
   annotations = parseMarkdown(data.markdown);
+  selectedAnnotationId = annotations[0]?.id || "";
   selectedModule = manifest.modules[0]?.dir || "";
   selectedFile = currentModule()?.files[0]?.path || "";
   rangeAnchor = 1;
@@ -841,6 +1056,7 @@ globalThis.__annotatorOpenFile = (payload) => {
   selectedModule = manifest.modules.find((mod) => mod.files.some((file) => file.path === selectedFile))?.dir || selectedModule;
   range = { start: 1, end: 1 };
   rangeAnchor = 1;
+  searchState.matches = [];
   return JSON.stringify(render());
 };
 
@@ -864,6 +1080,16 @@ globalThis.__annotatorDragRange = (payload) => {
   if (!Number.isFinite(start) || !Number.isFinite(end)) return JSON.stringify(render());
   rangeAnchor = start;
   range = { start: Math.min(start, end), end: Math.max(start, end) };
+  if (rangeEditMode) {
+    const selected = selectedAnnotation();
+    if (selected) {
+      const replacement = { file: selectedFile, start: range.start, end: range.end };
+      const index = selected.ranges.findIndex((itemRange) => itemRange.file === selectedFile);
+      if (index >= 0) selected.ranges[index] = replacement;
+      else selected.ranges[0] = replacement;
+      rangeEditMode = false;
+    }
+  }
   return JSON.stringify(render());
 };
 
@@ -872,13 +1098,45 @@ globalThis.__annotatorAdd = (payload) => {
   const start = Math.max(1, Number(data.start || range.start));
   const end = Math.max(start, Number(data.end || range.end));
   const note = String(data.note || "").trim();
-  if (selectedFile && note) annotations.push({ id: annotationId(), file: selectedFile, start, end, note });
+  const selected = selectedAnnotation();
+  if (selectedFile && data.multi && selected) {
+    selected.ranges.push({ file: selectedFile, start, end });
+    if (note) selected.note = note;
+    selectedAnnotationId = selected.id;
+  } else if (selectedFile && note) {
+    const item = { id: annotationId(), ranges: [{ file: selectedFile, start, end }], note };
+    annotations.push(item);
+    selectedAnnotationId = item.id;
+  }
+  rangeEditMode = false;
   return JSON.stringify(render());
 };
 
 globalThis.__annotatorRemove = (payload) => {
   const id = JSON.parse(payload).id;
   annotations = annotations.filter((item) => item.id !== id);
+  if (selectedAnnotationId === id) selectedAnnotationId = annotations[0]?.id || "";
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSelectAnnotation = (payload) => {
+  const id = JSON.parse(payload).id;
+  if (annotations.some((item) => item.id === id)) selectedAnnotationId = id;
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorShowInline = (payload) => {
+  showInline = Boolean(JSON.parse(payload).checked);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorMultiRange = (payload) => {
+  multiRange = Boolean(JSON.parse(payload).checked);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorRangeEdit = (payload) => {
+  rangeEditMode = Boolean(JSON.parse(payload).active);
   return JSON.stringify(render());
 };
 
@@ -892,10 +1150,42 @@ globalThis.__annotatorPackagePicker = (payload) => {
   return JSON.stringify(render());
 };
 
+globalThis.__annotatorSearchOpen = (payload) => {
+  searchOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSearch = (payload) => {
+  const data = JSON.parse(payload);
+  searchState = {
+    query: String(data.query || ""),
+    regex: Boolean(data.regex),
+    before: Math.max(0, Number(data.before || 0)),
+    after: Math.max(0, Number(data.after || 0)),
+    matches: [],
+    error: "",
+  };
+  if (!filePayload || !searchState.query) return JSON.stringify(render());
+  try {
+    const pattern = searchState.regex ? new RegExp(searchState.query, "i") : null;
+    const lines = filePayload.content.split(/\\r?\\n/);
+    searchState.matches = lines.flatMap((line, index) => {
+      const ok = pattern ? pattern.test(line) : line.toLowerCase().includes(searchState.query.toLowerCase());
+      if (!ok) return [];
+      const lineNumber = index + 1;
+      return [{ start: Math.max(1, lineNumber - searchState.before), end: Math.min(lines.length, lineNumber + searchState.after), line: lineNumber }];
+    });
+  } catch (err) {
+    searchState.error = err.message || String(err);
+  }
+  return JSON.stringify(render());
+};
+
 globalThis.__annotatorMarkdown = () => JSON.stringify({ markdown: markdown() });
 
 globalThis.__annotatorImport = (payload) => {
   annotations = parseMarkdown(JSON.parse(payload).markdown);
+  selectedAnnotationId = annotations[0]?.id || "";
   markdownToolsOpen = false;
   return JSON.stringify(render());
 };
