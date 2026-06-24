@@ -275,10 +275,19 @@ function page() {
     text-align: left;
     cursor: pointer;
   }
-  .file-button { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .file-button {
+    border-radius: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
   .module-button[aria-current="true"], .file-button[aria-current="true"] {
     background: #182133;
     box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .file-button[aria-current="true"] {
+    box-shadow: none;
+    border-left: 3px solid var(--accent);
+    padding-left: 9px;
   }
   .name { font-weight: 760; }
   .meta { color: var(--muted); font-size: 12px; }
