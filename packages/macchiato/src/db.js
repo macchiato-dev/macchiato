@@ -1,9 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { initFontCache } from "@macchiato-dev/font-use";
-import { initSiteDb } from "@macchiato-dev/site";
-import { initDeclarativeAppsDb } from "../../app/src/app-config-db.js";
+import { initSqliteStore } from "../../app/src/sqlite-store.js";
 
 function getHomeDir() {
   if ("Deno" in globalThis) {
@@ -27,48 +25,10 @@ export function withDb(fn, options = {}) {
   const dbPath = getDbPathForOptions(options);
   mkdirSync(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL");
-  db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL)");
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schemas (
-      name TEXT PRIMARY KEY,
-      json TEXT NOT NULL
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS site_pages (
-      subdomain TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      html TEXT NOT NULL,
-      css TEXT NOT NULL DEFAULT '',
-      dom_schema_json TEXT NOT NULL,
-      css_schema_json TEXT NOT NULL,
-      sandboxed INTEGER NOT NULL DEFAULT 1
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS site_files (
-      subdomain TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      file_path TEXT NOT NULL,
-      content_type TEXT NOT NULL DEFAULT '',
-      csp TEXT NOT NULL DEFAULT ''
-    )
-  `);
-  dropLegacySiteFileColumns(db);
-  initDeclarativeAppsDb(db);
-  initFontCache(db);
-  initSiteDb(db);
+  initSqliteStore(db);
   try {
     return fn(db);
   } finally {
     db.close();
-  }
-}
-
-function dropLegacySiteFileColumns(db) {
-  const columns = db.prepare("PRAGMA table_info(site_files)").all().map((column) => column.name);
-  if (columns.includes("clear_site_data")) {
-    db.exec("ALTER TABLE site_files DROP COLUMN clear_site_data");
   }
 }

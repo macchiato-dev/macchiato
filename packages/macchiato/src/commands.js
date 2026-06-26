@@ -3,6 +3,15 @@ import { withDb } from "./db.js";
 import { readFileSync } from "node:fs";
 import { putFontAsset } from "@macchiato-dev/font-use";
 import { deleteSiteRoutes, putSiteRoute } from "@macchiato-dev/site";
+import {
+  addDirectorySite,
+  addFileSite,
+  addPageSite,
+  addSchema,
+  listConfiguredSites,
+  listSchemas,
+  removeConfiguredSite,
+} from "../../app/src/sqlite-store.js";
 
 function parseServerOpts(args) {
   const opts = {};
@@ -152,13 +161,13 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const json = readText(path);
       JSON.parse(json);
       withDb((db) => {
-        db.prepare("INSERT OR REPLACE INTO schemas VALUES (?, ?)").run(name, json);
+        addSchema(db, name, json);
       }, dbOptions);
       console.log(`Added schema: ${name}`);
     },
 
     "schema list"() {
-      const rows = withDb((db) => db.prepare("SELECT name FROM schemas ORDER BY name").all(), dbOptions);
+      const rows = withDb((db) => listSchemas(db), dbOptions);
       if (rows.length === 0) {
         console.log("No schemas configured");
         return;
@@ -193,18 +202,13 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         return;
       }
       withDb((db) => {
-        db.prepare("INSERT OR REPLACE INTO sites VALUES (?, ?)").run(subdomain, directory);
+        addDirectorySite(db, subdomain, directory);
       }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
     },
 
     "site list"() {
-      const rows = withDb((db) => [
-        ...db.prepare("SELECT subdomain, 'directory' AS kind, directory, NULL AS sandboxed FROM sites").all(),
-        ...db.prepare("SELECT subdomain, 'page' AS kind, NULL AS directory, sandboxed FROM site_pages").all(),
-        ...db.prepare("SELECT subdomain, 'raw site' AS kind, file_path AS directory, NULL AS sandboxed FROM site_files").all(),
-        ...db.prepare("SELECT DISTINCT subdomain, 'routes' AS kind, NULL AS directory, NULL AS sandboxed FROM site_routes").all(),
-      ], dbOptions);
+      const rows = withDb((db) => listConfiguredSites(db), dbOptions);
       if (rows.length === 0) {
         console.log("No sites configured");
         return;
@@ -236,11 +240,15 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const cssSchema = readSchemaArg(cssSchemaPath);
 
       withDb((db) => {
-        db.prepare(`
-          INSERT OR REPLACE INTO site_pages
-            (subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(subdomain, opts.title || subdomain, html, css, domSchema, cssSchema, opts.sandboxed ? 1 : 0);
+        addPageSite(db, {
+          subdomain,
+          title: opts.title || subdomain,
+          html,
+          css,
+          domSchema,
+          cssSchema,
+          sandboxed: opts.sandboxed,
+        });
       }, dbOptions);
       console.log(`Added SQLite page: ${subdomain} (${opts.sandboxed ? "sandboxed" : "unsandboxed"})`);
     },
@@ -254,11 +262,13 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       }
 
       withDb((db) => {
-        db.prepare(`
-          INSERT OR REPLACE INTO site_files
-            (subdomain, title, file_path, content_type, csp)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(subdomain, opts.title || subdomain, filePath, opts.contentType, opts.csp);
+        addFileSite(db, {
+          subdomain,
+          title: opts.title || subdomain,
+          filePath,
+          contentType: opts.contentType,
+          csp: opts.csp,
+        });
       }, dbOptions);
       console.log(`Added raw site: ${subdomain} -> ${filePath}`);
     },
@@ -294,9 +304,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         return;
       }
       withDb((db) => {
-        db.prepare("DELETE FROM sites WHERE subdomain = ?").run(subdomain);
-        db.prepare("DELETE FROM site_pages WHERE subdomain = ?").run(subdomain);
-        db.prepare("DELETE FROM site_files WHERE subdomain = ?").run(subdomain);
+        removeConfiguredSite(db, subdomain);
         deleteSiteRoutes(db, subdomain);
       }, dbOptions);
       console.log(`Removed site: ${subdomain}`);

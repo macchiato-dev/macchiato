@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
-import { initDeclarativeAppsDb } from "./app-config-db.js";
 import { packageBrowserHandler } from "./package-browser.js";
+import {
+  addAppConfigIfMissing,
+  getAppConfigRow,
+  initDeclarativeAppsDb,
+  listVisibleAppConfigRows,
+} from "./sqlite-store.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 
@@ -53,23 +58,8 @@ const SEEDED_APPS = [
 
 export function seedDeclarativeApps(db) {
   initDeclarativeAppsDb(db);
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO app_configs
-      (subdomain, name, kind, description, handler, permissions_json, access_json, options_json, directory)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
   for (const app of SEEDED_APPS) {
-    insert.run(
-      app.subdomain,
-      app.name,
-      app.kind,
-      app.description,
-      app.handler,
-      JSON.stringify(app.permissions || {}),
-      JSON.stringify(app.access || {}),
-      JSON.stringify(app.options || {}),
-      app.directory === false ? 0 : 1,
-    );
+    addAppConfigIfMissing(db, app);
   }
 }
 
@@ -198,21 +188,11 @@ export function declarativeAppFromRow(row) {
 export function getDeclarativeApp(db, subdomain) {
   if (!db) return null;
   initDeclarativeAppsDb(db);
-  const row = db.prepare(`
-    SELECT subdomain, name, kind, description, handler, permissions_json, access_json, options_json, directory
-    FROM app_configs
-    WHERE subdomain = ?
-  `).get(subdomain);
-  return declarativeAppFromRow(row);
+  return declarativeAppFromRow(getAppConfigRow(db, subdomain));
 }
 
 export function visibleDeclarativeApps(db) {
   if (!db) return [];
   initDeclarativeAppsDb(db);
-  return db.prepare(`
-    SELECT subdomain, name, kind, description, handler, permissions_json, access_json, options_json, directory
-    FROM app_configs
-    WHERE directory != 0
-    ORDER BY subdomain
-  `).all().map(declarativeAppFromRow).filter(Boolean);
+  return listVisibleAppConfigRows(db).map(declarativeAppFromRow).filter(Boolean);
 }
