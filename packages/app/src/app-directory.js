@@ -2,6 +2,16 @@ import { readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
 import { findBuiltinApp, visibleBuiltinApps } from "./builtin-apps.js";
 import { getDeclarativeApp, visibleDeclarativeApps } from "./declarative-apps.js";
+import {
+  getDirectoryConfig,
+  getPageConfig,
+  getRawFileConfig,
+  getRouteConfig,
+  listDirectoryRows,
+  listPageRows,
+  listRawFileRows,
+  listRouteRows,
+} from "./sqlite-store.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 
@@ -98,10 +108,10 @@ function sqliteSiteRows(db) {
     ...visibleDeclarativeApps(db).map((app) => app.subdomain),
   ]);
   return [
-    ...db.prepare("SELECT subdomain, title, 'raw site' AS kind, file_path AS source FROM site_files").all(),
-    ...db.prepare("SELECT subdomain, title, 'sqlite page' AS kind, 'site_pages' AS source FROM site_pages").all(),
-    ...db.prepare("SELECT DISTINCT subdomain, subdomain AS title, 'sqlite routes' AS kind, 'site_routes' AS source FROM site_routes").all(),
-    ...db.prepare("SELECT subdomain, subdomain AS title, 'directory site' AS kind, directory AS source FROM sites").all(),
+    ...listRawFileRows(db),
+    ...listPageRows(db),
+    ...listRouteRows(db),
+    ...listDirectoryRows(db),
   ].filter((site) => !builtinSubdomains.has(site.subdomain))
     .sort((a, b) => String(a.subdomain).localeCompare(String(b.subdomain)));
 }
@@ -334,7 +344,7 @@ function sqliteSiteConfig(db, subdomain) {
       schemas: {},
     };
   }
-  const file = db.prepare("SELECT subdomain, title, file_path AS filePath, content_type AS contentType, csp FROM site_files WHERE subdomain = ?").get(subdomain);
+  const file = getRawFileConfig(db, subdomain);
   if (file) {
     return {
       app: {
@@ -358,15 +368,15 @@ function sqliteSiteConfig(db, subdomain) {
       schemas: {},
     };
   }
-  const page = db.prepare("SELECT subdomain, title, sandboxed FROM site_pages WHERE subdomain = ?").get(subdomain);
+  const page = getPageConfig(db, subdomain);
   if (page) {
     return { app: { ...page, kind: "sqlite page" }, runtime: { directory: true }, schemas: {} };
   }
-  const route = db.prepare("SELECT DISTINCT subdomain FROM site_routes WHERE subdomain = ?").get(subdomain);
+  const route = getRouteConfig(db, subdomain);
   if (route) {
     return { app: { ...route, kind: "sqlite routes" }, runtime: { directory: true }, schemas: {} };
   }
-  const directory = db.prepare("SELECT subdomain, directory FROM sites WHERE subdomain = ?").get(subdomain);
+  const directory = getDirectoryConfig(db, subdomain);
   if (directory) {
     return { app: { ...directory, kind: "directory site" }, runtime: { directory: true }, schemas: {} };
   }

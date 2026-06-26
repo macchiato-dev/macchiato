@@ -5,15 +5,15 @@ import { mkdirSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
-import { getFontAsset, initFontCache, parseFontAssetUrl } from "@macchiato-dev/font-use";
+import { getFontAsset, parseFontAssetUrl } from "@macchiato-dev/font-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
-import { getSiteRoute, hasSiteRoutes, initSiteDb, renderSiteRoute } from "@macchiato-dev/site";
+import { getSiteRoute, hasSiteRoutes, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { appDirectoryHandler } from "./app-directory.js";
-import { initDeclarativeAppsDb } from "./app-config-db.js";
 import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
 import { getDeclarativeApp, seedDeclarativeApps } from "./declarative-apps.js";
 import { fileAppHandler } from "./file-app.js";
+import { addFileSiteIfMissing, createSqliteStore, initSqliteStore } from "./sqlite-store.js";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
 const args = "Deno" in globalThis
@@ -77,64 +77,18 @@ if (dataDir) {
 }
 
 const db = new DatabaseSync(dbPath);
-db.exec("PRAGMA journal_mode = WAL");
-db.exec("CREATE TABLE IF NOT EXISTS sites (subdomain TEXT PRIMARY KEY, directory TEXT NOT NULL)");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS schemas (
-    name TEXT PRIMARY KEY,
-    json TEXT NOT NULL
-  )
-`);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS site_pages (
-    subdomain TEXT PRIMARY KEY,
-    title TEXT NOT NULL DEFAULT '',
-    html TEXT NOT NULL,
-    css TEXT NOT NULL DEFAULT '',
-    dom_schema_json TEXT NOT NULL,
-    css_schema_json TEXT NOT NULL,
-    sandboxed INTEGER NOT NULL DEFAULT 1
-  )
-`);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS site_files (
-    subdomain TEXT PRIMARY KEY,
-    title TEXT NOT NULL DEFAULT '',
-    file_path TEXT NOT NULL,
-    content_type TEXT NOT NULL DEFAULT '',
-    csp TEXT NOT NULL DEFAULT ''
-  )
-`);
-dropLegacySiteFileColumns(db);
-initDeclarativeAppsDb(db);
-initFontCache(db);
-initSiteDb(db);
+initSqliteStore(db);
 setupBuiltinApps(db);
 seedDeclarativeApps(db);
 seedResourcesSite(db);
-db.prepare(`
-  INSERT OR IGNORE INTO site_files
-    (subdomain, title, file_path, content_type)
-  VALUES (?, ?, ?, ?)
-`).run(
-  "resources-design",
-  "Resources.co Design",
-  join(resolve(new URL("../../..", import.meta.url).pathname), "resourcesco-standalone-20260617.html"),
-  "text/html; charset=utf-8",
-);
+addFileSiteIfMissing(db, {
+  subdomain: "resources-design",
+  title: "Resources.co Design",
+  filePath: join(resolve(new URL("../../..", import.meta.url).pathname), "resourcesco-standalone-20260617.html"),
+  contentType: "text/html; charset=utf-8",
+});
 
-const getSite = db.prepare("SELECT directory FROM sites WHERE subdomain = ?");
-const getSchema = db.prepare("SELECT json FROM schemas WHERE name = ?");
-const getSitePage = db.prepare(`
-  SELECT subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed
-  FROM site_pages
-  WHERE subdomain = ?
-`);
-const getSiteFile = db.prepare(`
-  SELECT subdomain, title, file_path AS path, content_type AS contentType, csp
-  FROM site_files
-  WHERE subdomain = ?
-`);
+const store = createSqliteStore(db);
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -146,13 +100,6 @@ const CONTENT_TYPES = {
   ".txt": "text/plain; charset=utf-8",
   ".woff2": "font/woff2",
 };
-
-function dropLegacySiteFileColumns(db) {
-  const columns = db.prepare("PRAGMA table_info(site_files)").all().map((column) => column.name);
-  if (columns.includes("clear_site_data")) {
-    db.exec("ALTER TABLE site_files DROP COLUMN clear_site_data");
-  }
-}
 
 function escapeHtml(str) {
   return str
@@ -240,7 +187,7 @@ function hydrateDomSchema(schema) {
 function parseSchemaDocument(value) {
   const text = String(value || "").trim();
   if (text.startsWith("@")) {
-    const row = getSchema.get(text);
+    const row = store.getSchema.get(text);
     if (!row) throw new Error(`Schema not found: ${text}`);
     return JSON.parse(row.json);
   }
@@ -385,7 +332,7 @@ async function route(request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const page = getSitePage.get(subdomain);
+  const page = store.getSitePage.get(subdomain);
   if (page && (url.pathname === "/" || url.pathname === "/index.html")) {
     return serveStoredPage(page);
   }
@@ -393,7 +340,7 @@ async function route(request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const fileSite = getSiteFile.get(subdomain);
+  const fileSite = store.getSiteFile.get(subdomain);
   if (fileSite) {
     return fileAppHandler(request, {
       name: fileSite.title || fileSite.subdomain,
@@ -406,7 +353,7 @@ async function route(request) {
     });
   }
 
-  const row = getSite.get(subdomain);
+  const row = store.getDirectorySite.get(subdomain);
   if (row) {
     return serveFile(row.directory, url.pathname);
   }
