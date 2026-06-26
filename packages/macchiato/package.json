@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@macchiato-dev/app": "*",
+    "@macchiato-dev/app-db-sqlite": "0.1.0",
     "@macchiato-dev/font-use": "0.1.0",
     "@macchiato-dev/site": "0.1.0"
   }

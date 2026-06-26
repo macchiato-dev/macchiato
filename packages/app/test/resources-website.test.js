@@ -444,7 +444,7 @@ test("resources sqlite site transitions between friendly paths in a real browser
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
 
-  await page.getByText("macchiato/app").click();
+  await page.locator(".items a[href='/macchiato/app']").first().click();
   await assert.doesNotReject(page.locator("h1", { hasText: "App" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/macchiato/app");
   assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "macchiato/app");

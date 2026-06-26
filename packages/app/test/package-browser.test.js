@@ -121,7 +121,7 @@ test("packages app runs browser UI inside the QuickJS wasm sandbox", async (t) =
   await page.goto(`http://packages.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: "Packages" }).waitFor());
   await assert.doesNotReject(page.getByText("QuickJS WASM sandbox").waitFor());
-  await assert.doesNotReject(page.getByRole("button", { name: /@macchiato-dev\/app/ }).waitFor());
+  await assert.doesNotReject(page.locator("[data-package-dir='packages/app']").waitFor());
 
   await page.getByRole("button", { name: /@macchiato-dev\/quickjs-emscripten-sandbox/ }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "@macchiato-dev/quickjs-emscripten-sandbox" }).waitFor());

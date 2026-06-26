@@ -11,7 +11,7 @@ import {
   listConfiguredSites,
   listSchemas,
   removeConfiguredSite,
-} from "../../app/src/sqlite-store.js";
+} from "@macchiato-dev/app-db-sqlite";
 
 function parseServerOpts(args) {
   const opts = {};

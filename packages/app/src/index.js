@@ -13,7 +13,7 @@ import { appDirectoryHandler } from "./app-directory.js";
 import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
 import { getDeclarativeApp, seedDeclarativeApps } from "./declarative-apps.js";
 import { fileAppHandler } from "./file-app.js";
-import { addFileSiteIfMissing, createSqliteStore, initSqliteStore } from "./sqlite-store.js";
+import { addFileSiteIfMissing, createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
 const args = "Deno" in globalThis
