@@ -72,7 +72,17 @@ test("packages app exposes only configured git-visible package files", async (t)
   await app.waitForReady;
 
   const directory = await fetch(`http://apps.localhost:${port}/`);
-  assert.match(await directory.text(), /packages\.localhost/);
+  const directoryText = await directory.text();
+  assert.match(directoryText, /packages\.localhost/);
+
+  const config = await fetch(`http://apps.localhost:${port}/config/packages`);
+  const configText = await config.text();
+  assert.equal(config.status, 200);
+  assert.match(configText, /&quot;declarative&quot;: true/);
+  assert.match(configText, /&quot;handler&quot;: &quot;package-browser&quot;/);
+  assert.match(configText, /&quot;sandbox&quot;: &quot;QuickJS WASM&quot;/);
+  assert.match(configText, /&quot;git-visible file read&quot;/);
+  assert.match(configText, /&quot;gitRoot&quot;: &quot;\$repo&quot;/);
 
   const response = await fetch(`http://packages.localhost:${port}/api/manifest`);
   const manifest = await response.json();

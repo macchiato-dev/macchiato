@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
 import { findBuiltinApp, visibleBuiltinApps } from "./builtin-apps.js";
+import { getDeclarativeApp, visibleDeclarativeApps } from "./declarative-apps.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 
@@ -92,7 +93,10 @@ async function appConfig(app) {
 
 function sqliteSiteRows(db) {
   if (!db) return [];
-  const builtinSubdomains = new Set(visibleBuiltinApps().map((app) => app.subdomain));
+  const builtinSubdomains = new Set([
+    ...visibleBuiltinApps().map((app) => app.subdomain),
+    ...visibleDeclarativeApps(db).map((app) => app.subdomain),
+  ]);
   return [
     ...db.prepare("SELECT subdomain, title, 'raw site' AS kind, file_path AS source FROM site_files").all(),
     ...db.prepare("SELECT subdomain, title, 'sqlite page' AS kind, 'site_pages' AS source FROM site_pages").all(),
@@ -125,6 +129,14 @@ function renderAppDirectory(request, { db } = {}) {
     href: appHref(app, request.url),
     config: configHref(app, request.url),
   }));
+  const declarativeRows = visibleDeclarativeApps(db).map((app) => renderAppRow({
+    name: app.name,
+    subdomain: app.subdomain,
+    kind: app.kind,
+    description: app.description,
+    href: appHref(app, request.url),
+    config: configHref(app, request.url),
+  }));
   const siteRows = sqliteSiteRows(db).map((site) => renderAppRow({
     name: site.title || site.subdomain,
     subdomain: site.subdomain,
@@ -133,7 +145,7 @@ function renderAppDirectory(request, { db } = {}) {
     href: appHref(site, request.url),
     config: configHref(site, request.url),
   }));
-  const rows = [...builtinRows, ...siteRows].join("");
+  const rows = [...builtinRows, ...declarativeRows, ...siteRows].join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -301,6 +313,27 @@ async function renderConfigPage(app, request) {
 
 function sqliteSiteConfig(db, subdomain) {
   if (!db) return null;
+  const app = getDeclarativeApp(db, subdomain);
+  if (app) {
+    return {
+      app: {
+        name: app.name,
+        subdomain: app.subdomain,
+        kind: app.kind,
+        description: app.description,
+        handler: app.handlerName,
+        declarative: true,
+        permissions: app.permissions,
+        access: app.access,
+        options: app.options,
+      },
+      runtime: {
+        directory: app.directory,
+        handler: `[Function ${app.handlerName}]`,
+      },
+      schemas: {},
+    };
+  }
   const file = db.prepare("SELECT subdomain, title, file_path AS filePath, content_type AS contentType, csp FROM site_files WHERE subdomain = ?").get(subdomain);
   if (file) {
     return {

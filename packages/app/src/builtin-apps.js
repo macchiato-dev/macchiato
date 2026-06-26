@@ -5,7 +5,6 @@ import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
-import { packageBrowserFileAccess, packageBrowserHandler } from "./package-browser.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -18,20 +17,6 @@ export const BUILTIN_APPS = [
     kind: "directory",
     description: "A directory of local Macchiato apps and projects.",
     directory: false,
-  },
-  {
-    name: "Packages",
-    subdomain: "packages",
-    kind: "sandboxed browser",
-    description: "Browse package files granted by git-aware app configuration.",
-    handler: packageBrowserHandler,
-    fileAccess: {
-      ...packageBrowserFileAccess,
-      gitRoot: repoRoot,
-    },
-    sourceFiles: [
-      "packages/app/src/package-browser.js",
-    ],
   },
   {
     name: "Code Notes",
