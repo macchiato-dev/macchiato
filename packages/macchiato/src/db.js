@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { initFontCache } from "@macchiato-dev/font-use";
 import { initSiteDb } from "@macchiato-dev/site";
+import { initDeclarativeAppsDb } from "../../app/src/app-config-db.js";
 
 function getHomeDir() {
   if ("Deno" in globalThis) {
@@ -55,6 +56,7 @@ export function withDb(fn, options = {}) {
     )
   `);
   dropLegacySiteFileColumns(db);
+  initDeclarativeAppsDb(db);
   initFontCache(db);
   initSiteDb(db);
   try {

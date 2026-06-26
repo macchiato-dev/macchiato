@@ -10,7 +10,9 @@ import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 import { getSiteRoute, hasSiteRoutes, initSiteDb, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { appDirectoryHandler } from "./app-directory.js";
+import { initDeclarativeAppsDb } from "./app-config-db.js";
 import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
+import { getDeclarativeApp, seedDeclarativeApps } from "./declarative-apps.js";
 import { fileAppHandler } from "./file-app.js";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 
@@ -104,9 +106,11 @@ db.exec(`
   )
 `);
 dropLegacySiteFileColumns(db);
+initDeclarativeAppsDb(db);
 initFontCache(db);
 initSiteDb(db);
 setupBuiltinApps(db);
+seedDeclarativeApps(db);
 seedResourcesSite(db);
 db.prepare(`
   INSERT OR IGNORE INTO site_files
@@ -365,6 +369,11 @@ async function route(request) {
   }
   if (builtinApp?.handler) {
     return builtinApp.handler(request, builtinApp);
+  }
+
+  const declarativeApp = getDeclarativeApp(db, subdomain);
+  if (declarativeApp?.handler) {
+    return declarativeApp.handler(request, declarativeApp);
   }
 
   if (hasSiteRoutes(db, subdomain)) {
