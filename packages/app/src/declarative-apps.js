@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
-import { packageBrowserHandler } from "./package-browser.js";
 import {
   addAppConfigIfMissing,
   getAppConfigRow,
-  initDeclarativeAppsDb,
+  initSqliteStore,
   listVisibleAppConfigRows,
-} from "./sqlite-store.js";
+} from "@macchiato-dev/app-db-sqlite";
+import { packageBrowserHandler } from "./package-browser.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 
@@ -57,7 +57,7 @@ const SEEDED_APPS = [
 ];
 
 export function seedDeclarativeApps(db) {
-  initDeclarativeAppsDb(db);
+  initSqliteStore(db);
   for (const app of SEEDED_APPS) {
     addAppConfigIfMissing(db, app);
   }
@@ -187,12 +187,10 @@ export function declarativeAppFromRow(row) {
 
 export function getDeclarativeApp(db, subdomain) {
   if (!db) return null;
-  initDeclarativeAppsDb(db);
   return declarativeAppFromRow(getAppConfigRow(db, subdomain));
 }
 
 export function visibleDeclarativeApps(db) {
   if (!db) return [];
-  initDeclarativeAppsDb(db);
   return listVisibleAppConfigRows(db).map(declarativeAppFromRow).filter(Boolean);
 }

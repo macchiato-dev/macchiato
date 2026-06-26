@@ -1,7 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
-import { findBuiltinApp, visibleBuiltinApps } from "./builtin-apps.js";
-import { getDeclarativeApp, visibleDeclarativeApps } from "./declarative-apps.js";
 import {
   getDirectoryConfig,
   getPageConfig,
@@ -11,7 +9,9 @@ import {
   listPageRows,
   listRawFileRows,
   listRouteRows,
-} from "./sqlite-store.js";
+} from "@macchiato-dev/app-db-sqlite";
+import { findBuiltinApp, visibleBuiltinApps } from "./builtin-apps.js";
+import { getDeclarativeApp, visibleDeclarativeApps } from "./declarative-apps.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 

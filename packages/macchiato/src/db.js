@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { initSqliteStore } from "../../app/src/sqlite-store.js";
+import { initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
 function getHomeDir() {
   if ("Deno" in globalThis) {

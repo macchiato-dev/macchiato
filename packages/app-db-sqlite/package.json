@@ -1,0 +1,13 @@
+{
+  "name": "@macchiato-dev/app-db-sqlite",
+  "version": "0.1.0",
+  "description": "SQLite storage package for Macchiato app configuration",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/font-use": "0.1.0",
+    "@macchiato-dev/site": "0.1.0"
+  }
+}
