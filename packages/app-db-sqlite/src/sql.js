@@ -1,161 +1,236 @@
-export function table(name) {
-  return {
-    name,
-    select(columns = "*") {
-      return selectFrom(name, columns);
-    },
-    insertOrReplace(columns) {
-      return insertInto(name, columns, { conflict: "OR REPLACE" });
-    },
-    insertOrIgnore(columns) {
-      return insertInto(name, columns, { conflict: "OR IGNORE" });
-    },
-    deleteWhere(where) {
-      return `DELETE FROM ${name} ${where}`;
-    },
-  };
+const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+export function quoteIdentifier(value) {
+  const text = String(value || "");
+  if (!IDENTIFIER.test(text)) throw new Error(`Invalid SQL identifier: ${text}`);
+  return text;
 }
 
-export function selectFrom(name, columns = "*") {
-  const selected = Array.isArray(columns) ? columns.join(", ") : columns;
-  return `SELECT ${selected} FROM ${name}`;
+export function quoteLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
 }
 
-export function insertInto(name, columns, { conflict = "" } = {}) {
-  const names = columns.join(", ");
-  const placeholders = columns.map(() => "?").join(", ");
+function rawSql(sql) {
+  return { kind: "raw", sql };
+}
+
+export function column(name, alias = "") {
+  return { kind: "column", name, alias };
+}
+
+export function literal(value, alias) {
+  return { kind: "literal", value, alias };
+}
+
+export function nullAs(alias) {
+  return { kind: "null", alias };
+}
+
+export function distinctColumn(name) {
+  return { kind: "distinct-column", name };
+}
+
+function expression(sql, alias = "") {
+  return { kind: "expression", sql, alias };
+}
+
+function renderSelection(selection) {
+  if (typeof selection === "string") return quoteIdentifier(selection);
+  if (!selection || typeof selection !== "object") throw new Error("Invalid SQL selection.");
+  if (selection.kind === "raw") return selection.sql;
+  if (selection.kind === "column") {
+    const base = quoteIdentifier(selection.name);
+    return selection.alias ? `${base} AS ${quoteIdentifier(selection.alias)}` : base;
+  }
+  if (selection.kind === "literal") return `${quoteLiteral(selection.value)} AS ${quoteIdentifier(selection.alias)}`;
+  if (selection.kind === "null") return `NULL AS ${quoteIdentifier(selection.alias)}`;
+  if (selection.kind === "distinct-column") return `DISTINCT ${quoteIdentifier(selection.name)}`;
+  if (selection.kind === "expression") {
+    return selection.alias ? `${selection.sql} AS ${quoteIdentifier(selection.alias)}` : selection.sql;
+  }
+  throw new Error(`Unsupported SQL selection kind: ${selection.kind}`);
+}
+
+function renderSelections(selections) {
+  if (selections === "*") return "*";
+  if (!Array.isArray(selections)) throw new Error("SQL selections must be an array or '*'.");
+  return selections.map(renderSelection).join(", ");
+}
+
+export function whereEquals(name) {
+  return `${quoteIdentifier(name)} = ?`;
+}
+
+export function orderBy(name) {
+  return `ORDER BY ${quoteIdentifier(name)}`;
+}
+
+export function select({ from, columns = "*", where = "", order = "" }) {
+  const clauses = [`SELECT ${renderSelections(columns)}`, `FROM ${quoteIdentifier(from)}`];
+  if (where) clauses.push(`WHERE ${where}`);
+  if (order) clauses.push(order);
+  return clauses.join(" ");
+}
+
+export function insert({ into, columns, conflict = "" }) {
+  const allowedConflicts = new Set(["", "OR REPLACE", "OR IGNORE"]);
+  if (!allowedConflicts.has(conflict)) throw new Error(`Unsupported INSERT conflict clause: ${conflict}`);
   const conflictSql = conflict ? ` ${conflict}` : "";
-  return `INSERT${conflictSql} INTO ${name} (${names}) VALUES (${placeholders})`;
+  const names = columns.map(quoteIdentifier).join(", ");
+  const placeholders = columns.map(() => "?").join(", ");
+  return `INSERT${conflictSql} INTO ${quoteIdentifier(into)} (${names}) VALUES (${placeholders})`;
 }
 
-export function whereEquals(column) {
-  return `WHERE ${column} = ?`;
+export function deleteWhere({ from, where }) {
+  return `DELETE FROM ${quoteIdentifier(from)} WHERE ${where}`;
 }
 
-export function orderBy(column) {
-  return `ORDER BY ${column}`;
+function columnDefinition(definition) {
+  const parts = [quoteIdentifier(definition.name), definition.type];
+  if (definition.primaryKey) parts.push("PRIMARY KEY");
+  if (definition.notNull) parts.push("NOT NULL");
+  if (Object.hasOwn(definition, "default")) parts.push(`DEFAULT ${defaultValue(definition.default)}`);
+  if (definition.check) parts.push(`CHECK (${definition.check})`);
+  return parts.join(" ");
 }
 
-export function distinct(columns) {
-  return `DISTINCT ${columns}`;
+function defaultValue(value) {
+  if (value && typeof value === "object" && value.kind === "raw") return value.sql;
+  if (typeof value === "string") return quoteLiteral(value);
+  if (typeof value === "number") return String(value);
+  if (value === null) return "NULL";
+  throw new Error(`Unsupported SQL default value: ${value}`);
 }
 
-export const tables = {
-  migrations: table("app_db_migrations"),
-  sites: table("sites"),
-  schemas: table("schemas"),
-  sitePages: table("site_pages"),
-  siteFiles: table("site_files"),
-  appConfigs: table("app_configs"),
-  siteRoutes: table("site_routes"),
+export function createTable(definition) {
+  const columns = definition.columns.map(columnDefinition).join(",\n      ");
+  return `CREATE TABLE IF NOT EXISTS ${quoteIdentifier(definition.name)} (\n      ${columns}\n    )`;
+}
+
+export const tableDefinitions = {
+  migrations: {
+    name: "app_db_migrations",
+    columns: [
+      { name: "version", type: "INTEGER", primaryKey: true },
+      { name: "name", type: "TEXT", notNull: true },
+      { name: "applied_at", type: "TEXT", notNull: true, default: rawSql("CURRENT_TIMESTAMP") },
+    ],
+  },
+  sites: {
+    name: "sites",
+    columns: [
+      { name: "subdomain", type: "TEXT", primaryKey: true },
+      { name: "directory", type: "TEXT", notNull: true },
+    ],
+  },
+  schemas: {
+    name: "schemas",
+    columns: [
+      { name: "name", type: "TEXT", primaryKey: true },
+      { name: "json", type: "TEXT", notNull: true },
+    ],
+  },
+  sitePages: {
+    name: "site_pages",
+    columns: [
+      { name: "subdomain", type: "TEXT", primaryKey: true },
+      { name: "title", type: "TEXT", notNull: true, default: "" },
+      { name: "html", type: "TEXT", notNull: true },
+      { name: "css", type: "TEXT", notNull: true, default: "" },
+      { name: "dom_schema_json", type: "TEXT", notNull: true },
+      { name: "css_schema_json", type: "TEXT", notNull: true },
+      { name: "sandboxed", type: "INTEGER", notNull: true, default: 1 },
+    ],
+  },
+  siteFiles: {
+    name: "site_files",
+    columns: [
+      { name: "subdomain", type: "TEXT", primaryKey: true },
+      { name: "title", type: "TEXT", notNull: true, default: "" },
+      { name: "file_path", type: "TEXT", notNull: true },
+      { name: "content_type", type: "TEXT", notNull: true, default: "" },
+      { name: "csp", type: "TEXT", notNull: true, default: "" },
+    ],
+  },
+  appConfigs: {
+    name: "app_configs",
+    columns: [
+      { name: "subdomain", type: "TEXT", primaryKey: true },
+      { name: "name", type: "TEXT", notNull: true },
+      { name: "kind", type: "TEXT", notNull: true },
+      { name: "description", type: "TEXT", notNull: true, default: "" },
+      { name: "handler", type: "TEXT", notNull: true },
+      { name: "permissions_json", type: "TEXT", notNull: true, default: "{}", check: `${rawFunction("json_valid", "permissions_json")}` },
+      { name: "access_json", type: "TEXT", notNull: true, default: "{}", check: `${rawFunction("json_valid", "access_json")}` },
+      { name: "options_json", type: "TEXT", notNull: true, default: "{}", check: `${rawFunction("json_valid", "options_json")}` },
+      { name: "directory", type: "INTEGER", notNull: true, default: 1, check: `${quoteIdentifier("directory")} IN (0, 1)` },
+    ],
+  },
 };
 
-export const where = {
-  subdomain: whereEquals("subdomain"),
-  name: whereEquals("name"),
-};
+function rawFunction(name, arg) {
+  if (!IDENTIFIER.test(name)) throw new Error(`Invalid SQL function name: ${name}`);
+  return `${name}(${quoteIdentifier(arg)})`;
+}
 
-export const schemaSql = {
-  migrations: `
-    CREATE TABLE IF NOT EXISTS app_db_migrations (
-      version INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `,
-  sites: `
-    CREATE TABLE IF NOT EXISTS sites (
-      subdomain TEXT PRIMARY KEY,
-      directory TEXT NOT NULL
-    )
-  `,
-  schemas: `
-    CREATE TABLE IF NOT EXISTS schemas (
-      name TEXT PRIMARY KEY,
-      json TEXT NOT NULL
-    )
-  `,
-  sitePages: `
-    CREATE TABLE IF NOT EXISTS site_pages (
-      subdomain TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      html TEXT NOT NULL,
-      css TEXT NOT NULL DEFAULT '',
-      dom_schema_json TEXT NOT NULL,
-      css_schema_json TEXT NOT NULL,
-      sandboxed INTEGER NOT NULL DEFAULT 1
-    )
-  `,
-  siteFiles: `
-    CREATE TABLE IF NOT EXISTS site_files (
-      subdomain TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      file_path TEXT NOT NULL,
-      content_type TEXT NOT NULL DEFAULT '',
-      csp TEXT NOT NULL DEFAULT ''
-    )
-  `,
-  appConfigs: `
-    CREATE TABLE IF NOT EXISTS app_configs (
-      subdomain TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      kind TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      handler TEXT NOT NULL,
-      permissions_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(permissions_json)),
-      access_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(access_json)),
-      options_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(options_json)),
-      directory INTEGER NOT NULL DEFAULT 1 CHECK (directory IN (0, 1))
-    )
-  `,
-};
+export const schemaSql = Object.fromEntries(
+  Object.entries(tableDefinitions).map(([key, definition]) => [key, createTable(definition)]),
+);
+
+const names = Object.fromEntries(
+  Object.entries(tableDefinitions).map(([key, definition]) => [key, definition.name]),
+);
+names.siteRoutes = "site_routes";
+
+const subdomain = whereEquals("subdomain");
+const nameEquals = whereEquals("name");
 
 export const querySql = {
   migrations: {
-    listVersions: tables.migrations.select("version"),
-    insertIfMissing: tables.migrations.insertOrIgnore(["version", "name"]),
-    currentVersion: "SELECT MAX(version) AS version FROM app_db_migrations",
+    listVersions: select({ from: names.migrations, columns: ["version"] }),
+    insertIfMissing: insert({ into: names.migrations, columns: ["version", "name"], conflict: "OR IGNORE" }),
+    currentVersion: select({ from: names.migrations, columns: [expression("MAX(version)", "version")] }),
   },
   serverLookups: {
-    directorySiteBySubdomain: `${tables.sites.select("directory")} ${where.subdomain}`,
-    schemaByName: `${tables.schemas.select("json")} ${where.name}`,
-    pageBySubdomain: `${tables.sitePages.select("subdomain, title, html, css, dom_schema_json, css_schema_json, sandboxed")} ${where.subdomain}`,
-    fileBySubdomain: `${tables.siteFiles.select("subdomain, title, file_path AS path, content_type AS contentType, csp")} ${where.subdomain}`,
+    directorySiteBySubdomain: select({ from: names.sites, columns: ["directory"], where: subdomain }),
+    schemaByName: select({ from: names.schemas, columns: ["json"], where: nameEquals }),
+    pageBySubdomain: select({ from: names.sitePages, columns: ["subdomain", "title", "html", "css", "dom_schema_json", "css_schema_json", "sandboxed"], where: subdomain }),
+    fileBySubdomain: select({ from: names.siteFiles, columns: ["subdomain", "title", column("file_path", "path"), column("content_type", "contentType"), "csp"], where: subdomain }),
   },
   schemaRows: {
-    upsert: tables.schemas.insertOrReplace(["name", "json"]),
-    list: `${tables.schemas.select("name")} ${orderBy("name")}`,
+    upsert: insert({ into: names.schemas, columns: ["name", "json"], conflict: "OR REPLACE" }),
+    list: select({ from: names.schemas, columns: ["name"], order: orderBy("name") }),
   },
   siteWrites: {
-    upsertDirectory: tables.sites.insertOrReplace(["subdomain", "directory"]),
-    upsertPage: tables.sitePages.insertOrReplace(["subdomain", "title", "html", "css", "dom_schema_json", "css_schema_json", "sandboxed"]),
-    upsertFile: tables.siteFiles.insertOrReplace(["subdomain", "title", "file_path", "content_type", "csp"]),
-    insertFileIfMissing: tables.siteFiles.insertOrIgnore(["subdomain", "title", "file_path", "content_type", "csp"]),
+    upsertDirectory: insert({ into: names.sites, columns: ["subdomain", "directory"], conflict: "OR REPLACE" }),
+    upsertPage: insert({ into: names.sitePages, columns: ["subdomain", "title", "html", "css", "dom_schema_json", "css_schema_json", "sandboxed"], conflict: "OR REPLACE" }),
+    upsertFile: insert({ into: names.siteFiles, columns: ["subdomain", "title", "file_path", "content_type", "csp"], conflict: "OR REPLACE" }),
+    insertFileIfMissing: insert({ into: names.siteFiles, columns: ["subdomain", "title", "file_path", "content_type", "csp"], conflict: "OR IGNORE" }),
   },
   appConfigs: {
-    insertIfMissing: tables.appConfigs.insertOrIgnore(["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"]),
-    getBySubdomain: `${tables.appConfigs.select("subdomain, name, kind, description, handler, permissions_json, access_json, options_json, directory")} ${where.subdomain}`,
-    listVisible: `${tables.appConfigs.select("subdomain, name, kind, description, handler, permissions_json, access_json, options_json, directory")} WHERE directory != 0 ${orderBy("subdomain")}`,
+    insertIfMissing: insert({ into: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], conflict: "OR IGNORE" }),
+    getBySubdomain: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], where: subdomain }),
+    listVisible: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], where: `${quoteIdentifier("directory")} != 0`, order: orderBy("subdomain") }),
   },
   siteLists: {
-    configuredDirectories: tables.sites.select("subdomain, 'directory' AS kind, directory, NULL AS sandboxed"),
-    configuredPages: tables.sitePages.select("subdomain, 'page' AS kind, NULL AS directory, sandboxed"),
-    configuredRawFiles: tables.siteFiles.select("subdomain, 'raw site' AS kind, file_path AS directory, NULL AS sandboxed"),
-    configuredRoutes: tables.siteRoutes.select(`${distinct("subdomain")}, 'routes' AS kind, NULL AS directory, NULL AS sandboxed`),
-    directoryRows: tables.sites.select("subdomain, subdomain AS title, 'directory site' AS kind, directory AS source"),
-    pageRows: tables.sitePages.select("subdomain, title, 'sqlite page' AS kind, 'site_pages' AS source"),
-    rawFileRows: tables.siteFiles.select("subdomain, title, 'raw site' AS kind, file_path AS source"),
-    routeRows: tables.siteRoutes.select(`${distinct("subdomain")}, subdomain AS title, 'sqlite routes' AS kind, 'site_routes' AS source`),
+    configuredDirectories: select({ from: names.sites, columns: ["subdomain", literal("directory", "kind"), "directory", nullAs("sandboxed")] }),
+    configuredPages: select({ from: names.sitePages, columns: ["subdomain", literal("page", "kind"), nullAs("directory"), "sandboxed"] }),
+    configuredRawFiles: select({ from: names.siteFiles, columns: ["subdomain", literal("raw site", "kind"), column("file_path", "directory"), nullAs("sandboxed")] }),
+    configuredRoutes: select({ from: names.siteRoutes, columns: [distinctColumn("subdomain"), literal("routes", "kind"), nullAs("directory"), nullAs("sandboxed")] }),
+    directoryRows: select({ from: names.sites, columns: ["subdomain", column("subdomain", "title"), literal("directory site", "kind"), column("directory", "source")] }),
+    pageRows: select({ from: names.sitePages, columns: ["subdomain", "title", literal("sqlite page", "kind"), literal("site_pages", "source")] }),
+    rawFileRows: select({ from: names.siteFiles, columns: ["subdomain", "title", literal("raw site", "kind"), column("file_path", "source")] }),
+    routeRows: select({ from: names.siteRoutes, columns: [distinctColumn("subdomain"), column("subdomain", "title"), literal("sqlite routes", "kind"), literal("site_routes", "source")] }),
   },
   siteConfig: {
-    rawFile: `${tables.siteFiles.select("subdomain, title, file_path AS filePath, content_type AS contentType, csp")} ${where.subdomain}`,
-    page: `${tables.sitePages.select("subdomain, title, sandboxed")} ${where.subdomain}`,
-    route: `${tables.siteRoutes.select(distinct("subdomain"))} ${where.subdomain}`,
-    directory: `${tables.sites.select("subdomain, directory")} ${where.subdomain}`,
+    rawFile: select({ from: names.siteFiles, columns: ["subdomain", "title", column("file_path", "filePath"), column("content_type", "contentType"), "csp"], where: subdomain }),
+    page: select({ from: names.sitePages, columns: ["subdomain", "title", "sandboxed"], where: subdomain }),
+    route: select({ from: names.siteRoutes, columns: [distinctColumn("subdomain")], where: subdomain }),
+    directory: select({ from: names.sites, columns: ["subdomain", "directory"], where: subdomain }),
   },
   siteRemoval: {
-    directory: tables.sites.deleteWhere(where.subdomain),
-    page: tables.sitePages.deleteWhere(where.subdomain),
-    file: tables.siteFiles.deleteWhere(where.subdomain),
+    directory: deleteWhere({ from: names.sites, where: subdomain }),
+    page: deleteWhere({ from: names.sitePages, where: subdomain }),
+    file: deleteWhere({ from: names.siteFiles, where: subdomain }),
   },
 };
