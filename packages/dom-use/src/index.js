@@ -519,6 +519,43 @@ export class DomUse {
   }
 
   /**
+   * Parse and sanitize an HTML string through this schema, returning safe HTML.
+   *
+   * When `container` is supplied, the input is treated as that container's
+   * children, so parent/child rules are enforced for the target region that
+   * will receive the resulting HTML.
+   *
+   * @param {string} html
+   * @param {object} [options]
+   * @param {string|object} [options.container] tag name or descriptor
+   * @param {string} [options.container.tagName]
+   * @param {object} [options.container.attributes]
+   * @param {boolean} [options.includeContainer=false]
+   * @returns {string}
+   */
+  sanitizeHTML(html, options = {}) {
+    const doc = this.createDocument();
+    const container = options.container;
+    if (container) {
+      const descriptor = typeof container === "string" ? { tagName: container } : container;
+      const node = doc.createElement(descriptor.tagName || "div");
+      for (const [name, value] of Object.entries(descriptor.attributes || {})) {
+        node.setAttribute(name, value);
+      }
+      this.setInnerHTML(node, html);
+      return options.includeContainer ? this.getOuterHTML(node) : this.getInnerHTML(node);
+    }
+
+    const fragment = parseHTML(html, {
+      createElement: (tag) => doc.createElement(tag),
+      createTextNode: (text) => doc.createTextNode(text),
+      schema: this.schema,
+      styleUse: this.styleUse,
+    });
+    return serializeHTML(fragment);
+  }
+
+  /**
    * Serialize a node's children to HTML.
    * Delegates to html-use.
    */
@@ -667,7 +704,8 @@ export class DomUse {
       if (!this.styleUse.rejectDangerousValue(url)) {
         throw new Error(`Disallowed URL on ${tagName}.${attr}`);
       }
-      if (rule !== true && !this.styleUse.isAllowedByRule(rule, url, `${tagName}.${attr}`)) {
+      const urlRule = typeof rule === "string" ? new RegExp(rule) : rule;
+      if (urlRule !== true && !this.styleUse.isAllowedByRule(urlRule, url, `${tagName}.${attr}`)) {
         throw new Error(`URL not allowed on ${tagName}.${attr}: ${url}`);
       }
     }
