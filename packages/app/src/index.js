@@ -5,10 +5,14 @@ import { mkdirSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
+import { domUseBrowserAssets } from "@macchiato-dev/dom-use/browser-assets";
 import { getFontAsset, parseFontAssetUrl } from "@macchiato-dev/font-use";
+import { htmlUseBrowserAssets } from "@macchiato-dev/html-use/browser-assets";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
+import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-emscripten-sandbox/browser-assets";
 import { getSiteRoute, hasSiteRoutes, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
+import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 import { appDirectoryHandler } from "./app-directory.js";
 import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
 import { getDeclarativeApp, seedDeclarativeApps } from "./declarative-apps.js";
@@ -100,6 +104,13 @@ const CONTENT_TYPES = {
   ".txt": "text/plain; charset=utf-8",
   ".woff2": "font/woff2",
 };
+
+const BROWSER_ASSET_SETS = [
+  quickJsEmscriptenSandboxBrowserAssets,
+  domUseBrowserAssets,
+  htmlUseBrowserAssets,
+  styleUseBrowserAssets,
+];
 
 function escapeHtml(str) {
   return str
@@ -303,12 +314,56 @@ function serveCachedFont(pathname) {
   });
 }
 
+function browserAsset(pathname) {
+  if (!pathname.startsWith("/-/")) return null;
+  const relative = pathname.slice("/-/".length);
+  if (relative.includes("..") || relative.includes("\\")) return null;
+  for (const set of BROWSER_ASSET_SETS) {
+    if (!relative.startsWith(`${set.namespace}/`)) continue;
+    const publicPath = relative.slice(set.namespace.length + 1);
+    for (const asset of set.files || []) {
+      if (publicPath === asset.publicPath) return asset;
+      if (asset.sourceMapPath && publicPath === `${asset.publicPath}.map`) {
+        return { ...asset, filePath: asset.sourceMapPath, rewrites: null, sourceMapPath: null };
+      }
+    }
+  }
+  return null;
+}
+
+function rewriteBrowserAsset(content, asset) {
+  let rewritten = content;
+  for (const [from, to] of Object.entries(asset.rewrites || {})) {
+    rewritten = rewritten.replaceAll(from, to);
+  }
+  if (asset.sourceMapPath) {
+    rewritten = rewritten.replace(/\/\/# sourceMappingURL=.*$/m, `//# sourceMappingURL=${asset.publicPath}.map`);
+  }
+  return rewritten;
+}
+
+async function serveBrowserAsset(pathname) {
+  const asset = browserAsset(pathname);
+  if (!asset) return null;
+  try {
+    const content = await readFile(asset.filePath, pathname.endsWith(".wasm") ? undefined : "utf8");
+    const body = pathname.endsWith(".js") ? rewriteBrowserAsset(content, asset) : content;
+    return new Response(body, {
+      headers: { "content-type": contentTypeFor(pathname) },
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+}
+
 async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
   const url = new URL(request.url);
   const cachedFont = serveCachedFont(url.pathname);
   if (cachedFont) return cachedFont;
+  const asset = await serveBrowserAsset(url.pathname);
+  if (asset) return asset;
 
   const builtinApp = findBuiltinApp(subdomain);
   if (builtinApp?.directory === false) {
