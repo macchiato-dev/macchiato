@@ -123,6 +123,33 @@ test("drops invalid markup when setting innerHTML", () => {
   assert.equal(domUse.getInnerHTML(main), "<h1>Hours</h1><ul><li>Cards</li></ul>");
 });
 
+test("sanitizes HTML fragments for a target container", () => {
+  const domUse = articleDomUse();
+
+  assert.equal(
+    domUse.sanitizeHTML(
+      '<h1>Hours</h1><script>alert(1)</script><p onclick="alert(1)">Open</p><ul><li>Cards</li></ul>',
+      { container: "main" },
+    ),
+    "<h1>Hours</h1><ul><li>Cards</li></ul>",
+  );
+});
+
+test("can include the sanitized target container when requested", () => {
+  const domUse = articleDomUse();
+
+  assert.equal(
+    domUse.sanitizeHTML("<h1>Hours</h1><p>Open</p>", {
+      container: {
+        tagName: "main",
+        attributes: { class: "content-root" },
+      },
+      includeContainer: true,
+    }),
+    '<main class="content-root"><h1>Hours</h1><p>Open</p></main>',
+  );
+});
+
 test("denies URL attributes by default even when attribute names are allowed", () => {
   const domUse = articleDomUse();
   const doc = domUse.createDocument();
