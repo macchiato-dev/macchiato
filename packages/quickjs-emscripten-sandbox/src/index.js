@@ -35,6 +35,16 @@ function formatQuickJsError(value) {
 }
 
 export class Sandbox {
+  /**
+   * @param {object} [options]
+   * @param {Record<string, string|(() => string)>} [options.modules]
+   * @param {(moduleName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleLoader]
+   * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
+   */
+  constructor(options = {}) {
+    this.options = options;
+  }
+
   /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
   runtime = null;
   /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
@@ -48,7 +58,26 @@ export class Sandbox {
 
     const mod = await getModule();
     this.runtime = mod.newRuntime();
+    this.installModuleLoader();
     this.context = this.runtime.newContext();
+  }
+
+  installModuleLoader() {
+    if (!this.runtime) return;
+    const modules = this.options.modules || {};
+    const customLoader = this.options.moduleLoader;
+    const customNormalizer = this.options.moduleNormalizer;
+    if (!customLoader && Object.keys(modules).length === 0) return;
+
+    this.runtime.setModuleLoader(
+      (moduleName, context) => {
+        if (customLoader) return customLoader(moduleName, context);
+        const source = modules[moduleName];
+        if (source === undefined) throw new Error(`Module not allowed: ${moduleName}`);
+        return typeof source === "function" ? source(moduleName) : String(source);
+      },
+      customNormalizer || ((_baseModuleName, requestedName) => requestedName),
+    );
   }
 
   /**
@@ -147,8 +176,8 @@ export class Sandbox {
   }
 }
 
-export async function createSandbox() {
-  const sandbox = new Sandbox();
+export async function createSandbox(options = {}) {
+  const sandbox = new Sandbox(options);
   await sandbox.init();
   return sandbox;
 }
@@ -165,4 +194,74 @@ export async function runInSandbox(code) {
   } finally {
     sandbox.dispose();
   }
+}
+
+export function nodeHttpModuleSource() {
+  return `
+function host(op, payload = {}) {
+  if (typeof globalThis.__macchiatoHost !== "function") {
+    throw new Error("node:http wrapper requires __macchiatoHost");
+  }
+  const result = JSON.parse(globalThis.__macchiatoHost(JSON.stringify({ op, ...payload })));
+  if (result && result.__error) throw new Error(result.__error);
+  return result;
+}
+
+export function createServer(handler) {
+  if (typeof handler !== "function") throw new TypeError("createServer requires a handler function");
+  const server = host("http.createServer", {});
+  return {
+    id: server.id,
+    listen(port, hostName = "127.0.0.1") {
+      return host("http.listen", { id: server.id, port, host: hostName });
+    },
+    close() {
+      return host("http.close", { id: server.id });
+    },
+  };
+}
+
+export default { createServer };
+`;
+}
+
+export function nodeSqliteModuleSource() {
+  return `
+function host(op, payload = {}) {
+  if (typeof globalThis.__macchiatoHost !== "function") {
+    throw new Error("node:sqlite wrapper requires __macchiatoHost");
+  }
+  const result = JSON.parse(globalThis.__macchiatoHost(JSON.stringify({ op, ...payload })));
+  if (result && result.__error) throw new Error(result.__error);
+  return result;
+}
+
+export class DatabaseSync {
+  constructor(name, options = {}) {
+    const database = host("sqlite.open", { name, options });
+    this.id = database.id;
+  }
+
+  prepare(sql) {
+    const db = this.id;
+    return {
+      all(...params) {
+        return host("sqlite.all", { db, sql, params });
+      },
+      get(...params) {
+        return host("sqlite.get", { db, sql, params });
+      },
+      run(...params) {
+        return host("sqlite.run", { db, sql, params });
+      },
+    };
+  }
+
+  close() {
+    return host("sqlite.close", { id: this.id });
+  }
+}
+
+export default { DatabaseSync };
+`;
 }
