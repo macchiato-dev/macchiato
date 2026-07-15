@@ -7,7 +7,7 @@
         {
           "oneOf": [
             "$brand",
-            "$theme-toggle-block",
+            "$userbar",
             "$main-column",
             "$primary-nav",
             "$site-footer"
@@ -18,12 +18,22 @@
     "brand": {
       "element": "header.box.brand",
       "attrs": ["class", "data-screen-label"],
-      "children": ["a"]
+      "children": ["nav"]
     },
-    "theme-toggle-block": {
-      "element": "section.box.toggle",
+    "userbar": {
+      "element": "section.box.userbar",
       "attrs": ["class", "data-screen-label"],
-      "children": ["button"]
+      "children": ["$userbar-pop"]
+    },
+    "userbar-pop": {
+      "element": "div.ub-pop",
+      "attrs": ["class"],
+      "children": ["button", "$popover-menu"]
+    },
+    "popover-menu": {
+      "element": "div.popover.user-menu",
+      "attrs": ["class", "role"],
+      "children": ["button", "div"]
     },
     "main-column": {
       "element": "div.main",
@@ -48,7 +58,7 @@
     "primary-nav": {
       "element": "nav.box.nav",
       "attrs": ["class", "data-screen-label", "aria-label"],
-      "children": ["a"]
+      "children": ["a", "div"]
     },
     "site-footer": {
       "element": "footer.box.footer",
@@ -58,20 +68,20 @@
   },
   "nodes": {
     "a": {
-      "attrs": ["class", "href", "data-section", "aria-current"],
-      "children": ["div", "span"]
+      "attrs": ["class", "href", "data-section", "aria-current", "aria-label"],
+      "children": ["div", "span", "#text"]
     },
     "button": {
-      "attrs": ["id", "class", "role", "aria-checked", "aria-label"],
-      "children": ["span", "svg"]
+      "attrs": ["id", "class", "role", "aria-checked", "aria-label", "aria-haspopup", "aria-expanded", "aria-pressed"],
+      "children": ["#text", "span", "svg"]
     },
     "circle": {
       "attrs": ["cx", "cy", "r", "fill", "stroke"],
       "children": []
     },
     "div": {
-      "attrs": ["class", "id"],
-      "children": ["#text", "a", "h1", "h2", "p", "section", "span"]
+      "attrs": ["class", "id", "role", "aria-label"],
+      "children": ["#text", "a", "button", "div", "h1", "h2", "p", "section", "span"]
     },
     "footer": {
       "attrs": ["class", "data-screen-label"],
@@ -87,7 +97,7 @@
     },
     "header": {
       "attrs": ["class", "data-screen-label"],
-      "children": ["div"]
+      "children": ["nav"]
     },
     "line": {
       "attrs": ["x1", "x2", "y1", "y2"],
@@ -99,7 +109,7 @@
         {
           "oneOf": [
             "$brand",
-            "$theme-toggle-block",
+            "$userbar",
             "$main-column",
             "$primary-nav",
             "$site-footer"
@@ -108,8 +118,8 @@
       ]
     },
     "nav": {
-      "attrs": ["class", "data-screen-label", "aria-label"],
-      "children": ["a"]
+      "attrs": ["class", "id", "data-screen-label", "aria-label"],
+      "children": ["a", "div"]
     },
     "p": {
       "attrs": [],
@@ -139,7 +149,7 @@
     "maxAttributeNameLength": 64,
     "maxAttributeValueLength": 260,
     "maxAttributes": 10,
-    "maxNodes": 180
+    "maxNodes": 320
   },
   "content": {
     "rejectPattern": "<"

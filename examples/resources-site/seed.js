@@ -147,6 +147,14 @@ export function resourcesCssSchema() {
   return hydrateCssSchema(JSON.parse(json));
 }
 
+function resourcesDomSchemaText() {
+  return readFileSync(join(__dirname, "dom.schema.json"), "utf8");
+}
+
+function resourcesCssSchemaText() {
+  return readFileSync(join(__dirname, "css.schema.json"), "utf8");
+}
+
 export function validateResourcesStylesheet(stylesheet) {
   return new StyleUse(resourcesCssSchema()).validateStylesheet(stylesheet);
 }
@@ -637,6 +645,36 @@ function themeToggleHtml() {
   return `<button class="toggle-btn theme-toggle" role="switch" aria-checked="true" aria-label="Switch to light mode">${sun}${moon}<span class="tb-thumb">${sun.replace("tb-ghost tb-ghost-sun", "tb-sun")}${moon.replace("tb-ghost tb-ghost-moon", "tb-moon")}</span></button>`;
 }
 
+function userbarHtml() {
+  return `<section class="box userbar" data-screen-label="userbar">
+    <div class="ub-pop">
+      <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span class="ub-dot"></span></button>
+      <div class="popover user-menu" role="menu"><div class="menu__head">Notifications</div><div class="menu__empty">You're all caught up.</div></div>
+    </div>
+    <div class="ub-pop">
+      <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+      <div class="popover user-menu" role="menu">
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
+        <div class="menu__sep"></div>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
+      </div>
+    </div>
+    <div class="ub-pop">
+      <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="ub-avatar">MD</span><svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <div class="popover user-menu" role="menu">
+        <div class="menu__acct"><span class="ub-avatar">MD</span><div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div></div>
+        <div class="menu__sep"></div>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
+        <div class="menu__sep"></div>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
+        <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
+      </div>
+    </div>
+  </section>`;
+}
+
 function navHtml(activeKey) {
   const links = NAV.map((item) => {
     const current = item.key === activeKey ? ' aria-current="page"' : "";
@@ -793,19 +831,138 @@ function pageHtml(path) {
   const route = routeForPath(path);
   return `<main class="layout">
     ${brandHeaderHtml(path)}
-    <section class="box toggle" data-screen-label="toggle">${themeToggleHtml()}</section>
+    ${userbarHtml()}
     ${menuHtml(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
     ${navHtml(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">&copy; 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
   </main>
-  <script>${clientScript()}</script>`;
+  <script type="module">${clientScript()}</script>`;
+}
+
+function headHtml() {
+  return `<script type="importmap">
+${JSON.stringify({
+  imports: {
+    "@macchiato-dev/quickjs-emscripten-sandbox": "/-/quickjs-emscripten-sandbox/index.js",
+    "@macchiato-dev/dom-use": "/-/@macchiato-dev/dom-use/index.js",
+    "@macchiato-dev/html-use": "/-/@macchiato-dev/html-use/index.js",
+    "@macchiato-dev/style-use": "/-/@macchiato-dev/style-use/index.js",
+    "@jitl/quickjs-ffi-types": "/-/quickjs-emscripten-sandbox/ffi-types.js",
+    "@jitl/quickjs-singlefile-browser-release-sync": "/-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js",
+    "quickjs-emscripten-core": "/-/quickjs-emscripten-sandbox/quickjs-core.js",
+  },
+}, null, 2)}
+</script>`;
 }
 
 function clientScript() {
-  return `(() => {
+  return `const resourcesDomSchema = ${resourcesDomSchemaText()};
+const resourcesCssSchema = ${resourcesCssSchemaText()};
+
+const userbarSandboxSource = ${JSON.stringify(`const state = {
+  openIndex: null,
+  hoverPaused: false,
+};
+
+function snapshot(blurIndex = null) {
+  return {
+    pinned: state.openIndex !== null,
+    hoverPaused: state.hoverPaused,
+    open: [0, 1, 2].map((index) => index === state.openIndex),
+    expanded: [0, 1, 2].map((index) => index === state.openIndex),
+    blurIndex,
+  };
+}
+
+function close({ pauseHover = false, blurIndex = null } = {}) {
+  state.openIndex = null;
+  state.hoverPaused = Boolean(pauseHover);
+  return snapshot(blurIndex);
+}
+
+globalThis.__resourcesUserbarEvent = (json) => {
+  const event = JSON.parse(json);
+  if (event.type === "click") {
+    if (event.target?.kind === "userbar-button") {
+      const index = Number(event.target.index);
+      if (!Number.isInteger(index) || index < 0 || index > 2) return JSON.stringify({ state: snapshot(), preventDefault: false });
+      if (state.openIndex === index) return JSON.stringify({ state: close({ pauseHover: true, blurIndex: index }), preventDefault: true });
+      state.openIndex = index;
+      state.hoverPaused = false;
+      return JSON.stringify({ state: snapshot(), preventDefault: true });
+    }
+    if (!event.target?.insideUserbar) return JSON.stringify({ state: close(), preventDefault: false });
+    return JSON.stringify({ state: snapshot(), preventDefault: false });
+  }
+  if (event.type === "toggle") {
+    const index = Number(event.index);
+    if (!Number.isInteger(index) || index < 0 || index > 2) return JSON.stringify(snapshot());
+    if (state.openIndex === index) return JSON.stringify(close({ pauseHover: true, blurIndex: index }));
+    state.openIndex = index;
+    state.hoverPaused = false;
+    return JSON.stringify(snapshot());
+  }
+  if (event.type === "close") return JSON.stringify(close());
+  if (event.type === "exit" || event.type === "pointerleave") {
+    state.hoverPaused = false;
+    return JSON.stringify(snapshot());
+  }
+  return JSON.stringify(snapshot());
+};
+
+globalThis.__resourcesUserbarBindings = () => JSON.stringify([
+  { target: "document", type: "click" },
+  { target: ".userbar", type: "pointerleave" },
+]);
+`)};
+
+(() => {
   const root = document.documentElement;
   const routeCache = new Map();
+  let userbarSandboxPromise = null;
+  let transitionDomUsePromise = null;
+
+  function attributesFor(node) {
+    return Object.fromEntries(Array.from(node.attributes || [], (attr) => [attr.name, attr.value]));
+  }
+
+  async function transitionDomUse() {
+    if (!transitionDomUsePromise) {
+      transitionDomUsePromise = Promise.all([
+        import("@macchiato-dev/dom-use"),
+        import("@macchiato-dev/style-use"),
+      ]).then(([domUseModule, styleUseModule]) => (
+        new domUseModule.DomUse(resourcesDomSchema, new styleUseModule.StyleUse(resourcesCssSchema))
+      ));
+    }
+    return transitionDomUsePromise;
+  }
+
+  async function sanitizeRegionInner(node) {
+    const domUse = await transitionDomUse();
+    return domUse.sanitizeHTML(node.innerHTML, {
+      container: {
+        tagName: node.tagName.toLowerCase(),
+        attributes: attributesFor(node),
+      },
+    });
+  }
+
+  async function setSanitizedInnerHTML(target, source) {
+    target.innerHTML = await sanitizeRegionInner(source);
+  }
+
+  async function sanitizedOuterHTML(node) {
+    const domUse = await transitionDomUse();
+    return domUse.sanitizeHTML(node.innerHTML, {
+      container: {
+        tagName: node.tagName.toLowerCase(),
+        attributes: attributesFor(node),
+      },
+      includeContainer: true,
+    });
+  }
 
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
@@ -825,6 +982,97 @@ function clientScript() {
     menu.dataset.open = open ? "true" : "false";
     button.setAttribute("aria-expanded", open ? "true" : "false");
     button.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  }
+
+  function applyUserbarState(state) {
+    const userbar = document.querySelector(".userbar");
+    if (!userbar || !state) return;
+    userbar.dataset.userbarPinned = state.pinned ? "true" : "false";
+    if (state.hoverPaused) userbar.dataset.userbarHoverPaused = "true";
+    else delete userbar.dataset.userbarHoverPaused;
+    userbar.querySelectorAll(".ub-pop").forEach((pop, index) => {
+      const open = Boolean(state.open && state.open[index]);
+      pop.dataset.open = open ? "true" : "false";
+      const button = pop.querySelector("button[aria-expanded]");
+      if (button) button.setAttribute("aria-expanded", open ? "true" : "false");
+      if (state.blurIndex === index && button) button.blur();
+    });
+  }
+
+  function applyUserbarResult(result) {
+    if (!result) return {};
+    if (result.state) {
+      applyUserbarState(result.state);
+      return result;
+    }
+    applyUserbarState(result);
+    return { state: result };
+  }
+
+  async function userbarSandbox() {
+    if (!userbarSandboxPromise) {
+      userbarSandboxPromise = import("@macchiato-dev/quickjs-emscripten-sandbox").then(({ createSandbox }) => createSandbox()).then((sandbox) => {
+        sandbox.evalGlobal(userbarSandboxSource, "resources-userbar-state.js");
+        return sandbox;
+      }).catch((error) => {
+        console.warn("Userbar sandbox unavailable", error);
+        return null;
+      });
+    }
+    return userbarSandboxPromise;
+  }
+
+  async function dispatchUserbarEvent(event) {
+    const sandbox = await userbarSandbox();
+    if (!sandbox) return;
+    return applyUserbarResult(sandbox.callJsonFunction("__resourcesUserbarEvent", event));
+  }
+
+  function userbarEventPayload(event) {
+    const userbar = document.querySelector(".userbar");
+    const button = event.target.closest(".userbar .ub-pop > button");
+    let target = { insideUserbar: Boolean(event.target.closest(".userbar")) };
+    if (button && userbar) {
+      const pop = button.closest(".ub-pop");
+      target = {
+        ...target,
+        kind: "userbar-button",
+        index: Array.from(userbar.querySelectorAll(".ub-pop")).indexOf(pop),
+      };
+    }
+    return { type: event.type, target };
+  }
+
+  function addUserbarBinding(binding) {
+    if (binding?.target === "document" && binding.type === "click") {
+      document.addEventListener("click", (event) => {
+        const payload = userbarEventPayload(event);
+        if (payload.target.kind === "userbar-button") {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+        dispatchUserbarEvent(payload);
+      });
+    }
+    if (binding?.target === ".userbar" && binding.type === "pointerleave") {
+      document.querySelector(".userbar")?.addEventListener("pointerleave", (event) => {
+        dispatchUserbarEvent({ type: event.type, target: { insideUserbar: false } });
+      });
+    }
+  }
+
+  async function installUserbarApp() {
+    const sandbox = await userbarSandbox();
+    if (!sandbox) return;
+    const bindings = sandbox.callJsonFunction("__resourcesUserbarBindings", {});
+    bindings.forEach(addUserbarBinding);
+  }
+
+  function prepareUserbarMenus() {
+    const userbar = document.querySelector(".userbar");
+    if (!userbar || userbar.dataset.userbarReady === "true") return;
+    userbar.dataset.userbarReady = "true";
+    installUserbarApp();
   }
 
   function syncActiveNav(nextDoc) {
@@ -916,6 +1164,7 @@ function clientScript() {
   }
 
   applyTheme(root.getAttribute("data-theme") || "dark");
+  prepareUserbarMenus();
   preparePrefetching();
   document.addEventListener("click", (event) => {
     const menuButton = event.target.closest(".menu-button");
@@ -963,12 +1212,12 @@ function clientScript() {
       return;
     }
     document.title = nextDoc.title;
-    if (currentBrand && nextBrand) currentBrand.replaceWith(nextBrand.cloneNode(true));
-    if (currentCrumb && nextCrumb) currentCrumb.replaceWith(nextCrumb.cloneNode(true));
+    if (currentBrand && nextBrand) currentBrand.outerHTML = await sanitizedOuterHTML(nextBrand);
+    if (currentCrumb && nextCrumb) currentCrumb.outerHTML = await sanitizedOuterHTML(nextCrumb);
     else if (currentCrumb) currentCrumb.remove();
-    else if (nextCrumb) document.getElementById("main").prepend(nextCrumb.cloneNode(true));
+    else if (nextCrumb) document.getElementById("main").insertAdjacentHTML("afterbegin", await sanitizedOuterHTML(nextCrumb));
     clearSkeleton();
-    currentContent.replaceChildren(...Array.from(nextContent.childNodes).map((node) => node.cloneNode(true)));
+    await setSanitizedInnerHTML(currentContent, nextContent);
     syncActiveNav(nextDoc);
     applyTheme(root.getAttribute("data-theme") || "dark");
     preparePrefetching(currentContent);
@@ -993,6 +1242,7 @@ export function buildResourcesSiteRoutes() {
       title: route.title,
       html: pageHtml(path),
       css: stylesheet,
+      head: headHtml(),
       nav: NAV,
       transition: { mode: "same-origin-ssr-swap", routePath: path },
     };

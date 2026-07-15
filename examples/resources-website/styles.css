@@ -128,6 +128,7 @@
     --accent: #30D5C8;
 
     --hover: rgba(255,255,255,0.07);
+    --pop-bg: #0c1230;
     --active-bg: #2f5bff;
     --active-fg: #ffffff;
 
@@ -153,6 +154,7 @@
     --accent: #1233f0;
 
     --hover: rgba(18,38,150,0.06);
+    --pop-bg: #ffffff;
     --active-bg: #1233f0;
     --active-fg: #ffffff;
 
@@ -194,9 +196,9 @@
     grid-template-columns: 1fr clamp(270px, 25vw, 320px);
     gap: var(--gap);
     align-items: start;
-    align-content: start;
+    grid-template-rows: auto 1fr auto;
     grid-template-areas:
-      "brand   toggle"
+      "brand   userbar"
       "main    nav"
       "footer  footer";
     max-width: 1380px;
@@ -204,27 +206,221 @@
     margin: 0 auto;
   }
 
-  /* ---- brand ---- */
+  /* ---- brand + header path ---- */
   .brand {
     grid-area: brand;
     justify-self: start;
-    padding: 20px 28px 26px;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
+    min-width: 0;
+    min-height: 64px;
   }
-  .brand__name {
-    font-size: clamp(24px, 3vw, 34px);
+  .brand__path {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    min-width: 0;
+  }
+  .brand__home {
+    text-decoration: none;
+    color: var(--text);
+    padding: 5px 8px;
+    border-radius: 9px;
+    font-size: clamp(22px, 2.6vw, 30px);
     font-weight: 600;
     letter-spacing: -0.02em;
-    line-height: 1;
+    line-height: 1.05;
+    transition: background .15s ease;
   }
-  .brand__name .dot { color: var(--accent); }
-  .brand__link { color: inherit; text-decoration: none; }
-  .brand__link:hover { color: inherit; }
+  .brand__home:hover { background: var(--hover); }
+  .brand__home .dot { color: var(--accent); }
+
+  /* ---- userbar ---- */
+  .userbar {
+    grid-area: userbar;
+    justify-self: end;
+    position: relative;
+    z-index: 40;
+    padding: 9px 11px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .ub-pop {
+    position: relative;
+    display: flex;
+    padding-bottom: 12px;
+    margin-bottom: -12px;
+  }
+  .ub-pop::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 100%;
+    height: 14px;
+    display: block;
+    pointer-events: auto;
+  }
+  .ub-icon {
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    transition: background .15s ease;
+  }
+  .ub-icon:hover,
+  .ub-pop:focus-within .ub-icon,
+  .ub-pop[data-open="true"] .ub-icon { background: var(--hover); }
+  .ub-icon svg { width: 19px; height: 19px; }
+  .ub-dot {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--card);
+  }
+  .ub-acct {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 7px 4px 4px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  .ub-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2f5bff 0%, #6a5bff 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+  }
+  .ub-acct:hover,
+  .ub-pop:focus-within .ub-acct,
+  .ub-pop[data-open="true"] .ub-acct {
+    background: var(--hover);
+    border-color: var(--track-border);
+  }
+  .ub-caret { width: 14px; height: 14px; color: var(--muted); }
+  .popover {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0;
+    min-width: 244px;
+    background: var(--pop-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+    padding: 7px;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+    z-index: 100;
+  }
+  .ub-pop[data-open="true"] .popover,
+  .userbar:not([data-userbar-pinned="true"]):not([data-userbar-hover-paused="true"]) .ub-pop:focus-within .popover,
+  .userbar:not([data-userbar-pinned="true"]):not([data-userbar-hover-paused="true"]) .ub-pop:hover .popover {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .menu__acct { display: flex; align-items: center; gap: 12px; padding: 9px 11px 11px; }
+  .menu__acct .ub-avatar { width: 40px; height: 40px; font-size: 14px; }
+  .menu__acct-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .menu__acct-meta b { font-size: 14.5px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .menu__acct-meta span { font-size: 12px; color: var(--muted); }
+  .menu__head {
+    padding: 9px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .menu__sep { height: 1px; background: var(--card-border); margin: 6px 5px; }
+  .menu__empty { padding: 6px 12px 12px; font-size: 13.5px; color: var(--muted); }
+  .user-menu .item {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .12s ease;
+  }
+  .user-menu .item:hover { background: var(--hover); }
+  .user-menu .item svg { width: 17px; height: 17px; color: var(--muted); flex: 0 0 auto; }
+  .user-menu .item:hover svg { color: var(--accent); }
+  .seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin: 2px 5px 4px;
+    padding: 4px;
+    background: var(--track);
+    border: 1px solid var(--track-border);
+    border-radius: 12px;
+  }
+  .seg__btn {
+    appearance: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 10px 4px;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--muted);
+  }
+  .seg__btn:hover { color: var(--text); }
+  .seg__btn[aria-pressed="true"] {
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 1px 5px rgba(0,0,0,0.18);
+  }
 
   /* ---- toggle ---- */
   .toggle {
-    grid-area: toggle;
+    grid-area: userbar;
     justify-self: end;
     padding: 14px;
     display: flex;
@@ -294,6 +490,25 @@
     color: var(--active-fg);
     font-weight: 600;
   }
+  .nav__sep { height: 1px; background: var(--card-border); margin: 9px 6px; }
+  .nav__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 2px 10px 6px;
+  }
+  .nav a.nav__sub {
+    padding: 9px 12px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--muted);
+    gap: 10px;
+  }
+  .nav a.nav__sub:hover { color: var(--text); }
 
   /* ---- main content column ---- */
   .main {
@@ -446,7 +661,7 @@
     grid-area: footer;
     justify-self: start;
     padding: 14px 24px;
-    margin-bottom: 28px;
+    margin-bottom: 0;
   }
   .footer .copy { font-size: 13.5px; font-weight: 400; color: var(--muted); }
   .footer .copy .dot { color: var(--accent); }
@@ -458,11 +673,12 @@
       justify-items: stretch;
       grid-template-areas:
         "brand"
-        "toggle"
+        "userbar"
         "nav"
         "main"
         "footer";
     }
     .nav { width: auto; justify-self: stretch; }
+    .userbar { justify-self: stretch; justify-content: flex-end; }
     .toggle { justify-self: stretch; justify-content: flex-end; }
   }

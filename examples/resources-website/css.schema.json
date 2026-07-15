@@ -104,7 +104,7 @@
       "pattern": "^(normal|\\d+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?(?:px|rem|em|%))$"
     },
     "letterSpacing": {
-      "pattern": "^-?\\d+(?:\\.\\d+)?(?:px|em|rem)$"
+      "pattern": "^(0|-?\\d+(?:\\.\\d+)?(?:px|em|rem))$"
     },
     "textDecoration": {
       "enum": [
@@ -162,6 +162,9 @@
           "$ref": "color"
         },
         "--muted": {
+          "$ref": "color"
+        },
+        "--pop-bg": {
           "$ref": "color"
         },
         "--text": {
@@ -376,6 +379,13 @@
         },
         "text-decoration": {
           "$ref": "textDecoration"
+        },
+        "text-align": {
+          "enum": [
+            "left",
+            "right",
+            "center"
+          ]
         }
       }
     },
@@ -474,6 +484,11 @@
         },
         "z-index": {
           "$ref": "integer"
+        },
+        "content": {
+          "enum": [
+            "\"\""
+          ]
         }
       }
     },
@@ -502,6 +517,9 @@
           "$ref": "length"
         },
         "padding": {
+          "$ref": "spacing"
+        },
+        "padding-bottom": {
           "$ref": "spacing"
         },
         "position": {
@@ -576,7 +594,7 @@
     "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
   },
   "limits": {
-    "maxStylesheetLength": 18000,
+    "maxStylesheetLength": 24000,
     "maxPropertyLength": 64,
     "maxValueLength": 900,
     "maxUrlLength": 100,
