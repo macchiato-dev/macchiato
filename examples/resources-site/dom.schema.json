@@ -8,6 +8,7 @@
           "oneOf": [
             "$brand",
             "$project-identity",
+            "$userbar",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
@@ -31,6 +32,21 @@
       "element": "section.box.toggle",
       "attrs": ["class", "data-screen-label"],
       "children": ["button"]
+    },
+    "userbar": {
+      "element": "section.box.userbar",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["$userbar-pop"]
+    },
+    "userbar-pop": {
+      "element": "div.ub-pop",
+      "attrs": ["class"],
+      "children": ["button", "$popover-menu"]
+    },
+    "popover-menu": {
+      "element": "div.popover.user-menu",
+      "attrs": ["class", "role"],
+      "children": ["button", "div"]
     },
     "mobile-menu": {
       "element": "section.box.menu",
@@ -124,7 +140,7 @@
       "children": ["#text", "div", "span", "svg"]
     },
     "button": {
-      "attrs": ["class", "type", "role", "aria-checked", "aria-expanded", "aria-label"],
+      "attrs": ["class", "type", "role", "aria-checked", "aria-expanded", "aria-label", "aria-haspopup"],
       "children": ["#text", "span", "svg"]
     },
     "circle": {
@@ -132,7 +148,7 @@
       "children": []
     },
     "div": {
-      "attrs": ["class", "id"],
+      "attrs": ["class", "id", "role", "aria-label"],
       "children": ["#text", "a", "button", "div", "h1", "h2", "nav", "p", "section", "span"]
     },
     "footer": {
@@ -162,6 +178,7 @@
           "oneOf": [
             "$brand",
             "$project-identity",
+            "$userbar",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",

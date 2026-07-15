@@ -9,45 +9,61 @@
 <body>
 <main class="layout">
 
-    <!-- BRAND -->
+    <!-- BRAND + HEADER PATH -->
     <header class="box brand" data-screen-label="brand">
-      <a class="brand__link" href="/"><div class="brand__name">Resources<span class="dot">.co</span></div></a>
+      <nav class="brand__path" id="brand-path" aria-label="Path">
+        <a class="brand__home" href="/" aria-label="Resources.co home">Resources<span class="dot">.co</span></a>
+      </nav>
     </header>
 
-    <!-- THEME TOGGLE -->
-    <section class="box toggle" data-screen-label="toggle">
-      <button id="theme-toggle" class="toggle-btn" role="switch" aria-checked="true" aria-label="Switch to light mode">
-        <svg class="tb-ghost tb-ghost-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle>
-          <line x1="12" y1="2" x2="12" y2="4"></line>
-          <line x1="12" y1="20" x2="12" y2="22"></line>
-          <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line>
-          <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
-          <line x1="2" y1="12" x2="4" y2="12"></line>
-          <line x1="20" y1="12" x2="22" y2="12"></line>
-          <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line>
-          <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
-        </svg>
-        <svg class="tb-ghost tb-ghost-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-        <span class="tb-thumb">
-          <svg class="tb-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle>
-            <line x1="12" y1="2" x2="12" y2="4"></line>
-            <line x1="12" y1="20" x2="12" y2="22"></line>
-            <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line>
-            <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line>
-            <line x1="2" y1="12" x2="4" y2="12"></line>
-            <line x1="20" y1="12" x2="22" y2="12"></line>
-            <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line>
-            <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line>
-          </svg>
-          <svg class="tb-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </span>
-      </button>
+    <!-- USERBAR -->
+    <section class="box userbar" data-screen-label="userbar">
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="ub-dot"></span>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__head">Notifications</div>
+          <div class="menu__empty">You're all caught up.</div>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+          <span class="ub-avatar">MD</span>
+          <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__acct">
+            <span class="ub-avatar">MD</span>
+            <div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div>
+          </div>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
+          <div class="menu__sep"></div>
+          <div class="menu__head">Appearance</div>
+          <div class="seg" role="group" aria-label="Appearance">
+            <button class="seg__btn" aria-pressed="true">Dark</button>
+            <button class="seg__btn" aria-pressed="false">Light</button>
+            <button class="seg__btn" aria-pressed="false">System</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- MAIN CONTENT -->
@@ -58,9 +74,14 @@
     <!-- NAV -->
     <nav class="box nav" data-screen-label="nav" aria-label="Primary">
       <a data-section="home" aria-current="page"><span>Home</span></a>
-      <a data-section="browse"><span>Browse</span></a>
-      <a data-section="collections"><span>Collections</span></a>
+      <a data-section="explore"><span>Explore</span></a>
       <a data-section="about"><span>About</span></a>
+      <a data-section="blog"><span>Blog</span></a>
+      <div class="nav__sep"></div>
+      <div class="nav__label">Trending</div>
+      <a class="nav__sub" data-section="macchiato/components"><span>components</span></a>
+      <a class="nav__sub" data-section="resources/containers"><span>containers</span></a>
+      <a class="nav__sub" data-section="halcyon/design-tokens"><span>design tokens</span></a>
     </nav>
 
     <!-- FOOTER -->
