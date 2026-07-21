@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
+import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
@@ -75,6 +76,25 @@ export const BUILTIN_APPS = [
       { name: "css", path: join(examplesRoot, "resources-website", "css.schema.json") },
     ],
     site: resourcesWebsiteSite,
+  },
+  {
+    name: "SQLite Notes",
+    subdomain: "sqlite-notes",
+    kind: "sandboxed app",
+    description: "Small SQLite CRUD app behind a schema-bound HTTP capability.",
+    handler: httpSqliteCrudHandler,
+    setup: setupHttpSqliteCrud,
+    sourceFiles: [
+      "examples/http-sqlite-crud/backend.js",
+      "examples/http-sqlite-crud/handler.js",
+      "examples/http-sqlite-crud/server.js",
+      "examples/http-sqlite-crud/client.js",
+      "examples/http-sqlite-crud/sandbox.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM",
+      hostCapabilities: ["partial node:http", "partial node:sqlite", "http-use schemas"],
+    },
   },
   {
     name: "DOM Use Todos",

@@ -207,19 +207,59 @@ function host(op, payload = {}) {
   return result;
 }
 
+const servers = new Map();
+
 export function createServer(handler) {
   if (typeof handler !== "function") throw new TypeError("createServer requires a handler function");
   const server = host("http.createServer", {});
+  servers.set(server.id, handler);
   return {
     id: server.id,
     listen(port, hostName = "127.0.0.1") {
       return host("http.listen", { id: server.id, port, host: hostName });
     },
     close() {
+      servers.delete(server.id);
       return host("http.close", { id: server.id });
     },
   };
 }
+
+globalThis.__macchiatoHttpDispatch = function(json) {
+  const message = JSON.parse(json);
+  const handler = servers.get(message.id);
+  if (!handler) return JSON.stringify({ status: 503, headers: {}, body: "Server is not available" });
+  const response = { status: 200, headers: {}, body: "" };
+  const req = {
+    method: message.method || "GET",
+    url: message.url || "/",
+    headers: message.headers || {},
+    on(type, callback) {
+      if (type === "data" && message.body) callback(message.body);
+      if (type === "end") callback();
+      return this;
+    },
+  };
+  const res = {
+    get statusCode() { return response.status; },
+    set statusCode(value) { response.status = Number(value); },
+    setHeader(name, value) { response.headers[String(name).toLowerCase()] = String(value); },
+    writeHead(status, headers = {}) {
+      response.status = Number(status);
+      for (const [name, value] of Object.entries(headers)) this.setHeader(name, value);
+      return this;
+    },
+    end(body = "") { response.body = String(body); },
+  };
+  try {
+    handler(req, res);
+  } catch (error) {
+    response.status = 500;
+    response.headers["content-type"] = "application/json; charset=utf-8";
+    response.body = JSON.stringify({ error: error.message });
+  }
+  return JSON.stringify(response);
+};
 
 export default { createServer };
 `;
@@ -255,6 +295,10 @@ export class DatabaseSync {
         return host("sqlite.run", { db, sql, params });
       },
     };
+  }
+
+  exec(sql) {
+    return host("sqlite.exec", { db: this.id, sql });
   }
 
   close() {

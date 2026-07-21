@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
@@ -19,13 +21,15 @@ function getPort() {
   });
 }
 
-function startApp(port) {
+function startApp(port, dataDir) {
   const child = spawn(process.execPath, [
     appCli,
     "--host",
     "127.0.0.1",
     "--port",
     String(port),
+    "--data-dir",
+    dataDir,
   ], {
     cwd: repoRoot,
     stdio: ["ignore", "pipe", "pipe"],
@@ -66,11 +70,13 @@ async function stopChild(child) {
 
 test("code notes exposes git-visible module code and annotation workflow", { timeout: 60000 }, async (t) => {
   const port = await getPort();
-  const app = startApp(port);
+  const dataDir = await mkdtemp(join(tmpdir(), "macchiato-code-notes-"));
+  const app = startApp(port, dataDir);
   let browser;
   t.after(async () => {
     await browser?.close();
     await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
   });
 
   await app.waitForReady;
@@ -110,7 +116,7 @@ test("code notes exposes git-visible module code and annotation workflow", { tim
   assert.equal(await page.getByText("Select a file to load its code").count(), 0);
   await page.getByRole("button", { name: "Choose package" }).click();
   await assert.doesNotReject(page.getByRole("menu").waitFor());
-  await page.getByRole("menu").getByRole("button", { name: /@macchiato-dev\/app/ }).click();
+  await page.getByRole("menu").getByRole("button", { name: /^@macchiato-dev\/app packages\// }).click();
   await assert.doesNotReject(page.locator(".source").first().waitFor());
   await page.getByRole("button", { name: /src\/code-annotator\.js/ }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "code-annotator.js" }).waitFor());
