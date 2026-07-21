@@ -1,0 +1,8 @@
+{
+  "name": "@macchiato-dev/theme-use",
+  "version": "0.1.0",
+  "description": "Validate and render configurable CSS custom-property themes",
+  "type": "module",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"]
+}

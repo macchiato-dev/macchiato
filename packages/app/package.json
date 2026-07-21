@@ -17,7 +17,8 @@
     "@macchiato-dev/http-use": "0.1.0",
     "@macchiato-dev/site": "0.1.0",
     "@macchiato-dev/sqlite-use": "0.1.0",
-    "@macchiato-dev/style-use": "0.1.0"
+    "@macchiato-dev/style-use": "0.1.0",
+    "@macchiato-dev/theme-use": "0.1.0"
   },
   "files": [
     "src"
