@@ -111,6 +111,31 @@ test("resources website is mounted on resources-website.localhost", async (t) =>
   assert.equal(font.headers.get("x-content-type-options"), "nosniff");
 });
 
+test("Resources.co edge profile is mounted locally through its storage adapter", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const response = await fetch(`http://resources-edge.localhost:${port}/`);
+  const text = await response.text();
+  const config = await fetch(`http://apps.localhost:${port}/config/resources-edge`);
+  const configText = await config.text();
+
+  assert.equal(response.status, 200);
+  assert.match(text, /--accent: #ffb86b/);
+  assert.match(response.headers.get("content-security-policy"), /script-src 'none'/);
+  assert.doesNotMatch(text, /type="module"|type="importmap"/);
+  assert.equal(config.status, 200);
+  assert.match(configText, /Resources\.co Edge Preview/);
+  assert.match(configText, /in-memory export manifest/);
+  assert.match(configText, /Bunny Storage/);
+});
+
 test("apps directory lists available app subdomains", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
@@ -127,6 +152,7 @@ test("apps directory lists available app subdomains", async (t) => {
   assert.equal(response.status, 200);
   assert.match(text, /Macchiato Apps/);
   assert.match(text, /resources-co\.localhost/);
+  assert.match(text, /resources-edge\.localhost/);
   assert.match(text, /resources-website\.localhost/);
   assert.match(text, /resources-design\.localhost/);
   assert.match(text, /raw site/);
@@ -218,6 +244,30 @@ test("apps directory renders in a real browser", async (t) => {
   await assert.doesNotReject(page.getByRole("link", { name: "Resources.co Design" }).waitFor());
   assert.deepEqual(errors, []);
   assert.deepEqual(badResponses, []);
+});
+
+test("Resources.co edge preview renders in a real browser without page scripts", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
+  assert.equal(response.status(), 200);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
+  assert.equal(await page.locator("script[type='application/json']").count(), 1);
+  assert.deepEqual(errors, []);
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {

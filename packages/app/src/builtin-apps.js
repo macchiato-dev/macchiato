@@ -3,6 +3,7 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
+import { resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
@@ -45,6 +46,8 @@ export const BUILTIN_APPS = [
     seededRoute: true,
     sourceFiles: [
       "examples/resources-site/seed.js",
+      "examples/resources-site/runtime.js",
+      "examples/resources-site/theme.js",
       "examples/resources-site/dom.schema.json",
       "examples/resources-site/css.schema.json",
     ],
@@ -54,8 +57,31 @@ export const BUILTIN_APPS = [
     ],
     site: {
       storage: "sqlite routes",
+      runtimeProfile: "local",
       subdomain: "resources-co",
       routeSource: "examples/resources-site/seed.js",
+    },
+  },
+  {
+    name: "Resources.co Edge Preview",
+    subdomain: resourcesEdgePreviewConfig.subdomain,
+    kind: "adapted static site",
+    description: "The Bunny edge profile running locally through an in-memory Storage adapter.",
+    handler: resourcesEdgePreviewHandler,
+    sourceFiles: [
+      "examples/resources-site/artifacts.js",
+      "examples/resources-site/runtime.js",
+      "examples/resources-site/theme.js",
+      "examples/resources-site/preview-handler.js",
+      "examples/resources-site/adapters/memory-storage.js",
+      "examples/resources-site/edge/app.js",
+      "examples/resources-site/edge/models.js",
+    ],
+    adapter: resourcesEdgePreviewConfig,
+    site: {
+      storage: "in-memory export manifest",
+      productionStorage: "Bunny Storage",
+      subdomain: resourcesEdgePreviewConfig.subdomain,
     },
   },
   {

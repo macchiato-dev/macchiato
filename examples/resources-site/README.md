@@ -1,12 +1,41 @@
 # Resources.co site
 
 Resources.co has two explicitly separate runtime profiles built from the same
-route and view models.
+route, theme, and view models. The deployment boundary is an adapter, not a
+fork of the application.
 
 | Profile | Runtime | Validation and navigation |
 | --- | --- | --- |
 | Local Macchiato | Node + SQLite | Rich browser transitions sanitized by `dom-use`; optional browser QuickJS for the userbar state machine |
 | Bunny edge | Bunny V8 isolate + Storage | Strict build-time `style-use` and `dom-use`; no executable page JavaScript; full-document navigation |
+
+The generic `@macchiato-dev/theme-use` module owns safe CSS-token definition,
+merging, and rendering. [`theme.js`](theme.js) is the Resources.co-specific
+model: it names the palette tokens and supplies the brand defaults. A caller
+can provide a partial dark/light palette to `createResourcesArtifactSet()` or
+`exportResourcesSite()`; undeclared tokens and active CSS values are rejected.
+
+The pieces compose in one direction:
+
+```text
+route/view models + theme + runtime profile
+                    |
+                    v
+             immutable artifacts
+                    |
+          +---------+----------+
+          |                    |
+  in-memory adapter       Bunny Storage
+          |                    |
+          +---- edge handler --+
+```
+
+[`runtime.js`](runtime.js) declares behavior differences. The `local` profile
+keeps the existing SQLite-backed site and its optional browser QuickJS WASM
+userbar. The `edge` profile emits inert documents. [`artifacts.js`](artifacts.js)
+is the portable build boundary. Storage is supplied as `fetch`, so the same
+dependency-free handler can use [`adapters/memory-storage.js`](adapters/memory-storage.js)
+locally or the platform `fetch` against private Bunny Storage in production.
 
 The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
 comes from a small edge program, an allowlisted immutable export, strict `use-*`
@@ -32,9 +61,29 @@ code. A strict CSP at the edge uses `script-src 'none'`.
 
 ## Check locally
 
+Run the normal Macchiato server:
+
+```sh
+node packages/app/src/index.js --host 127.0.0.1 --port 8765
+```
+
+Then compare:
+
+- `http://resources-co.localhost:8765` — rich local/SQLite profile, including
+  browser WASM where configured;
+- `http://resources-edge.localhost:8765` — edge profile, served by the actual
+  edge handler through an in-memory Storage adapter, without Bunny or page JS;
+- `http://apps.localhost:8765/config/resources-edge` — the declarative adapter
+  and source-module configuration exposed by the app directory.
+
+The separate preview subdomain keeps both architectures inspectable. Switching
+to Bunny changes the storage adapter and entrypoint configuration, not the
+models, generated artifacts, public paths, or edge request policy.
+
 ```sh
 node --test \
   packages/app/test/resources-edge.test.js \
+  packages/app/test/resources-edge-preview.test.js \
   packages/app/test/resources-site-export.test.js
 
 deno check \
@@ -42,7 +91,7 @@ deno check \
   examples/resources-site/bunny-server.js
 ```
 
-To inspect the generated documents without emulating Bunny Storage:
+To inspect only the generated documents without emulating Bunny Storage:
 
 ```sh
 cd examples/resources-site/exported
