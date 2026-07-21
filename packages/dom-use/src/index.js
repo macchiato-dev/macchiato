@@ -531,6 +531,7 @@ export class DomUse {
    * @param {string} [options.container.tagName]
    * @param {object} [options.container.attributes]
    * @param {boolean} [options.includeContainer=false]
+   * @param {boolean} [options.strict=false] reject instead of dropping invalid markup
    * @returns {string}
    */
   sanitizeHTML(html, options = {}) {
@@ -542,7 +543,18 @@ export class DomUse {
       for (const [name, value] of Object.entries(descriptor.attributes || {})) {
         node.setAttribute(name, value);
       }
-      this.setInnerHTML(node, html);
+      if (options.strict === true) {
+        const fragment = parseHTML(html, {
+          createElement: (tag) => doc.createElement(tag),
+          createTextNode: (text) => doc.createTextNode(text),
+          schema: this.schema,
+          styleUse: this.styleUse,
+          strict: true,
+        });
+        node.replaceChildren(...fragment.children);
+      } else {
+        this.setInnerHTML(node, html);
+      }
       return options.includeContainer ? this.getOuterHTML(node) : this.getInnerHTML(node);
     }
 
@@ -551,6 +563,7 @@ export class DomUse {
       createTextNode: (text) => doc.createTextNode(text),
       schema: this.schema,
       styleUse: this.styleUse,
+      strict: options.strict === true,
     });
     return serializeHTML(fragment);
   }
@@ -655,7 +668,7 @@ export class DomUse {
     const allowed = [
       ...(this.schema.globalAttrs || []),
       ...this.nodeRules(typeof ruleTarget === "object" ? ruleTarget : tag).flatMap((rule) => rule.attrs || []),
-    ];
+    ].map((entry) => String(entry).toLowerCase());
     if (allowed.includes("*")) return true;
     if (allowed.includes(name)) return true;
     if (allowed.some((entry) => entry.endsWith("*") && name.startsWith(entry.slice(0, -1)))) return true;
