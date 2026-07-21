@@ -43,7 +43,7 @@ export async function exportResourcesSite({ out = defaultOut, clean = true } = {
   if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
 
-  const routes = buildResourcesSiteRoutesForRuntime({ runtime: "document" });
+  const routes = buildResourcesSiteRoutesForRuntime({ runtime: "edge" });
   for (const route of routes) {
     const filePath = routeFilePath(outDir, route.path);
     await mkdir(dirname(filePath), { recursive: true });
