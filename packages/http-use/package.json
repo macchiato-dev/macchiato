@@ -1,0 +1,12 @@
+{
+  "name": "@macchiato-dev/http-use",
+  "version": "0.1.0",
+  "description": "Schema-bound HTTP capabilities for Macchiato apps",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./backend": "./src/backend.js"
+  },
+  "files": ["src"]
+}

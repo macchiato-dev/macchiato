@@ -1,0 +1,9 @@
+{
+  "name": "@macchiato-dev/sqlite-use",
+  "version": "0.1.0",
+  "description": "Small schema-configured SQLite CRUD resources",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"]
+}

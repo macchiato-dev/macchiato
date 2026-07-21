@@ -67,6 +67,31 @@ The imported module name can look like a Node built-in, but the implementation
 is still a capability wrapper supplied by the host. Unprovided modules are
 rejected by the loader.
 
+### Partial Node backend interface
+
+The wrappers are compatibility surfaces, not complete Node implementations.
+The current backend experiment supports:
+
+- `node:http`: `createServer(handler)`, `listen`, `close`; request `method`,
+  `url`, `headers`, and `on("data" | "end")`; response `statusCode`,
+  `setHeader`, `writeHead`, and `end`.
+- `node:sqlite`: `DatabaseSync`, `exec`, `prepare`, and prepared statement
+  `all`, `get`, and `run`, plus `close`.
+
+The host decides whether a listen call opens a socket, maps to an existing app
+route, or is denied. It also decides which database name maps to which database.
+In the HTTP/SQLite example the guest receives a dedicated SQLite database; it
+does not receive the Macchiato configuration database.
+
+Callbacks, values, and errors cross the WASM boundary as JSON. This means the
+surface is suitable for ordinary JSON CRUD applications, but not yet for Node
+streams, upgrades, trailers, binary bodies, transactions with callbacks,
+extensions, custom SQLite functions, or arbitrary native modules.
+
+The practical portability contract is: write against the documented subset,
+test in the sandbox, then run the same module under Node. Code needing more of
+Node should either remain native or receive a new explicit host capability.
+
 ## Publishing
 
 ```bash
