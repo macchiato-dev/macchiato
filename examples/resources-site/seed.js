@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
+import { resourcesRuntimeProfile } from "./runtime.js";
+import { resourcesThemeCss } from "./theme.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -249,30 +251,14 @@ const NOT_FOUND_ROUTE = {
   ],
 };
 
-function css() {
-  const base = readFileSync(join(__dirname, "..", "resources-website", "styles.css"), "utf8");
-  return `${base}
+function css(theme = {}) {
+  const authored = readFileSync(join(__dirname, "..", "resources-website", "styles.css"), "utf8");
+  const base = authored
+    .replace(/html\[data-theme="dark"\]\s*\{[\s\S]*?\n\s*\}/, "")
+    .replace(/html\[data-theme="light"\]\s*\{[\s\S]*?\n\s*\}/, "");
+  return `${resourcesThemeCss(theme)}
 
-html:not([data-theme]) {
-  --bg:
-    radial-gradient(1150px 820px at 86% -14%, #6a5bff 0%, rgba(106,91,255,0) 54%),
-    radial-gradient(1000px 860px at -8% 110%, rgba(40,80,255,0.5) 0%, rgba(40,80,255,0) 60%),
-    linear-gradient(152deg, #1a1aa2 0%, #2626d8 52%, #16168e 100%);
-  --card: rgba(9,15,42,0.52);
-  --card-border: rgba(255,255,255,0.12);
-  --shadow: 0 12px 28px rgba(2,6,28,0.24);
-  --text: #eef2ff;
-  --muted: #aeb9e8;
-  --accent: #30D5C8;
-  --hover: rgba(255,255,255,0.07);
-  --active-bg: #2f5bff;
-  --active-fg: #ffffff;
-  --track: rgba(255,255,255,0.10);
-  --track-border: rgba(255,255,255,0.16);
-  --ghost: rgba(255,255,255,0.55);
-  --thumb: #f3f6ff;
-  --thumb-ic: #0e1b46;
-}
+${base}
 
 .crumb a {
   appearance: none;
@@ -1271,28 +1257,28 @@ export function buildResourcesSiteRoutes() {
   return buildResourcesSiteRoutesForRuntime({ runtime: "browser-use" });
 }
 
-export function buildResourcesSiteRoutesForRuntime({ runtime = "browser-use" } = {}) {
-  if (!["browser-use", "document"].includes(runtime)) throw new Error(`Unsupported Resources.co runtime: ${runtime}`);
-  const stylesheet = css();
+export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {} } = {}) {
+  const profile = resourcesRuntimeProfile(runtime);
+  const stylesheet = css(theme);
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
   return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"].map((path) => {
     const route = routeForPath(path);
-    const authoredHtml = pageHtml(path, { runtime });
+    const authoredHtml = pageHtml(path, { runtime: profile.name });
     // The edge profile is promoted to trusted static content only after passing
     // through the use-* boundary. The richer local profile keeps its authored
     // module script and applies dom-use again to each client-side page swap.
-    const html = runtime === "document" ? domUse.sanitizeHTML(authoredHtml, { strict: true }) : authoredHtml;
+    const html = profile.name === "document" ? domUse.sanitizeHTML(authoredHtml, { strict: true }) : authoredHtml;
     return {
       subdomain: SUBDOMAIN,
       path,
       title: route.title,
       html,
       css: stylesheet,
-      head: headHtml({ runtime }),
+      head: headHtml({ runtime: profile.name }),
       nav: NAV,
-      transition: { mode: runtime === "document" ? "document" : "same-origin-ssr-swap", routePath: path },
+      transition: { mode: profile.navigation, routePath: path },
     };
   });
 }
