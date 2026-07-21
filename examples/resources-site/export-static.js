@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildResourcesSiteRoutes } from "./seed.js";
+import { buildResourcesSiteRoutesForRuntime } from "./seed.js";
 import { renderSiteRoute } from "@macchiato-dev/site";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -42,7 +43,7 @@ export async function exportResourcesSite({ out = defaultOut, clean = true } = {
   if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
 
-  const routes = buildResourcesSiteRoutes();
+  const routes = buildResourcesSiteRoutesForRuntime({ runtime: "document" });
   for (const route of routes) {
     const filePath = routeFilePath(outDir, route.path);
     await mkdir(dirname(filePath), { recursive: true });
@@ -54,16 +55,28 @@ export async function exportResourcesSite({ out = defaultOut, clean = true } = {
   await mkdir(fontTarget, { recursive: true });
   await cp(fontSource, fontTarget, { recursive: true });
 
+  const files = [
+    ...routes.map((route) => route.path === "/" ? "/index.html" : `${route.path}/index.html`),
+    "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2",
+    "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin-ext.woff2",
+    "/-/fonts/resourcesco-space-grotesk/space-grotesk-vietnamese.woff2",
+  ];
+  const artifacts = {};
+  for (const file of files) {
+    const bytes = await readFile(join(outDir, file.slice(1)));
+    artifacts[file] = {
+      bytes: bytes.byteLength,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+  }
   const manifest = {
     subdomain: "resources-co",
     generatedAt: new Date().toISOString(),
+    securityProfile: "document-navigation-v1",
+    validatedWith: ["dom-use", "style-use", "html-use"],
     routes: routes.map((route) => route.path),
-    files: [
-      ...routes.map((route) => route.path === "/" ? "/index.html" : `${route.path}/index.html`),
-      "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2",
-      "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin-ext.woff2",
-      "/-/fonts/resourcesco-space-grotesk/space-grotesk-vietnamese.woff2",
-    ],
+    files,
+    artifacts,
   };
   await writeFile(join(outDir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   return { outDir, routes: routes.length };

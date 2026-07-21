@@ -21,6 +21,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 deno.lock
+!examples/resources-site/deno.lock
 
 # IDE
 .idea/
