@@ -62,7 +62,7 @@ export function normalizeExportManifest(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid export manifest");
   if (value.subdomain !== "resources-co") throw new Error("Unexpected export manifest subdomain");
   if (value.securityProfile !== "document-navigation-v1") throw new Error("Unexpected export security profile");
-  if (!Array.isArray(value.validatedWith) || !["dom-use", "style-use", "html-use"].every((name) => value.validatedWith.includes(name))) {
+  if (!Array.isArray(value.validatedWith) || !["dom-use", "style-use", "html-use", "theme-use"].every((name) => value.validatedWith.includes(name))) {
     throw new Error("Export manifest is missing use-* validation evidence");
   }
   if (!Array.isArray(value.files) || value.files.length > 2_000) throw new Error("Invalid export manifest files");

@@ -19,7 +19,7 @@ const manifest = {
   subdomain: "resources-co",
   generatedAt: "2026-07-21T00:00:00.000Z",
   securityProfile: "document-navigation-v1",
-  validatedWith: ["dom-use", "style-use", "html-use"],
+  validatedWith: ["dom-use", "style-use", "html-use", "theme-use"],
   files: ["/index.html", "/about/index.html", "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2"],
   artifacts: {
     "/index.html": { bytes: 10, sha256: "a".repeat(64) },
