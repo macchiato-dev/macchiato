@@ -504,6 +504,20 @@ html:not([data-theme]) {
   font-weight: 600;
   line-height: 1.05;
 }
+.project-identity__home {
+  display: inline-flex;
+  align-self: center;
+  color: var(--accent);
+  text-decoration: none;
+}
+.project-identity__home:hover {
+  color: var(--text);
+}
+.project-identity__home svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
 .project-identity__owner,
 .project-identity__name {
   color: inherit;
@@ -735,7 +749,7 @@ function brandHeaderHtml(path) {
       }
       return `${sep}<span class="${cls} project-identity__name--current">${escapeHtml(segment.label)}</span>`;
     });
-    return `<header class="box project-identity" data-screen-label="brand"><nav class="project-identity__path" id="brand-path" aria-label="Project path">${parts.join("")}</nav></header>`;
+    return `<header class="box project-identity" data-screen-label="brand"><nav class="project-identity__path" id="brand-path" aria-label="Project path"><a class="project-identity__home" href="/" aria-label="Resources.co home">${homeIcon()}</a><span class="project-identity__sep">/</span>${parts.join("")}</nav></header>`;
   }
   const segments = brandSegmentsForPath(path);
   if (segments.length === 0) {
