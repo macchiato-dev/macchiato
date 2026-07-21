@@ -32,7 +32,7 @@ test("exports resources site as static files", async (t) => {
   assert.match(project, /<h1>App<\/h1>/);
   assert.equal(manifest.subdomain, "resources-co");
   assert.equal(manifest.securityProfile, "document-navigation-v1");
-  assert.deepEqual(manifest.validatedWith, ["dom-use", "style-use", "html-use"]);
+  assert.deepEqual(manifest.validatedWith, ["dom-use", "style-use", "html-use", "theme-use"]);
   assert.match(manifest.artifacts["/index.html"].sha256, /^[a-f0-9]{64}$/);
   assert.equal(manifest.artifacts["/index.html"].bytes, Buffer.byteLength(home));
   assert.doesNotMatch(home, /<script type="module"|<script type="importmap"|src="\/-\/quickjs/);
