@@ -60,7 +60,7 @@ function appendText(parent, text, createTextNode) {
  * @param {StyleUse} [options.styleUse] — for CSS validation
  * @returns {object} root fragment node
  */
-export function parseHTML(html, { createElement, createTextNode, schema, styleUse } = {}) {
+export function parseHTML(html, { createElement, createTextNode, schema, styleUse, strict = false } = {}) {
   if (!createElement) throw new Error("parseHTML requires createElement");
 
   const root = {
@@ -126,6 +126,7 @@ export function parseHTML(html, { createElement, createTextNode, schema, styleUs
       stack[stack.length - 1].appendChild(node);
     } catch (err) {
       if (err?.name === "DomUseGasError") throw err;
+      if (strict) throw err;
       if (!isSelfClosing) skipTag = tagName;
       continue;
     }

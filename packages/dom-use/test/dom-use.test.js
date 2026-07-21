@@ -150,6 +150,31 @@ test("can include the sanitized target container when requested", () => {
   );
 });
 
+test("matches schema attribute names case-insensitively when sanitizing SVG", () => {
+  const domUse = new DomUse({
+    nodes: {
+      a: { attrs: ["href"], children: ["svg"] },
+      svg: { attrs: ["viewBox", "fill"], children: ["path"] },
+      path: { attrs: ["d"], children: [] },
+    },
+    urls: { href: "^/$" },
+  });
+
+  assert.equal(
+    domUse.sanitizeHTML('<a href="/"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10h18"></path></svg></a>'),
+    '<a href="/"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10h18"></path></svg></a>',
+  );
+});
+
+test("strict sanitization rejects markup that permissive sanitization drops", () => {
+  const domUse = articleDomUse();
+  assert.equal(domUse.sanitizeHTML("<script>bad()</script><p>Safe</p>"), "<p>Safe</p>");
+  assert.throws(
+    () => domUse.sanitizeHTML("<script>bad()</script><p>Safe</p>", { strict: true }),
+    /Node not allowed: script/,
+  );
+});
+
 test("denies URL attributes by default even when attribute names are allowed", () => {
   const domUse = articleDomUse();
   const doc = domUse.createDocument();
