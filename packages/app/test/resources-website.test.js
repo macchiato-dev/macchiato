@@ -287,6 +287,7 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   assert.match(projectHtml, /<title>App - Resources\.co<\/title>/);
   assert.match(projectHtml, /<header class="box project-identity" data-screen-label="brand">/);
   assert.match(projectHtml, /aria-label="Project path"/);
+  assert.match(projectHtml, /class="project-identity__home" href="\/" aria-label="Resources\.co home"/);
   assert.match(projectHtml, /aria-label="Breadcrumb"/);
   assert.match(projectHtml, /href="\/macchiato"/);
   assert.match(projectHtml, /<h1>App<\/h1>/);
@@ -447,8 +448,9 @@ test("resources sqlite site transitions between friendly paths in a real browser
   await page.locator(".items a[href='/macchiato/app']").first().click();
   await assert.doesNotReject(page.locator("h1", { hasText: "App" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/macchiato/app");
-  assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "macchiato/app");
+  assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "/macchiato/app");
   assert.equal(await page.locator(".project-identity").count(), 1);
+  assert.equal(await page.locator(".project-identity__home[aria-label='Resources.co home'] svg").count(), 1);
   assert.equal(await page.locator(".project-identity__owner", { hasText: "macchiato" }).count(), 1);
   assert.equal(await page.locator(".project-identity__name--current", { hasText: "app" }).count(), 1);
   assert.equal(await page.locator(".brand__home").count(), 0);
