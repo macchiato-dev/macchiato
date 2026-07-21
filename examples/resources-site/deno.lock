@@ -1,0 +1,36 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:@bunny.net/edgescript-sdk@0.12.1": "0.12.1"
+  },
+  "npm": {
+    "@bunny.net/edgescript-sdk@0.12.1": {
+      "integrity": "sha512-+B+AUnfA+9y6PlyX6BNL2Uk8x3vExRIKKP+rH0r4UnEWRiJZsbuEnZg5Au6pglf67NumP8tOwbrqP9jS4e+jDQ==",
+      "dependencies": [
+        "@hono/node-server",
+        "hono"
+      ]
+    },
+    "@hono/node-server@1.19.14_hono@4.12.31": {
+      "integrity": "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==",
+      "dependencies": [
+        "hono"
+      ]
+    },
+    "hono@4.12.31": {
+      "integrity": "sha512-zJIHFrl6bq3RDd2YusFNCDlM8qUprxKswyi/OPzPyzKDdyBXDqWx8bZlZ7R+saTdSTatUmb3O7K4SspGPaEOQg=="
+    }
+  },
+  "redirects": {
+    "https://esm.sh/@bunny.net/edgescript-sdk@0.11": "https://esm.sh/@bunny.net/edgescript-sdk@0.11.5"
+  },
+  "remote": {
+    "https://esm.sh/@bunny.net/edgescript-sdk@0.11.5": "7ab48b12ffcd6036d32688a9e84f26230e353e12fdbd53dd269e73c94fc393ed",
+    "https://esm.sh/@bunny.net/edgescript-sdk@0.11.5/denonext/edgescript-sdk.mjs": "acb06e14dc8ac464a9fa196a6b2318962ec2d1f1dea7e6a7aa826f07238059a6"
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:@bunny.net/edgescript-sdk@0.12.1"
+    ]
+  }
+}

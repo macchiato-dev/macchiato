@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
+import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -149,6 +150,10 @@ export function resourcesCssSchema() {
 
 function resourcesDomSchemaText() {
   return readFileSync(join(__dirname, "dom.schema.json"), "utf8");
+}
+
+export function resourcesDomSchema() {
+  return JSON.parse(resourcesDomSchemaText());
 }
 
 function resourcesCssSchemaText() {
@@ -610,6 +615,21 @@ html:not([data-theme]) {
     max-width: none;
   }
 }
+
+@media (max-width: 760px) {
+  .layout.document-runtime {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand"
+      "nav"
+      "main"
+      "footer";
+  }
+  .document-runtime .nav {
+    display: flex;
+  }
+}
 `;
 }
 
@@ -841,20 +861,22 @@ function routeForPath(path) {
   return null;
 }
 
-function pageHtml(path) {
+function pageHtml(path, { runtime = "browser-use" } = {}) {
   const route = routeForPath(path);
-  return `<main class="layout">
+  const documentRuntime = runtime === "document";
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}">
     ${brandHeaderHtml(path)}
-    ${userbarHtml()}
-    ${menuHtml(route.navKey)}
+    ${documentRuntime ? "" : userbarHtml()}
+    ${documentRuntime ? "" : menuHtml(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
     ${navHtml(route.navKey)}
-    <footer class="box footer" data-screen-label="footer"><div class="copy">&copy; 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
-  </main>
-  <script type="module">${clientScript()}</script>`;
+    <footer class="box footer" data-screen-label="footer"><div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
+  </main>${runtime === "browser-use" ? `
+  <script type="module">${clientScript()}</script>` : ""}`;
 }
 
-function headHtml() {
+function headHtml({ runtime = "browser-use" } = {}) {
+  if (runtime === "document") return "";
   return `<script type="importmap">
 ${JSON.stringify({
   imports: {
@@ -1246,19 +1268,31 @@ export function seedResourcesSite(db) {
 }
 
 export function buildResourcesSiteRoutes() {
+  return buildResourcesSiteRoutesForRuntime({ runtime: "browser-use" });
+}
+
+export function buildResourcesSiteRoutesForRuntime({ runtime = "browser-use" } = {}) {
+  if (!["browser-use", "document"].includes(runtime)) throw new Error(`Unsupported Resources.co runtime: ${runtime}`);
   const stylesheet = css();
-  validateResourcesStylesheet(stylesheet);
+  const styleUse = new StyleUse(resourcesCssSchema());
+  styleUse.validateStylesheet(stylesheet);
+  const domUse = new DomUse(resourcesDomSchema(), styleUse);
   return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"].map((path) => {
     const route = routeForPath(path);
+    const authoredHtml = pageHtml(path, { runtime });
+    // The edge profile is promoted to trusted static content only after passing
+    // through the use-* boundary. The richer local profile keeps its authored
+    // module script and applies dom-use again to each client-side page swap.
+    const html = runtime === "document" ? domUse.sanitizeHTML(authoredHtml, { strict: true }) : authoredHtml;
     return {
       subdomain: SUBDOMAIN,
       path,
       title: route.title,
-      html: pageHtml(path),
+      html,
       css: stylesheet,
-      head: headHtml(),
+      head: headHtml({ runtime }),
       nav: NAV,
-      transition: { mode: "same-origin-ssr-swap", routePath: path },
+      transition: { mode: runtime === "document" ? "document" : "same-origin-ssr-swap", routePath: path },
     };
   });
 }
