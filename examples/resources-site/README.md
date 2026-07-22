@@ -98,6 +98,23 @@ icons. The Resources component modules do not decide whether storage is SQLite,
 memory, or Bunny. The route builder composes those independently testable
 pieces.
 
+### Hover intent
+
+The desktop user menu uses a dynamic safe triangle rather than a wide CSS hover
+bridge. When the pointer leaves an open trigger, the host computes a temporary
+triangle from that exit point to the top corners of its panel. Diagonal movement
+toward the panel keeps the current menu open even if the path crosses `+`.
+Horizontal movement toward `+` immediately exits the triangle and switches
+menus. A clicked menu remains pinned until another click or dismissal.
+
+This follows the intent-sensitive behavior documented by
+[Floating UI `safePolygon`](https://floating-ui.com/docs/usehover#safepolygon)
+and the directional approach demonstrated by
+[jQuery-menu-aim](https://github.com/kamens/jQuery-menu-aim). Resources.co keeps
+the geometry dependency-free and does not block pointer events behind the
+polygon. Buffer, intent requirement, and timeout are declarative fields beside
+the menu's DOM capability in `components/user-menu.js`.
+
 The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
 comes from a small edge program, an allowlisted immutable export, strict `use-*`
 validation before publication, and the Bunny isolate's own limits.

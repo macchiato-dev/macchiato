@@ -763,6 +763,45 @@ test("resources sqlite user menu preserves exclusive sandboxed popover behavior"
   assert.deepEqual(errors, []);
 });
 
+test("resources user menu safe polygon protects diagonal travel but permits horizontal switching", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+
+  const account = page.getByRole("button", { name: "Account menu" });
+  const create = page.getByRole("button", { name: "Create new" });
+  const accountPop = account.locator("xpath=..");
+  const createPop = create.locator("xpath=..");
+
+  await account.hover();
+  await page.waitForFunction(() => document.querySelector(".userbar .ub-pop:nth-child(3)")?.dataset.open === "true");
+  const accountBox = await account.boundingBox();
+  const panelBox = await accountPop.locator(".popover").boundingBox();
+  assert.ok(accountBox && panelBox);
+  await page.mouse.move(accountBox.x + accountBox.width / 2, accountBox.y + accountBox.height / 2);
+  await page.mouse.move(panelBox.x + 12, panelBox.y + 24, { steps: 16 });
+  assert.equal(await accountPop.getAttribute("data-open"), "true");
+  assert.notEqual(await createPop.getAttribute("data-open"), "true");
+
+  await account.hover();
+  const createBox = await create.boundingBox();
+  assert.ok(createBox);
+  await page.mouse.move(createBox.x + createBox.width / 2, accountBox.y + accountBox.height / 2, { steps: 8 });
+  await page.waitForFunction(() => document.querySelector(".userbar .ub-pop:nth-child(2)")?.dataset.open === "true");
+  assert.equal(await createPop.getAttribute("data-open"), "true");
+  assert.notEqual(await accountPop.getAttribute("data-open"), "true");
+});
+
 test("resources sqlite site keeps footer near the viewport bottom on sparse pages", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
