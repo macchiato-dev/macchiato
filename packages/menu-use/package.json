@@ -1,0 +1,8 @@
+{
+  "name": "@macchiato-dev/menu-use",
+  "version": "0.1.0",
+  "description": "Define and render declarative primary menus for interactive and document runtimes",
+  "type": "module",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"]
+}
