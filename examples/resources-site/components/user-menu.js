@@ -2,6 +2,7 @@ import { composeUserMenuDomSchema, createExclusiveUserMenuSandboxSource, defineU
 
 const svg = (body, attributes = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${attributes}>${body}</svg>`;
 const avatar = `<span class="ub-avatar">MD</span>`;
+const guestHtml = `<div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></div>`;
 
 export const RESOURCES_IDENTITY = Object.freeze({ name: "macchiato-dev", initials: "MD" });
 
@@ -10,7 +11,7 @@ const dom = {
     userbar: {
       element: "section.box.userbar",
       attrs: ["class", "data-screen-label"],
-      children: ["$userbar-pop"],
+      children: ["$userbar-pop", "div"],
       place: true,
     },
     "edge-status": {
@@ -61,9 +62,12 @@ export const RESOURCES_USER_MENU = defineUserMenu({
         <button class="item">${svg('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>')}Your profile</button>
         <div class="menu__sep"></div>
         <button class="item">${svg('<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>')}Settings</button>
-        <button class="item">${svg('<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>')}Help &amp; docs</button>`,
+        <button class="item">${svg('<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>')}Help &amp; docs</button>
+        <div class="menu__sep"></div>
+        <button class="item item--danger auth-signout">Sign out</button>`,
     },
   ],
+  guestHtml,
   dom,
   behavior: {
     hover: { enabled: true, safePolygon: true, requireIntent: true, buffer: 2, timeoutMs: 450 },

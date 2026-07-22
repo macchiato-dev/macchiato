@@ -9,6 +9,7 @@ import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
 import { RESOURCES_MENU, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
 import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
+import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "./components/auth.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -150,7 +151,7 @@ export function resourcesCssSchema() {
 
 export function resourcesDomSchema() {
   const base = JSON.parse(readFileSync(join(__dirname, "dom.schema.json"), "utf8"));
-  return composeResourcesUserMenuDomSchema(base);
+  return composeResourcesAuthDomSchema(composeResourcesUserMenuDomSchema(base));
 }
 
 function resourcesDomSchemaText() {
@@ -228,6 +229,8 @@ const SECTIONS = {
     ],
   },
 };
+SECTIONS["/login"] = resourcesAuthRoute("login");
+SECTIONS["/signup"] = resourcesAuthRoute("signup");
 
 const NOT_FOUND_ROUTE = {
   navKey: "",
@@ -553,6 +556,20 @@ ${base}
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.ub-guest { display: none; align-items: center; gap: 8px; }
+body[data-auth="out"] .userbar .ub-pop { display: none; }
+body[data-auth="out"] .ub-guest { display: flex; }
+.ub-btn { border: 1px solid var(--track-border); border-radius: 11px; padding: 10px 15px; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
+.ub-btn--solid { border-color: var(--active-bg); background: var(--active-bg); color: var(--active-fg); }
+.item--danger:hover { color: #ff6b6b; }
+.auth-card { width: 100%; max-width: 440px; padding: 38px; align-self: center; }
+.auth-eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.auth-providers { display: grid; gap: 10px; margin-top: 22px; }
+.auth-provider { border: 1px solid var(--track-border); border-radius: 12px; padding: 13px 16px; background: var(--track); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.auth-provider:hover { border-color: var(--accent); }
+.auth-alt, .auth-note { margin-top: 18px; font-size: 13px; color: var(--muted); }
+.auth-alt a { color: var(--accent); font-weight: 600; }
+.auth-note { padding: 12px 14px; border-radius: 10px; background: var(--hover); }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -762,6 +779,7 @@ function brandHeaderHtml(path) {
 }
 
 function blockHtml(block) {
+  if (block.type === "auth") return renderResourcesAuthBlock(block.mode);
   if (block.type === "project-summary") return projectSummaryHtml(block);
   if (block.type === "package-details") return packageDetailsHtml(block);
   const bits = [`<section class="box block content-block">`];
@@ -874,6 +892,7 @@ const resourcesCssSchema = ${resourcesCssSchemaText()};
 
 const userbarSandboxSource = ${JSON.stringify(resourcesUserMenuSandboxSource)};
 const userMenuBehavior = ${JSON.stringify(RESOURCES_USER_MENU.behavior)};
+const authConfig = ${JSON.stringify(RESOURCES_AUTH)};
 const createSafeTriangle = ${createSafeTriangle.toString()};
 const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 
@@ -934,6 +953,17 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
       button.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
       if (thumb) thumb.style.transform = dark ? "translateX(38px)" : "translateX(0)";
     });
+  }
+
+  function applyAuthState(state) {
+    const authenticated = state === "in";
+    if (authenticated) delete document.body.dataset.auth;
+    else document.body.dataset.auth = "out";
+    try { localStorage.setItem(authConfig.storageKey, authenticated ? "in" : "out"); } catch {}
+  }
+
+  function initialAuthState() {
+    try { return localStorage.getItem(authConfig.storageKey) || authConfig.defaultState; } catch { return authConfig.defaultState; }
   }
 
   function setMenuOpen(open) {
@@ -1170,9 +1200,24 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
   }
 
   applyTheme(root.getAttribute("data-theme") || "dark");
+  applyAuthState(initialAuthState());
   prepareUserbarMenus();
   preparePrefetching();
   document.addEventListener("click", (event) => {
+    const provider = event.target.closest(".auth-provider");
+    if (provider) {
+      event.preventDefault();
+      applyAuthState("in");
+      navigate(new URL("/", location.href), "push");
+      return;
+    }
+    if (event.target.closest(".auth-signout")) {
+      event.preventDefault();
+      applyAuthState("out");
+      dispatchUserbarEvent({ type: "close" });
+      navigate(new URL("/", location.href), "push");
+      return;
+    }
     const menuButton = event.target.closest(".menu-button");
     if (menuButton) {
       const menu = menuButton.closest(".menu");
@@ -1247,7 +1292,9 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
-  return [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"].map((path) => {
+  const paths = [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"]
+    .filter((path) => profile.name !== "document" || (path !== "/login" && path !== "/signup"));
+  return paths.map((path) => {
     const route = routeForPath(path);
     const authoredHtml = pageHtml(path, { runtime: profile.name });
     // The edge profile is promoted to trusted static content only after passing

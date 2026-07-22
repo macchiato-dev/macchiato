@@ -802,6 +802,48 @@ test("resources user menu safe polygon protects diagonal travel but permits hori
   assert.notEqual(await accountPop.getAttribute("data-open"), "true");
 });
 
+test("resources app supports logged-in, logged-out, login, signup, and signout states", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.waitForFunction(() => document.body.dataset.auth === "out");
+  await assert.doesNotReject(page.getByRole("link", { name: "Log in" }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Sign up" }).waitFor());
+  assert.equal(await page.getByRole("button", { name: "Account menu" }).isVisible(), false);
+
+  await page.getByRole("link", { name: "Log in" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/login");
+  await page.getByRole("button", { name: "Continue with GitHub" }).click();
+  await page.waitForFunction(() => document.body.dataset.auth !== "out");
+  await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/");
+  assert.equal(await page.getByRole("button", { name: "Account menu" }).isVisible(), true);
+
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("link", { name: "Sign up" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Create your account" }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/signup");
+  await page.getByRole("button", { name: "Continue with Apple" }).click();
+  await page.waitForFunction(() => document.body.dataset.auth !== "out");
+  assert.equal(new URL(page.url()).pathname, "/");
+  assert.equal(await page.evaluate(() => localStorage.getItem("resources-auth-state-v1")), "in");
+});
+
 test("resources sqlite site keeps footer near the viewport bottom on sparse pages", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
