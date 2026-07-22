@@ -6,6 +6,7 @@ import { createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } 
 test("user-menu-use renders configured popovers", () => {
   const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", triggerHtml: "AL", panelHtml: "Signed in" }] });
   assert.match(renderUserMenu(model), /aria-label="Account"[\s\S]*Signed in/);
+  assert.throws(() => defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Bad", triggerClass: "x\" onclick=", triggerHtml: "X", panelHtml: "Y" }] }), /safe class/);
 });
 
 test("exclusive user menu state opens, switches, and closes popovers", () => {

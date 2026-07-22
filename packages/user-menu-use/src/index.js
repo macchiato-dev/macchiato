@@ -1,18 +1,25 @@
 const SAFE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const SAFE_CLASSES = /^[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*$/;
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 export function defineUserMenu({ identity, menus }) {
   if (!identity?.name || !identity?.initials) throw new Error("User menu identity requires a name and initials");
   if (!Array.isArray(menus) || menus.length === 0) throw new Error("User menu requires at least one popover");
   const normalized = menus.map((menu) => {
     if (!menu?.label || !menu?.triggerHtml || !menu?.panelHtml) throw new Error("Each user menu requires a label, trigger, and panel");
-    return Object.freeze({ label: String(menu.label), triggerClass: String(menu.triggerClass || "ub-icon"), triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
+    const triggerClass = String(menu.triggerClass || "ub-icon");
+    if (!SAFE_CLASSES.test(triggerClass)) throw new Error("User menu trigger classes must be safe class names");
+    return Object.freeze({ label: String(menu.label), triggerClass, triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
   });
   return Object.freeze({ identity: Object.freeze({ name: String(identity.name), initials: String(identity.initials) }), menus: Object.freeze(normalized) });
 }
 
 export function renderUserMenu(model) {
   const popovers = model.menus.map((menu) => `<div class="ub-pop">
-      <button class="${menu.triggerClass}" aria-label="${menu.label}" aria-haspopup="true" aria-expanded="false">${menu.triggerHtml}</button>
+      <button class="${menu.triggerClass}" aria-label="${escapeHtml(menu.label)}" aria-haspopup="true" aria-expanded="false">${menu.triggerHtml}</button>
       <div class="popover user-menu" role="menu">${menu.panelHtml}</div>
     </div>`).join("\n    ");
   return `<section class="box userbar" data-screen-label="userbar">${popovers}</section>`;
