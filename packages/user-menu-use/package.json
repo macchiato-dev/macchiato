@@ -1,0 +1,8 @@
+{
+  "name": "@macchiato-dev/user-menu-use",
+  "version": "0.1.0",
+  "description": "Render user menus and generate an exclusive sandboxed popover state machine",
+  "type": "module",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"]
+}

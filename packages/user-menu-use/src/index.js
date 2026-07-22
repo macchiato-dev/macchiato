@@ -1,0 +1,53 @@
+const SAFE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+
+export function defineUserMenu({ identity, menus }) {
+  if (!identity?.name || !identity?.initials) throw new Error("User menu identity requires a name and initials");
+  if (!Array.isArray(menus) || menus.length === 0) throw new Error("User menu requires at least one popover");
+  const normalized = menus.map((menu) => {
+    if (!menu?.label || !menu?.triggerHtml || !menu?.panelHtml) throw new Error("Each user menu requires a label, trigger, and panel");
+    return Object.freeze({ label: String(menu.label), triggerClass: String(menu.triggerClass || "ub-icon"), triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
+  });
+  return Object.freeze({ identity: Object.freeze({ name: String(identity.name), initials: String(identity.initials) }), menus: Object.freeze(normalized) });
+}
+
+export function renderUserMenu(model) {
+  const popovers = model.menus.map((menu) => `<div class="ub-pop">
+      <button class="${menu.triggerClass}" aria-label="${menu.label}" aria-haspopup="true" aria-expanded="false">${menu.triggerHtml}</button>
+      <div class="popover user-menu" role="menu">${menu.panelHtml}</div>
+    </div>`).join("\n    ");
+  return `<section class="box userbar" data-screen-label="userbar">${popovers}</section>`;
+}
+
+export function createExclusiveUserMenuSandboxSource({ menuCount, eventFunction = "__userMenuEvent", bindingsFunction = "__userMenuBindings" }) {
+  if (!Number.isInteger(menuCount) || menuCount < 1 || menuCount > 20) throw new Error("User menu count must be between 1 and 20");
+  if (!SAFE_NAME.test(eventFunction) || !SAFE_NAME.test(bindingsFunction)) throw new Error("Sandbox function names must be safe identifiers");
+  return `const state = { openIndex: null, hoverPaused: false };
+const menuCount = ${menuCount};
+function snapshot(blurIndex = null) {
+  return { pinned: state.openIndex !== null, hoverPaused: state.hoverPaused, open: Array.from({ length: menuCount }, (_, index) => index === state.openIndex), expanded: Array.from({ length: menuCount }, (_, index) => index === state.openIndex), blurIndex };
+}
+function close({ pauseHover = false, blurIndex = null } = {}) { state.openIndex = null; state.hoverPaused = Boolean(pauseHover); return snapshot(blurIndex); }
+globalThis.${eventFunction} = (json) => {
+  const event = JSON.parse(json);
+  if (event.type === "click") {
+    if (event.target?.kind === "userbar-button") {
+      const index = Number(event.target.index);
+      if (!Number.isInteger(index) || index < 0 || index >= menuCount) return JSON.stringify({ state: snapshot(), preventDefault: false });
+      if (state.openIndex === index) return JSON.stringify({ state: close({ pauseHover: true, blurIndex: index }), preventDefault: true });
+      state.openIndex = index; state.hoverPaused = false; return JSON.stringify({ state: snapshot(), preventDefault: true });
+    }
+    if (!event.target?.insideUserbar) return JSON.stringify({ state: close(), preventDefault: false });
+    return JSON.stringify({ state: snapshot(), preventDefault: false });
+  }
+  if (event.type === "toggle") {
+    const index = Number(event.index);
+    if (!Number.isInteger(index) || index < 0 || index >= menuCount) return JSON.stringify(snapshot());
+    if (state.openIndex === index) return JSON.stringify(close({ pauseHover: true, blurIndex: index }));
+    state.openIndex = index; state.hoverPaused = false; return JSON.stringify(snapshot());
+  }
+  if (event.type === "close") return JSON.stringify(close());
+  if (event.type === "exit" || event.type === "pointerleave") { state.hoverPaused = false; return JSON.stringify(snapshot()); }
+  return JSON.stringify(snapshot());
+};
+globalThis.${bindingsFunction} = () => JSON.stringify([{ target: "document", type: "click" }, { target: ".userbar", type: "pointerleave" }]);`;
+}
