@@ -7,7 +7,8 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   const text = await home.text();
   assert.equal(home.status, 200);
   assert.match(text, /Resources\.co/);
-  assert.match(text, /--accent: #ffb86b/);
+  assert.match(text, /--accent: #30d5c8/);
+  assert.match(text, /Edge safe/);
   assert.match(home.headers.get("content-security-policy"), /script-src 'none'/);
   assert.doesNotMatch(text, /type="module"|type="importmap"/);
 

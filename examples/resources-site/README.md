@@ -37,6 +37,41 @@ is the portable build boundary. Storage is supplied as `fetch`, so the same
 dependency-free handler can use [`adapters/memory-storage.js`](adapters/memory-storage.js)
 locally or the platform `fetch` against private Bunny Storage in production.
 
+## Presentation parity and intentional differences
+
+Both profiles now use the Resources.co teal/blue theme by default, render the
+same brand, content, project metadata, navigation, footer, fonts, responsive
+breakpoints, and friendly URLs. The edge header includes a static `Edge safe`
+status and account identity in the same grid position as the local userbar, so
+removing the JavaScript runtime does not leave a visual hole.
+
+The remaining differences describe runtime capability rather than separate
+designs:
+
+| Local `resources-co` | Edge `resources-edge` |
+| --- | --- |
+| QuickJS-backed account popovers | Static, truthful runtime/account status |
+| Client theme toggle | Default theme rendered at build time |
+| Responsive JavaScript hamburger | Always-available document links on narrow screens |
+| Prefetch and sanitized DOM swaps | Ordinary full-document navigation |
+
+The orange/purple palette originally used by the edge preview was useful as a
+contrast test, but made adapter differences look like a separate product. It is
+retained as the exported `RESOURCES_EXPERIMENTAL_THEME` direction in
+[`theme.js`](theme.js), not as the preview default. To explore it explicitly:
+
+```js
+import { createResourcesArtifactSet } from "./artifacts.js";
+import { RESOURCES_EXPERIMENTAL_THEME } from "./theme.js";
+
+const artifacts = createResourcesArtifactSet({
+  theme: RESOURCES_EXPERIMENTAL_THEME,
+});
+```
+
+This keeps palette experiments declarative and validated by `theme-use`; a
+storage or execution adapter never silently changes the brand.
+
 The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
 comes from a small edge program, an allowlisted immutable export, strict `use-*`
 validation before publication, and the Bunny isolate's own limits.

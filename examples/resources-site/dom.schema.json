@@ -9,6 +9,7 @@
             "$brand",
             "$project-identity",
             "$userbar",
+            "$edge-status",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
@@ -37,6 +38,11 @@
       "element": "section.box.userbar",
       "attrs": ["class", "data-screen-label"],
       "children": ["$userbar-pop"]
+    },
+    "edge-status": {
+      "element": "aside.box.userbar.edge-status",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["span"]
     },
     "userbar-pop": {
       "element": "div.ub-pop",

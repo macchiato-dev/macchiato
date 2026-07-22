@@ -127,7 +127,8 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   const configText = await config.text();
 
   assert.equal(response.status, 200);
-  assert.match(text, /--accent: #ffb86b/);
+  assert.match(text, /--accent: #30d5c8/);
+  assert.match(text, /Edge safe/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'none'/);
   assert.doesNotMatch(text, /type="module"|type="importmap"/);
   assert.equal(config.status, 200);
@@ -264,9 +265,21 @@ test("Resources.co edge preview renders in a real browser without page scripts",
 
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
+  await assert.doesNotReject(page.getByText("Edge safe", { exact: true }).waitFor());
+  const edgeTheme = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
+  });
   assert.equal(response.status(), 200);
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  const localTheme = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
+  });
+  assert.deepEqual(edgeTheme, localTheme);
   assert.deepEqual(errors, []);
 });
 
