@@ -537,6 +537,24 @@ ${base}
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
+.edge-status {
+  min-height: 64px;
+  gap: 10px;
+}
+.edge-status__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.edge-status__label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .content-root[data-loading="true"] {
   width: 100%;
 }
@@ -605,9 +623,10 @@ ${base}
 @media (max-width: 760px) {
   .layout.document-runtime {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     grid-template-areas:
       "brand"
+      "userbar"
       "nav"
       "main"
       "footer";
@@ -852,13 +871,21 @@ function pageHtml(path, { runtime = "browser-use" } = {}) {
   const documentRuntime = runtime === "document";
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}">
     ${brandHeaderHtml(path)}
-    ${documentRuntime ? "" : userbarHtml()}
+    ${documentRuntime ? documentStatusHtml() : userbarHtml()}
     ${documentRuntime ? "" : menuHtml(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
     ${navHtml(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module">${clientScript()}</script>` : ""}`;
+}
+
+function documentStatusHtml() {
+  return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+    <span class="edge-status__dot"></span>
+    <span class="edge-status__label">Edge safe</span>
+    <span class="ub-avatar">MD</span>
+  </aside>`;
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {

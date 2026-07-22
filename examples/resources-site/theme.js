@@ -23,6 +23,11 @@ const defaults = Object.freeze({
   },
 });
 
+export const RESOURCES_EXPERIMENTAL_THEME = Object.freeze({
+  dark: Object.freeze({ "--accent": "#ffb86b", "--active-bg": "#7c3aed" }),
+  light: Object.freeze({ "--accent": "#7c3aed", "--active-bg": "#7c3aed" }),
+});
+
 const options = { allowedTokens: RESOURCES_THEME_TOKENS };
 const dark = defineTheme({ name: "resources-dark", selector: 'html[data-theme="dark"]', tokens: defaults.dark }, options);
 const light = defineTheme({ name: "resources-light", selector: 'html[data-theme="light"]', tokens: defaults.light }, options);

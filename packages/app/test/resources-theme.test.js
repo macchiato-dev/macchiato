@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildResourcesSiteRoutesForRuntime } from "../../../examples/resources-site/seed.js";
-import { createResourcesTheme, resourcesThemeCss } from "../../../examples/resources-site/theme.js";
+import { createResourcesTheme, RESOURCES_EXPERIMENTAL_THEME, resourcesThemeCss } from "../../../examples/resources-site/theme.js";
 import { RESOURCES_RUNTIME_PROFILES, resourcesRuntimeProfile } from "../../../examples/resources-site/runtime.js";
 
 test("Resources.co theme model supports allowlisted palette overrides", () => {
@@ -9,6 +9,7 @@ test("Resources.co theme model supports allowlisted palette overrides", () => {
   assert.equal(theme.dark.tokens["--accent"], "#ffb86b");
   assert.equal(theme.fallback.tokens["--accent"], "#ffb86b");
   assert.match(resourcesThemeCss({ dark: { "--accent": "#ffb86b" } }), /--accent: #ffb86b/);
+  assert.equal(RESOURCES_EXPERIMENTAL_THEME.dark["--active-bg"], "#7c3aed");
   assert.throws(() => createResourcesTheme({ dark: { "--unknown": "red" } }), /not allowed/);
 });
 

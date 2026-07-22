@@ -9,10 +9,7 @@ export const resourcesEdgePreviewConfig = Object.freeze({
   adapter: "in-memory manifest storage",
   targetAdapter: "Bunny Storage fetch",
   profile: "document-navigation-v1",
-  theme: {
-    dark: { "--accent": "#ffb86b", "--active-bg": "#7c3aed" },
-    light: { "--accent": "#7c3aed", "--active-bg": "#7c3aed" },
-  },
+  theme: {},
 });
 
 const config = createEdgeConfig({
