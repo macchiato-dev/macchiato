@@ -115,6 +115,48 @@ the geometry dependency-free and does not block pointer events behind the
 polygon. Buffer, intent requirement, and timeout are declarative fields beside
 the menu's DOM capability in `components/user-menu.js`.
 
+## Authentication slice
+
+The latest design reference is
+[`resourcesco-standalone-20260722.html`](../../resourcesco-standalone-20260722.html).
+It includes logged-in and logged-out layouts, Log in and Sign up routes, four
+OAuth provider buttons, and Sign out. Its provider exchange is explicitly
+simulated: a timeout changes DOM state without a server callback, session,
+cookie, or identity record.
+
+[`components/auth.js`](components/auth.js) ports that slice as a declarative
+model with two separable concerns:
+
+- presentation and state: provider list, login/signup route models, auth card,
+  guest actions, and a persisted local preview state;
+- adapter mode: currently `simulated-provider-adapter`, named explicitly so it
+  cannot be mistaken for server authentication.
+
+The local profile supports the complete preview loop: Sign out, Log in, choose
+a provider, Sign out again, Sign up, and choose a provider. Playwright covers
+that sequence and checks header visibility, routes, and stored state. The auth
+card's `dom-use` definition is composed from the auth module just like the user
+menu capability.
+
+The Bunny/document profile intentionally does not publish `/login` or `/signup`
+yet. Its CSP forbids the simulation script, and exposing inert provider buttons
+would be misleading. A production adapter must add authorization-start and
+callback endpoints, signed HTTP-only session cookies, provider state/nonce/PKCE
+validation, identity persistence, and authorization checks before those routes
+are enabled at the edge.
+
+The July 22 reference also expands the application beyond authentication. The
+next implementation slices, in dependency order, are:
+
+1. signed-in workspace/home versus the signed-out marketing home;
+2. Explore, Blog, and organization routes from shared declarative models;
+3. the New project workflow backed by a real model and storage adapter;
+4. Terms and Privacy document routes;
+5. production session and OAuth adapters, followed by edge enablement.
+
+The standalone file remains a design/prototype reference, not executable input
+to the server or a trusted bundle.
+
 The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
 comes from a small edge program, an allowlisted immutable export, strict `use-*`
 validation before publication, and the Bunny isolate's own limits.
