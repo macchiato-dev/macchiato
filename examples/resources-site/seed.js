@@ -6,17 +6,14 @@ import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
+import { RESOURCES_MENU, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
+import { renderResourcesEdgeStatus, renderResourcesUserMenu, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
 const SUBDOMAIN = "resources-co";
 
-const NAV = [
-  { path: "/", label: "Home", key: "home" },
-  { path: "/browse", label: "Browse", key: "browse" },
-  { path: "/collections", label: "Projects", key: "collections" },
-  { path: "/about", label: "About", key: "about" },
-];
+const NAV = RESOURCES_MENU.items;
 
 const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
 const ORG_COPY = {
@@ -678,12 +675,6 @@ function homeIcon() {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.6 12 3l9 7.6"></path><path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-5.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V21h3.5a1 1 0 0 0 1-1V9.5"></path></svg>`;
 }
 
-function themeToggleHtml() {
-  const sun = `<svg class="tb-ghost tb-ghost-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"></line><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"></line><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"></line></svg>`;
-  const moon = `<svg class="tb-ghost tb-ghost-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
-  return `<button class="toggle-btn theme-toggle" role="switch" aria-checked="true" aria-label="Switch to light mode">${sun}${moon}<span class="tb-thumb">${sun.replace("tb-ghost tb-ghost-sun", "tb-sun")}${moon.replace("tb-ghost tb-ghost-moon", "tb-moon")}</span></button>`;
-}
-
 function userbarHtml() {
   return `<section class="box userbar" data-screen-label="userbar">
     <div class="ub-pop">
@@ -710,28 +701,6 @@ function userbarHtml() {
         <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
         <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
       </div>
-    </div>
-  </section>`;
-}
-
-function navHtml(activeKey) {
-  const links = NAV.map((item) => {
-    const current = item.key === activeKey ? ' aria-current="page"' : "";
-    return `<a href="${item.path}" data-section="${item.key}"${current}><span>${escapeHtml(item.label)}</span></a>`;
-  });
-  return `<nav class="box nav" data-screen-label="nav" aria-label="Primary">${links.join("")}</nav>`;
-}
-
-function menuHtml(activeKey) {
-  const links = NAV.map((item) => {
-    const current = item.key === activeKey ? ' aria-current="page"' : "";
-    return `<a href="${item.path}" data-section="${item.key}"${current}><span>${escapeHtml(item.label)}</span></a>`;
-  });
-  return `<section class="box menu" data-open="false" data-screen-label="menu">
-    <button class="menu-button" type="button" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>
-    <div class="box menu-panel">
-      ${themeToggleHtml()}
-      <nav class="menu-nav" aria-label="Primary">${links.join("")}</nav>
     </div>
   </section>`;
 }
@@ -871,21 +840,13 @@ function pageHtml(path, { runtime = "browser-use" } = {}) {
   const documentRuntime = runtime === "document";
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}">
     ${brandHeaderHtml(path)}
-    ${documentRuntime ? documentStatusHtml() : userbarHtml()}
-    ${documentRuntime ? "" : menuHtml(route.navKey)}
+    ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
+    ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
-    ${navHtml(route.navKey)}
+    ${renderResourcesPrimaryMenu(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module">${clientScript()}</script>` : ""}`;
-}
-
-function documentStatusHtml() {
-  return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    <span class="edge-status__dot"></span>
-    <span class="edge-status__label">Edge safe</span>
-    <span class="ub-avatar">MD</span>
-  </aside>`;
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {
@@ -909,62 +870,7 @@ function clientScript() {
   return `const resourcesDomSchema = ${resourcesDomSchemaText()};
 const resourcesCssSchema = ${resourcesCssSchemaText()};
 
-const userbarSandboxSource = ${JSON.stringify(`const state = {
-  openIndex: null,
-  hoverPaused: false,
-};
-
-function snapshot(blurIndex = null) {
-  return {
-    pinned: state.openIndex !== null,
-    hoverPaused: state.hoverPaused,
-    open: [0, 1, 2].map((index) => index === state.openIndex),
-    expanded: [0, 1, 2].map((index) => index === state.openIndex),
-    blurIndex,
-  };
-}
-
-function close({ pauseHover = false, blurIndex = null } = {}) {
-  state.openIndex = null;
-  state.hoverPaused = Boolean(pauseHover);
-  return snapshot(blurIndex);
-}
-
-globalThis.__resourcesUserbarEvent = (json) => {
-  const event = JSON.parse(json);
-  if (event.type === "click") {
-    if (event.target?.kind === "userbar-button") {
-      const index = Number(event.target.index);
-      if (!Number.isInteger(index) || index < 0 || index > 2) return JSON.stringify({ state: snapshot(), preventDefault: false });
-      if (state.openIndex === index) return JSON.stringify({ state: close({ pauseHover: true, blurIndex: index }), preventDefault: true });
-      state.openIndex = index;
-      state.hoverPaused = false;
-      return JSON.stringify({ state: snapshot(), preventDefault: true });
-    }
-    if (!event.target?.insideUserbar) return JSON.stringify({ state: close(), preventDefault: false });
-    return JSON.stringify({ state: snapshot(), preventDefault: false });
-  }
-  if (event.type === "toggle") {
-    const index = Number(event.index);
-    if (!Number.isInteger(index) || index < 0 || index > 2) return JSON.stringify(snapshot());
-    if (state.openIndex === index) return JSON.stringify(close({ pauseHover: true, blurIndex: index }));
-    state.openIndex = index;
-    state.hoverPaused = false;
-    return JSON.stringify(snapshot());
-  }
-  if (event.type === "close") return JSON.stringify(close());
-  if (event.type === "exit" || event.type === "pointerleave") {
-    state.hoverPaused = false;
-    return JSON.stringify(snapshot());
-  }
-  return JSON.stringify(snapshot());
-};
-
-globalThis.__resourcesUserbarBindings = () => JSON.stringify([
-  { target: "document", type: "click" },
-  { target: ".userbar", type: "pointerleave" },
-]);
-`)};
+const userbarSandboxSource = ${JSON.stringify(resourcesUserMenuSandboxSource)};
 
 (() => {
   const root = document.documentElement;
