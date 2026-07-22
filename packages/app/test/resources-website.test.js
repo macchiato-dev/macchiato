@@ -9,7 +9,7 @@ import { DomUse } from "@macchiato-dev/dom-use";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
-import { buildResourcesSiteRoutes, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
+import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");
@@ -419,6 +419,17 @@ test("resources sqlite site DOM schema composes layout block definitions", async
   assert.equal(layout.appendChild(nav), nav);
   assert.equal(layout.appendChild(footer), footer);
   assert.throws(() => layout.appendChild(button), /Child button not allowed in main/);
+});
+
+test("resources user menu module composes its own dom-use capability", async () => {
+  const base = JSON.parse(await readFile(join(resourcesSiteDir, "dom.schema.json"), "utf8"));
+  const schema = resourcesDomSchema();
+  assert.equal(base.definitions.userbar, undefined);
+  assert.equal(schema.definitions.userbar.element, "section.box.userbar");
+  assert.equal(schema.definitions["edge-status"].element, "aside.box.userbar.edge-status");
+  assert.equal(schema.definitions["userbar-pop"].children[1], "$popover-menu");
+  assert.equal(schema.definitions.layout.children[0].oneOf.includes("$userbar"), true);
+  assert.equal(schema.nodes.main.children[0].oneOf.includes("$edge-status"), true);
 });
 
 test("resources website renders its index in a real browser", async (t) => {

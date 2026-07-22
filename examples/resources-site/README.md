@@ -81,13 +81,17 @@ Navigation and account UI are no longer authored inside the route builder:
   [`components/menu.js`](components/menu.js) supplies the Resources.co menu and
   theme-toggle markup. Local and edge documents therefore get their links and
   active-page state from the same model.
-- `@macchiato-dev/user-menu-use` renders exclusive popovers and generates their
-  runtime-neutral state machine. The local profile evaluates that state machine
-  in QuickJS; it is not trusted with DOM access. The host applies returned
-  snapshots to `data-open` and ARIA state.
+- `@macchiato-dev/user-menu-use` compiles one declarative component definition:
+  it renders exclusive popovers, composes the component's declared `dom-use`
+  capability into its host schema, and generates a runtime-neutral state
+  machine. It does not require a browser module. The local profile evaluates
+  the generated state machine in QuickJS; it is not trusted with DOM access.
+  The host applies returned snapshots to `data-open` and ARIA state.
 - [`components/user-menu.js`](components/user-menu.js) owns the Resources.co
-  identity, icons, menu actions, and static edge status. The edge profile shares
-  the identity model but deliberately renders no inert popover buttons.
+  identity, icons, menu actions, DOM definitions, schema placement, and static
+  edge status in the same declaration. There is no parallel user-menu section
+  in `dom.schema.json` to drift from the actual component. The edge profile
+  shares the identity model but deliberately renders no inert popover buttons.
 
 The generic modules do not know about Resources.co routes, colors, people, or
 icons. The Resources component modules do not decide whether storage is SQLite,

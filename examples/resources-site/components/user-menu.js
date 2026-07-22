@@ -1,9 +1,37 @@
-import { createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } from "@macchiato-dev/user-menu-use";
+import { composeUserMenuDomSchema, createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } from "@macchiato-dev/user-menu-use";
 
 const svg = (body, attributes = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${attributes}>${body}</svg>`;
 const avatar = `<span class="ub-avatar">MD</span>`;
 
 export const RESOURCES_IDENTITY = Object.freeze({ name: "macchiato-dev", initials: "MD" });
+
+const dom = {
+  definitions: {
+    userbar: {
+      element: "section.box.userbar",
+      attrs: ["class", "data-screen-label"],
+      children: ["$userbar-pop"],
+      place: true,
+    },
+    "edge-status": {
+      element: "aside.box.userbar.edge-status",
+      attrs: ["class", "data-screen-label"],
+      children: ["span"],
+      place: true,
+    },
+    "userbar-pop": {
+      element: "div.ub-pop",
+      attrs: ["class"],
+      children: ["button", "$popover-menu"],
+    },
+    "popover-menu": {
+      element: "div.popover.user-menu",
+      attrs: ["class", "role"],
+      children: ["button", "div"],
+    },
+  },
+  placements: ["definitions.layout", "nodes.main"],
+};
 
 export const RESOURCES_USER_MENU = defineUserMenu({
   identity: RESOURCES_IDENTITY,
@@ -36,7 +64,12 @@ export const RESOURCES_USER_MENU = defineUserMenu({
         <button class="item">${svg('<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>')}Help &amp; docs</button>`,
     },
   ],
+  dom,
 });
+
+export function composeResourcesUserMenuDomSchema(schema) {
+  return composeUserMenuDomSchema(schema, RESOURCES_USER_MENU);
+}
 
 export const resourcesUserMenuSandboxSource = createExclusiveUserMenuSandboxSource({
   menuCount: RESOURCES_USER_MENU.menus.length,

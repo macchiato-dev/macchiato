@@ -19,7 +19,7 @@ their own.
 | `@macchiato-dev/style-use` | CSS policy engine for inline styles and stylesheets. Schemas declare allowed properties, value patterns, selectors, at-rules, URL loading, imports, and stylesheet limits. |
 | `@macchiato-dev/theme-use` | Validates named, allowlisted CSS custom-property themes and renders customizable theme declarations without permitting active CSS values. |
 | `@macchiato-dev/menu-use` | Defines one immutable primary-navigation model and renders matching desktop, mobile, and document-runtime menus. |
-| `@macchiato-dev/user-menu-use` | Defines and renders user popovers and generates the exclusive open/close state machine used inside a sandbox. |
+| `@macchiato-dev/user-menu-use` | Compiles declarative user-menu definitions into markup, colocated `dom-use` schema capability, and an exclusive open/close state machine suitable for a sandbox. |
 | `@macchiato-dev/font-use` | Font asset cache helpers. Validates font names and paths, stores known font bytes in SQLite, emits stable `/-/fonts/...` URLs, and builds `@font-face` declarations. |
 | `@macchiato-dev/quickjs-emscripten-sandbox` | QuickJS-backed JavaScript sandbox. Runs guest JavaScript with explicit host capabilities and provides browser assets used by the DOM sandbox examples. |
 | `@macchiato-dev/dashboard` | Small management UI for local site mappings. It is a development convenience, not the core storage or policy layer. |

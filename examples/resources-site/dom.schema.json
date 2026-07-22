@@ -8,8 +8,6 @@
           "oneOf": [
             "$brand",
             "$project-identity",
-            "$userbar",
-            "$edge-status",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
@@ -33,26 +31,6 @@
       "element": "section.box.toggle",
       "attrs": ["class", "data-screen-label"],
       "children": ["button"]
-    },
-    "userbar": {
-      "element": "section.box.userbar",
-      "attrs": ["class", "data-screen-label"],
-      "children": ["$userbar-pop"]
-    },
-    "edge-status": {
-      "element": "aside.box.userbar.edge-status",
-      "attrs": ["class", "data-screen-label"],
-      "children": ["span"]
-    },
-    "userbar-pop": {
-      "element": "div.ub-pop",
-      "attrs": ["class"],
-      "children": ["button", "$popover-menu"]
-    },
-    "popover-menu": {
-      "element": "div.popover.user-menu",
-      "attrs": ["class", "role"],
-      "children": ["button", "div"]
     },
     "mobile-menu": {
       "element": "section.box.menu",
@@ -184,7 +162,6 @@
           "oneOf": [
             "$brand",
             "$project-identity",
-            "$userbar",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",

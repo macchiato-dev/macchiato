@@ -7,7 +7,7 @@ import { StyleUse } from "@macchiato-dev/style-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
 import { RESOURCES_MENU, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
-import { renderResourcesEdgeStatus, renderResourcesUserMenu, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
+import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -147,12 +147,13 @@ export function resourcesCssSchema() {
   return hydrateCssSchema(JSON.parse(json));
 }
 
-function resourcesDomSchemaText() {
-  return readFileSync(join(__dirname, "dom.schema.json"), "utf8");
+export function resourcesDomSchema() {
+  const base = JSON.parse(readFileSync(join(__dirname, "dom.schema.json"), "utf8"));
+  return composeResourcesUserMenuDomSchema(base);
 }
 
-export function resourcesDomSchema() {
-  return JSON.parse(resourcesDomSchemaText());
+function resourcesDomSchemaText() {
+  return JSON.stringify(resourcesDomSchema());
 }
 
 function resourcesCssSchemaText() {
