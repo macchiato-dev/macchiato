@@ -72,6 +72,28 @@ const artifacts = createResourcesArtifactSet({
 This keeps palette experiments declarative and validated by `theme-use`; a
 storage or execution adapter never silently changes the brand.
 
+## Menu module boundaries
+
+Navigation and account UI are no longer authored inside the route builder:
+
+- `@macchiato-dev/menu-use` validates an immutable list of paths, keys, and
+  labels, then renders both the desktop nav and interactive mobile shell.
+  [`components/menu.js`](components/menu.js) supplies the Resources.co menu and
+  theme-toggle markup. Local and edge documents therefore get their links and
+  active-page state from the same model.
+- `@macchiato-dev/user-menu-use` renders exclusive popovers and generates their
+  runtime-neutral state machine. The local profile evaluates that state machine
+  in QuickJS; it is not trusted with DOM access. The host applies returned
+  snapshots to `data-open` and ARIA state.
+- [`components/user-menu.js`](components/user-menu.js) owns the Resources.co
+  identity, icons, menu actions, and static edge status. The edge profile shares
+  the identity model but deliberately renders no inert popover buttons.
+
+The generic modules do not know about Resources.co routes, colors, people, or
+icons. The Resources component modules do not decide whether storage is SQLite,
+memory, or Bunny. The route builder composes those independently testable
+pieces.
+
 The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
 comes from a small edge program, an allowlisted immutable export, strict `use-*`
 validation before publication, and the Bunny isolate's own limits.
