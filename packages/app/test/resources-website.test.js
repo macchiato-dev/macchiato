@@ -702,6 +702,56 @@ test("resources sqlite site has a responsive hamburger menu", async (t) => {
   assert.deepEqual(badResponses, []);
 });
 
+test("resources sqlite user menu preserves exclusive sandboxed popover behavior", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
+  const userbar = page.locator(".userbar");
+  const popovers = userbar.locator(".ub-pop");
+  const notifications = page.getByRole("button", { name: "Notifications" });
+  const create = page.getByRole("button", { name: "Create new" });
+  const account = page.getByRole("button", { name: "Account menu" });
+
+  await notifications.click();
+  await assert.doesNotReject(popovers.nth(0).locator(".popover").waitFor());
+  assert.equal(await notifications.getAttribute("aria-expanded"), "true");
+  assert.equal(await popovers.nth(0).getAttribute("data-open"), "true");
+
+  await create.click();
+  await page.waitForFunction(() => document.querySelectorAll(".userbar .ub-pop[data-open='true']").length === 1);
+  assert.equal(await notifications.getAttribute("aria-expanded"), "false");
+  assert.equal(await create.getAttribute("aria-expanded"), "true");
+  await assert.doesNotReject(page.getByRole("menu").filter({ hasText: "New project" }).waitFor());
+
+  await create.click();
+  await page.waitForFunction(() => document.querySelectorAll(".userbar .ub-pop[data-open='true']").length === 0);
+  assert.equal(await userbar.getAttribute("data-userbar-hover-paused"), "true");
+  assert.equal(await create.getAttribute("aria-expanded"), "false");
+
+  await account.click();
+  await assert.doesNotReject(page.getByRole("menu").filter({ hasText: "Signed in" }).waitFor());
+  assert.equal(await account.getAttribute("aria-expanded"), "true");
+  assert.equal(await page.locator(".userbar .ub-pop[data-open='true']").count(), 1);
+
+  await page.getByRole("heading", { name: /Infrastructure you own/ }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".userbar .ub-pop[data-open='true']").length === 0);
+  assert.equal(await account.getAttribute("aria-expanded"), "false");
+  assert.deepEqual(errors, []);
+});
+
 test("resources sqlite site keeps footer near the viewport bottom on sparse pages", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
