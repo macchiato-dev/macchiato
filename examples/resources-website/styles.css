@@ -346,7 +346,7 @@
   }
   .ub-pop[data-open="true"] .popover,
   .userbar:not([data-userbar-pinned="true"]):not([data-userbar-hover-paused="true"]) .ub-pop:focus-within .popover,
-  .userbar:not([data-userbar-pinned="true"]):not([data-userbar-hover-paused="true"]) .ub-pop:hover .popover {
+  .userbar:not([data-userbar-controlled="true"]):not([data-userbar-pinned="true"]):not([data-userbar-hover-paused="true"]) .ub-pop:hover .popover {
     opacity: 1;
     transform: none;
     pointer-events: auto;

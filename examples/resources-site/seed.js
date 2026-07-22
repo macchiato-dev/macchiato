@@ -4,10 +4,11 @@ import { fileURLToPath } from "node:url";
 import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
+import { createSafeTriangle, pointInSafeTriangle } from "@macchiato-dev/user-menu-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
 import { RESOURCES_MENU, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
-import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
+import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -872,12 +873,16 @@ function clientScript() {
 const resourcesCssSchema = ${resourcesCssSchemaText()};
 
 const userbarSandboxSource = ${JSON.stringify(resourcesUserMenuSandboxSource)};
+const userMenuBehavior = ${JSON.stringify(RESOURCES_USER_MENU.behavior)};
+const createSafeTriangle = ${createSafeTriangle.toString()};
+const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 
 (() => {
   const root = document.documentElement;
   const routeCache = new Map();
   let userbarSandboxPromise = null;
   let transitionDomUsePromise = null;
+  let userbarHoverGuard = null;
 
   function attributesFor(node) {
     return Object.fromEntries(Array.from(node.attributes || [], (attr) => [attr.name, attr.value]));
@@ -984,6 +989,50 @@ const userbarSandboxSource = ${JSON.stringify(resourcesUserMenuSandboxSource)};
     return applyUserbarResult(sandbox.callJsonFunction("__resourcesUserbarEvent", event));
   }
 
+  function beginUserbarHoverGuard(event, pop) {
+    const behavior = userMenuBehavior.hover;
+    if (!behavior.enabled || !behavior.safePolygon || pop.dataset.open !== "true") return;
+    const panel = pop.querySelector(".popover");
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    const triangle = createSafeTriangle({ x: event.clientX, y: event.clientY }, rect, behavior);
+    if (!triangle) return;
+    userbarHoverGuard = {
+      pop,
+      triangle,
+      expires: performance.now() + behavior.timeoutMs,
+    };
+  }
+
+  function installUserbarHoverIntent() {
+    const behavior = userMenuBehavior.hover;
+    const userbar = document.querySelector(".userbar");
+    if (!behavior.enabled || !userbar || userbar.dataset.userbarControlled === "true") return;
+    userbar.dataset.userbarControlled = "true";
+    const pops = Array.from(userbar.querySelectorAll(".ub-pop"));
+    pops.forEach((pop, index) => {
+      const button = pop.querySelector(":scope > button");
+      button?.addEventListener("pointerenter", (event) => {
+        if (userbarHoverGuard && pointInSafeTriangle({ x: event.clientX, y: event.clientY }, userbarHoverGuard.triangle)) return;
+        userbarHoverGuard = null;
+        dispatchUserbarEvent({ type: "hover", index });
+      });
+      button?.addEventListener("pointerleave", (event) => beginUserbarHoverGuard(event, pop));
+    });
+    document.addEventListener("pointermove", (event) => {
+      if (!userbarHoverGuard) return;
+      if (userbarHoverGuard.pop.querySelector(".popover")?.contains(event.target)) {
+        userbarHoverGuard = null;
+        return;
+      }
+      const point = { x: event.clientX, y: event.clientY };
+      if (performance.now() <= userbarHoverGuard.expires && pointInSafeTriangle(point, userbarHoverGuard.triangle)) return;
+      userbarHoverGuard = null;
+      const button = event.target.closest(".userbar .ub-pop > button");
+      if (button) dispatchUserbarEvent({ type: "hover", index: pops.indexOf(button.closest(".ub-pop")) });
+    });
+  }
+
   function userbarEventPayload(event) {
     const userbar = document.querySelector(".userbar");
     const button = event.target.closest(".userbar .ub-pop > button");
@@ -1028,6 +1077,7 @@ const userbarSandboxSource = ${JSON.stringify(resourcesUserMenuSandboxSource)};
     const userbar = document.querySelector(".userbar");
     if (!userbar || userbar.dataset.userbarReady === "true") return;
     userbar.dataset.userbarReady = "true";
+    installUserbarHoverIntent();
     installUserbarApp();
   }
 

@@ -65,6 +65,9 @@ export const RESOURCES_USER_MENU = defineUserMenu({
     },
   ],
   dom,
+  behavior: {
+    hover: { enabled: true, safePolygon: true, requireIntent: true, buffer: 2, timeoutMs: 450 },
+  },
 });
 
 export function composeResourcesUserMenuDomSchema(schema) {
@@ -72,7 +75,7 @@ export function composeResourcesUserMenuDomSchema(schema) {
 }
 
 export const resourcesUserMenuSandboxSource = createExclusiveUserMenuSandboxSource({
-  menuCount: RESOURCES_USER_MENU.menus.length,
+  model: RESOURCES_USER_MENU,
   eventFunction: "__resourcesUserbarEvent",
   bindingsFunction: "__resourcesUserbarBindings",
 });
