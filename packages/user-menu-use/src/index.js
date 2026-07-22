@@ -22,7 +22,7 @@ export function createSafeTriangle(origin, panelRect, { buffer = 0, requireInten
   };
 }
 
-export function defineUserMenu({ identity, menus, dom, behavior = {} }) {
+export function defineUserMenu({ identity, menus, guestHtml = "", dom, behavior = {} }) {
   if (!identity?.name || !identity?.initials) throw new Error("User menu identity requires a name and initials");
   if (!Array.isArray(menus) || menus.length === 0) throw new Error("User menu requires at least one popover");
   if (!dom?.definitions || !Array.isArray(dom.placements) || dom.placements.length === 0) throw new Error("User menu requires declarative DOM definitions and placements");
@@ -40,6 +40,7 @@ export function defineUserMenu({ identity, menus, dom, behavior = {} }) {
   return Object.freeze({
     identity: Object.freeze({ name: String(identity.name), initials: String(identity.initials) }),
     menus: Object.freeze(normalized),
+    guestHtml: String(guestHtml),
     dom: Object.freeze({ definitions, placements }),
     behavior: Object.freeze({
       hover: Object.freeze({
@@ -77,7 +78,7 @@ export function renderUserMenu(model) {
       <button class="${menu.triggerClass}" aria-label="${escapeHtml(menu.label)}" aria-haspopup="true" aria-expanded="false">${menu.triggerHtml}</button>
       <div class="popover user-menu" role="menu">${menu.panelHtml}</div>
     </div>`).join("\n    ");
-  return `<section class="box userbar" data-screen-label="userbar">${popovers}</section>`;
+  return `<section class="box userbar" data-screen-label="userbar">${popovers}${model.guestHtml}</section>`;
 }
 
 export function createExclusiveUserMenuSandboxSource({ model, menuCount = model?.menus.length, eventFunction = "__userMenuEvent", bindingsFunction = "__userMenuBindings" }) {
