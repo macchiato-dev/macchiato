@@ -5,16 +5,45 @@ function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export function defineUserMenu({ identity, menus }) {
+export function defineUserMenu({ identity, menus, dom }) {
   if (!identity?.name || !identity?.initials) throw new Error("User menu identity requires a name and initials");
   if (!Array.isArray(menus) || menus.length === 0) throw new Error("User menu requires at least one popover");
+  if (!dom?.definitions || !Array.isArray(dom.placements) || dom.placements.length === 0) throw new Error("User menu requires declarative DOM definitions and placements");
   const normalized = menus.map((menu) => {
     if (!menu?.label || !menu?.triggerHtml || !menu?.panelHtml) throw new Error("Each user menu requires a label, trigger, and panel");
     const triggerClass = String(menu.triggerClass || "ub-icon");
     if (!SAFE_CLASSES.test(triggerClass)) throw new Error("User menu trigger classes must be safe class names");
     return Object.freeze({ label: String(menu.label), triggerClass, triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
   });
-  return Object.freeze({ identity: Object.freeze({ name: String(identity.name), initials: String(identity.initials) }), menus: Object.freeze(normalized) });
+  const definitions = Object.freeze(Object.fromEntries(Object.entries(dom.definitions).map(([name, definition]) => [name, Object.freeze(structuredClone(definition))])));
+  const placements = Object.freeze(dom.placements.map((placement) => {
+    if (!/^(definitions|nodes)\.[a-z][a-z0-9-]*$/.test(placement)) throw new Error("User menu DOM placements must target a named definition or node");
+    return placement;
+  }));
+  return Object.freeze({
+    identity: Object.freeze({ name: String(identity.name), initials: String(identity.initials) }),
+    menus: Object.freeze(normalized),
+    dom: Object.freeze({ definitions, placements }),
+  });
+}
+
+export function composeUserMenuDomSchema(schema, model) {
+  const composed = structuredClone(schema);
+  composed.definitions ||= {};
+  for (const [name, definition] of Object.entries(model.dom.definitions)) {
+    if (composed.definitions[name]) throw new Error(`DOM definition already exists: ${name}`);
+    composed.definitions[name] = structuredClone(definition);
+  }
+  const references = Object.keys(model.dom.definitions).filter((name) => model.dom.definitions[name].place).map((name) => `$${name}`);
+  for (const placement of model.dom.placements) {
+    const [collection, name] = placement.split(".");
+    const target = composed[collection]?.[name];
+    const oneOf = target?.children?.[0]?.oneOf;
+    if (!Array.isArray(oneOf)) throw new Error(`DOM placement does not expose a oneOf child list: ${placement}`);
+    for (const reference of references) if (!oneOf.includes(reference)) oneOf.push(reference);
+  }
+  for (const definition of Object.values(composed.definitions)) delete definition.place;
+  return composed;
 }
 
 export function renderUserMenu(model) {

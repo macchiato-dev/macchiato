@@ -1,12 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
-import { createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } from "../src/index.js";
+import { composeUserMenuDomSchema, createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } from "../src/index.js";
+
+const dom = {
+  definitions: { userbar: { element: "section.userbar", attrs: ["class"], children: ["button"], place: true } },
+  placements: ["definitions.layout"],
+};
 
 test("user-menu-use renders configured popovers", () => {
-  const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", triggerHtml: "AL", panelHtml: "Signed in" }] });
+  const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", triggerHtml: "AL", panelHtml: "Signed in" }], dom });
   assert.match(renderUserMenu(model), /aria-label="Account"[\s\S]*Signed in/);
-  assert.throws(() => defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Bad", triggerClass: "x\" onclick=", triggerHtml: "X", panelHtml: "Y" }] }), /safe class/);
+  assert.throws(() => defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Bad", triggerClass: "x\" onclick=", triggerHtml: "X", panelHtml: "Y" }], dom }), /safe class/);
+});
+
+test("user-menu-use composes colocated DOM capability definitions", () => {
+  const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", triggerHtml: "AL", panelHtml: "Signed in" }], dom });
+  const schema = composeUserMenuDomSchema({ definitions: { layout: { element: "main.layout", children: [{ oneOf: ["section"] }] } } }, model);
+  assert.deepEqual(schema.definitions.layout.children[0].oneOf, ["section", "$userbar"]);
+  assert.equal(schema.definitions.userbar.place, undefined);
 });
 
 test("exclusive user menu state opens, switches, and closes popovers", () => {
