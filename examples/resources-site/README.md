@@ -206,6 +206,38 @@ Then compare:
 - `http://apps.localhost:8765/config/resources-edge` — the declarative adapter
   and source-module configuration exposed by the app directory.
 
+### Real local OAuth callbacks
+
+The preview uses placeholder provider credentials by default, so its chooser
+works but provider authorization cannot complete. Create separate development
+applications and start the usual port-3030 server with:
+
+```sh
+RESOURCES_PREVIEW_ORIGIN=http://resources-edge.localhost:3030 \
+RESOURCES_PREVIEW_GITHUB_CLIENT_ID=... \
+RESOURCES_PREVIEW_GITHUB_CLIENT_SECRET=... \
+RESOURCES_PREVIEW_GITLAB_CLIENT_ID=... \
+RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET=... \
+RESOURCES_PREVIEW_SESSION_SIGNING_KEY="$(openssl rand -hex 32)" \
+node packages/app/src/index.js \
+  --host 0.0.0.0 --port 3030 --app-plugin development
+```
+
+Register these development callbacks:
+
+```text
+http://resources-edge.localhost:3030/auth/github/callback
+http://resources-edge.localhost:3030/auth/gitlab/callback
+```
+
+Insecure HTTP is accepted only when the origin is loopback or ends in
+`.localhost`; production and staging still require HTTPS. Local cookies omit
+`Secure` so browsers can return them over HTTP, but retain `HttpOnly` and
+`SameSite=Lax`. Use separate development registrations and secrets: a GitHub
+OAuth App supports only one callback URL, while a GitHub App can support
+multiple callbacks. Separate registrations also prevent a local compromise
+from granting staging credentials.
+
 The separate preview subdomain keeps both architectures inspectable. Switching
 to Bunny changes the storage adapter and entrypoint configuration, not the
 models, generated artifacts, public paths, or edge request policy.
