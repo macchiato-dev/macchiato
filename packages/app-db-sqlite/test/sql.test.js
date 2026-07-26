@@ -26,6 +26,7 @@ test("schema sql is generated from declarative table definitions", () => {
   assert.match(schemaSql.appConfigs, /CREATE TABLE IF NOT EXISTS app_configs/);
   assert.match(schemaSql.appConfigs, /permissions_json TEXT NOT NULL DEFAULT '\{\}' CHECK \(json_valid\(permissions_json\)\)/);
   assert.match(schemaSql.appConfigs, /directory INTEGER NOT NULL DEFAULT 1 CHECK \(directory IN \(0, 1\)\)/);
+  assert.match(schemaSql.appEnvironment, /CREATE TABLE IF NOT EXISTS app_environment/);
   assert.throws(() => createTable({ name: "bad table", columns: [] }), /Invalid SQL identifier/);
   assert.equal(
     select({ from: "sites", columns: ["subdomain", literal("directory", "kind")] }),

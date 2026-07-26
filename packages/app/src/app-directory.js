@@ -78,7 +78,9 @@ async function appConfig(app) {
   const config = serializeConfig(app);
   delete config.handler;
   delete config.setup;
+  delete config.environment;
   config.handler = app.handlerName;
+  config.configuredEnvironment = Object.keys(app.environment || {}).sort();
 
   return sortObject({
     app: config,

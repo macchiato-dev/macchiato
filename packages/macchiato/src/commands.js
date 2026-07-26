@@ -10,10 +10,14 @@ import {
   addPageSite,
   addSchema,
   listConfiguredSites,
+  listAppEnvironment,
+  getAppConfigRow,
+  removeAppEnvironmentValue,
   listSchemas,
   removeAppConfig,
   removeConfiguredSite,
   upsertAppConfig,
+  setAppEnvironmentValue,
 } from "@macchiato-dev/app-db-sqlite";
 
 function registerSiteApp(db, subdomain, handler, kind) {
@@ -92,6 +96,24 @@ function readText(path) {
   return readFileSync(path, "utf-8");
 }
 
+function appEnvironmentDeclaration(row) {
+  try {
+    return JSON.parse(row?.options_json || "{}").environment || {};
+  } catch {
+    return {};
+  }
+}
+
+function parseAppEnvironmentArgs(args) {
+  const positional = [];
+  let stdin = false;
+  for (const arg of args) {
+    if (arg === "--stdin") stdin = true;
+    else positional.push(arg);
+  }
+  return { positional, stdin };
+}
+
 function parseAppInstallOpts(args) {
   const plugins = [];
   const mappings = {};
@@ -155,6 +177,9 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
       console.log("  app install <id|preset>... [--map <id=subdomain>]");
       console.log("  app plugins                   List available app plugins and presets");
+      console.log("  app env set <app> <name> [value|--stdin]");
+      console.log("  app env list <app>            List configured names (values are never shown)");
+      console.log("  app env unset <app> <name>    Remove an app-scoped value");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>]");
@@ -242,6 +267,45 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
     "app plugins"() {
       console.log("Presets: core, development");
       for (const id of appPluginIds()) console.log(`  ${id}`);
+    },
+
+    "app env"(args) {
+      const [action, ...rest] = args;
+      const { positional, stdin } = parseAppEnvironmentArgs(rest);
+      const [subdomain, name, directValue] = positional;
+      if (!["set", "list", "unset"].includes(action) || !subdomain) {
+        console.log("Usage: app env <set|list|unset> <app-subdomain> [NAME] [value|--stdin]");
+        return;
+      }
+      const row = withDb((db) => getAppConfigRow(db, subdomain), dbOptions);
+      if (!row) throw new Error(`Declarative app is not installed: ${subdomain}`);
+      const declaration = appEnvironmentDeclaration(row);
+
+      if (action === "list") {
+        const configured = withDb((db) => listAppEnvironment(db, subdomain), dbOptions);
+        if (configured.length === 0) {
+          console.log(`No environment values configured for ${subdomain}`);
+          return;
+        }
+        for (const item of configured) console.log(`  ${item.name} (${item.secret ? "secret" : "value"})`);
+        return;
+      }
+
+      if (!name || !Object.hasOwn(declaration, name)) {
+        throw new Error(`Environment name is not declared by ${subdomain}: ${name || "(missing)"}`);
+      }
+      if (action === "unset") {
+        withDb((db) => removeAppEnvironmentValue(db, subdomain, name), dbOptions);
+        console.log(`Removed ${subdomain} environment: ${name}`);
+        return;
+      }
+
+      const secret = declaration[name].secret === true;
+      if (secret && !stdin) throw new Error(`Secret ${name} must be supplied with --stdin`);
+      const value = stdin ? readFileSync(0, "utf8").replace(/\r?\n$/, "") : directValue;
+      if (value === undefined || value === "") throw new Error(`Environment value is empty: ${name}`);
+      withDb((db) => setAppEnvironmentValue(db, subdomain, name, value, { secret }), dbOptions);
+      console.log(`Configured ${subdomain} environment: ${name} (${secret ? "secret" : "value"})`);
     },
 
     "site add"(args) {

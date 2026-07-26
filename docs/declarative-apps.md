@@ -55,6 +55,39 @@ services; ordinary package imports do not need subdomains.
 The equivalent startup flags are repeatable `--app-plugin` and
 `--app-map id=subdomain`.
 
+App-scoped environment
+
+Declarative apps may publish an `options.environment` contract. Each entry
+declares an uppercase environment name and whether it is secret. Operators can
+configure only declared names:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  app env set resources-edge PUBLIC_ORIGIN http://resources-edge.localhost:3030
+
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  app env set resources-edge GITLAB_CLIENT_ID your-client-id
+
+read -rsp "GitLab client secret: " APP_SECRET
+printf %s "$APP_SECRET" | node packages/macchiato/src/macchiato.js --data-dir ./data \
+  app env set resources-edge GITLAB_CLIENT_SECRET --stdin
+unset APP_SECRET
+echo
+```
+
+Use `app env list <subdomain>` to inspect configured names and `app env unset
+<subdomain> <NAME>` to remove one. Listings and the apps directory never expose
+values. A name marked `secret` must arrive on standard input, keeping it out of
+process arguments and ordinary shell history.
+
+Values are scoped to the installed subdomain, survive plugin updates, and are
+passed only to that app handler as its `environment` object. They are stored in
+the local Macchiato SQLite database, not in `app_configs`, exported artifacts,
+or source files. Treat the data directory as secret-bearing operator state and
+do not commit or copy it casually. Hosted adapters such as Bunny should map the
+same declared names to their native environment-secret facility rather than
+uploading this local table.
+
 Operator-created sites
 
 `site add`, `site add-page`, `site add-file`, and `site add-route` write both

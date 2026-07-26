@@ -3,6 +3,7 @@ import {
   getAppConfigRow,
   listAppConfigRows,
   listVisibleAppConfigRows,
+  readAppEnvironment,
 } from "@macchiato-dev/app-db-sqlite";
 import { resolveAppHandler } from "./app-plugins.js";
 
@@ -44,6 +45,16 @@ function validateConfig(config) {
     assertObject(config.options.dependencies, "options.dependencies");
     for (const subdomain of Object.values(config.options.dependencies)) safeRelativePath(subdomain, "dependency subdomain");
   }
+  if (config.options.environment !== undefined) {
+    assertObject(config.options.environment, "options.environment");
+    for (const [name, declaration] of Object.entries(config.options.environment)) {
+      if (!/^[A-Z][A-Z0-9_]*$/.test(name)) throw new Error(`Invalid environment name: ${name}`);
+      assertObject(declaration, `options.environment.${name}`);
+      if (declaration.secret !== undefined && typeof declaration.secret !== "boolean") {
+        throw new Error(`options.environment.${name}.secret must be boolean`);
+      }
+    }
+  }
   if (config.access.fileAccess) {
     assertObject(config.access.fileAccess, "access.fileAccess");
     safeRelativePath(config.access.fileAccess.root, "file access root");
@@ -57,7 +68,7 @@ function resolveAccess(access) {
     : access;
 }
 
-export function declarativeAppFromRow(row) {
+export function declarativeAppFromRow(row, environment = {}) {
   if (!row) return null;
   const permissions = parseJson(row.permissions_json);
   const access = parseJson(row.access_json);
@@ -74,6 +85,8 @@ export function declarativeAppFromRow(row) {
     permissions,
     access,
     options,
+    environment,
+    environmentSchema: options.environment || {},
     dependencies: options.dependencies || {},
     aliases: options.aliases || [],
     directory: Boolean(row.directory),
@@ -91,7 +104,7 @@ export function declarativeAppFromRow(row) {
 export function getDeclarativeApp(db, subdomain) {
   if (!db) return null;
   const direct = getAppConfigRow(db, subdomain);
-  if (direct) return declarativeAppFromRow(direct);
+  if (direct) return declarativeAppFromRow(direct, readAppEnvironment(db, direct.subdomain));
   return listAppConfigRows(db)
     .map(declarativeAppFromRow)
     .find((app) => app.aliases.includes(subdomain)) || null;

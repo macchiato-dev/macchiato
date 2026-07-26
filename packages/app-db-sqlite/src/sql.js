@@ -166,6 +166,16 @@ export const tableDefinitions = {
       { name: "directory", type: "INTEGER", notNull: true, default: 1, check: `${quoteIdentifier("directory")} IN (0, 1)` },
     ],
   },
+  appEnvironment: {
+    name: "app_environment",
+    columns: [
+      { name: "key", type: "TEXT", primaryKey: true },
+      { name: "subdomain", type: "TEXT", notNull: true },
+      { name: "name", type: "TEXT", notNull: true },
+      { name: "value", type: "TEXT", notNull: true },
+      { name: "secret", type: "INTEGER", notNull: true, default: 0, check: `${quoteIdentifier("secret")} IN (0, 1)` },
+    ],
+  },
 };
 
 function rawFunction(name, arg) {
@@ -184,6 +194,7 @@ names.siteRoutes = "site_routes";
 
 const subdomain = whereEquals("subdomain");
 const nameEquals = whereEquals("name");
+const keyEquals = whereEquals("key");
 
 export const querySql = {
   migrations: {
@@ -214,6 +225,13 @@ export const querySql = {
     list: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], order: orderBy("subdomain") }),
     listVisible: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], where: `${quoteIdentifier("directory")} != 0`, order: orderBy("subdomain") }),
     remove: deleteWhere({ from: names.appConfigs, where: subdomain }),
+  },
+  appEnvironment: {
+    upsert: insert({ into: names.appEnvironment, columns: ["key", "subdomain", "name", "value", "secret"], conflict: "OR REPLACE" }),
+    get: select({ from: names.appEnvironment, columns: ["subdomain", "name", "value", "secret"], where: keyEquals }),
+    list: select({ from: names.appEnvironment, columns: ["subdomain", "name", "secret"], where: subdomain, order: orderBy("name") }),
+    listValues: select({ from: names.appEnvironment, columns: ["subdomain", "name", "value", "secret"], where: subdomain, order: orderBy("name") }),
+    remove: deleteWhere({ from: names.appEnvironment, where: keyEquals }),
   },
   siteLists: {
     configuredDirectories: select({ from: names.sites, columns: ["subdomain", literal("directory", "kind"), "directory", nullAs("sandboxed")] }),
