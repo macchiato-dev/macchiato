@@ -61,8 +61,16 @@ function accountFromRow(row) {
   });
 }
 
-export function createAccountStore(client, { now = Date.now, randomId = () => crypto.randomUUID() } = {}) {
+export function createAccountStore(client, {
+  now = Date.now,
+  randomId = () => crypto.randomUUID(),
+  allowedProviders = ["github", "gitlab"],
+} = {}) {
   if (!client?.execute || !client?.batch) throw new Error("Account store requires a libSQL-compatible client");
+  const providers = new Set(allowedProviders);
+  if (!providers.size || [...providers].some((provider) => !/^[a-z][a-z0-9-]{0,63}$/.test(provider))) {
+    throw new Error("Account store providers must be lowercase identifiers");
+  }
   let initialized;
 
   function initialize() {
@@ -81,7 +89,7 @@ export function createAccountStore(client, { now = Date.now, randomId = () => cr
   return Object.freeze({
     async authenticateIdentity(identity, { linkToUserId = null } = {}) {
       await initialize();
-      if (!["github", "gitlab"].includes(identity.provider)) throw new Error("Unsupported identity provider");
+      if (!providers.has(identity.provider)) throw new Error("Unsupported identity provider");
       const providerUserId = String(identity.providerUserId);
       const { email, normalized } = normalizeEmail(identity.email);
       if (identity.emailVerified !== true) throw new Error("A verified provider email address is required");

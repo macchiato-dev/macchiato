@@ -53,6 +53,12 @@ to it, and `user_emails` enforces one normalized, provider-confirmed email per
 account. Email comparison is case-insensitive but deliberately avoids
 provider-specific dot or plus-address rewriting.
 
+The account store receives an explicit allowlist of authentication-method
+identifiers. GitHub and GitLab are enabled now; Apple and Google OAuth, passkey,
+magic-link, or optional self-hosted credential adapters can be added without
+changing the account schema. Each adapter remains responsible for proving its
+identity and verified email before calling the shared account model.
+
 A known provider identity signs in normally. A new identity with an unused
 confirmed email creates an account. If that email is already used, the callback
 returns `409` and asks the user to authenticate with their existing method

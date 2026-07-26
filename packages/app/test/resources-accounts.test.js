@@ -97,3 +97,22 @@ test("account model requires a verified email and rejects unknown providers", as
   await assert.rejects(store.authenticateIdentity({ ...gitlab, emailVerified: false }), /verified provider email/);
   await assert.rejects(store.authenticateIdentity({ ...gitlab, provider: "unknown" }), /Unsupported identity provider/);
 });
+
+test("account model can add authentication methods without changing its schema", async (t) => {
+  const db = new DatabaseSync(":memory:");
+  t.after(() => db.close());
+  const store = createAccountStore(createNodeSqliteClient(db), {
+    allowedProviders: ["github", "gitlab", "passkey", "magic-link"],
+    randomId: () => "user-1",
+  });
+  const account = await store.authenticateIdentity({
+    provider: "passkey",
+    providerUserId: "credential-id",
+    login: "latte@example.com",
+    name: "Latte",
+    email: "latte@example.com",
+    emailVerified: true,
+  });
+  assert.equal(account.id, "user-1");
+  assert.equal(db.prepare("SELECT provider FROM user_identities").get().provider, "passkey");
+});
