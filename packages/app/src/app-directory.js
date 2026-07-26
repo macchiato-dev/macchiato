@@ -78,6 +78,7 @@ async function appConfig(app) {
   const config = serializeConfig(app);
   delete config.handler;
   delete config.setup;
+  config.handler = app.handlerName;
 
   return sortObject({
     app: config,
