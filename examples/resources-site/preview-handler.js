@@ -2,6 +2,7 @@ import { createResourcesArtifactSet } from "./artifacts.js";
 import { createResourcesEdgeHandler } from "./edge/app.js";
 import { createEdgeConfig } from "./edge/models.js";
 import { createMemoryStorageAdapter } from "./adapters/memory-storage.js";
+import { createAuthConfig } from "./auth/github.js";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
@@ -20,7 +21,13 @@ const config = createEdgeConfig({
 });
 const artifactSet = createResourcesArtifactSet({ theme: resourcesEdgePreviewConfig.theme, generatedAt: "local-preview" });
 const fetchImpl = createMemoryStorageAdapter({ config, artifactSet });
-const handler = createResourcesEdgeHandler({ config, fetchImpl });
+const authConfig = createAuthConfig({
+  PUBLIC_ORIGIN: "https://resources-edge.localhost",
+  GITHUB_CLIENT_ID: "local-preview",
+  GITHUB_CLIENT_SECRET: "local-preview-not-a-provider-secret",
+  SESSION_SIGNING_KEY: "local-preview-session-signing-key",
+});
+const handler = createResourcesEdgeHandler({ config, authConfig, fetchImpl });
 
 export function resourcesEdgePreviewHandler(request) {
   return handler(request);

@@ -14,11 +14,13 @@ export function createAuthConfig(env = {}) {
   if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash) {
     throw new Error("PUBLIC_ORIGIN must be an HTTPS origin");
   }
+  const sessionSecret = required(env.SESSION_SIGNING_KEY, "SESSION_SIGNING_KEY");
+  if (sessionSecret.length < 32) throw new Error("SESSION_SIGNING_KEY must contain at least 32 characters");
   return Object.freeze({
     publicOrigin: origin.origin,
     clientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
     clientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
-    sessionSecret: required(env.SESSION_SIGNING_KEY, "SESSION_SIGNING_KEY"),
+    sessionSecret,
     sessionSeconds: 60 * 60 * 24 * 14,
   });
 }

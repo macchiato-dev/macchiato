@@ -559,6 +559,9 @@ ${base}
 .ub-guest { display: none; align-items: center; gap: 8px; }
 body[data-auth="out"] .userbar .ub-pop { display: none; }
 body[data-auth="out"] .ub-guest { display: flex; }
+.document-runtime .ub-guest { display: flex; }
+.edge-status form { margin: 0; }
+.edge-status form button { font: inherit; background: transparent; cursor: pointer; }
 .ub-btn { border: 1px solid var(--track-border); border-radius: 11px; padding: 10px 15px; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
 .ub-btn--solid { border-color: var(--active-bg); background: var(--active-bg); color: var(--active-fg); }
 .item--danger:hover { color: #ff6b6b; }
