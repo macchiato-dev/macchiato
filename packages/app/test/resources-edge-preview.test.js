@@ -29,3 +29,21 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(loginHtml, /href="\/signup"/);
   assert.match(loginHtml, /class="box footer"/);
 });
+
+test("local edge adapter consumes its declarative app-scoped OAuth environment", async () => {
+  const response = await resourcesEdgePreviewHandler(
+    new Request("http://resources-edge.localhost:3030/auth/gitlab/start"),
+    {
+      environment: {
+        PUBLIC_ORIGIN: "http://resources-edge.localhost:3030",
+        GITLAB_CLIENT_ID: "configured-gitlab-id",
+        GITLAB_CLIENT_SECRET: "configured-gitlab-secret",
+        SESSION_SIGNING_KEY: "configured-local-session-signing-key",
+      },
+    },
+  );
+  const location = new URL(response.headers.get("location"));
+  assert.equal(location.origin, "https://gitlab.com");
+  assert.equal(location.searchParams.get("client_id"), "configured-gitlab-id");
+  assert.equal(location.searchParams.get("redirect_uri"), "http://resources-edge.localhost:3030/auth/gitlab/callback");
+});

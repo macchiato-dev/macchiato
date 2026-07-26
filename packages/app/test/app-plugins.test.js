@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { getSiteRoute } from "@macchiato-dev/site";
-import { initSqliteStore, listAppConfigRows } from "@macchiato-dev/app-db-sqlite";
+import { initSqliteStore, listAppConfigRows, setAppEnvironmentValue } from "@macchiato-dev/app-db-sqlite";
 import { getDeclarativeApp } from "../src/declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "../src/app-plugins.js";
 
@@ -30,6 +30,9 @@ test("plugins install dependencies with overridable, recorded subdomains", () =>
   const edge = getDeclarativeApp(db, "resources-preview");
   assert.equal(edge.options.plugin, "resources-edge");
   assert.deepEqual(edge.dependencies, { "resources-co": "resources-source" });
+  assert.equal(edge.environmentSchema.GITLAB_CLIENT_SECRET.secret, true);
+  setAppEnvironmentValue(db, "resources-preview", "GITLAB_CLIENT_ID", "configured-id");
+  assert.deepEqual(getDeclarativeApp(db, "resources-preview").environment, { GITLAB_CLIENT_ID: "configured-id" });
   assert.ok(getSiteRoute(db, "resources-source", "/"));
   assert.equal(getDeclarativeApp(db, "resources-edge"), null);
 });
