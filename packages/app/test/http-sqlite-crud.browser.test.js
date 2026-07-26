@@ -49,7 +49,7 @@ async function stop(child) {
 test("http-use example completes browser CRUD through the WASM backend", { timeout: 30000 }, async (t) => {
   const port = await getPort();
   const dataDir = await mkdtemp(join(tmpdir(), "macchiato-http-use-browser-"));
-  const app = start(process.execPath, [appCli, "--data-dir", dataDir, "--host", "127.0.0.1", "--port", String(port)]);
+  const app = start(process.execPath, [appCli, "--data-dir", dataDir, "--host", "127.0.0.1", "--port", String(port), "--app-plugin", "development"]);
   let browser;
   t.after(async () => { await browser?.close(); await stop(app.child); await rm(dataDir, { recursive: true, force: true }); });
 

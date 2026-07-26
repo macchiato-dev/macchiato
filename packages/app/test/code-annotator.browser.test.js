@@ -30,6 +30,8 @@ function startApp(port, dataDir) {
     String(port),
     "--data-dir",
     dataDir,
+    "--app-plugin",
+    "development",
   ], {
     cwd: repoRoot,
     stdio: ["ignore", "pipe", "pipe"],

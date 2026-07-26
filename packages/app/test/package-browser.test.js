@@ -26,6 +26,8 @@ function startApp(port) {
     "127.0.0.1",
     "--port",
     String(port),
+    "--app-plugin",
+    "development",
   ], {
     cwd: repoRoot,
     stdio: ["ignore", "pipe", "pipe"],
