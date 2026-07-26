@@ -77,6 +77,16 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
 
   return async function resourcesEdgeHandler(request) {
     const pathname = new URL(request.url).pathname;
+    if (authConfig && request.method === "GET" && pathname === "/auth/github/link") {
+      const session = await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "no-store" } });
+      return startGithubAuth(authConfig, now, { linkToUserId: session.sub });
+    }
+    if (authConfig && gitlabAuthConfig && request.method === "GET" && pathname === "/auth/gitlab/link") {
+      const session = await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "no-store" } });
+      return startGitlabAuth(gitlabAuthConfig, now, { linkToUserId: session.sub });
+    }
     if (authConfig && request.method === "GET" && pathname === "/auth/github/start") {
       return startGithubAuth(authConfig, now);
     }

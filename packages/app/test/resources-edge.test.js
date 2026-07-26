@@ -8,6 +8,7 @@ import {
   storageObjectUrl,
 } from "../../../examples/resources-site/edge/models.js";
 import { createAuthConfig } from "../../../examples/resources-site/auth/github.js";
+import { createGitlabAuthConfig } from "../../../examples/resources-site/auth/gitlab.js";
 import { seal } from "../../../examples/resources-site/auth/session.js";
 
 const config = createEdgeConfig({
@@ -137,4 +138,37 @@ test("edge HTML renders escaped session identity without executable browser code
   assert.doesNotMatch(body, / · (?:GitHub|GitLab)/);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(response.headers.get("vary"), "cookie");
+});
+
+test("provider linking requires a signed-in account and starts a fresh provider authorization", async () => {
+  const authConfig = createAuthConfig({
+    PUBLIC_ORIGIN: "https://resources.example",
+    GITHUB_CLIENT_ID: "client",
+    GITHUB_CLIENT_SECRET: "secret",
+    SESSION_SIGNING_KEY: "a-production-secret-must-be-longer-than-this",
+  });
+  const gitlabAuthConfig = createGitlabAuthConfig({
+    GITLAB_CLIENT_ID: "gitlab-client",
+    GITLAB_CLIENT_SECRET: "gitlab-secret",
+  }, authConfig);
+  const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, now: () => 10_000 });
+
+  const guest = await handler(new Request("https://resources.example/auth/gitlab/link"));
+  assert.equal(guest.status, 302);
+  assert.equal(guest.headers.get("location"), "/login");
+
+  const session = await seal({
+    v: 1,
+    sub: "user-1",
+    login: "latte",
+    name: "Latte",
+    iat: 1,
+    exp: 20_000,
+  }, authConfig.sessionSecret);
+  const response = await handler(new Request("https://resources.example/auth/gitlab/link", {
+    headers: { cookie: `__Host-resources_session=${session}` },
+  }));
+  const target = new URL(response.headers.get("location"));
+  assert.equal(target.origin, "https://gitlab.com");
+  assert.equal(target.searchParams.get("client_id"), "gitlab-client");
 });
