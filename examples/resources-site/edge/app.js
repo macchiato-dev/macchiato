@@ -27,9 +27,24 @@ function authStatusHtml(session) {
   }
   const initials = session.login.slice(0, 2).toUpperCase();
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    <span class="ub-avatar">${escapeHtml(initials)}</span>
-    <span class="edge-account-name">${escapeHtml(session.login)}</span>
-    <form method="post" action="/logout"><button class="ub-btn ub-btn--ghost" type="submit">Sign out</button></form>
+    <details class="edge-user-menu">
+      <summary class="edge-user-menu__trigger" aria-label="Account menu">
+        <span class="ub-avatar">${escapeHtml(initials)}</span>
+        <span class="edge-account-name">${escapeHtml(session.login)}</span>
+        <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+      </summary>
+      <div class="popover edge-user-menu__panel">
+        <div class="menu__acct"><span class="ub-avatar">${escapeHtml(initials)}</span><div class="menu__acct-meta"><b>${escapeHtml(session.name)}</b><span>@${escapeHtml(session.login)} · GitLab</span></div></div>
+        <div class="menu__sep"></div>
+        <a class="item" href="/">Your projects</a>
+        <a class="item" href="/profile">Your profile</a>
+        <div class="menu__sep"></div>
+        <a class="item" href="/settings">Settings</a>
+        <a class="item" href="/help">Help &amp; docs</a>
+        <div class="menu__sep"></div>
+        <form method="post" action="/logout"><button class="item item--danger" type="submit">Sign out</button></form>
+      </div>
+    </details>
   </aside>`;
 }
 

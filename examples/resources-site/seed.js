@@ -228,6 +228,52 @@ const SECTIONS = {
       },
     ],
   },
+  "/profile": {
+    navKey: "",
+    title: "Your profile - Resources.co",
+    crumb: [{ icon: true, href: "/" }, { label: "Your profile" }],
+    blocks: [
+      {
+        eyebrow: "Account",
+        h1: "Your Resources.co profile",
+        paras: [
+          "Your provider identity is linked to this Resources.co account. Public profile editing and namespace controls will live here.",
+        ],
+      },
+    ],
+  },
+  "/settings": {
+    navKey: "",
+    title: "Settings - Resources.co",
+    crumb: [{ icon: true, href: "/" }, { label: "Settings" }],
+    blocks: [
+      {
+        eyebrow: "Account",
+        h1: "Settings",
+        paras: [
+          "Authentication providers, sessions, appearance, exports, and account deletion will be configured here.",
+        ],
+      },
+    ],
+  },
+  "/help": {
+    navKey: "",
+    title: "Help and docs - Resources.co",
+    crumb: [{ icon: true, href: "/" }, { label: "Help and docs" }],
+    blocks: [
+      {
+        eyebrow: "Support",
+        h1: "Help and documentation",
+        paras: [
+          "Architecture guides, self-hosting instructions, and support resources are being assembled alongside the application.",
+        ],
+        items: [
+          ["Browse projects", "Inspect the building blocks already available.", "/browse"],
+          ["About Resources.co", "Read how the pieces are intended to fit together.", "/about"],
+        ],
+      },
+    ],
+  },
 };
 SECTIONS["/login"] = resourcesAuthRoute("login");
 SECTIONS["/signup"] = resourcesAuthRoute("signup");
@@ -548,6 +594,13 @@ ${base}
   font-size: 14px;
   font-weight: 600;
 }
+.edge-user-menu { position: relative; }
+.edge-user-menu__trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.edge-user-menu__trigger .ub-caret { width: 14px; height: 14px; }
+.edge-user-menu__panel { top: calc(100% + 12px); right: 0; opacity: 0; pointer-events: none; }
+.edge-user-menu[open] .edge-user-menu__panel { opacity: 1; transform: none; pointer-events: auto; }
+.edge-user-menu__panel .item { display: flex; width: 100%; padding: 9px 12px; border: none; border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 500; text-decoration: none; cursor: pointer; }
+.edge-user-menu__panel .item:hover { background: var(--hover); }
 .ub-guest { display: none; align-items: center; gap: 8px; }
 body[data-auth="out"] .userbar .ub-pop { display: none; }
 body[data-auth="out"] .ub-guest { display: flex; }

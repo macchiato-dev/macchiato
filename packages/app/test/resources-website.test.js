@@ -315,7 +315,10 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   }]);
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByText("latte-dev", { exact: true }).waitFor());
+  await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByRole("button", { name: "Sign out" }).waitFor());
+  await page.getByRole("link", { name: "Your profile" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Your Resources.co profile" }).waitFor());
   assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 0);
 
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });

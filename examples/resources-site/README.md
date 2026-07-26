@@ -51,7 +51,7 @@ designs:
 
 | Local `resources-co` | Edge `resources-edge` |
 | --- | --- |
-| QuickJS-backed account popovers | Server-rendered GitHub session status |
+| QuickJS-backed account popovers | Native server-rendered account disclosure |
 | Client theme toggle | Default theme rendered at build time |
 | Responsive JavaScript hamburger | Always-available document links on narrow screens |
 | Prefetch and sanitized DOM swaps | Ordinary full-document navigation |
@@ -153,6 +153,12 @@ issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
 free of executable page scripts: the edge replaces one bounded account-status
 island with escaped guest or session markup and marks personalized documents
 `private, no-store`.
+
+The signed-in edge island uses native `details`/`summary` disclosure rather
+than a second menu script. It exposes the provider identity, project, profile,
+settings, help, and sign-out actions through ordinary document navigation.
+GitLab authorization also declares `gl_auth_type=login`; GitLab still owns any
+required consent or redirect screen outside Resources.co.
 
 The session identity is upserted into strict `users` and `user_identities`
 tables through the web libSQL client before the session is issued. Bunny
