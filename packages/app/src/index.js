@@ -14,11 +14,10 @@ import { getSiteRoute, hasSiteRoutes, renderSiteRoute } from "@macchiato-dev/sit
 import { StyleUse } from "@macchiato-dev/style-use";
 import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 import { appDirectoryHandler } from "./app-directory.js";
-import { findBuiltinApp, setupBuiltinApps } from "./builtin-apps.js";
-import { getDeclarativeApp, seedDeclarativeApps } from "./declarative-apps.js";
+import { getDeclarativeApp } from "./declarative-apps.js";
+import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
 import { fileAppHandler } from "./file-app.js";
-import { addFileSiteIfMissing, createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
-import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
+import { createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
 const args = "Deno" in globalThis
   ? globalThis.Deno.args
@@ -28,6 +27,9 @@ let host = "127.0.0.1";
 let port = 8765;
 let dbPath = "";
 let dataDir = "";
+const appPlugins = [];
+const appMappings = {};
+let appInit = true;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -39,9 +41,19 @@ for (let i = 0; i < args.length; i++) {
     dbPath = args[++i] ?? "";
   } else if (arg === "--data-dir") {
     dataDir = args[++i] ?? "";
+  } else if (arg === "--app-plugin") {
+    appPlugins.push(args[++i] ?? "");
+  } else if (arg === "--app-map") {
+    const mapping = args[++i] ?? "";
+    const separator = mapping.indexOf("=");
+    if (separator < 1) throw new Error(`Invalid --app-map: ${mapping}`);
+    appMappings[mapping.slice(0, separator)] = mapping.slice(separator + 1);
+  } else if (arg === "--no-app-init") {
+    appInit = false;
   } else if (arg === "--help" || arg === "-h") {
     console.log("Usage: macchiato-app [--data-dir <dir>] [--host <host>] [--port <port>]");
     console.log("       macchiato-app --db <path> [--host <host>] [--port <port>]");
+    console.log("       [--app-plugin <id|preset>] [--app-map <id=subdomain>] [--no-app-init]");
     process.exit(0);
   }
 }
@@ -82,15 +94,8 @@ if (dataDir) {
 
 const db = new DatabaseSync(dbPath);
 initSqliteStore(db);
-setupBuiltinApps(db);
-seedDeclarativeApps(db);
-seedResourcesSite(db);
-addFileSiteIfMissing(db, {
-  subdomain: "resources-design",
-  title: "Resources.co Design",
-  filePath: join(resolve(new URL("../../..", import.meta.url).pathname), "resourcesco-standalone-20260617.html"),
-  contentType: "text/html; charset=utf-8",
-});
+if (appPlugins.length > 0) installAppPlugins(db, appPlugins, { mappings: appMappings });
+else if (appInit) initializeAppsIfEmpty(db, ["core"], { mappings: appMappings });
 
 const store = createSqliteStore(db);
 
@@ -365,20 +370,17 @@ async function route(request) {
   const asset = await serveBrowserAsset(url.pathname);
   if (asset) return asset;
 
-  const builtinApp = findBuiltinApp(subdomain);
-  if (builtinApp?.directory === false) {
+  const app = getDeclarativeApp(db, subdomain);
+  if (!app) return new Response("App not configured", { status: 404 });
+
+  if (app.handlerName === "app-directory") {
     return appDirectoryHandler(request, { db });
   }
-  if (builtinApp?.handler) {
-    return builtinApp.handler(request, builtinApp);
+  if (app.handler) {
+    return app.handler(request, app);
   }
 
-  const declarativeApp = getDeclarativeApp(db, subdomain);
-  if (declarativeApp?.handler) {
-    return declarativeApp.handler(request, declarativeApp);
-  }
-
-  if (hasSiteRoutes(db, subdomain)) {
+  if (app.handlerName === "sqlite-routes" && hasSiteRoutes(db, subdomain)) {
     const routePath = url.pathname === "/index.html" ? "/" : url.pathname;
     const siteRoute = getSiteRoute(db, subdomain, routePath);
     if (siteRoute) return serveSiteRoute(siteRoute);
@@ -387,7 +389,7 @@ async function route(request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const page = store.getSitePage.get(subdomain);
+  const page = app.handlerName === "sqlite-page" ? store.getSitePage.get(subdomain) : null;
   if (page && (url.pathname === "/" || url.pathname === "/index.html")) {
     return serveStoredPage(page);
   }
@@ -395,7 +397,7 @@ async function route(request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const fileSite = store.getSiteFile.get(subdomain);
+  const fileSite = app.handlerName === "raw-file" ? store.getSiteFile.get(subdomain) : null;
   if (fileSite) {
     return fileAppHandler(request, {
       name: fileSite.title || fileSite.subdomain,
@@ -408,15 +410,12 @@ async function route(request) {
     });
   }
 
-  const row = store.getDirectorySite.get(subdomain);
+  const row = app.handlerName === "directory" ? store.getDirectorySite.get(subdomain) : null;
   if (row) {
     return serveFile(row.directory, url.pathname);
   }
 
-  return new Response(
-    `<!DOCTYPE html><html><body><h1>${escapeHtml(subdomain)}</h1></body></html>`,
-    { headers: { "content-type": "text/html; charset=utf-8" } },
-  );
+  return new Response("Configured app has no runnable handler", { status: 500 });
 }
 
 if ("Deno" in globalThis) {

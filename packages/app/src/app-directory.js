@@ -1,16 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { basename, relative, resolve } from "node:path";
-import {
-  getDirectoryConfig,
-  getPageConfig,
-  getRawFileConfig,
-  getRouteConfig,
-  listDirectoryRows,
-  listPageRows,
-  listRawFileRows,
-  listRouteRows,
-} from "@macchiato-dev/app-db-sqlite";
-import { findBuiltinApp, visibleBuiltinApps } from "./builtin-apps.js";
 import { getDeclarativeApp, visibleDeclarativeApps } from "./declarative-apps.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
@@ -101,21 +90,6 @@ async function appConfig(app) {
   });
 }
 
-function sqliteSiteRows(db) {
-  if (!db) return [];
-  const builtinSubdomains = new Set([
-    ...visibleBuiltinApps().map((app) => app.subdomain),
-    ...visibleDeclarativeApps(db).map((app) => app.subdomain),
-  ]);
-  return [
-    ...listRawFileRows(db),
-    ...listPageRows(db),
-    ...listRouteRows(db),
-    ...listDirectoryRows(db),
-  ].filter((site) => !builtinSubdomains.has(site.subdomain))
-    .sort((a, b) => String(a.subdomain).localeCompare(String(b.subdomain)));
-}
-
 function renderAppRow({ name, subdomain, kind, description, href, config }) {
   return `<article class="app-row">
       <div>
@@ -131,14 +105,6 @@ function renderAppRow({ name, subdomain, kind, description, href, config }) {
 }
 
 function renderAppDirectory(request, { db } = {}) {
-  const builtinRows = visibleBuiltinApps().map((app) => renderAppRow({
-    name: app.name,
-    subdomain: app.subdomain,
-    kind: app.kind,
-    description: app.description,
-    href: appHref(app, request.url),
-    config: configHref(app, request.url),
-  }));
   const declarativeRows = visibleDeclarativeApps(db).map((app) => renderAppRow({
     name: app.name,
     subdomain: app.subdomain,
@@ -147,15 +113,7 @@ function renderAppDirectory(request, { db } = {}) {
     href: appHref(app, request.url),
     config: configHref(app, request.url),
   }));
-  const siteRows = sqliteSiteRows(db).map((site) => renderAppRow({
-    name: site.title || site.subdomain,
-    subdomain: site.subdomain,
-    kind: site.kind,
-    description: `SQLite configured ${site.kind} from ${site.source}.`,
-    href: appHref(site, request.url),
-    config: configHref(site, request.url),
-  }));
-  const rows = [...builtinRows, ...declarativeRows, ...siteRows].join("");
+  const rows = declarativeRows.join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -344,42 +302,6 @@ function sqliteSiteConfig(db, subdomain) {
       schemas: {},
     };
   }
-  const file = getRawFileConfig(db, subdomain);
-  if (file) {
-    return {
-      app: {
-        name: file.title || file.subdomain,
-        subdomain: file.subdomain,
-        kind: "raw site",
-        description: "SQLite configured raw site.",
-        mapping: {
-          subdomain: file.subdomain,
-          file: file.filePath,
-        },
-        response: {
-          contentType: file.contentType,
-          csp: file.csp,
-        },
-      },
-      runtime: {
-        directory: true,
-        handler: "[Function fileAppHandler]",
-      },
-      schemas: {},
-    };
-  }
-  const page = getPageConfig(db, subdomain);
-  if (page) {
-    return { app: { ...page, kind: "sqlite page" }, runtime: { directory: true }, schemas: {} };
-  }
-  const route = getRouteConfig(db, subdomain);
-  if (route) {
-    return { app: { ...route, kind: "sqlite routes" }, runtime: { directory: true }, schemas: {} };
-  }
-  const directory = getDirectoryConfig(db, subdomain);
-  if (directory) {
-    return { app: { ...directory, kind: "directory site" }, runtime: { directory: true }, schemas: {} };
-  }
   return null;
 }
 
@@ -430,12 +352,6 @@ export async function appDirectoryHandler(request, options = {}) {
   const match = url.pathname.match(/^\/config\/([^/]+)$/);
   if (match) {
     const subdomain = decodeURIComponent(match[1]);
-    const app = findBuiltinApp(subdomain);
-    if (app && app.directory !== false) {
-      return new Response(await renderConfigPage(app, request), {
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    }
     const siteConfig = sqliteSiteConfig(options.db, subdomain);
     if (!siteConfig) return new Response("Not found", { status: 404 });
     return new Response(await renderSqliteConfigPage(siteConfig, request), {

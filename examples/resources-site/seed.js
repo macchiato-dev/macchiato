@@ -1278,15 +1278,15 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 })();`;
 }
 
-export function seedResourcesSite(db) {
-  for (const route of buildResourcesSiteRoutes()) putSiteRoute(db, route);
+export function seedResourcesSite(db, { subdomain = SUBDOMAIN } = {}) {
+  for (const route of buildResourcesSiteRoutesForRuntime({ runtime: "browser-use", subdomain })) putSiteRoute(db, route);
 }
 
 export function buildResourcesSiteRoutes() {
   return buildResourcesSiteRoutesForRuntime({ runtime: "browser-use" });
 }
 
-export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {} } = {}) {
+export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {}, subdomain = SUBDOMAIN } = {}) {
   const profile = resourcesRuntimeProfile(runtime);
   const stylesheet = css(theme);
   const styleUse = new StyleUse(resourcesCssSchema());
@@ -1302,7 +1302,7 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
     // module script and applies dom-use again to each client-side page swap.
     const html = profile.name === "document" ? domUse.sanitizeHTML(authoredHtml, { strict: true }) : authoredHtml;
     return {
-      subdomain: SUBDOMAIN,
+      subdomain,
       path,
       title: route.title,
       html,

@@ -3,6 +3,7 @@ import { withDb } from "./db.js";
 import { readFileSync } from "node:fs";
 import { putFontAsset } from "@macchiato-dev/font-use";
 import { deleteSiteRoutes, putSiteRoute } from "@macchiato-dev/site";
+import { appPluginIds, installAppPlugins } from "../../app/src/app-plugins.js";
 import {
   addDirectorySite,
   addFileSite,
@@ -10,8 +11,23 @@ import {
   addSchema,
   listConfiguredSites,
   listSchemas,
+  removeAppConfig,
   removeConfiguredSite,
+  upsertAppConfig,
 } from "@macchiato-dev/app-db-sqlite";
+
+function registerSiteApp(db, subdomain, handler, kind) {
+  upsertAppConfig(db, {
+    subdomain,
+    name: subdomain,
+    kind,
+    description: `Operator-configured ${kind}.`,
+    handler,
+    permissions: {},
+    access: {},
+    options: { plugin: "site-command", dependencies: {} },
+  });
+}
 
 function parseServerOpts(args) {
   const opts = {};
@@ -76,6 +92,22 @@ function readText(path) {
   return readFileSync(path, "utf-8");
 }
 
+function parseAppInstallOpts(args) {
+  const plugins = [];
+  const mappings = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--map") {
+      const value = args[++i] || "";
+      const separator = value.indexOf("=");
+      if (separator < 1) throw new Error(`Invalid --map: ${value}`);
+      mappings[value.slice(0, separator)] = value.slice(separator + 1);
+    } else {
+      plugins.push(args[i]);
+    }
+  }
+  return { plugins, mappings };
+}
+
 function parseFontOpts(args) {
   const opts = {
     mimeType: "font/woff2",
@@ -121,6 +153,8 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  schema add <name> <json>      Add a named schema");
       console.log("  schema list                   List named schemas");
       console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
+      console.log("  app install <id|preset>... [--map <id=subdomain>]");
+      console.log("  app plugins                   List available app plugins and presets");
       console.log("  site add <subdomain> <dir>    Add a site");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>]");
@@ -195,6 +229,21 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log(`  sha256 ${result.sha256}`);
     },
 
+    "app install"(args) {
+      const { plugins, mappings } = parseAppInstallOpts(args);
+      if (plugins.length === 0) {
+        console.log("Usage: app install <id|preset>... [--map <id=subdomain>]");
+        return;
+      }
+      const installed = withDb((db) => installAppPlugins(db, plugins, { mappings }), dbOptions);
+      for (const id of installed) console.log(`Installed app plugin: ${id}${mappings[id] ? ` -> ${mappings[id]}` : ""}`);
+    },
+
+    "app plugins"() {
+      console.log("Presets: core, development");
+      for (const id of appPluginIds()) console.log(`  ${id}`);
+    },
+
     "site add"(args) {
       const [subdomain, directory] = args;
       if (!subdomain || !directory) {
@@ -203,6 +252,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       }
       withDb((db) => {
         addDirectorySite(db, subdomain, directory);
+        registerSiteApp(db, subdomain, "directory", "directory site");
       }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
     },
@@ -249,6 +299,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
           cssSchema,
           sandboxed: opts.sandboxed,
         });
+        registerSiteApp(db, subdomain, "sqlite-page", "SQLite page");
       }, dbOptions);
       console.log(`Added SQLite page: ${subdomain} (${opts.sandboxed ? "sandboxed" : "unsandboxed"})`);
     },
@@ -269,6 +320,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
           contentType: opts.contentType,
           csp: opts.csp,
         });
+        registerSiteApp(db, subdomain, "raw-file", "raw site");
       }, dbOptions);
       console.log(`Added raw site: ${subdomain} -> ${filePath}`);
     },
@@ -294,6 +346,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         head,
         csp: opts.csp,
       }), dbOptions);
+      withDb((db) => registerSiteApp(db, subdomain, "sqlite-routes", "SQLite routes"), dbOptions);
       console.log(`Added SQLite route: ${route.subdomain}${route.path}`);
     },
 
@@ -306,6 +359,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       withDb((db) => {
         removeConfiguredSite(db, subdomain);
         deleteSiteRoutes(db, subdomain);
+        removeAppConfig(db, subdomain);
       }, dbOptions);
       console.log(`Removed site: ${subdomain}`);
     },
