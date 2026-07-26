@@ -26,6 +26,10 @@ cd /path/to/macchiato
 node packages/app/src/index.js --host 127.0.0.1 --port 8765
 ```
 
+A fresh database initializes only the `core` app-directory preset. For the full
+repository demo set, use `--app-plugin development`. See
+`docs/declarative-apps.md` for persistent installation and subdomain mapping.
+
 If running inside a container or VM and exposing the port to the host, bind to
 all interfaces inside the container:
 
@@ -33,7 +37,7 @@ all interfaces inside the container:
 node packages/app/src/index.js --host 0.0.0.0 --port 8765
 ```
 
-Useful local URLs:
+Useful local URLs after installing the relevant apps:
 
 ```text
 http://macchiato.localhost:8765

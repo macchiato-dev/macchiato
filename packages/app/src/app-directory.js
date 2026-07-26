@@ -352,6 +352,12 @@ export async function appDirectoryHandler(request, options = {}) {
   const match = url.pathname.match(/^\/config\/([^/]+)$/);
   if (match) {
     const subdomain = decodeURIComponent(match[1]);
+    const app = getDeclarativeApp(options.db, subdomain);
+    if (app) {
+      return new Response(await renderConfigPage(app, request), {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
     const siteConfig = sqliteSiteConfig(options.db, subdomain);
     if (!siteConfig) return new Response("Not found", { status: 404 });
     return new Response(await renderSqliteConfigPage(siteConfig, request), {

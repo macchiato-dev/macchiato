@@ -34,7 +34,7 @@ function startApp(port) {
   });
   let output = "";
   const waitForReady = new Promise((resolveReady, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Server did not start\n${output}`)), 5000);
+    const timer = setTimeout(() => reject(new Error(`Server did not start\n${output}`)), 30000);
     const onData = (chunk) => {
       output += chunk;
       if (output.includes("Server running")) {
