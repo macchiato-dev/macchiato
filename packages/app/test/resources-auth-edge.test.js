@@ -1,0 +1,64 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../examples/resources-site/auth/github.js";
+
+const config = createAuthConfig({
+  PUBLIC_ORIGIN: "https://resources.example",
+  GITHUB_CLIENT_ID: "client-id",
+  GITHUB_CLIENT_SECRET: "client-secret",
+  SESSION_SIGNING_KEY: "test-signing-key-that-is-not-used-in-production",
+});
+
+function cookiePair(setCookie, name) {
+  const match = setCookie.match(new RegExp(`${name}=([^;,]+)`));
+  assert.ok(match, `missing ${name}`);
+  return `${name}=${match[1]}`;
+}
+
+test("GitHub auth uses signed state, PKCE, and a secure flow cookie", async () => {
+  const response = await startGithubAuth(config, () => 1_000);
+  const target = new URL(response.headers.get("location"));
+  assert.equal(target.origin, "https://github.com");
+  assert.equal(target.searchParams.get("client_id"), "client-id");
+  assert.equal(target.searchParams.get("code_challenge_method"), "S256");
+  assert.ok(target.searchParams.get("code_challenge"));
+  assert.match(response.headers.get("set-cookie"), /HttpOnly; Secure; SameSite=Lax/);
+});
+
+test("GitHub callback validates state and creates a signed identity session", async () => {
+  const start = await startGithubAuth(config, () => 1_000);
+  const authorize = new URL(start.headers.get("location"));
+  const flowCookie = cookiePair(start.headers.get("set-cookie"), "__Host-resources_oauth");
+  const requests = [];
+  const fetchImpl = async (input, init) => {
+    requests.push({ input: String(input), init });
+    if (String(input).includes("access_token")) return Response.json({ access_token: "temporary-token" });
+    return Response.json({ id: 42, login: "macchiato-dev", name: "Macchiato Dev" });
+  };
+  const callback = new Request(`https://resources.example/auth/github/callback?code=code&state=${authorize.searchParams.get("state")}`, {
+    headers: { cookie: flowCookie },
+  });
+  const response = await finishGithubAuth(callback, config, { fetchImpl, now: () => 2_000 });
+
+  assert.equal(response.status, 302);
+  assert.equal(requests.length, 2);
+  assert.ok(JSON.parse(requests[0].init.body).code_verifier);
+  assert.equal(requests[1].init.headers.authorization, "Bearer temporary-token");
+  const sessionCookie = cookiePair(response.headers.get("set-cookie"), "__Host-resources_session");
+  const session = await readSession(new Request("https://resources.example/", { headers: { cookie: sessionCookie } }), config, () => 3_000);
+  assert.deepEqual({ sub: session.sub, login: session.login, name: session.name }, {
+    sub: "github:42",
+    login: "macchiato-dev",
+    name: "Macchiato Dev",
+  });
+});
+
+test("GitHub callback rejects a mismatched state before making subrequests", async () => {
+  const start = await startGithubAuth(config, () => 1_000);
+  let called = false;
+  const response = await finishGithubAuth(new Request("https://resources.example/auth/github/callback?code=x&state=wrong", {
+    headers: { cookie: cookiePair(start.headers.get("set-cookie"), "__Host-resources_oauth") },
+  }), config, { fetchImpl: async () => { called = true; }, now: () => 2_000 });
+  assert.equal(response.status, 400);
+  assert.equal(called, false);
+});

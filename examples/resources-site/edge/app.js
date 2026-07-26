@@ -4,6 +4,7 @@ import {
   publicResponseHeaders,
   storageRequest,
 } from "./models.js";
+import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth/github.js";
 
 const MANIFEST_KEY = "manifest.json";
 
@@ -13,7 +14,30 @@ async function fetchStorage(fetchImpl, request) {
   return response;
 }
 
-export function createResourcesEdgeHandler({ config, fetchImpl = fetch, now = Date.now, logger = console } = {}) {
+function escapeHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function authStatusHtml(session) {
+  if (!session) {
+    return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+      <span class="edge-status__dot"></span><span class="edge-status__label">Edge safe</span>
+      <span class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></span>
+    </aside>`;
+  }
+  const initials = session.login.slice(0, 2).toUpperCase();
+  return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+    <span class="edge-status__dot"></span><span class="edge-status__label">${escapeHtml(session.login)}</span>
+    <span class="ub-avatar">${escapeHtml(initials)}</span>
+    <form method="post" action="/logout"><button class="ub-btn ub-btn--ghost" type="submit">Sign out</button></form>
+  </aside>`;
+}
+
+function renderSessionHtml(html, session) {
+  return html.replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session));
+}
+
+export function createResourcesEdgeHandler({ config, authConfig = null, fetchImpl = fetch, now = Date.now, logger = console } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
@@ -37,10 +61,18 @@ export function createResourcesEdgeHandler({ config, fetchImpl = fetch, now = Da
   }
 
   return async function resourcesEdgeHandler(request) {
+    const pathname = new URL(request.url).pathname;
+    if (authConfig && request.method === "GET" && (pathname === "/login" || pathname === "/signup" || pathname === "/auth/github/start")) {
+      return startGithubAuth(authConfig, now);
+    }
+    if (authConfig && request.method === "GET" && pathname === "/auth/github/callback") {
+      return finishGithubAuth(request, authConfig, { fetchImpl, now });
+    }
+    if (authConfig && request.method === "POST" && pathname === "/logout") return signOut(authConfig);
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
     }
-    const key = pathToObjectKey(new URL(request.url).pathname);
+    const key = pathToObjectKey(pathname);
     if (!key || key === MANIFEST_KEY) return new Response("Not found", { status: 404 });
 
     try {
@@ -54,9 +86,16 @@ export function createResourcesEdgeHandler({ config, fetchImpl = fetch, now = Da
       if (receivedLength && receivedLength !== expected.bytes) {
         throw new Error(`Storage length mismatch for ${key}`);
       }
-      return new Response(request.method === "HEAD" ? null : upstream.body, {
+      const headers = publicResponseHeaders(key, upstream.headers);
+      let body = request.method === "HEAD" ? null : upstream.body;
+      if (authConfig && key.endsWith(".html") && request.method !== "HEAD") {
+        body = renderSessionHtml(await upstream.text(), await readSession(request, authConfig, now));
+        headers.set("cache-control", "private, no-store");
+        headers.set("vary", "cookie");
+      }
+      return new Response(body, {
         status: 200,
-        headers: publicResponseHeaders(key, upstream.headers),
+        headers,
       });
     } catch (error) {
       logger.error("resources-edge", error?.message || String(error));
