@@ -36,6 +36,10 @@ function securityHeaders(app) {
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
   });
+  if (file.cors) {
+    headers.set("access-control-allow-origin", file.cors);
+    headers.set("access-control-allow-methods", "GET, HEAD, OPTIONS");
+  }
   return headers;
 }
 
@@ -46,6 +50,12 @@ export async function fileAppHandler(request, app) {
   }
   if (!app.file?.path) {
     return new Response("File app is missing file.path", { status: 500 });
+  }
+  if (request.method === "OPTIONS" && app.file.cors) {
+    return new Response(null, { status: 204, headers: securityHeaders(app) });
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD, OPTIONS" } });
   }
   try {
     const body = request.method === "HEAD" ? null : await readFile(app.file.path);

@@ -185,17 +185,25 @@ test("resources design file is a SQLite raw file site with default security head
   const configText = await config.text();
 
   assert.equal(response.status, 200);
-  assert.match(text, /__bundler\/manifest/);
+  assert.match(text, /Create a project/);
+  assert.match(text, /Continue with GitLab/);
   assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
   assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'self' 'unsafe-inline' blob:/);
   assert.equal(response.headers.get("clear-site-data"), null);
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Design/);
   assert.match(configText, /raw site/);
   assert.doesNotMatch(configText, /clearSiteData/);
-  assert.match(configText, /resourcesco-standalone-20260617\.html/);
+  assert.match(configText, /resourcesco-standalone-20260722\.html/);
+  assert.match(configText, /&quot;cors&quot;: &quot;\*&quot;/);
+
+  const preflight = await fetch(`http://resources-design.localhost:${port}/`, { method: "OPTIONS" });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), "*");
+  assert.equal(preflight.headers.get("access-control-allow-methods"), "GET, HEAD, OPTIONS");
 });
 
 test("apps directory exposes app configuration with schemas", async (t) => {
@@ -317,7 +325,8 @@ test("resources design raw file site renders through the server in a real browse
   });
 
   const response = await page.goto(`http://resources-design.localhost:${port}/`, { waitUntil: "networkidle" });
-  await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());
+  await assert.doesNotReject(page.locator(".layout").waitFor());
+  await assert.doesNotReject(page.getByText("Resources.co", { exact: true }).first().waitFor());
   assert.equal(response.status(), 200);
   assert.equal(await page.locator("#__bundler_thumbnail").count(), 0);
   assert.deepEqual(errors, []);
