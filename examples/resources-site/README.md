@@ -233,12 +233,13 @@ printf %s "$GITLAB_SECRET" | node packages/macchiato/src/macchiato.js \
 unset GITLAB_SECRET
 echo
 
-openssl rand -hex 32 | node packages/macchiato/src/macchiato.js \
+node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))" | \
+  node packages/macchiato/src/macchiato.js \
   app env set resources-edge SESSION_SIGNING_KEY --stdin
 ```
 
-Restart the server after changing app environment. Register this GitLab
-development callback:
+App-environment changes are read on the next request; a server restart is not
+required. Register this GitLab development callback:
 
 ```text
 http://resources-edge.localhost:3030/auth/gitlab/callback
