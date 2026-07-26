@@ -29,19 +29,27 @@ const fetchImpl = (input, init) => {
     : fetch(input, init);
 };
 const previewEnv = globalThis.process?.env || {};
-const authConfig = createAuthConfig({
-  PUBLIC_ORIGIN: previewEnv.RESOURCES_PREVIEW_ORIGIN || "http://resources-edge.localhost:3030",
-  AUTH_ALLOW_INSECURE_LOCALHOST: "true",
-  GITHUB_CLIENT_ID: previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_ID || "local-preview",
-  GITHUB_CLIENT_SECRET: previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
-  SESSION_SIGNING_KEY: previewEnv.RESOURCES_PREVIEW_SESSION_SIGNING_KEY || "local-preview-session-signing-key",
-});
-const gitlabAuthConfig = createGitlabAuthConfig({
-  GITLAB_CLIENT_ID: previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_ID || "local-preview",
-  GITLAB_CLIENT_SECRET: previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
-}, authConfig);
-const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, fetchImpl });
+let cachedEnvironmentKey = "";
+let cachedHandler;
 
-export function resourcesEdgePreviewHandler(request) {
-  return handler(request);
+function handlerFor(environment = {}) {
+  const effective = {
+    PUBLIC_ORIGIN: environment.PUBLIC_ORIGIN || previewEnv.RESOURCES_PREVIEW_ORIGIN || "http://resources-edge.localhost:3030",
+    GITHUB_CLIENT_ID: environment.GITHUB_CLIENT_ID || previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_ID || "local-preview",
+    GITHUB_CLIENT_SECRET: environment.GITHUB_CLIENT_SECRET || previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
+    GITLAB_CLIENT_ID: environment.GITLAB_CLIENT_ID || previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_ID || "local-preview",
+    GITLAB_CLIENT_SECRET: environment.GITLAB_CLIENT_SECRET || previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
+    SESSION_SIGNING_KEY: environment.SESSION_SIGNING_KEY || previewEnv.RESOURCES_PREVIEW_SESSION_SIGNING_KEY || "local-preview-session-signing-key",
+  };
+  const key = JSON.stringify(effective);
+  if (key === cachedEnvironmentKey) return cachedHandler;
+  const authConfig = createAuthConfig({ ...effective, AUTH_ALLOW_INSECURE_LOCALHOST: "true" });
+  const gitlabAuthConfig = createGitlabAuthConfig(effective, authConfig);
+  cachedEnvironmentKey = key;
+  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, fetchImpl });
+  return cachedHandler;
+}
+
+export function resourcesEdgePreviewHandler(request, app = {}) {
+  return handlerFor(app.environment)(request);
 }

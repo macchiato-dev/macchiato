@@ -215,27 +215,39 @@ Then compare:
 
 ### Real local OAuth callbacks
 
-The preview uses placeholder provider credentials by default, so its chooser
-works but provider authorization cannot complete. Create separate development
-applications and start the usual port-3030 server with:
+The preview uses placeholder provider credentials by default, so provider
+authorization cannot complete until the installed `resources-edge` declaration
+has app-scoped values. Configure a GitLab development application without
+putting its secret in shell arguments:
 
 ```sh
-RESOURCES_PREVIEW_ORIGIN=http://resources-edge.localhost:3030 \
-RESOURCES_PREVIEW_GITHUB_CLIENT_ID=... \
-RESOURCES_PREVIEW_GITHUB_CLIENT_SECRET=... \
-RESOURCES_PREVIEW_GITLAB_CLIENT_ID=... \
-RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET=... \
-RESOURCES_PREVIEW_SESSION_SIGNING_KEY="$(openssl rand -hex 32)" \
-node packages/app/src/index.js \
-  --host 0.0.0.0 --port 3030 --app-plugin development
+node packages/macchiato/src/macchiato.js app env set \
+  resources-edge PUBLIC_ORIGIN http://resources-edge.localhost:3030
+
+node packages/macchiato/src/macchiato.js app env set \
+  resources-edge GITLAB_CLIENT_ID your-client-id
+
+read -rsp "GitLab client secret: " GITLAB_SECRET
+printf %s "$GITLAB_SECRET" | node packages/macchiato/src/macchiato.js \
+  app env set resources-edge GITLAB_CLIENT_SECRET --stdin
+unset GITLAB_SECRET
+echo
+
+openssl rand -hex 32 | node packages/macchiato/src/macchiato.js \
+  app env set resources-edge SESSION_SIGNING_KEY --stdin
 ```
 
-Register these development callbacks:
+Restart the server after changing app environment. Register this GitLab
+development callback:
 
 ```text
-http://resources-edge.localhost:3030/auth/github/callback
 http://resources-edge.localhost:3030/auth/gitlab/callback
 ```
+
+The corresponding GitHub callback is
+`http://resources-edge.localhost:3030/auth/github/callback`. The CLI uses the
+default data directory unless `--data-dir` or `--db` is supplied; use the same
+option for configuration and the server.
 
 Insecure HTTP is accepted only when the origin is loopback or ends in
 `.localhost`; production and staging still require HTTPS. Local cookies omit

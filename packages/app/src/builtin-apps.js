@@ -84,6 +84,14 @@ export const BUILTIN_APPS = [
       "examples/resources-site/edge/models.js",
     ],
     adapter: resourcesEdgePreviewConfig,
+    environment: {
+      PUBLIC_ORIGIN: { description: "Canonical origin used for OAuth callback URLs." },
+      GITHUB_CLIENT_ID: { description: "GitHub OAuth application client ID." },
+      GITHUB_CLIENT_SECRET: { secret: true, description: "GitHub OAuth application client secret." },
+      GITLAB_CLIENT_ID: { description: "GitLab OAuth application ID." },
+      GITLAB_CLIENT_SECRET: { secret: true, description: "GitLab OAuth application secret." },
+      SESSION_SIGNING_KEY: { secret: true, description: "At least 32 random characters used to sign local sessions." },
+    },
     site: {
       storage: "in-memory export manifest",
       productionStorage: "Bunny Storage",
