@@ -288,7 +288,13 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   await page.getByRole("link", { name: "Log in" }).click();
   await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitHub" }).waitFor());
   await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitLab" }).waitFor());
-  assert.equal(await page.locator("script").count(), 0);
+  await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
+  await assert.doesNotReject(page.locator(".nav").waitFor());
+  await assert.doesNotReject(page.locator(".footer").waitFor());
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
+  assert.equal(await page.locator("script[type='application/json']").count(), 1);
+  const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
+  assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
 
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
   const localTheme = await page.evaluate(() => {

@@ -138,13 +138,20 @@ that sequence and checks header visibility, routes, and stored state. The auth
 card's `dom-use` definition is composed from the auth module just like the user
 menu capability.
 
-The Bunny/document profile now implements GitHub and GitLab OAuth at `/login`
-and `/signup`. Both validate signed state and PKCE, exchange the code only at
-the edge, fetch the provider identity, discard the provider token, and issue a
-signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
-script-free: the edge replaces one bounded account-status island with escaped
-guest or session markup and marks personalized documents `private, no-store`.
-Google and Apple remain preview-only until separate adapters exist.
+The Bunny/document profile serves `/login` and `/signup` from the same exported
+Resources layout as every other page; there is no edge-only auth template. The
+auth component composes its card into the `dom-use` schema, so provider links,
+nested marks, legal links, and the card structure are validated during export.
+Its CSS passes through the site's `style-use` capability before an artifact can
+be published. GitHub and GitLab render as real OAuth links; Google and Apple are
+visibly unavailable until adapters exist.
+
+Both implemented providers validate signed state and PKCE, exchange the code
+only at the edge, fetch the provider identity, discard the provider token, and
+issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
+free of executable page scripts: the edge replaces one bounded account-status
+island with escaped guest or session markup and marks personalized documents
+`private, no-store`.
 
 The session identity is upserted into strict `users` and `user_identities`
 tables through the web libSQL client before the session is issued. Bunny

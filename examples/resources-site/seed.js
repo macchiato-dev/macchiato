@@ -565,14 +565,24 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .ub-btn { border: 1px solid var(--track-border); border-radius: 11px; padding: 10px 15px; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
 .ub-btn--solid { border-color: var(--active-bg); background: var(--active-bg); color: var(--active-fg); }
 .item--danger:hover { color: #ff6b6b; }
-.auth-card { width: 100%; max-width: 440px; padding: 38px; align-self: center; }
+.auth-card { width: 100%; max-width: 440px; padding: 40px 40px 34px; align-self: center; }
 .auth-eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .auth-providers { display: grid; gap: 10px; margin-top: 22px; }
-.auth-provider { border: 1px solid var(--track-border); border-radius: 12px; padding: 13px 16px; background: var(--track); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.auth-provider { min-height: 52px; border: 1px solid var(--track-border); border-radius: 12px; padding: 11px 16px; background: var(--track); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .auth-provider:hover { border-color: var(--accent); }
-.auth-alt, .auth-note { margin-top: 18px; font-size: 13px; color: var(--muted); }
-.auth-alt a { color: var(--accent); font-weight: 600; }
-.auth-note { padding: 12px 14px; border-radius: 10px; background: var(--hover); }
+.auth-provider__mark { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: var(--bg); background: #30364f; font-size: 9px; font-weight: 800; }
+.auth-provider__mark--gitlab { background: #e24329; }
+.auth-provider__mark--google { background: #4285f4; }
+.auth-provider__mark--apple { color: var(--text); background: transparent; font-size: 14px; }
+.auth-provider--disabled { opacity: 0.55; }
+.auth-provider__soon { margin: 0 0 0 auto; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.auth-legal { margin-top: 16px; color: var(--muted); font-size: 12px; line-height: 1.55; text-align: center; }
+.auth-legal a, .auth-alt a { color: var(--accent); font-weight: 600; }
+.auth-divider { display: flex; align-items: center; gap: 14px; margin-top: 22px; color: var(--muted); font-size: 12px; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--track-border); }
+.auth-alt { margin-top: 22px; font-size: 13px; color: var(--muted); text-align: center; }
+.auth-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; padding: 12px 14px; border-radius: 10px; background: var(--hover); font-size: 12px; line-height: 1.5; color: var(--muted); }
+.auth-note__icon { width: 16px; height: 16px; border: 1px solid var(--accent); color: var(--accent); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; font-size: 10px; font-weight: 700; }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -781,8 +791,8 @@ function brandHeaderHtml(path) {
   return `<header class="box brand" data-screen-label="brand"><nav class="brand__path brand__path--solo" id="brand-path" aria-label="Resource path">${parts.join("")}</nav></header>`;
 }
 
-function blockHtml(block) {
-  if (block.type === "auth") return renderResourcesAuthBlock(block.mode);
+function blockHtml(block, options = {}) {
+  if (block.type === "auth") return renderResourcesAuthBlock(block.mode, options);
   if (block.type === "project-summary") return projectSummaryHtml(block);
   if (block.type === "package-details") return packageDetailsHtml(block);
   const bits = [`<section class="box block content-block">`];
@@ -861,11 +871,12 @@ function routeForPath(path) {
 function pageHtml(path, { runtime = "browser-use" } = {}) {
   const route = routeForPath(path);
   const documentRuntime = runtime === "document";
-  return `<main class="layout${documentRuntime ? " document-runtime" : ""}">
+  const authRoute = path === "/login" || path === "/signup";
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey)}
-    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map(blockHtml).join("")}</div></div>
+    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
   </main>${runtime === "browser-use" ? `
@@ -1295,8 +1306,7 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
-  const paths = [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"]
-    .filter((path) => profile.name !== "document" || (path !== "/login" && path !== "/signup"));
+  const paths = [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
   return paths.map((path) => {
     const route = routeForPath(path);
     const authoredHtml = pageHtml(path, { runtime: profile.name });
