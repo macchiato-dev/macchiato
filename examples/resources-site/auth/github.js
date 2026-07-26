@@ -2,6 +2,14 @@ import { cookie, parseCookies, pkceChallenge, randomToken, seal, unseal } from "
 
 const STATE_COOKIE = "__Host-resources_oauth";
 const SESSION_COOKIE = "__Host-resources_session";
+const LOCAL_STATE_COOKIE = "resources_oauth";
+const LOCAL_SESSION_COOKIE = "resources_session";
+
+function cookieNames(config) {
+  return config.secureCookies
+    ? { state: STATE_COOKIE, session: SESSION_COOKIE }
+    : { state: LOCAL_STATE_COOKIE, session: LOCAL_SESSION_COOKIE };
+}
 
 function required(value, name) {
   const text = String(value || "").trim();
@@ -45,12 +53,13 @@ export async function startGithubAuth(config, now = Date.now) {
   target.searchParams.set("code_challenge", await pkceChallenge(verifier));
   target.searchParams.set("code_challenge_method", "S256");
   target.searchParams.set("scope", "read:user");
-  return redirect(target.href, cookie(STATE_COOKIE, flow, { maxAge: 600, secure: config.secureCookies }));
+  return redirect(target.href, cookie(cookieNames(config).state, flow, { maxAge: 600, secure: config.secureCookies }));
 }
 
 export async function finishGithubAuth(request, config, { fetchImpl = fetch, now = Date.now, accountStore = null } = {}) {
   const url = new URL(request.url);
-  const flow = await unseal(parseCookies(request.headers.get("cookie"))[STATE_COOKIE], config.sessionSecret);
+  const names = cookieNames(config);
+  const flow = await unseal(parseCookies(request.headers.get("cookie"))[names.state], config.sessionSecret);
   if (!flow || flow.exp < now() || url.searchParams.get("state") !== flow.state || !url.searchParams.get("code")) {
     return new Response("Invalid or expired authorization state", { status: 400, headers: { "cache-control": "no-store" } });
   }
@@ -98,16 +107,16 @@ export async function finishGithubAuth(request, config, { fetchImpl = fetch, now
     exp: issuedAt + config.sessionSeconds * 1000,
   }, config.sessionSecret);
   const headers = new Headers({ location: config.publicOrigin, "cache-control": "no-store" });
-  headers.append("set-cookie", cookie(SESSION_COOKIE, session, { maxAge: config.sessionSeconds, secure: config.secureCookies }));
-  headers.append("set-cookie", cookie(STATE_COOKIE, "", { maxAge: 0, secure: config.secureCookies }));
+  headers.append("set-cookie", cookie(names.session, session, { maxAge: config.sessionSeconds, secure: config.secureCookies }));
+  headers.append("set-cookie", cookie(names.state, "", { maxAge: 0, secure: config.secureCookies }));
   return new Response(null, { status: 302, headers });
 }
 
 export async function readSession(request, config, now = Date.now) {
-  const value = await unseal(parseCookies(request.headers.get("cookie"))[SESSION_COOKIE], config.sessionSecret);
+  const value = await unseal(parseCookies(request.headers.get("cookie"))[cookieNames(config).session], config.sessionSecret);
   return value?.v === 1 && value.exp >= now() ? value : null;
 }
 
 export function signOut(config) {
-  return redirect(config.publicOrigin, cookie(SESSION_COOKIE, "", { maxAge: 0, secure: config.secureCookies }));
+  return redirect(config.publicOrigin, cookie(cookieNames(config).session, "", { maxAge: 0, secure: config.secureCookies }));
 }
