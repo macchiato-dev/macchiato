@@ -1,4 +1,5 @@
 import { cookie, parseCookies, pkceChallenge, randomToken, seal, unseal } from "./session.js";
+import { accountErrorResponse } from "./account-response.js";
 
 const STATE_COOKIE = "__Host-resources_gitlab_oauth";
 const SESSION_COOKIE = "__Host-resources_session";
@@ -36,10 +37,10 @@ function redirect(location, setCookie) {
   });
 }
 
-export async function startGitlabAuth(config, now = Date.now) {
+export async function startGitlabAuth(config, now = Date.now, { linkToUserId = null } = {}) {
   const state = randomToken();
   const verifier = randomToken();
-  const flow = await seal({ state, verifier, exp: now() + 10 * 60_000 }, config.sessionSecret);
+  const flow = await seal({ state, verifier, linkToUserId, exp: now() + 10 * 60_000 }, config.sessionSecret);
   const target = new URL("https://gitlab.com/oauth/authorize");
   target.searchParams.set("client_id", config.clientId);
   target.searchParams.set("redirect_uri", `${config.publicOrigin}/auth/gitlab/callback`);
@@ -81,13 +82,35 @@ export async function finishGitlabAuth(request, config, { fetchImpl = fetch, now
   if (!userResponse.ok) return new Response("Identity lookup failed", { status: 502 });
   const user = await userResponse.json();
   if (!Number.isSafeInteger(user.id) || typeof user.username !== "string") return new Response("Invalid identity response", { status: 502 });
+  const emailResponse = await fetchImpl("https://gitlab.com/api/v4/user/emails", {
+    redirect: "manual",
+    headers: { accept: "application/json", authorization: `Bearer ${token.access_token}` },
+  });
+  if (!emailResponse.ok) return new Response("Confirmed email lookup failed", { status: 502 });
+  const emails = await emailResponse.json();
+  const confirmedEmail = Array.isArray(emails)
+    ? emails.find((entry) => entry?.email === user.email && entry?.confirmed_at)
+      || emails.find((entry) => typeof entry?.email === "string" && entry?.confirmed_at)
+    : null;
+  if (!confirmedEmail) {
+    return new Response("A confirmed GitLab email address is required", { status: 403 });
+  }
   const identity = {
     provider: "gitlab",
     providerUserId: user.id,
     login: user.username.slice(0, 80),
     name: String(user.name || user.username).slice(0, 120),
+    email: confirmedEmail.email,
+    emailVerified: true,
   };
-  const account = accountStore ? await accountStore.upsertIdentity(identity) : { id: `gitlab:${user.id}`, ...identity };
+  let account;
+  try {
+    account = accountStore
+      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null })
+      : { id: `gitlab:${user.id}`, ...identity };
+  } catch (error) {
+    return accountErrorResponse(error, config.publicOrigin);
+  }
   const issuedAt = now();
   const session = await seal({
     v: 1,

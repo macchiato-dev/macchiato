@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../examples/resources-site/auth/github.js";
 import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../examples/resources-site/auth/gitlab.js";
+import { accountErrorResponse } from "../../../examples/resources-site/auth/account-response.js";
+import { AccountConflictError } from "../../../examples/resources-site/models/accounts.js";
 
 const config = createAuthConfig({
   PUBLIC_ORIGIN: "https://resources.example",
@@ -20,11 +22,23 @@ function cookiePair(setCookie, name) {
   return `${name}=${match[1]}`;
 }
 
+test("account collision response does not disclose existing sign-in providers", async () => {
+  const response = accountErrorResponse(
+    new AccountConflictError("email_taken", ["gitlab"]),
+    "https://resources.example",
+  );
+  const body = await response.text();
+  assert.equal(response.status, 409);
+  assert.match(body, /existing method/);
+  assert.doesNotMatch(body, /GitHub|GitLab/);
+});
+
 test("GitHub auth uses signed state, PKCE, and a secure flow cookie", async () => {
   const response = await startGithubAuth(config, () => 1_000);
   const target = new URL(response.headers.get("location"));
   assert.equal(target.origin, "https://github.com");
   assert.equal(target.searchParams.get("client_id"), "client-id");
+  assert.match(target.searchParams.get("scope"), /user:email/);
   assert.equal(target.searchParams.get("code_challenge_method"), "S256");
   assert.ok(target.searchParams.get("code_challenge"));
   assert.match(response.headers.get("set-cookie"), /HttpOnly; Secure; SameSite=Lax/);
@@ -60,6 +74,9 @@ test("GitHub callback validates state and creates a signed identity session", as
   const fetchImpl = async (input, init) => {
     requests.push({ input: String(input), init });
     if (String(input).includes("access_token")) return Response.json({ access_token: "temporary-token" });
+    if (String(input).endsWith("/user/emails")) {
+      return Response.json([{ email: "dev@example.com", primary: true, verified: true }]);
+    }
     return Response.json({ id: 42, login: "macchiato-dev", name: "Macchiato Dev" });
   };
   const callback = new Request(`https://resources.example/auth/github/callback?code=code&state=${authorize.searchParams.get("state")}`, {
@@ -68,7 +85,7 @@ test("GitHub callback validates state and creates a signed identity session", as
   const response = await finishGithubAuth(callback, config, { fetchImpl, now: () => 2_000 });
 
   assert.equal(response.status, 302);
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
   assert.ok(JSON.parse(requests[0].init.body).code_verifier);
   assert.equal(requests[1].init.headers.authorization, "Bearer temporary-token");
   const sessionCookie = cookiePair(response.headers.get("set-cookie"), "__Host-resources_session");
@@ -106,9 +123,16 @@ test("GitLab auth uses read-only identity scope, PKCE, and the shared session fo
     now: () => 2_000,
     fetchImpl: async (input, init) => {
       requests.push({ input: String(input), init });
-      return String(input).endsWith("/oauth/token")
-        ? Response.json({ access_token: "gitlab-temporary-token" })
-        : Response.json({ id: 84, username: "latte-dev", name: "Latte Dev" });
+      if (String(input).endsWith("/oauth/token")) return Response.json({ access_token: "gitlab-temporary-token" });
+      if (String(input).endsWith("/user/emails")) {
+        return Response.json([{ email: "latte@example.com", confirmed_at: "2026-01-01T00:00:00Z" }]);
+      }
+      return Response.json({
+        id: 84,
+        username: "latte-dev",
+        name: "Latte Dev",
+        email: "latte@example.com",
+      });
     },
   });
   assert.equal(response.status, 302);

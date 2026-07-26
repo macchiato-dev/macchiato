@@ -1,4 +1,5 @@
 import { cookie, parseCookies, pkceChallenge, randomToken, seal, unseal } from "./session.js";
+import { accountErrorResponse } from "./account-response.js";
 
 const STATE_COOKIE = "__Host-resources_oauth";
 const SESSION_COOKIE = "__Host-resources_session";
@@ -42,17 +43,17 @@ function redirect(location, setCookie) {
   return new Response(null, { status: 302, headers });
 }
 
-export async function startGithubAuth(config, now = Date.now) {
+export async function startGithubAuth(config, now = Date.now, { linkToUserId = null } = {}) {
   const state = randomToken();
   const verifier = randomToken();
-  const flow = await seal({ state, verifier, exp: now() + 10 * 60_000 }, config.sessionSecret);
+  const flow = await seal({ state, verifier, linkToUserId, exp: now() + 10 * 60_000 }, config.sessionSecret);
   const target = new URL("https://github.com/login/oauth/authorize");
   target.searchParams.set("client_id", config.clientId);
   target.searchParams.set("redirect_uri", `${config.publicOrigin}/auth/github/callback`);
   target.searchParams.set("state", state);
   target.searchParams.set("code_challenge", await pkceChallenge(verifier));
   target.searchParams.set("code_challenge_method", "S256");
-  target.searchParams.set("scope", "read:user");
+  target.searchParams.set("scope", "read:user user:email");
   return redirect(target.href, cookie(cookieNames(config).state, flow, { maxAge: 600, secure: config.secureCookies }));
 }
 
@@ -90,13 +91,38 @@ export async function finishGithubAuth(request, config, { fetchImpl = fetch, now
   if (!userResponse.ok) return new Response("Identity lookup failed", { status: 502 });
   const user = await userResponse.json();
   if (!Number.isSafeInteger(user.id) || typeof user.login !== "string") return new Response("Invalid identity response", { status: 502 });
+  const emailResponse = await fetchImpl("https://api.github.com/user/emails", {
+    redirect: "manual",
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${token.access_token}`,
+      "x-github-api-version": "2022-11-28",
+      "user-agent": "resources.co",
+    },
+  });
+  if (!emailResponse.ok) return new Response("Verified email lookup failed", { status: 502 });
+  const emails = await emailResponse.json();
+  const verifiedEmail = Array.isArray(emails)
+    ? emails.find((entry) => entry?.primary === true && entry?.verified === true && typeof entry.email === "string")
+      || emails.find((entry) => entry?.verified === true && typeof entry.email === "string")
+    : null;
+  if (!verifiedEmail) return new Response("A verified GitHub email address is required", { status: 403 });
   const identity = {
     provider: "github",
     providerUserId: user.id,
     login: user.login.slice(0, 80),
     name: String(user.name || user.login).slice(0, 120),
+    email: verifiedEmail.email,
+    emailVerified: true,
   };
-  const account = accountStore ? await accountStore.upsertIdentity(identity) : { id: `github:${user.id}`, ...identity };
+  let account;
+  try {
+    account = accountStore
+      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null })
+      : { id: `github:${user.id}`, ...identity };
+  } catch (error) {
+    return accountErrorResponse(error, config.publicOrigin);
+  }
   const issuedAt = now();
   const session = await seal({
     v: 1,
