@@ -74,7 +74,15 @@ function fileSiteValues(site) {
 }
 
 export function addAppConfigIfMissing(db, app) {
-  cachedStatement(db, querySql.appConfigs.insertIfMissing).run(
+  writeAppConfig(db, querySql.appConfigs.insertIfMissing, app);
+}
+
+export function upsertAppConfig(db, app) {
+  writeAppConfig(db, querySql.appConfigs.upsert, app);
+}
+
+function writeAppConfig(db, query, app) {
+  cachedStatement(db, query).run(
     app.subdomain,
     app.name,
     app.kind,
@@ -93,6 +101,14 @@ export function getAppConfigRow(db, subdomain) {
 
 export function listVisibleAppConfigRows(db) {
   return cachedStatement(db, querySql.appConfigs.listVisible).all();
+}
+
+export function listAppConfigRows(db) {
+  return cachedStatement(db, querySql.appConfigs.list).all();
+}
+
+export function removeAppConfig(db, subdomain) {
+  cachedStatement(db, querySql.appConfigs.remove).run(subdomain);
 }
 
 export function listConfiguredSites(db) {
