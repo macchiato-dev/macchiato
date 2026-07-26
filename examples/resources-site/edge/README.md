@@ -41,9 +41,30 @@ credential separately from the read-only credential used by the edge script.
 - No edge-side HTML templating or interpretation of arbitrary route data.
 - No public Storage proxy and no prefix-only authorization.
 - No provider token in cookies, Storage, logs, or browser responses.
-- No mutations, SQL, durable user records, or user-authored HTML.
+- No user-authored HTML. The document publication path remains read-only;
+  authentication uses a separate, narrowly modeled account database boundary.
 - No executable JavaScript in the document-profile export.
 - No passthrough of upstream response headers except ETag and Last-Modified.
+
+## Accounts and linked OAuth identities
+
+`users` is the account record. `user_identities` maps stable provider user IDs
+to it, and `user_emails` enforces one normalized, provider-confirmed email per
+account. Email comparison is case-insensitive but deliberately avoids
+provider-specific dot or plus-address rewriting.
+
+A known provider identity signs in normally. A new identity with an unused
+confirmed email creates an account. If that email is already used, the callback
+returns `409` and asks the user to authenticate with their existing method
+before linking the new identity to the same account. Candidate providers remain
+internal and are not disclosed by the conflict response.
+
+Once signed in, `/auth/github/link` and `/auth/gitlab/link` start fresh PKCE
+flows. The target account ID travels only in the short-lived signed flow cookie,
+so only an explicit authenticated flow can attach another identity. Provider
+tokens are discarded after lookup. GitHub requires a verified address from
+`/user/emails`; GitLab requires a confirmed address from `/api/v4/user/emails`.
+Provider names belong in connection settings, not the account menu.
 
 ## Remaining deployment work
 

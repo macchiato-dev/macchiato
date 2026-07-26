@@ -251,7 +251,11 @@ const SECTIONS = {
         eyebrow: "Account",
         h1: "Settings",
         paras: [
-          "Authentication providers, sessions, appearance, exports, and account deletion will be configured here.",
+          "Manage the services you can use to sign in to your Resources.co account.",
+        ],
+        items: [
+          ["Connect GitHub", "Authorize GitHub and link that identity to this signed-in account.", "/auth/github/link"],
+          ["Connect GitLab", "Authorize GitLab and link that identity to this signed-in account.", "/auth/gitlab/link"],
         ],
       },
     ],
