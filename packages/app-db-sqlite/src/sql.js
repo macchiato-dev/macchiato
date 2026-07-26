@@ -209,8 +209,11 @@ export const querySql = {
   },
   appConfigs: {
     insertIfMissing: insert({ into: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], conflict: "OR IGNORE" }),
+    upsert: insert({ into: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], conflict: "OR REPLACE" }),
     getBySubdomain: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], where: subdomain }),
+    list: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], order: orderBy("subdomain") }),
     listVisible: select({ from: names.appConfigs, columns: ["subdomain", "name", "kind", "description", "handler", "permissions_json", "access_json", "options_json", "directory"], where: `${quoteIdentifier("directory")} != 0`, order: orderBy("subdomain") }),
+    remove: deleteWhere({ from: names.appConfigs, where: subdomain }),
   },
   siteLists: {
     configuredDirectories: select({ from: names.sites, columns: ["subdomain", literal("directory", "kind"), "directory", nullAs("sandboxed")] }),
