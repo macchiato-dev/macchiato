@@ -17,7 +17,7 @@ const dom = {
     "edge-status": {
       element: "aside.box.userbar.edge-status",
       attrs: ["class", "data-screen-label"],
-      children: ["span"],
+      children: ["div"],
       place: true,
     },
     "userbar-pop": {
@@ -90,8 +90,6 @@ export function renderResourcesUserMenu() {
 
 export function renderResourcesEdgeStatus() {
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    <span class="edge-status__dot"></span>
-    <span class="edge-status__label">Edge safe</span>
-    <span class="ub-avatar">${RESOURCES_IDENTITY.initials}</span>
+    ${guestHtml}
   </aside>`;
 }

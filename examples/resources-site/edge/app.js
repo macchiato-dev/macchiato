@@ -22,14 +22,13 @@ function escapeHtml(value) {
 function authStatusHtml(session) {
   if (!session) {
     return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-      <span class="edge-status__dot"></span><span class="edge-status__label">Edge safe</span>
-      <span class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></span>
+      <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></div>
     </aside>`;
   }
   const initials = session.login.slice(0, 2).toUpperCase();
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    <span class="edge-status__dot"></span><span class="edge-status__label">${escapeHtml(session.login)}</span>
     <span class="ub-avatar">${escapeHtml(initials)}</span>
+    <span class="edge-account-name">${escapeHtml(session.login)}</span>
     <form method="post" action="/logout"><button class="ub-btn ub-btn--ghost" type="submit">Sign out</button></form>
   </aside>`;
 }

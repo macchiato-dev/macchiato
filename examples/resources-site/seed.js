@@ -543,18 +543,10 @@ ${base}
   min-height: 64px;
   gap: 10px;
 }
-.edge-status__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-.edge-status__label {
+.edge-account-name {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
 }
 .ub-guest { display: none; align-items: center; gap: 8px; }
 body[data-auth="out"] .userbar .ub-pop { display: none; }
