@@ -76,7 +76,27 @@ Use `app env list <subdomain>` to inspect configured names and `app env unset
 <subdomain> <NAME>` to remove one. Listings and the apps directory never expose
 values. A name marked `secret` opens a no-echo terminal prompt, keeping it out
 of process arguments and ordinary shell history. For automation, pass the value
-through standard input with `--stdin`.
+through standard input with `--stdin`. For example, with
+[`pass`](https://www.passwordstore.org/), pipe the first line of a password-store
+entry directly into Macchiato:
+
+```bash
+pass show services/resources-edge/gitlab-client-secret | sed -n '1p' | \
+  node packages/macchiato/src/macchiato.js --data-dir ./data \
+  app env set resources-edge GITLAB_CLIENT_SECRET --stdin
+```
+
+The same primitive works with other secret-manager CLIs. An optional
+1Password CLI equivalent is:
+
+```bash
+op read 'op://Private/Resources Edge GitLab/client secret' | \
+  node packages/macchiato/src/macchiato.js --data-dir ./data \
+  app env set resources-edge GITLAB_CLIENT_SECRET --stdin
+```
+
+Macchiato receives the secret only on stdin; neither form puts its value in
+process arguments or app configuration.
 
 Values are scoped to the installed subdomain, survive plugin updates, and are
 passed only to that app handler as its `environment` object. They are stored in
