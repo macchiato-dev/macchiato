@@ -48,6 +48,8 @@ test("local callback mode is explicit and limited to loopback-style hosts", asyn
   const response = await startGithubAuth(local, () => 1_000);
   assert.equal(new URL(response.headers.get("location")).searchParams.get("redirect_uri"), "http://resources-edge.localhost:3030/auth/github/callback");
   assert.doesNotMatch(response.headers.get("set-cookie"), /; Secure/);
+  assert.match(response.headers.get("set-cookie"), /^resources_oauth=/);
+  assert.doesNotMatch(response.headers.get("set-cookie"), /^__Host-/);
 });
 
 test("GitHub callback validates state and creates a signed identity session", async () => {
