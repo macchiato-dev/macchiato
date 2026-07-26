@@ -95,7 +95,6 @@ test("GitLab auth uses read-only identity scope, PKCE, and the shared session fo
   const authorize = new URL(start.headers.get("location"));
   assert.equal(authorize.origin, "https://gitlab.com");
   assert.equal(authorize.searchParams.get("scope"), "read_user");
-  assert.equal(authorize.searchParams.get("gl_auth_type"), "login");
   assert.equal(authorize.searchParams.get("code_challenge_method"), "S256");
 
   const callback = new Request(`https://resources.example/auth/gitlab/callback?code=code&state=${authorize.searchParams.get("state")}`, {

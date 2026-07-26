@@ -157,8 +157,8 @@ island with escaped guest or session markup and marks personalized documents
 The signed-in edge island uses native `details`/`summary` disclosure rather
 than a second menu script. It exposes the provider identity, project, profile,
 settings, help, and sign-out actions through ordinary document navigation.
-GitLab authorization also declares `gl_auth_type=login`; GitLab still owns any
-required consent or redirect screen outside Resources.co.
+GitLab still owns any required consent or redirect screen outside Resources.co;
+provider login state is not treated as a Resources.co session.
 
 The session identity is upserted into strict `users` and `user_identities`
 tables through the web libSQL client before the session is issued. Bunny
