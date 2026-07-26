@@ -268,6 +268,7 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
   await assert.doesNotReject(page.getByText("Edge safe", { exact: true }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Log in" }).waitFor());
   const edgeTheme = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];

@@ -7,6 +7,8 @@ import {
   pathToObjectKey,
   storageObjectUrl,
 } from "../../../examples/resources-site/edge/models.js";
+import { createAuthConfig } from "../../../examples/resources-site/auth/github.js";
+import { seal } from "../../../examples/resources-site/auth/session.js";
 
 const config = createEdgeConfig({
   BUNNY_STORAGE_ORIGIN: "https://storage.example.test/zone",
@@ -98,4 +100,39 @@ test("edge handler fails closed on storage redirects and manifest failures", asy
     logger: { error() {} },
   });
   assert.equal((await invalidHandler(new Request("https://resources.example/about"))).status, 503);
+});
+
+test("edge HTML renders escaped session identity without executable browser code", async () => {
+  const authConfig = createAuthConfig({
+    PUBLIC_ORIGIN: "https://resources.example",
+    GITHUB_CLIENT_ID: "client",
+    GITHUB_CLIENT_SECRET: "secret",
+    SESSION_SIGNING_KEY: "a-production-secret-must-be-longer-than-this",
+  });
+  const session = await seal({
+    v: 1,
+    sub: "github:42",
+    login: "<script>alert(1)</script>",
+    name: "Unsafe",
+    iat: 1,
+    exp: 20_000,
+  }, authConfig.sessionSecret);
+  const html = `<main><aside class="box userbar edge-status" data-screen-label="runtime-status"><span>Edge safe</span></aside></main>`;
+  const handler = createResourcesEdgeHandler({
+    config,
+    authConfig,
+    now: () => 10_000,
+    fetchImpl: async (request) => request.url.endsWith("/manifest.json")
+      ? Response.json(manifest)
+      : new Response(html),
+  });
+  const response = await handler(new Request("https://resources.example/", {
+    headers: { cookie: `__Host-resources_session=${session}` },
+  }));
+  const body = await response.text();
+  assert.match(body, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(body, /<script>/);
+  assert.match(body, /method="post" action="\/logout"/);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("vary"), "cookie");
 });

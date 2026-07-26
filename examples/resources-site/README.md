@@ -50,7 +50,7 @@ designs:
 
 | Local `resources-co` | Edge `resources-edge` |
 | --- | --- |
-| QuickJS-backed account popovers | Static, truthful runtime/account status |
+| QuickJS-backed account popovers | Server-rendered GitHub session status |
 | Client theme toggle | Default theme rendered at build time |
 | Responsive JavaScript hamburger | Always-available document links on narrow screens |
 | Prefetch and sanitized DOM swaps | Ordinary full-document navigation |
@@ -138,12 +138,18 @@ that sequence and checks header visibility, routes, and stored state. The auth
 card's `dom-use` definition is composed from the auth module just like the user
 menu capability.
 
-The Bunny/document profile intentionally does not publish `/login` or `/signup`
-yet. Its CSP forbids the simulation script, and exposing inert provider buttons
-would be misleading. A production adapter must add authorization-start and
-callback endpoints, signed HTTP-only session cookies, provider state/nonce/PKCE
-validation, identity persistence, and authorization checks before those routes
-are enabled at the edge.
+The Bunny/document profile now implements GitHub OAuth at `/login` and
+`/signup`. It validates signed state and PKCE, exchanges the code only at the
+edge, fetches the GitHub identity, discards the provider token, and issues a
+signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
+script-free: the edge replaces one bounded account-status island with escaped
+guest or session markup and marks personalized documents `private, no-store`.
+GitLab, Google, and Apple remain preview-only until separate adapters exist.
+
+The session establishes identity but does not yet create a durable Resources.co
+account. Bunny Database is the intended adapter for user, organization, and
+project models; its credentials stay in the edge environment and never enter
+the session or browser.
 
 The July 22 reference also expands the application beyond authentication. The
 next implementation slices, in dependency order, are:
@@ -152,7 +158,7 @@ next implementation slices, in dependency order, are:
 2. Explore, Blog, and organization routes from shared declarative models;
 3. the New project workflow backed by a real model and storage adapter;
 4. Terms and Privacy document routes;
-5. production session and OAuth adapters, followed by edge enablement.
+5. durable account/project models on Bunny Database.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.
@@ -236,9 +242,22 @@ the edge security headers.
    - `BUNNY_BUCKET_PREFIX`: export subdirectory, default `resources-co`.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
+   - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
+   - `GITHUB_CLIENT_ID`: GitHub OAuth or GitHub App client ID.
+   - `GITHUB_CLIENT_SECRET`: an environment **secret**.
+   - `SESSION_SIGNING_KEY`: a random environment **secret** of at least 32
+     bytes; rotating it signs everyone out.
 
 4. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
    non-GET request before publishing.
+5. Register `${PUBLIC_ORIGIN}/auth/github/callback` as the GitHub authorization
+   callback URL. Test login, callback rejection with altered state, signed-in
+   rendering, and POST `/logout` before directing production DNS to the script.
+
+Bunny supports script environment variables/secrets and exposes Bunny Database
+credentials to scripts as `BUNNY_DATABASE_URL` and
+`BUNNY_DATABASE_AUTH_TOKEN`. Keep the Storage, GitHub, session, and future
+database credentials as separate authorities.
 
 `BUNNY_ORIGIN` remains accepted as a compatibility alias, but new deployments
 should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
