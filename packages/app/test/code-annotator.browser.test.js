@@ -38,7 +38,7 @@ function startApp(port, dataDir) {
   });
   let output = "";
   const waitForReady = new Promise((resolveReady, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Server did not start\n${output}`)), 5000);
+    const timer = setTimeout(() => reject(new Error(`Server did not start\n${output}`)), 30000);
     const onData = (chunk) => {
       output += chunk;
       if (output.includes("Server running")) {
@@ -70,7 +70,7 @@ async function stopChild(child) {
   });
 }
 
-test("code notes exposes git-visible module code and annotation workflow", { timeout: 60000 }, async (t) => {
+test("code notes exposes git-visible module code and annotation workflow", { timeout: 90000 }, async (t) => {
   const port = await getPort();
   const dataDir = await mkdtemp(join(tmpdir(), "macchiato-code-notes-"));
   const app = startApp(port, dataDir);

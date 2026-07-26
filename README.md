@@ -10,7 +10,7 @@ their own.
 
 | Component | Description |
 |-----------|-------------|
-| `@macchiato-dev/app` | Cross-runtime HTTP server. Routes by subdomain, serves SQLite-backed pages and sites, exposes built-in development apps, serves cached font assets, and falls back to directory-backed sites for older examples. |
+| `@macchiato-dev/app` | Cross-runtime HTTP server. Routes only declaratively registered apps by subdomain and serves their handlers or SQLite-backed content. |
 | `@macchiato-dev/macchiato` | CLI and interactive shell for managing the local Macchiato database: sites, schemas, routes, fonts, and server lifecycle helpers. |
 | `@macchiato-dev/app-db-sqlite` | SQLite storage layer for app configuration. Owns schema creation, migrations, query helpers, and prepared-statement-backed access for the app database without becoming a full ORM. |
 | `@macchiato-dev/site` | SSR site framework for full HTML documents, route rows, transition policy, trusted pre-sanitized page swaps, and fallback navigation. |
@@ -37,6 +37,9 @@ implementation capabilities that can also be used directly where lower-level
 HTML or CSS validation is needed.
 
 ## Examples
+
+App installation, dependency mapping, and the minimal default are described in
+[Declarative apps](docs/declarative-apps.md).
 
 | Example | Description |
 |---------|-------------|
@@ -128,7 +131,7 @@ node packages/macchiato/src/macchiato.js site add-page \
   @macchiato-dev/style-use@0.0.1/basic.json \
   --title "Neighborhood Library"
 
-node packages/app/src/index.js
+node packages/app/src/index.js --app-plugin dom-use-todos
 ```
 
 Then open:

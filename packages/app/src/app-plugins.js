@@ -78,7 +78,10 @@ apps["resources-design"] = {
     handler: "raw-file",
     permissions: {},
     access: {},
-    options: {},
+    options: {
+      file: "resourcesco-standalone-20260617.html",
+      contentType: "text/html; charset=utf-8",
+    },
   },
   setup(db, { subdomain }) {
     addFileSiteIfMissing(db, {
