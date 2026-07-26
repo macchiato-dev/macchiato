@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
@@ -23,8 +23,10 @@ export function getDbPathForOptions(options = {}) {
 
 export function withDb(fn, options = {}) {
   const dbPath = getDbPathForOptions(options);
-  mkdirSync(dirname(dbPath), { recursive: true });
+  mkdirSync(dirname(dbPath), { recursive: true, mode: 0o700 });
+  chmodSync(dirname(dbPath), 0o700);
   const db = new DatabaseSync(dbPath);
+  chmodSync(dbPath, 0o600);
   initSqliteStore(db);
   try {
     return fn(db);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
@@ -81,7 +81,8 @@ if (dbPath) {
 
 if (dataDir) {
   try {
-    mkdirSync(dataDir, { recursive: true });
+    mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+    chmodSync(dataDir, 0o700);
   } catch (err) {
     console.error(`Error: cannot create data directory ${dataDir}`);
     console.error(`  ${err.message}`);
@@ -93,6 +94,7 @@ if (dataDir) {
 }
 
 const db = new DatabaseSync(dbPath);
+chmodSync(dbPath, 0o600);
 initSqliteStore(db);
 if (appPlugins.length > 0) installAppPlugins(db, appPlugins, { mappings: appMappings });
 else if (appInit) initializeAppsIfEmpty(db, ["core"], { mappings: appMappings });

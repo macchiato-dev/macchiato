@@ -24,10 +24,10 @@ test("linear migrations initialize an isolated app sqlite database", async () =>
 
   try {
     initSqliteStore(db);
-    assert.equal(appDbVersion(db), 1);
+    assert.equal(appDbVersion(db), 2);
 
     const tables = tableNames(db);
-    for (const name of ["app_db_migrations", "sites", "schemas", "site_pages", "site_files", "app_configs", "site_routes", "font_assets"]) {
+    for (const name of ["app_db_migrations", "sites", "schemas", "site_pages", "site_files", "app_configs", "app_environment", "site_routes", "font_assets"]) {
       assert.equal(tables.has(name), true, `${name} table exists`);
     }
 
@@ -48,8 +48,8 @@ test("linear migrations initialize an isolated app sqlite database", async () =>
     assert.ok(listConfiguredSites(db).some((site) => site.subdomain === "docs"));
 
     initSqliteStore(db);
-    assert.equal(appDbVersion(db), 1);
-    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM app_db_migrations").get().count, 1);
+    assert.equal(appDbVersion(db), 2);
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM app_db_migrations").get().count, 2);
   } finally {
     db.close();
     await rm(dir, { recursive: true, force: true });

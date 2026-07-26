@@ -111,6 +111,36 @@ export function removeAppConfig(db, subdomain) {
   cachedStatement(db, querySql.appConfigs.remove).run(subdomain);
 }
 
+function environmentKey(subdomain, name) {
+  return `${subdomain}\u0000${name}`;
+}
+
+export function setAppEnvironmentValue(db, subdomain, name, value, { secret = false } = {}) {
+  cachedStatement(db, querySql.appEnvironment.upsert).run(
+    environmentKey(subdomain, name),
+    subdomain,
+    name,
+    value,
+    secret ? 1 : 0,
+  );
+}
+
+export function listAppEnvironment(db, subdomain) {
+  return cachedStatement(db, querySql.appEnvironment.list).all(subdomain);
+}
+
+export function readAppEnvironment(db, subdomain) {
+  return Object.fromEntries(
+    cachedStatement(db, querySql.appEnvironment.listValues)
+      .all(subdomain)
+      .map((row) => [row.name, row.value]),
+  );
+}
+
+export function removeAppEnvironmentValue(db, subdomain, name) {
+  return cachedStatement(db, querySql.appEnvironment.remove).run(environmentKey(subdomain, name));
+}
+
 export function listConfiguredSites(db) {
   const { siteLists } = querySql;
   return [

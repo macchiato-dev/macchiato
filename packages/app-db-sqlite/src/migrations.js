@@ -2,7 +2,7 @@ import { initFontCache } from "@macchiato-dev/font-use";
 import { initSiteDb } from "@macchiato-dev/site";
 import { querySql, schemaSql } from "./sql.js";
 
-export const APP_DB_SQLITE_VERSION = 1;
+export const APP_DB_SQLITE_VERSION = 2;
 
 export const migrations = [
   {
@@ -16,6 +16,13 @@ export const migrations = [
       db.exec(schemaSql.appConfigs);
       initFontCache(db);
       initSiteDb(db);
+    },
+  },
+  {
+    version: 2,
+    name: "add app-scoped environment",
+    up(db) {
+      db.exec(schemaSql.appEnvironment);
     },
   },
 ];

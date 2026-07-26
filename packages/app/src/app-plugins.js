@@ -22,7 +22,7 @@ function declarationForBuiltin(app) {
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
-  const { aliases, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, ...base } = app;
+  const { aliases, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, ...base } = app;
   return {
     ...base,
     handler,
@@ -42,6 +42,7 @@ function declarationForBuiltin(app) {
       schemas: schemas || [],
       site,
       adapter,
+      environment,
     },
   };
 }
