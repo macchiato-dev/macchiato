@@ -180,7 +180,7 @@
       "children": ["#text"]
     },
     "path": {
-      "attrs": ["d"],
+      "attrs": ["d", "fill"],
       "children": []
     },
     "script": {
@@ -207,7 +207,7 @@
   "limits": {
     "maxTextLength": 12000,
     "maxAttributeNameLength": 64,
-    "maxAttributeValueLength": 260,
+    "maxAttributeValueLength": 1600,
     "maxAttributes": 10,
     "maxNodes": 260
   },

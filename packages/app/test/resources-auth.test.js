@@ -13,7 +13,14 @@ test("Resources auth declaration supports simulated and document-runtime provide
   const edgeHtml = renderResourcesAuthBlock("login", { documentRuntime: true });
   assert.match(edgeHtml, /href="\/auth\/github\/start"/);
   assert.match(edgeHtml, /href="\/auth\/gitlab\/start"/);
-  assert.match(edgeHtml, /auth-provider--disabled[\s\S]*Continue with Google[\s\S]*Soon/);
+  assert.match(edgeHtml, /auth-provider__mark--github"><svg/);
+  assert.match(edgeHtml, /auth-provider__mark--gitlab"><svg/);
+  assert.equal(resourcesDomSchema().nodes.path.attrs.includes("fill"), true);
+  assert.doesNotMatch(edgeHtml, /Continue with Google|Continue with Apple|Soon/);
+  assert.match(
+    renderResourcesAuthBlock("login", { documentRuntime: true, showUnavailableProviders: true }),
+    /auth-provider--disabled[\s\S]*Continue with Google[\s\S]*Soon/,
+  );
 });
 
 test("Resources auth declaration composes its auth card into dom-use", () => {
