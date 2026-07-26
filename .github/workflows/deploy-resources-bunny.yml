@@ -1,0 +1,53 @@
+name: Deploy Resources.co to Bunny
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: resources-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.7.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - run: npm ci
+
+      - name: Build validated site and edge bundle
+        run: ./scripts/build-resources-bunny.sh
+
+      - name: Upload immutable site export
+        env:
+          STORAGE_API_KEY: ${{ secrets.BUNNY_STORAGE_UPLOAD_KEY }}
+          STORAGE_ORIGIN: ${{ vars.BUNNY_STORAGE_UPLOAD_ORIGIN }}
+          STORAGE_PREFIX: ${{ vars.BUNNY_BUCKET_PREFIX }}
+        run: |
+          test -n "$STORAGE_API_KEY"
+          test -n "$STORAGE_ORIGIN"
+          test -n "$STORAGE_PREFIX"
+          find dist/resources-bunny/site -type f -print0 |
+            while IFS= read -r -d '' file; do
+              key="${file#dist/resources-bunny/site/}"
+              curl --fail --silent --show-error \
+                --request PUT \
+                --header "AccessKey: $STORAGE_API_KEY" \
+                --upload-file "$file" \
+                "${STORAGE_ORIGIN%/}/${STORAGE_PREFIX#/}/$key"
+            done
+
+      - name: Deploy standalone Edge Script
+        uses: BunnyWay/actions/deploy-script@main
+        with:
+          script_id: ${{ secrets.BUNNY_SCRIPT_ID }}
+          deploy_key: ${{ secrets.BUNNY_DEPLOY_KEY }}
+          file: dist/resources-bunny/resources-bunny.js

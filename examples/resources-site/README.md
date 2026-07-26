@@ -230,6 +230,17 @@ the edge security headers.
 
 ## Bunny deployment
 
+For a reproducible local build:
+
+```sh
+./scripts/build-resources-bunny.sh
+```
+
+This produces a single Edge Script at
+`dist/resources-bunny/resources-bunny.js` and the validated Storage objects at
+`dist/resources-bunny/site`. The bundle is currently about 28 KB, well below
+Bunny's 10 MB script limit.
+
 1. Upload the *contents* of `examples/resources-site/exported` beneath the
    configured `BUNNY_BUCKET_PREFIX` in a private Bunny Storage zone.
 2. Create a Bunny standalone Edge Script connected to this repository. Use
@@ -258,6 +269,23 @@ Bunny supports script environment variables/secrets and exposes Bunny Database
 credentials to scripts as `BUNNY_DATABASE_URL` and
 `BUNNY_DATABASE_AUTH_TOKEN`. Keep the Storage, GitHub, session, and future
 database credentials as separate authorities.
+
+The manual GitHub Actions workflow
+`.github/workflows/deploy-resources-bunny.yml` builds both artifacts, uploads
+the site, then deploys the standalone script. Configure its
+`resources-production` environment with:
+
+| Kind | Name |
+| --- | --- |
+| GitHub secret | `BUNNY_STORAGE_UPLOAD_KEY` |
+| GitHub secret | `BUNNY_SCRIPT_ID` |
+| GitHub secret | `BUNNY_DEPLOY_KEY` |
+| GitHub variable | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
+| GitHub variable | `BUNNY_BUCKET_PREFIX` |
+
+The upload key is CI-only. The Edge Script receives a separate read-only
+`STORAGE_API_KEY` through Bunny. Use environment protection/approval for the
+production workflow.
 
 `BUNNY_ORIGIN` remains accepted as a compatibility alias, but new deployments
 should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
