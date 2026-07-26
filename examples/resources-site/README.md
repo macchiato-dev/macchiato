@@ -138,18 +138,21 @@ that sequence and checks header visibility, routes, and stored state. The auth
 card's `dom-use` definition is composed from the auth module just like the user
 menu capability.
 
-The Bunny/document profile now implements GitHub OAuth at `/login` and
-`/signup`. It validates signed state and PKCE, exchanges the code only at the
-edge, fetches the GitHub identity, discards the provider token, and issues a
+The Bunny/document profile now implements GitHub and GitLab OAuth at `/login`
+and `/signup`. Both validate signed state and PKCE, exchange the code only at
+the edge, fetch the provider identity, discard the provider token, and issue a
 signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
 script-free: the edge replaces one bounded account-status island with escaped
 guest or session markup and marks personalized documents `private, no-store`.
-GitLab, Google, and Apple remain preview-only until separate adapters exist.
+Google and Apple remain preview-only until separate adapters exist.
 
-The session establishes identity but does not yet create a durable Resources.co
-account. Bunny Database is the intended adapter for user, organization, and
-project models; its credentials stay in the edge environment and never enter
-the session or browser.
+The session identity is upserted into strict `users` and `user_identities`
+tables through the web libSQL client before the session is issued. Bunny
+Database supplies the production transport and automatically injects
+`BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN` when connected to the
+script. Its credentials never enter the session or browser. Provider identities
+remain separate rows so account-linking policy can be added without changing
+OAuth callbacks.
 
 The July 22 reference also expands the application beyond authentication. The
 next implementation slices, in dependency order, are:
@@ -158,7 +161,8 @@ next implementation slices, in dependency order, are:
 2. Explore, Blog, and organization routes from shared declarative models;
 3. the New project workflow backed by a real model and storage adapter;
 4. Terms and Privacy document routes;
-5. durable account/project models on Bunny Database.
+5. organization and project models on Bunny Database, followed by explicit
+   cross-provider account linking.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.
@@ -238,7 +242,7 @@ For a reproducible local build:
 
 This produces a single Edge Script at
 `dist/resources-bunny/resources-bunny.js` and the validated Storage objects at
-`dist/resources-bunny/site`. The bundle is currently about 28 KB, well below
+`dist/resources-bunny/site`. The bundle is currently about 185 KB, well below
 Bunny's 10 MB script limit.
 
 1. Upload the *contents* of `examples/resources-site/exported` beneath the
@@ -256,19 +260,30 @@ Bunny's 10 MB script limit.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
    - `GITHUB_CLIENT_ID`: GitHub OAuth or GitHub App client ID.
    - `GITHUB_CLIENT_SECRET`: an environment **secret**.
+   - `GITLAB_CLIENT_ID`: GitLab OAuth application ID.
+   - `GITLAB_CLIENT_SECRET`: an environment **secret**.
    - `SESSION_SIGNING_KEY`: a random environment **secret** of at least 32
      bytes; rotating it signs everyone out.
+   - `BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN`: added by connecting
+     the staging Bunny Database to the script.
 
 4. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
    non-GET request before publishing.
-5. Register `${PUBLIC_ORIGIN}/auth/github/callback` as the GitHub authorization
-   callback URL. Test login, callback rejection with altered state, signed-in
+5. Start with `PUBLIC_ORIGIN=https://staging.resources.co` (or the chosen
+   staging hostname). Register these exact callback URLs:
+
+   - `${PUBLIC_ORIGIN}/auth/github/callback`
+   - `${PUBLIC_ORIGIN}/auth/gitlab/callback`
+
+   Test both providers, callback rejection with altered state, signed-in
    rendering, and POST `/logout` before directing production DNS to the script.
 
-Bunny supports script environment variables/secrets and exposes Bunny Database
-credentials to scripts as `BUNNY_DATABASE_URL` and
-`BUNNY_DATABASE_AUTH_TOKEN`. Keep the Storage, GitHub, session, and future
-database credentials as separate authorities.
+Bunny Database is libSQL-based and SQLite-compatible, which is why the account
+model uses ordinary SQLite SQL and parameter placeholders. It is currently a
+public-preview service, so staging should exercise migrations, concurrent
+identity upserts, replication behavior, backup/export, and rollback before
+production. Keep the Storage, provider, session, and database credentials as
+separate authorities.
 
 The manual GitHub Actions workflow
 `.github/workflows/deploy-resources-bunny.yml` builds both artifacts, uploads

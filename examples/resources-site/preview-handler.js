@@ -3,6 +3,7 @@ import { createResourcesEdgeHandler } from "./edge/app.js";
 import { createEdgeConfig } from "./edge/models.js";
 import { createMemoryStorageAdapter } from "./adapters/memory-storage.js";
 import { createAuthConfig } from "./auth/github.js";
+import { createGitlabAuthConfig } from "./auth/gitlab.js";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
@@ -27,7 +28,11 @@ const authConfig = createAuthConfig({
   GITHUB_CLIENT_SECRET: "local-preview-not-a-provider-secret",
   SESSION_SIGNING_KEY: "local-preview-session-signing-key",
 });
-const handler = createResourcesEdgeHandler({ config, authConfig, fetchImpl });
+const gitlabAuthConfig = createGitlabAuthConfig({
+  GITLAB_CLIENT_ID: "local-preview",
+  GITLAB_CLIENT_SECRET: "local-preview-not-a-provider-secret",
+}, authConfig);
+const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, fetchImpl });
 
 export function resourcesEdgePreviewHandler(request) {
   return handler(request);
