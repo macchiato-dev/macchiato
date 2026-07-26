@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { addFileSiteIfMissing, listAppConfigRows, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
+import { addFileSite, listAppConfigRows, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
 import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
 import { BUILTIN_APPS } from "./builtin-apps.js";
 import { packageBrowserHandler } from "./package-browser.js";
@@ -79,15 +79,16 @@ apps["resources-design"] = {
     permissions: {},
     access: {},
     options: {
-      file: "resourcesco-standalone-20260617.html",
+      file: "resourcesco-standalone-20260722.html",
       contentType: "text/html; charset=utf-8",
+      cors: "*",
     },
   },
   setup(db, { subdomain }) {
-    addFileSiteIfMissing(db, {
+    addFileSite(db, {
       subdomain,
       title: "Resources.co Design",
-      filePath: join(repoRoot, "resourcesco-standalone-20260617.html"),
+      filePath: join(repoRoot, "resourcesco-standalone-20260722.html"),
       contentType: "text/html; charset=utf-8",
     });
   },

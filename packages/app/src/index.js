@@ -406,6 +406,7 @@ async function route(request) {
         path: fileSite.path,
         contentType: fileSite.contentType,
         csp: fileSite.csp,
+        cors: app.options.cors,
       },
     });
   }
