@@ -19,6 +19,13 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   const login = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/login"));
   assert.equal(login.status, 200);
   const loginHtml = await login.text();
+  assert.match(loginHtml, /<main class="layout document-runtime auth-layout"/);
+  assert.match(loginHtml, /class="box block auth-card"/);
+  assert.match(loginHtml, /Log in to Resources\.co/);
   assert.match(loginHtml, /Continue with GitHub/);
   assert.match(loginHtml, /Continue with GitLab/);
+  assert.match(loginHtml, /Continue with Google/);
+  assert.match(loginHtml, /secured by OAuth/);
+  assert.match(loginHtml, /href="\/signup"/);
+  assert.match(loginHtml, /class="box footer"/);
 });

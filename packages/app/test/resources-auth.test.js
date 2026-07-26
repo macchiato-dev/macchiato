@@ -3,13 +3,17 @@ import test from "node:test";
 import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "../../../examples/resources-site/components/auth.js";
 import { resourcesDomSchema } from "../../../examples/resources-site/seed.js";
 
-test("Resources auth declaration separates simulated providers from future server adapters", () => {
+test("Resources auth declaration supports simulated and document-runtime provider adapters", () => {
   assert.equal(RESOURCES_AUTH.mode, "simulated-provider-adapter");
   assert.deepEqual(RESOURCES_AUTH.providers.map(({ key }) => key), ["github", "gitlab", "google", "apple"]);
   assert.equal(resourcesAuthRoute("login").title, "Log in - Resources.co");
   assert.equal(resourcesAuthRoute("signup").blocks[0].mode, "signup");
   assert.match(renderResourcesAuthBlock("signup"), /Create your account/);
-  assert.match(renderResourcesAuthBlock("login"), /no account is created/);
+  assert.match(renderResourcesAuthBlock("login"), /provider authorization is simulated/);
+  const edgeHtml = renderResourcesAuthBlock("login", { documentRuntime: true });
+  assert.match(edgeHtml, /href="\/auth\/github\/start"/);
+  assert.match(edgeHtml, /href="\/auth\/gitlab\/start"/);
+  assert.match(edgeHtml, /auth-provider--disabled[\s\S]*Continue with Google[\s\S]*Soon/);
 });
 
 test("Resources auth declaration composes its auth card into dom-use", () => {
