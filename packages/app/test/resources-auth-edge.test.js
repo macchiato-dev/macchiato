@@ -30,6 +30,26 @@ test("GitHub auth uses signed state, PKCE, and a secure flow cookie", async () =
   assert.match(response.headers.get("set-cookie"), /HttpOnly; Secure; SameSite=Lax/);
 });
 
+test("local callback mode is explicit and limited to loopback-style hosts", async () => {
+  const values = {
+    PUBLIC_ORIGIN: "http://resources-edge.localhost:3030",
+    GITHUB_CLIENT_ID: "local-client",
+    GITHUB_CLIENT_SECRET: "local-secret",
+    SESSION_SIGNING_KEY: "local-session-key-with-at-least-32-characters",
+  };
+  assert.throws(() => createAuthConfig(values), /HTTPS origin/);
+  assert.throws(() => createAuthConfig({
+    ...values,
+    PUBLIC_ORIGIN: "http://example.test",
+    AUTH_ALLOW_INSECURE_LOCALHOST: "true",
+  }), /HTTPS origin/);
+
+  const local = createAuthConfig({ ...values, AUTH_ALLOW_INSECURE_LOCALHOST: "true" });
+  const response = await startGithubAuth(local, () => 1_000);
+  assert.equal(new URL(response.headers.get("location")).searchParams.get("redirect_uri"), "http://resources-edge.localhost:3030/auth/github/callback");
+  assert.doesNotMatch(response.headers.get("set-cookie"), /; Secure/);
+});
+
 test("GitHub callback validates state and creates a signed identity session", async () => {
   const start = await startGithubAuth(config, () => 1_000);
   const authorize = new URL(start.headers.get("location"));

@@ -55,8 +55,10 @@ export function parseCookies(header) {
   return cookies;
 }
 
-export function cookie(name, value, { maxAge, path = "/", sameSite = "Lax" } = {}) {
-  const parts = [`${name}=${value}`, `Path=${path}`, "HttpOnly", "Secure", `SameSite=${sameSite}`];
+export function cookie(name, value, { maxAge, path = "/", sameSite = "Lax", secure = true } = {}) {
+  const parts = [`${name}=${value}`, `Path=${path}`, "HttpOnly"];
+  if (secure) parts.push("Secure");
+  parts.push(`SameSite=${sameSite}`);
   if (maxAge !== undefined) parts.push(`Max-Age=${Math.max(0, Math.floor(maxAge))}`);
   return parts.join("; ");
 }

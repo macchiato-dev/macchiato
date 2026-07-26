@@ -15,6 +15,7 @@ export function createGitlabAuthConfig(env = {}, sessionConfig) {
     publicOrigin: sessionConfig.publicOrigin,
     sessionSecret: sessionConfig.sessionSecret,
     sessionSeconds: sessionConfig.sessionSeconds,
+    secureCookies: sessionConfig.secureCookies,
     clientId: required(env.GITLAB_CLIENT_ID, "GITLAB_CLIENT_ID"),
     clientSecret: required(env.GITLAB_CLIENT_SECRET, "GITLAB_CLIENT_SECRET"),
   });
@@ -39,7 +40,7 @@ export async function startGitlabAuth(config, now = Date.now) {
   target.searchParams.set("scope", "read_user");
   target.searchParams.set("code_challenge", await pkceChallenge(verifier));
   target.searchParams.set("code_challenge_method", "S256");
-  return redirect(target.href, cookie(STATE_COOKIE, flow, { maxAge: 600 }));
+  return redirect(target.href, cookie(STATE_COOKIE, flow, { maxAge: 600, secure: config.secureCookies }));
 }
 
 export async function finishGitlabAuth(request, config, { fetchImpl = fetch, now = Date.now, accountStore = null } = {}) {
@@ -88,7 +89,7 @@ export async function finishGitlabAuth(request, config, { fetchImpl = fetch, now
     exp: issuedAt + config.sessionSeconds * 1000,
   }, config.sessionSecret);
   const headers = new Headers({ location: config.publicOrigin, "cache-control": "no-store" });
-  headers.append("set-cookie", cookie(SESSION_COOKIE, session, { maxAge: config.sessionSeconds }));
-  headers.append("set-cookie", cookie(STATE_COOKIE, "", { maxAge: 0 }));
+  headers.append("set-cookie", cookie(SESSION_COOKIE, session, { maxAge: config.sessionSeconds, secure: config.secureCookies }));
+  headers.append("set-cookie", cookie(STATE_COOKIE, "", { maxAge: 0, secure: config.secureCookies }));
   return new Response(null, { status: 302, headers });
 }

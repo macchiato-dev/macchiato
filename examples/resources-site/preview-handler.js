@@ -21,16 +21,24 @@ const config = createEdgeConfig({
   MANIFEST_TTL_MS: "300000",
 });
 const artifactSet = createResourcesArtifactSet({ theme: resourcesEdgePreviewConfig.theme, generatedAt: "local-preview" });
-const fetchImpl = createMemoryStorageAdapter({ config, artifactSet });
+const storageFetch = createMemoryStorageAdapter({ config, artifactSet });
+const fetchImpl = (input, init) => {
+  const url = new URL(input instanceof Request ? input.url : input);
+  return url.origin === new URL(config.storageOrigin).origin
+    ? storageFetch(input, init)
+    : fetch(input, init);
+};
+const previewEnv = globalThis.process?.env || {};
 const authConfig = createAuthConfig({
-  PUBLIC_ORIGIN: "https://resources-edge.localhost",
-  GITHUB_CLIENT_ID: "local-preview",
-  GITHUB_CLIENT_SECRET: "local-preview-not-a-provider-secret",
-  SESSION_SIGNING_KEY: "local-preview-session-signing-key",
+  PUBLIC_ORIGIN: previewEnv.RESOURCES_PREVIEW_ORIGIN || "http://resources-edge.localhost:3030",
+  AUTH_ALLOW_INSECURE_LOCALHOST: "true",
+  GITHUB_CLIENT_ID: previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_ID || "local-preview",
+  GITHUB_CLIENT_SECRET: previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
+  SESSION_SIGNING_KEY: previewEnv.RESOURCES_PREVIEW_SESSION_SIGNING_KEY || "local-preview-session-signing-key",
 });
 const gitlabAuthConfig = createGitlabAuthConfig({
-  GITLAB_CLIENT_ID: "local-preview",
-  GITLAB_CLIENT_SECRET: "local-preview-not-a-provider-secret",
+  GITLAB_CLIENT_ID: previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_ID || "local-preview",
+  GITLAB_CLIENT_SECRET: previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
 }, authConfig);
 const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, fetchImpl });
 

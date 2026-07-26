@@ -11,8 +11,10 @@ function required(value, name) {
 
 export function createAuthConfig(env = {}) {
   const origin = new URL(required(env.PUBLIC_ORIGIN, "PUBLIC_ORIGIN"));
-  if (origin.protocol !== "https:" || origin.pathname !== "/" || origin.search || origin.hash) {
-    throw new Error("PUBLIC_ORIGIN must be an HTTPS origin");
+  const localHost = origin.hostname === "localhost" || origin.hostname === "127.0.0.1" || origin.hostname === "::1" || origin.hostname.endsWith(".localhost");
+  const allowLocalHttp = env.AUTH_ALLOW_INSECURE_LOCALHOST === "true" && localHost;
+  if ((origin.protocol !== "https:" && !(origin.protocol === "http:" && allowLocalHttp)) || origin.pathname !== "/" || origin.search || origin.hash) {
+    throw new Error("PUBLIC_ORIGIN must be an HTTPS origin or explicitly allowed local HTTP origin");
   }
   const sessionSecret = required(env.SESSION_SIGNING_KEY, "SESSION_SIGNING_KEY");
   if (sessionSecret.length < 32) throw new Error("SESSION_SIGNING_KEY must contain at least 32 characters");
@@ -21,6 +23,7 @@ export function createAuthConfig(env = {}) {
     clientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
     clientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
     sessionSecret,
+    secureCookies: !allowLocalHttp,
     sessionSeconds: 60 * 60 * 24 * 14,
   });
 }
@@ -42,7 +45,7 @@ export async function startGithubAuth(config, now = Date.now) {
   target.searchParams.set("code_challenge", await pkceChallenge(verifier));
   target.searchParams.set("code_challenge_method", "S256");
   target.searchParams.set("scope", "read:user");
-  return redirect(target.href, cookie(STATE_COOKIE, flow, { maxAge: 600 }));
+  return redirect(target.href, cookie(STATE_COOKIE, flow, { maxAge: 600, secure: config.secureCookies }));
 }
 
 export async function finishGithubAuth(request, config, { fetchImpl = fetch, now = Date.now, accountStore = null } = {}) {
@@ -95,8 +98,8 @@ export async function finishGithubAuth(request, config, { fetchImpl = fetch, now
     exp: issuedAt + config.sessionSeconds * 1000,
   }, config.sessionSecret);
   const headers = new Headers({ location: config.publicOrigin, "cache-control": "no-store" });
-  headers.append("set-cookie", cookie(SESSION_COOKIE, session, { maxAge: config.sessionSeconds }));
-  headers.append("set-cookie", cookie(STATE_COOKIE, "", { maxAge: 0 }));
+  headers.append("set-cookie", cookie(SESSION_COOKIE, session, { maxAge: config.sessionSeconds, secure: config.secureCookies }));
+  headers.append("set-cookie", cookie(STATE_COOKIE, "", { maxAge: 0, secure: config.secureCookies }));
   return new Response(null, { status: 302, headers });
 }
 
@@ -106,5 +109,5 @@ export async function readSession(request, config, now = Date.now) {
 }
 
 export function signOut(config) {
-  return redirect(config.publicOrigin, cookie(SESSION_COOKIE, "", { maxAge: 0 }));
+  return redirect(config.publicOrigin, cookie(SESSION_COOKIE, "", { maxAge: 0, secure: config.secureCookies }));
 }
