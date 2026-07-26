@@ -24,7 +24,7 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(loginHtml, /Log in to Resources\.co/);
   assert.match(loginHtml, /Continue with GitHub/);
   assert.match(loginHtml, /Continue with GitLab/);
-  assert.match(loginHtml, /Continue with Google/);
+  assert.doesNotMatch(loginHtml, /Continue with Google|Continue with Apple|Soon/);
   assert.match(loginHtml, /secured by OAuth/);
   assert.match(loginHtml, /href="\/signup"/);
   assert.match(loginHtml, /class="box footer"/);

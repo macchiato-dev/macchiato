@@ -570,8 +570,8 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .auth-providers { display: grid; gap: 10px; margin-top: 22px; }
 .auth-provider { min-height: 52px; border: 1px solid var(--track-border); border-radius: 12px; padding: 11px 16px; background: var(--track); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; text-decoration: none; }
 .auth-provider:hover { border-color: var(--accent); }
-.auth-provider__mark { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: var(--bg); background: #30364f; font-size: 9px; font-weight: 800; }
-.auth-provider__mark--gitlab { background: #e24329; }
+.auth-provider__mark { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: var(--text); background: transparent; font-size: 9px; font-weight: 800; }
+.auth-provider__mark svg { width: 22px; height: 22px; }
 .auth-provider__mark--google { background: #4285f4; }
 .auth-provider__mark--apple { color: var(--text); background: transparent; font-size: 14px; }
 .auth-provider--disabled { opacity: 0.55; }
