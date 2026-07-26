@@ -34,7 +34,7 @@ function authStatusHtml(session) {
         <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
       </summary>
       <div class="popover edge-user-menu__panel">
-        <div class="menu__acct"><span class="ub-avatar">${escapeHtml(initials)}</span><div class="menu__acct-meta"><b>${escapeHtml(session.name)}</b><span>@${escapeHtml(session.login)} · GitLab</span></div></div>
+        <div class="menu__acct"><span class="ub-avatar">${escapeHtml(initials)}</span><div class="menu__acct-meta"><b>${escapeHtml(session.name)}</b><span>@${escapeHtml(session.login)}</span></div></div>
         <div class="menu__sep"></div>
         <a class="item" href="/">Your projects</a>
         <a class="item" href="/profile">Your profile</a>

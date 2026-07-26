@@ -92,6 +92,7 @@ export async function finishGitlabAuth(request, config, { fetchImpl = fetch, now
   const session = await seal({
     v: 1,
     sub: account.id,
+    provider: identity.provider,
     login: account.login,
     name: account.name,
     iat: issuedAt,
