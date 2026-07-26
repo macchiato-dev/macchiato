@@ -380,7 +380,7 @@ async function route(request) {
     return appDirectoryHandler(request, { db });
   }
   if (app.handler) {
-    return app.handler(request, app);
+    return app.handler(request, app, { db });
   }
 
   if (app.handlerName === "sqlite-routes" && hasSiteRoutes(db, subdomain)) {
