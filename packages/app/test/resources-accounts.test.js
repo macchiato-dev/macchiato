@@ -1,46 +1,99 @@
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
-import { createAccountStore } from "../../../examples/resources-site/models/accounts.js";
+import {
+  AccountConflictError,
+  createAccountStore,
+} from "../../../examples/resources-site/models/accounts.js";
+import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
 
-test("account model initializes SQLite-compatible schema and upserts provider identity", async () => {
-  const batches = [];
-  const client = {
-    execute() {},
-    async batch(statements) {
-      batches.push(statements);
-      return [];
-    },
-  };
-  const store = createAccountStore(client, { now: () => 1_000 });
-  const account = await store.upsertIdentity({
-    provider: "gitlab",
-    providerUserId: 84,
-    login: "latte-dev",
-    name: "Latte Dev",
+function setup() {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys = ON");
+  let id = 0;
+  const store = createAccountStore(createNodeSqliteClient(db), {
+    now: () => 1_000,
+    randomId: () => `user-${++id}`,
   });
+  return { db, store };
+}
 
-  assert.deepEqual(account, { id: "gitlab:84", login: "latte-dev", name: "Latte Dev" });
-  assert.equal(batches.length, 2);
-  assert.match(batches[0][0].sql, /CREATE TABLE IF NOT EXISTS users/);
-  assert.match(batches[0][1].sql, /CREATE TABLE IF NOT EXISTS user_identities/);
-  assert.deepEqual(batches[1][1].args.slice(0, 4), ["gitlab", "84", "gitlab:84", "latte-dev"]);
+const gitlab = {
+  provider: "gitlab",
+  providerUserId: 84,
+  login: "latte-dev",
+  name: "Latte Dev",
+  email: "Latte@example.com",
+  emailVerified: true,
+};
 
-  await store.upsertIdentity({
-    provider: "gitlab",
-    providerUserId: 84,
-    login: "latte-renamed",
-    name: "Latte Renamed",
-  });
-  assert.equal(batches.length, 3, "schema initialization is reused by the isolate");
-  assert.match(batches[2][0].sql, /ON CONFLICT\(id\) DO UPDATE/);
+test("account model creates a provider-neutral user for a verified identity", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  const account = await store.authenticateIdentity(gitlab);
+
+  assert.deepEqual(account, { id: "user-1", login: "latte-dev", name: "Latte Dev" });
+  assert.deepEqual(
+    { ...db.prepare("SELECT normalized_email, user_id FROM user_emails").get() },
+    { normalized_email: "latte@example.com", user_id: "user-1" },
+  );
+  assert.equal(db.prepare("SELECT user_id FROM user_identities").get().user_id, "user-1");
 });
 
-test("account model rejects providers outside the configured identity boundary", async () => {
-  const store = createAccountStore({ execute() {}, batch: async () => [] });
-  await assert.rejects(store.upsertIdentity({
-    provider: "unknown",
-    providerUserId: 1,
-    login: "x",
-    name: "X",
-  }), /Unsupported identity provider/);
+test("existing provider identities log in even when provider profile details change", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  await store.authenticateIdentity(gitlab);
+  const account = await store.authenticateIdentity({ ...gitlab, login: "latte-renamed", name: "Latte Renamed" });
+
+  assert.deepEqual(account, { id: "user-1", login: "latte-renamed", name: "Latte Renamed" });
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM users").get().count, 1);
+});
+
+test("matching email returns a structured conflict without linking identities", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  await store.authenticateIdentity(gitlab);
+
+  await assert.rejects(
+    store.authenticateIdentity({
+      provider: "github",
+      providerUserId: 42,
+      login: "latte",
+      name: "Latte",
+      email: "latte@EXAMPLE.com",
+      emailVerified: true,
+    }),
+    (error) => error instanceof AccountConflictError
+      && error.code === "email_taken"
+      && error.providers.join(",") === "gitlab",
+  );
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM user_identities").get().count, 1);
+});
+
+test("an authenticated account can explicitly link a second verified provider", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  const account = await store.authenticateIdentity(gitlab);
+  const linked = await store.authenticateIdentity({
+    provider: "github",
+    providerUserId: 42,
+    login: "latte",
+    name: "Latte",
+    email: "latte@example.com",
+    emailVerified: true,
+  }, { linkToUserId: account.id });
+
+  assert.equal(linked.id, account.id);
+  assert.deepEqual(
+    db.prepare("SELECT provider FROM user_identities ORDER BY provider").all().map((row) => row.provider),
+    ["github", "gitlab"],
+  );
+});
+
+test("account model requires a verified email and rejects unknown providers", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  await assert.rejects(store.authenticateIdentity({ ...gitlab, emailVerified: false }), /verified provider email/);
+  await assert.rejects(store.authenticateIdentity({ ...gitlab, provider: "unknown" }), /Unsupported identity provider/);
 });

@@ -2,8 +2,10 @@ import { createResourcesArtifactSet } from "./artifacts.js";
 import { createResourcesEdgeHandler } from "./edge/app.js";
 import { createEdgeConfig } from "./edge/models.js";
 import { createMemoryStorageAdapter } from "./adapters/memory-storage.js";
+import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
+import { createAccountStore } from "./models/accounts.js";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
@@ -31,8 +33,9 @@ const fetchImpl = (input, init) => {
 const previewEnv = globalThis.process?.env || {};
 let cachedEnvironmentKey = "";
 let cachedHandler;
+let cachedDatabase;
 
-function handlerFor(environment = {}) {
+function handlerFor(environment = {}, db = null) {
   const effective = {
     PUBLIC_ORIGIN: environment.PUBLIC_ORIGIN || previewEnv.RESOURCES_PREVIEW_ORIGIN || "http://resources-edge.localhost:3030",
     GITHUB_CLIENT_ID: environment.GITHUB_CLIENT_ID || previewEnv.RESOURCES_PREVIEW_GITHUB_CLIENT_ID || "local-preview",
@@ -42,14 +45,16 @@ function handlerFor(environment = {}) {
     SESSION_SIGNING_KEY: environment.SESSION_SIGNING_KEY || previewEnv.RESOURCES_PREVIEW_SESSION_SIGNING_KEY || "local-preview-session-signing-key",
   };
   const key = JSON.stringify(effective);
-  if (key === cachedEnvironmentKey) return cachedHandler;
+  if (key === cachedEnvironmentKey && db === cachedDatabase) return cachedHandler;
   const authConfig = createAuthConfig({ ...effective, AUTH_ALLOW_INSECURE_LOCALHOST: "true" });
   const gitlabAuthConfig = createGitlabAuthConfig(effective, authConfig);
   cachedEnvironmentKey = key;
-  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, fetchImpl });
+  cachedDatabase = db;
+  const accountStore = db ? createAccountStore(createNodeSqliteClient(db)) : null;
+  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, accountStore, fetchImpl });
   return cachedHandler;
 }
 
-export function resourcesEdgePreviewHandler(request, app = {}) {
-  return handlerFor(app.environment)(request);
+export function resourcesEdgePreviewHandler(request, app = {}, context = {}) {
+  return handlerFor(app.environment, context.db)(request);
 }
