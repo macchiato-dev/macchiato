@@ -133,6 +133,8 @@ test("edge HTML renders escaped session identity without executable browser code
   assert.match(body, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(body, /<script>/);
   assert.match(body, /method="post" action="\/logout"/);
+  assert.match(body, /@&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/span>/);
+  assert.doesNotMatch(body, / · (?:GitHub|GitLab)/);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(response.headers.get("vary"), "cookie");
 });

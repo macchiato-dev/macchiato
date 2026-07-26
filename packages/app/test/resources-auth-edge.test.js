@@ -78,6 +78,7 @@ test("GitHub callback validates state and creates a signed identity session", as
     login: "macchiato-dev",
     name: "Macchiato Dev",
   });
+  assert.equal(session.provider, "github");
 });
 
 test("GitHub callback rejects a mismatched state before making subrequests", async () => {
@@ -116,4 +117,5 @@ test("GitLab auth uses read-only identity scope, PKCE, and the shared session fo
   const session = await readSession(new Request("https://resources.example/", { headers: { cookie: sessionCookie } }), config, () => 3_000);
   assert.equal(session.sub, "gitlab:84");
   assert.equal(session.login, "latte-dev");
+  assert.equal(session.provider, "gitlab");
 });
