@@ -235,6 +235,16 @@ node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('h
   app env set resources-edge SESSION_SIGNING_KEY --stdin
 ```
 
+For a repeatable setup backed by
+[Password Store](https://www.passwordstore.org/), pipe the first line of a
+`pass` entry instead of using the interactive prompt:
+
+```sh
+pass show services/resources-edge/gitlab-client-secret | sed -n '1p' | \
+  node packages/macchiato/src/macchiato.js app env set \
+  resources-edge GITLAB_CLIENT_SECRET --stdin
+```
+
 App-environment changes are read on the next request; a server restart is not
 required. Register this GitLab development callback:
 
