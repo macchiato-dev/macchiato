@@ -46,7 +46,6 @@ export async function startGitlabAuth(config, now = Date.now) {
   target.searchParams.set("response_type", "code");
   target.searchParams.set("state", state);
   target.searchParams.set("scope", "read_user");
-  target.searchParams.set("gl_auth_type", "login");
   target.searchParams.set("code_challenge", await pkceChallenge(verifier));
   target.searchParams.set("code_challenge_method", "S256");
   return redirect(target.href, cookie(cookieNames(config).state, flow, { maxAge: 600, secure: config.secureCookies }));
