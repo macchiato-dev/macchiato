@@ -41,9 +41,10 @@ locally or the platform `fetch` against private Bunny Storage in production.
 
 Both profiles now use the Resources.co teal/blue theme by default, render the
 same brand, content, project metadata, navigation, footer, fonts, responsive
-breakpoints, and friendly URLs. The edge header includes a static `Edge safe`
-status and account identity in the same grid position as the local userbar, so
-removing the JavaScript runtime does not leave a visual hole.
+breakpoints, and friendly URLs. The edge header uses the same product-facing
+account position as the local userbar: guests see Log in and Sign up, while a
+session renders its provider identity and Sign out. Runtime diagnostics do not
+appear in the product interface.
 
 The remaining differences describe runtime capability rather than separate
 designs:

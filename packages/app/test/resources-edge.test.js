@@ -117,7 +117,7 @@ test("edge HTML renders escaped session identity without executable browser code
     iat: 1,
     exp: 20_000,
   }, authConfig.sessionSecret);
-  const html = `<main><aside class="box userbar edge-status" data-screen-label="runtime-status"><span>Edge safe</span></aside></main>`;
+  const html = `<main><aside class="box userbar edge-status" data-screen-label="runtime-status"><div>Guest account controls</div></aside></main>`;
   const handler = createResourcesEdgeHandler({
     config,
     authConfig,

@@ -131,7 +131,8 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
 
   assert.equal(response.status, 200);
   assert.match(text, /--accent: #30d5c8/);
-  assert.match(text, /Edge safe/);
+  assert.match(text, /Log in/);
+  assert.doesNotMatch(text, /Edge safe/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'none'/);
   assert.doesNotMatch(text, /type="module"|type="importmap"/);
   assert.equal(config.status, 200);
@@ -276,7 +277,6 @@ test("Resources.co edge preview renders in a real browser without page scripts",
 
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
-  await assert.doesNotReject(page.getByText("Edge safe", { exact: true }).waitFor());
   await assert.doesNotReject(page.getByRole("link", { name: "Log in" }).waitFor());
   const edgeTheme = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
