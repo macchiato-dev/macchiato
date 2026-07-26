@@ -227,11 +227,8 @@ node packages/macchiato/src/macchiato.js app env set \
 node packages/macchiato/src/macchiato.js app env set \
   resources-edge GITLAB_CLIENT_ID your-client-id
 
-read -rsp "GitLab client secret: " GITLAB_SECRET
-printf %s "$GITLAB_SECRET" | node packages/macchiato/src/macchiato.js \
-  app env set resources-edge GITLAB_CLIENT_SECRET --stdin
-unset GITLAB_SECRET
-echo
+node packages/macchiato/src/macchiato.js app env set \
+  resources-edge GITLAB_CLIENT_SECRET
 
 node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('hex'))" | \
   node packages/macchiato/src/macchiato.js \

@@ -33,6 +33,10 @@ test("CLI configures only declared app environment and redacts secret values", a
     assert.notEqual(undeclared.status, 0);
     assert.match(undeclared.stderr, /not declared/);
 
+    const exposedSecret = run(dataDir, ["app", "env", "set", "resources-edge", "GITLAB_CLIENT_SECRET", "visible"]);
+    assert.notEqual(exposedSecret.status, 0);
+    assert.match(exposedSecret.stderr, /cannot be supplied as a command argument/);
+
     const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
     assert.equal(
       db.prepare("SELECT value FROM app_environment WHERE subdomain = ? AND name = ?")

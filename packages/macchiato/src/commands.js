@@ -114,6 +114,39 @@ function parseAppEnvironmentArgs(args) {
   return { positional, stdin };
 }
 
+async function promptSecret(label) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY || typeof process.stdin.setRawMode !== "function") {
+    throw new Error(`${label} requires an interactive terminal or --stdin`);
+  }
+  process.stdout.write(`${label}: `);
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding("utf8");
+  return new Promise((resolve, reject) => {
+    let value = "";
+    function finish(error) {
+      process.stdin.off("data", onData);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+      process.stdout.write("\n");
+      if (error) reject(error);
+      else resolve(value);
+    }
+    function onData(chunk) {
+      for (const character of chunk) {
+        if (character === "\u0003") return finish(new Error("Secret entry cancelled"));
+        if (character === "\r" || character === "\n") return finish();
+        if (character === "\u007f" || character === "\b") {
+          value = value.slice(0, -1);
+        } else if (character >= " ") {
+          value += character;
+        }
+      }
+    }
+    process.stdin.on("data", onData);
+  });
+}
+
 function parseAppInstallOpts(args) {
   const plugins = [];
   const mappings = {};
@@ -269,7 +302,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       for (const id of appPluginIds()) console.log(`  ${id}`);
     },
 
-    "app env"(args) {
+    async "app env"(args) {
       const [action, ...rest] = args;
       const { positional, stdin } = parseAppEnvironmentArgs(rest);
       const [subdomain, name, directValue] = positional;
@@ -301,8 +334,12 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       }
 
       const secret = declaration[name].secret === true;
-      if (secret && !stdin) throw new Error(`Secret ${name} must be supplied with --stdin`);
-      const value = stdin ? readFileSync(0, "utf8").replace(/\r?\n$/, "") : directValue;
+      if (secret && directValue !== undefined) throw new Error(`Secret ${name} cannot be supplied as a command argument`);
+      const value = stdin
+        ? readFileSync(0, "utf8").replace(/\r?\n$/, "")
+        : secret
+          ? await promptSecret(name)
+          : directValue;
       if (value === undefined || value === "") throw new Error(`Environment value is empty: ${name}`);
       withDb((db) => setAppEnvironmentValue(db, subdomain, name, value, { secret }), dbOptions);
       console.log(`Configured ${subdomain} environment: ${name} (${secret ? "secret" : "value"})`);
