@@ -17,6 +17,7 @@ import { appDirectoryHandler } from "./app-directory.js";
 import { getDeclarativeApp } from "./declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
 import { fileAppHandler } from "./file-app.js";
+import { nodeResponseHeaders } from "./node-response.js";
 import { createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
 const args = "Deno" in globalThis
@@ -448,7 +449,7 @@ if ("Deno" in globalThis) {
       });
 
       const response = await route(request);
-      res.writeHead(response.status, Object.fromEntries(response.headers));
+      res.writeHead(response.status, nodeResponseHeaders(response.headers));
       res.end(Buffer.from(await response.arrayBuffer()));
     } catch (err) {
       res.writeHead(500, { "content-type": "text/plain" });
