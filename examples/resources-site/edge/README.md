@@ -6,7 +6,9 @@
 - `models.js`: pure validation and policy models with no SDK dependency.
 - `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
   and logger.
-- `../auth/`: signed cookie, PKCE, GitHub exchange, and identity validation.
+- `../auth/`: signed cookie, PKCE, GitHub/GitLab exchange, and identity validation.
+- `../models/accounts.js`: provider-neutral SQLite identity model behind a
+  libSQL-compatible client boundary.
 - `../seed.js`: route/view model and authored UI.
 - `../export-static.js`: trusted publisher that runs strict `use-*` validation.
 
@@ -52,8 +54,9 @@ credential separately from the read-only credential used by the edge script.
   compromised Storage writer; hashes currently support audit and accidental
   corruption diagnosis, not an independent signature root.
 - Add production log sampling and alerting without logging secrets or full URLs.
-- Add a Bunny Database adapter for durable identities and app models. Keep its
-  token separate from the Storage read key and session signing key.
+- Exercise Bunny Database migration and rollback behavior in staging, then add
+  organization/project models. Keep its token separate from the Storage read
+  key and session signing key.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
 - Reconsider a native browser client only when an interaction needs it. Keep its

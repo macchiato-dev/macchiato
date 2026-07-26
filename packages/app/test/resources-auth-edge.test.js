@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../examples/resources-site/auth/github.js";
+import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../examples/resources-site/auth/gitlab.js";
 
 const config = createAuthConfig({
   PUBLIC_ORIGIN: "https://resources.example",
@@ -8,6 +9,10 @@ const config = createAuthConfig({
   GITHUB_CLIENT_SECRET: "client-secret",
   SESSION_SIGNING_KEY: "test-signing-key-that-is-not-used-in-production",
 });
+const gitlabConfig = createGitlabAuthConfig({
+  GITLAB_CLIENT_ID: "gitlab-client-id",
+  GITLAB_CLIENT_SECRET: "gitlab-client-secret",
+}, config);
 
 function cookiePair(setCookie, name) {
   const match = setCookie.match(new RegExp(`${name}=([^;,]+)`));
@@ -61,4 +66,32 @@ test("GitHub callback rejects a mismatched state before making subrequests", asy
   }), config, { fetchImpl: async () => { called = true; }, now: () => 2_000 });
   assert.equal(response.status, 400);
   assert.equal(called, false);
+});
+
+test("GitLab auth uses read-only identity scope, PKCE, and the shared session format", async () => {
+  const start = await startGitlabAuth(gitlabConfig, () => 1_000);
+  const authorize = new URL(start.headers.get("location"));
+  assert.equal(authorize.origin, "https://gitlab.com");
+  assert.equal(authorize.searchParams.get("scope"), "read_user");
+  assert.equal(authorize.searchParams.get("code_challenge_method"), "S256");
+
+  const callback = new Request(`https://resources.example/auth/gitlab/callback?code=code&state=${authorize.searchParams.get("state")}`, {
+    headers: { cookie: cookiePair(start.headers.get("set-cookie"), "__Host-resources_gitlab_oauth") },
+  });
+  const requests = [];
+  const response = await finishGitlabAuth(callback, gitlabConfig, {
+    now: () => 2_000,
+    fetchImpl: async (input, init) => {
+      requests.push({ input: String(input), init });
+      return String(input).endsWith("/oauth/token")
+        ? Response.json({ access_token: "gitlab-temporary-token" })
+        : Response.json({ id: 84, username: "latte-dev", name: "Latte Dev" });
+    },
+  });
+  assert.equal(response.status, 302);
+  assert.equal(requests[1].input, "https://gitlab.com/api/v4/user");
+  const sessionCookie = cookiePair(response.headers.get("set-cookie"), "__Host-resources_session");
+  const session = await readSession(new Request("https://resources.example/", { headers: { cookie: sessionCookie } }), config, () => 3_000);
+  assert.equal(session.sub, "gitlab:84");
+  assert.equal(session.login, "latte-dev");
 });

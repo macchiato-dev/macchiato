@@ -277,6 +277,11 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
 
+  await page.getByRole("link", { name: "Log in" }).click();
+  await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitHub" }).waitFor());
+  await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitLab" }).waitFor());
+  assert.equal(await page.locator("script").count(), 0);
+
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
   const localTheme = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);

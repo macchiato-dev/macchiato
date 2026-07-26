@@ -5,6 +5,7 @@ import {
   storageRequest,
 } from "./models.js";
 import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth/github.js";
+import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 
 const MANIFEST_KEY = "manifest.json";
 
@@ -37,7 +38,24 @@ function renderSessionHtml(html, session) {
   return html.replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session));
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, fetchImpl = fetch, now = Date.now, logger = console } = {}) {
+function authChooser(mode) {
+  const signup = mode === "signup";
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${signup ? "Sign up" : "Log in"} - Resources.co</title></head>
+  <body><main><h1>${signup ? "Create your account" : "Log in to Resources.co"}</h1>
+  <p>Continue with a source-code identity provider.</p>
+  <p><a href="/auth/github/start">Continue with GitHub</a></p>
+  <p><a href="/auth/gitlab/start">Continue with GitLab</a></p>
+  <p><a href="/">Back to Resources.co</a></p></main></body></html>`, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, fetchImpl = fetch, now = Date.now, logger = console } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
@@ -62,11 +80,20 @@ export function createResourcesEdgeHandler({ config, authConfig = null, fetchImp
 
   return async function resourcesEdgeHandler(request) {
     const pathname = new URL(request.url).pathname;
-    if (authConfig && request.method === "GET" && (pathname === "/login" || pathname === "/signup" || pathname === "/auth/github/start")) {
+    if (authConfig && request.method === "GET" && (pathname === "/login" || pathname === "/signup")) {
+      return authChooser(pathname.slice(1));
+    }
+    if (authConfig && request.method === "GET" && pathname === "/auth/github/start") {
       return startGithubAuth(authConfig, now);
     }
     if (authConfig && request.method === "GET" && pathname === "/auth/github/callback") {
-      return finishGithubAuth(request, authConfig, { fetchImpl, now });
+      return finishGithubAuth(request, authConfig, { fetchImpl, now, accountStore });
+    }
+    if (gitlabAuthConfig && request.method === "GET" && pathname === "/auth/gitlab/start") {
+      return startGitlabAuth(gitlabAuthConfig, now);
+    }
+    if (gitlabAuthConfig && request.method === "GET" && pathname === "/auth/gitlab/callback") {
+      return finishGitlabAuth(request, gitlabAuthConfig, { fetchImpl, now, accountStore });
     }
     if (authConfig && request.method === "POST" && pathname === "/logout") return signOut(authConfig);
     if (request.method !== "GET" && request.method !== "HEAD") {
