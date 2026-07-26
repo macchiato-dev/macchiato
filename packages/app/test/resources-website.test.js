@@ -10,6 +10,7 @@ import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
+import { seal } from "../../../examples/resources-site/auth/session.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");
@@ -295,6 +296,27 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
+
+  const session = await seal({
+    v: 1,
+    sub: "gitlab:84",
+    login: "latte-dev",
+    name: "Latte Dev",
+    iat: Date.now(),
+    exp: Date.now() + 60_000,
+  }, "local-preview-session-signing-key");
+  await page.context().addCookies([{
+    name: "resources_session",
+    value: session,
+    domain: "resources-edge.localhost",
+    path: "/",
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
+  await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByText("latte-dev", { exact: true }).waitFor());
+  await assert.doesNotReject(page.getByRole("button", { name: "Sign out" }).waitFor());
+  assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 0);
 
   await page.goto(`http://resources-co.localhost:${port}/`, { waitUntil: "networkidle" });
   const localTheme = await page.evaluate(() => {
