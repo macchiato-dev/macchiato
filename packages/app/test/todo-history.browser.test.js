@@ -94,8 +94,10 @@ test("TODO history swaps Markdown and SQLite while replaying character edits", {
   await page.getByRole("button", { name: "Add task" }).click();
   await page.getByText("Stored in Markdown", { exact: true }).waitFor();
   const markdown = await readFile(join(dataDir, "todo-history", "history.md"), "utf8");
-  assert.match(markdown, /Format: `todo-history\/v1`/);
-  assert.match(markdown, /title "Stored in Markdown"/);
+  assert.match(markdown, /Dialect: `todo-history\/v1`/);
+  assert.match(markdown, /## List\n\n- \[ \] Stored in Markdown/);
+  assert.match(markdown, /- Title: Stored in Markdown/);
+  assert.doesNotMatch(markdown, /```/);
 
   await page.getByLabel("Backend").selectOption("sqlite");
   await page.getByText("Get milk", { exact: true }).waitFor();
