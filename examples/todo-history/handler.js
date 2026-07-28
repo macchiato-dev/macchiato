@@ -33,8 +33,8 @@ function page() {
     <section class="history" aria-labelledby="history-title">
       <div class="history-heading"><div><p class="eyebrow">Character-level replay</p><h2 id="history-title">History</h2></div><output id="position">0 / 0</output></div>
       <div class="player">
-        <button id="play" type="button" aria-label="Play history">▶ Play</button>
-        <button id="pause" type="button" aria-label="Pause history" disabled>Ⅱ Pause</button>
+        <button id="play" type="button" aria-label="Play history">Play</button>
+        <button id="pause" type="button" aria-label="Pause history" disabled>Pause</button>
         <input id="timeline" type="range" min="0" max="0" value="0" aria-label="History timeline">
       </div>
       <div id="replay" class="replay" aria-live="polite"></div>
