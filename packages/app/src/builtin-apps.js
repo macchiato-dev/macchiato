@@ -5,6 +5,7 @@ import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
 import { resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
+import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 
@@ -155,6 +156,26 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM",
       hostCapabilities: ["dom-use", "style-use", "html-use"],
+    },
+  },
+  {
+    name: "Character History TODO",
+    subdomain: "todo-history",
+    kind: "history-backed app",
+    description: "TODO list with character-timed history and swappable Markdown and SQLite dialects.",
+    handler: todoHistoryHandler,
+    sourceFiles: [
+      "examples/todo-history/model.js",
+      "examples/todo-history/markdown-dialect.js",
+      "examples/todo-history/sqlite-dialect.js",
+      "examples/todo-history/handler.js",
+      "examples/todo-history/client.js",
+      "examples/todo-history/style.css",
+      "examples/todo-history/README.md",
+    ],
+    adapter: {
+      profile: "character-history-v1",
+      backends: ["sqlite", "markdown"],
     },
   },
   {
