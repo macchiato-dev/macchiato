@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { createMarkdownHistoryStore, encodeMarkdownEvent, MARKDOWN_HEADER, parseMarkdownHistory } from "../../../examples/todo-history/markdown-dialect.js";
+import { createMarkdownHistoryStore, parseMarkdownHistory, renderMarkdownHistory } from "../../../examples/todo-history/markdown-dialect.js";
 import { applyEdit, expandTimeline, replayEvents } from "../../../examples/todo-history/model.js";
 import { createSqliteHistoryStore } from "../../../examples/todo-history/sqlite-dialect.js";
 
@@ -36,7 +36,7 @@ test("compact edit actions retain character-level timing", () => {
   assert.equal(expandTimeline(events).length, 5);
 });
 
-test("Markdown dialect is readable, append-only, and round trips history", async (t) => {
+test("Markdown dialect uses lists, documents itself, and round trips history", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "todo-history-markdown-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const file = join(directory, "history.md");
@@ -45,11 +45,15 @@ test("Markdown dialect is readable, append-only, and round trips history", async
 
   assert.deepEqual(await store.state(), [{ id: "t1", title: "Get milk", done: true, deleted: false }]);
   const markdown = await readFile(file, "utf8");
-  assert.match(markdown, /```todo-history/);
-  assert.match(markdown, /move 5 after 400/);
-  assert.match(markdown, /insert "il" delays 120,180/);
+  assert.match(markdown, /## List\n\n- \[x\] Get milk — `t1`/);
+  assert.match(markdown, /## History/);
+  assert.match(markdown, /### Edit `e2`/);
+  assert.match(markdown, /  1\. Move: `5`\n     - After: `400ms`/);
+  assert.match(markdown, /  2\. Insert: il\n     - Delays: `120ms`, `180ms`/);
+  assert.match(markdown, /## Format/);
+  assert.doesNotMatch(markdown, /```/);
   assert.deepEqual(parseMarkdownHistory(markdown), events);
-  assert.deepEqual(parseMarkdownHistory(MARKDOWN_HEADER + events.map(encodeMarkdownEvent).join("")), events);
+  assert.deepEqual(parseMarkdownHistory(renderMarkdownHistory(events)), events);
 });
 
 test("SQLite dialect normalizes edit actions and matches Markdown replay", async (t) => {

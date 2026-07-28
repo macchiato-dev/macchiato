@@ -1,7 +1,7 @@
 # Character History TODO
 
-A proof of concept for one event model stored in either SQLite or an
-append-only Markdown dialect. Install the `todo-history` app plugin (the
+A proof of concept for one event model stored in either SQLite or a
+Markdown-list dialect. Install the `todo-history` app plugin (the
 `development` preset includes it), then open:
 
 ```text
@@ -38,27 +38,39 @@ wait 120 ms, type `l` after another 180 ms.”
 
 ## Markdown dialect: `todo-history/v1`
 
-The file is ordinary Markdown with append-only fenced records:
+The file is ordinary Markdown. `## List` contains the current checkbox view,
+and `## History` contains event headings with nested lists:
 
-````markdown
+```markdown
 # TODO character history
 
-Format: `todo-history/v1`
+## List
 
-```todo-history
-event e2
-at 2000
-todo t1
-edit
-cursor 0
-move 5 after 400
-insert "il" delays 120,180
+- [ ] Get milk — `t1`
+
+## History
+
+### Edit `e2`
+- TODO: `t1`
+- At: `2000`
+- Cursor: `0`
+- Actions:
+  1. Move: `5`
+     - After: `400ms`
+  2. Insert: il
+     - Delays: `120ms`, `180ms`
+
+## Format
+
+- Dialect: `todo-history/v1`.
+- **List** is materialized; **History** is authoritative in document order.
 ```
-````
 
-Text uses JSON string quoting. Durations are integer milliseconds. Records are
-replayed in file order, and an invalid append is rejected before it is written.
-The adapter caches its parsed stream for efficient reads during one process.
+Normal text stays normal Markdown. Values needing lossless escaping use an
+inline-code `json:` value. Durations are integer milliseconds. The adapter
+validates the complete history, renders the current list, and atomically
+replaces the document. It caches the parsed stream for efficient reads during
+one process.
 
 ## SQLite dialect
 
