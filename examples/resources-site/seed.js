@@ -284,6 +284,24 @@ function sectionsFor(i18n) {
       },
     ],
   },
+  "/dashboard": {
+    navKey: "",
+    title: t("dashboard.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("dashboard.heading") }],
+    blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
+  },
+  "/projects/new": {
+    navKey: "",
+    title: t("projectCreate.title"),
+    crumb: [{ icon: true, href: "/dashboard" }, { label: t("projectCreate.heading") }],
+    blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
+  },
+  "/organizations/new": {
+    navKey: "",
+    title: t("organizationCreate.title"),
+    crumb: [{ icon: true, href: "/dashboard" }, { label: t("organizationCreate.heading") }],
+    blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
+  },
   };
   sections["/login"] = resourcesAuthRoute("login", authMessages(i18n));
   sections["/signup"] = resourcesAuthRoute("signup", authMessages(i18n));
@@ -648,6 +666,29 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .auth-alt { margin-top: 22px; font-size: 13px; color: var(--muted); text-align: center; }
 .auth-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; padding: 12px 14px; border-radius: 10px; background: var(--hover); font-size: 12px; line-height: 1.5; color: var(--muted); }
 .auth-note__icon { width: 16px; height: 16px; border: 1px solid var(--accent); color: var(--accent); border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; font-size: 10px; font-weight: 700; }
+.account-dashboard__header, .account-section__header, .create-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.account-dashboard__header h1, .account-section__header h2 { margin: 0; }
+.account-dashboard__intro { color: var(--muted); margin: 8px 0 0; }
+.create-actions { justify-content: flex-start; flex-wrap: wrap; margin-top: 22px; }
+.account-action { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 15px; border: 1px solid var(--active-bg); border-radius: 10px; color: var(--active-fg); background: var(--active-bg); font-weight: 700; text-decoration: none; }
+.account-action--secondary { border-color: var(--track-border); color: var(--text); background: var(--track); }
+.account-section { margin-top: 32px; }
+.account-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.account-card { min-height: 128px; padding: 17px; border: 1px solid var(--track-border); border-radius: 12px; background: var(--track); }
+.account-card__namespace, .account-card__meta { color: var(--muted); font-size: 12px; font-weight: 600; }
+.account-card h3 { margin: 8px 0; font-size: 17px; }
+.account-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.account-empty { margin-top: 16px; padding: 22px; border: 1px dashed var(--track-border); border-radius: 12px; color: var(--muted); }
+.create-form { display: grid; gap: 18px; max-width: 660px; margin-top: 24px; }
+.create-form__field { display: grid; gap: 7px; }
+.create-form__field label, .create-form legend { font-size: 13px; font-weight: 700; }
+.create-form input, .create-form textarea, .create-form select { width: 100%; padding: 11px 13px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--track); font: inherit; }
+.create-form textarea { min-height: 96px; resize: vertical; }
+.create-form fieldset { padding: 0; border: none; }
+.create-form__options { display: flex; gap: 16px; margin-top: 9px; }
+.create-form__options label { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+.create-form__options input { width: auto; }
+.form-error { padding: 11px 13px; border: 1px solid #ff6b6b; border-radius: 10px; color: #ffb3b3; }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -683,6 +724,8 @@ body[data-auth="out"] .ub-guest { display: flex; }
 }
 
 @media (max-width: 760px) {
+  .account-grid { grid-template-columns: 1fr; }
+  .account-dashboard__header, .account-section__header { align-items: flex-start; flex-direction: column; }
   .layout {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto minmax(0, 1fr) auto;

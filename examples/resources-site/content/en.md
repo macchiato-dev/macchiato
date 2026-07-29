@@ -116,6 +116,43 @@
 - **account.help**: Help and docs
 - **account.signout**: Sign out
 
+## Account content
+
+- **account.create**: Create
+- **account.newProject**: New project
+- **account.newOrganization**: New organization
+- **dashboard.title**: Your projects - Resources.co
+- **dashboard.heading**: Your projects
+- **dashboard.intro**: Projects and organizations owned by your Resources.co account.
+- **dashboard.projects**: Projects
+- **dashboard.organizations**: Organizations
+- **dashboard.noProjects**: No projects yet. Create one from a small starting template.
+- **dashboard.noOrganizations**: No organizations yet. Create one when a project needs a shared namespace.
+- **dashboard.private**: Private
+- **dashboard.public**: Public
+- **projectCreate.title**: Create a project - Resources.co
+- **projectCreate.heading**: Create a project
+- **projectCreate.intro**: Pick a template, give it a name, then create.
+- **projectCreate.name**: Project name
+- **projectCreate.slug**: Project slug
+- **projectCreate.description**: Description (optional)
+- **projectCreate.namespace**: Namespace
+- **projectCreate.template**: Template
+- **projectCreate.visibility**: Visibility
+- **projectCreate.blank**: Blank
+- **projectCreate.html**: HTML
+- **projectCreate.svg**: SVG
+- **projectCreate.canvas**: Canvas
+- **projectCreate.submit**: Create project
+- **organizationCreate.title**: Create an organization - Resources.co
+- **organizationCreate.heading**: Create an organization
+- **organizationCreate.intro**: Organizations give related projects a shared namespace.
+- **organizationCreate.name**: Organization name
+- **organizationCreate.slug**: Organization slug
+- **organizationCreate.description**: Description (optional)
+- **organizationCreate.submit**: Create organization
+- **content.error**: Check the form and try again.
+
 ## Not found and chrome
 
 - **notFound.title**: Not found - Resources.co

@@ -5,12 +5,15 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
 import { seal } from "../../../examples/resources-site/auth/session.js";
+import { createAccountStore } from "../../../examples/resources-site/models/accounts.js";
+import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");
@@ -340,6 +343,69 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   });
   assert.deepEqual(edgeTheme, localTheme);
   assert.deepEqual(errors, []);
+});
+
+test("Resources.co edge account creates organizations and projects in a real browser", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await app.waitForReady;
+
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github",
+    providerUserId: "content-test",
+    login: "latte-dev",
+    name: "Latte Dev",
+    email: "latte@example.test",
+    emailVerified: true,
+  });
+  db.close();
+  const session = await seal({
+    v: 1,
+    sub: account.id,
+    login: account.login,
+    name: account.name,
+    iat: Date.now(),
+    exp: Date.now() + 60_000,
+  }, "local-preview-session-signing-key");
+
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  await page.context().addCookies([{
+    name: "resources_session",
+    value: session,
+    domain: "resources-edge.localhost",
+    path: "/",
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
+  await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByRole("heading", { name: "Your projects", exact: true }).waitFor());
+  assert.equal(new URL(page.url()).pathname, "/dashboard");
+
+  await page.getByRole("link", { name: "New organization" }).first().click();
+  await page.getByLabel("Organization name").fill("Tiny Tools");
+  await page.getByLabel("Organization slug").fill("tiny-tools");
+  await page.getByLabel("Description (optional)").fill("Small, focused tools.");
+  await page.getByRole("button", { name: "Create organization" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Tiny Tools" }).waitFor());
+
+  await page.getByRole("link", { name: "New project" }).first().click();
+  await page.getByLabel("Project name").fill("Digital Clock");
+  await page.getByLabel("Project slug").fill("digital-clock");
+  await page.getByLabel("Description (optional)").fill("A small HTML clock.");
+  await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
+  await page.getByLabel("Template").selectOption("html");
+  await page.getByRole("button", { name: "Create project" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
+  await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {
