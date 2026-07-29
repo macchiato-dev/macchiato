@@ -636,7 +636,7 @@ ${base}
 .command-palette::backdrop { background: rgba(8,14,40,.38); backdrop-filter: blur(5px); }
 .command-palette__surface { padding: 8px; }
 .command-palette__search { display: flex; align-items: center; gap: 10px; padding: 8px 10px 14px; }
-.command-palette__search > span { color: var(--muted); font-size: 24px; }
+.command-palette__icon { width: 20px; height: 20px; color: var(--muted); }
 .command-palette__search input { flex: 1; min-width: 0; border: none; outline: none; color: var(--text); background: transparent; font: inherit; font-size: 17px; }
 .command-palette__list { display: grid; gap: 3px; padding: 7px 0 0; }
 .command-palette__item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 12px; border-radius: 9px; color: var(--text); text-decoration: none; font-size: 14px; }

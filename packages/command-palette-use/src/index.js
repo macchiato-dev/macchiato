@@ -20,12 +20,12 @@ export function defineCommandPalette({ placeholder = "Search or jump to…", com
 
 export function renderCommandPalette(model) {
   const items = model.commands.map((command) =>
-    `<a class="command-palette__item" href="${escapeHtml(command.href)}" data-command-label="${escapeHtml(command.label.toLowerCase())}" data-command-kind="${command.kind}"><span>${escapeHtml(command.label)}</span><kbd>↵</kbd></a>`).join("");
+    `<a class="command-palette__item" href="${escapeHtml(command.href)}" data-command-label="${escapeHtml(command.label.toLowerCase())}" data-command-kind="${command.kind}"><span>${escapeHtml(command.label)}</span><kbd>Enter</kbd></a>`).join("");
   return `<button class="command-trigger" type="button" data-command-open aria-label="${escapeHtml(model.placeholder)}"><span>${escapeHtml(model.placeholder)}</span><kbd data-command-shortcut>Ctrl K</kbd></button>
     <dialog class="command-palette" data-command-dialog aria-label="${escapeHtml(model.placeholder)}">
       <div class="command-palette__surface">
-        <div class="command-palette__search"><span aria-hidden="true">⌕</span><input type="search" data-command-input aria-label="${escapeHtml(model.placeholder)}" placeholder="${escapeHtml(model.placeholder)}"><kbd>Esc</kbd></div>
-        <div class="command-palette__list" data-command-list>${items}<a class="command-palette__item command-palette__search-elsewhere" href="/browse" data-search-elsewhere><span>Search Resources.co</span><kbd>↵</kbd></a></div>
+        <div class="command-palette__search"><svg class="command-palette__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input type="search" data-command-input aria-label="${escapeHtml(model.placeholder)}" placeholder="${escapeHtml(model.placeholder)}"><kbd>Esc</kbd></div>
+        <div class="command-palette__list" data-command-list>${items}<a class="command-palette__item command-palette__search-elsewhere" href="/browse" data-search-elsewhere><span>Search Resources.co</span><kbd>Enter</kbd></a></div>
       </div>
     </dialog>`;
 }
