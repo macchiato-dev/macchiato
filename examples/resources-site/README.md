@@ -155,8 +155,8 @@ island with escaped guest or session markup and marks personalized documents
 `private, no-store`.
 
 The signed-in edge island uses native `details`/`summary` disclosure rather
-than a second menu script. It exposes the provider identity, project, profile,
-settings, help, and sign-out actions through ordinary document navigation.
+than a second menu script. It exposes create, project, profile, settings, help,
+and sign-out actions through ordinary document navigation.
 GitLab still owns any required consent or redirect screen outside Resources.co;
 provider login state is not treated as a Resources.co session.
 
@@ -168,15 +168,17 @@ script. Its credentials never enter the session or browser. Provider identities
 remain separate rows so account-linking policy can be added without changing
 OAuth callbacks.
 
-The July 22 reference also expands the application beyond authentication. The
-next implementation slices, in dependency order, are:
+The signed-in workspace from the July 22 reference is implemented in the edge
+profile. Signed-in `/` redirects to `/dashboard`, where projects and
+organizations are read from Bunny Database (or the same SQLite schema in the
+local preview). The create menu and dashboard link to server-rendered project
+and organization forms. Projects can use the personal namespace or an owned
+organization namespace. All mutations use validated URL-encoded POSTs,
+short-lived signed CSRF tokens, same-origin checks, parameterized SQL, and a
+`303` redirect back to the list.
 
-1. signed-in workspace/home versus the signed-out marketing home;
-2. Explore, Blog, and organization routes from shared declarative models;
-3. the New project workflow backed by a real model and storage adapter;
-4. Terms and Privacy document routes;
-5. organization and project models on Bunny Database, followed by explicit
-   cross-provider account linking.
+The next design slices are Explore and Blog, organization/project detail
+routes, Terms and Privacy, and richer template-specific project creation.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.
