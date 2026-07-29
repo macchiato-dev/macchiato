@@ -9,6 +9,8 @@
 - `../auth/`: signed cookie, PKCE, GitHub/GitLab exchange, and identity validation.
 - `../models/accounts.js`: provider-neutral SQLite identity model behind a
   libSQL-compatible client boundary.
+- `../models/content.js`: account-owned organization and project model behind
+  the same SQLite/libSQL boundary.
 - `../seed.js`: route/view model and authored UI.
 - `../export-static.js`: trusted publisher that runs strict `use-*` validation.
 
@@ -28,7 +30,7 @@ repository route/view models
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request
   -> fixed public response policy and CSP
-  -> optional signed session renders one escaped account-status island
+  -> signed sessions render escaped account UI and trusted account-owned models
 ```
 
 The generated manifest is publication authority, not user input. Anyone able to
@@ -42,7 +44,8 @@ credential separately from the read-only credential used by the edge script.
 - No public Storage proxy and no prefix-only authorization.
 - No provider token in cookies, Storage, logs, or browser responses.
 - No user-authored HTML. The document publication path remains read-only;
-  authentication uses a separate, narrowly modeled account database boundary.
+  authentication and account content use separate, narrowly modeled database
+  boundaries. Names, slugs, and descriptions are always escaped.
 - No executable JavaScript in the document-profile export.
 - No passthrough of upstream response headers except ETag and Last-Modified.
 
@@ -71,6 +74,22 @@ so only an explicit authenticated flow can attach another identity. Provider
 tokens are discarded after lookup. GitHub requires a verified address from
 `/user/emails`; GitLab requires a confirmed address from `/api/v4/user/emails`.
 Provider names belong in connection settings, not the account menu.
+
+## Account content
+
+Signed-in `/` redirects to `/dashboard`. That page lists projects and
+organizations owned by the stable Resources.co user ID. `/projects/new` and
+`/organizations/new` are ordinary server-rendered forms; successful POSTs
+return `303` to the dashboard. The forms carry short-lived, signed,
+account-and-action-specific CSRF tokens and also require a same-origin request.
+Bodies are URL-encoded and size-limited.
+
+Projects use either the user's namespace or an organization owned by that user.
+Database uniqueness constraints protect organization slugs and project slugs
+within a namespace. The edge accepts only enumerated templates and visibility
+values. The static export contains validated placeholder routes and layout;
+`app.js` replaces one exact marker with trusted, escaped model output. No
+user-authored markup or browser script crosses that boundary.
 
 ## Localized content
 
@@ -109,9 +128,9 @@ public project paths such as `macchiato/app/es.md`. The in-repo
   compromised Storage writer; hashes currently support audit and accidental
   corruption diagnosis, not an independent signature root.
 - Add production log sampling and alerting without logging secrets or full URLs.
-- Exercise Bunny Database migration and rollback behavior in staging, then add
-  organization/project models. Keep its token separate from the Storage read
-  key and session signing key.
+- Exercise Bunny Database migration and rollback behavior for the account,
+  organization, and project tables in staging. Keep its token separate from
+  the Storage read key and session signing key.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
 - Reconsider a native browser client only when an interaction needs it. Keep its
