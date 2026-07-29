@@ -116,6 +116,43 @@
 - **account.help**: Ayuda y documentación
 - **account.signout**: Cerrar sesión
 
+## Contenido de la cuenta
+
+- **account.create**: Crear
+- **account.newProject**: Nuevo proyecto
+- **account.newOrganization**: Nueva organización
+- **dashboard.title**: Tus proyectos - Resources.co
+- **dashboard.heading**: Tus proyectos
+- **dashboard.intro**: Proyectos y organizaciones que pertenecen a tu cuenta de Resources.co.
+- **dashboard.projects**: Proyectos
+- **dashboard.organizations**: Organizaciones
+- **dashboard.noProjects**: Todavía no hay proyectos. Crea uno a partir de una plantilla pequeña.
+- **dashboard.noOrganizations**: Todavía no hay organizaciones. Crea una cuando un proyecto necesite un espacio de nombres compartido.
+- **dashboard.private**: Privado
+- **dashboard.public**: Público
+- **projectCreate.title**: Crear un proyecto - Resources.co
+- **projectCreate.heading**: Crear un proyecto
+- **projectCreate.intro**: Elige una plantilla, dale un nombre y créalo.
+- **projectCreate.name**: Nombre del proyecto
+- **projectCreate.slug**: Identificador del proyecto
+- **projectCreate.description**: Descripción (opcional)
+- **projectCreate.namespace**: Espacio de nombres
+- **projectCreate.template**: Plantilla
+- **projectCreate.visibility**: Visibilidad
+- **projectCreate.blank**: Vacío
+- **projectCreate.html**: HTML
+- **projectCreate.svg**: SVG
+- **projectCreate.canvas**: Canvas
+- **projectCreate.submit**: Crear proyecto
+- **organizationCreate.title**: Crear una organización - Resources.co
+- **organizationCreate.heading**: Crear una organización
+- **organizationCreate.intro**: Las organizaciones dan a proyectos relacionados un espacio de nombres compartido.
+- **organizationCreate.name**: Nombre de la organización
+- **organizationCreate.slug**: Identificador de la organización
+- **organizationCreate.description**: Descripción (opcional)
+- **organizationCreate.submit**: Crear organización
+- **content.error**: Revisa el formulario e inténtalo de nuevo.
+
 ## No encontrado y marco
 
 - **notFound.title**: No encontrado - Resources.co

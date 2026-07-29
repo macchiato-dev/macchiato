@@ -6,6 +6,7 @@ import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createAccountStore } from "./models/accounts.js";
+import { createContentStore } from "./models/content.js";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
@@ -50,8 +51,10 @@ function handlerFor(environment = {}, db = null) {
   const gitlabAuthConfig = createGitlabAuthConfig(effective, authConfig);
   cachedEnvironmentKey = key;
   cachedDatabase = db;
-  const accountStore = db ? createAccountStore(createNodeSqliteClient(db)) : null;
-  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, accountStore, fetchImpl });
+  const client = db ? createNodeSqliteClient(db) : null;
+  const accountStore = client ? createAccountStore(client) : null;
+  const contentStore = client ? createContentStore(client) : null;
+  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, accountStore, contentStore, fetchImpl });
   return cachedHandler;
 }
 
