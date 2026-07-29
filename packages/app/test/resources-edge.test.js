@@ -23,10 +23,24 @@ const manifest = {
   generatedAt: "2026-07-21T00:00:00.000Z",
   securityProfile: "document-navigation-v1",
   validatedWith: ["dom-use", "style-use", "html-use", "theme-use"],
-  files: ["/index.html", "/about/index.html", "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2"],
+  defaultLocale: "en",
+  locales: ["en", "es"],
+  messages: {
+    en: { "auth.login": "Log in", "auth.signup": "Sign up" },
+    es: { "auth.login": "Entrar", "auth.signup": "Registrarse" },
+  },
+  files: [
+    "/locales/en/index.html",
+    "/locales/en/about/index.html",
+    "/locales/es/index.html",
+    "/locales/es/about/index.html",
+    "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2",
+  ],
   artifacts: {
-    "/index.html": { bytes: 10, sha256: "a".repeat(64) },
-    "/about/index.html": { bytes: 14, sha256: "b".repeat(64) },
+    "/locales/en/index.html": { bytes: 10, sha256: "a".repeat(64) },
+    "/locales/en/about/index.html": { bytes: 14, sha256: "b".repeat(64) },
+    "/locales/es/index.html": { bytes: 10, sha256: "c".repeat(64) },
+    "/locales/es/about/index.html": { bytes: 14, sha256: "d".repeat(64) },
     "/-/fonts/resourcesco-space-grotesk/space-grotesk-latin.woff2": { bytes: 20, sha256: "c".repeat(64) },
   },
 };
@@ -47,9 +61,9 @@ test("edge request and storage models reject ambiguous paths and origins", () =>
 
 test("edge manifest is a strict allowlist", () => {
   const model = normalizeExportManifest(manifest);
-  assert.equal(model.files.has("index.html"), true);
+  assert.equal(model.files.has("locales/en/index.html"), true);
   assert.equal(model.files.has("private.txt"), false);
-  assert.equal(model.artifacts.get("about/index.html").bytes, 14);
+  assert.equal(model.artifacts.get("locales/en/about/index.html").bytes, 14);
   assert.throws(() => normalizeExportManifest({ ...manifest, subdomain: "other" }), /Unexpected/);
   assert.throws(() => normalizeExportManifest({ ...manifest, files: ["/../secret"] }), /Unsafe/);
 });
@@ -61,7 +75,7 @@ test("edge handler serves only exported artifacts with hardened headers", async 
     assert.equal(request.headers.get("AccessKey"), "test-secret");
     assert.equal(request.redirect, "manual");
     if (request.url.endsWith("/manifest.json")) return Response.json(manifest);
-    if (request.url.endsWith("/about/index.html")) return new Response("<h1>About</h1>", { headers: { etag: '"about-v1"' } });
+    if (request.url.endsWith("/locales/en/about/index.html")) return new Response("<h1>About</h1>", { headers: { etag: '"about-v1"' } });
     return new Response("missing", { status: 404 });
   };
   const handler = createResourcesEdgeHandler({ config, fetchImpl, now: () => 1_000 });
@@ -137,7 +151,36 @@ test("edge HTML renders escaped session identity without executable browser code
   assert.match(body, /@&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/span>/);
   assert.doesNotMatch(body, / · (?:GitHub|GitLab)/);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
-  assert.equal(response.headers.get("vary"), "cookie");
+  assert.equal(response.headers.get("vary"), "accept-language, cookie");
+});
+
+test("edge locale negotiation serves localized HTML and persists explicit switches", async () => {
+  const requests = [];
+  const handler = createResourcesEdgeHandler({
+    config,
+    fetchImpl: async (request) => {
+      requests.push(request.url);
+      if (request.url.endsWith("/manifest.json")) return Response.json(manifest);
+      return new Response(request.url.includes("/locales/es/") ? "<h1>Acerca de</h1>" : "<h1>About</h1>");
+    },
+  });
+  const spanish = await handler(new Request("https://resources.example/about", {
+    headers: { "accept-language": "fr;q=0.9, es-MX;q=0.8, en;q=0.7" },
+  }));
+  assert.equal(spanish.headers.get("content-language"), "es");
+  assert.match(await spanish.text(), /Acerca de/);
+  assert.equal(requests.at(-1).endsWith("/locales/es/about/index.html"), true);
+
+  const switched = await handler(new Request("https://resources.example/language/es/about"));
+  assert.equal(switched.status, 302);
+  assert.equal(switched.headers.get("location"), "/about");
+  assert.match(switched.headers.get("set-cookie"), /^resources_locale=es;/);
+
+  const cookieWins = await handler(new Request("https://resources.example/about", {
+    headers: { cookie: "resources_locale=en", "accept-language": "es" },
+  }));
+  assert.equal(cookieWins.headers.get("content-language"), "en");
+  assert.match(await cookieWins.text(), /About/);
 });
 
 test("provider linking requires a signed-in account and starts a fresh provider authorization", async () => {

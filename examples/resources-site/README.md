@@ -276,6 +276,12 @@ The separate preview subdomain keeps both architectures inspectable. Switching
 to Bunny changes the storage adapter and entrypoint configuration, not the
 models, generated artifacts, public paths, or edge request policy.
 
+Resources Edge serves complete English or Spanish HTML on first load. Authored
+copy is read from `content/*.md` during publication, not fetched as client JSON.
+Use the footer switcher or send `Accept-Language: es`; see
+[`edge/README.md`](edge/README.md#localized-content) for negotiation and
+artifact details.
+
 ```sh
 node --test \
   packages/app/test/resources-edge.test.js \

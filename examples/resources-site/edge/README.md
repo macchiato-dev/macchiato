@@ -72,6 +72,29 @@ tokens are discarded after lookup. GitHub requires a verified address from
 `/user/emails`; GitLab requires a confirmed address from `/api/v4/user/emails`.
 Provider names belong in connection settings, not the account menu.
 
+## Localized content
+
+English and Spanish authored copy lives in `../content/en.md` and
+`../content/es.md`. `../i18n.js` parses their small Markdown message-list
+dialect and requires both files to expose the same keys. Publication renders
+each locale through the normal `dom-use`, `style-use`, and `html-use`
+validation boundary and writes HTML beneath `locales/<locale>/`; Markdown is
+not interpreted on the public request path.
+
+The edge returns a complete localized HTML document on the first request. It
+does not fetch page content as browser JSON and the document profile still has
+`script-src 'none'`. Locale selection is:
+
+1. the `resources_locale` cookie set by the footer language switcher;
+2. the browser's `Accept-Language` preference;
+3. English.
+
+Switcher routes such as `/language/es/about` set an HTTP-only, same-site cookie
+and redirect to `/about`. Localized HTML responses include `Content-Language`
+and vary on `Accept-Language, Cookie`. The manifest carries the validated
+locale allowlist and the small message set needed to localize the trusted
+signed-in/guest status island.
+
 ## Remaining deployment work
 
 - Add a least-privilege upload job and keep its write credential out of the Edge
