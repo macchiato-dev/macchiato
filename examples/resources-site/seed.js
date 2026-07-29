@@ -7,15 +7,16 @@ import { StyleUse } from "@macchiato-dev/style-use";
 import { createSafeTriangle, pointInSafeTriangle } from "@macchiato-dev/user-menu-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
-import { RESOURCES_MENU, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
+import { resourcesMenu, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
 import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "./components/auth.js";
+import { createTranslator, DEFAULT_RESOURCE_LOCALE, loadResourcesLocales } from "./i18n.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
 const SUBDOMAIN = "resources-co";
 
-const NAV = RESOURCES_MENU.items;
+const RESOURCE_MESSAGES = loadResourcesLocales();
 
 const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
 const ORG_COPY = {
@@ -43,9 +44,9 @@ function projectItems(project) {
   return items;
 }
 
-function projectFacts(project) {
+function projectFacts(project, t = null) {
   const facts = [
-    ["Organization", project.namespace],
+    [t ? t("common.organization") : "Organization", project.namespace],
     ["Package", project.npmName],
     ["Kind", project.kind],
     ["Files", `${project.files}`],
@@ -54,21 +55,22 @@ function projectFacts(project) {
   return facts;
 }
 
-function languageSummary(project) {
+function languageSummary(project, t = null) {
   return Object.entries(project.languages)
     .slice(0, 6)
     .map(([language, count]) => `${language} ${count}`)
-    .join(", ") || "No tracked source files";
+    .join(", ") || (t ? t("common.noTrackedFiles") : "No tracked source files");
 }
 
-function packageRows(project) {
+function packageRows(project, t = null) {
+  const label = (key, fallback) => t ? t(key) : fallback;
   return [
-    ["Source", project.packageDir],
-    ["Package file", project.packageJson],
-    ["Languages", languageSummary(project)],
-    ["Exports", project.exports.join(", ") || "None declared"],
-    ["Commands", project.bins.join(", ") || "None declared"],
-    ["Workspace deps", project.dependencies.join(", ") || "None"],
+    [label("common.source", "Source"), project.packageDir],
+    [label("common.packageFile", "Package file"), project.packageJson],
+    [label("common.languages", "Languages"), languageSummary(project, t)],
+    [label("common.exports", "Exports"), project.exports.join(", ") || label("common.noneDeclared", "None declared")],
+    [label("common.commands", "Commands"), project.bins.join(", ") || label("common.noneDeclared", "None declared")],
+    [label("common.workspaceDeps", "Workspace deps"), project.dependencies.join(", ") || label("common.none", "None")],
   ];
 }
 
@@ -166,30 +168,38 @@ export function validateResourcesStylesheet(stylesheet) {
   return new StyleUse(resourcesCssSchema()).validateStylesheet(stylesheet);
 }
 
-const SECTIONS = {
-  "/": {
+function authMessages(i18n) {
+  return Object.fromEntries(Object.entries(i18n.messages)
+    .filter(([key]) => key.startsWith("auth."))
+    .map(([key, value]) => [key.slice(5), value]));
+}
+
+function sectionsFor(i18n) {
+  const t = i18n.text;
+  const sections = {
+    "/": {
     navKey: "home",
-    title: "Resources.co",
+    title: t("home.title"),
     blocks: [
       {
-        eyebrow: "Self-hosted building blocks",
-        h1: "Infrastructure you own, composed from parts.",
+        eyebrow: t("home.eyebrow"),
+        h1: t("home.heading"),
         paras: [
-          "Resources.co is a startup building self-hostable primitives for the web: containers, components, and usage providers you run on your own stack, wired together however you like.",
-          "Pick a section from the panel on the right to start, or browse the full catalogue.",
+          t("home.p1"),
+          t("home.p2"),
         ],
       },
-      { h2: "Featured projects", items: projectLinks() },
+      { h2: t("home.featured"), items: projectLinks() },
     ],
   },
   "/browse": {
     navKey: "browse",
-    title: "Browse - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Browse" }],
+    title: t("browse.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("browse.crumb") }],
     blocks: [
       {
-        h1: "Browse the catalogue",
-        paras: ["Everything in Resources.co, grouped from the real packages in this repo. All self-hostable, all yours to run."],
+        h1: t("browse.heading"),
+        paras: [t("browse.p1")],
         tags: [...new Set(REPO_PROJECT_METADATA.projects.map((project) => project.kind))],
       },
       ...projectGroups(),
@@ -197,111 +207,110 @@ const SECTIONS = {
   },
   "/collections": {
     navKey: "collections",
-    title: "Projects - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Projects" }],
+    title: t("projects.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("projects.crumb") }],
     blocks: [
       {
-        h1: "Projects",
-        paras: ["Real packages from this repository, mapped into public project paths like macchiato/dom-use."],
+        h1: t("projects.heading"),
+        paras: [t("projects.p1")],
       },
       { items: projectLinks() },
     ],
   },
   "/about": {
     navKey: "about",
-    title: "About - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "About" }],
+    title: t("about.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("about.crumb") }],
     blocks: [
       {
-        h1: "About Resources.co",
+        h1: t("about.heading"),
         paras: [
-          "Resources.co is a startup making self-hosting composable. We build the primitives: containers, components, and usage providers, so teams can run modern infrastructure on their own terms.",
-          "The bet is simple: owning your stack should not mean rebuilding it from scratch.",
+          t("about.p1"),
+          t("about.p2"),
         ],
       },
       {
-        h2: "How it fits together",
+        h2: t("about.fit"),
         paras: [
-          "Every building block is designed to be self-hosted and to compose with the others. The project catalogue is generated from package metadata rather than a hand-maintained list.",
-          "Package names become public project paths, so @macchiato-dev/dom-use appears as macchiato/dom-use.",
+          t("about.fitP1"),
+          t("about.fitP2"),
         ],
       },
     ],
   },
   "/profile": {
     navKey: "",
-    title: "Your profile - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Your profile" }],
+    title: t("profile.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("profile.crumb") }],
     blocks: [
       {
-        eyebrow: "Account",
-        h1: "Your Resources.co profile",
-        paras: [
-          "Your provider identity is linked to this Resources.co account. Public profile editing and namespace controls will live here.",
-        ],
+        eyebrow: t("common.account"),
+        h1: t("profile.heading"),
+        paras: [t("profile.p1")],
       },
     ],
   },
   "/settings": {
     navKey: "",
-    title: "Settings - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Settings" }],
+    title: t("settings.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("settings.crumb") }],
     blocks: [
       {
-        eyebrow: "Account",
-        h1: "Settings",
-        paras: [
-          "Manage the services you can use to sign in to your Resources.co account.",
-        ],
+        eyebrow: t("common.account"),
+        h1: t("settings.heading"),
+        paras: [t("settings.p1")],
         items: [
-          ["Connect GitHub", "Authorize GitHub and link that identity to this signed-in account.", "/auth/github/link"],
-          ["Connect GitLab", "Authorize GitLab and link that identity to this signed-in account.", "/auth/gitlab/link"],
+          [t("settings.github"), t("settings.githubDesc"), "/auth/github/link"],
+          [t("settings.gitlab"), t("settings.gitlabDesc"), "/auth/gitlab/link"],
         ],
       },
     ],
   },
   "/help": {
     navKey: "",
-    title: "Help and docs - Resources.co",
-    crumb: [{ icon: true, href: "/" }, { label: "Help and docs" }],
+    title: t("help.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("help.crumb") }],
     blocks: [
       {
-        eyebrow: "Support",
-        h1: "Help and documentation",
-        paras: [
-          "Architecture guides, self-hosting instructions, and support resources are being assembled alongside the application.",
-        ],
+        eyebrow: t("common.support"),
+        h1: t("help.heading"),
+        paras: [t("help.p1")],
         items: [
-          ["Browse projects", "Inspect the building blocks already available.", "/browse"],
-          ["About Resources.co", "Read how the pieces are intended to fit together.", "/about"],
+          [t("help.browse"), t("help.browseDesc"), "/browse"],
+          [t("help.about"), t("help.aboutDesc"), "/about"],
         ],
       },
     ],
   },
-};
-SECTIONS["/login"] = resourcesAuthRoute("login");
-SECTIONS["/signup"] = resourcesAuthRoute("signup");
+  };
+  sections["/login"] = resourcesAuthRoute("login", authMessages(i18n));
+  sections["/signup"] = resourcesAuthRoute("signup", authMessages(i18n));
+  return sections;
+}
 
-const NOT_FOUND_ROUTE = {
+function notFoundRoute(i18n) {
+  const t = i18n.text;
+  return {
   navKey: "",
-  title: "Not found - Resources.co",
-  crumb: [{ icon: true, href: "/" }, { label: "Not found" }],
+  title: t("notFound.title"),
+  crumb: [{ icon: true, href: "/" }, { label: t("notFound.crumb") }],
   blocks: [
     {
       eyebrow: "404",
-      h1: "This block has not been composed yet.",
+      h1: t("notFound.heading"),
       paras: [
-        "That route is not in the Resources.co catalogue. It may still be on a workbench somewhere, or it may be a typo.",
-        "Head back home or browse the projects that are already wired up.",
+        t("notFound.p1"),
+        t("notFound.p2"),
       ],
       items: [
-        ["Home", "Return to the Resources.co starting point.", "/"],
-        ["Browse", "Scan the current catalogue of self-hostable parts.", "/browse"],
-        ["Projects", "Open the generated Resources.co projects.", "/collections"],
+        [t("nav.home"), t("notFound.homeDesc"), "/"],
+        [t("nav.browse"), t("notFound.browseDesc"), "/browse"],
+        [t("nav.projects"), t("notFound.projectsDesc"), "/collections"],
       ],
     },
   ],
-};
+  };
+}
 
 function css(theme = {}) {
   const authored = readFileSync(join(__dirname, "..", "resources-website", "styles.css"), "utf8");
@@ -329,6 +338,10 @@ ${base}
 .crumb a.home-ic { display: inline-flex; align-items: center; padding: 6px 9px; color: var(--accent); }
 .crumb a.home-ic:hover { color: var(--text); }
 .crumb a svg { width: 16px; height: 16px; display: block; }
+.footer .copy { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.language-switcher { display: inline-flex; align-items: center; gap: 6px; }
+.language-switcher a { color: var(--muted); text-decoration: none; }
+.language-switcher a[aria-current="page"] { color: var(--accent); font-weight: 700; }
 
 .items a {
   flex-direction: column;
@@ -841,7 +854,7 @@ function brandHeaderHtml(path) {
 }
 
 function blockHtml(block, options = {}) {
-  if (block.type === "auth") return renderResourcesAuthBlock(block.mode, options);
+  if (block.type === "auth") return renderResourcesAuthBlock(block.mode, { ...options, messages: authMessages(options.i18n) });
   if (block.type === "project-summary") return projectSummaryHtml(block);
   if (block.type === "package-details") return packageDetailsHtml(block);
   const bits = [`<section class="box block content-block">`];
@@ -882,9 +895,11 @@ function packageDetailsHtml(block) {
   </section>`;
 }
 
-function routeForPath(path) {
-  if (path === "/404") return NOT_FOUND_ROUTE;
-  if (SECTIONS[path]) return SECTIONS[path];
+function routeForPath(path, i18n) {
+  const sections = sectionsFor(i18n);
+  const t = i18n.text;
+  if (path === "/404") return notFoundRoute(i18n);
+  if (sections[path]) return sections[path];
   if (PROJECTS[path]) {
     const project = PROJECTS[path];
     return {
@@ -896,8 +911,8 @@ function routeForPath(path) {
         { label: project.slug },
       ],
       blocks: [
-        { type: "project-summary", eyebrow: project.npmName, h1: project.name, intro: project.intro, facts: projectFacts(project) },
-        { type: "package-details", h2: "Package metadata", rows: packageRows(project) },
+        { type: "project-summary", eyebrow: project.npmName, h1: project.name, intro: project.intro, facts: projectFacts(project, t) },
+        { type: "package-details", h2: t("common.packageMetadata"), rows: packageRows(project, t) },
       ],
     };
   }
@@ -909,25 +924,38 @@ function routeForPath(path) {
       title: `${org.name} - Resources.co`,
       crumb: [{ icon: true, href: "/" }, { label: org.name }],
       blocks: [
-        { eyebrow: "Organization", h1: org.name, paras: [org.blurb] },
-        { h2: children.length === 1 ? "1 project" : `${children.length} projects`, items: children },
+        { eyebrow: t("common.organization"), h1: org.name, paras: [org.blurb] },
+        { h2: children.length === 1 ? t("projects.one") : t("projects.many", { count: children.length }), items: children },
       ],
     };
   }
   return null;
 }
 
-function pageHtml(path, { runtime = "browser-use" } = {}) {
-  const route = routeForPath(path);
+function languageHref(locale, path) {
+  return `/language/${locale}${path === "/" ? "" : path}`;
+}
+
+function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
+  const route = routeForPath(path, i18n);
   const documentRuntime = runtime === "document";
   const authRoute = path === "/login" || path === "/signup";
+  const menu = resourcesMenu({
+    home: i18n.text("nav.home"),
+    browse: i18n.text("nav.browse"),
+    projects: i18n.text("nav.projects"),
+    about: i18n.text("nav.about"),
+  });
+  const language = documentRuntime
+    ? `<div class="language-switcher" aria-label="${escapeHtml(i18n.text("chrome.language"))}"><a href="${languageHref("en", path)}"${i18n.locale === "en" ? ' aria-current="page"' : ""}>${escapeHtml(i18n.text("chrome.english"))}</a><span>/</span><a href="${languageHref("es", path)}"${i18n.locale === "es" ? ' aria-current="page"' : ""}>${escapeHtml(i18n.text("chrome.spanish"))}</a></div>`
+    : "";
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
-    ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey)}
-    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime })).join("")}</div></div>
-    ${renderResourcesPrimaryMenu(route.navKey)}
-    <footer class="box footer" data-screen-label="footer"><div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div></footer>
+    ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
+    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n })).join("")}</div></div>
+    ${renderResourcesPrimaryMenu(route.navKey, menu)}
+    <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))} ${language}</div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module">${clientScript()}</script>` : ""}`;
 }
@@ -1342,23 +1370,31 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 }
 
 export function seedResourcesSite(db, { subdomain = SUBDOMAIN } = {}) {
-  for (const route of buildResourcesSiteRoutesForRuntime({ runtime: "browser-use", subdomain })) putSiteRoute(db, route);
+  for (const route of buildResourcesSiteRoutesForRuntime({ runtime: "browser-use", subdomain, locale: DEFAULT_RESOURCE_LOCALE })) putSiteRoute(db, route);
 }
 
 export function buildResourcesSiteRoutes() {
   return buildResourcesSiteRoutesForRuntime({ runtime: "browser-use" });
 }
 
-export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {}, subdomain = SUBDOMAIN } = {}) {
+export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {}, subdomain = SUBDOMAIN, locale = DEFAULT_RESOURCE_LOCALE } = {}) {
   const profile = resourcesRuntimeProfile(runtime);
+  const i18n = createTranslator(locale, RESOURCE_MESSAGES);
+  const sections = sectionsFor(i18n);
+  const nav = resourcesMenu({
+    home: i18n.text("nav.home"),
+    browse: i18n.text("nav.browse"),
+    projects: i18n.text("nav.projects"),
+    about: i18n.text("nav.about"),
+  }).items;
   const stylesheet = css(theme);
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
-  const paths = [...Object.keys(SECTIONS), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
+  const paths = [...Object.keys(sections), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
   return paths.map((path) => {
-    const route = routeForPath(path);
-    const authoredHtml = pageHtml(path, { runtime: profile.name });
+    const route = routeForPath(path, i18n);
+    const authoredHtml = pageHtml(path, { runtime: profile.name, i18n });
     // The edge profile is promoted to trusted static content only after passing
     // through the use-* boundary. The richer local profile keeps its authored
     // module script and applies dom-use again to each client-side page swap.
@@ -1367,10 +1403,11 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
       subdomain,
       path,
       title: route.title,
+      lang: i18n.locale,
       html,
       css: stylesheet,
       head: headHtml({ runtime: profile.name }),
-      nav: NAV,
+      nav,
       transition: { mode: profile.navigation, routePath: path },
     };
   });

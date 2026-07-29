@@ -74,6 +74,9 @@ export const BUILTIN_APPS = [
     handler: resourcesEdgePreviewHandler,
     sourceFiles: [
       "examples/resources-site/artifacts.js",
+      "examples/resources-site/i18n.js",
+      "examples/resources-site/content/en.md",
+      "examples/resources-site/content/es.md",
       "examples/resources-site/runtime.js",
       "examples/resources-site/theme.js",
       "examples/resources-site/components/menu.js",
@@ -82,6 +85,7 @@ export const BUILTIN_APPS = [
       "examples/resources-site/preview-handler.js",
       "examples/resources-site/adapters/memory-storage.js",
       "examples/resources-site/edge/app.js",
+      "examples/resources-site/edge/i18n.js",
       "examples/resources-site/edge/models.js",
     ],
     adapter: resourcesEdgePreviewConfig,

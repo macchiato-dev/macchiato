@@ -16,19 +16,20 @@ const PROVIDER_ICONS = Object.freeze({
   gitlab: '<svg viewBox="0 0 24 24"><path fill="#E24329" d="M12 21.42 15.31 11.2H8.69L12 21.42z"></path><path fill="#FC6D26" d="M12 21.42 8.69 11.2H4.05L12 21.42z"></path><path fill="#FCA326" d="M4.05 11.2 3.04 14.3a.69.69 0 0 0 .25.77L12 21.42 4.05 11.2z"></path><path fill="#E24329" d="M4.05 11.2h4.64L6.69 5.06a.35.35 0 0 0-.67 0L4.05 11.2z"></path><path fill="#FC6D26" d="M12 21.42 15.31 11.2h4.64L12 21.42z"></path><path fill="#FCA326" d="M19.95 11.2l1.01 3.1a.69.69 0 0 1-.25.77L12 21.42l7.95-10.22z"></path><path fill="#E24329" d="M19.95 11.2h-4.64l2-6.14a.35.35 0 0 1 .67 0l1.97 6.14z"></path></svg>',
 });
 
-export function resourcesAuthRoute(mode) {
+export function resourcesAuthRoute(mode, messages = {}) {
   const signup = mode === "signup";
   return {
     navKey: "",
-    title: `${signup ? "Sign up" : "Log in"} - Resources.co`,
-    crumb: [{ icon: true, href: "/" }, { label: signup ? "Sign up" : "Log in" }],
+    title: messages[signup ? "signupTitle" : "loginTitle"] || `${signup ? "Sign up" : "Log in"} - Resources.co`,
+    crumb: [{ icon: true, href: "/" }, { label: messages[signup ? "signup" : "login"] || (signup ? "Sign up" : "Log in") }],
     blocks: [{ type: "auth", mode }],
   };
 }
 
-function providerControl(provider, documentRuntime) {
+function providerControl(provider, documentRuntime, messages) {
   const mark = PROVIDER_ICONS[provider.icon] || provider.mark;
-  const content = `<span class="auth-provider__mark auth-provider__mark--${provider.key}">${mark}</span><span>Continue with ${provider.label}</span>`;
+  const label = (messages.continueWith || "Continue with {provider}").replace("{provider}", provider.label);
+  const content = `<span class="auth-provider__mark auth-provider__mark--${provider.key}">${mark}</span><span>${label}</span>`;
   if (documentRuntime && provider.enabledAtEdge) {
     return `<a class="auth-provider auth-provider--${provider.key}" href="/auth/${provider.key}/start">${content}</a>`;
   }
@@ -41,22 +42,25 @@ function providerControl(provider, documentRuntime) {
 export function renderResourcesAuthBlock(mode, {
   documentRuntime = false,
   showUnavailableProviders = RESOURCES_AUTH.showUnavailableProviders,
+  messages = {},
 } = {}) {
   const signup = mode === "signup";
   const providers = RESOURCES_AUTH.providers
     .filter((provider) => !documentRuntime || provider.enabledAtEdge || showUnavailableProviders)
-    .map((provider) => providerControl(provider, documentRuntime))
+    .map((provider) => providerControl(provider, documentRuntime, messages))
     .join("");
-  const alternate = signup ? 'Already have an account? <a href="/login">Log in</a>' : 'New to Resources.co? <a href="/signup">Create an account</a>';
+  const alternate = signup
+    ? `${messages.hasAccount || "Already have an account?"} <a href="/login">${messages.login || "Log in"}</a>`
+    : `${messages.new || "New to Resources.co?"} <a href="/signup">${messages.createAccount || "Create an account"}</a>`;
   return `<section class="box block auth-card">
-    <div class="auth-eyebrow">${signup ? "Join Resources.co" : "Welcome back"}</div>
-    <h1>${signup ? "Create your account" : "Log in to Resources.co"}</h1>
-    <p>${signup ? "Use a provider you already have. We'll set up your namespace on first sign-in." : "Continue with the provider you used to sign up."}</p>
+    <div class="auth-eyebrow">${signup ? (messages.join || "Join Resources.co") : (messages.welcome || "Welcome back")}</div>
+    <h1>${signup ? (messages.createHeading || "Create your account") : (messages.loginHeading || "Log in to Resources.co")}</h1>
+    <p>${signup ? (messages.createIntro || "Use a provider you already have. We'll set up your namespace on first sign-in.") : (messages.loginIntro || "Continue with the provider you used to sign up.")}</p>
     <div class="auth-providers">${providers}</div>
-    <div class="auth-legal">By continuing you agree to our <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Policy</a>.</div>
-    <div class="auth-divider"><span>secured by OAuth</span></div>
+    <div class="auth-legal">${messages.termsPrefix || "By continuing you agree to our"} <a href="/terms">${messages.termsOfUse || "Terms of Use"}</a> ${messages.and || "and"} <a href="/privacy">${messages.privacy || "Privacy Policy"}</a>.</div>
+    <div class="auth-divider"><span>${messages.oauth || "secured by OAuth"}</span></div>
     <div class="auth-alt">${alternate}</div>
-    <div class="auth-note"><span class="auth-note__icon">i</span><span>${documentRuntime ? "GitHub and GitLab create a real Resources.co session." : "Local architecture preview — provider authorization is simulated."}</span></div>
+    <div class="auth-note"><span class="auth-note__icon">i</span><span>${documentRuntime ? (messages.realSession || "GitHub and GitLab create a real Resources.co session.") : "Local architecture preview — provider authorization is simulated."}</span></div>
   </section>`;
 }
 
