@@ -9,6 +9,7 @@ import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../../examples/code-editor-use/handler.js";
+import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -58,6 +59,47 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM controller + native constrained adapter",
       hostCapabilities: ["browser-use scoped DOM", "code-editor-use CodeMirror 6 subtree"],
+    },
+  },
+  {
+    name: "Constrained ProseMirror",
+    subdomain: "prose-editor-use",
+    kind: "sandboxed browser component",
+    description: "A small ProseMirror message composer behind a shape-checked browser-use adapter and QuickJS controller.",
+    handler: proseEditorUseHandler,
+    sourceFiles: [
+      "examples/prose-editor-use/handler.js",
+      "examples/prose-editor-use/client.js",
+      "examples/prose-editor-use/controller.js",
+      "examples/prose-editor-use/controller-wordgard.js",
+      "examples/prose-editor-use/style.css",
+      "packages/browser-use/src/index.js",
+      "packages/browser-use/src/quickjs-guest.js",
+      "packages/prose-editor-use/src/index.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM controller + native constrained adapter",
+      hostCapabilities: ["browser-use scoped DOM", "prose-editor-use ProseMirror subtree"],
+    },
+  },
+  {
+    name: "Constrained Wordgard",
+    subdomain: "wordgard-editor-use",
+    kind: "sandboxed browser component",
+    description: "The same constrained message composer with only its QuickJS controller selecting Wordgard.",
+    handler: wordgardEditorUseHandler,
+    sourceFiles: [
+      "examples/prose-editor-use/handler.js",
+      "examples/prose-editor-use/client.js",
+      "examples/prose-editor-use/controller-wordgard.js",
+      "examples/prose-editor-use/style.css",
+      "packages/browser-use/src/index.js",
+      "packages/browser-use/src/quickjs-guest.js",
+      "packages/prose-editor-use/src/index.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM controller + native constrained adapter",
+      hostCapabilities: ["browser-use scoped DOM", "prose-editor-use allowlisted rich-text subtree"],
     },
   },
   {
