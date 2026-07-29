@@ -1,0 +1,10 @@
+{
+  "name": "@macchiato-dev/browser-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Policy-bound live browser DOM handles and shape detection",
+  "exports": {
+    ".": "./src/index.js",
+    "./quickjs-guest": "./src/quickjs-guest.js"
+  }
+}
