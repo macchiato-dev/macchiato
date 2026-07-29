@@ -1,5 +1,27 @@
 # QuickJS DOM Runtime Design
 
+## Live browser capability prototype
+
+`@macchiato-dev/browser-use` now prototypes the live-DOM branch of this design.
+It gives QuickJS opaque handles scoped to one browser subtree and forwards a
+small, JSON-only `document` surface. The host allowlists selectors, readable
+properties, and writable properties; native node references never cross into
+QuickJS. It also detects the subtree's actual tag, attribute, class, depth,
+element-count, and text shape at mount time and after each mutation.
+
+`@macchiato-dev/code-editor-use` is the first specialized adapter. CodeMirror 6
+runs natively because selection, focus, composition, layout geometry, and
+incremental rendering are browser capabilities that cannot be represented by
+the current serialized `dom-use` tree. A QuickJS controller observes its
+shape through `browser-use`, while the adapter fixes the CodeMirror extensions
+and continuously checks one declared subtree. Shape violations destroy and
+clear the editor. See `examples/code-editor-use/`.
+
+This is intentionally not a claim that arbitrary browser libraries can run
+unchanged in QuickJS. The general bridge and each native adapter remain
+separate capabilities: `browser-use` controls access, and the adapter declares
+the additional native behavior it requires.
+
 ## Status
 
 Macchiato has the first pieces of a constrained app runtime, but it does not
