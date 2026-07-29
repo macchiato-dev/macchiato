@@ -11,8 +11,8 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(text, /Log in/);
   assert.match(text, /Sign up/);
   assert.doesNotMatch(text, /Edge safe/);
-  assert.match(home.headers.get("content-security-policy"), /script-src 'none'/);
-  assert.doesNotMatch(text, /type="module"|type="importmap"/);
+  assert.match(home.headers.get("content-security-policy"), /script-src 'self'/);
+  assert.match(text, /type="module".*command-palette-use\/client\.js/);
 
   const project = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/macchiato/app"));
   assert.equal(project.status, 200);
