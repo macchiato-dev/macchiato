@@ -74,6 +74,7 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /wasm-unsafe-eval/);
   assert.equal(await page.locator(".cm-editor").count(), 1);
+  assert.equal(await page.locator(".editor-shell").evaluate((node) => getComputedStyle(node).borderRadius), "2px");
   assert.match(await page.locator("#status").textContent(), /QuickJS observed \d+ characters across 2 lines/);
 
   await page.locator(".cm-content").click();
