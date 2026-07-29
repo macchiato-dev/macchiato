@@ -1,21 +1,25 @@
 import { defineMenu, renderMobileMenu, renderPrimaryMenu } from "@macchiato-dev/menu-use";
 
-export const RESOURCES_MENU = defineMenu({
-  name: "resources-primary",
-  items: [
-    { path: "/", label: "Home", key: "home" },
-    { path: "/browse", label: "Browse", key: "browse" },
-    { path: "/collections", label: "Projects", key: "collections" },
-    { path: "/about", label: "About", key: "about" },
-  ],
-});
-
-export function renderResourcesPrimaryMenu(activeKey) {
-  return renderPrimaryMenu(RESOURCES_MENU, { activeKey });
+export function resourcesMenu(labels = {}) {
+  return defineMenu({
+    name: "resources-primary",
+    items: [
+      { path: "/", label: labels.home || "Home", key: "home" },
+      { path: "/browse", label: labels.browse || "Browse", key: "browse" },
+      { path: "/collections", label: labels.projects || "Projects", key: "collections" },
+      { path: "/about", label: labels.about || "About", key: "about" },
+    ],
+  });
 }
 
-export function renderResourcesMobileMenu(activeKey) {
-  return renderMobileMenu(RESOURCES_MENU, { activeKey, controlHtml: renderResourcesThemeToggle() });
+export const RESOURCES_MENU = resourcesMenu();
+
+export function renderResourcesPrimaryMenu(activeKey, menu = RESOURCES_MENU) {
+  return renderPrimaryMenu(menu, { activeKey });
+}
+
+export function renderResourcesMobileMenu(activeKey, menu = RESOURCES_MENU) {
+  return renderMobileMenu(menu, { activeKey, controlHtml: renderResourcesThemeToggle() });
 }
 
 export function renderResourcesThemeToggle() {

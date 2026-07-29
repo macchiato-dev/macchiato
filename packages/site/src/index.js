@@ -238,6 +238,7 @@ export function renderSiteRoute(row) {
 ${row.head || ""}`;
   return renderDocument({
     title: row.title || row.subdomain,
+    lang: row.lang || "en",
     csp: row.csp || "",
     head,
     body: row.html,
