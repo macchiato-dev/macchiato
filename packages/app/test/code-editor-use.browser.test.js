@@ -101,6 +101,18 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
 
   await page.keyboard.press("Control+f");
   const search = page.locator(".cm-search input[name='search']");
+  const searchLayout = await page.locator("#editor").evaluate((editor) => {
+    const editorBox = editor.querySelector(".cm-editor").getBoundingClientRect();
+    const scrollerBox = editor.querySelector(".cm-scroller").getBoundingClientRect();
+    const panelsBox = editor.querySelector(".cm-panels").getBoundingClientRect();
+    return {
+      editorBottom: editorBox.bottom,
+      scrollerHeight: scrollerBox.height,
+      panelsBottom: panelsBox.bottom,
+    };
+  });
+  assert.ok(searchLayout.scrollerHeight > 200);
+  assert.ok(Math.abs(searchLayout.editorBottom - searchLayout.panelsBottom) < 1);
   await search.fill("item8");
   await page.keyboard.press("Enter");
   await page.keyboard.press("Escape");
