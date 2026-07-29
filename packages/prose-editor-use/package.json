@@ -1,0 +1,16 @@
+{
+  "name": "@macchiato-dev/prose-editor-use",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.js",
+  "dependencies": {
+    "@macchiato-dev/browser-use": "0.1.0",
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.4",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-view": "^1.41.3",
+    "wordgard": "^0.3.1"
+  }
+}
