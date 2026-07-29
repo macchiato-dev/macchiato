@@ -1,8 +1,27 @@
 import { composeUserMenuDomSchema, createExclusiveUserMenuSandboxSource, defineUserMenu, renderUserMenu } from "@macchiato-dev/user-menu-use";
+import { defineCommandPalette, renderCommandPalette } from "@macchiato-dev/command-palette-use";
 
 const svg = (body, attributes = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${attributes}>${body}</svg>`;
 const avatar = `<span class="ub-avatar">MD</span>`;
-const guestHtml = `<div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></div>`;
+const blankAvatar = `<span class="ub-avatar ub-avatar--blank" aria-hidden="true">${svg('<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>')}</span>`;
+export const resourcesAppearanceHtml = `<div class="menu__head">Appearance</div><div class="seg" role="group" aria-label="Appearance"><button class="seg__btn" type="button" data-theme-choice="dark" aria-pressed="true"><span>Dark</span></button><button class="seg__btn" type="button" data-theme-choice="light" aria-pressed="false"><span>Light</span></button><button class="seg__btn" type="button" data-theme-choice="system" aria-pressed="false"><span>System</span></button></div>`;
+const guestHtml = `<div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a>
+  <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="Account menu">${blankAvatar}${svg('<path d="m6 9 6 6 6-6"></path>', 'class="ub-caret" fill="none" stroke="currentColor" stroke-width="2"')}</summary>
+    <div class="popover edge-user-menu__panel"><a class="item" href="/settings">Settings</a><a class="item" href="/help">Help &amp; docs</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div><a class="item" href="/login">Log in</a><a class="item" href="/signup">Sign up</a></div>
+  </details></div>`;
+
+export const RESOURCES_COMMAND_PALETTE = defineCommandPalette({
+  commands: [
+    { id: "browse", label: "Browse resources", href: "/browse" },
+    { id: "projects", label: "Your projects", href: "/dashboard" },
+    { id: "settings", label: "Settings", href: "/settings" },
+    { id: "help", label: "Help and documentation", href: "/help" },
+  ],
+});
+
+export function renderResourcesCommandPalette() {
+  return renderCommandPalette(RESOURCES_COMMAND_PALETTE);
+}
 
 export const RESOURCES_IDENTITY = Object.freeze({ name: "macchiato-dev", initials: "MD" });
 
@@ -64,6 +83,8 @@ export const RESOURCES_USER_MENU = defineUserMenu({
         <button class="item">${svg('<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path>')}Settings</button>
         <button class="item">${svg('<circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>')}Help &amp; docs</button>
         <div class="menu__sep"></div>
+        ${resourcesAppearanceHtml}
+        <div class="menu__sep"></div>
         <button class="item item--danger auth-signout">Sign out</button>`,
     },
   ],
@@ -85,11 +106,14 @@ export const resourcesUserMenuSandboxSource = createExclusiveUserMenuSandboxSour
 });
 
 export function renderResourcesUserMenu() {
-  return renderUserMenu(RESOURCES_USER_MENU);
+  return renderUserMenu(RESOURCES_USER_MENU).replace(
+    '<section class="box userbar" data-screen-label="userbar">',
+    `<section class="box userbar" data-screen-label="userbar">${renderResourcesCommandPalette()}`,
+  );
 }
 
 export function renderResourcesEdgeStatus() {
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    ${guestHtml}
+    <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></div>
   </aside>`;
 }

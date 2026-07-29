@@ -9,6 +9,9 @@ import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 import { seal, unseal } from "../auth/session.js";
 import { ContentConflictError, ContentValidationError } from "../models/content.js";
+import { renderResourcesCommandPalette, resourcesAppearanceHtml } from "../components/user-menu.js";
+import { commandPaletteClientPath } from "@macchiato-dev/command-palette-use";
+import { themeUseClientPath } from "@macchiato-dev/theme-use";
 
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
@@ -31,11 +34,17 @@ function message(messages, key, fallback) {
 function authStatusHtml(session, messages = {}) {
   if (!session) {
     return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-      <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="ub-btn ub-btn--solid" href="/signup">${message(messages, "auth.signup", "Sign up")}</a></div>
+      ${renderResourcesCommandPalette()}
+      <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="ub-btn ub-btn--solid" href="/signup">${message(messages, "auth.signup", "Sign up")}</a>
+        <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}"><span class="ub-avatar ub-avatar--blank" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg></span><svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></summary>
+          <div class="popover edge-user-menu__panel"><a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a><a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div><a class="item" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="item" href="/signup">${message(messages, "auth.signup", "Sign up")}</a></div>
+        </details>
+      </div>
     </aside>`;
   }
   const initials = session.login.slice(0, 2).toUpperCase();
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+    ${renderResourcesCommandPalette()}
     <details class="edge-user-menu edge-create-menu">
       <summary class="edge-user-menu__trigger edge-create-menu__trigger" aria-label="${message(messages, "account.create", "Create")}">+</summary>
       <div class="popover edge-user-menu__panel edge-create-menu__panel">
@@ -58,6 +67,8 @@ function authStatusHtml(session, messages = {}) {
         <a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a>
         <a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a>
         <div class="menu__sep"></div>
+        ${resourcesAppearanceHtml}
+        <div class="menu__sep"></div>
         <form method="post" action="/logout"><button class="item item--danger" type="submit">${message(messages, "account.signout", "Sign out")}</button></form>
       </div>
     </details>
@@ -65,7 +76,9 @@ function authStatusHtml(session, messages = {}) {
 }
 
 function renderSessionHtml(html, session, messages) {
-  return html.replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages));
+  return html
+    .replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages))
+    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script></body>`);
 }
 
 function checked(value, expected) {

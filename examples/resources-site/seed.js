@@ -9,6 +9,8 @@ import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
 import { resourcesMenu, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
 import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
+import { commandPaletteClientPath } from "@macchiato-dev/command-palette-use";
+import { themeUseClientPath } from "@macchiato-dev/theme-use";
 import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "./components/auth.js";
 import { createTranslator, DEFAULT_RESOURCE_LOCALE, loadResourcesLocales } from "./i18n.js";
 import { loadProjectContentSpace } from "./catalog-content.js";
@@ -627,6 +629,19 @@ ${base}
   min-height: 64px;
   gap: 10px;
 }
+.command-trigger { min-width: 200px; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 10px 8px 13px; border: 1px solid var(--track-border); border-radius: 11px; color: var(--muted); background: var(--track); font: inherit; font-size: 13px; cursor: pointer; }
+.command-trigger:hover { border-color: var(--accent); color: var(--text); }
+.command-trigger kbd, .command-palette kbd { padding: 3px 6px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--muted); background: var(--card); font-family: "Space Mono", monospace; font-size: 10px; font-weight: 600; line-height: 1.2; }
+.command-palette { width: min(620px, calc(100% - 32px)); margin: 13vh auto 0; padding: 0; border: 1px solid var(--card-border); border-radius: 16px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
+.command-palette::backdrop { background: rgba(8,14,40,.38); backdrop-filter: blur(5px); }
+.command-palette__surface { padding: 8px; }
+.command-palette__search { display: flex; align-items: center; gap: 10px; padding: 8px 10px 14px; }
+.command-palette__search > span { color: var(--muted); font-size: 24px; }
+.command-palette__search input { flex: 1; min-width: 0; border: none; outline: none; color: var(--text); background: transparent; font: inherit; font-size: 17px; }
+.command-palette__list { display: grid; gap: 3px; padding: 7px 0 0; }
+.command-palette__item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 12px; border-radius: 9px; color: var(--text); text-decoration: none; font-size: 14px; }
+.command-palette__item:hover, .command-palette__item:focus { color: var(--active-fg); background: var(--active-bg); outline: none; }
+.command-palette__item[hidden] { display: none; }
 .edge-account-name {
   color: var(--muted);
   font-size: 14px;
@@ -645,8 +660,13 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .document-runtime .ub-guest { display: flex; }
 .edge-status form { margin: 0; }
 .edge-status form button { font: inherit; background: transparent; cursor: pointer; }
-.ub-btn { border: 1px solid var(--track-border); border-radius: 11px; padding: 10px 15px; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
+.ub-btn { flex: 0 0 auto; border: 1px solid var(--track-border); border-radius: 11px; padding: 10px 15px; color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
 .ub-btn--solid { border-color: var(--active-bg); background: var(--active-bg); color: var(--active-fg); }
+.ub-avatar--blank { border: 1px solid var(--track-border); color: var(--muted); background: var(--track); }
+.ub-avatar--blank svg { width: 20px; height: 20px; }
+.edge-guest-menu { position: relative; }
+.edge-guest-menu .ub-acct { padding: 4px; }
+.edge-guest-menu .edge-user-menu__panel { min-width: 210px; }
 .item--danger:hover { color: #ff6b6b; }
 .auth-card { width: 100%; max-width: 440px; padding: 40px 40px 34px; align-self: center; }
 .auth-eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
@@ -724,6 +744,9 @@ body[data-auth="out"] .ub-guest { display: flex; }
 }
 
 @media (max-width: 760px) {
+  .command-trigger { min-width: 42px; width: 42px; padding: 8px; justify-content: center; }
+  .command-trigger > span { display: none; }
+  .command-trigger kbd { border: none; padding: 0; font-size: 9px; }
   .account-grid { grid-template-columns: 1fr; }
   .account-dashboard__header, .account-section__header { align-items: flex-start; flex-direction: column; }
   .layout {
@@ -1015,7 +1038,9 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))} ${language}</div></footer>
   </main>${runtime === "browser-use" ? `
-  <script type="module">${clientScript()}</script>` : ""}`;
+  <script type="module">${clientScript()}</script>
+  <script type="module" src="${commandPaletteClientPath}"></script>
+  <script type="module" src="${themeUseClientPath}"></script>` : ""}`;
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {

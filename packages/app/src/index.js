@@ -6,6 +6,8 @@ import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { domUseBrowserAssets } from "@macchiato-dev/dom-use/browser-assets";
+import { commandPaletteUseBrowserAssets } from "@macchiato-dev/command-palette-use/browser-assets";
+import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 import { getFontAsset, parseFontAssetUrl } from "@macchiato-dev/font-use";
 import { htmlUseBrowserAssets } from "@macchiato-dev/html-use/browser-assets";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
@@ -115,6 +117,8 @@ const CONTENT_TYPES = {
 
 const BROWSER_ASSET_SETS = [
   quickJsEmscriptenSandboxBrowserAssets,
+  commandPaletteUseBrowserAssets,
+  themeUseBrowserAssets,
   domUseBrowserAssets,
   htmlUseBrowserAssets,
   styleUseBrowserAssets,

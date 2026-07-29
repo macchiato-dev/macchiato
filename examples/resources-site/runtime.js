@@ -8,7 +8,7 @@ export const RESOURCES_RUNTIME_PROFILES = Object.freeze({
   edge: Object.freeze({
     name: "document",
     navigation: "document",
-    browserJavaScript: false,
+    browserJavaScript: "host-owned command palette only",
     storage: "manifest-objects",
   }),
 });
