@@ -1,0 +1,11 @@
+{
+  "name": "@macchiato-dev/command-palette-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Declarative combined instant search and command palette",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./browser-assets": "./src/browser-assets.js"
+  }
+}
