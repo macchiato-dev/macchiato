@@ -1,0 +1,16 @@
+{
+  "name": "@macchiato-dev/code-editor-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A tightly constrained CodeMirror 6 browser-use adapter",
+  "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.1",
+    "@macchiato-dev/browser-use": "0.1.0",
+    "codemirror": "^6.0.2"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  }
+}
