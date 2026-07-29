@@ -79,13 +79,16 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
   await page.locator(".cm-content").click();
   const cursorStyle = await page.locator(".cm-cursor-primary").evaluate((node) => {
     const style = getComputedStyle(node);
+    const editorStyle = getComputedStyle(node.closest(".cm-editor"));
     return {
       color: style.borderLeftColor,
+      editorBackground: editorStyle.backgroundColor,
       display: style.display,
       height: Number.parseFloat(style.height),
     };
   });
-  assert.equal(cursorStyle.color, "rgb(103, 232, 212)");
+  assert.notEqual(cursorStyle.color, cursorStyle.editorBackground);
+  assert.notEqual(cursorStyle.color, "rgba(0, 0, 0, 0)");
   assert.equal(cursorStyle.display, "block");
   assert.ok(cursorStyle.height > 10);
 

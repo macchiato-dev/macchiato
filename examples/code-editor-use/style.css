@@ -9,8 +9,7 @@ main > p { max-width: 720px; color: #aebbd0; line-height: 1.6; }
 #editor { min-height: 340px; }
 .cm-editor { min-height: 340px; background: #151a23; font-size: 15px; }
 .cm-scroller { overflow: auto; font-family: "SFMono-Regular", Consolas, monospace; line-height: 1.65; }
-.cm-content { padding: 18px 0; caret-color: #67e8d4; }
-#editor .cm-cursor { border-left-color: #67e8d4; }
+.cm-content { padding: 18px 0; }
 #editor .cm-gutters { border-right: 1px solid #28354a; background: #111620; color: #65738a; }
 #editor .cm-gutterElement { color: #65738a; }
 #editor .cm-activeLine, #editor .cm-activeLineGutter { background: #23304988; }
