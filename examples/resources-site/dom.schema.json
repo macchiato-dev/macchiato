@@ -112,6 +112,11 @@
       "attrs": ["class", "data-screen-label"],
       "children": ["div"]
     },
+    "language-form": {
+      "element": "form.language-switcher",
+      "attrs": ["class", "method", "action"],
+      "children": ["label", "input", "button"]
+    },
     "client-script": {
       "element": "script",
       "attrs": [],
@@ -133,7 +138,11 @@
     },
     "div": {
       "attrs": ["class", "id", "role", "aria-label"],
-      "children": ["#text", "a", "button", "div", "h1", "h2", "nav", "p", "section", "span"]
+      "children": ["#text", "a", "button", "div", "form", "h1", "h2", "nav", "p", "section", "span"]
+    },
+    "form": {
+      "attrs": ["class", "method", "action"],
+      "children": ["label", "input", "button"]
     },
     "footer": {
       "attrs": ["class", "data-screen-label"],
@@ -145,6 +154,18 @@
     },
     "h2": {
       "attrs": [],
+      "children": ["#text"]
+    },
+    "input": {
+      "attrs": ["type", "name", "value"],
+      "children": []
+    },
+    "label": {
+      "attrs": ["class"],
+      "children": ["#text", "select", "span"]
+    },
+    "option": {
+      "attrs": ["value", "selected"],
       "children": ["#text"]
     },
     "header": {
@@ -191,6 +212,10 @@
       "attrs": ["class", "data-open", "data-screen-label"],
       "children": ["button", "div", "h1", "h2", "p"]
     },
+    "select": {
+      "attrs": ["name", "aria-label"],
+      "children": ["option"]
+    },
     "span": {
       "attrs": ["class"],
       "children": ["#text", "svg"]
@@ -201,7 +226,8 @@
     }
   },
   "urls": {
-    "href": "^/(?:[A-Za-z0-9._~-]+/?)*$"
+    "href": "^/(?:[A-Za-z0-9._~-]+/?)*$",
+    "action": "^/language$"
   },
   "maxDepth": 12,
   "limits": {

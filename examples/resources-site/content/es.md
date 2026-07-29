@@ -11,6 +11,10 @@
 - **common.account**: Cuenta
 - **common.support**: Ayuda
 - **common.organization**: Organización
+- **common.package**: Paquete
+- **common.kind**: Tipo
+- **common.files**: Archivos
+- **common.version**: Versión
 - **common.packageMetadata**: Metadatos del paquete
 - **common.source**: Código fuente
 - **common.packageFile**: Archivo del paquete
@@ -21,6 +25,8 @@
 - **common.none**: Ninguno
 - **common.noneDeclared**: Ninguna declarada
 - **common.noTrackedFiles**: No hay archivos de código registrados
+- **catalog.intro**: {description} Se publica como {package} desde {directory}.
+- **catalog.group**: Paquetes: {kind}
 
 ## Inicio
 
@@ -124,3 +130,4 @@
 - **chrome.language**: Idioma
 - **chrome.english**: Inglés
 - **chrome.spanish**: Español
+- **chrome.changeLanguage**: Cambiar
