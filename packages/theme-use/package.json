@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Validate and render configurable CSS custom-property themes",
   "type": "module",
-  "exports": { ".": "./src/index.js" },
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./browser-assets": "./src/browser-assets.js"
+  },
   "files": ["src"]
 }

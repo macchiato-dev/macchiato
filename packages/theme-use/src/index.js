@@ -44,3 +44,5 @@ export function renderThemeCss(themes) {
     return `${theme.selector} {\n${declarations}\n}`;
   }).join("\n\n");
 }
+
+export const themeUseClientPath = "/-/theme-use/client.js";
