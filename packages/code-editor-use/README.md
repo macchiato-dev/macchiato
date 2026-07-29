@@ -4,7 +4,8 @@
 does not grant a QuickJS guest CodeMirror's native nodes. The guest controls the
 editor through JSON operations while the audited adapter owns one subtree.
 
-The adapter fixes the extension set to `basicSetup` plus JavaScript syntax,
+The adapter fixes the extension set to `basicSetup`, JavaScript syntax, and
+CodeMirror's maintained One Dark theme,
 caps documents at 100,000 characters, and continuously checks the resulting
 subtree against `CODE_EDITOR_DOM_POLICY`. The policy declares CodeMirror's
 expected tags, attributes, generated class-name families, depth, element count,
