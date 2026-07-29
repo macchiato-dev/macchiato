@@ -65,6 +65,22 @@ export function normalizeExportManifest(value) {
   if (!Array.isArray(value.validatedWith) || !["dom-use", "style-use", "html-use", "theme-use"].every((name) => value.validatedWith.includes(name))) {
     throw new Error("Export manifest is missing use-* validation evidence");
   }
+  if (value.defaultLocale !== "en" || !Array.isArray(value.locales) || value.locales.join(",") !== "en,es") {
+    throw new Error("Export manifest has invalid locales");
+  }
+  if (!value.messages || typeof value.messages !== "object" || Array.isArray(value.messages)) {
+    throw new Error("Export manifest has invalid locale messages");
+  }
+  const messages = {};
+  for (const locale of value.locales) {
+    const source = value.messages[locale];
+    if (!source || typeof source !== "object" || Array.isArray(source)) throw new Error(`Missing locale messages: ${locale}`);
+    const entries = Object.entries(source);
+    if (!entries.length || entries.length > 500 || entries.some(([key, message]) => !/^[A-Za-z][A-Za-z0-9.]+$/.test(key) || typeof message !== "string" || message.length > 2_000)) {
+      throw new Error(`Invalid locale messages: ${locale}`);
+    }
+    messages[locale] = Object.freeze({ ...source });
+  }
   if (!Array.isArray(value.files) || value.files.length > 2_000) throw new Error("Invalid export manifest files");
   const files = new Set();
   for (const file of value.files) {
@@ -84,7 +100,14 @@ export function normalizeExportManifest(value) {
     artifacts.set(pathToObjectKey(file), Object.freeze({ bytes: artifact.bytes, sha256: artifact.sha256 }));
   }
   if (Object.keys(value.artifacts).length !== files.size) throw new Error("Export manifest artifacts do not match files");
-  return Object.freeze({ generatedAt: String(value.generatedAt || ""), files, artifacts });
+  return Object.freeze({
+    generatedAt: String(value.generatedAt || ""),
+    files,
+    artifacts,
+    defaultLocale: value.defaultLocale,
+    locales: Object.freeze([...value.locales]),
+    messages: Object.freeze(messages),
+  });
 }
 
 export function storageObjectUrl(config, key) {

@@ -285,8 +285,18 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   assert.equal(response.status(), 200);
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
 
-  await page.getByRole("link", { name: "Log in" }).click();
+  await page.getByRole("link", { name: "Spanish" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
+  assert.equal(await page.locator("html").getAttribute("lang"), "es");
+  await page.getByRole("link", { name: "Acerca de" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "Acerca de Resources.co" }).waitFor());
+  await page.getByRole("link", { name: "Inglés" }).click();
+  await assert.doesNotReject(page.getByRole("heading", { name: "About Resources.co" }).waitFor());
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+
+  await page.goto(`http://resources-edge.localhost:${port}/login`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitHub" }).waitFor());
   await assert.doesNotReject(page.getByRole("link", { name: "Continue with GitLab" }).waitFor());
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
