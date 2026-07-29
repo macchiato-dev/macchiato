@@ -8,7 +8,7 @@ main > p { max-width: 720px; color: #aebbd0; line-height: 1.6; }
 .editor-shell { margin-top: 30px; overflow: hidden; border: 1px solid #34445f; border-radius: 14px; background: #151a23; box-shadow: 0 22px 60px #0006; }
 #editor { min-height: 340px; }
 .cm-editor { min-height: 340px; background: #151a23; font-size: 15px; }
-.cm-scroller { overflow: auto; font-family: "SFMono-Regular", Consolas, monospace; line-height: 1.65; }
+.cm-scroller { flex: 1; min-height: 0; overflow: auto; font-family: "SFMono-Regular", Consolas, monospace; line-height: 1.65; }
 .cm-content { padding: 18px 0; }
 #editor .cm-gutters { border-right: 1px solid #28354a; background: #111620; color: #65738a; }
 #editor .cm-gutterElement { color: #65738a; }
