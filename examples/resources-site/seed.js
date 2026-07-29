@@ -1038,9 +1038,9 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
     <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))} ${language}</div></footer>
   </main>${runtime === "browser-use" ? `
+  <script type="module" src="${themeUseClientPath}"></script>
   <script type="module">${clientScript()}</script>
-  <script type="module" src="${commandPaletteClientPath}"></script>
-  <script type="module" src="${themeUseClientPath}"></script>` : ""}`;
+  <script type="module" src="${commandPaletteClientPath}"></script>` : ""}`;
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {

@@ -923,7 +923,7 @@ test("resources user menu safe polygon protects diagonal travel but permits hori
   const createPop = create.locator("xpath=..");
 
   await account.hover();
-  await page.waitForFunction(() => document.querySelector(".userbar .ub-pop:nth-child(3)")?.dataset.open === "true");
+  await page.waitForFunction(() => document.querySelectorAll(".userbar .ub-pop")[2]?.dataset.open === "true");
   const accountBox = await account.boundingBox();
   const panelBox = await accountPop.locator(".popover").boundingBox();
   assert.ok(accountBox && panelBox);
@@ -936,7 +936,7 @@ test("resources user menu safe polygon protects diagonal travel but permits hori
   const createBox = await create.boundingBox();
   assert.ok(createBox);
   await page.mouse.move(createBox.x + createBox.width / 2, accountBox.y + accountBox.height / 2, { steps: 8 });
-  await page.waitForFunction(() => document.querySelector(".userbar .ub-pop:nth-child(2)")?.dataset.open === "true");
+  await page.waitForFunction(() => document.querySelectorAll(".userbar .ub-pop")[1]?.dataset.open === "true");
   assert.equal(await createPop.getAttribute("data-open"), "true");
   assert.notEqual(await accountPop.getAttribute("data-open"), "true");
 });
