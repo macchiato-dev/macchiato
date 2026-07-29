@@ -85,7 +85,7 @@ test("edge handler serves only exported artifacts with hardened headers", async 
   assert.equal(await response.text(), "<h1>About</h1>");
   assert.equal(response.headers.get("content-type"), "text/html; charset=utf-8");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
-  assert.match(response.headers.get("content-security-policy"), /script-src 'none'/);
+  assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
   assert.equal(response.headers.get("etag"), '"about-v1"');
   assert.equal(requests.length, 2);
 

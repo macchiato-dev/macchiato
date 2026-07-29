@@ -7,7 +7,7 @@ fork of the application.
 | Profile | Runtime | Validation and navigation |
 | --- | --- | --- |
 | Local Macchiato | Node + SQLite | Rich browser transitions sanitized by `dom-use`; optional browser QuickJS for the userbar state machine |
-| Bunny edge | Bunny V8 isolate + Storage | Strict build-time `style-use` and `dom-use`; no executable page JavaScript; full-document navigation |
+| Bunny edge | Bunny V8 isolate + Storage | Strict build-time `style-use` and `dom-use`; two fixed host-owned UI modules; full-document navigation |
 
 The generic `@macchiato-dev/theme-use` module owns safe CSS-token definition,
 merging, and rendering. [`theme.js`](theme.js) is the Resources.co-specific
@@ -149,10 +149,11 @@ visibly unavailable until adapters exist.
 
 Both implemented providers validate signed state and PKCE, exchange the code
 only at the edge, fetch the provider identity, discard the provider token, and
-issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. HTML remains
-free of executable page scripts: the edge replaces one bounded account-status
-island with escaped guest or session markup and marks personalized documents
-`private, no-store`.
+issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. The edge
+replaces one bounded account-status island with escaped guest or session markup
+and marks personalized documents `private, no-store`. Browser code is limited
+to the published `command-palette-use` and `theme-use` modules; neither module
+interprets account content or arbitrary commands.
 
 The signed-in edge island uses native `details`/`summary` disclosure rather
 than a second menu script. It exposes create, project, profile, settings, help,
@@ -203,7 +204,8 @@ manifest records:
 - byte length and SHA-256 evidence for every artifact.
 
 The HTML contains no module scripts, import map, QuickJS, or dynamic page-swap
-code. A strict CSP at the edge uses `script-src 'none'`.
+code. A strict CSP at the edge uses `script-src 'self'` and the export manifest
+allowlists only the fixed command-palette and appearance modules.
 
 ## Check locally
 

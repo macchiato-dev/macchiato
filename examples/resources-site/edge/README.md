@@ -46,7 +46,8 @@ credential separately from the read-only credential used by the edge script.
 - No user-authored HTML. The document publication path remains read-only;
   authentication and account content use separate, narrowly modeled database
   boundaries. Names, slugs, and descriptions are always escaped.
-- No executable JavaScript in the document-profile export.
+- No app-authored JavaScript in the document-profile export. The only browser
+  code is the fixed, host-owned command-palette and appearance modules.
 - No passthrough of upstream response headers except ETag and Last-Modified.
 
 ## Accounts and linked OAuth identities
@@ -101,8 +102,9 @@ validation boundary and writes HTML beneath `locales/<locale>/`; Markdown is
 not interpreted on the public request path.
 
 The edge returns a complete localized HTML document on the first request. It
-does not fetch page content as browser JSON and the document profile still has
-`script-src 'none'`. Locale selection is:
+does not fetch page content as browser JSON. CSP permits same-origin scripts
+only because the export manifest contains the fixed command-palette and
+appearance modules. Locale selection is:
 
 1. the `resources_locale` cookie set by the footer language switcher;
 2. the browser's `Accept-Language` preference;

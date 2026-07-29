@@ -136,8 +136,8 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   assert.match(text, /--accent: #30d5c8/);
   assert.match(text, /Log in/);
   assert.doesNotMatch(text, /Edge safe/);
-  assert.match(response.headers.get("content-security-policy"), /script-src 'none'/);
-  assert.doesNotMatch(text, /type="module"|type="importmap"/);
+  assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
+  assert.match(text, /command-palette-use\/client\.js/);
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Edge Preview/);
   assert.match(configText, /in-memory export manifest/);
@@ -262,7 +262,7 @@ test("apps directory renders in a real browser", async (t) => {
   assert.deepEqual(badResponses, []);
 });
 
-test("Resources.co edge preview renders in a real browser without page scripts", async (t) => {
+test("Resources.co edge preview limits browser code to host-owned UI modules", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
   const app = startApp(port, dataDir);
@@ -286,9 +286,22 @@ test("Resources.co edge preview renders in a real browser without page scripts",
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
   });
   assert.equal(response.status(), 200);
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
+  await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
+  await page.getByLabel("Account menu").click();
+  await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).waitFor());
+  assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 2);
+  await page.getByRole("button", { name: "Light" }).click();
+  assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
+  await page.getByLabel("Account menu").click();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
+  await assert.doesNotReject(page.getByRole("dialog", { name: "Search or jump to…" }).waitFor());
+  await page.getByRole("searchbox", { name: "Search or jump to…" }).fill("settings");
+  await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).last().waitFor());
+  await page.keyboard.press("Escape");
 
   await page.getByLabel("Language").selectOption("es");
   await page.getByRole("button", { name: "Change" }).click();
@@ -307,7 +320,7 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
   await assert.doesNotReject(page.locator(".nav").waitFor());
   await assert.doesNotReject(page.locator(".footer").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
@@ -405,7 +418,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 0);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {
