@@ -287,12 +287,14 @@ test("Resources.co edge preview renders in a real browser without page scripts",
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
 
-  await page.getByRole("link", { name: "Spanish" }).click();
+  await page.getByLabel("Language").selectOption("es");
+  await page.getByRole("button", { name: "Change" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "es");
   await page.getByRole("link", { name: "Acerca de" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Acerca de Resources.co" }).waitFor());
-  await page.getByRole("link", { name: "Inglés" }).click();
+  await page.getByLabel("Idioma").selectOption("en");
+  await page.getByRole("button", { name: "Cambiar" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "About Resources.co" }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
 

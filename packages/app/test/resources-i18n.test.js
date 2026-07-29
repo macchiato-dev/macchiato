@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { loadProjectContentSpace } from "../../../examples/resources-site/catalog-content.js";
 import { createTranslator, loadResourcesLocales, parseLocaleMarkdown } from "../../../examples/resources-site/i18n.js";
-import { negotiateLocale, parseLanguageRoute } from "../../../examples/resources-site/edge/i18n.js";
+import { negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "../../../examples/resources-site/edge/i18n.js";
 
 test("Resources locale Markdown has matching English and Spanish message keys", () => {
   const locales = loadResourcesLocales();
@@ -19,5 +23,25 @@ test("Resources locale negotiation prefers the explicit cookie, then browser lan
   })), "es");
   assert.equal(negotiateLocale(new Request("https://resources.example/")), "en");
   assert.deepEqual(parseLanguageRoute("/language/es/about"), { locale: "es", pathname: "/about" });
+  assert.deepEqual(
+    parseLanguageSelection(new URL("https://resources.example/language?locale=es&return=/about")),
+    { locale: "es", pathname: "/about" },
+  );
   assert.equal(parseLanguageRoute("/language/fr/about"), null);
+});
+
+test("Resources catalogue descriptions can come from an external mirrored content root", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "resources-content-space-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, "macchiato", "app"), { recursive: true });
+  await writeFile(
+    join(root, "macchiato", "app", "es.md"),
+    "# macchiato/app\n\n- **description**: Descripción externa.\n",
+  );
+  const content = loadProjectContentSpace([
+    { path: "/macchiato/app", description: "External description." },
+  ], { root, locales: ["es"] });
+  assert.deepEqual(content["/macchiato/app"], {
+    es: "Descripción externa.",
+  });
 });

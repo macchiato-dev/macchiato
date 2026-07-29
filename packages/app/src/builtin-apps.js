@@ -75,8 +75,10 @@ export const BUILTIN_APPS = [
     sourceFiles: [
       "examples/resources-site/artifacts.js",
       "examples/resources-site/i18n.js",
+      "examples/resources-site/catalog-content.js",
       "examples/resources-site/content/en.md",
       "examples/resources-site/content/es.md",
+      "examples/resources-site/content-space/README.md",
       "examples/resources-site/runtime.js",
       "examples/resources-site/theme.js",
       "examples/resources-site/components/menu.js",

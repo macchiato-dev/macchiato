@@ -176,6 +176,10 @@ test("edge locale negotiation serves localized HTML and persists explicit switch
   assert.equal(switched.headers.get("location"), "/about");
   assert.match(switched.headers.get("set-cookie"), /^resources_locale=es;/);
 
+  const dropdownSwitch = await handler(new Request("https://resources.example/language?locale=es&return=/about"));
+  assert.equal(dropdownSwitch.status, 302);
+  assert.equal(dropdownSwitch.headers.get("location"), "/about");
+
   const cookieWins = await handler(new Request("https://resources.example/about", {
     headers: { cookie: "resources_locale=en", "accept-language": "es" },
   }));

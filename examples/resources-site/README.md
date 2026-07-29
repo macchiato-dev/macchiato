@@ -282,6 +282,18 @@ Use the footer switcher or send `Accept-Language: es`; see
 [`edge/README.md`](edge/README.md#localized-content) for negotiation and
 artifact details.
 
+Translated catalogue descriptions come from a content space that mirrors public
+project paths. The checked-in `content-space/` is the development fixture; use
+an external checkout in a deployment build with:
+
+```sh
+RESOURCES_CONTENT_ROOT=/srv/resources-content ./scripts/build-resources-bunny.sh
+```
+
+For example, the Spanish description for `/macchiato/app` is read from
+`$RESOURCES_CONTENT_ROOT/macchiato/app/es.md`. Missing required descriptions
+fail publication instead of falling back to a mixed-language catalogue.
+
 ```sh
 node --test \
   packages/app/test/resources-edge.test.js \

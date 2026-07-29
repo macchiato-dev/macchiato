@@ -19,6 +19,7 @@ test("exports resources site as static files", async (t) => {
   const result = await exportResourcesSite({ out });
   const home = await readFile(join(out, "locales", "en", "index.html"), "utf8");
   const spanishHome = await readFile(join(out, "locales", "es", "index.html"), "utf8");
+  const spanishProject = await readFile(join(out, "locales", "es", "macchiato", "app", "index.html"), "utf8");
   const project = await readFile(join(out, "locales", "en", "macchiato", "app", "index.html"), "utf8");
   const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
   const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
@@ -30,7 +31,11 @@ test("exports resources site as static files", async (t) => {
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);
   assert.match(spanishHome, /Infraestructura tuya, compuesta por partes\./);
-  assert.match(spanishHome, /href="\/language\/en"/);
+  assert.match(spanishHome, /Servidor HTTP multiplataforma y registro declarativo/);
+  assert.match(spanishProject, /Servidor HTTP multiplataforma y registro declarativo/);
+  assert.match(spanishProject, /Se publica como @macchiato-dev\/app/);
+  assert.match(spanishHome, /<form class="language-switcher" method="get" action="\/language">/);
+  assert.match(spanishHome, /<option value="es" selected>Español<\/option>/);
   assert.match(home, /href="\/macchiato\/app"/);
   assert.doesNotMatch(home, /href="#macchiato\/app"/);
   assert.match(project, /<title>App - Resources\.co<\/title>/);

@@ -95,6 +95,11 @@ and vary on `Accept-Language, Cookie`. The manifest carries the validated
 locale allowlist and the small message set needed to localize the trusted
 signed-in/guest status island.
 
+Project descriptions are a separate content authority. `RESOURCES_CONTENT_ROOT`
+points the publisher at a directory (or separate repository checkout) mirroring
+public project paths such as `macchiato/app/es.md`. The in-repo
+`../content-space/` tree is only the reproducible local/test fixture.
+
 ## Remaining deployment work
 
 - Add a least-privilege upload job and keep its write credential out of the Edge

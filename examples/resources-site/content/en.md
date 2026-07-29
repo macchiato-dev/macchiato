@@ -11,6 +11,10 @@
 - **common.account**: Account
 - **common.support**: Support
 - **common.organization**: Organization
+- **common.package**: Package
+- **common.kind**: Kind
+- **common.files**: Files
+- **common.version**: Version
 - **common.packageMetadata**: Package metadata
 - **common.source**: Source
 - **common.packageFile**: Package file
@@ -21,6 +25,8 @@
 - **common.none**: None
 - **common.noneDeclared**: None declared
 - **common.noTrackedFiles**: No tracked source files
+- **catalog.intro**: {description} Published as {package} from {directory}.
+- **catalog.group**: {kind} packages
 
 ## Home
 
@@ -124,3 +130,4 @@
 - **chrome.language**: Language
 - **chrome.english**: English
 - **chrome.spanish**: Spanish
+- **chrome.changeLanguage**: Change

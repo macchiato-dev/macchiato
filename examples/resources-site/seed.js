@@ -11,6 +11,7 @@ import { resourcesMenu, renderResourcesMobileMenu, renderResourcesPrimaryMenu } 
 import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "./components/auth.js";
 import { createTranslator, DEFAULT_RESOURCE_LOCALE, loadResourcesLocales } from "./i18n.js";
+import { loadProjectContentSpace } from "./catalog-content.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -19,6 +20,7 @@ const SUBDOMAIN = "resources-co";
 const RESOURCE_MESSAGES = loadResourcesLocales();
 
 const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
+const PROJECT_CONTENT = loadProjectContentSpace(REPO_PROJECT_METADATA.projects);
 const ORG_COPY = {
   macchiato: "Open-source packages from the macchiato-dev workspace, mapped into public project paths.",
   resources: "Packages published under the resources organization on npm.",
@@ -45,13 +47,14 @@ function projectItems(project) {
 }
 
 function projectFacts(project, t = null) {
+  const label = (key, fallback) => t ? t(key) : fallback;
   const facts = [
-    [t ? t("common.organization") : "Organization", project.namespace],
-    ["Package", project.npmName],
-    ["Kind", project.kind],
-    ["Files", `${project.files}`],
+    [label("common.organization", "Organization"), project.namespace],
+    [label("common.package", "Package"), project.npmName],
+    [label("common.kind", "Kind"), project.kind],
+    [label("common.files", "Files"), `${project.files}`],
   ];
-  if (project.version) facts.splice(2, 0, ["Version", project.version]);
+  if (project.version) facts.splice(2, 0, [label("common.version", "Version"), project.version]);
   return facts;
 }
 
@@ -81,8 +84,7 @@ const PROJECTS = Object.fromEntries(REPO_PROJECT_METADATA.projects.map((project)
     name: titleForProject(project),
     namespace: project.namespace,
     slug: project.slug,
-    tagline: project.description,
-    intro: `${project.description} This ${project.kind} is published as ${project.npmName} from ${project.packageDir}.`,
+    descriptions: PROJECT_CONTENT[project.path],
     items: projectItems(project),
   },
 ]));
@@ -189,7 +191,7 @@ function sectionsFor(i18n) {
           t("home.p2"),
         ],
       },
-      { h2: t("home.featured"), items: projectLinks() },
+      { h2: t("home.featured"), items: projectLinks(i18n) },
     ],
   },
   "/browse": {
@@ -202,7 +204,7 @@ function sectionsFor(i18n) {
         paras: [t("browse.p1")],
         tags: [...new Set(REPO_PROJECT_METADATA.projects.map((project) => project.kind))],
       },
-      ...projectGroups(),
+      ...projectGroups(i18n),
     ],
   },
   "/collections": {
@@ -214,7 +216,7 @@ function sectionsFor(i18n) {
         h1: t("projects.heading"),
         paras: [t("projects.p1")],
       },
-      { items: projectLinks() },
+      { items: projectLinks(i18n) },
     ],
   },
   "/about": {
@@ -340,8 +342,9 @@ ${base}
 .crumb a svg { width: 16px; height: 16px; display: block; }
 .footer .copy { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .language-switcher { display: inline-flex; align-items: center; gap: 6px; }
-.language-switcher a { color: var(--muted); text-decoration: none; }
-.language-switcher a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+.language-switcher label { display: inline-flex; align-items: center; gap: 6px; }
+.language-switcher select { padding: 4px 24px 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; }
+.language-switcher button { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; cursor: pointer; }
 
 .items a {
   flex-direction: column;
@@ -729,32 +732,36 @@ body[data-auth="out"] .ub-guest { display: flex; }
 `;
 }
 
-function projectLinks() {
+function projectDescription(project, i18n) {
+  return project.descriptions[i18n.locale] || project.descriptions.en;
+}
+
+function projectLinks(i18n) {
   return PROJECT_ORDER.map((path) => [
     path.slice(1),
-    PROJECTS[path].tagline,
+    projectDescription(PROJECTS[path], i18n),
     path,
   ]);
 }
 
-function projectGroups() {
+function projectGroups(i18n) {
   const groups = new Map();
   for (const path of PROJECT_ORDER) {
     const project = PROJECTS[path];
     if (!groups.has(project.kind)) groups.set(project.kind, []);
-    groups.get(project.kind).push([path.slice(1), project.tagline, path]);
+    groups.get(project.kind).push([path.slice(1), projectDescription(project, i18n), path]);
   }
   return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([kind, items]) => ({
-    h2: `${kind[0].toUpperCase()}${kind.slice(1)} packages`,
+    h2: i18n.text("catalog.group", { kind: `${kind[0].toUpperCase()}${kind.slice(1)}` }),
     items,
   }));
 }
 
-function childrenOf(namespacePath) {
+function childrenOf(namespacePath, i18n) {
   const namespace = namespacePath.slice(1);
   return PROJECT_ORDER
     .filter((path) => PROJECTS[path].namespace === namespace)
-    .map((path) => [path.slice(1), PROJECTS[path].tagline, path]);
+    .map((path) => [path.slice(1), projectDescription(PROJECTS[path], i18n), path]);
 }
 
 function escapeHtml(value) {
@@ -902,6 +909,7 @@ function routeForPath(path, i18n) {
   if (sections[path]) return sections[path];
   if (PROJECTS[path]) {
     const project = PROJECTS[path];
+    const description = projectDescription(project, i18n);
     return {
       navKey: "collections",
       title: `${project.name} - Resources.co`,
@@ -911,14 +919,25 @@ function routeForPath(path, i18n) {
         { label: project.slug },
       ],
       blocks: [
-        { type: "project-summary", eyebrow: project.npmName, h1: project.name, intro: project.intro, facts: projectFacts(project, t) },
+        {
+          type: "project-summary",
+          eyebrow: project.npmName,
+          h1: project.name,
+          intro: t("catalog.intro", {
+            description,
+            kind: project.kind,
+            package: project.npmName,
+            directory: project.packageDir,
+          }),
+          facts: projectFacts(project, t),
+        },
         { type: "package-details", h2: t("common.packageMetadata"), rows: packageRows(project, t) },
       ],
     };
   }
   if (ORGS[path]) {
     const org = ORGS[path];
-    const children = childrenOf(path);
+    const children = childrenOf(path, i18n);
     return {
       navKey: "",
       title: `${org.name} - Resources.co`,
@@ -932,10 +951,6 @@ function routeForPath(path, i18n) {
   return null;
 }
 
-function languageHref(locale, path) {
-  return `/language/${locale}${path === "/" ? "" : path}`;
-}
-
 function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
   const route = routeForPath(path, i18n);
   const documentRuntime = runtime === "document";
@@ -947,7 +962,7 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     about: i18n.text("nav.about"),
   });
   const language = documentRuntime
-    ? `<div class="language-switcher" aria-label="${escapeHtml(i18n.text("chrome.language"))}"><a href="${languageHref("en", path)}"${i18n.locale === "en" ? ' aria-current="page"' : ""}>${escapeHtml(i18n.text("chrome.english"))}</a><span>/</span><a href="${languageHref("es", path)}"${i18n.locale === "es" ? ' aria-current="page"' : ""}>${escapeHtml(i18n.text("chrome.spanish"))}</a></div>`
+    ? `<form class="language-switcher" method="get" action="/language"><label><span>${escapeHtml(i18n.text("chrome.language"))}</span><select name="locale" aria-label="${escapeHtml(i18n.text("chrome.language"))}"><option value="en"${i18n.locale === "en" ? " selected" : ""}>English</option><option value="es"${i18n.locale === "es" ? " selected" : ""}>Español</option></select></label><input type="hidden" name="return" value="${escapeHtml(path)}"><button type="submit">${escapeHtml(i18n.text("chrome.changeLanguage"))}</button></form>`
     : "";
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}">
     ${brandHeaderHtml(path)}

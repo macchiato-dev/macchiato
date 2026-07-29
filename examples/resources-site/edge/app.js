@@ -4,7 +4,7 @@ import {
   publicResponseHeaders,
   storageRequest,
 } from "./models.js";
-import { localeCookie, localizedObjectKey, negotiateLocale, parseLanguageRoute } from "./i18n.js";
+import { localeCookie, localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "./i18n.js";
 import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth/github.js";
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 
@@ -82,7 +82,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
 
   return async function resourcesEdgeHandler(request) {
     const pathname = new URL(request.url).pathname;
-    const languageRoute = request.method === "GET" ? parseLanguageRoute(pathname) : null;
+    const languageRoute = request.method === "GET"
+      ? parseLanguageSelection(new URL(request.url)) || parseLanguageRoute(pathname)
+      : null;
     if (languageRoute) {
       const targetKey = pathToObjectKey(languageRoute.pathname);
       if (!targetKey || languageRoute.pathname.startsWith("/language/")) return new Response("Not found", { status: 404 });

@@ -32,6 +32,14 @@ export function parseLanguageRoute(pathname, locales = SUPPORTED) {
   return Object.freeze({ locale: match[1], pathname: match[2] || "/" });
 }
 
+export function parseLanguageSelection(url, locales = SUPPORTED) {
+  if (url.pathname !== "/language") return null;
+  const locale = url.searchParams.get("locale");
+  const pathname = url.searchParams.get("return") || "/";
+  if (!locales.includes(locale) || !pathname.startsWith("/") || pathname.startsWith("//") || pathname.startsWith("/language")) return null;
+  return Object.freeze({ locale, pathname });
+}
+
 export function localeCookie(locale, { secure = true } = {}) {
   if (!SUPPORTED.includes(locale)) throw new Error("Unsupported locale cookie");
   return `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`;
