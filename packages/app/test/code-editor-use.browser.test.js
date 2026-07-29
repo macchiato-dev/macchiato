@@ -77,11 +77,43 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
   assert.match(await page.locator("#status").textContent(), /QuickJS observed \d+ characters across 2 lines/);
 
   await page.locator(".cm-content").click();
+  const cursorStyle = await page.locator(".cm-cursor-primary").evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      color: style.borderLeftColor,
+      display: style.display,
+      height: Number.parseFloat(style.height),
+    };
+  });
+  assert.equal(cursorStyle.color, "rgb(103, 232, 212)");
+  assert.equal(cursorStyle.display, "block");
+  assert.ok(cursorStyle.height > 10);
+
   await page.keyboard.press("Control+End");
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.type(`\nconst item${index} = ${index};`);
+  }
+  await assert.doesNotReject(page.getByText(/across 14 lines/).waitFor());
+  assert.equal((await page.locator(".cm-line").allTextContents()).at(-1), "const item11 = 11;");
+
+  await page.keyboard.press("Control+f");
+  const search = page.locator(".cm-search input[name='search']");
+  await search.fill("item8");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("const answer = 42;");
-  await assert.doesNotReject(page.getByText(/across 3 lines/).waitFor());
-  assert.equal((await page.locator(".cm-line").allTextContents()).at(-1), "const answer = 42;");
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator(".cm-search").count(), 0);
+
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\ncon");
+  await page.keyboard.press("Control+Space");
+  await page.locator(".cm-tooltip-autocomplete").waitFor();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+Shift+z");
+  await page.locator("h1").click();
+  await page.locator(".cm-content").click();
+  assert.equal(await page.locator(".cm-focused").count(), 1);
   assert.deepEqual(errors, []);
 
   await page.locator(".cm-line").first().evaluate((node) => node.setAttribute("onclick", "alert(1)"));
