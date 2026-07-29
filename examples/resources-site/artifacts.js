@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { renderSiteRoute } from "@macchiato-dev/site";
 import { buildResourcesSiteRoutesForRuntime } from "./seed.js";
 import { DEFAULT_RESOURCE_LOCALE, loadResourcesLocales, RESOURCE_LOCALES } from "./i18n.js";
+import { commandPaletteUseBrowserAssets } from "@macchiato-dev/command-palette-use/browser-assets";
+import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
@@ -38,6 +40,11 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   }
   for (const name of fontNames) {
     files.set(`/-/fonts/resourcesco-space-grotesk/${name}`, bytes(readFileSync(join(fontDirectory, name))));
+  }
+  for (const set of [commandPaletteUseBrowserAssets, themeUseBrowserAssets]) {
+    for (const asset of set.files) {
+      files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
+    }
   }
   const artifacts = {};
   for (const [file, content] of files) {
