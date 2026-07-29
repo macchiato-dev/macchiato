@@ -8,6 +8,7 @@ import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
+import { codeEditorUseHandler } from "../../../examples/code-editor-use/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -37,6 +38,26 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM",
       hostCapabilities: ["git-visible file read", "localStorage", "download"],
+    },
+  },
+  {
+    name: "Constrained CodeMirror",
+    subdomain: "code-editor-use",
+    kind: "sandboxed browser component",
+    description: "CodeMirror 6 behind a shape-checked browser-use adapter and QuickJS controller.",
+    handler: codeEditorUseHandler,
+    sourceFiles: [
+      "examples/code-editor-use/handler.js",
+      "examples/code-editor-use/client.js",
+      "examples/code-editor-use/controller.js",
+      "examples/code-editor-use/style.css",
+      "packages/browser-use/src/index.js",
+      "packages/browser-use/src/quickjs-guest.js",
+      "packages/code-editor-use/src/index.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM controller + native constrained adapter",
+      hostCapabilities: ["browser-use scoped DOM", "code-editor-use CodeMirror 6 subtree"],
     },
   },
   {
