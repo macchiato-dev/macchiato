@@ -41,10 +41,11 @@ locally or the platform `fetch` against private Bunny Storage in production.
 
 Both profiles now use the Resources.co teal/blue theme by default, render the
 same brand, content, project metadata, navigation, footer, fonts, responsive
-breakpoints, and friendly URLs. The edge header uses the same product-facing
-account position as the local userbar: guests see Log in and Sign up, while a
-session renders its provider identity and Sign out. Runtime diagnostics do not
-appear in the product interface.
+breakpoints, and friendly URLs. Both headers retain the compact notification,
+create, and profile controls whether signed in or out. Guest authentication
+links live only in the blank-avatar profile menu; language selection lives in
+the same menu instead of the footer. Runtime diagnostics do not appear in the
+product interface.
 
 The remaining differences describe runtime capability rather than separate
 designs:
@@ -152,12 +153,13 @@ only at the edge, fetch the provider identity, discard the provider token, and
 issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. The edge
 replaces one bounded account-status island with escaped guest or session markup
 and marks personalized documents `private, no-store`. Browser code is limited
-to the published `command-palette-use` and `theme-use` modules; neither module
-interprets account content or arbitrary commands.
+to the published `command-palette-use`, `theme-use`, and `user-menu-use`
+modules. The menu module adds only outside-click and Escape dismissal to native
+edge disclosures; none interprets account content or arbitrary commands.
 
-The signed-in edge island uses native `details`/`summary` disclosure rather
-than a second menu script. It exposes create, project, profile, settings, help,
-and sign-out actions through ordinary document navigation.
+The edge island uses native `details`/`summary` disclosure. It exposes
+notifications, create, project, profile, settings, language, help,
+authentication, and sign-out actions through ordinary document navigation.
 GitLab still owns any required consent or redirect screen outside Resources.co;
 provider login state is not treated as a Resources.co session.
 

@@ -47,7 +47,8 @@ credential separately from the read-only credential used by the edge script.
   authentication and account content use separate, narrowly modeled database
   boundaries. Names, slugs, and descriptions are always escaped.
 - No app-authored JavaScript in the document-profile export. The only browser
-  code is the fixed, host-owned command-palette and appearance modules.
+  code is the fixed, host-owned command-palette, appearance, and native-menu
+  dismissal modules.
 - No passthrough of upstream response headers except ETag and Last-Modified.
 
 ## Accounts and linked OAuth identities
