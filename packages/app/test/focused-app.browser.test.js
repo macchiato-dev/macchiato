@@ -75,11 +75,16 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /connect-src 'none'/);
   assert.equal(await page.locator(".topbar").count(), 0);
+  assert.equal(await page.locator("#search").getAttribute("autocomplete"), "off");
+  assert.equal(await page.locator("#search").getAttribute("type"), "text");
+  assert.equal(await page.locator("#new-document").getAttribute("class"), await page.locator("#filter").getAttribute("class"));
   assert.match(await page.locator("#collection-trigger").textContent(), /Session Storage/);
   await page.locator("#collection-trigger").click();
   assert.deepEqual(await page.locator(".collection-option strong").allTextContents(), [
     "Session Storage", "Local Storage", "Memory", "Secure demo library",
   ]);
+  assert.equal(await page.locator(".collection-menu-header").evaluate((node) => getComputedStyle(node).height), "36px");
+  assert.equal(await page.locator("#new-collection").evaluate((node) => getComputedStyle(node).height), "30px");
   assert.equal(await page.locator(".collection-option").last().getAttribute("data-collection"), "library");
   await page.locator(".collection-option").first().locator(".storage-icon").hover();
   await page.waitForTimeout(150);
@@ -87,6 +92,8 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
     getComputedStyle(node, "::after").opacity), "1");
   await page.locator("main").click();
 
+  assert.equal(await page.locator("#toggle-sidebar").evaluate((node) => getComputedStyle(node).width), "31px");
+  assert.equal(await page.locator("#sidebar-control-more").evaluate((node) => getComputedStyle(node).opacity), "0.3");
   await page.locator("#toggle-sidebar").click();
   assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "hidden");
   await page.waitForTimeout(250);
@@ -99,17 +106,23 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.mouse.up();
   await page.waitForTimeout(250);
   assert.ok(await page.locator(".sidebar").evaluate((node) => node.getBoundingClientRect().width) > 370);
-  await page.locator("#sidebar-edge").hover();
-  await page.waitForTimeout(180);
-  assert.ok(await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().width) > 100);
-  const dragBox = await page.locator("#edge-drag").boundingBox();
-  const oldEdgeY = await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().y);
+  await page.locator("#sidebar-control").hover();
+  await page.waitForTimeout(160);
+  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().width) > 85);
+  await page.locator("#sidebar-control-more").click();
+  assert.deepEqual(await page.locator("#sidebar-control-menu").getByRole("menuitem").allTextContents(), ["Hide", "Move to Right"]);
+  await page.locator("#sidebar-menu-side").click();
+  assert.equal(await page.locator("#sidebar-control").getAttribute("data-side"), "right");
+  assert.equal(await page.locator(".sidebar-control__layout").evaluate((node) => getComputedStyle(node).display), "block");
+  await page.locator("#sidebar-control").hover();
+  const dragBox = await page.locator("#sidebar-control-drag").boundingBox();
   await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + 90);
+  await page.mouse.move(dragBox.x + dragBox.width / 2, 160);
   await page.mouse.up();
-  assert.ok(await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().y) > oldEdgeY + 40);
+  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().y) > 100);
 
+  await page.locator("#collection-trigger").click();
   await page.locator("#new-collection").click();
   await page.locator("#collection-form input[name=name]").fill("Private tools");
   await page.locator("#collection-form select[name=storage]").selectOption("local");
@@ -122,15 +135,28 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.equal(await page.locator(".document-open").count(), 1);
   assert.equal(await page.locator(".document-open").evaluate((node) => getComputedStyle(node).height), "92px");
   await page.locator(".document-menu").click();
-  assert.match(await page.locator("#status").textContent(), /sandbox config is shown/);
+  assert.deepEqual(await page.locator("#document-actions").getByRole("menuitem").allTextContents(), ["Hide"]);
+  await page.locator("#document-hide-sidebar").click();
+  assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "hidden");
 
   await page.keyboard.press("Control+k");
+  await page.locator("#command-palette[open]").waitFor();
+  assert.equal(await page.locator("#command-palette .command-palette__surface").count(), 1);
+  await page.locator("[data-command-input]").fill("missing");
+  assert.equal(await page.locator("#command-show-sidebar").isHidden(), true);
+  await page.locator("[data-command-input]").fill("show");
+  assert.equal(await page.locator("#command-show-sidebar").isVisible(), true);
+  await page.locator("#command-show-sidebar").click();
+  assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "visible");
+  await page.keyboard.press("Control+Shift+k");
   await page.locator("#command-palette[open]").waitFor();
   await page.keyboard.press("Escape");
   assert.equal(await page.locator("#command-palette[open]").count(), 0);
 
   await page.reload();
   await page.locator("body[data-ready=true]").waitFor();
+  assert.equal(await page.locator("#sidebar-control").getAttribute("data-side"), "right");
+  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().y) > 100);
   await page.locator("#collection-trigger").click();
   await page.locator(".collection-option", { hasText: "Private tools" }).click();
   assert.equal(await page.locator("#editor").inputValue(), "A private calculator\n\nNo network required.");
