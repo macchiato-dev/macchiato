@@ -9,7 +9,7 @@ export const CODE_EDITOR_DOM_POLICY = Object.freeze({
   tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li"],
   attributes: {
     class: "^[^<>\"']{0,240}$",
-    style: "^(?:(?:min-height|max-height|height|min-width|max-width|width|left|right|top|bottom|transform|position|visibility|pointer-events|font-family|font-size|line-height|white-space|tab-size|overflow|overflow-x|overflow-y|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|color|background(?:-color)?|border(?:-[a-z]+)?|outline|caret-color|opacity|z-index|animation-duration):[^;<>\"']{0,200};?\\s*|animation-name:\\s*cm-blink[0-9]*;?\\s*|display:\\s*(?:none|block|inline-block);?\\s*){0,30}$",
+    style: "^(?:(?:min-height|max-height|height|min-width|max-width|width|left|right|top|bottom|transform|position|visibility|pointer-events|font-family|font-size|line-height|white-space|tab-size|overflow|overflow-x|overflow-y|padding(?:-[a-z]+)?|margin(?:-[a-z]+)?|color|background(?:-color)?|border(?:-[a-z]+)?|outline|caret-color|opacity|z-index|animation-duration):[^;<>\"']{0,200};?\\s*|cursor:\\s*(?:text|crosshair|default|pointer);?\\s*|animation-name:\\s*cm-blink[0-9]*;?\\s*|display:\\s*(?:none|block|inline-block);?\\s*){0,30}$",
     role: "^(?:textbox|presentation|status|button|listbox|option)$",
     "aria-label": "^[^<>]{0,160}$",
     "aria-live": "^(?:polite|assertive|off)$",

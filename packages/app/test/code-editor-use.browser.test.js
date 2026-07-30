@@ -78,6 +78,14 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
   assert.match(await page.locator("#status").textContent(), /QuickJS observed \d+ characters across 2 lines/);
 
   await page.locator(".cm-content").click();
+  const contentBox = await page.locator(".cm-content").boundingBox();
+  await page.keyboard.down("Alt");
+  await page.mouse.move(contentBox.x + 20, contentBox.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(contentBox.x + 120, contentBox.y + 35);
+  await page.mouse.up();
+  await page.keyboard.up("Alt");
+  assert.doesNotMatch(await page.locator("#status").textContent(), /Editor stopped/);
   const cursorStyle = await page.locator(".cm-cursor-primary").evaluate((node) => {
     const style = getComputedStyle(node);
     const editorStyle = getComputedStyle(node.closest(".cm-editor"));
