@@ -1,6 +1,8 @@
 const SAFE_NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const SAFE_CLASSES = /^[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)*$/;
 
+export const userMenuUseClientPath = "/-/user-menu-use/client.js";
+
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -29,8 +31,12 @@ export function defineUserMenu({ identity, menus, guestHtml = "", dom, behavior 
   const normalized = menus.map((menu) => {
     if (!menu?.label || !menu?.triggerHtml || !menu?.panelHtml) throw new Error("Each user menu requires a label, trigger, and panel");
     const triggerClass = String(menu.triggerClass || "ub-icon");
+    const containerClass = String(menu.containerClass || "ub-pop");
     if (!SAFE_CLASSES.test(triggerClass)) throw new Error("User menu trigger classes must be safe class names");
-    return Object.freeze({ label: String(menu.label), triggerClass, triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
+    if (!SAFE_CLASSES.test(containerClass) || !containerClass.split(" ").includes("ub-pop")) {
+      throw new Error("User menu container classes must be safe and include ub-pop");
+    }
+    return Object.freeze({ label: String(menu.label), containerClass, triggerClass, triggerHtml: String(menu.triggerHtml), panelHtml: String(menu.panelHtml) });
   });
   const definitions = Object.freeze(Object.fromEntries(Object.entries(dom.definitions).map(([name, definition]) => [name, Object.freeze(structuredClone(definition))])));
   const placements = Object.freeze(dom.placements.map((placement) => {
@@ -74,7 +80,7 @@ export function composeUserMenuDomSchema(schema, model) {
 }
 
 export function renderUserMenu(model) {
-  const popovers = model.menus.map((menu) => `<div class="ub-pop">
+  const popovers = model.menus.map((menu) => `<div class="${menu.containerClass}">
       <button class="${menu.triggerClass}" aria-label="${escapeHtml(menu.label)}" aria-haspopup="true" aria-expanded="false">${menu.triggerHtml}</button>
       <div class="popover user-menu" role="menu">${menu.panelHtml}</div>
     </div>`).join("\n    ");

@@ -9,8 +9,9 @@ const dom = {
 };
 
 test("user-menu-use renders configured popovers", () => {
-  const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", triggerHtml: "AL", panelHtml: "Signed in" }], guestHtml: '<div class="guest">Log in</div>', dom });
+  const model = defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Account", containerClass: "ub-pop account-pop", triggerHtml: "AL", panelHtml: "Signed in" }], guestHtml: '<div class="guest">Log in</div>', dom });
   assert.match(renderUserMenu(model), /aria-label="Account"[\s\S]*Signed in[\s\S]*class="guest">Log in/);
+  assert.match(renderUserMenu(model), /class="ub-pop account-pop"/);
   assert.throws(() => defineUserMenu({ identity: { name: "Ada", initials: "AL" }, menus: [{ label: "Bad", triggerClass: "x\" onclick=", triggerHtml: "X", panelHtml: "Y" }], dom }), /safe class/);
 });
 
