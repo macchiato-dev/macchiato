@@ -27,7 +27,8 @@ const $ = (selector) => document.querySelector(selector);
 const elements = {
   app: $(".app"),
   sidebar: $(".sidebar"),
-  collection: $("#collection"),
+  collectionTrigger: $("#collection-trigger"),
+  collectionMenu: $("#collection-menu"),
   documents: $("#documents"),
   search: $("#search"),
   title: $("#document-title"),
@@ -61,7 +62,7 @@ function ensureDefaults() {
     local.push(createCollection({ id: "local", name: "Local Storage", storage: "local" }));
     adapters.local.save(local);
   }
-  collections = [BUILTIN_COLLECTION, ...session, ...local, ...memoryCollections];
+  collections = [...session, ...local, ...memoryCollections, BUILTIN_COLLECTION];
 }
 
 function saveCollection(collection) {
@@ -76,20 +77,57 @@ function storageLabel(collection) {
 }
 
 function renderCollectionOptions() {
-  elements.collection.replaceChildren(...collections.map((collection) => {
-    const option = document.createElement("option");
-    const type = storageLabel(collection);
-    option.value = collection.id;
-    option.textContent = `${type.icon} ${collection.name}`;
+  const collection = currentCollection();
+  elements.collectionTrigger.replaceChildren(...collectionOptionContents(collection));
+  elements.collectionMenu.replaceChildren(...collections.map((candidate) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "collection-option";
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(candidate.id === activeCollectionId));
+    option.dataset.collection = candidate.id;
+    option.append(...collectionOptionContents(candidate));
+    option.addEventListener("click", () => {
+      closeCollectionMenu();
+      selectCollection(candidate.id);
+    });
     return option;
   }));
-  elements.collection.value = activeCollectionId;
-  elements.importCollection.replaceChildren(...writableCollections().map((collection) => {
+  elements.importCollection.replaceChildren(...writableCollections().map((candidate) => {
     const option = document.createElement("option");
-    option.value = collection.id;
-    option.textContent = `${storageLabel(collection).icon} ${collection.name}`;
+    const candidateType = storageLabel(candidate);
+    option.value = candidate.id;
+    option.textContent = `${candidateType.icon} ${candidate.name}`;
     return option;
   }));
+}
+
+function collectionOptionContents(collection) {
+  const type = storageLabel(collection);
+  const icon = document.createElement("span");
+  icon.className = `storage-icon storage-icon--${collection.storage}`;
+  icon.dataset.tooltip = type.label;
+  icon.setAttribute("aria-label", type.label);
+  icon.textContent = type.icon.slice(1, 2);
+  const copy = document.createElement("span");
+  copy.className = "collection-copy";
+  const name = document.createElement("strong");
+  name.textContent = collection.name;
+  const detail = document.createElement("small");
+  detail.textContent = `${type.label} · ${collection.documents.length} app${collection.documents.length === 1 ? "" : "s"}`;
+  copy.append(name, detail);
+  return [icon, copy];
+}
+
+function closeCollectionMenu() {
+  elements.collectionMenu.hidden = true;
+  elements.collectionTrigger.setAttribute("aria-expanded", "false");
+}
+
+function toggleCollectionMenu() {
+  const open = elements.collectionMenu.hidden;
+  elements.collectionMenu.hidden = !open;
+  elements.collectionTrigger.setAttribute("aria-expanded", String(open));
 }
 
 function currentCollection() {
@@ -182,12 +220,20 @@ async function importFile(file) {
   elements.importDialog.showModal();
 }
 
+function setSidebarHidden(hidden) {
+  elements.app.dataset.sidebar = hidden ? "hidden" : "visible";
+  $("#toggle-sidebar").setAttribute("aria-expanded", String(!hidden));
+  $("#toggle-sidebar").setAttribute("aria-label", hidden ? "Show sidebar" : "Hide sidebar");
+}
+
 $("#toggle-sidebar").addEventListener("click", () => {
   const hidden = elements.app.dataset.sidebar === "hidden";
-  elements.app.dataset.sidebar = hidden ? "visible" : "hidden";
-  $("#toggle-sidebar").setAttribute("aria-expanded", String(hidden));
+  setSidebarHidden(!hidden);
 });
-elements.collection.addEventListener("change", () => selectCollection(elements.collection.value));
+elements.collectionTrigger.addEventListener("click", toggleCollectionMenu);
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".collection-picker")) closeCollectionMenu();
+});
 elements.search.addEventListener("input", renderDocuments);
 $("#filter").addEventListener("click", () => {
   filterMode = filterMode === "all" ? "sandboxed" : "all";
@@ -225,7 +271,7 @@ elements.editor.addEventListener("input", () => {
   elements.summary.textContent = document.summary;
   elements.status.textContent = `Saved to ${storageLabel(collection).label}.`;
 });
-$("#import").addEventListener("click", () => $("#file").click());
+$("#edge-more").addEventListener("click", () => $("#file").click());
 $("#file").addEventListener("change", (event) => event.target.files[0] && importFile(event.target.files[0]));
 elements.importDialog.querySelector("form").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -272,6 +318,32 @@ $("#profile").addEventListener("click", () => {
 });
 document.querySelectorAll("[data-close]").forEach((button) =>
   button.addEventListener("click", () => button.closest("dialog").close()));
+
+$("#sidebar-resizer").addEventListener("pointerdown", (event) => {
+  if (elements.app.dataset.sidebar === "hidden") return;
+  const handle = event.currentTarget;
+  handle.setPointerCapture(event.pointerId);
+  const move = (moveEvent) => {
+    const width = Math.max(260, Math.min(480, moveEvent.clientX));
+    elements.app.style.setProperty("--sidebar-width", `${width}px`);
+  };
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", () => {
+    handle.removeEventListener("pointermove", move);
+  }, { once: true });
+});
+$("#edge-drag").addEventListener("pointerdown", (event) => {
+  const handle = event.currentTarget;
+  handle.setPointerCapture(event.pointerId);
+  const move = (moveEvent) => {
+    const top = Math.max(16, Math.min(innerHeight - 70, moveEvent.clientY - 24));
+    elements.app.style.setProperty("--edge-y", `${top}px`);
+  };
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", () => {
+    handle.removeEventListener("pointermove", move);
+  }, { once: true });
+});
 
 ensureDefaults();
 renderCollectionOptions();
