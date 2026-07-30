@@ -5,15 +5,30 @@ html,body,.app { height:100%; margin:0 }
 body { overflow:hidden; background:var(--bg); color:var(--text) }
 button,input,select,textarea { font:inherit }
 button,select,input { color:inherit }
-.app { display:grid; grid-template-columns:320px 1fr; transition:grid-template-columns .2s ease }
+.app { --sidebar-width:320px; --edge-y:168px; display:grid; grid-template-columns:var(--sidebar-width) 1fr; transition:grid-template-columns .2s ease }
 .app[data-sidebar=hidden] { grid-template-columns:0 1fr }
 .app[data-sidebar=hidden] .sidebar { border-right:0 }
 .sidebar { min-width:0; overflow:hidden; background:var(--panel); border-right:1px solid var(--line); display:grid; grid-template-rows:auto auto 1fr auto }
 .collection-header,.collection-actions,.sidebar-footer,.topbar { display:flex; align-items:center }
-.collection-header { gap:8px; padding:14px 12px 10px }
-.collection-picker { min-width:0; flex:1 }
-.collection-picker span,.eyebrow { display:block; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase }
-.collection-picker select { width:100%; border:0; background:transparent; font-weight:650; padding:4px 0 }
+.collection-header { position:relative; gap:8px; padding:12px }
+.collection-picker { position:relative; min-width:0; flex:1 }
+.collection-picker > span,.eyebrow { display:block; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase }
+.collection-picker > span { margin:0 0 5px 3px }
+#collection-trigger,.collection-option { width:100%; min-width:0; border:0; color:inherit; display:grid; grid-template-columns:34px 1fr; gap:9px; align-items:center; text-align:left; cursor:pointer }
+#collection-trigger { min-height:58px; background:var(--panel-2); border-radius:10px; padding:7px 10px }
+#collection-trigger:hover,#collection-trigger[aria-expanded=true] { background:var(--hover) }
+.collection-menu { position:absolute; z-index:30; top:calc(100% + 6px); left:0; width:min(330px,calc(100vw - 28px)); max-height:min(460px,70vh); overflow:auto; padding:6px; border:1px solid var(--line); border-radius:12px; background:var(--panel); box-shadow:0 18px 50px #0006 }
+.collection-option { min-height:68px; padding:8px 10px; border-radius:9px; background:transparent }
+.collection-option:hover,.collection-option:focus-visible { background:var(--hover) }
+.collection-option[aria-selected=true] { background:var(--panel-2) }
+.collection-copy { min-width:0; display:grid; gap:3px }
+.collection-copy strong,.collection-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.collection-copy strong { font-size:14px }
+.collection-copy small { color:var(--muted); font-size:11px; font-weight:500; letter-spacing:0; text-transform:none }
+.storage-icon { position:relative; width:30px; height:30px; display:grid!important; place-items:center; border-radius:8px; color:#fff!important; font-size:12px!important; letter-spacing:0!important; background:#687087 }
+.storage-icon--session { background:#7767ee }.storage-icon--local { background:#277c72 }.storage-icon--memory { background:#9a6735 }.storage-icon--library { background:#526074 }
+.storage-icon::after { content:attr(data-tooltip); position:absolute; left:50%; bottom:calc(100% + 8px); z-index:50; width:max-content; max-width:160px; padding:6px 8px; border-radius:6px; background:#05070b; color:#fff; font-size:11px; font-weight:600; letter-spacing:0; text-transform:none; opacity:0; pointer-events:none; transform:translate(-50%,4px); transition:opacity .12s,transform .12s }
+.storage-icon:hover::after,.storage-icon:focus::after { opacity:1; transform:translate(-50%,0) }
 .icon-button { width:38px; height:38px; flex:0 0 auto; border:0; border-radius:9px; background:transparent; cursor:pointer; display:grid; place-items:center }
 .icon-button svg,.search svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round }
 .icon-button:hover,.icon-button:focus-visible { background:var(--hover) }
@@ -25,7 +40,7 @@ button,select,input { color:inherit }
 .documents { list-style:none; padding:8px; margin:0; overflow:auto }
 .document-item { position:relative; border-radius:11px; margin-bottom:3px }
 .document-item:hover,.document-item[data-active=true] { background:var(--hover) }
-.document-item[data-active=true] { box-shadow:inset 3px 0 var(--accent) }
+.document-item[data-active=true] { background:var(--hover) }
 .document-open { width:100%; height:92px; padding:12px 42px 10px 13px; color:inherit; text-align:left; border:0; background:transparent; cursor:pointer; display:grid; grid-template-rows:auto 1fr auto; gap:3px }
 .document-open strong,.document-open span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .document-open span,.document-open time { color:var(--muted); font-size:12px }
@@ -36,9 +51,7 @@ button,select,input { color:inherit }
 .profile span:last-child { min-width:0; display:grid }
 .profile small { color:var(--muted) }
 .avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(135deg,#7968ff,#32c7b5); font-weight:750 }
-.main { min-width:0; height:100%; display:grid; grid-template-rows:64px 1fr auto }
-.topbar { gap:12px; padding:0 18px; border-bottom:1px solid var(--line) }
-.wordmark { font-weight:700; margin-right:auto }.wordmark span { color:var(--accent) }
+.main { min-width:0; height:100%; display:grid; grid-template-rows:1fr auto }
 .import-button,.dialog-actions button { border:1px solid var(--line); color:inherit; background:var(--panel-2); border-radius:9px; padding:9px 13px; cursor:pointer }
 .workspace { min-height:0; padding:clamp(24px,4vw,56px); display:grid; grid-template-rows:auto 1fr; gap:24px; max-width:1200px; width:100%; margin:auto }
 .document-header { display:flex; justify-content:space-between; align-items:start; gap:30px }
@@ -57,5 +70,19 @@ dialog input,dialog select { background:var(--panel-2); border:1px solid var(--l
 .dialog-actions { display:flex; justify-content:flex-end; gap:8px }
 .drop-overlay { display:none; position:fixed; inset:18px; z-index:20; border:2px dashed var(--accent); border-radius:18px; background:#111522ed; place-items:center; font-size:22px; font-weight:700 }
 body[data-drop=true] .drop-overlay { display:grid }
-@media(max-width:700px){.app{grid-template-columns:min(88vw,320px) 1fr}.app:not([data-sidebar=hidden]) .main{visibility:hidden}.sandbox-details{flex-basis:auto}.document-header{display:grid}.workspace{padding:24px}.wordmark{display:none}}
+.sidebar-resizer { position:fixed; z-index:45; top:0; bottom:0; left:calc(var(--sidebar-width) - 3px); width:6px; cursor:col-resize }
+.app[data-sidebar=hidden] .sidebar-resizer { display:none }
+.sidebar-resizer:hover { background:color-mix(in srgb,var(--accent) 35%,transparent) }
+.sidebar-edge { position:fixed; z-index:60; top:var(--edge-y); left:calc(var(--sidebar-width) - 22px); width:44px; height:48px; display:flex; align-items:center; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:var(--panel); box-shadow:0 8px 28px #0003; transition:left .2s,width .15s ease }
+.sidebar-edge:hover,.sidebar-edge:focus-within { width:108px }
+.app[data-sidebar=hidden] .sidebar-edge { left:-11px }
+.edge-arrow,.edge-more,.edge-drag { height:46px; flex:0 0 auto; border:0; color:inherit; background:transparent; cursor:pointer }
+.edge-arrow { width:43px; display:grid; place-items:center }
+.edge-arrow:hover,.edge-more:hover,.edge-drag:hover { background:var(--hover) }
+.edge-arrow svg { width:27px; height:27px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s }
+.app[data-sidebar=hidden] .edge-arrow svg { transform:rotate(180deg) }
+.edge-more { width:30px; color:var(--muted); font-weight:750; letter-spacing:1px }
+.edge-drag { width:31px; cursor:ns-resize; display:grid; place-items:center }
+.edge-drag svg { width:17px; height:25px; fill:none; stroke:var(--muted); stroke-width:3; stroke-linecap:round }
+@media(max-width:700px){.app{--sidebar-width:min(88vw,320px)}.app:not([data-sidebar=hidden]) .main{visibility:hidden}.sandbox-details{flex-basis:auto}.document-header{display:grid}.workspace{padding:24px}}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f7fa;--panel:#fff;--panel-2:#f0f2f6;--line:#dfe2e9;--text:#171a21;--muted:#697184;--hover:#edf0f5}}

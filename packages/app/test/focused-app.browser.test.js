@@ -74,22 +74,47 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
 
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /connect-src 'none'/);
-  assert.equal(await page.locator("#collection").inputValue(), "session");
-  assert.deepEqual(await page.locator("#collection option").allTextContents(), [
-    "[B] Secure demo library", "[S] Session Storage", "[L] Local Storage", "[M] Memory",
+  assert.equal(await page.locator(".topbar").count(), 0);
+  assert.match(await page.locator("#collection-trigger").textContent(), /Session Storage/);
+  await page.locator("#collection-trigger").click();
+  assert.deepEqual(await page.locator(".collection-option strong").allTextContents(), [
+    "Session Storage", "Local Storage", "Memory", "Secure demo library",
   ]);
+  assert.equal(await page.locator(".collection-option").last().getAttribute("data-collection"), "library");
+  await page.locator(".collection-option").first().locator(".storage-icon").hover();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator(".collection-option").first().locator(".storage-icon").evaluate((node) =>
+    getComputedStyle(node, "::after").opacity), "1");
+  await page.locator("main").click();
 
   await page.locator("#toggle-sidebar").click();
   assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "hidden");
   await page.waitForTimeout(250);
   assert.equal(await page.locator(".sidebar").evaluate((node) => node.getBoundingClientRect().width), 0);
   await page.locator("#toggle-sidebar").click();
+  const resizeX = await page.locator("#sidebar-resizer").evaluate((node) => node.getBoundingClientRect().x);
+  await page.mouse.move(resizeX, 300);
+  await page.mouse.down();
+  await page.mouse.move(380, 300);
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  assert.ok(await page.locator(".sidebar").evaluate((node) => node.getBoundingClientRect().width) > 370);
+  await page.locator("#sidebar-edge").hover();
+  await page.waitForTimeout(180);
+  assert.ok(await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().width) > 100);
+  const dragBox = await page.locator("#edge-drag").boundingBox();
+  const oldEdgeY = await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().y);
+  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + 90);
+  await page.mouse.up();
+  assert.ok(await page.locator("#sidebar-edge").evaluate((node) => node.getBoundingClientRect().y) > oldEdgeY + 40);
 
   await page.locator("#new-collection").click();
   await page.locator("#collection-form input[name=name]").fill("Private tools");
   await page.locator("#collection-form select[name=storage]").selectOption("local");
   await page.locator("#collection-form").getByRole("button", { name: "Create collection" }).click();
-  assert.equal(await page.locator("#collection").locator("option:checked").textContent(), "[L] Private tools");
+  assert.match(await page.locator("#collection-trigger").textContent(), /Private tools/);
 
   await page.locator("#new-document").click();
   await page.locator("#editor").fill("A private calculator\n\nNo network required.");
@@ -106,7 +131,8 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
 
   await page.reload();
   await page.locator("body[data-ready=true]").waitFor();
-  await page.locator("#collection").selectOption({ label: "[L] Private tools" });
+  await page.locator("#collection-trigger").click();
+  await page.locator(".collection-option", { hasText: "Private tools" }).click();
   assert.equal(await page.locator("#editor").inputValue(), "A private calculator\n\nNo network required.");
 
   await page.locator("#file").setInputFiles({
