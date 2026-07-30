@@ -22,7 +22,7 @@ function declarationForBuiltin(app) {
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
-  const { aliases, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, ...base } = app;
+  const { aliases, pluginId, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, ...base } = app;
   return {
     ...base,
     handler,
@@ -48,7 +48,7 @@ function declarationForBuiltin(app) {
 }
 
 const apps = Object.fromEntries(BUILTIN_APPS.map((app) => [
-  app.subdomain,
+  app.pluginId || app.subdomain,
   {
     declaration: declarationForBuiltin(app),
     setup: app.subdomain === "resources-co" ? seedResourcesSite : app.setup,
