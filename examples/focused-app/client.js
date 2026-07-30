@@ -7,6 +7,7 @@ import {
 } from "./model.js";
 
 const KEY = "macchiato.focused-app.collections.v1";
+const UI_KEY = "macchiato.focused-app.sidebar.v1";
 const memoryCollections = [createCollection({ id: "memory", name: "Memory", storage: "memory" })];
 const adapters = {
   memory: {
@@ -29,6 +30,7 @@ const elements = {
   sidebar: $(".sidebar"),
   collectionTrigger: $("#collection-trigger"),
   collectionMenu: $("#collection-menu"),
+  collectionOptions: $("#collection-options"),
   documents: $("#documents"),
   search: $("#search"),
   title: $("#document-title"),
@@ -79,7 +81,7 @@ function storageLabel(collection) {
 function renderCollectionOptions() {
   const collection = currentCollection();
   elements.collectionTrigger.replaceChildren(...collectionOptionContents(collection));
-  elements.collectionMenu.replaceChildren(...collections.map((candidate) => {
+  elements.collectionOptions.replaceChildren(...collections.map((candidate) => {
     const option = document.createElement("button");
     option.type = "button";
     option.className = "collection-option";
@@ -180,7 +182,11 @@ function renderDocuments() {
     menu.setAttribute("aria-label", `Actions for ${entry.title}`);
     menu.textContent = "•••";
     menu.addEventListener("click", () => {
-      elements.status.textContent = `${entry.title}: sandbox config is shown in the document inspector.`;
+      const popover = $("#document-actions");
+      const box = menu.getBoundingClientRect();
+      popover.style.left = `${Math.max(8, box.right - 120)}px`;
+      popover.style.top = `${box.bottom + 4}px`;
+      popover.hidden = false;
     });
     item.append(button, menu);
     return item;
@@ -222,14 +228,44 @@ async function importFile(file) {
 
 function setSidebarHidden(hidden) {
   elements.app.dataset.sidebar = hidden ? "hidden" : "visible";
-  $("#toggle-sidebar").setAttribute("aria-expanded", String(!hidden));
+  if (hidden) closeCollectionMenu();
   $("#toggle-sidebar").setAttribute("aria-label", hidden ? "Show sidebar" : "Hide sidebar");
+  $("#toggle-sidebar").setAttribute("title", hidden ? "Show sidebar" : "Hide sidebar");
+  $("#sidebar-menu-visibility").textContent = hidden ? "Show" : "Hide";
+  persistSidebar();
 }
 
-$("#toggle-sidebar").addEventListener("click", () => {
-  const hidden = elements.app.dataset.sidebar === "hidden";
-  setSidebarHidden(!hidden);
-});
+function setControlSide(side) {
+  const normalized = side === "right" ? "right" : "left";
+  $("#sidebar-control").dataset.side = normalized;
+  $("#sidebar-menu-side").textContent = normalized === "right" ? "Move to Left" : "Move to Right";
+  persistSidebar();
+}
+
+function persistSidebar() {
+  localStorage.setItem(UI_KEY, JSON.stringify({
+    hidden: elements.app.dataset.sidebar === "hidden",
+    side: $("#sidebar-control").dataset.side,
+    top: elements.app.style.getPropertyValue("--control-y") || "18px",
+  }));
+}
+
+function restoreSidebar() {
+  try {
+    const state = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
+    if (typeof state.top === "string" && /^\d+(?:\.\d+)?px$/.test(state.top)) {
+      elements.app.style.setProperty("--control-y", state.top);
+    }
+    setControlSide(state.side);
+    setSidebarHidden(Boolean(state.hidden));
+  } catch {
+    setControlSide("left");
+    setSidebarHidden(false);
+  }
+}
+
+$("#toggle-sidebar").addEventListener("click", () =>
+  setSidebarHidden(elements.app.dataset.sidebar !== "hidden"));
 elements.collectionTrigger.addEventListener("click", toggleCollectionMenu);
 document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".collection-picker")) closeCollectionMenu();
@@ -271,7 +307,6 @@ elements.editor.addEventListener("input", () => {
   elements.summary.textContent = document.summary;
   elements.status.textContent = `Saved to ${storageLabel(collection).label}.`;
 });
-$("#edge-more").addEventListener("click", () => $("#file").click());
 $("#file").addEventListener("change", (event) => event.target.files[0] && importFile(event.target.files[0]));
 elements.importDialog.querySelector("form").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -301,20 +336,62 @@ window.addEventListener("beforeunload", (event) => {
 document.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    $("#command-palette").showModal();
-    $("#command-palette input").focus();
+    if (!$("#command-palette").open) $("#command-palette").showModal();
+    const input = $("#command-palette [data-command-input]");
+    input.value = "";
+    input.dispatchEvent(new Event("input"));
+    input.focus();
   }
   if (event.key === "Escape") document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
 });
 $("#open-command-palette").addEventListener("click", () => {
   $("#command-palette").showModal();
-  $("#command-palette input").focus();
+  $("#command-palette [data-command-input]").focus();
 });
 $("#settings").addEventListener("click", () => {
   elements.status.textContent = "Settings will configure app-wide themes, adapters, and trusted import sources.";
 });
 $("#profile").addEventListener("click", () => {
   elements.status.textContent = "This workspace is local and self-hosted; hosted identity adapters are optional.";
+});
+$("#document-hide-sidebar").addEventListener("click", () => {
+  $("#document-actions").hidden = true;
+  setSidebarHidden(true);
+});
+$("#command-show-sidebar").addEventListener("click", () => {
+  setSidebarHidden(false);
+  $("#command-palette").close();
+});
+$("#sidebar-control-more").addEventListener("click", () => {
+  const menu = $("#sidebar-control-menu");
+  menu.hidden = !menu.hidden;
+  $("#sidebar-control-more").setAttribute("aria-expanded", String(!menu.hidden));
+});
+$("#sidebar-menu-visibility").addEventListener("click", () => {
+  $("#sidebar-control-menu").hidden = true;
+  setSidebarHidden(elements.app.dataset.sidebar !== "hidden");
+});
+$("#sidebar-menu-side").addEventListener("click", () => {
+  $("#sidebar-control-menu").hidden = true;
+  setControlSide($("#sidebar-control").dataset.side === "right" ? "left" : "right");
+});
+$("#command-palette [data-command-input]").addEventListener("input", (event) => {
+  const query = event.target.value.trim().toLowerCase();
+  for (const item of $("#command-palette").querySelectorAll("[data-command-label]")) {
+    item.hidden = Boolean(query && !item.dataset.commandLabel.includes(query));
+  }
+});
+$("#command-palette").addEventListener("click", (event) => {
+  if (event.target === $("#command-palette")) $("#command-palette").close();
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".document-menu") && !event.target.closest("#document-actions")) {
+    $("#document-actions").hidden = true;
+  }
+  if (!event.target.closest("#sidebar-control")) {
+    $("#sidebar-control-menu").hidden = true;
+    $("#sidebar-control-more").setAttribute("aria-expanded", "false");
+  }
 });
 document.querySelectorAll("[data-close]").forEach((button) =>
   button.addEventListener("click", () => button.closest("dialog").close()));
@@ -332,20 +409,22 @@ $("#sidebar-resizer").addEventListener("pointerdown", (event) => {
     handle.removeEventListener("pointermove", move);
   }, { once: true });
 });
-$("#edge-drag").addEventListener("pointerdown", (event) => {
+$("#sidebar-control-drag").addEventListener("pointerdown", (event) => {
   const handle = event.currentTarget;
   handle.setPointerCapture(event.pointerId);
   const move = (moveEvent) => {
-    const top = Math.max(16, Math.min(innerHeight - 70, moveEvent.clientY - 24));
-    elements.app.style.setProperty("--edge-y", `${top}px`);
+    const top = Math.max(8, Math.min(innerHeight - 42, moveEvent.clientY - 16));
+    elements.app.style.setProperty("--control-y", `${top}px`);
+    setControlSide(moveEvent.clientX > innerWidth / 2 ? "right" : "left");
   };
   handle.addEventListener("pointermove", move);
   handle.addEventListener("pointerup", () => {
     handle.removeEventListener("pointermove", move);
+    persistSidebar();
   }, { once: true });
 });
-
 ensureDefaults();
+restoreSidebar();
 renderCollectionOptions();
 selectCollection(activeCollectionId);
 document.body.dataset.ready = "true";
