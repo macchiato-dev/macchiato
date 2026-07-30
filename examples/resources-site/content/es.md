@@ -119,6 +119,8 @@
 ## Contenido de la cuenta
 
 - **account.create**: Crear
+- **account.notifications**: Notificaciones
+- **account.noNotifications**: Estás al día.
 - **account.newProject**: Nuevo proyecto
 - **account.newOrganization**: Nueva organización
 - **dashboard.title**: Tus proyectos - Resources.co

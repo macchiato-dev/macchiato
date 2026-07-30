@@ -119,6 +119,8 @@
 ## Account content
 
 - **account.create**: Create
+- **account.notifications**: Notifications
+- **account.noNotifications**: You're all caught up.
 - **account.newProject**: New project
 - **account.newOrganization**: New organization
 - **dashboard.title**: Your projects - Resources.co
