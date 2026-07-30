@@ -10,11 +10,12 @@ node packages/macchiato/src/macchiato.js app install focused-app \
   --map focused-app=workspace
 ```
 
-The sidebar is navigation, not part of a running document's authority. It
-selects a collection, searches and creates documents, and exposes account-wide
-commands. Collapsing it gives the active app the full viewport. Every document
-retains an explicit sandbox declaration independently of the collection that
-stores its bytes.
+The sidebar is navigation, not part of a running document's authority. There
+is no top bar competing with the app. A rich collection list keeps storage
+identity visible, the separator resizes horizontally, and the edge arrow
+collapses the sidebar for a full viewport. Hovering that edge reveals import
+and a vertically draggable control handle. Every document retains an explicit
+sandbox declaration independently of the collection that stores its bytes.
 
 Storage boundary
 
@@ -44,4 +45,3 @@ explicitly approved source capability. Referrer checks can inform UI but are
 not authentication. Blockchain integration belongs behind the same collection
 interface: content hashes, signatures, or discovery records may be
 decentralized without granting sandboxed code an unrestricted network channel.
-
