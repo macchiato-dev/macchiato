@@ -48,6 +48,32 @@ let activeCollectionId = "session";
 let activeDocumentId;
 let dirtyEphemeral = false;
 let filterMode = "all";
+let controlExpandTimer;
+let controlCollapseTimer;
+
+function collapseSidebarControl() {
+  clearTimeout(controlExpandTimer);
+  $("#sidebar-control").classList.remove("is-expanded");
+  $("#sidebar-control-menu").hidden = true;
+  $("#sidebar-control-more").setAttribute("aria-expanded", "false");
+}
+
+function scheduleSidebarControlExpansion() {
+  clearTimeout(controlCollapseTimer);
+  clearTimeout(controlExpandTimer);
+  if (elements.app.dataset.sidebar !== "hidden") return collapseSidebarControl();
+  controlExpandTimer = setTimeout(() => {
+    if ($("#sidebar-control").matches(":hover, :focus-within") && elements.app.dataset.sidebar === "hidden") {
+      $("#sidebar-control").classList.add("is-expanded");
+    }
+  }, 1_200);
+}
+
+function scheduleSidebarControlCollapse() {
+  clearTimeout(controlExpandTimer);
+  clearTimeout(controlCollapseTimer);
+  controlCollapseTimer = setTimeout(collapseSidebarControl, 750);
+}
 
 function writableCollections() {
   return collections.filter((collection) => collection.storage !== "library");
@@ -229,8 +255,8 @@ async function importFile(file) {
 function setSidebarHidden(hidden) {
   elements.app.dataset.sidebar = hidden ? "hidden" : "visible";
   if (hidden) closeCollectionMenu();
+  else collapseSidebarControl();
   $("#toggle-sidebar").setAttribute("aria-label", hidden ? "Show sidebar" : "Hide sidebar");
-  $("#toggle-sidebar").setAttribute("title", hidden ? "Show sidebar" : "Hide sidebar");
   $("#sidebar-menu-visibility").textContent = hidden ? "Show" : "Hide";
   persistSidebar();
 }
@@ -264,8 +290,16 @@ function restoreSidebar() {
   }
 }
 
-$("#toggle-sidebar").addEventListener("click", () =>
-  setSidebarHidden(elements.app.dataset.sidebar !== "hidden"));
+$("#toggle-sidebar").addEventListener("click", () => {
+  setSidebarHidden(elements.app.dataset.sidebar !== "hidden");
+  if (elements.app.dataset.sidebar === "hidden" && $("#sidebar-control").matches(":hover")) {
+    scheduleSidebarControlExpansion();
+  }
+});
+$("#sidebar-control").addEventListener("pointerenter", scheduleSidebarControlExpansion);
+$("#sidebar-control").addEventListener("pointerleave", scheduleSidebarControlCollapse);
+$("#sidebar-control").addEventListener("focusin", scheduleSidebarControlExpansion);
+$("#sidebar-control").addEventListener("focusout", scheduleSidebarControlCollapse);
 elements.collectionTrigger.addEventListener("click", toggleCollectionMenu);
 document.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".collection-picker")) closeCollectionMenu();
@@ -334,7 +368,12 @@ window.addEventListener("beforeunload", (event) => {
   event.returnValue = "";
 });
 document.addEventListener("keydown", (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+  const activeDocument = currentCollection()?.documents.find((candidate) => candidate.id === activeDocumentId);
+  const plainCommandKBelongsToHost = activeDocument?.sandbox?.shortcuts?.commandK !== "app";
+  const hostPaletteShortcut = (event.metaKey || event.ctrlKey)
+    && event.key.toLowerCase() === "k"
+    && (event.shiftKey || plainCommandKBelongsToHost);
+  if (hostPaletteShortcut) {
     event.preventDefault();
     if (!$("#command-palette").open) $("#command-palette").showModal();
     const input = $("#command-palette [data-command-input]");
@@ -369,10 +408,12 @@ $("#sidebar-control-more").addEventListener("click", () => {
 });
 $("#sidebar-menu-visibility").addEventListener("click", () => {
   $("#sidebar-control-menu").hidden = true;
+  $("#sidebar-control-more").setAttribute("aria-expanded", "false");
   setSidebarHidden(elements.app.dataset.sidebar !== "hidden");
 });
 $("#sidebar-menu-side").addEventListener("click", () => {
   $("#sidebar-control-menu").hidden = true;
+  $("#sidebar-control-more").setAttribute("aria-expanded", "false");
   setControlSide($("#sidebar-control").dataset.side === "right" ? "left" : "right");
 });
 $("#command-palette [data-command-input]").addEventListener("input", (event) => {

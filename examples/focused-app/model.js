@@ -12,7 +12,7 @@ const starterDocuments = [
     summary: "A focused place for small sandboxed apps.",
     body: "This document is running in a focused app workspace. Hide the sidebar to give an app the full viewport.",
     updatedAt: 1785369600000,
-    sandbox: { runtime: "QuickJS WASM", capabilities: ["dom-use"], network: "none" },
+    sandbox: { runtime: "QuickJS WASM", capabilities: ["dom-use"], network: "none", shortcuts: { commandK: "host" } },
   },
   {
     id: "storage",
@@ -20,7 +20,7 @@ const starterDocuments = [
     summary: "Every collection names the adapter holding it.",
     body: "Session Storage is the default. Local Storage survives browser restarts. Memory disappears when this page closes.",
     updatedAt: 1785366000000,
-    sandbox: { runtime: "document", capabilities: ["collection:read"], network: "none" },
+    sandbox: { runtime: "document", capabilities: ["collection:read"], network: "none", shortcuts: { commandK: "host" } },
   },
 ];
 
@@ -47,7 +47,7 @@ export function createDocument({ name, text, sandbox } = {}) {
     summary: body.trim().split(/\n+/)[0]?.slice(0, 140) || "Empty document",
     body,
     updatedAt: Date.now(),
-    sandbox: sandbox || { runtime: "QuickJS WASM", capabilities: ["dom-use"], network: "none" },
+    sandbox: sandbox || { runtime: "QuickJS WASM", capabilities: ["dom-use"], network: "none", shortcuts: { commandK: "host" } },
   };
 }
 

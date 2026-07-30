@@ -89,14 +89,15 @@ body[data-drop=true] .drop-overlay { display:grid }
 .sidebar-resizer { position:fixed; z-index:45; top:0; bottom:0; left:calc(var(--sidebar-width) - 3px); width:6px; cursor:col-resize }
 .app[data-sidebar=hidden] .sidebar-resizer { display:none }
 .sidebar-resizer:hover { background:color-mix(in srgb,var(--accent) 35%,transparent) }
-.sidebar-control { position:fixed; z-index:65; top:var(--control-y,18px); left:calc(var(--sidebar-width) - 34px); width:32px; height:34px; display:flex; flex-direction:row-reverse; align-items:center; overflow:visible; border:1px solid var(--line); border-radius:9px; background:var(--panel); box-shadow:0 6px 20px #0002; transition:left .18s,width .14s }
-.sidebar-control:hover,.sidebar-control:focus-within { left:calc(var(--sidebar-width) - 94px); width:92px }
-.app[data-sidebar=hidden] .sidebar-control[data-side=left] { left:0 }
-.app[data-sidebar=hidden] .sidebar-control[data-side=left]:hover,.app[data-sidebar=hidden] .sidebar-control[data-side=left]:focus-within { left:0 }
-.sidebar-control[data-side=right] { right:8px; left:auto }
-.sidebar-control[data-side=right]:hover,.sidebar-control[data-side=right]:focus-within { right:8px; left:auto }
+.sidebar-control { position:fixed; z-index:65; top:var(--control-y,18px); left:calc(var(--sidebar-width) - 34px); width:32px; height:34px; display:flex; align-items:center; overflow:hidden; border:1px solid transparent; background:transparent; transition:width .2s ease }
+.app[data-sidebar=hidden] .sidebar-control { border-color:var(--line); border-radius:9px; background:var(--panel); box-shadow:0 6px 20px #0002 }
+.app[data-sidebar=hidden] .sidebar-control[data-side=left] { left:-6px }
+.app[data-sidebar=hidden] .sidebar-control.is-expanded { width:92px; overflow:visible }
+.sidebar-control[data-side=right] { right:8px; left:auto; flex-direction:row-reverse }
+.app[data-sidebar=hidden] .sidebar-control[data-side=right] { right:-6px }
 .sidebar-control button { height:32px; flex:0 0 auto; border:0; color:inherit; background:transparent; cursor:pointer }
 .sidebar-control button:hover,.sidebar-control button:focus-visible { background:var(--hover); outline:0 }
+.app[data-sidebar=visible] .sidebar-control__primary:hover,.app[data-sidebar=visible] .sidebar-control__primary:focus-visible { background:transparent }
 .sidebar-control__primary { width:31px; display:grid; place-items:center; border-radius:8px!important }
 .sidebar-control__primary svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
 .sidebar-control__layout { display:none }
@@ -104,12 +105,14 @@ body[data-drop=true] .drop-overlay { display:grid }
 .sidebar-control[data-side=right] .sidebar-control__layout { display:block }
 .app[data-sidebar=hidden] .sidebar-control[data-side=left] .sidebar-control__arrow { transform:rotate(180deg) }
 .sidebar-control__more { width:29px; color:var(--muted)!important; font-weight:750; letter-spacing:1px; opacity:.3; transition:opacity .12s }
-.sidebar-control:hover .sidebar-control__more,.sidebar-control:focus-within .sidebar-control__more { opacity:.65 }
+.sidebar-control.is-expanded .sidebar-control__more { opacity:.65 }
 .sidebar-control__more:hover,.sidebar-control__more:focus-visible,.sidebar-control__more[aria-expanded=true] { opacity:1!important }
 .sidebar-control__drag { width:29px; display:grid; place-items:center; cursor:ns-resize!important; opacity:.48 }
 .sidebar-control__drag:hover { opacity:1 }
 .sidebar-control__drag svg { width:16px; height:23px; fill:none; stroke:var(--muted); stroke-width:3; stroke-linecap:round }
-.sidebar-control-menu { position:absolute; top:calc(100% + 6px); right:0; width:150px; padding:5px; border:1px solid var(--line); border-radius:9px; background:var(--panel); box-shadow:0 12px 32px #0005; direction:ltr }
+.sidebar-control-menu { position:absolute; top:calc(100% + 6px); width:150px; padding:5px; border:1px solid var(--line); border-radius:9px; background:var(--panel); box-shadow:0 12px 32px #0005; direction:ltr }
+.sidebar-control[data-side=left] .sidebar-control-menu { left:6px }
+.sidebar-control[data-side=right] .sidebar-control-menu { right:6px }
 .sidebar-control-menu button { width:100%; padding:8px 10px; border-radius:6px; text-align:left }
 @media(max-width:700px){.app{--sidebar-width:min(88vw,320px)}.app:not([data-sidebar=hidden]) .main{visibility:hidden}.sandbox-details{flex-basis:auto}.document-header{display:grid}.workspace{padding:24px}}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f7fa;--panel:#fff;--panel-2:#f0f2f6;--line:#dfe2e9;--text:#171a21;--muted:#697184;--hover:#edf0f5}}
