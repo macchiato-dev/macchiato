@@ -13,9 +13,16 @@ node packages/macchiato/src/macchiato.js app install focused-app \
 The sidebar is navigation, not part of a running document's authority. There
 is no top bar competing with the app. A rich collection list keeps storage
 identity visible, the separator resizes horizontally, and the edge arrow
-collapses the sidebar for a full viewport. Hovering that edge reveals import
-and a vertically draggable control handle. Every document retains an explicit
-sandbox declaration independently of the collection that stores its bytes.
+beside the collection picker collapses the sidebar for a full viewport. A
+compact hover expansion adds a vertical grip and low-emphasis dots for Hide
+and Move to Right/Left. Moving the control right replaces its arrow with a
+sidebar-layout icon. Its side and vertical position are local UI preferences
+persisted across reloads. Document dot menus also expose Hide, while the
+command palette exposes Show Sidebar through either K shortcut. The palette
+uses the same `command-palette-use` markup and visual contract as Resources
+Edge, with commands supplied by this workspace. Every document retains an
+explicit sandbox declaration independently of the collection that stores its
+bytes.
 
 Storage boundary
 

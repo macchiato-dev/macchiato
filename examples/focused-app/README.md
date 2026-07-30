@@ -20,13 +20,19 @@ node packages/app/src/index.js --host 127.0.0.1 --port 8765 \
 ```
 
 Open `http://app.localhost:8765`. The collection button opens a rich list whose
-two-line entries explain their storage and keep the read-only Library last.
-Hover a storage icon for its type. Drag the sidebar separator horizontally to
-resize it. The prominent edge arrow collapses it; hover that control to reveal
-file import and a handle that moves the control vertically. Use `Ctrl/Cmd-K`
-for the command surface, or drag a text file anywhere onto the page. Files
-larger than 1 MB default to Memory. Manual changes in Memory or Session Storage
-enable the browser's leave-page warning.
+compact heading contains New Collection and whose two-line entries explain
+their storage and keep the read-only Library last. Hover a storage icon for its
+type. Drag the sidebar separator horizontally to resize it. The arrow beside
+the collection button collapses the sidebar. Hover it for a vertically
+draggable grip and a deliberately subdued dot menu with Hide and Move to
+Right/Left. On the right edge it uses a sidebar-layout icon because a
+directional arrow would be ambiguous. Side and vertical position persist
+locally. A document's dot menu can also hide it. Use `Ctrl/Cmd-K` or
+`Ctrl/Cmd-Shift-K`, then Show Sidebar, to restore it without the tab. Drag a
+text file anywhere onto the page to import it. Files larger than 1 MB default
+to Memory. Manual changes in Memory or Session Storage enable the browser's
+leave-page warning. Command search follows the same `command-palette-use`
+surface as Resources Edge rather than introducing a second palette design.
 
 Deployment
 
