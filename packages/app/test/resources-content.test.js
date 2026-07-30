@@ -33,7 +33,7 @@ test("content store creates organizations and namespaced projects", async () => 
     name: "Tiny Tools",
     description: "Small things.",
   });
-  await content.createProject(account.id, {
+  const privateProject = await content.createProject(account.id, {
     namespace: organization.id,
     userSlug: account.login,
     slug: "clock",
@@ -58,6 +58,9 @@ test("content store creates organizations and namespaced projects", async () => 
     ["tiny-tools", "clock"],
     ["latte", "logo"],
   ]);
+  assert.equal((await content.getProject("tiny-tools", "clock", account.id)).id, privateProject.id);
+  assert.equal(await content.getProject("tiny-tools", "clock"), null);
+  assert.equal((await content.getProject("latte", "logo")).visibility, "public");
 });
 
 test("content store validates inputs, ownership, and namespace uniqueness", async () => {

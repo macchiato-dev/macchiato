@@ -101,6 +101,20 @@ export function createContentStore(client, {
   const initialize = () => (initialized ||= client.batch(SCHEMA.map((sql) => ({ sql, args: [] }))));
 
   return Object.freeze({
+    async getProject(namespace, projectSlug, viewerUserId = null) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects
+              WHERE namespace_slug = ? COLLATE NOCASE AND slug = ? COLLATE NOCASE`,
+        args: [slug(namespace), slug(projectSlug)],
+      });
+      const row = found.rows[0];
+      if (!row || (row.visibility === "private" && String(row.owner_user_id) !== String(viewerUserId || ""))) return null;
+      return project(row);
+    },
+
     async listForUser(userId) {
       await initialize();
       const [organizations, projects] = await Promise.all([
