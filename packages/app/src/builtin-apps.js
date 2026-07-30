@@ -10,6 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../../examples/code-editor-use/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
+import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -22,6 +23,25 @@ export const BUILTIN_APPS = [
     kind: "directory",
     description: "A directory of local Macchiato apps and projects.",
     directory: false,
+  },
+  {
+    name: "Focused App",
+    pluginId: "focused-app",
+    subdomain: "app",
+    kind: "portable sandbox workspace",
+    description: "A collapsible, storage-explicit workspace for running focused sandboxed apps.",
+    handler: focusedAppHandler,
+    sourceFiles: [
+      "examples/focused-app/index.html",
+      "examples/focused-app/client.js",
+      "examples/focused-app/model.js",
+      "examples/focused-app/style.css",
+      "examples/focused-app/handler.js",
+    ],
+    sandbox: {
+      runtime: "browser-native shell with per-document sandbox declarations",
+      hostCapabilities: ["memory collections", "sessionStorage collections", "localStorage collections", "file import"],
+    },
   },
   {
     name: "Code Notes",
