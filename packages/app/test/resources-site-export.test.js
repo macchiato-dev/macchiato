@@ -34,8 +34,7 @@ test("exports resources site as static files", async (t) => {
   assert.match(spanishHome, /Servidor HTTP multiplataforma y registro declarativo/);
   assert.match(spanishProject, /Servidor HTTP multiplataforma y registro declarativo/);
   assert.match(spanishProject, /Se publica como @macchiato-dev\/app/);
-  assert.match(spanishHome, /<form class="language-switcher" method="get" action="\/language">/);
-  assert.match(spanishHome, /<option value="es" selected>Español<\/option>/);
+  assert.doesNotMatch(spanishHome, /<footer[\s\S]*class="language-switcher"/);
   assert.match(home, /href="\/macchiato\/app"/);
   assert.doesNotMatch(home, /href="#macchiato\/app"/);
   assert.match(project, /<title>App - Resources\.co<\/title>/);
