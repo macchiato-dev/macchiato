@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Macchiato Focused Apps</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app" data-sidebar="visible">
+    <aside class="sidebar" aria-label="Collections and documents">
+      <header class="collection-header">
+        <label class="collection-picker"><span>Collection</span><select id="collection" aria-label="Collection"></select></label>
+        <button id="new-collection" class="icon-button" aria-label="New collection" title="New collection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5h7l2 2h9v10H3zM12 11v5m-2.5-2.5h5"/></svg></button>
+      </header>
+      <div class="collection-actions">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></svg><input id="search" type="search" placeholder="Search collection"></label>
+        <button id="filter" class="icon-button" aria-label="Filter documents: all" title="Filter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg></button>
+        <button id="new-document" class="icon-button primary" aria-label="Add document" title="Add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <ul id="documents" class="documents"></ul>
+      <footer class="sidebar-footer">
+        <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
+        <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>
+        <button id="open-command-palette" class="icon-button" aria-label="Command palette" title="Command palette (⌘K)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 10 2 2-2 2m5 0h5"/></svg></button>
+      </footer>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <button id="toggle-sidebar" class="icon-button" aria-label="Toggle sidebar" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+        <div class="wordmark">macchiato<span>•</span>app</div>
+        <button id="import" class="import-button">Import file</button>
+        <input id="file" type="file" hidden>
+      </header>
+      <section id="empty" class="empty"><div class="empty-icon"></div><h1>Choose or create an app</h1><p>Documents run with their own inspectable sandbox configuration.</p></section>
+      <article id="workspace" class="workspace" hidden>
+        <header class="document-header">
+          <div><p class="eyebrow">Focused app</p><h1 id="document-title"></h1><p id="document-summary"></p></div>
+          <details class="sandbox-details"><summary>Sandbox</summary><pre id="sandbox"></pre></details>
+        </header>
+        <textarea id="editor" aria-label="Document content" spellcheck="false"></textarea>
+      </article>
+      <output id="status" class="status" aria-live="polite"></output>
+    </main>
+  </div>
+  <div class="drop-overlay">Drop a file to create an app</div>
+  <dialog id="collection-dialog"><form id="collection-form"><h2>New collection</h2><label>Name<input name="name" required maxlength="80"></label><label>Storage<select name="storage"><option value="session">Session Storage</option><option value="local">Local Storage</option><option value="memory">Memory</option></select></label><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Create collection</button></div></form></dialog>
+  <dialog id="import-dialog"><form><h2>Import as an app</h2><label>Name<input name="name" required></label><label>Collection<select id="import-collection" name="collection"></select></label><textarea name="content" hidden></textarea><p>Files over 1 MB default to Memory so browser storage is not unexpectedly exhausted.</p><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Import</button></div></form></dialog>
+  <dialog id="command-palette"><form method="dialog"><h2>Commands and search</h2><input type="search" placeholder="Type a command or search…"><button>Close</button></form></dialog>
+  <script type="module" src="./client.js"></script>
+</body>
+</html>
