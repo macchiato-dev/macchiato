@@ -92,7 +92,7 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
     getComputedStyle(node, "::after").opacity), "1");
   await page.locator("main").click();
 
-  assert.equal(await page.locator("#toggle-sidebar").evaluate((node) => getComputedStyle(node).width), "31px");
+  assert.equal(await page.locator("#toggle-sidebar").evaluate((node) => getComputedStyle(node).width), "39px");
   assert.equal(await page.locator("#toggle-sidebar").getAttribute("title"), null);
   assert.deepEqual(await page.locator("#sidebar-control").evaluate((node) => {
     const style = getComputedStyle(node);
@@ -150,6 +150,13 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.match(await page.locator("#collection-trigger").textContent(), /Private tools/);
 
   await page.locator("#new-document").click();
+  assert.equal(await page.locator(".sidebar").getAttribute("data-tab"), "info");
+  assert.equal(await page.locator("#info-title").textContent(), "Untitled app");
+  assert.match(await page.locator("#info-storage").textContent(), /Local Storage/);
+  assert.match(await page.locator("#info-sandbox").textContent(), /QuickJS WASM/);
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#download-document").click();
+  assert.match((await downloadPromise).suggestedFilename(), /Untitled-app\.txt/);
   await page.locator("#editor").fill("A private calculator\n\nNo network required.");
   assert.match(await page.locator("#status").textContent(), /Saved to Local Storage/);
   await page.evaluate(() => {
@@ -167,6 +174,7 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.keyboard.press("Control+Shift+k");
   await page.locator("#command-palette[open]").waitFor();
   await page.keyboard.press("Escape");
+  await page.locator("#documents-tab").click();
   assert.equal(await page.locator(".document-open").count(), 1);
   assert.equal(await page.locator(".document-open").evaluate((node) => getComputedStyle(node).height), "92px");
   await page.locator(".document-menu").click();

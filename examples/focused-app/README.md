@@ -5,6 +5,12 @@ Focused App is the portable shell intended for `app.resources.co` and
 workspace without a top bar. Its sidebar can be resized or collapsed
 completely.
 
+The sidebar starts with Documents and Info tabs. Documents owns collection
+navigation, search, and the three-line document list. Info shows the selected
+document's storage, encoded byte size, update time, sandbox declaration, and a
+local download action. Creating a document selects Info so its authority and
+persistence are visible before the user starts treating it as durable.
+
 The first prototype is deliberately serverless. A collection owns a storage
 adapter and documents own sandbox declarations. The built-in adapters are
 Memory, Session Storage (the default), Local Storage, and a read-only Library.

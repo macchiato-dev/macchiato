@@ -37,6 +37,13 @@ const elements = {
   summary: $("#document-summary"),
   editor: $("#editor"),
   sandbox: $("#sandbox"),
+  infoTitle: $("#info-title"),
+  infoCollection: $("#info-collection"),
+  infoStorage: $("#info-storage"),
+  infoSize: $("#info-size"),
+  infoUpdated: $("#info-updated"),
+  infoSandbox: $("#info-sandbox"),
+  documentInfo: $("#document-info"),
   empty: $("#empty"),
   workspace: $("#workspace"),
   status: $("#status"),
@@ -173,12 +180,38 @@ function showDocument(document) {
   activeDocumentId = document?.id;
   elements.workspace.hidden = !document;
   elements.empty.hidden = Boolean(document);
-  if (!document) return;
+  if (!document) {
+    elements.infoTitle.textContent = "No document selected";
+    elements.infoCollection.textContent = "—";
+    elements.infoStorage.textContent = "—";
+    elements.infoSize.textContent = "—";
+    elements.infoUpdated.textContent = "—";
+    elements.infoSandbox.textContent = "";
+    $("#download-document").disabled = true;
+    return;
+  }
   elements.title.textContent = document.title;
   elements.summary.textContent = document.summary;
   elements.editor.value = document.body;
   elements.editor.readOnly = currentCollection().storage === "library";
   elements.sandbox.textContent = JSON.stringify(document.sandbox, null, 2);
+  const collection = currentCollection();
+  elements.infoTitle.textContent = document.title;
+  elements.infoCollection.textContent = collection.name;
+  elements.infoStorage.textContent = storageLabel(collection).label;
+  const bytes = new TextEncoder().encode(document.body).byteLength;
+  elements.infoSize.textContent = bytes < 1_000 ? `${bytes} B` : `${(bytes / 1_000).toFixed(1)} KB`;
+  elements.infoUpdated.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(document.updatedAt);
+  elements.infoSandbox.textContent = JSON.stringify(document.sandbox, null, 2);
+  $("#download-document").disabled = false;
+}
+
+function setSidebarTab(tab) {
+  const normalized = tab === "info" ? "info" : "documents";
+  elements.sidebar.dataset.tab = normalized;
+  $("#documents-tab").setAttribute("aria-selected", String(normalized === "documents"));
+  $("#info-tab").setAttribute("aria-selected", String(normalized === "info"));
+  elements.documentInfo.hidden = normalized !== "info";
 }
 
 function renderDocuments() {
@@ -317,7 +350,19 @@ $("#new-document").addEventListener("click", () => {
     ? collections.find((candidate) => candidate.id === "session")
     : currentCollection();
   addDocument(createDocument({ name: "Untitled app", text: "# Start here\n" }), collection.id);
-  elements.editor.focus();
+  setSidebarTab("info");
+});
+$("#documents-tab").addEventListener("click", () => setSidebarTab("documents"));
+$("#info-tab").addEventListener("click", () => setSidebarTab("info"));
+$("#download-document").addEventListener("click", () => {
+  const documentValue = currentCollection().documents.find((candidate) => candidate.id === activeDocumentId);
+  if (!documentValue) return;
+  const url = URL.createObjectURL(new Blob([documentValue.body], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${documentValue.title.replace(/[^A-Za-z0-9._-]+/g, "-") || "document"}.txt`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 });
 $("#new-collection").addEventListener("click", () => $("#collection-dialog").showModal());
 $("#collection-form").addEventListener("submit", (event) => {
@@ -339,6 +384,9 @@ elements.editor.addEventListener("input", () => {
   document.updatedAt = Date.now();
   saveCollection(collection);
   elements.summary.textContent = document.summary;
+  const bytes = new TextEncoder().encode(document.body).byteLength;
+  elements.infoSize.textContent = bytes < 1_000 ? `${bytes} B` : `${(bytes / 1_000).toFixed(1)} KB`;
+  elements.infoUpdated.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(document.updatedAt);
   elements.status.textContent = `Saved to ${storageLabel(collection).label}.`;
 });
 $("#file").addEventListener("change", (event) => event.target.files[0] && importFile(event.target.files[0]));
