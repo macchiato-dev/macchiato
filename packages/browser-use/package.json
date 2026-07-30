@@ -5,6 +5,7 @@
   "description": "Policy-bound live browser DOM handles and shape detection",
   "exports": {
     ".": "./src/index.js",
-    "./quickjs-guest": "./src/quickjs-guest.js"
+    "./quickjs-guest": "./src/quickjs-guest.js",
+    "./quickjs-dom-guest": "./src/quickjs-dom-guest.js"
   }
 }

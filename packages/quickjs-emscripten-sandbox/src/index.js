@@ -23,7 +23,7 @@ function formatQuickJsError(value) {
     const parts = [];
     if (value.name) parts.push(String(value.name));
     if (value.message) parts.push(String(value.message));
-    if (value.stack && !parts.length) parts.push(String(value.stack));
+    if (value.stack) parts.push(String(value.stack));
     if (parts.length) return parts.join(": ");
     try {
       return JSON.stringify(value);

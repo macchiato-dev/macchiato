@@ -1,16 +1,28 @@
-# Constrained CodeMirror example
+# CodeMirror in QuickJS
 
-Run the development app plugin and open:
+Run the `code-editor-use` app plugin and open:
 
 `http://code-editor-use.localhost:8765`
 
-The page runs CodeMirror 6 natively because editing depends on browser
-selection, focus, composition, geometry, and incremental DOM. The app
-controller runs in QuickJS/WASM. It sees the editor through `browser-use`:
-opaque scoped handles and JSON-only query/read/write operations.
+CodeMirror 6, its editor state, extensions, commands, and view run inside
+QuickJS/WASM. The page realm does not import or evaluate CodeMirror. Its small
+bootstrap does three things:
 
-`code-editor-use` is the specialized capability. It fixes the CodeMirror
-extensions and validates the live subtree against a declared shape at startup
-and after mutations. A mismatch destroys and clears the editor. The example
-bundles only the audited adapter and its pinned workspace dependencies; it
-doesn't accept packages, extensions, HTML, CSS, or JavaScript from the user.
+1. starts QuickJS and evaluates the fixed CodeMirror guest bundle;
+2. applies synchronous, JSON-only DOM operations to the granted editor root;
+3. forwards browser events to QuickJS and honors `preventDefault`.
+
+`beforeinput` is converted to a QuickJS CodeMirror transaction, so the native
+`contenteditable` DOM never becomes the editor's source of truth. Search,
+completion, history commands, rendering, and syntax highlighting are initiated
+inside the guest.
+
+The host bridge retains opaque handles and allowlists DOM reads, writes,
+methods, event fields, tags, attributes, class families, element count, depth,
+and text size. A `MutationObserver` validates the live subtree and clears it
+after any rejected mutation.
+
+The guest bundle is served as data and passed to `sandbox.evalGlobal`; it is
+never loaded as a page `<script>` or module. The browser test asserts that no
+CodeMirror constructor is present in the page global and exercises editing,
+selection, search, completion, undo/redo, focus, and fail-closed mutation.
