@@ -93,11 +93,46 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.locator("main").click();
 
   assert.equal(await page.locator("#toggle-sidebar").evaluate((node) => getComputedStyle(node).width), "31px");
+  assert.equal(await page.locator("#toggle-sidebar").getAttribute("title"), null);
+  assert.deepEqual(await page.locator("#sidebar-control").evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundColor, border: style.borderTopColor, shadow: style.boxShadow };
+  }), { background: "rgba(0, 0, 0, 0)", border: "rgba(0, 0, 0, 0)", shadow: "none" });
   assert.equal(await page.locator("#sidebar-control-more").evaluate((node) => getComputedStyle(node).opacity), "0.3");
   await page.locator("#toggle-sidebar").click();
   assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "hidden");
   await page.waitForTimeout(250);
   assert.equal(await page.locator(".sidebar").evaluate((node) => node.getBoundingClientRect().width), 0);
+  await page.locator("#sidebar-control").hover();
+  await page.waitForTimeout(900);
+  assert.equal(await page.locator("#sidebar-control").evaluate((node) => Math.round(node.getBoundingClientRect().width)), 32);
+  await page.waitForTimeout(500);
+  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().width) > 85);
+  await page.locator("main").hover();
+  await page.waitForTimeout(1_050);
+  assert.equal(await page.locator("#sidebar-control").evaluate((node) => Math.round(node.getBoundingClientRect().width)), 32);
+  await page.locator("#sidebar-control").hover();
+  await page.waitForTimeout(1_300);
+  await page.locator("#sidebar-control-more").click();
+  assert.deepEqual(await page.locator("#sidebar-control-menu").getByRole("menuitem").allTextContents(), ["Show", "Move to Right"]);
+  const leftMenuBox = await page.locator("#sidebar-control-menu").boundingBox();
+  assert.ok(leftMenuBox.x >= 0);
+  assert.ok(leftMenuBox.x + leftMenuBox.width <= page.viewportSize().width);
+  await page.locator("#sidebar-menu-side").click();
+  assert.equal(await page.locator("#sidebar-control").getAttribute("data-side"), "right");
+  assert.equal(await page.locator(".sidebar-control__layout").evaluate((node) => getComputedStyle(node).display), "block");
+  await page.locator("#sidebar-control").hover();
+  await page.locator("#sidebar-control-more").click();
+  const rightMenuBox = await page.locator("#sidebar-control-menu").boundingBox();
+  assert.ok(rightMenuBox.x >= 0);
+  assert.ok(rightMenuBox.x + rightMenuBox.width <= page.viewportSize().width);
+  await page.locator("#sidebar-control-more").click();
+  const dragBox = await page.locator("#sidebar-control-drag").boundingBox();
+  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dragBox.x + dragBox.width / 2, 160);
+  await page.mouse.up();
+  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().y) > 100);
   await page.locator("#toggle-sidebar").click();
   const resizeX = await page.locator("#sidebar-resizer").evaluate((node) => node.getBoundingClientRect().x);
   await page.mouse.move(resizeX, 300);
@@ -106,21 +141,6 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.mouse.up();
   await page.waitForTimeout(250);
   assert.ok(await page.locator(".sidebar").evaluate((node) => node.getBoundingClientRect().width) > 370);
-  await page.locator("#sidebar-control").hover();
-  await page.waitForTimeout(160);
-  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().width) > 85);
-  await page.locator("#sidebar-control-more").click();
-  assert.deepEqual(await page.locator("#sidebar-control-menu").getByRole("menuitem").allTextContents(), ["Hide", "Move to Right"]);
-  await page.locator("#sidebar-menu-side").click();
-  assert.equal(await page.locator("#sidebar-control").getAttribute("data-side"), "right");
-  assert.equal(await page.locator(".sidebar-control__layout").evaluate((node) => getComputedStyle(node).display), "block");
-  await page.locator("#sidebar-control").hover();
-  const dragBox = await page.locator("#sidebar-control-drag").boundingBox();
-  await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(dragBox.x + dragBox.width / 2, 160);
-  await page.mouse.up();
-  assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().y) > 100);
 
   await page.locator("#collection-trigger").click();
   await page.locator("#new-collection").click();
@@ -132,6 +152,21 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.locator("#new-document").click();
   await page.locator("#editor").fill("A private calculator\n\nNo network required.");
   assert.match(await page.locator("#status").textContent(), /Saved to Local Storage/);
+  await page.evaluate(() => {
+    const key = "macchiato.focused-app.collections.v1";
+    const collections = JSON.parse(localStorage.getItem(key));
+    collections.find((collection) => collection.name === "Private tools").documents[0].sandbox.shortcuts.commandK = "app";
+    localStorage.setItem(key, JSON.stringify(collections));
+  });
+  await page.reload();
+  await page.locator("body[data-ready=true]").waitFor();
+  await page.locator("#collection-trigger").click();
+  await page.locator(".collection-option", { hasText: "Private tools" }).click();
+  await page.keyboard.press("Control+k");
+  assert.equal(await page.locator("#command-palette[open]").count(), 0);
+  await page.keyboard.press("Control+Shift+k");
+  await page.locator("#command-palette[open]").waitFor();
+  await page.keyboard.press("Escape");
   assert.equal(await page.locator(".document-open").count(), 1);
   assert.equal(await page.locator(".document-open").evaluate((node) => getComputedStyle(node).height), "92px");
   await page.locator(".document-menu").click();
@@ -139,7 +174,7 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   await page.locator("#document-hide-sidebar").click();
   assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "hidden");
 
-  await page.keyboard.press("Control+k");
+  await page.keyboard.press("Control+Shift+k");
   await page.locator("#command-palette[open]").waitFor();
   assert.equal(await page.locator("#command-palette .command-palette__surface").count(), 1);
   await page.locator("[data-command-input]").fill("missing");
@@ -148,9 +183,6 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.equal(await page.locator("#command-show-sidebar").isVisible(), true);
   await page.locator("#command-show-sidebar").click();
   assert.equal(await page.locator(".app").getAttribute("data-sidebar"), "visible");
-  await page.keyboard.press("Control+Shift+k");
-  await page.locator("#command-palette[open]").waitFor();
-  await page.keyboard.press("Escape");
   assert.equal(await page.locator("#command-palette[open]").count(), 0);
 
   await page.reload();
