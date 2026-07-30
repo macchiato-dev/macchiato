@@ -51,7 +51,7 @@ async function stop(child) {
   });
 }
 
-test("code-editor-use runs CodeMirror through a QuickJS-observed constrained subtree", async (t) => {
+test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM bridge", async (t) => {
   const port = await getPort();
   const dataDir = await mkdtemp(join(tmpdir(), "macchiato-code-editor-"));
   const app = startApp(port, dataDir);
@@ -74,8 +74,17 @@ test("code-editor-use runs CodeMirror through a QuickJS-observed constrained sub
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /wasm-unsafe-eval/);
   assert.equal(await page.locator(".cm-editor").count(), 1);
+  assert.deepEqual(await page.evaluate(() => ({
+    editorViewGlobal: typeof globalThis.EditorView,
+    createCodeEditorGlobal: typeof globalThis.createCodeEditor,
+    bridge: typeof globalThis.__codeEditorBridge,
+  })), {
+    editorViewGlobal: "undefined",
+    createCodeEditorGlobal: "undefined",
+    bridge: "object",
+  });
   assert.equal(await page.locator(".editor-shell").evaluate((node) => getComputedStyle(node).borderRadius), "2px");
-  assert.match(await page.locator("#status").textContent(), /QuickJS observed \d+ characters across 2 lines/);
+  assert.match(await page.locator("#status").textContent(), /QuickJS owns \d+ characters across 2 lines/);
 
   await page.locator(".cm-content").click();
   const contentBox = await page.locator(".cm-content").boundingBox();

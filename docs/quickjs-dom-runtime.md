@@ -10,17 +10,15 @@ QuickJS. It also detects the subtree's actual tag, attribute, class, depth,
 element-count, and text shape at mount time and after each mutation.
 
 `@macchiato-dev/code-editor-use` is the first specialized adapter. CodeMirror 6
-runs natively because selection, focus, composition, layout geometry, and
-incremental rendering are browser capabilities that cannot be represented by
-the current serialized `dom-use` tree. A QuickJS controller observes its
-shape through `browser-use`, while the adapter fixes the CodeMirror extensions
-and continuously checks one declared subtree. Shape violations destroy and
-clear the editor. See `examples/code-editor-use/`.
+runs in QuickJS, including its state, commands, syntax parser, extensions, and
+view. The page realm only starts the sandbox, applies synchronous DOM operations
+to one granted root, and forwards events. Native `beforeinput` is prevented and
+translated into a QuickJS transaction, keeping the guest state authoritative.
 
-This is intentionally not a claim that arbitrary browser libraries can run
-unchanged in QuickJS. The general bridge and each native adapter remain
-separate capabilities: `browser-use` controls access, and the adapter declares
-the additional native behavior it requires.
+The adapter fixes the CodeMirror extensions and continuously checks the
+resulting subtree. Shape violations destroy and clear the editor. This does not
+make arbitrary browser libraries compatible: each guest still needs an
+explicit, auditable subset of browser APIs. See `examples/code-editor-use/`.
 
 ## Status
 

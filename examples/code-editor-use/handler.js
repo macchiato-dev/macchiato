@@ -6,7 +6,8 @@ import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-em
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(directory, "../..");
-let bundlePromise;
+let guestBundlePromise;
+let hostBundlePromise;
 
 function contentType(pathname) {
   if (pathname.endsWith(".js")) return "application/javascript; charset=utf-8";
@@ -21,6 +22,7 @@ function importMap() {
     imports[specifier] = `/-/${quickJsEmscriptenSandboxBrowserAssets.namespace}/${publicPath}`;
   }
   imports["@macchiato-dev/browser-use/quickjs-guest"] = "/browser-use-quickjs-guest.js";
+  imports["@macchiato-dev/browser-use/quickjs-dom-guest"] = "/browser-use-quickjs-dom-guest.js";
   return JSON.stringify({ imports });
 }
 
@@ -58,26 +60,38 @@ function page() {
   <main>
     <p class="eyebrow">code-editor-use / browser-use</p>
     <h1>Constrained CodeMirror 6</h1>
-    <p>CodeMirror owns one shape-checked browser subtree. A QuickJS controller sees it only through scoped JSON DOM handles.</p>
+    <p>CodeMirror runs inside QuickJS/WASM. A small browser bridge forwards events and applies its policy-checked DOM operations.</p>
     <div class="editor-shell"><div id="editor" aria-label="Code editor"></div></div>
     <div class="runtime"><span id="status" role="status">Starting QuickJS…</span><span id="shape"></span></div>
-    <details><summary>What is constrained?</summary><p>Tags, attributes, class families, selectors, readable properties, writable properties, depth, element count, and text size are declared by code-editor-use.</p></details>
+    <details><summary>What is constrained?</summary><p>The browser only starts QuickJS, forwards events, and applies an allowlisted DOM protocol. Tags, attributes, class families, operations, depth, element count, and text size are declared by code-editor-use.</p></details>
   </main>
   <script type="module" src="/client.js"></script>
 </body>
 </html>`;
 }
 
-async function codeEditorBundle() {
-  bundlePromise ||= build({
-    entryPoints: [join(repoRoot, "packages/code-editor-use/src/index.js")],
+async function codeEditorGuestBundle() {
+  guestBundlePromise ||= build({
+    entryPoints: [join(repoRoot, "packages/code-editor-use/src/guest.js")],
+    bundle: true,
+    format: "iife",
+    platform: "neutral",
+    write: false,
+    sourcemap: false,
+  }).then((result) => result.outputFiles[0].text);
+  return guestBundlePromise;
+}
+
+async function codeEditorHostBundle() {
+  hostBundlePromise ||= build({
+    entryPoints: [join(repoRoot, "packages/code-editor-use/src/host.js")],
     bundle: true,
     format: "esm",
     platform: "browser",
     write: false,
     sourcemap: false,
   }).then((result) => result.outputFiles[0].text);
-  return bundlePromise;
+  return hostBundlePromise;
 }
 
 export async function codeEditorUseHandler(request) {
@@ -100,8 +114,14 @@ export async function codeEditorUseHandler(request) {
   if (pathname === "/browser-use-quickjs-guest.js") {
     return new Response(await readFile(join(repoRoot, "packages/browser-use/src/quickjs-guest.js"), "utf8"), { headers: { "content-type": contentType(pathname) } });
   }
-  if (pathname === "/code-editor.js") {
-    return new Response(await codeEditorBundle(), { headers: { "content-type": contentType(pathname) } });
+  if (pathname === "/browser-use-quickjs-dom-guest.js") {
+    return new Response(await readFile(join(repoRoot, "packages/browser-use/src/quickjs-dom-guest.js"), "utf8"), { headers: { "content-type": contentType(pathname) } });
+  }
+  if (pathname === "/code-editor-guest.js") {
+    return new Response(await codeEditorGuestBundle(), { headers: { "content-type": contentType(pathname) } });
+  }
+  if (pathname === "/code-editor-host.js") {
+    return new Response(await codeEditorHostBundle(), { headers: { "content-type": contentType(pathname) } });
   }
   if (pathname === "/style.css") {
     return new Response(await readFile(join(directory, "style.css"), "utf8"), { headers: { "content-type": "text/css; charset=utf-8" } });

@@ -1,36 +1,69 @@
-import { browserUseQuickJsGuestSource } from "@macchiato-dev/browser-use/quickjs-guest";
+import { browserUseQuickJsDomGuestSource } from "@macchiato-dev/browser-use/quickjs-dom-guest";
 import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
-import { createCodeEditor } from "/code-editor.js";
+import { BrowserDomHost, CODE_EDITOR_DOM_POLICY } from "/code-editor-host.js";
 
 const root = document.getElementById("editor");
 const status = document.getElementById("status");
 const shape = document.getElementById("shape");
-let sandbox = null;
-let violation = null;
+let sandbox;
+let stopped = false;
 
-function summary(result) {
-  status.textContent = `QuickJS observed ${result.characters ?? "the initial"} characters across ${result.lines} line${result.lines === 1 ? "" : "s"}.`;
-  shape.textContent = `${result.elements} constrained DOM elements`;
+function summary(message) {
+  const current = host.inspect();
+  status.textContent = `QuickJS owns ${message.characters} characters across ${message.lines} line${message.lines === 1 ? "" : "s"}.`;
+  shape.textContent = `${current.elements} constrained DOM elements`;
 }
 
-const editor = createCodeEditor({
-  parent: root,
-  onChange(value) {
-    if (!sandbox) return;
-    summary(sandbox.callJsonFunction("__codeEditorChanged", { characters: value.length }));
-  },
+const host = new BrowserDomHost(root, CODE_EDITOR_DOM_POLICY, {
   onViolation(error) {
-    violation = error;
+    stopped = true;
     console.error("code-editor-use shape violation", error);
     status.textContent = `Editor stopped: ${error.message}`;
     status.dataset.state = "error";
   },
+  onEvent(listenerId, event, nativeEvent) {
+    if (!sandbox || stopped) return;
+    const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
+    if (result.preventDefault) nativeEvent.preventDefault();
+    if (result.stopPropagation) nativeEvent.stopPropagation();
+  },
 });
 
 sandbox = await createSandbox();
-sandbox.installJsonHostFunction("__browserUseHost", (message) => editor.browserDom.dispatch(message));
-sandbox.evalGlobal(browserUseQuickJsGuestSource, "browser-use-guest.js");
-sandbox.evalModule(await (await fetch("/controller.js")).text(), "code-editor-controller.js");
-const initial = sandbox.callJsonFunction("__codeEditorBoot", {});
-if (!violation) summary({ ...initial, characters: editor.value.length });
+sandbox.installJsonHostFunction("__browserUseHost", (message) => host.dispatch(message));
+sandbox.installJsonHostFunction("__browserUseNotify", (message) => {
+  summary(message);
+  return {};
+});
+sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
+sandbox.evalGlobal(await (await fetch("/code-editor-guest.js")).text(), "code-editor-quickjs.js");
+root.addEventListener("beforeinput", (event) => {
+  if (stopped) return;
+  const result = sandbox.callJsonFunction("__codeEditorBeforeInput", {
+    inputType: event.inputType,
+    data: event.data,
+  });
+  sandbox.callJsonFunction("__browserUseFlush", {});
+  if (result.handled) event.preventDefault();
+}, true);
+root.addEventListener("keydown", (event) => {
+  if (stopped) return;
+  const result = sandbox.callJsonFunction("__codeEditorCommand", {
+    key: event.key,
+    code: event.code,
+    ctrlKey: event.ctrlKey,
+    shiftKey: event.shiftKey,
+    mod: event.ctrlKey || event.metaKey,
+  });
+  sandbox.callJsonFunction("__browserUseFlush", {});
+  if (result.handled) event.preventDefault();
+}, true);
+host.start();
+globalThis.__codeEditorBridge = Object.freeze({
+  command(payload) {
+    const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
+    sandbox.callJsonFunction("__browserUseFlush", {});
+    return result;
+  },
+});
 document.body.dataset.ready = "true";
