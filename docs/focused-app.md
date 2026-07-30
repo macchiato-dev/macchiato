@@ -14,15 +14,30 @@ The sidebar is navigation, not part of a running document's authority. There
 is no top bar competing with the app. A rich collection list keeps storage
 identity visible, the separator resizes horizontally, and the edge arrow
 beside the collection picker collapses the sidebar for a full viewport. A
-compact hover expansion adds a vertical grip and low-emphasis dots for Hide
-and Move to Right/Left. Moving the control right replaces its arrow with a
-sidebar-layout icon. Its side and vertical position are local UI preferences
-persisted across reloads. Document dot menus also expose Hide, while the
+hidden sidebar leaves a small side nub. A continuous 1.2-second hover—not an
+incidental pointer crossing—expands the nub to expose low-emphasis dots and a
+vertical grip. It contracts 750 ms after pointer exit. Moving the control right
+replaces its arrow with a sidebar-layout icon. Its side and vertical position
+are local UI preferences persisted across reloads. Document dot menus also
+expose Hide, while the
 command palette exposes Show Sidebar through either K shortcut. The palette
 uses the same `command-palette-use` markup and visual contract as Resources
 Edge, with commands supplied by this workspace. Every document retains an
 explicit sandbox declaration independently of the collection that stores its
 bytes.
+
+Shortcut ownership
+
+Documents default to `sandbox.shortcuts.commandK: "host"`. A document that
+needs Command/Ctrl-K may declare `"app"` instead; the host then leaves the
+plain shortcut alone. Command/Ctrl-Shift-K is always reserved as the host
+palette escape hatch.
+
+A fully controlled iframe may eventually need to forward that shifted shortcut
+to its host with `postMessage`. That bridge is intentionally not implemented
+yet: its message shape, source-window checks, origin rules, capability
+declaration, and replay behavior must be specified together. Arbitrary iframe
+messages must never be treated as host commands.
 
 Storage boundary
 

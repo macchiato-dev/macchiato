@@ -23,16 +23,22 @@ Open `http://app.localhost:8765`. The collection button opens a rich list whose
 compact heading contains New Collection and whose two-line entries explain
 their storage and keep the read-only Library last. Hover a storage icon for its
 type. Drag the sidebar separator horizontally to resize it. The arrow beside
-the collection button collapses the sidebar. Hover it for a vertically
-draggable grip and a deliberately subdued dot menu with Hide and Move to
-Right/Left. On the right edge it uses a sidebar-layout icon because a
-directional arrow would be ambiguous. Side and vertical position persist
-locally. A document's dot menu can also hide it. Use `Ctrl/Cmd-K` or
+the collection button collapses the sidebar and remains a single small arrow
+while the sidebar is visible. When hidden it becomes a side nub. Hold a hover
+on that nub for 1.2 seconds to reveal its deliberately subdued dots and
+vertical grip; leaving it collapses the utility again after 750 ms. Its menu
+contains Show and Move to Right/Left. On the right edge it uses a
+sidebar-layout icon because a directional arrow would be ambiguous. Side and
+vertical position persist locally. A document's dot menu can also hide it. Use
+`Ctrl/Cmd-K` or
 `Ctrl/Cmd-Shift-K`, then Show Sidebar, to restore it without the tab. Drag a
 text file anywhere onto the page to import it. Files larger than 1 MB default
 to Memory. Manual changes in Memory or Session Storage enable the browser's
 leave-page warning. Command search follows the same `command-palette-use`
 surface as Resources Edge rather than introducing a second palette design.
+Apps may claim plain Command/Ctrl-K in their sandbox declaration;
+Command/Ctrl-Shift-K remains reserved for the host. A future controlled-iframe
+`postMessage` bridge is documented but deliberately unspecified and disabled.
 
 Deployment
 
