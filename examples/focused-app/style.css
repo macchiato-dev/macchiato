@@ -1,0 +1,61 @@
+:root { color-scheme: dark; --bg:#0b0d12; --panel:#12151c; --panel-2:#181c25; --line:#292e3a; --text:#f2f4f8; --muted:#929aab; --accent:#8b7cff; --hover:#202530; font-family:Inter,ui-sans-serif,system-ui,sans-serif }
+* { box-sizing:border-box }
+[hidden] { display:none!important }
+html,body,.app { height:100%; margin:0 }
+body { overflow:hidden; background:var(--bg); color:var(--text) }
+button,input,select,textarea { font:inherit }
+button,select,input { color:inherit }
+.app { display:grid; grid-template-columns:320px 1fr; transition:grid-template-columns .2s ease }
+.app[data-sidebar=hidden] { grid-template-columns:0 1fr }
+.app[data-sidebar=hidden] .sidebar { border-right:0 }
+.sidebar { min-width:0; overflow:hidden; background:var(--panel); border-right:1px solid var(--line); display:grid; grid-template-rows:auto auto 1fr auto }
+.collection-header,.collection-actions,.sidebar-footer,.topbar { display:flex; align-items:center }
+.collection-header { gap:8px; padding:14px 12px 10px }
+.collection-picker { min-width:0; flex:1 }
+.collection-picker span,.eyebrow { display:block; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase }
+.collection-picker select { width:100%; border:0; background:transparent; font-weight:650; padding:4px 0 }
+.icon-button { width:38px; height:38px; flex:0 0 auto; border:0; border-radius:9px; background:transparent; cursor:pointer; display:grid; place-items:center }
+.icon-button svg,.search svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round }
+.icon-button:hover,.icon-button:focus-visible { background:var(--hover) }
+.icon-button[data-active=true] { background:var(--hover); color:var(--accent) }
+.icon-button.primary { background:var(--accent); color:white }
+.collection-actions { gap:5px; padding:7px 12px 12px; border-bottom:1px solid var(--line) }
+.search { height:38px; min-width:0; flex:1; border-radius:9px; background:var(--panel-2); display:flex; align-items:center; gap:7px; padding:0 10px; color:var(--muted) }
+.search input { width:100%; min-width:0; background:transparent; border:0; outline:0 }
+.documents { list-style:none; padding:8px; margin:0; overflow:auto }
+.document-item { position:relative; border-radius:11px; margin-bottom:3px }
+.document-item:hover,.document-item[data-active=true] { background:var(--hover) }
+.document-item[data-active=true] { box-shadow:inset 3px 0 var(--accent) }
+.document-open { width:100%; height:92px; padding:12px 42px 10px 13px; color:inherit; text-align:left; border:0; background:transparent; cursor:pointer; display:grid; grid-template-rows:auto 1fr auto; gap:3px }
+.document-open strong,.document-open span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.document-open span,.document-open time { color:var(--muted); font-size:12px }
+.document-menu { position:absolute; top:9px; right:8px; border:0; background:transparent; color:var(--muted); cursor:pointer; border-radius:7px; padding:4px 6px }
+.document-menu:hover { background:#303746; color:var(--text) }
+.sidebar-footer { min-width:300px; gap:5px; padding:10px 12px; border-top:1px solid var(--line) }
+.profile { min-width:0; flex:1; display:flex; align-items:center; gap:9px; text-align:left; color:inherit; border:0; background:transparent; padding:4px; cursor:pointer }
+.profile span:last-child { min-width:0; display:grid }
+.profile small { color:var(--muted) }
+.avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(135deg,#7968ff,#32c7b5); font-weight:750 }
+.main { min-width:0; height:100%; display:grid; grid-template-rows:64px 1fr auto }
+.topbar { gap:12px; padding:0 18px; border-bottom:1px solid var(--line) }
+.wordmark { font-weight:700; margin-right:auto }.wordmark span { color:var(--accent) }
+.import-button,.dialog-actions button { border:1px solid var(--line); color:inherit; background:var(--panel-2); border-radius:9px; padding:9px 13px; cursor:pointer }
+.workspace { min-height:0; padding:clamp(24px,4vw,56px); display:grid; grid-template-rows:auto 1fr; gap:24px; max-width:1200px; width:100%; margin:auto }
+.document-header { display:flex; justify-content:space-between; align-items:start; gap:30px }
+.document-header h1 { font-size:clamp(30px,4vw,48px); letter-spacing:-.04em; margin:5px 0 8px }
+.document-header p { color:var(--muted); margin:0 }
+.sandbox-details { flex:0 0 240px; border:1px solid var(--line); border-radius:10px; padding:10px 12px }
+.sandbox-details summary { cursor:pointer }.sandbox-details pre { white-space:pre-wrap; color:#b9c2d5; font-size:12px }
+#editor { width:100%; min-height:0; resize:none; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--text); padding:20px; line-height:1.65; outline:0 }
+#editor:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent) }
+.empty { place-self:center; text-align:center; color:var(--muted) }.empty h1 { color:var(--text) }.empty-icon { width:38px;height:38px;margin:auto;border:3px solid var(--accent);border-radius:11px;transform:rotate(45deg) }
+.status { min-height:30px; padding:5px 20px; color:var(--muted); font-size:12px }
+dialog { color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:14px; width:min(440px,calc(100% - 30px)); box-shadow:0 24px 80px #0009 }
+dialog::backdrop { background:#05060acc; backdrop-filter:blur(3px) }
+dialog form { display:grid; gap:16px } dialog h2 { margin:0 } dialog label { display:grid; gap:6px; color:var(--muted) }
+dialog input,dialog select { background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:10px }
+.dialog-actions { display:flex; justify-content:flex-end; gap:8px }
+.drop-overlay { display:none; position:fixed; inset:18px; z-index:20; border:2px dashed var(--accent); border-radius:18px; background:#111522ed; place-items:center; font-size:22px; font-weight:700 }
+body[data-drop=true] .drop-overlay { display:grid }
+@media(max-width:700px){.app{grid-template-columns:min(88vw,320px) 1fr}.app:not([data-sidebar=hidden]) .main{visibility:hidden}.sandbox-details{flex-basis:auto}.document-header{display:grid}.workspace{padding:24px}.wordmark{display:none}}
+@media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f6f7fa;--panel:#fff;--panel-2:#f0f2f6;--line:#dfe2e9;--text:#171a21;--muted:#697184;--hover:#edf0f5}}
