@@ -8,7 +8,13 @@ button,select,input { color:inherit }
 .app { --sidebar-width:320px; display:grid; grid-template-columns:var(--sidebar-width) 1fr; transition:grid-template-columns .2s ease }
 .app[data-sidebar=hidden] { grid-template-columns:0 1fr }
 .app[data-sidebar=hidden] .sidebar { border-right:0 }
-.sidebar { min-width:0; overflow:hidden; background:var(--panel); border-right:1px solid var(--line); display:grid; grid-template-rows:auto auto 1fr auto }
+.sidebar { min-width:0; overflow:hidden; background:var(--panel); border-right:1px solid var(--line); display:grid; grid-template-rows:auto auto auto 1fr auto }
+.sidebar-tabs { height:56px; display:flex; align-items:end; gap:4px; padding:10px 56px 8px 12px; border-bottom:1px solid var(--line) }
+.sidebar-tabs button { min-width:0; height:34px; padding:0 12px; border:0; border-radius:8px; color:var(--muted); background:transparent; font-weight:650; cursor:pointer }
+.sidebar-tabs button:hover { color:var(--text); background:var(--hover) }
+.sidebar-tabs button[aria-selected=true] { color:var(--text); background:var(--panel-2) }
+.sidebar[data-tab=info] { grid-template-rows:auto 1fr auto }
+.sidebar[data-tab=info] .collection-header,.sidebar[data-tab=info] .collection-actions,.sidebar[data-tab=info] .documents { display:none }
 .collection-header,.collection-actions,.sidebar-footer,.topbar { display:flex; align-items:center }
 .collection-header { position:relative; align-items:center; gap:7px; padding:12px }
 .collection-picker { position:relative; min-width:0; flex:1 }
@@ -40,6 +46,17 @@ button,select,input { color:inherit }
 .search { height:38px; min-width:0; flex:1; border-radius:9px; background:var(--panel-2); display:flex; align-items:center; gap:7px; padding:0 10px; color:var(--muted) }
 .search input { width:100%; min-width:0; background:transparent; border:0; outline:0 }
 .documents { list-style:none; padding:8px; margin:0; overflow:auto }
+.document-info { min-height:0; overflow:auto; padding:20px 18px }
+.document-info__eyebrow { margin:0 0 7px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase }
+.document-info h2 { margin:0 0 20px; font-size:20px; letter-spacing:-.02em }
+.document-info dl { display:grid; gap:0; margin:0 0 20px }
+.document-info dl div { display:flex; justify-content:space-between; gap:16px; padding:10px 0; border-bottom:1px solid var(--line) }
+.document-info dt { color:var(--muted); font-size:12px }.document-info dd { margin:0; text-align:right; font-size:12px; font-weight:650 }
+.document-info details { border:1px solid var(--line); border-radius:9px; padding:10px 11px; margin-bottom:14px }
+.document-info summary { cursor:pointer; font-size:12px; font-weight:650 }
+.document-info pre { overflow:auto; margin:10px 0 0; color:var(--muted); font-size:11px; white-space:pre-wrap }
+.info-download { width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:9px; color:inherit; background:transparent; cursor:pointer }
+.info-download:hover:not(:disabled) { background:var(--hover) }.info-download:disabled { opacity:.45; cursor:default }
 .document-item { position:relative; border-radius:11px; margin-bottom:3px }
 .document-item:hover,.document-item[data-active=true] { background:var(--hover) }
 .document-item[data-active=true] { background:var(--hover) }
@@ -90,6 +107,7 @@ body[data-drop=true] .drop-overlay { display:grid }
 .app[data-sidebar=hidden] .sidebar-resizer { display:none }
 .sidebar-resizer:hover { background:color-mix(in srgb,var(--accent) 35%,transparent) }
 .sidebar-control { position:fixed; z-index:65; top:var(--control-y,18px); left:calc(var(--sidebar-width) - 34px); width:32px; height:34px; display:flex; align-items:center; overflow:hidden; border:1px solid transparent; background:transparent; transition:width .2s ease }
+.app[data-sidebar=visible] .sidebar-control[data-side=left] { top:9px; left:calc(var(--sidebar-width) - 52px); width:40px; height:40px }
 .app[data-sidebar=hidden] .sidebar-control { border-color:var(--line); border-radius:9px; background:var(--panel); box-shadow:0 6px 20px #0002 }
 .app[data-sidebar=hidden] .sidebar-control[data-side=left] { left:-6px }
 .app[data-sidebar=hidden] .sidebar-control.is-expanded { width:92px; overflow:visible }
@@ -99,6 +117,7 @@ body[data-drop=true] .drop-overlay { display:grid }
 .sidebar-control button:hover,.sidebar-control button:focus-visible { background:var(--hover); outline:0 }
 .app[data-sidebar=visible] .sidebar-control__primary:hover,.app[data-sidebar=visible] .sidebar-control__primary:focus-visible { background:transparent }
 .sidebar-control__primary { width:31px; display:grid; place-items:center; border-radius:8px!important }
+.app[data-sidebar=visible] .sidebar-control__primary { width:39px; height:38px; padding:9px }
 .sidebar-control__primary svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
 .sidebar-control__layout { display:none }
 .sidebar-control[data-side=right] .sidebar-control__arrow { display:none }

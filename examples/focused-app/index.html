@@ -9,7 +9,11 @@
 </head>
 <body>
   <div class="app" data-sidebar="visible">
-    <aside class="sidebar" aria-label="Collections and documents">
+    <aside class="sidebar" data-tab="documents" aria-label="Collections and documents">
+      <div class="sidebar-tabs" role="tablist" aria-label="Sidebar view">
+        <button id="documents-tab" role="tab" aria-selected="true" aria-controls="documents">Documents</button>
+        <button id="info-tab" role="tab" aria-selected="false" aria-controls="document-info">Info</button>
+      </div>
       <header class="collection-header">
         <div class="collection-picker">
           <button id="collection-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
@@ -28,6 +32,18 @@
         <button id="new-document" class="icon-button" aria-label="Add document" title="Add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <ul id="documents" class="documents"></ul>
+      <section id="document-info" class="document-info" role="tabpanel" aria-labelledby="info-tab" hidden>
+        <p class="document-info__eyebrow">Current document</p>
+        <h2 id="info-title">No document selected</h2>
+        <dl>
+          <div><dt>Collection</dt><dd id="info-collection">—</dd></div>
+          <div><dt>Storage</dt><dd id="info-storage">—</dd></div>
+          <div><dt>Size</dt><dd id="info-size">—</dd></div>
+          <div><dt>Updated</dt><dd id="info-updated">—</dd></div>
+        </dl>
+        <details><summary>Sandbox configuration</summary><pre id="info-sandbox"></pre></details>
+        <button id="download-document" class="info-download" disabled>Download</button>
+      </section>
       <footer class="sidebar-footer">
         <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
         <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>

@@ -26,6 +26,12 @@ Edge, with commands supplied by this workspace. Every document retains an
 explicit sandbox declaration independently of the collection that stores its
 bytes.
 
+Documents and Info are separate sidebar views. Info is selected after document
+creation and derives its size and sandbox declaration from the current
+document model; Download creates a local Blob and does not grant network
+access. The visible collapse arrow aligns with these tabs and has a padded,
+transparent hit target whose shape appears only on hover.
+
 Shortcut ownership
 
 Documents default to `sandbox.shortcuts.commandK: "host"`. A document that
