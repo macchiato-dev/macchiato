@@ -9,9 +9,16 @@ import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 import { seal, unseal } from "../auth/session.js";
 import { ContentConflictError, ContentValidationError } from "../models/content.js";
-import { renderResourcesCommandPalette, resourcesAppearanceHtml } from "../components/user-menu.js";
+import {
+  renderResourcesCommandPalette,
+  resourcesAppearanceHtml,
+  resourcesBellIconHtml,
+  resourcesBlankAvatarHtml,
+  resourcesCreateIconHtml,
+} from "../components/user-menu.js";
 import { commandPaletteClientPath } from "@macchiato-dev/command-palette-use";
 import { themeUseClientPath } from "@macchiato-dev/theme-use";
+import { userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
@@ -31,31 +38,54 @@ function message(messages, key, fallback) {
   return escapeHtml(messages?.[key] || fallback);
 }
 
-function authStatusHtml(session, messages = {}) {
+function languageMenuHtml(locale, pathname, messages) {
+  return `<div class="menu__head">${message(messages, "chrome.language", "Language")}</div>
+    <form class="profile-language" method="get" action="/language">
+      <select name="locale" aria-label="${message(messages, "chrome.language", "Language")}">
+        <option value="en"${locale === "en" ? " selected" : ""}>English</option>
+        <option value="es"${locale === "es" ? " selected" : ""}>Español</option>
+      </select>
+      <input type="hidden" name="return" value="${escapeHtml(pathname)}">
+      <button type="submit">${message(messages, "chrome.changeLanguage", "Change")}</button>
+    </form>`;
+}
+
+function notificationMenuHtml(messages) {
+  return `<details class="edge-user-menu edge-icon-menu">
+    <summary class="edge-user-menu__trigger ub-icon" aria-label="${message(messages, "account.notifications", "Notifications")}">${resourcesBellIconHtml}</summary>
+    <div class="popover edge-user-menu__panel"><div class="menu__head">${message(messages, "account.notifications", "Notifications")}</div><div class="menu__empty">${message(messages, "account.noNotifications", "You're all caught up.")}</div></div>
+  </details>`;
+}
+
+function createMenuHtml(messages) {
+  return `<details class="edge-user-menu edge-icon-menu">
+    <summary class="edge-user-menu__trigger ub-icon" aria-label="${message(messages, "account.create", "Create new")}">${resourcesCreateIconHtml}</summary>
+    <div class="popover edge-user-menu__panel">
+      <a class="item" href="/projects/new">${message(messages, "account.newProject", "New project")}</a>
+      <a class="item" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a>
+    </div>
+  </details>`;
+}
+
+function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" } = {}) {
   if (!session) {
     return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
       ${renderResourcesCommandPalette()}
-      <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="ub-btn ub-btn--solid" href="/signup">${message(messages, "auth.signup", "Sign up")}</a>
-        <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}"><span class="ub-avatar ub-avatar--blank" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg></span><svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></summary>
-          <div class="popover edge-user-menu__panel"><a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a><a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div><a class="item" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="item" href="/signup">${message(messages, "auth.signup", "Sign up")}</a></div>
-        </details>
-      </div>
+      ${notificationMenuHtml(messages)}
+      ${createMenuHtml(messages)}
+      <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}">${resourcesBlankAvatarHtml}<svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></summary>
+        <div class="popover edge-user-menu__panel"><a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a><a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div>${languageMenuHtml(locale, pathname, messages)}<div class="menu__sep"></div><a class="item" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="item" href="/signup">${message(messages, "auth.signup", "Sign up")}</a></div>
+      </details>
     </aside>`;
   }
   const initials = session.login.slice(0, 2).toUpperCase();
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
     ${renderResourcesCommandPalette()}
-    <details class="edge-user-menu edge-create-menu">
-      <summary class="edge-user-menu__trigger edge-create-menu__trigger" aria-label="${message(messages, "account.create", "Create")}">+</summary>
-      <div class="popover edge-user-menu__panel edge-create-menu__panel">
-        <a class="item" href="/projects/new">${message(messages, "account.newProject", "New project")}</a>
-        <a class="item" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a>
-      </div>
-    </details>
+    ${notificationMenuHtml(messages)}
+    ${createMenuHtml(messages)}
     <details class="edge-user-menu">
       <summary class="edge-user-menu__trigger" aria-label="${message(messages, "account.menu", "Account menu")}">
         <span class="ub-avatar">${escapeHtml(initials)}</span>
-        <span class="edge-account-name">${escapeHtml(session.login)}</span>
         <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
       </summary>
       <div class="popover edge-user-menu__panel">
@@ -69,16 +99,18 @@ function authStatusHtml(session, messages = {}) {
         <div class="menu__sep"></div>
         ${resourcesAppearanceHtml}
         <div class="menu__sep"></div>
+        ${languageMenuHtml(locale, pathname, messages)}
+        <div class="menu__sep"></div>
         <form method="post" action="/logout"><button class="item item--danger" type="submit">${message(messages, "account.signout", "Sign out")}</button></form>
       </div>
     </details>
   </aside>`;
 }
 
-function renderSessionHtml(html, session, messages) {
+function renderSessionHtml(html, session, messages, options) {
   return html
-    .replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages))
-    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script></body>`);
+    .replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
+    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script></body>`);
 }
 
 function checked(value, expected) {
@@ -316,7 +348,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, dynamic);
         }
-        body = renderSessionHtml(html, session, manifest.messages[locale]);
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname });
         headers.set("cache-control", "private, no-store");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

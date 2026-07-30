@@ -3,10 +3,12 @@ import { defineCommandPalette, renderCommandPalette } from "@macchiato-dev/comma
 
 const svg = (body, attributes = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${attributes}>${body}</svg>`;
 const avatar = `<span class="ub-avatar">MD</span>`;
-const blankAvatar = `<span class="ub-avatar ub-avatar--blank" aria-hidden="true">${svg('<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>')}</span>`;
+export const resourcesBlankAvatarHtml = `<span class="ub-avatar ub-avatar--blank" aria-hidden="true">${svg('<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>')}</span>`;
+export const resourcesBellIconHtml = `${svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>')}<span class="ub-dot"></span>`;
+export const resourcesCreateIconHtml = svg('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>', 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"');
 export const resourcesAppearanceHtml = `<div class="menu__head">Appearance</div><div class="seg" role="group" aria-label="Appearance"><button class="seg__btn" type="button" data-theme-choice="dark" aria-pressed="true"><span>Dark</span></button><button class="seg__btn" type="button" data-theme-choice="light" aria-pressed="false"><span>Light</span></button><button class="seg__btn" type="button" data-theme-choice="system" aria-pressed="false"><span>System</span></button></div>`;
-const guestHtml = `<div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a>
-  <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="Account menu">${blankAvatar}${svg('<path d="m6 9 6 6 6-6"></path>', 'class="ub-caret" fill="none" stroke="currentColor" stroke-width="2"')}</summary>
+const guestHtml = `<div class="ub-guest">
+  <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="Account menu">${resourcesBlankAvatarHtml}${svg('<path d="m6 9 6 6 6-6"></path>', 'class="ub-caret" fill="none" stroke="currentColor" stroke-width="2"')}</summary>
     <div class="popover edge-user-menu__panel"><a class="item" href="/settings">Settings</a><a class="item" href="/help">Help &amp; docs</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div><a class="item" href="/login">Log in</a><a class="item" href="/signup">Sign up</a></div>
   </details></div>`;
 
@@ -58,12 +60,12 @@ export const RESOURCES_USER_MENU = defineUserMenu({
   menus: [
     {
       label: "Notifications",
-      triggerHtml: `${svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>')}<span class="ub-dot"></span>`,
+      triggerHtml: resourcesBellIconHtml,
       panelHtml: `<div class="menu__head">Notifications</div><div class="menu__empty">You're all caught up.</div>`,
     },
     {
       label: "Create new",
-      triggerHtml: svg('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>', 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"'),
+      triggerHtml: resourcesCreateIconHtml,
       panelHtml: `
         <button class="item">${svg('<path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line>')}New project</button>
         <button class="item">${svg('<path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path>')}New organization</button>
@@ -72,6 +74,7 @@ export const RESOURCES_USER_MENU = defineUserMenu({
     },
     {
       label: "Account menu",
+      containerClass: "ub-pop ub-pop--member",
       triggerClass: "ub-acct",
       triggerHtml: `${avatar}${svg('<path d="m6 9 6 6 6-6"></path>', 'class="ub-caret" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"')}`,
       panelHtml: `
@@ -114,6 +117,6 @@ export function renderResourcesUserMenu() {
 
 export function renderResourcesEdgeStatus() {
   return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
-    <div class="ub-guest"><a class="ub-btn ub-btn--ghost" href="/login">Log in</a><a class="ub-btn ub-btn--solid" href="/signup">Sign up</a></div>
+    <div class="ub-guest"></div>
   </aside>`;
 }

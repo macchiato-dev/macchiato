@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
-import { createSafeTriangle, pointInSafeTriangle } from "@macchiato-dev/user-menu-use";
+import { createSafeTriangle, pointInSafeTriangle, userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
 import { resourcesMenu, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
@@ -625,10 +625,7 @@ ${base}
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
-.edge-status {
-  min-height: 64px;
-  gap: 10px;
-}
+.edge-status { min-height: 64px; gap: 5px; }
 .command-trigger { min-width: 200px; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 10px 8px 13px; border: 1px solid var(--track-border); border-radius: 11px; color: var(--muted); background: var(--track); font: inherit; font-size: 13px; cursor: pointer; }
 .command-trigger:hover { border-color: var(--accent); color: var(--text); }
 .command-trigger kbd, .command-palette kbd { padding: 3px 6px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--muted); background: var(--card); font-family: "Space Mono", monospace; font-size: 10px; font-weight: 600; line-height: 1.2; }
@@ -647,15 +644,19 @@ ${base}
   font-size: 14px;
   font-weight: 600;
 }
-.edge-user-menu { position: relative; }
+.edge-user-menu { position: relative; display: flex; padding-bottom: 12px; margin-bottom: -12px; }
+.edge-user-menu::after { content: ""; position: absolute; top: 100%; right: 0; width: 100%; height: 14px; display: block; pointer-events: auto; }
+.edge-user-menu > summary::-webkit-details-marker { display: none; }
 .edge-user-menu__trigger { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.edge-user-menu__trigger.ub-icon { display: grid; }
 .edge-user-menu__trigger .ub-caret { width: 14px; height: 14px; }
-.edge-user-menu__panel { top: calc(100% + 12px); right: 0; opacity: 0; pointer-events: none; }
-.edge-user-menu[open] .edge-user-menu__panel { opacity: 1; transform: none; pointer-events: auto; }
+.edge-user-menu__panel { top: calc(100% + 2px); right: 0; opacity: 0; pointer-events: none; }
+.edge-user-menu[open] .edge-user-menu__panel, .edge-user-menu:focus-within .edge-user-menu__panel, .edge-user-menu:hover .edge-user-menu__panel { opacity: 1; transform: none; pointer-events: auto; }
+.edge-user-menu:hover > .ub-icon, .edge-user-menu:focus-within > .ub-icon, .edge-user-menu[open] > .ub-icon { background: var(--hover); }
 .edge-user-menu__panel .item { display: flex; width: 100%; padding: 9px 12px; border: none; border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 500; text-decoration: none; cursor: pointer; }
 .edge-user-menu__panel .item:hover { background: var(--hover); }
-.ub-guest { display: none; align-items: center; gap: 8px; }
-body[data-auth="out"] .userbar .ub-pop { display: none; }
+.ub-guest { display: none; align-items: center; gap: 5px; }
+body[data-auth="out"] .userbar .ub-pop--member { display: none; }
 body[data-auth="out"] .ub-guest { display: flex; }
 .document-runtime .ub-guest { display: flex; }
 .edge-status form { margin: 0; }
@@ -667,6 +668,11 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .edge-guest-menu { position: relative; }
 .edge-guest-menu .ub-acct { padding: 4px; }
 .edge-guest-menu .edge-user-menu__panel { min-width: 210px; }
+.profile-language { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; padding: 2px 5px 5px; }
+.profile-language select, .profile-language button { min-height: 36px; border: 1px solid var(--track-border); border-radius: 9px; color: var(--text); background: var(--track); font: inherit; font-size: 13px; }
+.profile-language select { min-width: 0; padding: 6px 9px; }
+.profile-language button { padding: 6px 10px; cursor: pointer; }
+.profile-language button:hover { border-color: var(--accent); }
 .item--danger:hover { color: #ff6b6b; }
 .auth-card { width: 100%; max-width: 440px; padding: 40px 40px 34px; align-self: center; }
 .auth-eyebrow { color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
@@ -1027,20 +1033,18 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     projects: i18n.text("nav.projects"),
     about: i18n.text("nav.about"),
   });
-  const language = documentRuntime
-    ? `<form class="language-switcher" method="get" action="/language"><label><span>${escapeHtml(i18n.text("chrome.language"))}</span><select name="locale" aria-label="${escapeHtml(i18n.text("chrome.language"))}"><option value="en"${i18n.locale === "en" ? " selected" : ""}>English</option><option value="es"${i18n.locale === "es" ? " selected" : ""}>Español</option></select></label><input type="hidden" name="return" value="${escapeHtml(path)}"><button type="submit">${escapeHtml(i18n.text("chrome.changeLanguage"))}</button></form>`
-    : "";
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
-    <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))} ${language}</div></footer>
+    <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))}</div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module" src="${themeUseClientPath}"></script>
   <script type="module">${clientScript()}</script>
-  <script type="module" src="${commandPaletteClientPath}"></script>` : ""}`;
+  <script type="module" src="${commandPaletteClientPath}"></script>
+  <script type="module" src="${userMenuUseClientPath}"></script>` : ""}`;
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {

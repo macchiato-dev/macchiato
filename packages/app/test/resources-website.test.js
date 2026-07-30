@@ -280,35 +280,53 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
 
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
-  await assert.doesNotReject(page.getByRole("link", { name: "Log in" }).waitFor());
+  await assert.doesNotReject(page.getByLabel("Notifications").waitFor());
+  await assert.doesNotReject(page.getByLabel("Create").waitFor());
+  assert.equal(await page.locator(".ub-btn").count(), 0);
+  const notification = page.getByLabel("Notifications");
+  const create = page.getByLabel("Create");
+  assert.equal(await notification.locator("svg path").count(), 2);
+  assert.equal(await create.locator("svg line").count(), 2);
+  const notificationBox = await notification.boundingBox();
+  const createBox = await create.boundingBox();
+  assert.ok(notificationBox && createBox);
+  assert.ok(Math.abs(createBox.x - notificationBox.x - notificationBox.width - 5) < 1);
+  const restingBackground = await create.evaluate((node) => getComputedStyle(node).backgroundColor);
+  await create.hover();
+  await page.waitForTimeout(180);
+  const hoverBackground = await create.evaluate((node) => getComputedStyle(node).backgroundColor);
+  assert.notEqual(hoverBackground, restingBackground);
   const edgeTheme = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement);
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
   });
   assert.equal(response.status(), 200);
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
   assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
   await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
   await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).waitFor());
-  assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 2);
+  assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 1);
   await page.getByRole("button", { name: "Light" }).click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
-  await page.getByLabel("Account menu").click();
+  await page.locator(".main").click();
+  assert.equal(await page.locator("details.edge-user-menu[open]").count(), 0);
   await page.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
   await assert.doesNotReject(page.getByRole("dialog", { name: "Search or jump to…" }).waitFor());
   await page.getByRole("searchbox", { name: "Search or jump to…" }).fill("settings");
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).last().waitFor());
   await page.keyboard.press("Escape");
 
+  await page.getByLabel("Account menu").click();
   await page.getByLabel("Language").selectOption("es");
   await page.getByRole("button", { name: "Change" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "es");
   await page.getByRole("link", { name: "Acerca de" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Acerca de Resources.co" }).waitFor());
+  await page.getByLabel("Menú de cuenta").click();
   await page.getByLabel("Idioma").selectOption("en");
   await page.getByRole("button", { name: "Cambiar" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "About Resources.co" }).waitFor());
@@ -320,7 +338,7 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
   await assert.doesNotReject(page.locator(".nav").waitFor());
   await assert.doesNotReject(page.locator(".footer").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
@@ -342,8 +360,9 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
     sameSite: "Lax",
   }]);
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
-  await assert.doesNotReject(page.getByText("latte-dev", { exact: true }).waitFor());
+  assert.equal(await page.getByLabel("Account menu").locator(".ub-avatar").textContent(), "LA");
   await page.getByLabel("Account menu").click();
+  await assert.doesNotReject(page.getByText("@latte-dev", { exact: true }).waitFor());
   await assert.doesNotReject(page.getByRole("button", { name: "Sign out" }).waitFor());
   await page.getByRole("link", { name: "Your profile" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Your Resources.co profile" }).waitFor());
@@ -418,7 +437,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 2);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {
@@ -959,9 +978,14 @@ test("resources app supports logged-in, logged-out, login, signup, and signout s
   await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForFunction(() => document.body.dataset.auth === "out");
+  await assert.doesNotReject(page.getByRole("button", { name: "Notifications" }).waitFor());
+  await assert.doesNotReject(page.getByRole("button", { name: "Create new" }).waitFor());
+  assert.equal(await page.locator(".ub-btn").count(), 0);
+  const guestAccount = page.locator('[aria-label="Account menu"]:visible');
+  assert.equal(await guestAccount.locator(".ub-avatar--blank").count(), 1);
+  await guestAccount.click();
   await assert.doesNotReject(page.getByRole("link", { name: "Log in" }).waitFor());
   await assert.doesNotReject(page.getByRole("link", { name: "Sign up" }).waitFor());
-  assert.equal(await page.getByRole("button", { name: "Account menu" }).isVisible(), false);
 
   await page.getByRole("link", { name: "Log in" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
@@ -974,6 +998,7 @@ test("resources app supports logged-in, logged-out, login, signup, and signout s
 
   await page.getByRole("button", { name: "Account menu" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
+  await page.locator('[aria-label="Account menu"]:visible').click();
   await page.getByRole("link", { name: "Sign up" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Create your account" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/signup");
