@@ -146,6 +146,8 @@
 - **projectCreate.svg**: SVG
 - **projectCreate.canvas**: Canvas
 - **projectCreate.submit**: Create project
+- **projectView.empty**: This project is ready for its first document.
+- **projectView.manage**: Manage projects
 - **organizationCreate.title**: Create an organization - Resources.co
 - **organizationCreate.heading**: Create an organization
 - **organizationCreate.intro**: Organizations give related projects a shared namespace.
@@ -165,7 +167,7 @@
 - **notFound.homeDesc**: Return to the Resources.co starting point.
 - **notFound.browseDesc**: Scan the current catalogue of self-hostable parts.
 - **notFound.projectsDesc**: Open the generated Resources.co projects.
-- **chrome.copyright**: © 2026 Resources.co. All rights reserved.
+- **chrome.copyright**: © 2026 Resources.co
 - **chrome.language**: Language
 - **chrome.english**: English
 - **chrome.spanish**: Spanish

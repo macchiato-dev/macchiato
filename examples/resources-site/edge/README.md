@@ -80,9 +80,10 @@ Provider names belong in connection settings, not the account menu.
 ## Account content
 
 Signed-in `/` redirects to `/dashboard`. That page lists projects and
-organizations owned by the stable Resources.co user ID. `/projects/new` and
-`/organizations/new` are ordinary server-rendered forms; successful POSTs
-return `303` to the dashboard. The forms carry short-lived, signed,
+organizations owned by the stable Resources.co user ID. Project cards open
+dynamic `/{namespace}/{slug}` views. `/projects/new` and `/organizations/new`
+are ordinary server-rendered forms; a project POST redirects directly to its
+new view, while an organization POST returns to the dashboard. The forms carry short-lived, signed,
 account-and-action-specific CSRF tokens and also require a same-origin request.
 Bodies are URL-encoded and size-limited.
 
@@ -91,7 +92,9 @@ Database uniqueness constraints protect organization slugs and project slugs
 within a namespace. The edge accepts only enumerated templates and visibility
 values. The static export contains validated placeholder routes and layout;
 `app.js` replaces one exact marker with trusted, escaped model output. No
-user-authored markup or browser script crosses that boundary.
+user-authored markup or browser script crosses that boundary. Private project
+lookups require the owning user ID; public projects can resolve without a
+session.
 
 ## Localized content
 

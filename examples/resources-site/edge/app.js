@@ -117,6 +117,15 @@ function checked(value, expected) {
   return value === expected ? " checked" : "";
 }
 
+function projectRoute(pathname) {
+  try {
+    const match = /^\/([^/]+)\/([^/]+)$/.exec(decodeURIComponent(pathname));
+    return match ? { namespace: match[1], slug: match[2] } : null;
+  } catch {
+    return null;
+  }
+}
+
 async function csrfToken(session, action, authConfig, now) {
   return seal({ v: 1, sub: session.sub, action, exp: now() + 20 * 60_000 }, authConfig.sessionSecret);
 }
@@ -128,12 +137,12 @@ async function validCsrf(value, session, action, authConfig, now) {
 
 function dashboardHtml(content, messages) {
   const projects = content.projects.length
-    ? `<div class="account-grid">${content.projects.map((item) => `<article class="account-card">
+    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
         <span class="account-card__namespace">${escapeHtml(item.namespace)}/</span>
         <h3>${escapeHtml(item.name)}</h3>
         <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
         <span class="account-card__meta">${message(messages, `dashboard.${item.visibility}`, item.visibility)}</span>
-      </article>`).join("")}</div>`
+      </a>`).join("")}</div>`
     : `<div class="account-empty">${message(messages, "dashboard.noProjects", "No projects yet.")}</div>`;
   const organizations = content.organizations.length
     ? `<div class="account-grid">${content.organizations.map((item) => `<article class="account-card">
@@ -148,6 +157,25 @@ function dashboardHtml(content, messages) {
     <div class="create-actions"><a class="account-action account-action--secondary" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a></div>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${projects}</section>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.organizations", "Organizations")}</h2></div>${organizations}</section>
+  </div>`;
+}
+
+function projectViewHtml(project, messages) {
+  return `<div class="account-dashboard project-view">
+    <a class="project-view__back" href="/dashboard">← ${message(messages, "account.projects", "Your projects")}</a>
+    <div class="project-view__identity">
+      <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
+      <h1>${escapeHtml(project.name)}</h1>
+      <p class="account-dashboard__intro">${escapeHtml(project.description || `${project.template.toUpperCase()} project`)}</p>
+    </div>
+    <div class="project-view__meta">
+      <span>${message(messages, `dashboard.${project.visibility}`, project.visibility)}</span>
+      <span>${escapeHtml(project.template.toUpperCase())}</span>
+    </div>
+    <section class="project-surface" aria-label="${escapeHtml(project.name)} workspace">
+      <p>${message(messages, "projectView.empty", "This project is ready for its first document.")}</p>
+      <a class="account-action account-action--secondary" href="/dashboard">${message(messages, "projectView.manage", "Manage projects")}</a>
+    </section>
   </div>`;
 }
 
@@ -288,7 +316,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             name: form.get("name"), slug: form.get("slug"), description: form.get("description"),
           });
         } else {
-          await contentStore.createProject(session.sub, {
+          const created = await contentStore.createProject(session.sub, {
             userSlug: session.login,
             name: form.get("name"),
             slug: form.get("slug"),
@@ -296,6 +324,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             namespace: form.get("namespace"),
             template: form.get("template"),
             visibility: form.get("visibility"),
+          });
+          return new Response(null, {
+            status: 303,
+            headers: {
+              location: `/${encodeURIComponent(created.namespace)}/${encodeURIComponent(created.slug)}`,
+              "cache-control": "no-store",
+            },
           });
         }
         return new Response(null, { status: 303, headers: { location: "/dashboard", "cache-control": "no-store" } });
@@ -315,13 +350,17 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const manifest = await loadManifest();
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
+      const requestedProject = projectRoute(pathname);
+      const dynamicProject = requestedProject && contentStore?.getProject
+        ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
+        : null;
       if (session && contentStore && pathname === "/") {
         return new Response(null, { status: 302, headers: { location: "/dashboard", "cache-control": "private, no-store" } });
       }
       if (ACCOUNT_PATHS.has(pathname) && !session) {
         return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
       }
-      const key = localizedObjectKey(locale, publicKey);
+      const key = localizedObjectKey(locale, dynamicProject ? pathToObjectKey("/dashboard") : publicKey);
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
       if (upstream.status === 404) return new Response("Not found", { status: 404 });
@@ -336,7 +375,10 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       let body = request.method === "HEAD" ? null : upstream.body;
       if (authConfig && key.endsWith(".html") && request.method !== "HEAD") {
         let html = await upstream.text();
-        if (ACCOUNT_PATHS.has(pathname)) {
+        if (dynamicProject) {
+          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
+          html = html.replace(ACCOUNT_CONTENT_MARKER, projectViewHtml(dynamicProject, manifest.messages[locale]));
+        } else if (ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
           const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : "/organizations", authConfig, now);

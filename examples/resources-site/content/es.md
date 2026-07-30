@@ -146,6 +146,8 @@
 - **projectCreate.svg**: SVG
 - **projectCreate.canvas**: Canvas
 - **projectCreate.submit**: Crear proyecto
+- **projectView.empty**: Este proyecto está listo para su primer documento.
+- **projectView.manage**: Gestionar proyectos
 - **organizationCreate.title**: Crear una organización - Resources.co
 - **organizationCreate.heading**: Crear una organización
 - **organizationCreate.intro**: Las organizaciones dan a proyectos relacionados un espacio de nombres compartido.
@@ -165,7 +167,7 @@
 - **notFound.homeDesc**: Volver al punto de partida de Resources.co.
 - **notFound.browseDesc**: Recorrer el catálogo actual de piezas autoalojables.
 - **notFound.projectsDesc**: Abrir los proyectos generados de Resources.co.
-- **chrome.copyright**: © 2026 Resources.co. Todos los derechos reservados.
+- **chrome.copyright**: © 2026 Resources.co
 - **chrome.language**: Idioma
 - **chrome.english**: Inglés
 - **chrome.spanish**: Español

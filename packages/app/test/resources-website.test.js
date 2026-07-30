@@ -306,6 +306,19 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
   assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
   await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
+  const accountTrigger = page.getByLabel("Account menu");
+  const accountResting = await accountTrigger.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundColor, border: style.borderColor };
+  });
+  await accountTrigger.hover();
+  await page.waitForTimeout(180);
+  const accountHover = await accountTrigger.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundColor, border: style.borderColor };
+  });
+  assert.notEqual(accountHover.background, accountResting.background);
+  assert.equal(accountHover.border, accountResting.border);
   await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).waitFor());
   assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 1);
@@ -437,6 +450,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
+  assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
+  await assert.doesNotReject(page.getByText("This project is ready for its first document.").waitFor());
+  await page.getByRole("link", { name: "Manage projects" }).click();
+  await page.getByRole("link", { name: /Digital Clock/ }).click();
+  assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
 });
 
