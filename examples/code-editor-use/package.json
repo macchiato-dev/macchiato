@@ -6,6 +6,7 @@
   "description": "Reference application that chooses and configures a CodeMirror guest for code-editor-use",
   "scripts": {
     "start": "node server.js",
+    "detect": "macchiato-detect-app .",
     "test": "node --test ../../packages/app/test/code-editor-use.browser.test.js",
     "check:guest": "npm run check:guest --prefix ../../packages/browser-use"
   },

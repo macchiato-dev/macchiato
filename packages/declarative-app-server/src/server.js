@@ -14,6 +14,10 @@ export function createDeclarativeAppHandler(app, options = {}) {
 
 export async function serveDeclarativeApp(app, options = {}) {
   const handler = createDeclarativeAppHandler(app, options);
+  return serveHttpHandler(handler, options);
+}
+
+export async function serveHttpHandler(handler, options = {}) {
   const requestedPort = options.port ?? (process.env.PORT ? Number(process.env.PORT) : 0);
   if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) throw new TypeError("PORT must be a valid TCP port");
   const host = options.host || process.env.HOST || "127.0.0.1";

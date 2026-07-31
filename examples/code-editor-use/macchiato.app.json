@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "format": "standard-web-app",
+  "id": "code-editor-use",
+  "entry": "index.html",
+  "schemas": {
+    "html": "html.schema.json",
+    "css": "css.schema.json"
+  },
+  "runtime": {
+    "target": "browser-quickjs",
+    "bootstrap": "client.js",
+    "hostAdapter": "code-editor-use"
+  }
+}

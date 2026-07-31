@@ -1,10 +1,7 @@
-import { serveDeclarativeApp } from "@macchiato-dev/declarative-app-server";
-import { app, renderCodeEditorBlock } from "./app.js";
-import { codeEditorUseAssetHandler, codeEditorUseImportMap } from "./handler.js";
+import { serveHttpHandler } from "@macchiato-dev/declarative-app-server";
+import { codeEditorUseHandler } from "./handler.js";
 
-const running = await serveDeclarativeApp(app, {
-  blocks: { "code-editor": (block, declaration) => renderCodeEditorBlock(block, declaration, codeEditorUseImportMap()) },
-  assets: codeEditorUseAssetHandler,
+const running = await serveHttpHandler(codeEditorUseHandler, {
   onError: console.error,
 });
 

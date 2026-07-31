@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Constrained CodeMirror 6</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">code-editor-use / browser-use</p>
+    <h1>Constrained CodeMirror 6</h1>
+    <p>CodeMirror runs inside QuickJS/WASM. A small browser bridge forwards events and applies its policy-checked DOM operations.</p>
+    <div class="editor-shell"><div id="editor" aria-label="Code editor"></div></div>
+    <div class="runtime"><span id="status" role="status">Starting QuickJS…</span><span id="shape"></span></div>
+    <aside>The browser applies an allowlisted DOM protocol; the editor and its state belong to the QuickJS guest.</aside>
+  </main>
+  <script type="module" src="/code-editor-guest.js"></script>
+</body>
+</html>
