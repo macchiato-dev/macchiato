@@ -348,6 +348,7 @@ Bunny's 10 MB script limit.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
+   - `BLOG_EXAMPLES_ORIGIN`: the separate origin used by sandboxed examples.
    - `GITHUB_CLIENT_ID`: GitHub OAuth or GitHub App client ID.
    - `GITHUB_CLIENT_SECRET`: an environment **secret**.
    - `GITLAB_CLIENT_ID`: GitLab OAuth application ID.
@@ -390,6 +391,7 @@ give each environment its own values for:
 | GitHub variable | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
 | GitHub variable | `BUNNY_BUCKET_PREFIX` |
 | GitHub variable | `PUBLIC_ORIGIN` |
+| GitHub variable | `BLOG_EXAMPLES_ORIGIN` |
 
 The upload key is CI-only. The Edge Script receives a separate read-only
 `STORAGE_API_KEY` through Bunny. Use environment protection/approval for the
@@ -403,6 +405,14 @@ Database's Access page, use **Add Secrets to Edge Script** so Bunny supplies
 `BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN`. This application creates
 accounts and projects, so the staging token must be full-access rather than
 read-only.
+
+Attach two hostnames to the same validated export and Edge Script. Production
+uses `https://blog-examples.resources.co`; staging uses
+`https://staging-blog-examples.resources.co`. Set `BLOG_EXAMPLES_ORIGIN` to the
+matching value in each GitHub environment. Locally, the development plugin
+installs `blog-examples.localhost` as its own declarative app. The example host
+serves only `/-/blog-examples/` artifacts; iframe CSP names these origins
+explicitly and does not grant `allow-same-origin`.
 
 Register these provider callbacks against that same `PUBLIC_ORIGIN`:
 

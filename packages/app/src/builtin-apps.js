@@ -3,7 +3,7 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
-import { resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
+import { blogExamplesPreviewConfig, blogExamplesPreviewHandler, resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
@@ -195,6 +195,21 @@ export const BUILTIN_APPS = [
       productionStorage: "Bunny Storage",
       subdomain: resourcesEdgePreviewConfig.subdomain,
     },
+  },
+  {
+    name: "Resources.co Blog Examples",
+    subdomain: blogExamplesPreviewConfig.subdomain,
+    kind: "sandboxed static examples",
+    description: "A separate origin for tightly sandboxed Resources.co blog examples.",
+    handler: blogExamplesPreviewHandler,
+    sourceFiles: [
+      "examples/resources-site/blog-examples/vtv/dist/index.html",
+      "examples/resources-site/blog-examples/vtv/dist/app.js",
+      "examples/resources-site/blog-examples/vtv/dist/app.css",
+      "examples/resources-site/preview-handler.js",
+    ],
+    adapter: blogExamplesPreviewConfig,
+    site: { storage: "validated static artifacts", subdomain: blogExamplesPreviewConfig.subdomain },
   },
   {
     name: "Resources Website",

@@ -24,8 +24,7 @@ const RESOURCE_MESSAGES = loadResourcesLocales();
 
 const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
 const PROJECT_CONTENT = loadProjectContentSpace(REPO_PROJECT_METADATA.projects);
-const BLOG_POSTS = loadBlogPosts();
-const BLOG_BY_PATH = Object.fromEntries(BLOG_POSTS.map((post) => [`/blog/${post.slug}`, post]));
+const BLOG_POSTS_BY_LOCALE = Object.freeze(Object.fromEntries(["en", "es"].map((locale) => [locale, loadBlogPosts(undefined, locale)])));
 const ORG_COPY = {
   macchiato: "Open-source packages from the macchiato-dev workspace, mapped into public project paths.",
   resources: "Packages published under the resources organization on npm.",
@@ -183,6 +182,33 @@ function authMessages(i18n) {
 
 function sectionsFor(i18n) {
   const t = i18n.text;
+  const legal = i18n.locale === "es" ? {
+    terms: ["Condiciones de uso", "Al crear una cuenta o utilizar Resources.co, aceptas estas condiciones.", [
+      ["Tu cuenta", "Eres responsable de la actividad de tu cuenta y de mantener seguras las credenciales de tu proveedor."],
+      ["Contenido y espacios de nombres", "Conservas la propiedad de lo que publicas. Al hacer público un proyecto, concedes los permisos que hayas elegido."],
+      ["Uso aceptable", "No subas malware, infrinjas derechos ajenos ni abuses de los recursos de la plataforma."],
+      ["Terminación", "Puedes eliminar tu cuenta. Podemos suspender cuentas que incumplan estas condiciones."],
+    ]],
+    privacy: ["Política de privacidad", "Recibimos de tu proveedor de acceso tu nombre, correo electrónico y avatar, y guardamos los proyectos y ajustes que creas.", [
+      ["Cómo usamos los datos", "Los usamos para operar tu cuenta y el servicio. No vendemos tus datos personales."],
+      ["Acceso de terceros", "GitHub, GitLab y futuros proveedores gestionan la autenticación conforme a sus propias políticas."],
+      ["Tus opciones", "Puedes exportar o eliminar tus datos y revocar el acceso desde los ajustes del proveedor."],
+      ["Contacto", "Para preguntas sobre privacidad, escribe a privacy@resources.co."],
+    ]],
+  } : {
+    terms: ["Terms of Use", "By creating an account or using Resources.co, you agree to these terms.", [
+      ["Your account", "You are responsible for activity under your account and for keeping your provider credentials secure."],
+      ["Content and namespaces", "You retain ownership of what you publish. When you make a project public, you grant the rights you choose."],
+      ["Acceptable use", "Do not upload malware, infringe others' rights, or abuse the platform's resources."],
+      ["Termination", "You can delete your account. We may suspend accounts that violate these terms."],
+    ]],
+    privacy: ["Privacy Policy", "We receive your name, email, and avatar from your sign-in provider and store the projects and settings you create.", [
+      ["How we use data", "We use it to operate your account and the service. We do not sell your personal data."],
+      ["Third-party sign-in", "GitHub, GitLab, and future providers handle authentication under their own privacy policies."],
+      ["Your choices", "You can export or delete your data and revoke access from your provider's settings."],
+      ["Contact", "For privacy questions, contact privacy@resources.co."],
+    ]],
+  };
   const sections = {
     "/": {
     navKey: "home",
@@ -251,9 +277,11 @@ function sectionsFor(i18n) {
     crumb: [{ icon: true, href: "/" }, { label: t("blog.heading") }],
     blocks: [
       { h1: t("blog.heading"), paras: [t("blog.intro")] },
-      { items: BLOG_POSTS.map((post) => [post.title, post.published, `/blog/${post.slug}`]) },
+      { items: BLOG_POSTS_BY_LOCALE[i18n.locale].map((post) => [post.title, post.published, `/blog/${post.slug}`]) },
     ],
   },
+  "/terms": legalRoute(legal.terms, i18n),
+  "/privacy": legalRoute(legal.privacy, i18n),
   "/profile": {
     navKey: "",
     title: t("profile.title"),
@@ -320,6 +348,15 @@ function sectionsFor(i18n) {
   sections["/login"] = resourcesAuthRoute("login", authMessages(i18n));
   sections["/signup"] = resourcesAuthRoute("signup", authMessages(i18n));
   return sections;
+}
+
+function legalRoute([title, intro, sections], i18n) {
+  return {
+    navKey: "",
+    title: `${title} - Resources.co`,
+    crumb: [{ icon: true, href: "/" }, { label: title }],
+    blocks: [{ h1: title, paras: [intro] }, ...sections.map(([h2, paragraph]) => ({ h2, paras: [paragraph] }))],
+  };
 }
 
 function notFoundRoute(i18n) {
@@ -983,11 +1020,12 @@ function blockHtml(block, options = {}) {
   if (block.h2) bits.push(`<h2>${escapeHtml(block.h2)}</h2>`);
   for (const para of block.paras || []) bits.push(`<p>${escapeHtml(para)}</p>`);
   for (const para of block.markdownParas || []) bits.push(`<p>${renderBlogInline(para, escapeHtml)}</p>`);
+  for (const item of block.blogBody || []) {
+    if (item.type === "paragraph") bits.push(`<p>${renderBlogInline(item.markdown, escapeHtml)}</p>`);
+    else bits.push(blogExampleHtml(item.example, options.blogExamplesOrigin));
+  }
   for (const example of block.examples || []) {
-    const sandbox = example.external
-      ? "allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
-      : "allow-scripts";
-    bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`);
+    bits.push(blogExampleHtml(example, options.blogExamplesOrigin));
   }
   if (block.tags) {
     bits.push(`<div class="tags">${block.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>`);
@@ -1000,6 +1038,14 @@ function blockHtml(block, options = {}) {
   }
   bits.push(`</section>`);
   return bits.join("");
+}
+
+function blogExampleHtml(example, origin) {
+  const sandbox = example.external
+    ? "allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
+    : "allow-scripts";
+  const src = example.external ? example.url : `${origin || ""}${example.url}`;
+  return `<iframe class="blog-example" src="${escapeHtml(src)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`;
 }
 
 function projectSummaryHtml(block) {
@@ -1024,16 +1070,17 @@ function packageDetailsHtml(block) {
 
 function routeForPath(path, i18n) {
   const sections = sectionsFor(i18n);
+  const blogByPath = Object.fromEntries(BLOG_POSTS_BY_LOCALE[i18n.locale].map((post) => [`/blog/${post.slug}`, post]));
   const t = i18n.text;
   if (path === "/404") return notFoundRoute(i18n);
   if (sections[path]) return sections[path];
-  if (BLOG_BY_PATH[path]) {
-    const post = BLOG_BY_PATH[path];
+  if (blogByPath[path]) {
+    const post = blogByPath[path];
     return {
       navKey: "blog",
       title: `${post.title} - Resources.co`,
       crumb: [{ icon: true, href: "/" }, { label: i18n.text("blog.heading"), href: "/blog" }, { label: post.title }],
-      blocks: [{ eyebrow: post.published, h1: post.title, markdownParas: post.paragraphs, examples: post.examples }],
+      blocks: [{ eyebrow: post.published, h1: post.title, blogBody: post.body }],
     };
   }
   if (PROJECTS[path]) {
@@ -1060,6 +1107,11 @@ function routeForPath(path, i18n) {
           }),
           facts: projectFacts(project, t),
         },
+        {
+          h2: i18n.locale === "es" ? "Editor del proyecto" : "Project editor",
+          paras: [i18n.locale === "es" ? "Un editor Markdown aislado con vista previa en vivo." : "A sandboxed Markdown editor with a live preview."],
+          examples: [{ title: "Project Markdown editor", url: "/-/blog-examples/markdown-editor/index.html", external: false }],
+        },
         { type: "package-details", h2: t("common.packageMetadata"), rows: packageRows(project, t) },
       ],
     };
@@ -1080,7 +1132,7 @@ function routeForPath(path, i18n) {
   return null;
 }
 
-function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
+function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = "" } = {}) {
   const route = routeForPath(path, i18n);
   const documentRuntime = runtime === "document";
   const authRoute = path === "/login" || path === "/signup";
@@ -1095,9 +1147,9 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
-    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n })).join("")}</div></div>
+    <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n, blogExamplesOrigin })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
-    <footer class="box footer" data-screen-label="footer"><div class="copy">${escapeHtml(i18n.text("chrome.copyright"))}</div></footer>
+    <footer class="box footer" data-screen-label="footer"><div class="copy"><span>${escapeHtml(i18n.text("chrome.copyright"))}</span><a href="/terms">${escapeHtml(i18n.text("auth.termsOfUse"))}</a><a href="/privacy">${escapeHtml(i18n.text("auth.privacy"))}</a></div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module" src="${themeUseClientPath}"></script>
   <script type="module">${clientScript()}</script>
@@ -1522,7 +1574,7 @@ export function buildResourcesSiteRoutes() {
   return buildResourcesSiteRoutesForRuntime({ runtime: "browser-use" });
 }
 
-export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {}, subdomain = SUBDOMAIN, locale = DEFAULT_RESOURCE_LOCALE } = {}) {
+export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = {}, subdomain = SUBDOMAIN, locale = DEFAULT_RESOURCE_LOCALE, blogExamplesOrigin = "" } = {}) {
   const profile = resourcesRuntimeProfile(runtime);
   const i18n = createTranslator(locale, RESOURCE_MESSAGES);
   const sections = sectionsFor(i18n);
@@ -1537,10 +1589,10 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
-  const paths = [...Object.keys(sections), ...Object.keys(BLOG_BY_PATH), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
+  const paths = [...Object.keys(sections), ...BLOG_POSTS_BY_LOCALE[locale].map((post) => `/blog/${post.slug}`), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
   return paths.map((path) => {
     const route = routeForPath(path, i18n);
-    const authoredHtml = pageHtml(path, { runtime: profile.name, i18n });
+    const authoredHtml = pageHtml(path, { runtime: profile.name, i18n, blogExamplesOrigin });
     // The edge profile is promoted to trusted static content only after passing
     // through the use-* boundary. The richer local profile keeps its authored
     // module script and applies dom-use again to each client-side page swap.

@@ -1,6 +1,7 @@
 import { createResourcesArtifactSet } from "./artifacts.js";
 import { createResourcesEdgeHandler } from "./edge/app.js";
 import { createEdgeConfig } from "./edge/models.js";
+import { publicResponseHeaders } from "./edge/models.js";
 import { createMemoryStorageAdapter } from "./adapters/memory-storage.js";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
@@ -23,7 +24,12 @@ const config = createEdgeConfig({
   STORAGE_API_KEY: "local-adapter-only",
   MANIFEST_TTL_MS: "300000",
 });
-const artifactSet = createResourcesArtifactSet({ theme: resourcesEdgePreviewConfig.theme, generatedAt: "local-preview" });
+const previewEnv = globalThis.process?.env || {};
+const artifactSet = createResourcesArtifactSet({
+  theme: resourcesEdgePreviewConfig.theme,
+  generatedAt: "local-preview",
+  blogExamplesOrigin: previewEnv.BLOG_EXAMPLES_ORIGIN || "http://blog-examples.localhost:3030",
+});
 const storageFetch = createMemoryStorageAdapter({ config, artifactSet });
 const fetchImpl = (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
@@ -31,7 +37,6 @@ const fetchImpl = (input, init) => {
     ? storageFetch(input, init)
     : fetch(input, init);
 };
-const previewEnv = globalThis.process?.env || {};
 let cachedEnvironmentKey = "";
 let cachedHandler;
 let cachedDatabase;
@@ -60,4 +65,20 @@ function handlerFor(environment = {}, db = null) {
 
 export function resourcesEdgePreviewHandler(request, app = {}, context = {}) {
   return handlerFor(app.environment, context.db)(request);
+}
+
+export const blogExamplesPreviewConfig = Object.freeze({
+  subdomain: "blog-examples",
+  runtime: "local static example host",
+  profile: "sandboxed-blog-examples-v1",
+});
+
+export function blogExamplesPreviewHandler(request) {
+  const url = new URL(request.url);
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  if (!url.pathname.startsWith("/-/blog-examples/")) return new Response("Not found", { status: 404 });
+  const asset = artifactSet.files.get(url.pathname);
+  if (!asset) return new Response("Not found", { status: 404 });
+  const key = url.pathname.slice(1);
+  return new Response(request.method === "HEAD" ? null : asset, { status: 200, headers: publicResponseHeaders(key) });
 }

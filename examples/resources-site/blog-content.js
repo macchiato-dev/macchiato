@@ -14,24 +14,35 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
   if (!DATE.test(published || "") || Number.isNaN(Date.parse(`${published}T00:00:00Z`))) throw new Error(`${filename}: invalid publication date`);
   let offset = 3;
   const examples = [];
-  while (lines[offset]?.startsWith("- Example: ")) {
-    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+)\)$/.exec(lines[offset]);
+  const parseExample = (line) => {
+    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+)\)$/.exec(line);
     if (!match) throw new Error(`${filename}: invalid example`);
     const external = match[2].startsWith("https://");
     const url = new URL(match[2], "https://resources.invalid");
     if (external && (url.hostname !== "codesandbox.io" || !url.pathname.startsWith("/embed/"))) throw new Error(`${filename}: unsupported example host`);
     if (!external && !url.pathname.startsWith("/-/blog-examples/")) throw new Error(`${filename}: unsupported local example`);
-    examples.push(Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external }));
+    return Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external });
+  };
+  while (lines[offset]?.startsWith("- Example: ")) {
+    examples.push(parseExample(lines[offset]));
     offset += 1;
   }
   if (lines[offset] !== "" || lines[offset + 1] !== "## Body" || lines[offset + 2] !== "") throw new Error(`${filename}: expected a Body heading after metadata`);
-  const paragraphs = lines.slice(offset + 3).join("\n").trim().split(/\n{2,}/).map((value) => value.replace(/\n/g, " ").trim()).filter(Boolean);
+  const body = lines.slice(offset + 3).join("\n").trim().split(/\n{2,}/).map((value) => value.replace(/\n/g, " ").trim()).filter(Boolean).map((value) => (
+    value.startsWith("- Example: ")
+      ? Object.freeze({ type: "example", example: parseExample(value) })
+      : Object.freeze({ type: "paragraph", markdown: value })
+  ));
+  const paragraphs = body.filter((item) => item.type === "paragraph").map((item) => item.markdown);
   if (!paragraphs.length || paragraphs.some((value) => value.length > 5_000)) throw new Error(`${filename}: invalid body`);
-  return Object.freeze({ title, slug, published, paragraphs: Object.freeze(paragraphs), examples: Object.freeze(examples) });
+  const orderedBody = examples.length
+    ? [...body, ...examples.map((example) => Object.freeze({ type: "example", example }))]
+    : body;
+  return Object.freeze({ title, slug, published, paragraphs: Object.freeze(paragraphs), examples: Object.freeze(examples), body: Object.freeze(orderedBody) });
 }
 
-export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resolve("examples/resources-site/content-space")) {
-  const directory = join(resolve(root), "blog");
+export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resolve("examples/resources-site/content-space"), locale = "en") {
+  const directory = locale === "en" ? join(resolve(root), "blog") : join(resolve(root), locale, "blog");
   let names;
   try {
     names = readdirSync(directory).filter((name) => name.endsWith(".md")).sort();
@@ -51,13 +62,13 @@ export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resol
 export function renderBlogInline(markdown, escapeHtml) {
   let output = "";
   let cursor = 0;
-  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/blog\/[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
+  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
   for (const match of markdown.matchAll(links)) {
     output += escapeHtml(markdown.slice(cursor, match.index));
     const external = match[2].startsWith("https://");
     const href = new URL(match[2], "https://resources.invalid");
     if (href.username || href.password) throw new Error("Blog links cannot contain credentials");
-    output += `<a href="${escapeHtml(external ? href.href : href.pathname)}">${escapeHtml(match[1])}</a>`;
+    output += `<a href="${escapeHtml(external ? href.href : `${href.pathname}${href.search}`)}">${escapeHtml(match[1])}</a>`;
     cursor = match.index + match[0].length;
   }
   return output + escapeHtml(markdown.slice(cursor));

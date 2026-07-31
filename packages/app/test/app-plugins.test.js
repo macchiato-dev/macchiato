@@ -25,11 +25,11 @@ test("plugins install dependencies with overridable, recorded subdomains", () =>
       "resources-co": "resources-source",
       "resources-edge": "resources-preview",
     },
-  }), ["resources-co", "resources-edge"]);
+  }), ["resources-co", "blog-examples", "resources-edge"]);
 
   const edge = getDeclarativeApp(db, "resources-preview");
   assert.equal(edge.options.plugin, "resources-edge");
-  assert.deepEqual(edge.dependencies, { "resources-co": "resources-source" });
+  assert.deepEqual(edge.dependencies, { "resources-co": "resources-source", "blog-examples": "blog-examples" });
   assert.equal(edge.environmentSchema.GITLAB_CLIENT_SECRET.secret, true);
   setAppEnvironmentValue(db, "resources-preview", "GITLAB_CLIENT_ID", "configured-id");
   assert.deepEqual(getDeclarativeApp(db, "resources-preview").environment, { GITLAB_CLIENT_ID: "configured-id" });

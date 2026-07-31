@@ -1,7 +1,6 @@
 # Building a Visual JSON Editor - Part 1 of ?
 - Slug: building-a-visual-json-editor
 - Published: 2020-09-21
-- Example: [Visual hierarchy](/-/blog-examples/vtv/index.html?preset=hierarchy)
 
 ## Body
 
@@ -10,6 +9,8 @@ Some time ago, we embarked upon building a group chat like UI with a visual JSON
 JSON data is in a hierarchy, with a root node, interior nodes, and leaf nodes. To make it easy to see at a glance what the nodes are, the node names are shown in bubbles.
 
 This applies not just to key value pairs in a JSON object but to array elements.
+
+- Example: [Visual hierarchy](/-/blog-examples/vtv/index.html?preset=hierarchy)
 
 By choosing an indentation level that isn't too shallow, and using a familiar bubble style for all of the keys (object keys and array indexes), it's easy to see what the underlying JSON data is like. Also the number of items is wrapped in the type of brackets used in the JSON: curly braces for objects and square brackets for arrays.
 

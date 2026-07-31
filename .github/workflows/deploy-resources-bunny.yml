@@ -38,6 +38,8 @@ jobs:
       - run: npm ci
 
       - name: Build validated site and edge bundle
+        env:
+          BLOG_EXAMPLES_ORIGIN: ${{ vars.BLOG_EXAMPLES_ORIGIN }}
         run: ./scripts/build-resources-bunny.sh
 
       - name: Upload immutable site export
@@ -69,11 +71,15 @@ jobs:
       - name: Smoke test deployed site
         env:
           PUBLIC_ORIGIN: ${{ vars.PUBLIC_ORIGIN }}
+          BLOG_EXAMPLES_ORIGIN: ${{ vars.BLOG_EXAMPLES_ORIGIN }}
         run: |
           test -n "$PUBLIC_ORIGIN"
+          test -n "$BLOG_EXAMPLES_ORIGIN"
           curl --fail --silent --show-error --retry 8 --retry-delay 5 \
             --header 'Accept-Language: en' \
             "$PUBLIC_ORIGIN/" >/dev/null
           curl --fail --silent --show-error --retry 3 --retry-delay 2 \
             --header 'Accept-Language: es' \
             "$PUBLIC_ORIGIN/about" >/dev/null
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 \
+            "$BLOG_EXAMPLES_ORIGIN/-/blog-examples/vtv/index.html?preset=types" >/dev/null

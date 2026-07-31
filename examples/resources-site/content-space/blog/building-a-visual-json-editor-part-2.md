@@ -1,7 +1,6 @@
 # Building a Visual JSON Editor - Part 2 of ?: Code View
 - Slug: building-a-visual-json-editor-part-2
 - Published: 2020-10-21
-- Example: [Code values](/-/blog-examples/vtv/index.html?preset=code)
 
 ## Body
 
@@ -23,7 +22,11 @@ To integrate it with Next.js, the CSS files are added to pages/_app.tsx and a dy
 
 The [previous post](/blog/building-a-visual-json-editor) describes the state , which contains information for each node, such as whether it is expanded or not. This is also where it stores what format each node is, for syntax highlighting. The data is passed in as the value prop to the [vtv](https://github.com/ResourcesCo/resources/tree/develop/packages/vtv) React component, and these details are passed in as the "state" prop. Here is the data and state for a JSON object containing some HTML and CSS:
 
+- Example: [Code data and state](/-/blog-examples/vtv/index.html?preset=code-data)
+
 Here is the view with the above value and state:
+
+- Example: [Highlighted code values](/-/blog-examples/vtv/index.html?preset=code)
 
 As you can see, each code block is highlighted with its language. The language can be changed by selecting View from the menu that pops up when clicking on a node.
 
