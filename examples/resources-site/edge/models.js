@@ -137,7 +137,7 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
   headers.set("cross-origin-resource-policy", "same-origin");
-  headers.set("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  headers.set("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src https://codesandbox.io; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   headers.set("cache-control", key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" : "public, max-age=31536000, immutable");
   const etag = upstreamHeaders.get("etag");
   const lastModified = upstreamHeaders.get("last-modified");

@@ -7,6 +7,7 @@ export function resourcesMenu(labels = {}) {
       { path: "/", label: labels.home || "Home", key: "home" },
       { path: "/browse", label: labels.browse || "Browse", key: "browse" },
       { path: "/collections", label: labels.projects || "Projects", key: "collections" },
+      { path: "/blog", label: labels.blog || "Blog", key: "blog" },
       { path: "/about", label: labels.about || "About", key: "about" },
     ],
   });
