@@ -174,7 +174,7 @@ export class CodeMirrorInputBridge {
       this.root.classList.remove("cm-drag-preview");
       this.pendingDragPoint = null;
       this.snapshot = null;
-    }, true);
+    }, false);
     this.listen(this.root, "beforeinput", (event) => {
       if (this.isStopped()) return;
       const result = this.sandbox.callJsonFunction("__codeEditorBeforeInput", { inputType: event.inputType, data: event.data });
