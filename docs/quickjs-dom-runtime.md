@@ -18,7 +18,8 @@ translated into a QuickJS transaction, keeping the guest state authoritative.
 The adapter fixes the CodeMirror extensions and continuously checks the
 resulting subtree. Shape violations destroy and clear the editor. This does not
 make arbitrary browser libraries compatible: each guest still needs an
-explicit, auditable subset of browser APIs. See `examples/code-editor-use/`.
+explicit, auditable subset of browser APIs. See
+`packages/declarative-app-server/example/code-editor-use/`.
 
 ## Status
 
