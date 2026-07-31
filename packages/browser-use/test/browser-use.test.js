@@ -57,6 +57,18 @@ test("browser-use filters guest event subscriptions through policy", () => {
   assert.throws(() => host.listen("root", "message", "denied"), /subscription is not allowed: message/);
 });
 
+test("browser-use recognizes DOM handles from another realm by shape", () => {
+  const iframeNode = { nodeType: 1, localName: "p" };
+  const root = {
+    ownerDocument: {}, firstChild: iframeNode,
+    querySelectorAll() { return []; }, contains() { return true; },
+  };
+  const host = new BrowserDomHost(root, { tags: ["p"] });
+  const encoded = host.remote({ action: "get", id: "root", property: "firstChild" });
+  assert.equal(typeof encoded.handle, "string");
+  assert.equal(host.remoteNode(encoded.handle), iframeNode);
+});
+
 test("generated QuickJS environment matches its directly runnable source", async () => {
   const source = await readFile(new URL("../guest/quickjs-dom-environment.js", import.meta.url), "utf8");
   assert.equal(browserUseQuickJsDomGuestSource, source);

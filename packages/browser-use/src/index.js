@@ -215,7 +215,12 @@ export class BrowserDomHost {
     ]);
     const encode = (value) => {
       if (value == null || ["string", "number", "boolean"].includes(typeof value)) return { value };
-      if (value instanceof Node || value instanceof Range || value instanceof Selection) return { handle: this.registerRemote(value) };
+      const isDomHandle = typeof value === "object" && (
+        typeof value.nodeType === "number"
+        || (typeof value.setStart === "function" && typeof value.setEnd === "function")
+        || (typeof value.removeAllRanges === "function" && "rangeCount" in value)
+      );
+      if (isDomHandle) return { handle: this.registerRemote(value) };
       if (typeof value.length === "number" && typeof value !== "function") {
         return { list: Array.from(value, (item) => encode(item)) };
       }
