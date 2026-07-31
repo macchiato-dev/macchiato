@@ -973,7 +973,7 @@ function blockHtml(block, options = {}) {
   if (block.h2) bits.push(`<h2>${escapeHtml(block.h2)}</h2>`);
   for (const para of block.paras || []) bits.push(`<p>${escapeHtml(para)}</p>`);
   for (const para of block.markdownParas || []) bits.push(`<p>${renderBlogInline(para, escapeHtml)}</p>`);
-  for (const example of block.examples || []) bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-forms allow-modals allow-popups allow-scripts"></iframe>`);
+  for (const example of block.examples || []) bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"></iframe>`);
   if (block.tags) {
     bits.push(`<div class="tags">${block.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>`);
   }
