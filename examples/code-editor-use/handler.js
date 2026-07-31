@@ -3,8 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-emscripten-sandbox/browser-assets";
-import { renderDeclarativeApp, standardLayoutCss } from "@macchiato-dev/declarative-app-server";
-import { app, renderCodeEditorBlock } from "./app.js";
+import { createStandardWebAppHandler, readStandardAppConfig } from "@macchiato-dev/declarative-app-server";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(directory, "../..");
@@ -48,12 +47,6 @@ async function providerAsset(pathname) {
   }
 }
 
-function page() {
-  return renderDeclarativeApp(app, {
-    blocks: { "code-editor": (block, declaration) => renderCodeEditorBlock(block, declaration, codeEditorUseImportMap()) },
-  });
-}
-
 async function codeEditorGuestBundle() {
   guestBundlePromise ||= build({
     entryPoints: [join(repoRoot, "packages/code-editor-use/src/guest.js")],
@@ -78,27 +71,10 @@ async function codeEditorHostBundle() {
   return hostBundlePromise;
 }
 
-export async function codeEditorUseHandler(request) {
-  const { pathname } = new URL(request.url);
-  if (pathname === "/" || pathname === "/index.html") {
-    return new Response(page(), { headers: { ...securityHeaders, "content-type": "text/html; charset=utf-8" } });
-  }
-  return await codeEditorUseAssetHandler(request);
-}
-
-const securityHeaders = {
-  "content-security-policy": "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-  "x-content-type-options": "nosniff",
-};
-
 export async function codeEditorUseAssetHandler(request) {
   const { pathname } = new URL(request.url);
   const asset = await providerAsset(pathname);
   if (asset) return asset;
-  if (pathname === "/-/app.css") return new Response(standardLayoutCss, { headers: { "content-type": "text/css; charset=utf-8" } });
-  if (pathname === "/client.js") {
-    return new Response(await readFile(join(directory, "client.js"), "utf8"), { headers: { "content-type": contentType(pathname) } });
-  }
   if (pathname === "/controller.js") {
     return new Response(await readFile(join(directory, "controller.js"), "utf8"), { headers: { "content-type": contentType(pathname) } });
   }
@@ -118,4 +94,23 @@ export async function codeEditorUseAssetHandler(request) {
     return new Response(await readFile(join(directory, "style.css"), "utf8"), { headers: { "content-type": "text/css; charset=utf-8" } });
   }
   return new Response("Not found", { status: 404 });
+}
+
+const standardHandler = createStandardWebAppHandler({
+  directory,
+  config: await readStandardAppConfig(directory),
+  importMap: codeEditorUseImportMap(),
+  resolveScript: async (source) => {
+    if (source === "/code-editor-guest.js") return codeEditorGuestBundle();
+    throw new Error(`Undeclared guest script: ${source}`);
+  },
+  assets: codeEditorUseAssetHandler,
+});
+
+export async function codeEditorUseHandler(request) {
+  const response = await (await standardHandler)(request);
+  const headers = new Headers(response.headers);
+  headers.set("content-security-policy", "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+  headers.set("x-content-type-options", "nosniff");
+  return new Response(response.body, { status: response.status, headers });
 }

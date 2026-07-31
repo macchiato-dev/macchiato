@@ -8,6 +8,15 @@ standard layout with a content area whose block types are explicitly allowed.
 Applications import block implementations; they do not proxy whole apps from
 subdomains.
 
+The lower-level `standard-web-app` format is for existing app-shaped HTML, CSS,
+and JavaScript. Its configuration points at those files plus HTML/CSS schemas
+and a trusted runtime bootstrap. The loader removes authored script tags,
+validates HTML and each stylesheet independently, preserves external stylesheet
+URLs, and exposes JavaScript only as ordered guest source for the QuickJS
+bootstrap. `macchiato-detect-app` reports whether this configuration is present
+and complete so other programs—and eventually a skill—can use one stable
+detection contract.
+
 `examples/code-editor-use` is an independent nested npm project demonstrating
 both modes. `npm start` uses its minimal server and `PORT` (or a system-selected
 free port). `app install code-editor-use` records an optional main-server

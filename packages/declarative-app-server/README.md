@@ -25,3 +25,23 @@ console.log(url);
 The server uses `PORT` when set and asks the operating system for a free port
 otherwise. `HOST` defaults to `127.0.0.1`. An imported block supplies markup;
 the optional `assets(request)` hook serves only the files it needs.
+
+## Ordinary web applications
+
+`standard-web-app` configuration accepts an ordinary HTML entry containing
+stylesheet links, inline styles, external scripts, and inline scripts. Loading
+it follows a deliberately asymmetric path:
+
+1. HTML is sanitized through the configured `html-use` schema.
+2. Every stylesheet is validated independently through `style-use` and served
+   at its original URL. Inline styles receive stable generated URLs.
+3. Authored script elements are removed. Their source order and code appear in
+   `/-/app-manifest.json` and non-executable `text/plain` guest endpoints.
+4. The only executable element the server adds is `/-/runtime.js`, the trusted
+   host bootstrap named by the configuration. It starts the selected WASM
+   sandbox, installs the host/guest capability layer, fetches the guest sources,
+   and evaluates them inside QuickJS.
+
+Run `macchiato-detect-app [directory]` to find and validate either
+`macchiato.app.json` or `package.json#macchiato`. Its JSON result is intended
+for people, automation, and a future configuration-detection skill.

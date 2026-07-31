@@ -13,10 +13,23 @@ With no `PORT`, the operating system selects a free port and the command prints
 its URL. Use `PORT=8765 npm start` to select one. This path imports reusable npm
 modules and does not use SQLite or fetch an app from another subdomain.
 
-`app.js` is the reusable declaration. It selects the standard layout, applies a
-small validated theme, and defines a standard content area which permits only
-`code-editor` and `callout` blocks. The editor appears only because the app
-explicitly supplies its renderer and assets.
+The project now looks like an ordinary small website. `index.html` links
+`style.css` and declares `/code-editor-guest.js` with a normal script element.
+`macchiato.app.json` is the only special part: it names the entry, HTML and CSS
+schemas, QuickJS target, trusted `client.js` bootstrap, and specialized
+code-editor host adapter.
+
+The loader removes the authored script element and never lets the browser
+execute it. It validates and serves `style.css` under that same name, sanitizes
+the initial HTML, then adds only the trusted runtime bootstrap. The bootstrap
+starts QuickJS/WASM, installs `browser-use`, fetches the extracted script from
+the guest manifest, and evaluates it inside QuickJS.
+
+Inspect detection without starting the app:
+
+```bash
+npm run detect
+```
 
 To expose the separately registered declaration through Macchiato's optional
 subdomain catalog instead:

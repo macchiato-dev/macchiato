@@ -3,7 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "description": "A small, storage-neutral server and renderer for declarative Macchiato apps",
+  "bin": {
+    "macchiato-detect-app": "./src/detect-cli.js"
+  },
   "exports": {
     ".": "./src/index.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/html-use": "0.1.0",
+    "@macchiato-dev/style-use": "0.1.0"
   }
 }

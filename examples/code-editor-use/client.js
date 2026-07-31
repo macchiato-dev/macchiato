@@ -40,7 +40,10 @@ sandbox.callJsonFunction("__browserUseConfigureEnvironment", {
   userAgent: navigator.userAgent,
   vendor: navigator.vendor,
 });
-sandbox.evalGlobal(await (await fetch("/code-editor-guest.js")).text(), "code-editor-quickjs.js");
+const manifest = await (await fetch("/-/app-manifest.json")).json();
+for (const script of manifest.scripts) {
+  sandbox.evalGlobal(await (await fetch(script.url)).text(), script.source);
+}
 inputBridge = new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
 host.start();
 globalThis.__codeEditorBridge = Object.freeze({
