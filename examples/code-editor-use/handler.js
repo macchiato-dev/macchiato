@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-emscripten-sandbox/browser-assets";
+import { renderDeclarativeApp, standardLayoutCss } from "@macchiato-dev/declarative-app-server";
+import { app, renderCodeEditorBlock } from "./app.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(directory, "../..");
@@ -16,7 +18,7 @@ function contentType(pathname) {
   return "application/octet-stream";
 }
 
-function importMap() {
+export function codeEditorUseImportMap() {
   const imports = {};
   for (const [specifier, publicPath] of Object.entries(quickJsEmscriptenSandboxBrowserAssets.imports)) {
     imports[specifier] = `/-/${quickJsEmscriptenSandboxBrowserAssets.namespace}/${publicPath}`;
@@ -47,27 +49,9 @@ async function providerAsset(pathname) {
 }
 
 function page() {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Constrained CodeMirror</title>
-  <link rel="stylesheet" href="/style.css">
-  <script type="importmap">${importMap()}</script>
-</head>
-<body>
-  <main>
-    <p class="eyebrow">code-editor-use / browser-use</p>
-    <h1>Constrained CodeMirror 6</h1>
-    <p>CodeMirror runs inside QuickJS/WASM. A small browser bridge forwards events and applies its policy-checked DOM operations.</p>
-    <div class="editor-shell"><div id="editor" aria-label="Code editor"></div></div>
-    <div class="runtime"><span id="status" role="status">Starting QuickJS…</span><span id="shape"></span></div>
-    <details><summary>What is constrained?</summary><p>The browser only starts QuickJS, forwards events, and applies an allowlisted DOM protocol. Tags, attributes, class families, operations, depth, element count, and text size are declared by code-editor-use.</p></details>
-  </main>
-  <script type="module" src="/client.js"></script>
-</body>
-</html>`;
+  return renderDeclarativeApp(app, {
+    blocks: { "code-editor": (block, declaration) => renderCodeEditorBlock(block, declaration, codeEditorUseImportMap()) },
+  });
 }
 
 async function codeEditorGuestBundle() {
@@ -96,15 +80,22 @@ async function codeEditorHostBundle() {
 
 export async function codeEditorUseHandler(request) {
   const { pathname } = new URL(request.url);
+  if (pathname === "/" || pathname === "/index.html") {
+    return new Response(page(), { headers: { ...securityHeaders, "content-type": "text/html; charset=utf-8" } });
+  }
+  return await codeEditorUseAssetHandler(request);
+}
+
+const securityHeaders = {
+  "content-security-policy": "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "x-content-type-options": "nosniff",
+};
+
+export async function codeEditorUseAssetHandler(request) {
+  const { pathname } = new URL(request.url);
   const asset = await providerAsset(pathname);
   if (asset) return asset;
-  const headers = {
-    "content-security-policy": "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src data:; connect-src 'self'; font-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-    "x-content-type-options": "nosniff",
-  };
-  if (pathname === "/" || pathname === "/index.html") {
-    return new Response(page(), { headers: { ...headers, "content-type": "text/html; charset=utf-8" } });
-  }
+  if (pathname === "/-/app.css") return new Response(standardLayoutCss, { headers: { "content-type": "text/css; charset=utf-8" } });
   if (pathname === "/client.js") {
     return new Response(await readFile(join(directory, "client.js"), "utf8"), { headers: { "content-type": contentType(pathname) } });
   }

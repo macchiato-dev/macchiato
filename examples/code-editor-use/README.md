@@ -1,13 +1,34 @@
 # CodeMirror in QuickJS
 
-Install workspace dependencies, run the focused plugin, and open:
+This directory is a self-contained nested npm project, deliberately excluded
+from the root workspace. Install and run it directly:
 
 ```bash
+cd examples/code-editor-use
 npm install
-npm run start -w @macchiato-dev/example-code-editor-use
+npm start
 ```
 
-`http://code-editor-use.localhost:8765`
+With no `PORT`, the operating system selects a free port and the command prints
+its URL. Use `PORT=8765 npm start` to select one. This path imports reusable npm
+modules and does not use SQLite or fetch an app from another subdomain.
+
+`app.js` is the reusable declaration. It selects the standard layout, applies a
+small validated theme, and defines a standard content area which permits only
+`code-editor` and `callout` blocks. The editor appears only because the app
+explicitly supplies its renderer and assets.
+
+To expose the separately registered declaration through Macchiato's optional
+subdomain catalog instead:
+
+```bash
+node packages/macchiato/src/macchiato.js app install code-editor-use
+node packages/app/src/index.js --host 127.0.0.1 --port 8765
+```
+
+For a temporary development mapping, add `--app-plugin code-editor-use` to the
+server command. Only this optional catalog uses SQLite to remember the mapping;
+the handler and standalone runner remain storage-neutral.
 
 No separate bundle command is required for development. On its first request,
 the example handler uses the root `esbuild` dependency to bundle
@@ -95,10 +116,9 @@ in this order:
 
 The environment is inspectable and runnable without a bundler. Its generated
 string adapter is checked with `npm run check:generated`. CodeMirror and
-`browser-use` are build inputs selected by this example; the exported
-`code-editor-use` policy entry has no runtime dependencies. The reference
-application's separate `package.json` lists every CodeMirror, sandbox,
-Playwright, and build package it chooses as a `devDependency`.
+`browser-use` are inputs selected by this example; the exported
+`code-editor-use` policy entry has no runtime dependencies. The independent
+`package.json` exposes every package and command chosen by the example.
 
 The application owns guest setup. `code-editor-use` supplies the constrained
 policy, the specialized host input bridge, and a reference CodeMirror guest;
@@ -106,7 +126,6 @@ it does not install or start CodeMirror implicitly for applications. This
 example deliberately chooses the reference guest, bundles it, configures its
 fake browser environment, and evaluates it in QuickJS.
 
-This example is a private workspace because the current app plugin imports the
-repository example handler. Its manifest is still colocated here so someone
-finding the example can immediately see its complete dependency and command
-surface without reverse-engineering the root manifest.
+The package is private and independently installable. Local `file:` dependency
+paths make repository development inspectable; published consumers would use
+normal package versions.
