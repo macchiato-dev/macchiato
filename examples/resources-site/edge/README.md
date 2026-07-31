@@ -141,3 +141,11 @@ public project paths such as `macchiato/app/es.md`. The in-repo
   so the publication path retains its tiny read-only authority.
 - Reconsider a native browser client only when an interaction needs it. Keep its
   code and CSP capability separate from the current document-only profile.
+
+## Staging boundary
+
+Staging is a distinct deployment of the same bundle, not a conditional branch
+inside the application. Its hostname, Storage prefix and credentials, OAuth
+applications, session key, Edge Script, and Bunny Database are separate. That
+keeps environment selection in deployment configuration while the reviewed
+request path remains identical to production.
