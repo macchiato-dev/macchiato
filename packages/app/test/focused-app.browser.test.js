@@ -75,6 +75,12 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /connect-src 'none'/);
   assert.equal(await page.locator(".topbar").count(), 0);
+  assert.deepEqual(await page.locator(".sidebar-tabs [role=tab]").allTextContents(), ["Documents", "Info", "Activity"]);
+  await page.locator("#activity-tab").click();
+  assert.equal(await page.locator(".sidebar").getAttribute("data-tab"), "activity");
+  assert.match(await page.locator("#activity-list").textContent(), /No activity yet/);
+  assert.equal(await page.locator("#collection-trigger").isHidden(), true);
+  await page.locator("#documents-tab").click();
   assert.equal(await page.locator("#search").getAttribute("autocomplete"), "off");
   assert.equal(await page.locator("#search").getAttribute("type"), "text");
   assert.equal(await page.locator("#new-document").getAttribute("class"), await page.locator("#filter").getAttribute("class"));
@@ -154,11 +160,25 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.equal(await page.locator("#info-title").textContent(), "Untitled app");
   assert.match(await page.locator("#info-storage").textContent(), /Local Storage/);
   assert.match(await page.locator("#info-sandbox").textContent(), /QuickJS WASM/);
+  await page.locator("#activity-tab").click();
+  assert.equal(await page.locator(".sidebar").getAttribute("data-tab"), "activity");
+  const activityItems = await page.locator(".activity-item").allTextContents();
+  assert.match(activityItems[0], /Added app/);
+  assert.match(activityItems[0], /Untitled app · Private tools/);
+  assert.match(activityItems[1], /Added collection/);
+  assert.match(activityItems[1], /Private tools · Local Storage/);
+  assert.ok(activityItems.some((item) => /Changed setting/.test(item) && /Sidebar hidden/.test(item)));
+  await page.locator("#info-tab").click();
   const downloadPromise = page.waitForEvent("download");
   await page.locator("#download-document").click();
   assert.match((await downloadPromise).suggestedFilename(), /Untitled-app\.txt/);
-  await page.locator("#editor").fill("A private calculator\n\nNo network required.");
-  assert.match(await page.locator("#status").textContent(), /Saved to Local Storage/);
+  assert.equal(await page.frameLocator("#app-preview").locator("h1").textContent(), "Start here");
+  assert.match(await page.locator("#status").textContent(), /declarative preview/i);
+  assert.deepEqual(await page.locator("#app-packages span").allTextContents(), [
+    "@macchiato-dev/declarative-app-server@0.1.0",
+    "@macchiato-dev/browser-use@0.1.0",
+    "@macchiato-dev/quickjs-emscripten-sandbox@0.1.0",
+  ]);
   await page.evaluate(() => {
     const key = "macchiato.focused-app.collections.v1";
     const collections = JSON.parse(localStorage.getItem(key));
@@ -199,16 +219,25 @@ test("focused app runs a portable storage-explicit workspace", async (t) => {
   assert.ok(await page.locator("#sidebar-control").evaluate((node) => node.getBoundingClientRect().y) > 100);
   await page.locator("#collection-trigger").click();
   await page.locator(".collection-option", { hasText: "Private tools" }).click();
-  assert.equal(await page.locator("#editor").inputValue(), "A private calculator\n\nNo network required.");
+  assert.equal(await page.frameLocator("#app-preview").locator("h1").textContent(), "Start here");
 
   await page.locator("#file").setInputFiles({
-    name: "hello.md",
-    mimeType: "text/markdown",
-    buffer: Buffer.from("# Hello from a file"),
+    name: "hello.html",
+    mimeType: "text/html",
+    buffer: Buffer.from('<main id="hello"><h1>Hello from a file</h1><button id="change" type="button">Change</button></main><script>document.getElementById("change").addEventListener("click",()=>{document.querySelector("h1").textContent="Changed in QuickJS"})</script>'),
   });
   await page.locator("#import-dialog[open]").waitFor();
   await page.locator("#import-dialog").getByRole("button", { name: "Import" }).click();
   assert.equal(await page.locator("#document-title").textContent(), "hello");
-  assert.equal(await page.locator("#editor").inputValue(), "# Hello from a file");
+  await page.frameLocator("#app-preview").getByRole("heading", { name: "Hello from a file" }).waitFor();
+  assert.equal(await page.frameLocator("#app-preview").locator("h1").textContent(), "Hello from a file");
+  assert.equal(await page.frameLocator("#app-preview").locator("script").count(), 0);
+  await page.frameLocator("#app-preview").locator("#change").click();
+  assert.equal(await page.frameLocator("#app-preview").locator("h1").textContent(), "Changed in QuickJS");
+  await page.locator("#activity-tab").click();
+  const finalActivity = await page.locator(".activity-item").allTextContents();
+  assert.match(finalActivity[0], /Added app/);
+  assert.match(finalActivity[0], /hello · Private tools/);
+  assert.ok(finalActivity.some((item) => /Added collection/.test(item) && /Private tools/.test(item)));
   assert.deepEqual(errors, []);
 });

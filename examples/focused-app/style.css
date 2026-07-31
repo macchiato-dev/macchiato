@@ -10,11 +10,11 @@ button,select,input { color:inherit }
 .app[data-sidebar=hidden] .sidebar { border-right:0 }
 .sidebar { min-width:0; overflow:hidden; background:var(--panel); border-right:1px solid var(--line); display:grid; grid-template-rows:auto auto auto 1fr auto }
 .sidebar-tabs { height:56px; display:flex; align-items:end; gap:4px; padding:10px 56px 8px 12px; border-bottom:1px solid var(--line) }
-.sidebar-tabs button { min-width:0; height:34px; padding:0 12px; border:0; border-radius:8px; color:var(--muted); background:transparent; font-weight:650; cursor:pointer }
+.sidebar-tabs button { min-width:0; height:34px; padding:0 12px; border:0; border-radius:8px; color:var(--muted); background:transparent; font-weight:650; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .sidebar-tabs button:hover { color:var(--text); background:var(--hover) }
 .sidebar-tabs button[aria-selected=true] { color:var(--text); background:var(--panel-2) }
-.sidebar[data-tab=info] { grid-template-rows:auto 1fr auto }
-.sidebar[data-tab=info] .collection-header,.sidebar[data-tab=info] .collection-actions,.sidebar[data-tab=info] .documents { display:none }
+.sidebar[data-tab=info],.sidebar[data-tab=activity] { grid-template-rows:auto 1fr auto }
+.sidebar[data-tab=info] .collection-header,.sidebar[data-tab=info] .collection-actions,.sidebar[data-tab=info] .documents,.sidebar[data-tab=activity] .collection-header,.sidebar[data-tab=activity] .collection-actions,.sidebar[data-tab=activity] .documents { display:none }
 .collection-header,.collection-actions,.sidebar-footer,.topbar { display:flex; align-items:center }
 .collection-header { position:relative; align-items:center; gap:7px; padding:12px }
 .collection-picker { position:relative; min-width:0; flex:1 }
@@ -55,6 +55,14 @@ button,select,input { color:inherit }
 .document-info details { border:1px solid var(--line); border-radius:9px; padding:10px 11px; margin-bottom:14px }
 .document-info summary { cursor:pointer; font-size:12px; font-weight:650 }
 .document-info pre { overflow:auto; margin:10px 0 0; color:var(--muted); font-size:11px; white-space:pre-wrap }
+.activity { min-height:0; overflow:auto; padding:20px 18px }
+.activity__eyebrow { margin:0 0 7px; color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase }
+.activity-list { list-style:none; margin:0; padding:0 }
+.activity-item { display:grid; gap:2px; padding:10px 0; border-bottom:1px solid var(--line) }
+.activity-item strong { font-size:13px }
+.activity-item span { color:var(--muted); font-size:12px; overflow-wrap:anywhere }
+.activity-item time { color:var(--muted); font-size:11px }
+.activity-empty { padding:10px 0; color:var(--muted); font-size:12px; line-height:1.5 }
 .info-download { width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:9px; color:inherit; background:transparent; cursor:pointer }
 .info-download:hover:not(:disabled) { background:var(--hover) }.info-download:disabled { opacity:.45; cursor:default }
 .document-item { position:relative; border-radius:11px; margin-bottom:3px }
@@ -79,10 +87,12 @@ button,select,input { color:inherit }
 .document-header { display:flex; justify-content:space-between; align-items:start; gap:30px }
 .document-header h1 { font-size:clamp(30px,4vw,48px); letter-spacing:-.04em; margin:5px 0 8px }
 .document-header p { color:var(--muted); margin:0 }
+.document-header .app-detection { margin-top:8px; color:var(--accent); font:12px/1.4 ui-monospace,monospace }
+.app-packages { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px }
+.app-packages span { padding:4px 7px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:var(--panel); font:11px/1.2 ui-monospace,monospace }
 .sandbox-details { flex:0 0 240px; border:1px solid var(--line); border-radius:10px; padding:10px 12px }
 .sandbox-details summary { cursor:pointer }.sandbox-details pre { white-space:pre-wrap; color:#b9c2d5; font-size:12px }
-#editor { width:100%; min-height:0; resize:none; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--text); padding:20px; line-height:1.65; outline:0 }
-#editor:focus { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent) }
+#app-preview { width:100%; min-height:0; height:100%; border:1px solid var(--line); border-radius:12px; background:white; color-scheme:light; }
 .empty { place-self:center; text-align:center; color:var(--muted) }.empty h1 { color:var(--text) }.empty-icon { width:38px;height:38px;margin:auto;border:3px solid var(--accent);border-radius:11px;transform:rotate(45deg) }
 .status { min-height:30px; padding:5px 20px; color:var(--muted); font-size:12px }
 dialog { color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:14px; width:min(440px,calc(100% - 30px)); box-shadow:0 24px 80px #0009 }

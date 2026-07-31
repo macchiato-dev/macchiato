@@ -35,6 +35,8 @@ export const BUILTIN_APPS = [
       "examples/focused-app/index.html",
       "examples/focused-app/client.js",
       "examples/focused-app/model.js",
+      "examples/focused-app/preview-runtime.js",
+      "examples/focused-app/export-static.js",
       "examples/focused-app/style.css",
       "examples/focused-app/handler.js",
     ],
