@@ -40,7 +40,10 @@ QuickJS. Stable reads therefore return from the event cache, pointer movement
 does not synchronously re-run the editor, and QuickJS remains authoritative at
 the event boundary. A scoped preview class temporarily reveals the native
 range that CodeMirror normally makes transparent, then yields to CodeMirror's
-guest-owned selection layer on mouseup.
+guest-owned selection layer on mouseup. The authoritative mouseup commit runs
+in the final bubble phase, after CodeMirror has finished reconciling the native
+cross-line range, so a later editor handler cannot collapse the committed
+selection.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
