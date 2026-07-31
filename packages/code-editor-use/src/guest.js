@@ -60,6 +60,10 @@ function moveSelection(event) {
     if (targetNumber >= 1 && targetNumber <= view.state.doc.lines) {
       const target = view.state.doc.line(targetNumber);
       next = target.from + Math.min(head - line.from, target.length);
+    } else if (event.key === "ArrowDown") {
+      next = view.state.doc.length;
+    } else {
+      next = 0;
     }
   } else if (event.key === "Home") {
     next = event.mod ? 0 : view.state.doc.lineAt(head).from;

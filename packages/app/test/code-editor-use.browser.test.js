@@ -128,6 +128,29 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.match(await page.locator(".cm-line").first().textContent(), /conXstrained/);
   await page.keyboard.press("Control+z");
 
+  await page.mouse.dblclick(constrainedPoint.x, constrainedPoint.y);
+  await page.keyboard.type("WORD");
+  assert.match(await page.locator(".cm-line").first().textContent(), /Hello, WORD editor!/);
+  await page.keyboard.press("Control+z");
+
+  const firstLineBox = await page.locator(".cm-line").first().boundingBox();
+  const secondLineBox = await page.locator(".cm-line").nth(1).boundingBox();
+  await page.mouse.move(firstLineBox.x + 35, firstLineBox.y + firstLineBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(secondLineBox.x + secondLineBox.width + 60, secondLineBox.y + secondLineBox.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await page.keyboard.type("R");
+  assert.equal(await page.locator(".cm-line").count(), 1);
+  assert.doesNotMatch(await page.locator(".cm-line").first().textContent(), /console/);
+  await page.keyboard.press("Control+z");
+
+  const lastLineBox = await page.locator(".cm-line").last().boundingBox();
+  await page.mouse.click(lastLineBox.x + 50, lastLineBox.y + lastLineBox.height / 2);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.type("Z");
+  assert.match(await page.locator(".cm-line").last().textContent(), /;Z$/);
+  await page.keyboard.press("Control+z");
+
   await page.keyboard.press("Control+End");
   await page.keyboard.type("A");
   await page.keyboard.press("ArrowLeft");
