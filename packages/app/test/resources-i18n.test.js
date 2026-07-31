@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { loadProjectContentSpace } from "../../../examples/resources-site/catalog-content.js";
 import { createTranslator, loadResourcesLocales, parseLocaleMarkdown } from "../../../examples/resources-site/i18n.js";
-import { negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "../../../examples/resources-site/edge/i18n.js";
+import { localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "../../../examples/resources-site/edge/i18n.js";
 
 test("Resources locale Markdown has matching English and Spanish message keys", () => {
   const locales = loadResourcesLocales();
@@ -28,6 +28,11 @@ test("Resources locale negotiation prefers the explicit cookie, then browser lan
     { locale: "es", pathname: "/about" },
   );
   assert.equal(parseLanguageRoute("/language/fr/about"), null);
+});
+
+test("localized routes leave host-owned example assets outside locale trees", () => {
+  assert.equal(localizedObjectKey("es", "blog/index.html"), "locales/es/blog/index.html");
+  assert.equal(localizedObjectKey("es", "-/blog-examples/vtv/index.html"), "-/blog-examples/vtv/index.html");
 });
 
 test("Resources catalogue descriptions can come from an external mirrored content root", async (t) => {

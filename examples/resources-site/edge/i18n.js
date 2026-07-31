@@ -47,5 +47,5 @@ export function localeCookie(locale, { secure = true } = {}) {
 
 export function localizedObjectKey(locale, publicKey) {
   if (!SUPPORTED.includes(locale) || typeof publicKey !== "string") throw new Error("Invalid localized object key");
-  return publicKey.endsWith(".html") ? `locales/${locale}/${publicKey}` : publicKey;
+  return publicKey.endsWith(".html") && !publicKey.startsWith("-/") ? `locales/${locale}/${publicKey}` : publicKey;
 }

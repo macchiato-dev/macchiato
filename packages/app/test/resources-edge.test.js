@@ -5,6 +5,7 @@ import {
   createEdgeConfig,
   normalizeExportManifest,
   pathToObjectKey,
+  publicResponseHeaders,
   storageObjectUrl,
 } from "../../../examples/resources-site/edge/models.js";
 import { createAuthConfig } from "../../../examples/resources-site/auth/github.js";
@@ -16,6 +17,16 @@ const config = createEdgeConfig({
   BUNNY_BUCKET_PREFIX: "public/resources-co",
   STORAGE_API_KEY: "test-secret",
   MANIFEST_TTL_MS: "30000",
+});
+
+test("standalone blog examples receive an opaque script-only document policy", () => {
+  const documentHeaders = publicResponseHeaders("-/blog-examples/vtv/index.html");
+  const scriptHeaders = publicResponseHeaders("-/blog-examples/vtv/app.js");
+  assert.match(documentHeaders.get("content-security-policy"), /^sandbox allow-scripts;/);
+  assert.match(documentHeaders.get("content-security-policy"), /default-src 'none'/);
+  assert.doesNotMatch(documentHeaders.get("content-security-policy"), /connect-src/);
+  assert.equal(documentHeaders.get("cross-origin-resource-policy"), "cross-origin");
+  assert.equal(scriptHeaders.get("content-type"), "application/javascript; charset=utf-8");
 });
 
 const manifest = {

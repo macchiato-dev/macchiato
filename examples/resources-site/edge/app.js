@@ -371,9 +371,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         throw new Error(`Storage length mismatch for ${key}`);
       }
       const headers = publicResponseHeaders(key, upstream.headers);
-      if (key.endsWith(".html")) headers.set("content-language", locale);
+      if (key.startsWith("locales/") && key.endsWith(".html")) headers.set("content-language", locale);
       let body = request.method === "HEAD" ? null : upstream.body;
-      if (authConfig && key.endsWith(".html") && request.method !== "HEAD") {
+      if (authConfig && key.startsWith("locales/") && key.endsWith(".html") && request.method !== "HEAD") {
         let html = await upstream.text();
         if (dynamicProject) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);

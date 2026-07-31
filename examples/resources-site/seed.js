@@ -400,6 +400,15 @@ ${base}
   border-radius: 12px;
   background: var(--track);
 }
+.content-block p a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.content-block p a:visited { color: var(--accent); }
+.content-block p a:hover,
+.content-block p a:focus-visible {
+  color: var(--text);
+}
 
 .project-summary {
   display: grid;
@@ -974,7 +983,12 @@ function blockHtml(block, options = {}) {
   if (block.h2) bits.push(`<h2>${escapeHtml(block.h2)}</h2>`);
   for (const para of block.paras || []) bits.push(`<p>${escapeHtml(para)}</p>`);
   for (const para of block.markdownParas || []) bits.push(`<p>${renderBlogInline(para, escapeHtml)}</p>`);
-  for (const example of block.examples || []) bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"></iframe>`);
+  for (const example of block.examples || []) {
+    const sandbox = example.external
+      ? "allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
+      : "allow-scripts";
+    bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`);
+  }
   if (block.tags) {
     bits.push(`<div class="tags">${block.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>`);
   }

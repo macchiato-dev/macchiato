@@ -10,6 +10,7 @@ import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
+const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const fontNames = ["space-grotesk-latin.woff2", "space-grotesk-latin-ext.woff2", "space-grotesk-vietnamese.woff2"];
 
 function routeRow(route) {
@@ -45,6 +46,9 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     for (const asset of set.files) {
       files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
     }
+  }
+  for (const name of ["index.html", "app.js", "app.css"]) {
+    files.set(`/-/blog-examples/vtv/${name}`, bytes(readFileSync(join(vtvExampleDirectory, name))));
   }
   const artifacts = {};
   for (const [file, content] of files) {

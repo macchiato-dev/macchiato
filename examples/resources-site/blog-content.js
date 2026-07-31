@@ -15,11 +15,13 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
   let offset = 3;
   const examples = [];
   while (lines[offset]?.startsWith("- Example: ")) {
-    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+)\)$/.exec(lines[offset]);
+    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+)\)$/.exec(lines[offset]);
     if (!match) throw new Error(`${filename}: invalid example`);
-    const url = new URL(match[2]);
-    if (url.hostname !== "codesandbox.io" || !url.pathname.startsWith("/embed/")) throw new Error(`${filename}: unsupported example host`);
-    examples.push(Object.freeze({ title: match[1], url: url.href }));
+    const external = match[2].startsWith("https://");
+    const url = new URL(match[2], "https://resources.invalid");
+    if (external && (url.hostname !== "codesandbox.io" || !url.pathname.startsWith("/embed/"))) throw new Error(`${filename}: unsupported example host`);
+    if (!external && !url.pathname.startsWith("/-/blog-examples/")) throw new Error(`${filename}: unsupported local example`);
+    examples.push(Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external }));
     offset += 1;
   }
   if (lines[offset] !== "" || lines[offset + 1] !== "## Body" || lines[offset + 2] !== "") throw new Error(`${filename}: expected a Body heading after metadata`);
@@ -49,12 +51,13 @@ export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resol
 export function renderBlogInline(markdown, escapeHtml) {
   let output = "";
   let cursor = 0;
-  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+)\)/g;
+  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/blog\/[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
   for (const match of markdown.matchAll(links)) {
     output += escapeHtml(markdown.slice(cursor, match.index));
-    const href = new URL(match[2]);
+    const external = match[2].startsWith("https://");
+    const href = new URL(match[2], "https://resources.invalid");
     if (href.username || href.password) throw new Error("Blog links cannot contain credentials");
-    output += `<a href="${escapeHtml(href.href)}">${escapeHtml(match[1])}</a>`;
+    output += `<a href="${escapeHtml(external ? href.href : href.pathname)}">${escapeHtml(match[1])}</a>`;
     cursor = match.index + match[0].length;
   }
   return output + escapeHtml(markdown.slice(cursor));
