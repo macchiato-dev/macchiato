@@ -410,6 +410,9 @@ ${base}
 .crumb a.home-ic:hover { color: var(--text); }
 .crumb a svg { width: 16px; height: 16px; display: block; }
 .footer .copy { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.footer .copy a { color: var(--accent); text-decoration: underline; }
+.footer .copy a:visited { color: var(--accent); }
+.footer .copy a:hover, .footer .copy a:focus-visible { color: var(--text); }
 .language-switcher { display: inline-flex; align-items: center; gap: 6px; }
 .language-switcher label { display: inline-flex; align-items: center; gap: 6px; }
 .language-switcher select { padding: 4px 24px 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; }
