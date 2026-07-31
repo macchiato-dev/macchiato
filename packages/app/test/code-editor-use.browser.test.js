@@ -83,6 +83,18 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
     createCodeEditorGlobal: "undefined",
     bridge: "object",
   });
+
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+a");
+  const selectAllOnFirstPress = await page.evaluate(() => globalThis.__codeEditorBridge.inspect());
+  assert.deepEqual(selectAllOnFirstPress.selection, {
+    anchor: 0,
+    head: selectAllOnFirstPress.document.length,
+    from: 0,
+    to: selectAllOnFirstPress.document.length,
+  });
+  assert.equal(await page.locator("#editor.cm-native-selection").count(), 1);
+  await page.keyboard.press("ArrowRight");
   assert.equal(await page.locator(".editor-shell").evaluate((node) => getComputedStyle(node).borderRadius), "2px");
   assert.match(await page.locator("#status").textContent(), /QuickJS owns \d+ characters across 2 lines/);
 
