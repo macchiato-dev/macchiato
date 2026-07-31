@@ -193,6 +193,37 @@ change their fail-closed defaults.
 
 ## DOM Capability Shape
 
+### Owned roots and document-level surfaces
+
+The guest does not receive the browser's document. Its default DOM universe is
+one granted root. Parent and sibling traversal stop at that boundary; a native
+node outside the root must never acquire a guest handle. Detached nodes created
+through the virtual document are owned by the guest and tracked until they are
+inserted or discarded.
+
+Some UI, especially a lightbox, must visually escape the app container. That
+requires a separate owned-surface capability rather than broader document
+access. The host creates a bounded document-level overlay root and records its
+owner, nodes, listeners, stacking slot, focus origin, and teardown state. The
+surface declaration can require:
+
+- Escape dismissal;
+- a visible close control;
+- both Escape and a close control;
+- focus containment and restoration; and
+- a maximum surface count and DOM budget.
+
+Removing a required dismissal path, inserting outside the owned overlay root,
+surviving owner teardown, or exceeding the declared budget is a sandbox
+violation. Tooltips, menus, dialogs, and lightboxes may share the ownership
+mechanism while selecting different dismissal and focus policies.
+
+This document is evolving toward a handbook structure. Each capability should
+eventually have its own chapter covering its threat model, virtual API,
+ownership rules, lifecycle, limits, audit events, failure behavior, and
+conformance tests. Fine-grained capabilities should compose without one grant
+silently implying another.
+
 The first useful API should be intentionally small:
 
 ```javascript
