@@ -137,6 +137,13 @@ public project paths such as `macchiato/app/es.md`. The in-repo
 - Exercise Bunny Database migration and rollback behavior for the account,
   organization, and project tables in staging. Keep its token separate from
   the Storage read key and session signing key.
+- Split Bunny Database access into two injected clients. Rendering, lookup, and
+  search paths should receive only `BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN`;
+  explicit validated mutations should receive
+  `BUNNY_DATABASE_AUTH_TOKEN`. Both tokens are retained in staging now, but the
+  current adapter still uses the full-access client for all queries. Make the
+  distinction structural rather than selecting a token from request input, and
+  fail closed instead of escalating a read path to the write client.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
 - Reconsider a native browser client only when an interaction needs it. Keep its

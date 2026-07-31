@@ -165,11 +165,16 @@ provider login state is not treated as a Resources.co session.
 
 The session identity is upserted into strict `users` and `user_identities`
 tables through the web libSQL client before the session is issued. Bunny
-Database supplies the production transport and automatically injects
-`BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN` when connected to the
-script. Its credentials never enter the session or browser. Provider identities
-remain separate rows so account-linking policy can be added without changing
-OAuth callbacks.
+Database supplies the production transport and can inject
+`BUNNY_DATABASE_URL`, `BUNNY_DATABASE_AUTH_TOKEN`, and
+`BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN` when connected to the script. Its
+credentials never enter the session or browser. The current adapter uses the
+full-access token for both reads and writes. The intended next boundary is two
+database clients: read-only by default for rendering, search, and lookup paths,
+with the full-access client passed only to explicit, validated mutation paths.
+Keeping both tokens in staging lets that split be tested without changing the
+deployed database. Provider identities remain separate rows so account-linking
+policy can be added without changing OAuth callbacks.
 
 The signed-in workspace from the July 22 reference is implemented in the edge
 profile. Signed-in `/` redirects to `/dashboard`, where projects and
@@ -355,8 +360,11 @@ Bunny's 10 MB script limit.
    - `GITLAB_CLIENT_SECRET`: an environment **secret**.
    - `SESSION_SIGNING_KEY`: a random environment **secret** of at least 32
      bytes; rotating it signs everyone out.
-   - `BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN`: added by connecting
-     the staging Bunny Database to the script.
+   - `BUNNY_DATABASE_URL`, `BUNNY_DATABASE_AUTH_TOKEN`, and
+     `BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN`: added by connecting the staging
+     Bunny Database to the script. The read-only token is retained for the
+     planned query/mutation capability split; it is not used by the current
+     adapter yet.
 
 4. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
    non-GET request before publishing.
@@ -402,9 +410,11 @@ do not point the staging script at production state. In the staging script set
 `PUBLIC_ORIGIN` to the exact staging hostname and add the Storage read key,
 OAuth client IDs/secrets, and a fresh `SESSION_SIGNING_KEY`. From Bunny
 Database's Access page, use **Add Secrets to Edge Script** so Bunny supplies
-`BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN`. This application creates
-accounts and projects, so the staging token must be full-access rather than
-read-only.
+the database URL plus full-access and read-only tokens. This application creates
+accounts and projects, so explicit mutation handlers still require the
+full-access token. Retain the read-only token for the planned default client;
+do not silently fall back from a read-only operation to full access once that
+boundary is implemented.
 
 Attach two hostnames to the same validated export and Edge Script. Production
 uses `https://blog-examples.resources.co`; staging uses
