@@ -1,8 +1,18 @@
 # CodeMirror in QuickJS
 
-Run the `code-editor-use` app plugin and open:
+Install workspace dependencies, run the focused plugin, and open:
+
+```bash
+npm install
+npm run start -w @macchiato-dev/example-code-editor-use
+```
 
 `http://code-editor-use.localhost:8765`
+
+No separate bundle command is required for development. On its first request,
+the example handler uses the root `esbuild` dependency to bundle
+`packages/code-editor-use/src/guest.js` for QuickJS and `host.js` for the page,
+then caches both bundles in memory.
 
 CodeMirror 6, its editor state, extensions, commands, and view run inside
 QuickJS/WASM. The page realm does not import or evaluate CodeMirror. Its small
@@ -73,3 +83,30 @@ The guest bundle is served as data and passed to `sandbox.evalGlobal`; it is
 never loaded as a page `<script>` or module. The browser test asserts that no
 CodeMirror constructor is present in the page global and exercises editing,
 selection, search, completion, undo/redo, focus, and fail-closed mutation.
+
+## Execution order and dependencies
+
+The browser bootstrap is `examples/code-editor-use/client.js`. The guest starts
+in this order:
+
+1. the plain `packages/browser-use/guest/quickjs-dom-environment.js` environment;
+2. the host platform configuration (`navigator.platform`, user agent, vendor);
+3. the bundled `packages/code-editor-use/src/guest.js` CodeMirror setup.
+
+The environment is inspectable and runnable without a bundler. Its generated
+string adapter is checked with `npm run check:generated`. CodeMirror and
+`browser-use` are build inputs selected by this example; the exported
+`code-editor-use` policy entry has no runtime dependencies. The reference
+application's separate `package.json` lists every CodeMirror, sandbox,
+Playwright, and build package it chooses as a `devDependency`.
+
+The application owns guest setup. `code-editor-use` supplies the constrained
+policy, the specialized host input bridge, and a reference CodeMirror guest;
+it does not install or start CodeMirror implicitly for applications. This
+example deliberately chooses the reference guest, bundles it, configures its
+fake browser environment, and evaluates it in QuickJS.
+
+This example is a private workspace because the current app plugin imports the
+repository example handler. Its manifest is still colocated here so someone
+finding the example can immediately see its complete dependency and command
+surface without reverse-engineering the root manifest.
