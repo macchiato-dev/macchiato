@@ -332,7 +332,7 @@ For a reproducible local build:
 
 This produces a single Edge Script at
 `dist/resources-bunny/resources-bunny.js` and the validated Storage objects at
-`dist/resources-bunny/site`. The bundle is currently about 185 KB, well below
+`dist/resources-bunny/site`. The bundle is currently about 240 KB, well below
 Bunny's 10 MB script limit.
 
 1. Upload the *contents* of `examples/resources-site/exported` beneath the
@@ -376,9 +376,11 @@ production. Keep the Storage, provider, session, and database credentials as
 separate authorities.
 
 The manual GitHub Actions workflow
-`.github/workflows/deploy-resources-bunny.yml` builds both artifacts, uploads
-the site, then deploys the standalone script. Configure its
-`resources-production` environment with:
+`.github/workflows/deploy-resources-bunny.yml` takes a `staging` (default) or
+`production` target, builds both artifacts, uploads the site, deploys the
+matching standalone script, and smoke-tests English and Spanish pages. Create
+separate `resources-staging` and `resources-production` GitHub environments;
+give each environment its own values for:
 
 | Kind | Name |
 | --- | --- |
@@ -387,10 +389,32 @@ the site, then deploys the standalone script. Configure its
 | GitHub secret | `BUNNY_DEPLOY_KEY` |
 | GitHub variable | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
 | GitHub variable | `BUNNY_BUCKET_PREFIX` |
+| GitHub variable | `PUBLIC_ORIGIN` |
 
 The upload key is CI-only. The Edge Script receives a separate read-only
 `STORAGE_API_KEY` through Bunny. Use environment protection/approval for the
 production workflow.
+
+For staging, create a separate Storage prefix, Edge Script, and Bunny Database;
+do not point the staging script at production state. In the staging script set
+`PUBLIC_ORIGIN` to the exact staging hostname and add the Storage read key,
+OAuth client IDs/secrets, and a fresh `SESSION_SIGNING_KEY`. From Bunny
+Database's Access page, use **Add Secrets to Edge Script** so Bunny supplies
+`BUNNY_DATABASE_URL` and `BUNNY_DATABASE_AUTH_TOKEN`. This application creates
+accounts and projects, so the staging token must be full-access rather than
+read-only.
+
+Register these provider callbacks against that same `PUBLIC_ORIGIN`:
+
+```text
+https://staging.resources.co/auth/github/callback
+https://staging.resources.co/auth/gitlab/callback
+```
+
+Once the GitHub environment is configured, run **Deploy Resources.co to
+Bunny**, leave the target at `staging`, and verify `/blog` in addition to the
+workflow smoke tests. Production remains an explicit second choice and should
+have an environment approval rule.
 
 `BUNNY_ORIGIN` remains accepted as a compatibility alias, but new deployments
 should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
