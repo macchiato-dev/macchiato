@@ -138,7 +138,11 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.mouse.move(firstLineBox.x + 35, firstLineBox.y + firstLineBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(secondLineBox.x + secondLineBox.width + 60, secondLineBox.y + secondLineBox.height / 2, { steps: 12 });
+  assert.match(await page.evaluate(() => document.getSelection().toString()), /\n/);
+  assert.equal(await page.locator("#editor.cm-drag-preview").count(), 1);
   await page.mouse.up();
+  assert.equal(await page.locator("#editor.cm-drag-preview").count(), 0);
+  assert.ok(await page.locator(".cm-selectionBackground").count() >= 2);
   await page.keyboard.type("R");
   assert.equal(await page.locator(".cm-line").count(), 1);
   assert.doesNotMatch(await page.locator(".cm-line").first().textContent(), /console/);
