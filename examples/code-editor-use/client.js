@@ -76,17 +76,16 @@ function documentLocationFromPoint(x, y) {
     if (lineOffset == null) lineOffset = x < (lineRect.left + lineRect.right) / 2 ? 0 : line.textContent.length;
   }
   lineOffset = Math.max(0, Math.min(line.textContent.length, lineOffset));
-  const lineStart = lines.slice(0, lineIndex).reduce((total, item) => total + item.textContent.length + 1, 0);
-  return { position: lineStart + lineOffset, lineStart, lineOffset, text: line.textContent };
+  return { renderedLineIndex: lineIndex, lineOffset, text: line.textContent };
 }
 
 function selectAtPoint(event, anchor) {
   const location = documentLocationFromPoint(event.clientX, event.clientY);
   if (!location) return false;
-  sandbox.callJsonFunction("__codeEditorSelect", { anchor: anchor ?? location.position, head: location.position });
+  const selection = sandbox.callJsonFunction("__codeEditorSelect", { anchor, headLocation: location });
   sandbox.callJsonFunction("__browserUseFlush", {});
   root.querySelector(".cm-content")?.focus({ preventScroll: true });
-  return true;
+  return selection;
 }
 
 root.addEventListener("mousedown", (event) => {
@@ -102,11 +101,15 @@ root.addEventListener("mousedown", (event) => {
     while (from > 0 && word.test(location.text[from - 1])) from -= 1;
     while (to < location.text.length && word.test(location.text[to])) to += 1;
     dragAnchor = null;
-    sandbox.callJsonFunction("__codeEditorSelect", { anchor: location.lineStart + from, head: location.lineStart + to });
+    sandbox.callJsonFunction("__codeEditorSelect", {
+      anchorLocation: { ...location, lineOffset: from },
+      headLocation: { ...location, lineOffset: to },
+    });
     sandbox.callJsonFunction("__browserUseFlush", {});
   } else {
-    dragAnchor = location.position;
-    selectAtPoint(event, event.shiftKey ? undefined : dragAnchor);
+    const existing = event.shiftKey ? sandbox.callJsonFunction("__codeEditorGetSelection", {}) : null;
+    const selected = selectAtPoint(event, existing?.anchor);
+    dragAnchor = existing?.anchor ?? selected?.anchor ?? null;
   }
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -162,6 +165,9 @@ globalThis.__codeEditorBridge = Object.freeze({
     const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
     sandbox.callJsonFunction("__browserUseFlush", {});
     return result;
+  },
+  inspect() {
+    return sandbox.callJsonFunction("__codeEditorInspect", {});
   },
 });
 document.body.dataset.ready = "true";

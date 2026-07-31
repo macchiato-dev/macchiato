@@ -151,6 +151,29 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.match(await page.locator(".cm-line").last().textContent(), /;Z$/);
   await page.keyboard.press("Control+z");
 
+  await page.mouse.click(constrainedPoint.x, constrainedPoint.y);
+  const secondLinePoint = await page.locator(".cm-line").nth(1).boundingBox();
+  await page.keyboard.down("Shift");
+  await page.mouse.click(secondLinePoint.x + 70, secondLinePoint.y + secondLinePoint.height / 2);
+  await page.keyboard.up("Shift");
+  await page.keyboard.type("SHIFTCLICK");
+  assert.equal(await page.locator(".cm-line").count(), 1);
+  assert.match(await page.locator(".cm-line").first().textContent(), /SHIFTCLICK/);
+  await page.keyboard.press("Control+z");
+
+  await page.mouse.click(constrainedPoint.x, constrainedPoint.y);
+  await page.keyboard.down("Shift");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.up("Shift");
+  await page.keyboard.type("SHIFTDOWN");
+  assert.equal(await page.locator(".cm-line").count(), 1);
+  assert.match(await page.locator(".cm-line").first().textContent(), /SHIFTDOWN/);
+  await page.keyboard.press("Control+z");
+
+  await page.reload();
+  await page.locator("body[data-ready='true']").waitFor();
+  await page.locator(".cm-content").click();
+
   await page.keyboard.press("Control+End");
   await page.keyboard.type("A");
   await page.keyboard.press("ArrowLeft");
@@ -168,6 +191,21 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   }
   await assert.doesNotReject(page.getByText(/across 14 lines/).waitFor());
   assert.equal((await page.locator(".cm-line").allTextContents()).at(-1), "const item11 = 11;");
+
+  const finalLine = page.locator(".cm-line").last();
+  await finalLine.scrollIntoViewIfNeeded();
+  const renderedLines = page.locator(".cm-content > .cm-line");
+  const penultimateBox = await renderedLines.nth((await renderedLines.count()) - 2).boundingBox();
+  const finalBox = await renderedLines.last().boundingBox();
+  await page.mouse.move(penultimateBox.x + 35, penultimateBox.y + penultimateBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(finalBox.x + finalBox.width + 40, finalBox.y + finalBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+  await page.keyboard.type("VIRTUAL");
+  const virtualizedDocument = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document);
+  assert.match(virtualizedDocument, /^const greeting = "Hello, constrained editor!";/);
+  assert.match(virtualizedDocument, /VIRTUAL$/);
+  await page.keyboard.press("Control+z");
 
   await page.keyboard.press("Control+f");
   const search = page.locator(".cm-search input[name='search']");

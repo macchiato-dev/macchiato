@@ -78,7 +78,30 @@ function moveSelection(event) {
 
 globalThis.__codeEditorSelect = (json) => {
   const selection = JSON.parse(json);
-  return JSON.stringify(setSelection(selection.anchor, selection.head));
+  const view = globalThis.__codeEditorView;
+  const viewportLine = view.state.doc.lineAt(view.viewport.from).number;
+  const positionFromLocation = (location) => {
+    if (!location) return null;
+    const lineNumber = Math.max(1, Math.min(view.state.doc.lines, viewportLine + Number(location.renderedLineIndex)));
+    const line = view.state.doc.line(lineNumber);
+    return line.from + Math.max(0, Math.min(line.length, Number(location.lineOffset)));
+  };
+  const head = positionFromLocation(selection.headLocation) ?? selection.head;
+  const anchor = selection.anchor ?? positionFromLocation(selection.anchorLocation) ?? head;
+  return JSON.stringify(setSelection(anchor, head));
+};
+globalThis.__codeEditorGetSelection = () => {
+  const selection = globalThis.__codeEditorView.state.selection.main;
+  return JSON.stringify({ anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to });
+};
+globalThis.__codeEditorInspect = () => {
+  const view = globalThis.__codeEditorView;
+  const selection = view.state.selection.main;
+  return JSON.stringify({
+    document: view.state.doc.toString(),
+    selection: { anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to },
+    viewport: { from: view.viewport.from, to: view.viewport.to },
+  });
 };
 let searchPanel = null;
 let completion = null;

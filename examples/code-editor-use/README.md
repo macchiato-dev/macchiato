@@ -26,6 +26,10 @@ browser, while selection state stays in the guest.
 Points outside a short line clamp to that line's start or end, so cross-line
 dragging remains defined. Double-click expands the reported point to a word,
 and vertical movement at the first or last line clamps to the document edge.
+Because CodeMirror virtualizes long documents, pointer messages carry a
+rendered-line index and an offset within that line—not a browser-calculated
+absolute offset. QuickJS resolves that pair against `EditorView.viewport` and
+retains the authoritative anchor for Shift-click and Shift+arrow selection.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
