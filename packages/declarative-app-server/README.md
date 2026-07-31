@@ -45,3 +45,9 @@ it follows a deliberately asymmetric path:
 Run `macchiato-detect-app [directory]` to find and validate either
 `macchiato.app.json` or `package.json#macchiato`. Its JSON result is intended
 for people, automation, and a future configuration-detection skill.
+
+The independently installable `example/` project is a small counter using this
+entire path. It has ordinary `index.html`, `style.css`, and `app.js` files; the
+configuration is the only Macchiato-specific application file. Run it with
+`cd example && npm install && npm start`. It is excluded from the published npm
+package.

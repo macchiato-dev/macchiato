@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quick Counter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <p class="eyebrow">standard-web-app</p>
+    <h1>Quick Counter</h1>
+    <p class="intro">An ordinary page whose application script runs inside QuickJS.</p>
+    <section class="counter" aria-label="Counter controls">
+      <output id="count" aria-live="polite">0</output>
+      <div class="actions">
+        <button id="increment" type="button">Add one</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <p id="activity" class="activity">Ready.</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "format": "standard-web-app",
+  "id": "quick-counter",
+  "entry": "index.html",
+  "schemas": {
+    "html": "html.schema.json",
+    "css": "css.schema.json"
+  },
+  "runtime": {
+    "target": "browser-quickjs",
+    "bootstrap": "runtime.js",
+    "hostAdapter": "browser-use"
+  }
+}

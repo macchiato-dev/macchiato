@@ -1,0 +1,5 @@
+{
+  "limits": { "maxStylesheetLength": 16000, "maxImports": 0 },
+  "imports": false,
+  "urls": false
+}
