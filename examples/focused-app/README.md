@@ -5,14 +5,19 @@ Focused App is the portable shell intended for `app.resources.co` and
 workspace without a top bar. Its sidebar can be resized or collapsed
 completely.
 
-The sidebar starts with Documents and Info tabs. Documents owns collection
-navigation, search, and the three-line document list. Info shows the selected
-document's storage, encoded byte size, update time, sandbox declaration, and a
-local download action. Creating a document selects Info so its authority and
-persistence are visible before the user starts treating it as durable.
+The sidebar starts with Documents, Info, and Activity tabs. Documents owns
+collection navigation, search, and the three-line document list. Info shows
+the selected document's storage, encoded byte size, update time, sandbox
+declaration, and a local download action. Activity is a workspace stream that
+records actions such as adding an app or collection and changing settings
+(sidebar visibility, control side, document filter); it persists locally and
+is capped at 100 entries. Creating a document selects Info so its authority
+and persistence are visible before the user starts treating it as durable.
 
-The first prototype is deliberately serverless. A collection owns a storage
-adapter and documents own sandbox declarations. The built-in adapters are
+The first prototype is deliberately serverless. The active app is displayed in
+a sandboxed iframe that cannot execute authored scripts. The parent starts
+QuickJS/WASM and grants the guest a policy-bound `browser-use` DOM bridge. A
+collection owns a storage adapter and documents own sandbox declarations. The built-in adapters are
 Memory, Session Storage (the default), Local Storage, and a read-only Library.
 That boundary is the extension point for hosted SQLite, remote self-hosted
 storage, content-addressed stores, and blockchain-backed references; those
@@ -37,8 +42,12 @@ contains Show and Move to Right/Left. On the right edge it uses a
 sidebar-layout icon because a directional arrow would be ambiguous. Side and
 vertical position persist locally. A document's dot menu can also hide it. Use
 `Ctrl/Cmd-K` or
-`Ctrl/Cmd-Shift-K`, then Show Sidebar, to restore it without the tab. Drag a
-text file anywhere onto the page to import it. Files larger than 1 MB default
+`Ctrl/Cmd-Shift-K`, then Show Sidebar, to restore it without the tab. Drag one
+`.html`, `.css`, or `.js` file anywhere onto the page to import it. The browser
+detects a `standard-web-app`, extracts its HTML, styles, scripts, bare package
+names, and explicit versions, and previews the declaration before executing
+its scripts in QuickJS. External dependencies are reported but are not fetched
+without a package capability. Files larger than 1 MB default
 to Memory. Manual changes in Memory or Session Storage enable the browser's
 leave-page warning. Command search follows the same `command-palette-use`
 surface as Resources Edge rather than introducing a second palette design.
@@ -57,8 +66,14 @@ published unchanged at:
 - GitHub Pages for an auditable fork; or
 - any static/self-hosted web server.
 
-GitHub Pages should deploy `examples/focused-app/` as its site root (or copy
-the four runtime files to a Pages artifact). Relative asset URLs keep project
+Build a complete GitHub Pages artifact with:
+
+```bash
+npm run export:focused-app -- /path/to/pages-artifact
+```
+
+The artifact contains the shell, iframe bridge, and pinned QuickJS browser
+modules. It needs no SQLite or application server. Relative URLs keep project
 Pages paths working. A self-hosted instance can replace storage adapters while
 retaining this UI and document format.
 

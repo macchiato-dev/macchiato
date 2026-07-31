@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark light">
   <title>Macchiato Focused Apps</title>
   <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"@macchiato-dev/quickjs-emscripten-sandbox":"./-/quickjs-emscripten-sandbox/index.js","@jitl/quickjs-ffi-types":"./-/quickjs-emscripten-sandbox/ffi-types.js","@jitl/quickjs-singlefile-browser-release-sync":"./-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js","quickjs-emscripten-core":"./-/quickjs-emscripten-sandbox/quickjs-core.js","@macchiato-dev/browser-use/quickjs-dom-guest":"./browser-use-quickjs-dom-guest.js"}}</script>
 </head>
 <body>
   <div class="app" data-sidebar="visible">
@@ -13,6 +14,7 @@
       <div class="sidebar-tabs" role="tablist" aria-label="Sidebar view">
         <button id="documents-tab" role="tab" aria-selected="true" aria-controls="documents">Documents</button>
         <button id="info-tab" role="tab" aria-selected="false" aria-controls="document-info">Info</button>
+        <button id="activity-tab" role="tab" aria-selected="false" aria-controls="activity">Activity</button>
       </div>
       <header class="collection-header">
         <div class="collection-picker">
@@ -44,6 +46,10 @@
         <details><summary>Sandbox configuration</summary><pre id="info-sandbox"></pre></details>
         <button id="download-document" class="info-download" disabled>Download</button>
       </section>
+      <section id="activity" class="activity" role="tabpanel" aria-labelledby="activity-tab" hidden>
+        <p class="activity__eyebrow">Workspace activity</p>
+        <ol id="activity-list" class="activity-list"></ol>
+      </section>
       <footer class="sidebar-footer">
         <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
         <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>
@@ -67,15 +73,15 @@
       <section id="empty" class="empty"><div class="empty-icon"></div><h1>Choose or create an app</h1><p>Documents run with their own inspectable sandbox configuration.</p></section>
       <article id="workspace" class="workspace" hidden>
         <header class="document-header">
-          <div><p class="eyebrow">Focused app</p><h1 id="document-title"></h1><p id="document-summary"></p></div>
+          <div><p class="eyebrow">Declarative app preview</p><h1 id="document-title"></h1><p id="document-summary"></p><p id="app-detection" class="app-detection"></p><div id="app-packages" class="app-packages"></div></div>
           <details class="sandbox-details"><summary>Sandbox</summary><pre id="sandbox"></pre></details>
         </header>
-        <textarea id="editor" aria-label="Document content" spellcheck="false"></textarea>
+        <iframe id="app-preview" title="Declarative app preview" sandbox="allow-same-origin"></iframe>
       </article>
       <output id="status" class="status" aria-live="polite"></output>
     </main>
   </div>
-  <input id="file" type="file" hidden>
+  <input id="file" type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript,application/javascript" hidden>
   <div class="drop-overlay">Drop a file to create an app</div>
   <dialog id="collection-dialog"><form id="collection-form"><h2>New collection</h2><label>Name<input name="name" required maxlength="80"></label><label>Storage<select name="storage"><option value="session">Session Storage</option><option value="local">Local Storage</option><option value="memory">Memory</option></select></label><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Create collection</button></div></form></dialog>
   <dialog id="import-dialog"><form><h2>Import as an app</h2><label>Name<input name="name" required></label><label>Collection<select id="import-collection" name="collection"></select></label><textarea name="content" hidden></textarea><p>Files over 1 MB default to Memory so browser storage is not unexpectedly exhausted.</p><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Import</button></div></form></dialog>

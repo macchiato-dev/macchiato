@@ -3,11 +3,15 @@ import {
   STORAGE_TYPES,
   createCollection,
   createDocument,
+  parseStoredActivity,
   parseStoredCollections,
 } from "./model.js";
+import { previewDeclarativeApp } from "./preview-runtime.js";
 
 const KEY = "macchiato.focused-app.collections.v1";
 const UI_KEY = "macchiato.focused-app.sidebar.v1";
+const ACTIVITY_KEY = "macchiato.focused-app.activity.v1";
+const ACTIVITY_LIMIT = 100;
 const memoryCollections = [createCollection({ id: "memory", name: "Memory", storage: "memory" })];
 const adapters = {
   memory: {
@@ -35,7 +39,9 @@ const elements = {
   search: $("#search"),
   title: $("#document-title"),
   summary: $("#document-summary"),
-  editor: $("#editor"),
+  preview: $("#app-preview"),
+  packages: $("#app-packages"),
+  detection: $("#app-detection"),
   sandbox: $("#sandbox"),
   infoTitle: $("#info-title"),
   infoCollection: $("#info-collection"),
@@ -44,6 +50,8 @@ const elements = {
   infoUpdated: $("#info-updated"),
   infoSandbox: $("#info-sandbox"),
   documentInfo: $("#document-info"),
+  activity: $("#activity"),
+  activityList: $("#activity-list"),
   empty: $("#empty"),
   workspace: $("#workspace"),
   status: $("#status"),
@@ -57,6 +65,43 @@ let dirtyEphemeral = false;
 let filterMode = "all";
 let controlExpandTimer;
 let controlCollapseTimer;
+let activity = parseStoredActivity(localStorage.getItem(ACTIVITY_KEY));
+
+function recordActivity(action, detail = "") {
+  activity.unshift({ at: Date.now(), action, detail });
+  if (activity.length > ACTIVITY_LIMIT) activity.length = ACTIVITY_LIMIT;
+  try {
+    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(activity));
+  } catch {
+    // Activity is a convenience log; ignore storage quota failures.
+  }
+  renderActivity();
+}
+
+function renderActivity() {
+  if (!activity.length) {
+    const empty = document.createElement("li");
+    empty.className = "activity-empty";
+    empty.textContent = "No activity yet. Apps you add and settings you change will appear here.";
+    elements.activityList.replaceChildren(empty);
+    return;
+  }
+  elements.activityList.replaceChildren(...activity.map((entry) => {
+    const item = document.createElement("li");
+    item.className = "activity-item";
+    const action = document.createElement("strong");
+    action.textContent = entry.action;
+    const detail = document.createElement("span");
+    detail.textContent = entry.detail;
+    const time = document.createElement("time");
+    time.dateTime = new Date(entry.at).toISOString();
+    time.textContent = new Intl.DateTimeFormat(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    }).format(entry.at);
+    item.append(action, detail, time);
+    return item;
+  }));
+}
 
 function collapseSidebarControl() {
   clearTimeout(controlExpandTimer);
@@ -192,9 +237,19 @@ function showDocument(document) {
   }
   elements.title.textContent = document.title;
   elements.summary.textContent = document.summary;
-  elements.editor.value = document.body;
-  elements.editor.readOnly = currentCollection().storage === "library";
-  elements.sandbox.textContent = JSON.stringify(document.sandbox, null, 2);
+  const app = document.declarativeApp || createDocument({ name: `${document.title}.html`, text: document.body }).declarativeApp;
+  document.declarativeApp = app;
+  elements.detection.textContent = `${app.format} v${app.version} · ${app.kind} · ${app.entry}`;
+  elements.sandbox.textContent = JSON.stringify({ ...document.sandbox, declarativeApp: { format: app.format, version: app.version, entry: app.entry, kind: app.kind } }, null, 2);
+  const packages = [...app.runtimePackages, ...app.packages];
+  elements.packages.replaceChildren(...packages.map((entry) => {
+    const badge = window.document.createElement("span");
+    badge.textContent = `${entry.name}@${entry.version}`;
+    return badge;
+  }));
+  previewDeclarativeApp(elements.preview, app, (message) => { elements.status.textContent = message; }).catch((error) => {
+    elements.status.textContent = `Preview failed: ${error.message}`;
+  });
   const collection = currentCollection();
   elements.infoTitle.textContent = document.title;
   elements.infoCollection.textContent = collection.name;
@@ -202,16 +257,20 @@ function showDocument(document) {
   const bytes = new TextEncoder().encode(document.body).byteLength;
   elements.infoSize.textContent = bytes < 1_000 ? `${bytes} B` : `${(bytes / 1_000).toFixed(1)} KB`;
   elements.infoUpdated.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(document.updatedAt);
-  elements.infoSandbox.textContent = JSON.stringify(document.sandbox, null, 2);
+  elements.infoSandbox.textContent = JSON.stringify({ ...document.sandbox, declarativeApp: app }, null, 2);
   $("#download-document").disabled = false;
 }
 
+const SIDEBAR_TABS = ["documents", "info", "activity"];
+
 function setSidebarTab(tab) {
-  const normalized = tab === "info" ? "info" : "documents";
+  const normalized = SIDEBAR_TABS.includes(tab) ? tab : "documents";
   elements.sidebar.dataset.tab = normalized;
-  $("#documents-tab").setAttribute("aria-selected", String(normalized === "documents"));
-  $("#info-tab").setAttribute("aria-selected", String(normalized === "info"));
+  for (const name of SIDEBAR_TABS) {
+    $(`#${name}-tab`).setAttribute("aria-selected", String(normalized === name));
+  }
   elements.documentInfo.hidden = normalized !== "info";
+  elements.activity.hidden = normalized !== "activity";
 }
 
 function renderDocuments() {
@@ -271,6 +330,7 @@ function addDocument(document, collectionId = activeCollectionId) {
   activeDocumentId = document.id;
   renderCollectionOptions();
   renderDocuments();
+  recordActivity("Added app", `${document.title} · ${collection.name}`);
 }
 
 function suggestedCollection(file) {
@@ -278,6 +338,10 @@ function suggestedCollection(file) {
 }
 
 async function importFile(file) {
+  if (!/\.(?:html?|css|m?js)$/i.test(file.name)) {
+    elements.status.textContent = "Choose one HTML, CSS, or JavaScript file.";
+    return;
+  }
   const collection = suggestedCollection(file);
   elements.importDialog.querySelector("[name=name]").value = file.name;
   elements.importDialog.querySelector("[name=content]").value = await file.text();
@@ -285,20 +349,28 @@ async function importFile(file) {
   elements.importDialog.showModal();
 }
 
-function setSidebarHidden(hidden) {
+function setSidebarHidden(hidden, { record = true } = {}) {
+  const wasHidden = elements.app.dataset.sidebar === "hidden";
   elements.app.dataset.sidebar = hidden ? "hidden" : "visible";
   if (hidden) closeCollectionMenu();
   else collapseSidebarControl();
   $("#toggle-sidebar").setAttribute("aria-label", hidden ? "Show sidebar" : "Hide sidebar");
   $("#sidebar-menu-visibility").textContent = hidden ? "Show" : "Hide";
   persistSidebar();
+  if (record && wasHidden !== hidden) {
+    recordActivity("Changed setting", hidden ? "Sidebar hidden" : "Sidebar shown");
+  }
 }
 
-function setControlSide(side) {
+function setControlSide(side, { record = true } = {}) {
   const normalized = side === "right" ? "right" : "left";
+  const previous = $("#sidebar-control").dataset.side;
   $("#sidebar-control").dataset.side = normalized;
   $("#sidebar-menu-side").textContent = normalized === "right" ? "Move to Left" : "Move to Right";
   persistSidebar();
+  if (record && previous !== normalized) {
+    recordActivity("Changed setting", `Sidebar control on the ${normalized}`);
+  }
 }
 
 function persistSidebar() {
@@ -315,11 +387,11 @@ function restoreSidebar() {
     if (typeof state.top === "string" && /^\d+(?:\.\d+)?px$/.test(state.top)) {
       elements.app.style.setProperty("--control-y", state.top);
     }
-    setControlSide(state.side);
-    setSidebarHidden(Boolean(state.hidden));
+    setControlSide(state.side, { record: false });
+    setSidebarHidden(Boolean(state.hidden), { record: false });
   } catch {
-    setControlSide("left");
-    setSidebarHidden(false);
+    setControlSide("left", { record: false });
+    setSidebarHidden(false, { record: false });
   }
 }
 
@@ -344,16 +416,18 @@ $("#filter").addEventListener("click", () => {
   $("#filter").dataset.active = String(filterMode !== "all");
   renderDocuments();
   elements.status.textContent = filterMode === "all" ? "Showing all documents." : "Showing sandboxed apps.";
+  recordActivity("Changed setting", `Document filter: ${filterMode}`);
 });
 $("#new-document").addEventListener("click", () => {
   const collection = currentCollection().storage === "library"
     ? collections.find((candidate) => candidate.id === "session")
     : currentCollection();
-  addDocument(createDocument({ name: "Untitled app", text: "# Start here\n" }), collection.id);
+  addDocument(createDocument({ name: "Untitled app.html", text: '<main id="app"><h1>Start here</h1><p>Your declarative app preview appears here.</p></main>' }), collection.id);
   setSidebarTab("info");
 });
 $("#documents-tab").addEventListener("click", () => setSidebarTab("documents"));
 $("#info-tab").addEventListener("click", () => setSidebarTab("info"));
+$("#activity-tab").addEventListener("click", () => setSidebarTab("activity"));
 $("#download-document").addEventListener("click", () => {
   const documentValue = currentCollection().documents.find((candidate) => candidate.id === activeDocumentId);
   if (!documentValue) return;
@@ -374,22 +448,12 @@ $("#collection-form").addEventListener("submit", (event) => {
   event.currentTarget.closest("dialog").close();
   event.currentTarget.reset();
   selectCollection(collection.id);
+  recordActivity("Added collection", `${collection.name} · ${storageLabel(collection).label}`);
 });
-elements.editor.addEventListener("input", () => {
-  const collection = currentCollection();
-  const document = collection.documents.find((candidate) => candidate.id === activeDocumentId);
-  if (!document || collection.storage === "library") return;
-  document.body = elements.editor.value;
-  document.summary = document.body.trim().split(/\n+/)[0]?.slice(0, 140) || "Empty document";
-  document.updatedAt = Date.now();
-  saveCollection(collection);
-  elements.summary.textContent = document.summary;
-  const bytes = new TextEncoder().encode(document.body).byteLength;
-  elements.infoSize.textContent = bytes < 1_000 ? `${bytes} B` : `${(bytes / 1_000).toFixed(1)} KB`;
-  elements.infoUpdated.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(document.updatedAt);
-  elements.status.textContent = `Saved to ${storageLabel(collection).label}.`;
+$("#file").addEventListener("change", (event) => {
+  if (event.target.files.length !== 1) elements.status.textContent = "Choose exactly one file.";
+  else importFile(event.target.files[0]);
 });
-$("#file").addEventListener("change", (event) => event.target.files[0] && importFile(event.target.files[0]));
 elements.importDialog.querySelector("form").addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
@@ -408,7 +472,8 @@ document.addEventListener("dragleave", (event) => {
 document.addEventListener("drop", (event) => {
   event.preventDefault();
   delete document.body.dataset.drop;
-  if (event.dataTransfer.files[0]) importFile(event.dataTransfer.files[0]);
+  if (event.dataTransfer.files.length !== 1) elements.status.textContent = "Drop exactly one HTML, CSS, or JavaScript file.";
+  else importFile(event.dataTransfer.files[0]);
 });
 window.addEventListener("beforeunload", (event) => {
   if (!dirtyEphemeral) return;
@@ -515,5 +580,6 @@ $("#sidebar-control-drag").addEventListener("pointerdown", (event) => {
 ensureDefaults();
 restoreSidebar();
 renderCollectionOptions();
+renderActivity();
 selectCollection(activeCollectionId);
 document.body.dataset.ready = "true";

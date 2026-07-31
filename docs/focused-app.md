@@ -26,10 +26,19 @@ Edge, with commands supplied by this workspace. Every document retains an
 explicit sandbox declaration independently of the collection that stores its
 bytes.
 
-Documents and Info are separate sidebar views. Info is selected after document
-creation and derives its size and sandbox declaration from the current
-document model; Download creates a local Blob and does not grant network
-access. The visible collapse arrow aligns with these tabs and has a padded,
+A dropped `.html`, `.css`, or `.js` file is detected as a
+`standard-web-app`. The workspace shows its entry kind and package/version
+requirements and renders it in a sandboxed iframe. Authored script elements
+are removed; QuickJS/WASM in the parent evaluates extracted JavaScript through
+a scoped `browser-use` DOM bridge. Build the same implementation for GitHub
+Pages with `npm run export:focused-app -- <directory>`.
+
+Documents and Info are separate sidebar views, joined by an Activity view
+that streams workspace actions (adding apps or collections, changing
+settings) from a locally persisted, size-capped log. Info is selected after
+document creation and derives its size and sandbox declaration from the
+current document model; Download creates a local Blob and does not grant
+network access. The visible collapse arrow aligns with these tabs and has a padded,
 transparent hit target whose shape appears only on hover.
 
 Shortcut ownership
@@ -61,11 +70,11 @@ network, DOM, HTTP, and other capabilities remain separate sandbox grants.
 
 Distribution and trust
 
-The current shell is four relative-URL static assets and has
-`connect-src 'none'`. It can run unchanged on Resources, macchiato.dev, GitHub
-Pages, or a static self-host. Hosted services are a convenience, not a
-requirement; self-hosting is recommended when an operator is ready to own
-updates and persistence.
+The exported shell uses relative URLs and includes its pinned QuickJS modules.
+It can run unchanged on Resources, macchiato.dev, GitHub Pages, or a static
+self-host without SQLite. Hosted services are a convenience, not a requirement;
+self-hosting is recommended when an operator is ready to own updates and
+persistence.
 
 A future Resources “open in my instance” link should behave like file import.
 It must use a bounded payload and either a verifiable signature or an
