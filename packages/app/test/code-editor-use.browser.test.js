@@ -110,6 +110,35 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.equal(cursorStyle.display, "block");
   assert.ok(cursorStyle.height > 10);
 
+  const constrainedPoint = await page.locator(".cm-line").first().evaluate((line) => {
+    const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const index = walker.currentNode.textContent.indexOf("constrained");
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(walker.currentNode, index + 3);
+      range.collapse(true);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.left, y: rect.top + rect.height / 2 };
+    }
+    throw new Error("constrained text was not rendered");
+  });
+  await page.mouse.click(constrainedPoint.x, constrainedPoint.y);
+  await page.keyboard.type("X");
+  assert.match(await page.locator(".cm-line").first().textContent(), /conXstrained/);
+  await page.keyboard.press("Control+z");
+
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("A");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.type("B");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.type("C");
+  assert.match(await page.locator(".cm-line").last().textContent(), /;BAC$/);
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+
   await page.keyboard.press("Control+End");
   for (let index = 0; index < 12; index += 1) {
     await page.keyboard.type(`\nconst item${index} = ${index};`);

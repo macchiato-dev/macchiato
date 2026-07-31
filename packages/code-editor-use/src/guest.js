@@ -1,6 +1,6 @@
 import { basicSetup } from "codemirror";
 import { javascript } from "@codemirror/lang-javascript";
-import { EditorState } from "@codemirror/state";
+import { EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { undo, redo } from "@codemirror/commands";
@@ -27,6 +27,55 @@ const state = EditorState.create({
 });
 
 globalThis.__codeEditorView = new EditorView({ state, parent });
+function setSelection(anchor, head = anchor) {
+  const view = globalThis.__codeEditorView;
+  const length = view.state.doc.length;
+  anchor = Math.max(0, Math.min(length, Number(anchor)));
+  head = Math.max(0, Math.min(length, Number(head)));
+  view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
+  view.focus();
+  return { anchor, head };
+}
+
+function moveSelection(event) {
+  const view = globalThis.__codeEditorView;
+  const selection = view.state.selection.main;
+  const head = selection.head;
+  let next = head;
+  if (event.key === "ArrowLeft") {
+    if (!event.shiftKey && !selection.empty) next = selection.from;
+    else if (head > 0) {
+      const line = view.state.doc.lineAt(head);
+      next = head === line.from ? head - 1 : line.from + findClusterBreak(line.text, head - line.from, false);
+    }
+  } else if (event.key === "ArrowRight") {
+    if (!event.shiftKey && !selection.empty) next = selection.to;
+    else if (head < view.state.doc.length) {
+      const line = view.state.doc.lineAt(head);
+      next = head === line.to ? head + 1 : line.from + findClusterBreak(line.text, head - line.from, true);
+    }
+  } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    const line = view.state.doc.lineAt(head);
+    const targetNumber = line.number + (event.key === "ArrowUp" ? -1 : 1);
+    if (targetNumber >= 1 && targetNumber <= view.state.doc.lines) {
+      const target = view.state.doc.line(targetNumber);
+      next = target.from + Math.min(head - line.from, target.length);
+    }
+  } else if (event.key === "Home") {
+    next = event.mod ? 0 : view.state.doc.lineAt(head).from;
+  } else if (event.key === "End") {
+    next = event.mod ? view.state.doc.length : view.state.doc.lineAt(head).to;
+  } else {
+    return false;
+  }
+  setSelection(event.shiftKey ? selection.anchor : next, next);
+  return true;
+}
+
+globalThis.__codeEditorSelect = (json) => {
+  const selection = JSON.parse(json);
+  return JSON.stringify(setSelection(selection.anchor, selection.head));
+};
 let searchPanel = null;
 let completion = null;
 function showSearchPanel() {
@@ -76,7 +125,8 @@ globalThis.__codeEditorCommand = (json) => {
   const event = JSON.parse(json);
   const view = globalThis.__codeEditorView;
   let handled = false;
-  if (event.key === "f" && event.mod) handled = showSearchPanel();
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) handled = moveSelection(event);
+  else if (event.key === "f" && event.mod) handled = showSearchPanel();
   else if (event.code === "Space" && event.ctrlKey) handled = showCompletion();
   else if (event.key === "z" && event.mod && event.shiftKey) handled = redo(view);
   else if (event.key === "z" && event.mod) handled = undo(view);
