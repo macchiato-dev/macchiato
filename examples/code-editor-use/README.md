@@ -31,6 +31,17 @@ rendered-line index and an offset within that line—not a browser-calculated
 absolute offset. QuickJS resolves that pair against `EditorView.viewport` and
 retains the authoritative anchor for Shift-click and Shift+arrow selection.
 
+Editor interaction intentionally diverges from the generic DOM facade.
+`CodeMirrorInputBridge` owns CodeMirror-specific browser event semantics and
+caches the rendered line objects and their rectangles for an entire pointer
+event or drag. During dragging, the browser previews one native range from that
+snapshot; mouseup sends one viewport-relative selection transaction to
+QuickJS. Stable reads therefore return from the event cache, pointer movement
+does not synchronously re-run the editor, and QuickJS remains authoritative at
+the event boundary. A scoped preview class temporarily reveals the native
+range that CodeMirror normally makes transparent, then yields to CodeMirror's
+guest-owned selection layer on mouseup.
+
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
 and text size. A `MutationObserver` validates the live subtree and clears it
