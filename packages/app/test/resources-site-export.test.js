@@ -31,9 +31,8 @@ test("exports resources site as static files", async (t) => {
   assert.equal(manifest.routes.includes("/macchiato/sqlite-use"), true);
   assert.equal(manifest.routes.includes("/blog/a-markdown-based-code-playground"), true);
   assert.match(blog, /A Markdown-based Code Playground/);
-  assert.match(archivedPost, /<iframe class="blog-example"[^>]+sandbox="allow-forms allow-modals allow-popups allow-scripts"/);
+  assert.match(archivedPost, /<iframe class="blog-example"[^>]+sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"/);
   assert.match(archivedPost, /src="https:\/\/codesandbox\.io\/embed\/markdown-based-code-playground/);
-  assert.doesNotMatch(archivedPost, /allow-same-origin/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);

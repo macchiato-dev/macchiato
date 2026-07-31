@@ -30,8 +30,10 @@ cannot silently produce a partly translated catalogue.
 Archived blog posts live in `blog/*.md`. Their compact dialect uses a title,
 slug and ISO publication date, followed by a `Body` heading and Markdown
 paragraphs. An optional `Example` list entry may name a CodeSandbox embed. The
-publisher accepts only its HTTPS embed origin and emits a lazy iframe without
-`allow-same-origin`; iframe permissions are fixed by the renderer, not content.
+publisher accepts only its HTTPS embed origin and emits a lazy iframe. The
+foreign frame keeps its own origin so CodeSandbox works, but cannot navigate
+the top page, download files, open unprompted windows, or request device
+permissions. Iframe permissions are fixed by the renderer, not content.
 
 Import the legacy static HTML directory with:
 
