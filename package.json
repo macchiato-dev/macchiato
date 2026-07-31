@@ -8,8 +8,7 @@
     "test": "node --test \"packages/*/test/*.test.js\""
   },
   "workspaces": [
-    "packages/*",
-    "examples/code-editor-use"
+    "packages/*"
   ],
   "devDependencies": {
     "@playwright/test": "^1.60.0",

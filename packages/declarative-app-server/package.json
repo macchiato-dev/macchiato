@@ -1,0 +1,9 @@
+{
+  "name": "@macchiato-dev/declarative-app-server",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A small, storage-neutral server and renderer for declarative Macchiato apps",
+  "exports": {
+    ".": "./src/index.js"
+  }
+}

@@ -1,5 +1,20 @@
 # Declarative apps
 
+## Storage-neutral standalone apps
+
+`@macchiato-dev/declarative-app-server` runs a validated app declaration
+without the registry, SQLite, or the full server. A declaration combines the
+standard layout with a content area whose block types are explicitly allowed.
+Applications import block implementations; they do not proxy whole apps from
+subdomains.
+
+`examples/code-editor-use` is an independent nested npm project demonstrating
+both modes. `npm start` uses its minimal server and `PORT` (or a system-selected
+free port). `app install code-editor-use` records an optional main-server
+subdomain mapping. In that second mode SQLite is only the operator's catalog;
+the same declaration, layout, code-editor block, and handler remain imported
+modules. Its README has the complete commands.
+
 `app_configs` is the only app routing registry. Files, route rows, imported
 handlers, and plugin code are inert until an app declaration maps them to a
 subdomain.
