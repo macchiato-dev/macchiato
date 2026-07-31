@@ -173,8 +173,12 @@ full-access token for both reads and writes. The intended next boundary is two
 database clients: read-only by default for rendering, search, and lookup paths,
 with the full-access client passed only to explicit, validated mutation paths.
 Keeping both tokens in staging lets that split be tested without changing the
-deployed database. Provider identities remain separate rows so account-linking
-policy can be added without changing OAuth callbacks.
+deployed database. The equivalent local adapter may open two `node:sqlite`
+clients over the same database: a normal write connection and a read connection
+configured with `PRAGMA query_only = ON`. That pragma is useful defense in
+depth, while filesystem permissions and which connection is injected remain
+the stronger capability boundaries. Provider identities remain separate rows
+so account-linking policy can be added without changing OAuth callbacks.
 
 The signed-in workspace from the July 22 reference is implemented in the edge
 profile. Signed-in `/` redirects to `/dashboard`, where projects and

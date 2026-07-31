@@ -144,6 +144,13 @@ public project paths such as `macchiato/app/es.md`. The in-repo
   current adapter still uses the full-access client for all queries. Make the
   distinction structural rather than selecting a token from request input, and
   fail closed instead of escalating a read path to the write client.
+- Mirror that shape in the local adapter when useful by opening two
+  `node:sqlite` clients on the same file. Apply `PRAGMA query_only = ON` to the
+  read client and inject it only into query models; inject the normal client
+  only into mutation models. Keep transactions on one connection rather than
+  trying to span both. This makes local and Bunny deployments share the same
+  model interfaces without pretending that `node:sqlite` and remote libSQL are
+  the same transport.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
 - Reconsider a native browser client only when an interaction needs it. Keep its
