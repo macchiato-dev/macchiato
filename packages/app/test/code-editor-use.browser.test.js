@@ -98,6 +98,12 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   });
   assert.equal(await page.locator("#editor.cm-native-selection").count(), 1);
   await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowLeft");
+  const beforeEmacsForward = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().selection.head);
+  await page.keyboard.press("Control+f");
+  const afterEmacsForward = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().selection.head);
+  assert.equal(afterEmacsForward, beforeEmacsForward + 1);
+  assert.equal(await page.locator(".cm-search").count(), 0);
   assert.equal(await page.locator(".editor-shell").evaluate((node) => getComputedStyle(node).borderRadius), "2px");
   assert.match(await page.locator("#status").textContent(), /QuickJS owns \d+ characters across 2 lines/);
 
@@ -235,7 +241,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.match(virtualizedDocument, /VIRTUAL$/);
   await page.keyboard.press("Control+z");
 
-  await page.keyboard.press("Control+f");
+  await page.keyboard.press("Meta+f");
   const search = page.locator(".cm-search input[name='search']");
   const searchLayout = await page.locator("#editor").evaluate((editor) => {
     const editorBox = editor.querySelector(".cm-editor").getBoundingClientRect();

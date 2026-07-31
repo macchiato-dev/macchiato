@@ -20,10 +20,12 @@ export function compileDomShapePolicy(input = {}) {
     value === true ? true : pattern(value, `attribute ${name}`),
   ]));
   const classNames = (input.classNames || []).map((value) => pattern(value, "class name"));
+  const events = new Set((input.events || []).map((event) => String(event).toLowerCase()));
   return Object.freeze({
     tags,
     attributes: Object.freeze(attributes),
     classNames: Object.freeze(classNames),
+    events,
     maxElements: Math.max(1, Math.min(Number(input.maxElements || 500), 10_000)),
     maxDepth: Math.max(1, Math.min(Number(input.maxDepth || 20), 100)),
     maxTextLength: Math.max(0, Math.min(Number(input.maxTextLength || 100_000), 1_000_000)),
@@ -161,6 +163,8 @@ export class BrowserDomHost {
 
   listen(id, type, listenerId) {
     const node = this.node(id);
+    type = String(type).toLowerCase();
+    if (!this.policy.events.has(type)) throw new Error(`DOM event subscription is not allowed: ${type}`);
     const key = `${id}:${type}:${listenerId}`;
     if (this.listeners.has(key)) return {};
     const listener = (event) => this.onEvent(String(listenerId), {
@@ -184,8 +188,8 @@ export class BrowserDomHost {
       repeat: event.repeat,
       target: this.register(event.target),
     }, event);
-    node.addEventListener(String(type), listener);
-    this.listeners.set(key, { node, type: String(type), listener });
+    node.addEventListener(type, listener);
+    this.listeners.set(key, { node, type, listener });
     return {};
   }
 

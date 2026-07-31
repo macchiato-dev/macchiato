@@ -1,5 +1,10 @@
 export const CODE_EDITOR_DOM_POLICY = Object.freeze({
   tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
+  events: [
+    "beforeinput", "blur", "change", "click", "compositionend", "compositionstart", "compositionupdate",
+    "contextmenu", "copy", "cut", "dragend", "dragenter", "dragleave", "dragover", "dragstart", "drop", "focus", "input", "keydown", "keyup",
+    "mousedown", "mousemove", "mouseup", "mousewheel", "paste", "scroll", "touchcancel", "touchend", "touchmove", "touchstart", "wheel",
+  ],
   attributes: {
     class: "^[^<>\"']{0,240}$",
     style: "^[^<>\"']{0,2400}$",

@@ -160,9 +160,10 @@ function showCompletion() {
 globalThis.__codeEditorCommand = (json) => {
   const event = JSON.parse(json);
   const view = globalThis.__codeEditorView;
+  const mac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
   let handled = false;
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) handled = moveSelection(event);
-  else if (event.key === "f" && event.mod) handled = showSearchPanel();
+  else if (event.key.toLowerCase() === "f" && (mac ? event.metaKey : event.ctrlKey)) handled = showSearchPanel();
   else if (event.code === "Space" && event.ctrlKey) handled = showCompletion();
   else if (event.key === "z" && event.mod && event.shiftKey) handled = redo(view);
   else if (event.key === "z" && event.mod) handled = undo(view);

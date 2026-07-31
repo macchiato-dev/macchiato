@@ -209,7 +209,7 @@ export class CodeMirrorInputBridge {
     this.listen(this.root, "keydown", (event) => {
       if (this.isStopped()) return;
       const result = this.sandbox.callJsonFunction("__codeEditorCommand", {
-        key: event.key, code: event.code, ctrlKey: event.ctrlKey, shiftKey: event.shiftKey,
+        key: event.key, code: event.code, ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey,
         mod: event.ctrlKey || event.metaKey,
       });
       this.flush();
