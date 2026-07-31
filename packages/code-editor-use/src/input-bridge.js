@@ -97,6 +97,13 @@ export class CodeMirrorInputBridge {
     this.root.classList.toggle("cm-native-selection", Boolean(selection && selection.to > selection.from));
   }
 
+  reconcileSelection() {
+    if (this.isStopped()) return;
+    const selection = this.sandbox.callJsonFunction("__codeEditorGetSelection", {});
+    this.flush();
+    this.syncSelectionVisibility(selection);
+  }
+
   selectAtPoint(point, anchor) {
     const location = this.locationFromPoint(point.clientX, point.clientY);
     if (!location) return null;

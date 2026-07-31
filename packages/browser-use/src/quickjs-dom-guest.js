@@ -162,6 +162,13 @@ export const browserUseQuickJsDomGuestSource = `
     }
     return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });
   };
+  globalThis.__browserUseConfigureEnvironment = (json) => {
+    const environment = JSON.parse(json);
+    if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);
+    if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);
+    if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);
+    return JSON.stringify({ platform: navigator.platform });
+  };
   globalThis.__browserUseFlush = () => {
     let count = 0;
     for (let round = 0; round < 10; round++) {
