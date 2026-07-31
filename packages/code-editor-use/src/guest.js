@@ -3,7 +3,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { redo, selectAll, undo } from "@codemirror/commands";
+import { redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 
@@ -162,7 +162,6 @@ globalThis.__codeEditorCommand = (json) => {
   const view = globalThis.__codeEditorView;
   let handled = false;
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) handled = moveSelection(event);
-  else if (event.key.toLowerCase() === "a" && event.mod) handled = selectAll(view);
   else if (event.key === "f" && event.mod) handled = showSearchPanel();
   else if (event.code === "Space" && event.ctrlKey) handled = showCompletion();
   else if (event.key === "z" && event.mod && event.shiftKey) handled = redo(view);

@@ -47,8 +47,13 @@ selection. The native range remains visibly enabled while the guest selection
 is non-empty, covering cases where CodeMirror retains the correct state but
 its remote selection layer misses a paint. Double-click selects a word;
 triple-click selects the complete logical line, including its trailing newline
-when present. Mod-A is dispatched directly to CodeMirror's QuickJS `selectAll`
-command, so the first keypress both owns and visibly paints the full range.
+when present. Mod-A follows CodeMirror's standard keymap through the fake DOM;
+the input bridge reconciles visible selection state after the forwarded event
+completes instead of special-casing the command. The fake browser environment
+is configured from the host platform before CodeMirror initializes, so its
+ordinary keymap chooses Meta bindings on macOS and Control bindings elsewhere.
+The host event-return boundary refreshes cached guest selection state only
+after CodeMirror's handler has run.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,

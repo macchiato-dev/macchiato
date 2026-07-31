@@ -7,6 +7,7 @@ const status = document.getElementById("status");
 const shape = document.getElementById("shape");
 let sandbox;
 let stopped = false;
+let inputBridge = null;
 
 function summary(message) {
   const current = host.inspect();
@@ -26,6 +27,7 @@ const host = new BrowserDomHost(root, CODE_EDITOR_DOM_POLICY, {
     const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
     if (result.preventDefault) nativeEvent.preventDefault();
     if (result.stopPropagation) nativeEvent.stopPropagation();
+    inputBridge?.reconcileSelection();
   },
 });
 
@@ -33,8 +35,13 @@ sandbox = await createSandbox();
 sandbox.installJsonHostFunction("__browserUseHost", (message) => host.dispatch(message));
 sandbox.installJsonHostFunction("__browserUseNotify", (message) => { summary(message); return {}; });
 sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
+sandbox.callJsonFunction("__browserUseConfigureEnvironment", {
+  platform: navigator.platform,
+  userAgent: navigator.userAgent,
+  vendor: navigator.vendor,
+});
 sandbox.evalGlobal(await (await fetch("/code-editor-guest.js")).text(), "code-editor-quickjs.js");
-new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
+inputBridge = new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
 host.start();
 globalThis.__codeEditorBridge = Object.freeze({
   command(payload) {

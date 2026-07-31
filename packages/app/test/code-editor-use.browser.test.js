@@ -64,6 +64,9 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "platform", { configurable: true, value: "MacIntel" });
+  });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
@@ -85,7 +88,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   });
 
   await page.locator(".cm-content").click();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("Meta+a");
   const selectAllOnFirstPress = await page.evaluate(() => globalThis.__codeEditorBridge.inspect());
   assert.deepEqual(selectAllOnFirstPress.selection, {
     anchor: 0,
