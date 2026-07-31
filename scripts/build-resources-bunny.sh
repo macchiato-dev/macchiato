@@ -7,6 +7,8 @@ out_dir="${1:-$repo_root/dist/resources-bunny}"
 rm -rf "$out_dir"
 mkdir -p "$out_dir/site"
 
+npm ci --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
+npm run build --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
 node "$repo_root/examples/resources-site/export-static.js" --out "$out_dir/site"
 deno bundle \
   --config "$repo_root/examples/resources-site/deno.json" \

@@ -12,7 +12,7 @@ After that realization, I decided to do something that was self-contained, and t
 
 It took some work to get it set up, but it is running smoothly. Playwright, a powerful new browser automation tool, and Jest, a testing framework, are used to run the sign-in test.
 
-This post is just a high level overview. The details are in the git repository, [ResourcesCo/app](http://github.com/ResourcesCo/app) on both [GitHub](http://github.com/ResourcesCo/app) and [GitLab](http://gitlab.com/ResourcesCo/app).
+This post is just a high level overview. The details are in the git repository, [ResourcesCo/app](https://github.com/ResourcesCo/app) on both [GitHub](https://github.com/ResourcesCo/app) and [GitLab](https://gitlab.com/ResourcesCo/app).
 
 [Gitea can be run with Docker](https://docs.gitea.io/en-us/install-with-docker/) by using the gitea/gitea image on Docker Hub. It can be configured using environment variables. The environment variables are used to generate the configuration file. I would run it and see a setup screen.
 

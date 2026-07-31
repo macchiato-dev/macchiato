@@ -1,0 +1,19 @@
+{
+  "name": "resources-archived-vtv-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "vtv": "1.0.0-canary.40"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  },
+  "overrides": {
+    "esbuild": "0.28.1"
+  }
+}

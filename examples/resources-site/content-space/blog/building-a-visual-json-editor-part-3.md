@@ -1,10 +1,11 @@
 # Building a Visual JSON Editor - Part 3 of ?: Data Type Detection
 - Slug: building-a-visual-json-editor-part-3
 - Published: 2021-01-22
+- Example: [Strings and non-strings](/-/blog-examples/vtv/index.html?preset=types)
 
 ## Body
 
-([Previous post here.](building-a-visual-json-editor-part-2.html))
+([Previous post here.](/blog/building-a-visual-json-editor-part-2))
 
 In this post, I'm sharing some info about our ongoing project to build a visual JSON editor.
 

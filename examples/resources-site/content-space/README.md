@@ -35,6 +35,12 @@ foreign frame keeps its own origin so CodeSandbox works, but cannot navigate
 the top page, download files, open unprompted windows, or request device
 permissions. Iframe permissions are fixed by the renderer, not content.
 
+Local examples use `/-/blog-examples/...` URLs. They are independently bundled
+static applications and receive the narrower `allow-scripts` sandbox plus a
+response CSP with no network, form, object, or base capability. The VTV
+reconstruction lives in `../blog-examples/vtv/`; it deliberately excludes the
+historical Next.js shell.
+
 Import the legacy static HTML directory with:
 
 ```sh

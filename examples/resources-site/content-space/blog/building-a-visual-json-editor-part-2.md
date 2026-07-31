@@ -1,10 +1,11 @@
 # Building a Visual JSON Editor - Part 2 of ?: Code View
 - Slug: building-a-visual-json-editor-part-2
 - Published: 2020-10-21
+- Example: [Code values](/-/blog-examples/vtv/index.html?preset=code)
 
 ## Body
 
-([Previous post here.](building-a-visual-json-editor.html))
+([Previous post here.](/blog/building-a-visual-json-editor))
 
 We're working on a visual JSON editor that will make it easy to edit all sorts of JSON data. Because JSON is used by countless APIs, it contains all the different types of data APIs contain. While a neat JSON document like a package.json contains maybe a dozen or two nodes with each leaf node having no more than a couple hundred characters, JSON documents found in the wild can contain hundreds or thousands or tens of thousands of nodes, multiline strings, and binary data encoded as base64.
 
@@ -20,7 +21,7 @@ To facilitate editing code, [CodeMirror](https://codemirror.net/) is used with r
 
 To integrate it with Next.js, the CSS files are added to pages/_app.tsx and a dynamic import is added to load CodeMirror only in the browser, because it depends on navigator which is not available on the server.
 
-The [previous post](building-a-visual-json-editor.html) describes the state , which contains information for each node, such as whether it is expanded or not. This is also where it stores what format each node is, for syntax highlighting. The data is passed in as the value prop to the [vtv](https://github.com/ResourcesCo/resources/tree/develop/packages/vtv) React component, and these details are passed in as the "state" prop. Here is the data and state for a JSON object containing some HTML and CSS:
+The [previous post](/blog/building-a-visual-json-editor) describes the state , which contains information for each node, such as whether it is expanded or not. This is also where it stores what format each node is, for syntax highlighting. The data is passed in as the value prop to the [vtv](https://github.com/ResourcesCo/resources/tree/develop/packages/vtv) React component, and these details are passed in as the "state" prop. Here is the data and state for a JSON object containing some HTML and CSS:
 
 Here is the view with the above value and state:
 

@@ -1,6 +1,7 @@
 # Building a Visual JSON Editor - Part 1 of ?
 - Slug: building-a-visual-json-editor
 - Published: 2020-09-21
+- Example: [Visual hierarchy](/-/blog-examples/vtv/index.html?preset=hierarchy)
 
 ## Body
 

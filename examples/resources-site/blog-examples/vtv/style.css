@@ -1,0 +1,10 @@
+:root {
+  color-scheme: dark;
+  background: #0c1230;
+  font-family: system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { min-height: 100%; margin: 0; }
+body { padding: 18px; background: #0c1230; }
+button, input, textarea { font: inherit; }

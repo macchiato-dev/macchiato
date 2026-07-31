@@ -1,6 +1,7 @@
 const SAFE_SEGMENT = /^[A-Za-z0-9._~-]+$/;
 const CONTENT_TYPES = Object.freeze({
   ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".woff2": "font/woff2",
@@ -136,8 +137,10 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("x-content-type-options", "nosniff");
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
-  headers.set("cross-origin-resource-policy", "same-origin");
-  headers.set("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src https://codesandbox.io; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") ? "cross-origin" : "same-origin");
+  headers.set("content-security-policy", key.startsWith("-/blog-examples/")
+    ? "sandbox allow-scripts; default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src 'self' https://codesandbox.io; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   headers.set("cache-control", key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" : "public, max-age=31536000, immutable");
   const etag = upstreamHeaders.get("etag");
   const lastModified = upstreamHeaders.get("last-modified");

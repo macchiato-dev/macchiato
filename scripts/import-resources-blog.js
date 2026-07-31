@@ -17,7 +17,12 @@ async function load(name = "index.html") {
 
 function text(value) {
   return String(value)
-    .replace(/<a\s+[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => `[${text(label)}](${remote ? new URL(href, source).href : href})`)
+    .replace(/<a\s+[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
+      let target = remote ? new URL(href, source).href : href;
+      if (!remote && /^[a-z0-9-]+\.html$/.test(target)) target = `/blog/${target.slice(0, -5)}`;
+      if (/^http:\/\/(?:github|gitlab)\.com\//.test(target)) target = target.replace(/^http:/, "https:");
+      return `[${text(label)}](${target})`;
+    })
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/\s+/g, " ").trim();
