@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compileDomShapePolicy, inspectDomShape } from "../src/index.js";
+import { BrowserDomHost, compileDomShapePolicy, inspectDomShape } from "../src/index.js";
 
 function element(tagName, attrs = {}, children = [], text = "") {
   return {
@@ -35,4 +35,21 @@ test("browser-use rejects undeclared elements, attributes, and classes", () => {
   assert.throws(() => inspectDomShape(element("root", {}, [element("script")]), policy), /rejected element/);
   assert.throws(() => inspectDomShape(element("root", {}, [element("div", { onclick: "x" })]), policy), /rejected attribute/);
   assert.throws(() => inspectDomShape(element("root", {}, [element("div", { class: "escape" })]), policy), /rejected class/);
+});
+
+test("browser-use filters guest event subscriptions through policy", () => {
+  const ownerDocument = {};
+  const root = {
+    ownerDocument,
+    querySelectorAll() { return []; },
+    contains(node) { return node === root; },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const host = new BrowserDomHost(root, {
+    tags: ["div"],
+    events: ["keydown"],
+  });
+  assert.doesNotThrow(() => host.listen("root", "keydown", "allowed"));
+  assert.throws(() => host.listen("root", "message", "denied"), /subscription is not allowed: message/);
 });

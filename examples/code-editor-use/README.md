@@ -57,8 +57,17 @@ after CodeMirror's handler has run.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
-and text size. A `MutationObserver` validates the live subtree and clears it
-after any rejected mutation.
+text size, and event subscription types. A guest request to listen for an
+undeclared event fails closed before a native listener is installed. A
+`MutationObserver` validates the live subtree and clears it after any rejected
+mutation.
+
+Migration to ordinary fake-DOM behavior is incremental. Select All and macOS
+Ctrl-F now use CodeMirror's standard platform keymap. Search-panel painting
+still has a temporary platform-aware compatibility handler (Meta-F on macOS,
+Ctrl-F elsewhere) until CodeMirror's standard panel lifecycle is fully
+represented by the fake DOM; importantly, Ctrl-F is no longer mistaken for
+Find on macOS.
 
 The guest bundle is served as data and passed to `sandbox.evalGlobal`; it is
 never loaded as a page `<script>` or module. The browser test asserts that no
