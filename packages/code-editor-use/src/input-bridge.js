@@ -1,3 +1,5 @@
+import { ownsNativeInput } from "@macchiato-dev/browser-use";
+
 export class CodeMirrorInputBridge {
   constructor(root, sandbox, { isStopped = () => false } = {}) {
     this.root = root;
@@ -197,6 +199,8 @@ export class CodeMirrorInputBridge {
     }, false);
     this.listen(this.root, "beforeinput", (event) => {
       if (this.isStopped()) return;
+      const target = event.target;
+      if (ownsNativeInput(target) || !(target?.isContentEditable || target?.contentEditable === "true")) return;
       const result = this.sandbox.callJsonFunction("__codeEditorBeforeInput", { inputType: event.inputType, data: event.data });
       this.flush();
       this.syncSelectionVisibility(result);

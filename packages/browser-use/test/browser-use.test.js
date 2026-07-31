@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
-import { BrowserDomHost, compileDomShapePolicy, inspectDomShape } from "../src/index.js";
+import { BrowserDomHost, compileDomShapePolicy, inspectDomShape, ownsNativeInput } from "../src/index.js";
 import { browserUseQuickJsDomGuestSource } from "../src/quickjs-dom-guest.js";
 
 function element(tagName, attrs = {}, children = [], text = "") {
@@ -67,6 +67,12 @@ test("browser-use recognizes DOM handles from another realm by shape", () => {
   const encoded = host.remote({ action: "get", id: "root", property: "firstChild" });
   assert.equal(typeof encoded.handle, "string");
   assert.equal(host.remoteNode(encoded.handle), iframeNode);
+});
+
+test("native form controls retain their own text input", () => {
+  assert.equal(ownsNativeInput({ localName: "input" }), true);
+  assert.equal(ownsNativeInput({ tagName: "TEXTAREA" }), true);
+  assert.equal(ownsNativeInput({ localName: "div", isContentEditable: true }), false);
 });
 
 test("generated QuickJS environment matches its directly runnable source", async () => {

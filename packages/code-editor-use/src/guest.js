@@ -113,9 +113,25 @@ globalThis.__codeEditorInspect = () => {
   });
 };
 let searchPanel = null;
+let searchInput = null;
+let searchQuery = "";
 let completion = null;
+function findSearchMatch({ restart = false } = {}) {
+  if (!searchQuery) return false;
+  const view = globalThis.__codeEditorView;
+  const text = view.state.doc.toString();
+  const start = restart ? 0 : view.state.selection.main.to;
+  let from = text.indexOf(searchQuery, start);
+  if (from < 0 && start > 0) from = text.indexOf(searchQuery);
+  if (from < 0) return false;
+  view.dispatch({ selection: { anchor: from, head: from + searchQuery.length }, scrollIntoView: true });
+  return true;
+}
 function showSearchPanel() {
-  if (searchPanel) return true;
+  if (searchPanel) {
+    searchInput.focus();
+    return true;
+  }
   searchPanel = document.createElement("div");
   searchPanel.className = "cm-panels cm-panels-bottom";
   const panel = document.createElement("div");
@@ -124,9 +140,20 @@ function showSearchPanel() {
   input.type = "text";
   input.name = "search";
   input.setAttribute("aria-label", "Find");
+  input.addEventListener("input", (event) => {
+    searchQuery = event.target.value;
+    findSearchMatch({ restart: true });
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      findSearchMatch();
+      event.preventDefault();
+    }
+  });
   panel.appendChild(input);
   searchPanel.appendChild(panel);
   globalThis.__codeEditorView.dom.appendChild(searchPanel);
+  searchInput = input;
   input.focus();
   return true;
 }
@@ -135,6 +162,7 @@ function hideOverlays() {
   if (searchPanel) {
     searchPanel.remove();
     searchPanel = null;
+    searchInput = null;
     hidden = true;
   }
   if (completion) {
@@ -167,7 +195,10 @@ globalThis.__codeEditorCommand = (json) => {
   else if (event.code === "Space" && event.ctrlKey) handled = showCompletion();
   else if (event.key === "z" && event.mod && event.shiftKey) handled = redo(view);
   else if (event.key === "z" && event.mod) handled = undo(view);
-  else if (event.key === "Escape") handled = hideOverlays() || closeCompletion(view) || closeSearchPanel(view);
+  else if (event.key === "Escape") {
+    handled = hideOverlays() || closeCompletion(view) || closeSearchPanel(view);
+    if (handled) view.focus();
+  }
   const selection = view.state.selection.main;
   return JSON.stringify({ handled: Boolean(handled), from: selection.from, to: selection.to });
 };

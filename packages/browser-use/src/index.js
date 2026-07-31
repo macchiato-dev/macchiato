@@ -12,6 +12,11 @@ function elementChildren(element) {
   return Array.from(element.children || []).filter((child) => child?.nodeType === undefined || child.nodeType === 1);
 }
 
+export function ownsNativeInput(target) {
+  const name = String(target?.localName || target?.tagName || "").toLowerCase();
+  return ["input", "select", "textarea"].includes(name);
+}
+
 export function compileDomShapePolicy(input = {}) {
   const tags = new Set((input.tags || []).map((tag) => String(tag).toLowerCase()));
   if (!tags.size) throw new Error("DOM shape policy requires tags");
@@ -215,12 +220,15 @@ export class BrowserDomHost {
     ]);
     const encode = (value) => {
       if (value == null || ["string", "number", "boolean"].includes(typeof value)) return { value };
-      const isDomHandle = typeof value === "object" && (
-        typeof value.nodeType === "number"
-        || (typeof value.setStart === "function" && typeof value.setEnd === "function")
+      const isNode = typeof value === "object" && typeof value.nodeType === "number";
+      const isVirtualBrowserObject = typeof value === "object" && (
+        (typeof value.setStart === "function" && typeof value.setEnd === "function")
         || (typeof value.removeAllRanges === "function" && "rangeCount" in value)
       );
-      if (isDomHandle) return { handle: this.registerRemote(value) };
+      if (isNode) {
+        return { handle: this.registerRemote(value) };
+      }
+      if (isVirtualBrowserObject) return { handle: this.registerRemote(value) };
       if (typeof value.length === "number" && typeof value !== "function") {
         return { list: Array.from(value, (item) => encode(item)) };
       }
