@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Policy-bound live browser DOM handles and shape detection",
+  "scripts": {
+    "build:guest": "node scripts/sync-quickjs-dom-guest.js --write",
+    "check:guest": "node scripts/sync-quickjs-dom-guest.js --check"
+  },
   "exports": {
     ".": "./src/index.js",
     "./quickjs-guest": "./src/quickjs-guest.js",

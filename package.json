@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check:generated": "npm run check:guest -w @macchiato-dev/browser-use",
     "export:resources": "node examples/resources-site/export-static.js",
     "test": "node --test \"packages/*/test/*.test.js\""
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/code-editor-use"
   ],
   "devDependencies": {
     "@playwright/test": "^1.60.0",

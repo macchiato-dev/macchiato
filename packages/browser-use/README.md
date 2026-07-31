@@ -1,15 +1,34 @@
 # browser-use
 
-`browser-use` grants QuickJS opaque handles to one live browser subtree. It is
-for widgets that need selection, layout, or incremental native DOM behavior
-that the serialized `dom-use` tree cannot preserve.
+`browser-use` is the policy boundary between a JavaScript guest and one granted
+browser subtree.
 
-The guest gets a deliberately ordinary-looking `document` wrapper with scoped
-`querySelector`, `querySelectorAll`, and a small property surface. Every call
-is forwarded as JSON to `BrowserDomHost`; native nodes never enter QuickJS.
-Selectors, reads, and writes are allowlisted.
+## Guest environment source
 
-The host also detects the actual subtree shape at mount time and after every
-mutation. A policy limits tags, attributes, class-name patterns, depth, element
-count, and text. A violation disconnects observation and clears the granted
-root. Specialized adapters should narrow this generic policy further.
+The first code evaluated inside the guest is:
+
+`guest/quickjs-dom-environment.js`
+
+It is a plain self-invoking JavaScript file with no imports and no bundler
+requirement. It installs the fake `window`, `document`, DOM handles, event
+dispatch, timers, and environment configuration expected by browser guests.
+
+`src/quickjs-dom-guest.js` is generated from that file. It only exports the
+same bytes as a JavaScript string so a host can pass them to QuickJS. Do not
+edit the generated adapter directly.
+
+```bash
+npm run build:guest -w @macchiato-dev/browser-use
+npm run check:guest -w @macchiato-dev/browser-use
+```
+
+The repository test suite compares the source bytes with the exported string
+and evaluates the plain source without a bundler. `npm run check:generated` is
+the short root-level drift check.
+
+## Boundary
+
+The host compiles a policy for tags, attributes, classes, event subscription
+types, size, and depth. Guest DOM handles are opaque. Reads, writes, methods,
+and listener registration cross the JSON host function and fail closed when
+the operation is outside that policy.

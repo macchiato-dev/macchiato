@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import vm from "node:vm";
 import { BrowserDomHost, compileDomShapePolicy, inspectDomShape } from "../src/index.js";
+import { browserUseQuickJsDomGuestSource } from "../src/quickjs-dom-guest.js";
 
 function element(tagName, attrs = {}, children = [], text = "") {
   return {
@@ -52,4 +55,13 @@ test("browser-use filters guest event subscriptions through policy", () => {
   });
   assert.doesNotThrow(() => host.listen("root", "keydown", "allowed"));
   assert.throws(() => host.listen("root", "message", "denied"), /subscription is not allowed: message/);
+});
+
+test("generated QuickJS environment matches its directly runnable source", async () => {
+  const source = await readFile(new URL("../guest/quickjs-dom-environment.js", import.meta.url), "utf8");
+  assert.equal(browserUseQuickJsDomGuestSource, source);
+  const context = { __browserUseHost() { throw new Error("host should not run during environment setup"); } };
+  vm.runInNewContext(source, context, { filename: "quickjs-dom-environment.js" });
+  assert.equal(typeof context.__browserUseDispatchEvent, "function");
+  assert.equal(typeof context.__browserUseConfigureEnvironment, "function");
 });
