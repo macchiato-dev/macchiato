@@ -374,6 +374,12 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   }]);
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   assert.equal(await page.getByLabel("Account menu").locator(".ub-avatar").textContent(), "LA");
+  const commandTrigger = await page.locator(".command-trigger").evaluate((node) => {
+    const label = node.querySelector("span");
+    return { buttonHeight: node.getBoundingClientRect().height, labelHeight: label.getBoundingClientRect().height };
+  });
+  assert.ok(commandTrigger.buttonHeight <= 42);
+  assert.ok(commandTrigger.labelHeight <= 18);
   await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByText("@latte-dev", { exact: true }).waitFor());
   await assert.doesNotReject(page.getByRole("button", { name: "Sign out" }).waitFor());
