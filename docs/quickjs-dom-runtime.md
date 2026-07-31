@@ -19,7 +19,7 @@ The adapter fixes the CodeMirror extensions and continuously checks the
 resulting subtree. Shape violations destroy and clear the editor. This does not
 make arbitrary browser libraries compatible: each guest still needs an
 explicit, auditable subset of browser APIs. See
-`packages/declarative-app-server/example/code-editor-use/`.
+`packages/code-editor-use/example/`.
 
 ## Status
 

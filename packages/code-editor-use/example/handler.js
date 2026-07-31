@@ -6,7 +6,7 @@ import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-em
 import { createStandardWebAppHandler, readStandardAppConfig } from "@macchiato-dev/declarative-app-server";
 
 const directory = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(directory, "../../../..");
+const repoRoot = resolve(directory, "../../..");
 let guestBundlePromise;
 let hostBundlePromise;
 
