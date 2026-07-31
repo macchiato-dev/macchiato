@@ -1,0 +1,16 @@
+{
+  "name": "@macchiato-dev/example-declarative-app-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "detect": "macchiato-detect-app ."
+  },
+  "dependencies": {
+    "@macchiato-dev/browser-use": "file:../../browser-use",
+    "@macchiato-dev/declarative-app-server": "file:..",
+    "@macchiato-dev/quickjs-emscripten-sandbox": "file:../../quickjs-emscripten-sandbox",
+    "esbuild": "^0.28.1"
+  }
+}
