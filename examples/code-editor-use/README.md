@@ -17,6 +17,13 @@ bootstrap does three things:
 completion, history commands, rendering, and syntax highlighting are initiated
 inside the guest.
 
+Selection follows the same single-owner rule. The bridge reduces a pointer
+location to a document offset and sends only that offset to QuickJS; drag
+updates are coalesced to animation frames. Navigation keys are handled once in
+QuickJS and stop before CodeMirror's lower-level forwarded listener, avoiding
+two handlers independently advancing the same selection. Geometry stays in the
+browser, while selection state stays in the guest.
+
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
 and text size. A `MutationObserver` validates the live subtree and clears it
