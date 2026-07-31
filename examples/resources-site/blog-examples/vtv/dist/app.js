@@ -599,7 +599,12 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
 </main>`,css:`main {
   max-width: 42rem;
   margin: auto;
-}`},state:{}},types:{name:"values",value:{number:42,boolean:!0,nullValue:null,numberLikeString:"42",booleanLikeString:"true",quotedString:'"s"',emptyString:""},state:{}}};function a21(){let t=new URLSearchParams(location.search).get("preset")||"hierarchy",e=CT[t]||CT.hierarchy,[n,r]=(0,qi.useState)(e);return qi.default.createElement(ST,{name:n.name,value:n.value,state:n.state,theme:"dark",onChange:r,onAction:()=>{},onPickId:()=>{}})}(0,MT.createRoot)(document.getElementById("app")).render(qi.default.createElement(a21,null));})();
+}`},state:{}},"code-data":{name:"example",value:{value:{html:`<main>
+  <h1>Hello, world.</h1>
+</main>`,css:`main {
+  max-width: 42rem;
+  margin: auto;
+}`},state:{html:{_view:"html"},css:{_view:"css"}}},state:{}},types:{name:"values",value:{number:42,boolean:!0,nullValue:null,numberLikeString:"42",booleanLikeString:"true",quotedString:'"s"',emptyString:""},state:{}}};function a21(){let t=new URLSearchParams(location.search).get("preset")||"hierarchy",e=CT[t]||CT.hierarchy,[n,r]=(0,qi.useState)(e);return qi.default.createElement(ST,{name:n.name,value:n.value,state:n.state,theme:"dark",onChange:r,onAction:()=>{},onPickId:()=>{}})}(0,MT.createRoot)(document.getElementById("app")).render(qi.default.createElement(a21,null));})();
 /*! Bundled license information:
 
 react/cjs/react.production.min.js:

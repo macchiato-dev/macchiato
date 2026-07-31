@@ -11,6 +11,7 @@ import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 const directory = dirname(fileURLToPath(import.meta.url));
 const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
+const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
 const fontNames = ["space-grotesk-latin.woff2", "space-grotesk-latin-ext.woff2", "space-grotesk-vietnamese.woff2"];
 
 function routeRow(route) {
@@ -26,11 +27,11 @@ function bytes(value) {
   return typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
 }
 
-export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date().toISOString() } = {}) {
+export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date().toISOString(), blogExamplesOrigin = "" } = {}) {
   const messages = loadResourcesLocales();
   const routesByLocale = Object.fromEntries(RESOURCE_LOCALES.map((locale) => [
     locale,
-    buildResourcesSiteRoutesForRuntime({ runtime: "edge", theme, locale }),
+    buildResourcesSiteRoutesForRuntime({ runtime: "edge", theme, locale, blogExamplesOrigin }),
   ]));
   const routes = routesByLocale[DEFAULT_RESOURCE_LOCALE];
   const files = new Map();
@@ -47,8 +48,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
       files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
     }
   }
-  for (const name of ["index.html", "app.js", "app.css"]) {
-    files.set(`/-/blog-examples/vtv/${name}`, bytes(readFileSync(join(vtvExampleDirectory, name))));
+  for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory]]) {
+    for (const name of ["index.html", "app.js", "app.css"]) {
+      files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));
+    }
   }
   const artifacts = {};
   for (const [file, content] of files) {

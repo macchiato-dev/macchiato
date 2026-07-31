@@ -1,0 +1,20 @@
+{
+  "name": "resources-archived-markdown-editor-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "@codemirror/commands": "6.8.1",
+    "@codemirror/lang-markdown": "6.3.4",
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.38.1",
+    "remark-html": "16.0.1",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.8"
+  }
+}

@@ -1,0 +1,13 @@
+:root { color-scheme: dark; font: 15px/1.55 system-ui, sans-serif; background: #151717; color: #edf3f2; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { display: grid; grid-template-columns: 1fr 1fr; min-height: 26rem; }
+section { min-width: 0; padding: 1rem; }
+section + section { border-left: 1px solid #39403f; }
+.cm-editor { min-height: 23rem; background: #1d2020; border-radius: .5rem; }
+.cm-scroller { padding: .75rem; }
+.cm-focused { outline: 2px solid #30d5c8; outline-offset: 2px; }
+.preview { overflow-wrap: anywhere; }
+.preview h1 { font-size: 1.55rem; }
+.preview strong { color: #30d5c8; }
+@media (max-width: 600px) { main { grid-template-columns: 1fr; } section + section { border-left: 0; border-top: 1px solid #39403f; } }

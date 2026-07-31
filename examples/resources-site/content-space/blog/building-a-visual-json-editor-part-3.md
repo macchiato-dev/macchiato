@@ -1,7 +1,6 @@
 # Building a Visual JSON Editor - Part 3 of ?: Data Type Detection
 - Slug: building-a-visual-json-editor-part-3
 - Published: 2021-01-22
-- Example: [Strings and non-strings](/-/blog-examples/vtv/index.html?preset=types)
 
 ## Body
 
@@ -32,6 +31,8 @@ For an empty string, we also show the JSON. It is just an empty pair of quotes: 
 If you delete all the text and then unfocus it, it turns into null. To set a value to an empty string, type an empty pair of quotes.
 
 To wrap it up, here is an example of some strings and non-strings:
+
+- Example: [Strings and non-strings](/-/blog-examples/vtv/index.html?preset=types)
 
 You can try editing the values in the interactive demo, and watch the formats change. To see the JSON, click one of the node names (the bubbles) and View > JSON.
 

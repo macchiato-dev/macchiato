@@ -52,7 +52,7 @@ const apps = Object.fromEntries(BUILTIN_APPS.map((app) => [
   {
     declaration: declarationForBuiltin(app),
     setup: app.subdomain === "resources-co" ? seedResourcesSite : app.setup,
-    dependencies: app.subdomain === "resources-edge" ? ["resources-co"] : [],
+    dependencies: app.subdomain === "resources-edge" ? ["resources-co", "blog-examples"] : [],
   },
 ]));
 

@@ -21,6 +21,17 @@ const presets = {
     },
     state: {},
   },
+  "code-data": {
+    name: "example",
+    value: {
+      value: {
+        html: "<main>\n  <h1>Hello, world.</h1>\n</main>",
+        css: "main {\n  max-width: 42rem;\n  margin: auto;\n}",
+      },
+      state: { html: { _view: "html" }, css: { _view: "css" } },
+    },
+    state: {},
+  },
   types: {
     name: "values",
     value: {

@@ -9,6 +9,8 @@ mkdir -p "$out_dir/site"
 
 npm ci --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
 npm run build --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
+npm ci --prefix "$repo_root/examples/resources-site/blog-examples/markdown-editor"
+npm run build --prefix "$repo_root/examples/resources-site/blog-examples/markdown-editor"
 node "$repo_root/examples/resources-site/export-static.js" --out "$out_dir/site"
 deno bundle \
   --config "$repo_root/examples/resources-site/deno.json" \

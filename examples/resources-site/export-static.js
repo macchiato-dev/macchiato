@@ -20,11 +20,11 @@ function parseArgs(args) {
   return options;
 }
 
-export async function exportResourcesSite({ out = defaultOut, clean = true, theme = {} } = {}) {
+export async function exportResourcesSite({ out = defaultOut, clean = true, theme = {}, blogExamplesOrigin = process.env.BLOG_EXAMPLES_ORIGIN || "" } = {}) {
   const outDir = resolve(out);
   if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
-  const artifactSet = createResourcesArtifactSet({ theme });
+  const artifactSet = createResourcesArtifactSet({ theme, blogExamplesOrigin });
   for (const [file, content] of artifactSet.files) {
     const target = join(outDir, file.slice(1));
     await mkdir(dirname(target), { recursive: true });
