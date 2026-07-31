@@ -41,34 +41,49 @@ sandbox.installJsonHostFunction("__browserUseNotify", (message) => {
 sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
 sandbox.evalGlobal(await (await fetch("/code-editor-guest.js")).text(), "code-editor-quickjs.js");
 
-function documentPositionFromPoint(x, y) {
+function documentLocationFromPoint(x, y) {
   const content = root.querySelector(".cm-content");
   if (!content) return null;
-  const caret = document.caretPositionFromPoint?.(x, y);
-  const fallback = caret ? null : document.caretRangeFromPoint?.(x, y);
-  const node = caret?.offsetNode || fallback?.startContainer;
-  const offset = caret?.offset ?? fallback?.startOffset;
-  const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-  const line = element?.closest?.(".cm-line");
-  if (!line || !content.contains(line)) return null;
   const lines = Array.from(content.querySelectorAll(":scope > .cm-line"));
+  if (!lines.length) return null;
+  const line = lines.reduce((nearest, candidate) => {
+    const rect = candidate.getBoundingClientRect();
+    const distance = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+    return !nearest || distance < nearest.distance ? { element: candidate, distance } : nearest;
+  }, null).element;
   const lineIndex = lines.indexOf(line);
-  if (lineIndex < 0) return null;
-  const range = document.createRange();
-  range.setStart(line, 0);
-  try {
-    range.setEnd(node, offset);
-  } catch {
-    range.selectNodeContents(line);
+  const lineRect = line.getBoundingClientRect();
+  let lineOffset;
+  if (x <= lineRect.left) {
+    lineOffset = 0;
+  } else if (x >= lineRect.right) {
+    lineOffset = line.textContent.length;
+  } else {
+    const sampleY = Math.max(lineRect.top + 1, Math.min(lineRect.bottom - 1, y));
+    const caret = document.caretPositionFromPoint?.(x, sampleY);
+    const fallback = caret ? null : document.caretRangeFromPoint?.(x, sampleY);
+    const node = caret?.offsetNode || fallback?.startContainer;
+    const offset = caret?.offset ?? fallback?.startOffset;
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    if (node && element && line.contains(element)) {
+      const range = document.createRange();
+      range.setStart(line, 0);
+      try {
+        range.setEnd(node, offset);
+        lineOffset = range.toString().length;
+      } catch {}
+    }
+    if (lineOffset == null) lineOffset = x < (lineRect.left + lineRect.right) / 2 ? 0 : line.textContent.length;
   }
-  const lineOffset = Math.min(line.textContent.length, range.toString().length);
-  return lines.slice(0, lineIndex).reduce((total, item) => total + item.textContent.length + 1, 0) + lineOffset;
+  lineOffset = Math.max(0, Math.min(line.textContent.length, lineOffset));
+  const lineStart = lines.slice(0, lineIndex).reduce((total, item) => total + item.textContent.length + 1, 0);
+  return { position: lineStart + lineOffset, lineStart, lineOffset, text: line.textContent };
 }
 
 function selectAtPoint(event, anchor) {
-  const position = documentPositionFromPoint(event.clientX, event.clientY);
-  if (position == null) return false;
-  sandbox.callJsonFunction("__codeEditorSelect", { anchor: anchor ?? position, head: position });
+  const location = documentLocationFromPoint(event.clientX, event.clientY);
+  if (!location) return false;
+  sandbox.callJsonFunction("__codeEditorSelect", { anchor: anchor ?? location.position, head: location.position });
   sandbox.callJsonFunction("__browserUseFlush", {});
   root.querySelector(".cm-content")?.focus({ preventScroll: true });
   return true;
@@ -76,10 +91,23 @@ function selectAtPoint(event, anchor) {
 
 root.addEventListener("mousedown", (event) => {
   if (stopped || event.button !== 0 || !event.target.closest?.(".cm-content")) return;
-  const position = documentPositionFromPoint(event.clientX, event.clientY);
-  if (position == null) return;
-  dragAnchor = position;
-  selectAtPoint(event, event.shiftKey ? undefined : dragAnchor);
+  const location = documentLocationFromPoint(event.clientX, event.clientY);
+  if (!location) return;
+  if (event.detail === 2) {
+    const word = /[\p{L}\p{N}_$]/u;
+    let probe = Math.min(location.text.length - 1, location.lineOffset);
+    if (probe >= 0 && !word.test(location.text[probe]) && probe > 0 && word.test(location.text[probe - 1])) probe -= 1;
+    let from = probe;
+    let to = probe + 1;
+    while (from > 0 && word.test(location.text[from - 1])) from -= 1;
+    while (to < location.text.length && word.test(location.text[to])) to += 1;
+    dragAnchor = null;
+    sandbox.callJsonFunction("__codeEditorSelect", { anchor: location.lineStart + from, head: location.lineStart + to });
+    sandbox.callJsonFunction("__browserUseFlush", {});
+  } else {
+    dragAnchor = location.position;
+    selectAtPoint(event, event.shiftKey ? undefined : dragAnchor);
+  }
   event.preventDefault();
   event.stopImmediatePropagation();
 }, true);

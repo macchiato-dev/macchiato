@@ -23,6 +23,9 @@ updates are coalesced to animation frames. Navigation keys are handled once in
 QuickJS and stop before CodeMirror's lower-level forwarded listener, avoiding
 two handlers independently advancing the same selection. Geometry stays in the
 browser, while selection state stays in the guest.
+Points outside a short line clamp to that line's start or end, so cross-line
+dragging remains defined. Double-click expands the reported point to a word,
+and vertical movement at the first or last line clamps to the document edge.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,
