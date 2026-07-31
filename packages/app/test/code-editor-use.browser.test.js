@@ -133,6 +133,11 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.match(await page.locator(".cm-line").first().textContent(), /Hello, WORD editor!/);
   await page.keyboard.press("Control+z");
 
+  await page.mouse.click(constrainedPoint.x, constrainedPoint.y, { clickCount: 3 });
+  const tripleClick = await page.evaluate(() => globalThis.__codeEditorBridge.inspect());
+  assert.match(tripleClick.document.slice(tripleClick.selection.from, tripleClick.selection.to), /^const greeting.*\n$/);
+  await page.mouse.click(constrainedPoint.x, constrainedPoint.y);
+
   const firstLineBox = await page.locator(".cm-line").first().boundingBox();
   const secondLineBox = await page.locator(".cm-line").nth(1).boundingBox();
   await page.mouse.move(firstLineBox.x + 35, firstLineBox.y + firstLineBox.height / 2);
@@ -143,6 +148,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.mouse.up();
   await page.waitForTimeout(30);
   assert.equal(await page.locator("#editor.cm-drag-preview").count(), 0);
+  assert.equal(await page.locator("#editor.cm-native-selection").count(), 1);
   assert.ok(await page.locator(".cm-selectionBackground").count() >= 2);
   const settledDragSelection = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().selection);
   assert.ok(settledDragSelection.to > settledDragSelection.from);

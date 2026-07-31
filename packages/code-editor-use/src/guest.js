@@ -34,7 +34,8 @@ function setSelection(anchor, head = anchor) {
   head = Math.max(0, Math.min(length, Number(head)));
   view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
   view.focus();
-  return { anchor, head };
+  const selection = view.state.selection.main;
+  return { anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to };
 }
 
 function moveSelection(event) {
@@ -93,6 +94,14 @@ globalThis.__codeEditorSelect = (json) => {
 globalThis.__codeEditorGetSelection = () => {
   const selection = globalThis.__codeEditorView.state.selection.main;
   return JSON.stringify({ anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to });
+};
+globalThis.__codeEditorSelectLine = (json) => {
+  const request = JSON.parse(json);
+  const view = globalThis.__codeEditorView;
+  const viewportLine = view.state.doc.lineAt(view.viewport.from).number;
+  const lineNumber = Math.max(1, Math.min(view.state.doc.lines, viewportLine + Number(request.renderedLineIndex)));
+  const line = view.state.doc.line(lineNumber);
+  return JSON.stringify(setSelection(line.from, Math.min(view.state.doc.length, line.to + 1)));
 };
 globalThis.__codeEditorInspect = () => {
   const view = globalThis.__codeEditorView;
@@ -158,7 +167,8 @@ globalThis.__codeEditorCommand = (json) => {
   else if (event.key === "z" && event.mod && event.shiftKey) handled = redo(view);
   else if (event.key === "z" && event.mod) handled = undo(view);
   else if (event.key === "Escape") handled = hideOverlays() || closeCompletion(view) || closeSearchPanel(view);
-  return JSON.stringify({ handled: Boolean(handled) });
+  const selection = view.state.selection.main;
+  return JSON.stringify({ handled: Boolean(handled), from: selection.from, to: selection.to });
 };
 globalThis.__codeEditorBeforeInput = (json) => {
   const event = JSON.parse(json);
@@ -176,14 +186,15 @@ globalThis.__codeEditorBeforeInput = (json) => {
   } else if (event.inputType === "deleteContentForward") {
     if (from === to && to < view.state.doc.length) to += 1;
   } else {
-    return JSON.stringify({ handled: false });
+    return JSON.stringify({ handled: false, from: selection.from, to: selection.to });
   }
   view.dispatch({
     changes: { from, to, insert },
     selection: { anchor: from + insert.length },
     userEvent: "input",
   });
-  return JSON.stringify({ handled: true });
+  const nextSelection = view.state.selection.main;
+  return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
 };
 globalThis.__browserUseNotify(JSON.stringify({
   type: "ready",

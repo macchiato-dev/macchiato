@@ -43,7 +43,11 @@ range that CodeMirror normally makes transparent, then yields to CodeMirror's
 guest-owned selection layer on mouseup. The authoritative mouseup commit runs
 in the final bubble phase, after CodeMirror has finished reconciling the native
 cross-line range, so a later editor handler cannot collapse the committed
-selection.
+selection. The native range remains visibly enabled while the guest selection
+is non-empty, covering cases where CodeMirror retains the correct state but
+its remote selection layer misses a paint. Double-click selects a word;
+triple-click selects the complete logical line, including its trailing newline
+when present.
 
 The host bridge retains opaque handles and allowlists DOM reads, writes,
 methods, event fields, tags, attributes, class families, element count, depth,

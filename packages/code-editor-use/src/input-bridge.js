@@ -93,12 +93,17 @@ export class CodeMirrorInputBridge {
     this.sandbox.callJsonFunction("__browserUseFlush", {});
   }
 
+  syncSelectionVisibility(selection) {
+    this.root.classList.toggle("cm-native-selection", Boolean(selection && selection.to > selection.from));
+  }
+
   selectAtPoint(point, anchor) {
     const location = this.locationFromPoint(point.clientX, point.clientY);
     if (!location) return null;
     const headLocation = { renderedLineIndex: location.renderedLineIndex, lineOffset: location.lineOffset };
     const selection = this.sandbox.callJsonFunction("__codeEditorSelect", { anchor, headLocation });
     this.flush();
+    this.syncSelectionVisibility(selection);
     this.root.querySelector(".cm-content")?.focus({ preventScroll: true });
     return selection;
   }
@@ -122,7 +127,14 @@ export class CodeMirrorInputBridge {
       this.suppressNextClick = true;
       const location = this.locationFromPoint(event.clientX, event.clientY);
       if (!location) return;
-      if (event.detail === 2) {
+      if (event.detail >= 3) {
+        this.dragAnchor = null;
+        const selection = this.sandbox.callJsonFunction("__codeEditorSelectLine", {
+          renderedLineIndex: location.renderedLineIndex,
+        });
+        this.flush();
+        this.syncSelectionVisibility(selection);
+      } else if (event.detail === 2) {
         const word = /[\p{L}\p{N}_$]/u;
         let probe = Math.min(location.text.length - 1, location.lineOffset);
         if (probe >= 0 && !word.test(location.text[probe]) && probe > 0 && word.test(location.text[probe - 1])) probe -= 1;
@@ -131,11 +143,12 @@ export class CodeMirrorInputBridge {
         while (from > 0 && word.test(location.text[from - 1])) from -= 1;
         while (to < location.text.length && word.test(location.text[to])) to += 1;
         this.dragAnchor = null;
-        this.sandbox.callJsonFunction("__codeEditorSelect", {
+        const selection = this.sandbox.callJsonFunction("__codeEditorSelect", {
           anchorLocation: { renderedLineIndex: location.renderedLineIndex, lineOffset: from },
           headLocation: { renderedLineIndex: location.renderedLineIndex, lineOffset: to },
         });
         this.flush();
+        this.syncSelectionVisibility(selection);
       } else {
         const existing = event.shiftKey ? this.sandbox.callJsonFunction("__codeEditorGetSelection", {}) : null;
         const selected = this.selectAtPoint(event, existing?.anchor);
@@ -179,6 +192,7 @@ export class CodeMirrorInputBridge {
       if (this.isStopped()) return;
       const result = this.sandbox.callJsonFunction("__codeEditorBeforeInput", { inputType: event.inputType, data: event.data });
       this.flush();
+      this.syncSelectionVisibility(result);
       this.snapshot = null;
       if (result.handled) {
         event.preventDefault();
@@ -192,6 +206,7 @@ export class CodeMirrorInputBridge {
         mod: event.ctrlKey || event.metaKey,
       });
       this.flush();
+      this.syncSelectionVisibility(result);
       this.snapshot = null;
       if (result.handled) {
         event.preventDefault();
@@ -205,5 +220,6 @@ export class CodeMirrorInputBridge {
     for (const remove of this.listeners.splice(0)) remove();
     if (this.dragFrame) cancelAnimationFrame(this.dragFrame);
     this.root.classList.remove("cm-drag-preview");
+    this.root.classList.remove("cm-native-selection");
   }
 }
