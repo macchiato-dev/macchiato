@@ -146,7 +146,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   });
   await page.mouse.click(constrainedPoint.x, constrainedPoint.y);
   await page.keyboard.type("X");
-  assert.match(await page.locator(".cm-line").first().textContent(), /conXstrained/);
+  assert.match(await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document), /conXstrained/);
   await page.keyboard.press("Control+z");
 
   await page.mouse.dblclick(constrainedPoint.x, constrainedPoint.y);
@@ -243,6 +243,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
 
   await page.keyboard.press("Meta+f");
   const search = page.locator(".cm-search input[name='search']");
+  const documentBeforeSearch = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document);
   const searchLayout = await page.locator("#editor").evaluate((editor) => {
     const editorBox = editor.querySelector(".cm-editor").getBoundingClientRect();
     const scrollerBox = editor.querySelector(".cm-scroller").getBoundingClientRect();
@@ -256,9 +257,30 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.ok(searchLayout.scrollerHeight > 200);
   assert.ok(Math.abs(searchLayout.editorBottom - searchLayout.panelsBottom) < 1);
   await search.fill("item8");
+  assert.equal(await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document), documentBeforeSearch);
+  assert.match(await page.evaluate(() => {
+    const state = globalThis.__codeEditorBridge.inspect();
+    return state.document.slice(state.selection.from, state.selection.to);
+  }), /item8/);
   await page.keyboard.press("Enter");
   await page.keyboard.press("Escape");
   assert.equal(await page.locator(".cm-search").count(), 0);
+  assert.equal(await page.evaluate(() => document.activeElement.classList.contains("cm-content")), true);
+  assert.equal(await page.locator(".cm-focused").count(), 1);
+
+  const linuxPage = await browser.newPage();
+  await linuxPage.goto(`http://code-editor-use.localhost:${port}/`, { waitUntil: "networkidle" });
+  await linuxPage.locator("body[data-ready='true']").waitFor();
+  await linuxPage.locator(".cm-content").click();
+  await linuxPage.keyboard.press("Control+f");
+  await linuxPage.locator(".cm-search input[name='search']").fill("greeting");
+  assert.equal(await linuxPage.evaluate(() => {
+    const state = globalThis.__codeEditorBridge.inspect();
+    return state.document.slice(state.selection.from, state.selection.to);
+  }), "greeting");
+  await linuxPage.keyboard.press("Escape");
+  assert.equal(await linuxPage.evaluate(() => document.activeElement.classList.contains("cm-content")), true);
+  await linuxPage.close();
 
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
