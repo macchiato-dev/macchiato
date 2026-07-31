@@ -5,6 +5,7 @@
 - **nav.home**: Home
 - **nav.browse**: Browse
 - **nav.projects**: Projects
+- **nav.blog**: Blog
 - **nav.about**: About
 - **nav.primary**: Primary
 - **common.home**: Home
@@ -63,6 +64,9 @@
 - **about.fit**: How it fits together
 - **about.fitP1**: Every building block is designed to be self-hosted and to compose with the others. The project catalogue is generated from package metadata rather than a hand-maintained list.
 - **about.fitP2**: Package names become public project paths, so @macchiato-dev/dom-use appears as macchiato/dom-use.
+- **blog.title**: Blog - Resources.co
+- **blog.heading**: Blog
+- **blog.intro**: Notes from the Resources.co archive and new work on secure, portable applications.
 
 ## Account pages
 

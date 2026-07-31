@@ -5,6 +5,7 @@
 - **nav.home**: Inicio
 - **nav.browse**: Explorar
 - **nav.projects**: Proyectos
+- **nav.blog**: Blog
 - **nav.about**: Acerca de
 - **nav.primary**: Principal
 - **common.home**: Inicio
@@ -63,6 +64,9 @@
 - **about.fit**: Cómo encaja todo
 - **about.fitP1**: Cada pieza está diseñada para alojarse por cuenta propia y combinarse con las demás. El catálogo se genera desde los metadatos de los paquetes, no desde una lista mantenida a mano.
 - **about.fitP2**: Los nombres de paquetes se convierten en rutas públicas; por ejemplo, @macchiato-dev/dom-use aparece como macchiato/dom-use.
+- **blog.title**: Blog - Resources.co
+- **blog.heading**: Blog
+- **blog.intro**: Notas del archivo de Resources.co y novedades sobre aplicaciones seguras y portátiles.
 
 ## Páginas de cuenta
 

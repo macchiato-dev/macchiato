@@ -14,6 +14,7 @@ import { themeUseClientPath } from "@macchiato-dev/theme-use";
 import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "./components/auth.js";
 import { createTranslator, DEFAULT_RESOURCE_LOCALE, loadResourcesLocales } from "./i18n.js";
 import { loadProjectContentSpace } from "./catalog-content.js";
+import { loadBlogPosts, renderBlogInline } from "./blog-content.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "../..");
@@ -23,6 +24,8 @@ const RESOURCE_MESSAGES = loadResourcesLocales();
 
 const REPO_PROJECT_METADATA = readRepoProjectMetadata({ repoRoot });
 const PROJECT_CONTENT = loadProjectContentSpace(REPO_PROJECT_METADATA.projects);
+const BLOG_POSTS = loadBlogPosts();
+const BLOG_BY_PATH = Object.fromEntries(BLOG_POSTS.map((post) => [`/blog/${post.slug}`, post]));
 const ORG_COPY = {
   macchiato: "Open-source packages from the macchiato-dev workspace, mapped into public project paths.",
   resources: "Packages published under the resources organization on npm.",
@@ -242,6 +245,15 @@ function sectionsFor(i18n) {
       },
     ],
   },
+  "/blog": {
+    navKey: "blog",
+    title: t("blog.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("blog.heading") }],
+    blocks: [
+      { h1: t("blog.heading"), paras: [t("blog.intro")] },
+      { items: BLOG_POSTS.map((post) => [post.title, post.published, `/blog/${post.slug}`]) },
+    ],
+  },
   "/profile": {
     navKey: "",
     title: t("profile.title"),
@@ -377,6 +389,16 @@ ${base}
 }
 .items .it-desc {
   max-width: 58ch;
+}
+
+.blog-example {
+  display: block;
+  width: 100%;
+  min-height: 500px;
+  margin-top: 22px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--track);
 }
 
 .project-summary {
@@ -950,6 +972,8 @@ function blockHtml(block, options = {}) {
   if (block.h1) bits.push(`<h1>${escapeHtml(block.h1)}</h1>`);
   if (block.h2) bits.push(`<h2>${escapeHtml(block.h2)}</h2>`);
   for (const para of block.paras || []) bits.push(`<p>${escapeHtml(para)}</p>`);
+  for (const para of block.markdownParas || []) bits.push(`<p>${renderBlogInline(para, escapeHtml)}</p>`);
+  for (const example of block.examples || []) bits.push(`<iframe class="blog-example" src="${escapeHtml(example.url)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-forms allow-modals allow-popups allow-scripts"></iframe>`);
   if (block.tags) {
     bits.push(`<div class="tags">${block.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>`);
   }
@@ -988,6 +1012,15 @@ function routeForPath(path, i18n) {
   const t = i18n.text;
   if (path === "/404") return notFoundRoute(i18n);
   if (sections[path]) return sections[path];
+  if (BLOG_BY_PATH[path]) {
+    const post = BLOG_BY_PATH[path];
+    return {
+      navKey: "blog",
+      title: `${post.title} - Resources.co`,
+      crumb: [{ icon: true, href: "/" }, { label: i18n.text("blog.heading"), href: "/blog" }, { label: post.title }],
+      blocks: [{ eyebrow: post.published, h1: post.title, markdownParas: post.paragraphs, examples: post.examples }],
+    };
+  }
   if (PROJECTS[path]) {
     const project = PROJECTS[path];
     const description = projectDescription(project, i18n);
@@ -1040,6 +1073,7 @@ function pageHtml(path, { runtime = "browser-use", i18n } = {}) {
     home: i18n.text("nav.home"),
     browse: i18n.text("nav.browse"),
     projects: i18n.text("nav.projects"),
+    blog: i18n.text("nav.blog"),
     about: i18n.text("nav.about"),
   });
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}">
@@ -1481,13 +1515,14 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
     home: i18n.text("nav.home"),
     browse: i18n.text("nav.browse"),
     projects: i18n.text("nav.projects"),
+    blog: i18n.text("nav.blog"),
     about: i18n.text("nav.about"),
   }).items;
   const stylesheet = css(theme);
   const styleUse = new StyleUse(resourcesCssSchema());
   styleUse.validateStylesheet(stylesheet);
   const domUse = new DomUse(resourcesDomSchema(), styleUse);
-  const paths = [...Object.keys(sections), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
+  const paths = [...Object.keys(sections), ...Object.keys(BLOG_BY_PATH), ...Object.keys(ORGS), ...PROJECT_ORDER, "/404"];
   return paths.map((path) => {
     const route = routeForPath(path, i18n);
     const authoredHtml = pageHtml(path, { runtime: profile.name, i18n });

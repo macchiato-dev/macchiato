@@ -21,12 +21,19 @@ test("exports resources site as static files", async (t) => {
   const spanishHome = await readFile(join(out, "locales", "es", "index.html"), "utf8");
   const spanishProject = await readFile(join(out, "locales", "es", "macchiato", "app", "index.html"), "utf8");
   const project = await readFile(join(out, "locales", "en", "macchiato", "app", "index.html"), "utf8");
+  const blog = await readFile(join(out, "locales", "en", "blog", "index.html"), "utf8");
+  const archivedPost = await readFile(join(out, "locales", "en", "blog", "a-markdown-based-code-playground", "index.html"), "utf8");
   const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
   const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
 
   assert.equal(result.routes, manifest.routes.length);
   assert.equal(manifest.routes.includes("/macchiato/http-use"), true);
   assert.equal(manifest.routes.includes("/macchiato/sqlite-use"), true);
+  assert.equal(manifest.routes.includes("/blog/a-markdown-based-code-playground"), true);
+  assert.match(blog, /A Markdown-based Code Playground/);
+  assert.match(archivedPost, /<iframe class="blog-example"[^>]+sandbox="allow-forms allow-modals allow-popups allow-scripts"/);
+  assert.match(archivedPost, /src="https:\/\/codesandbox\.io\/embed\/markdown-based-code-playground/);
+  assert.doesNotMatch(archivedPost, /allow-same-origin/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);

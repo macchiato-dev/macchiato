@@ -26,3 +26,16 @@ field:
 The directory path is the public project path. Publication fails if a required
 project/locale file is absent or malformed, so an incomplete content checkout
 cannot silently produce a partly translated catalogue.
+
+Archived blog posts live in `blog/*.md`. Their compact dialect uses a title,
+slug and ISO publication date, followed by a `Body` heading and Markdown
+paragraphs. An optional `Example` list entry may name a CodeSandbox embed. The
+publisher accepts only its HTTPS embed origin and emits a lazy iframe without
+`allow-same-origin`; iframe permissions are fixed by the renderer, not content.
+
+Import the legacy static HTML directory with:
+
+```sh
+node scripts/import-resources-blog.js /path/to/resources-co-website/blog \
+  examples/resources-site/content-space/blog
+```
