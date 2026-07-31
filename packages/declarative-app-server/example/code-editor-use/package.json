@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "detect": "macchiato-detect-app .",
-    "test": "node --test ../../packages/app/test/code-editor-use.browser.test.js",
-    "check:guest": "npm run check:guest --prefix ../../packages/browser-use"
+    "test": "node --test ../../../app/test/code-editor-use.browser.test.js",
+    "check:guest": "npm run check:guest --prefix ../../../browser-use"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.7",
@@ -18,10 +18,10 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.38.1",
-    "@macchiato-dev/browser-use": "file:../../packages/browser-use",
-    "@macchiato-dev/code-editor-use": "file:../../packages/code-editor-use",
-    "@macchiato-dev/declarative-app-server": "file:../../packages/declarative-app-server",
-    "@macchiato-dev/quickjs-emscripten-sandbox": "file:../../packages/quickjs-emscripten-sandbox",
+    "@macchiato-dev/browser-use": "file:../../../browser-use",
+    "@macchiato-dev/code-editor-use": "file:../../../code-editor-use",
+    "@macchiato-dev/declarative-app-server": "file:../..",
+    "@macchiato-dev/quickjs-emscripten-sandbox": "file:../../../quickjs-emscripten-sandbox",
     "codemirror": "^6.0.2",
     "esbuild": "^0.28.1"
   },
