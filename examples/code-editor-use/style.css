@@ -11,7 +11,9 @@ main > p { max-width: 720px; color: #aebbd0; line-height: 1.6; }
 .cm-scroller { flex: 1; min-height: 0; overflow: auto; font-family: "SFMono-Regular", Consolas, monospace; line-height: 1.65; }
 .cm-content { padding: 18px 0; }
 #editor.cm-drag-preview .cm-content .cm-line::selection,
-#editor.cm-drag-preview .cm-content .cm-line ::selection { background: #3e526f !important; }
+#editor.cm-drag-preview .cm-content .cm-line ::selection,
+#editor.cm-native-selection .cm-content .cm-line::selection,
+#editor.cm-native-selection .cm-content .cm-line ::selection { background: #3e526f !important; }
 #editor .cm-gutters { border-right: 1px solid #28354a; background: #111620; color: #65738a; }
 #editor .cm-gutterElement { color: #65738a; }
 #editor .cm-activeLine, #editor .cm-activeLineGutter { background: #23304988; }
