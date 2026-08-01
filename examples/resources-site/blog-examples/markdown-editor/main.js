@@ -21,6 +21,7 @@ const initial = embedded ? "" : demo;
 const preview = document.querySelector("#preview");
 const projectPreview = document.querySelector("#project-preview");
 const language = new Compartment();
+let applyingHostContent = false;
 function languageExtension(name) {
   if (name === "javascript") return javascript();
   if (name === "html") return html();
@@ -51,7 +52,7 @@ const view = new EditorView({
   state: EditorState.create({
     doc: initial,
     extensions: [basicSetup, oneDark, language.of(markdown()), EditorView.lineWrapping, EditorView.updateListener.of((update) => {
-      if (update.docChanged) {
+      if (update.docChanged && !applyingHostContent) {
         const content = update.state.doc.toString();
         render(content);
         if (embedded) parent.postMessage({ protocol: "resources-project-editor-v1", type: "change", content }, "*");
@@ -97,10 +98,15 @@ if (embedded) {
     if (event.source !== parent || message?.protocol !== "resources-project-editor-v1") return;
     if (message.type === "set-content" && typeof message.content === "string" && message.content.length <= 1_000_000) {
       document.body.dataset.mode = message.mode === "markdown" ? "markdown" : "code";
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: message.content },
-        effects: language.reconfigure(languageExtension(message.language)),
-      });
+      applyingHostContent = true;
+      try {
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: message.content },
+          effects: language.reconfigure(languageExtension(message.language)),
+        });
+      } finally {
+        applyingHostContent = false;
+      }
       if (message.mode === "markdown") {
         projectPreview.hidden = true;
         preview.hidden = false;

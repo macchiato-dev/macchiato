@@ -9,7 +9,7 @@ function slugify(value) {
 }
 
 const EDITOR_PROTOCOL = "resources-project-editor-v1";
-const DRAFT_KEY = "resources_project_draft_v2";
+const DRAFT_KEY = "resources_project_draft_v3";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
   article: {
@@ -135,7 +135,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
   let selected = state.files[0]?.path || "config";
   let ready = false;
-  let suppressChange = false;
   let pending = false;
   let saveTimer = 0;
   let pendingDestructive = false;
@@ -144,6 +143,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let localHistory = null;
 
   if (draft) {
+    const navigationType = performance.getEntriesByType("navigation")[0]?.type;
+    if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
     try {
       const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
       if (stored?.patches?.length) {
@@ -177,7 +178,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function sendContent() {
     if (!ready) return;
-    suppressChange = true;
     root.dataset.editorLoading = "true";
     iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode(), language: language(), snapshot: state }, "*");
   }
@@ -338,7 +338,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (message.type === "ready") { ready = true; sendContent(); return; }
     if (message.type === "content-set") { delete root.dataset.editorLoading; return; }
     if (message.type !== "change" || typeof message.content !== "string") return;
-    if (suppressChange) { suppressChange = false; return; }
     try {
       if (selected === "config") updateSnapshot({ files: state.files, config: JSON.parse(message.content) });
       else updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content: message.content } : file), config: state.config });
@@ -413,7 +412,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   container?.addEventListener("change", updateContainer);
   linkPatterns?.addEventListener("input", () => { growPatterns(); updateContainer(); });
   growPatterns();
-  versionButton.addEventListener("click", () => { historyPanel.hidden = false; versionButton.setAttribute("aria-expanded", "true"); draft ? renderDraftVersions() : renderStoredVersions(); });
+  versionButton.addEventListener("click", () => {
+    if (!historyPanel.hidden) {
+      historyPanel.hidden = true;
+      versionButton.setAttribute("aria-expanded", "false");
+      return;
+    }
+    historyPanel.hidden = false;
+    versionButton.setAttribute("aria-expanded", "true");
+    draft ? renderDraftVersions() : renderStoredVersions();
+  });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);

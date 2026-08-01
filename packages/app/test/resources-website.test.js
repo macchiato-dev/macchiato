@@ -490,6 +490,25 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
   const topBarHeights = await page.locator(".focused-header, .layout.focused-view > .userbar").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
   assert.deepEqual(topBarHeights, [54, 54]);
+  const focusedGeometry = await page.evaluate(() => {
+    const header = document.querySelector(".focused-header").getBoundingClientRect();
+    const breadcrumb = document.querySelector(".focused-header .crumb").getBoundingClientRect();
+    return {
+      viewportHeight: innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+      bodyHeight: document.body.scrollHeight,
+      breadcrumbCenter: breadcrumb.top + breadcrumb.height / 2,
+      headerCenter: header.top + header.height / 2,
+    };
+  });
+  assert.equal(focusedGeometry.documentHeight, focusedGeometry.viewportHeight);
+  assert.equal(focusedGeometry.bodyHeight, focusedGeometry.viewportHeight);
+  assert.ok(Math.abs(focusedGeometry.breadcrumbCenter - focusedGeometry.headerCenter) < 1);
+  await page.locator("[data-project-versions]").click();
+  assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");
+  assert.equal(await page.locator("[data-project-history]").isVisible(), true);
+  await page.locator("[data-project-versions]").click();
+  assert.equal(await page.locator("[data-project-history]").isHidden(), true);
   await template.selectOption("canvas");
   assert.equal(await container.inputValue(), "canvas");
   assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
@@ -506,6 +525,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\n{");
   assert.match(await newEditor.locator(".cm-content").innerText(), /\{\}$/);
+  await template.selectOption("article");
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
   await template.selectOption("html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await newEditor.locator(".cm-content").click();
@@ -525,6 +547,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Draft saved in this session");
   await page.locator("[data-project-versions]").click();
   assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");
+  assert.equal(await page.locator("[data-project-history]").isVisible(), true);
+  await page.locator("[data-project-versions]").click();
+  assert.equal(await page.locator("[data-project-history]").isHidden(), true);
+  await page.locator("[data-project-versions]").click();
+  assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   await assert.doesNotReject(page.locator("[data-project-versions] .project-editor__version-count", { hasText: "3" }).waitFor());
   await page.getByRole("button", { name: "index.html", exact: true }).click();
