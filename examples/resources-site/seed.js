@@ -799,11 +799,11 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .form-field-error { color: #ffb3b3; font-size: 13px; }
 .project-create__heading { margin-bottom: 18px; }
 .project-create .create-form { max-width: none; margin-top: 0; }
-.project-create__layout { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: clamp(12px, 1.5vw, 18px); min-height: calc(100vh - 190px); }
+.project-create__layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 270px); gap: clamp(10px, 1.2vw, 16px); min-height: calc(100vh - 105px); }
 .project-create__fields { display: grid; align-content: start; gap: 14px; }
 .project-create__fields .create-form textarea { min-height: 72px; }
 .project-create__fields .create-actions { gap: 8px; margin-top: 2px; }
-.project-editor { position: relative; min-width: 0; min-height: 560px; border: 1px solid var(--track-border); border-radius: 12px; background: #151717; }
+.project-editor { position: relative; min-width: 0; min-height: 650px; border: 1px solid var(--track-border); border-radius: 10px; background: #151717; }
 .project-editor__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px; color: var(--muted); background: var(--track); }
 .project-editor__tabs { display: flex; align-items: center; gap: 3px; min-width: 0; }
 .project-editor__tools { display: flex; align-items: center; gap: 2px; }
@@ -812,7 +812,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__tool:disabled { opacity: .4; cursor: default; }
 .project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
 .project-editor__versions { flex: 0 0 auto; }
-.project-editor iframe { display: block; width: 100%; height: calc(100% - 70px); min-height: 525px; border: none; background: #151717; }
+.project-editor iframe { display: block; width: 100%; height: calc(100% - 70px); min-height: 615px; border: none; background: #151717; }
 .project-editor[data-editor-loading="true"] iframe { pointer-events: none; }
 .project-editor__status { min-height: 31px; padding: 7px 11px; color: var(--muted); background: #151717; font-size: 11px; }
 .project-editor__status[data-error="true"] { color: #ffb3b3; }
@@ -825,11 +825,19 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .layout.project-create-layout > .brand,
 .layout.project-create-layout > .edge-status { min-height: 48px; padding: 4px 23px; }
 .layout.project-create-layout > .main { max-width: none; padding: clamp(14px, 2vw, 28px); }
+.layout.project-focus-layout { width: 100%; max-width: none; margin: 0; gap: 0; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main main" "footer footer"; }
+.layout.project-focus-layout > .project-identity,
+.layout.project-focus-layout > .brand { min-height: 54px; justify-self: stretch; padding: 8px 16px; border-radius: 0; }
+.layout.project-focus-layout > .edge-status { min-height: 54px; justify-self: stretch; padding: 7px 16px; border-radius: 0; }
+.layout.project-focus-layout > .nav { display: none; }
+.layout.project-focus-layout > .main { max-width: none; padding: clamp(8px, 1.2vw, 16px); }
+.layout.project-focus-layout > .main > .crumb { display: none; }
+.layout.project-focus-layout .content-root, .layout.project-focus-layout .content-block { width: 100%; }
 .project-create-layout .content-root { width: 100%; }
 .project-create-layout .content-block { width: 100%; }
 .layout:has(.project-workspace) > .main { max-width: none; }
 .layout:has(.project-workspace) .content-root, .layout:has(.project-workspace) .content-block { width: 100%; }
-.project-workspace .project-editor { min-height: calc(100vh - 300px); margin-top: 20px; }
+.project-workspace .project-editor { min-height: calc(100vh - 190px); margin-top: 12px; }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -901,6 +909,12 @@ body[data-auth="out"] .ub-guest { display: flex; }
   .main {
     max-width: none;
   }
+}
+
+@media (min-width: 761px) and (max-width: 980px) {
+  .project-create__layout { grid-template-columns: minmax(0, 1fr); }
+  .project-create__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .project-create__fields .create-actions { align-self: end; }
 }
 
 @media (max-width: 760px) {
@@ -1024,7 +1038,8 @@ function brandSegmentsForPath(path) {
 }
 
 function brandHeaderHtml(path) {
-  if (PROJECTS[path]) {
+  const focusedProject = path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"));
+  if (PROJECTS[path] || focusedProject) {
     const parts = projectSegmentsForPath(path).map((segment, index) => {
       const sep = index === 0 ? "" : `<span class="project-identity__sep">/</span>`;
       const cls = segment.owner ? "project-identity__owner" : "project-identity__name";
@@ -1184,7 +1199,8 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
     blog: i18n.text("nav.blog"),
     about: i18n.text("nav.about"),
   });
-  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}">
+  const focusedProject = path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"));
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${focusedProject ? " project-focus-layout" : ""}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}

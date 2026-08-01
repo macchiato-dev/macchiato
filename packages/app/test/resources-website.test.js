@@ -453,7 +453,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
 
   await page.getByRole("link", { name: "New Project" }).first().click();
   assert.deepEqual(projectErrors, []);
+  await page.locator("[data-project-file]").first().waitFor();
   await page.getByLabel("Project name").fill("Digital Clock");
+  await page.waitForTimeout(50);
+  assert.deepEqual(projectErrors, []);
   assert.equal(await page.getByLabel("Project slug").inputValue(), "digital-clock");
   await page.getByLabel("Project slug").fill("Digital Clock");
   assert.equal(await page.getByLabel("Project slug").getAttribute("aria-invalid"), "true");
@@ -462,9 +465,29 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.getByLabel("Project slug").getAttribute("aria-invalid"), "false");
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
-  await page.getByLabel("Template").selectOption("html");
+  assert.equal(await page.locator(".layout.project-focus-layout > .nav").isHidden(), true);
+  const startingPoint = page.getByLabel("Starting point");
+  assert.deepEqual(await startingPoint.locator("option").allTextContents(), ["HTML page", "Canvas sketch", "SVG illustration", "Blank project"]);
+  await startingPoint.selectOption("canvas");
   const newEditor = page.frameLocator(".project-editor iframe");
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
+  await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
+  assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
+  await page.getByRole("button", { name: "script.js", exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("getContext", { exact: false }).waitFor());
+  await startingPoint.selectOption("html");
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await newEditor.locator(".cm-content").click();
+  await assert.doesNotReject(newEditor.locator(".cm-cursor").waitFor({ state: "visible" }));
+  await newEditor.getByRole("button", { name: "Preview" }).click();
+  assert.equal(await newEditor.locator("main").getAttribute("data-view"), "preview");
+  await newEditor.getByRole("button", { name: "Editor" }).click();
+  assert.equal(await newEditor.locator("main").getAttribute("data-view"), "editor");
+  await newEditor.getByRole("button", { name: "Split" }).click();
+  const splitter = newEditor.getByRole("separator", { name: "Resize editor and preview" });
+  await splitter.press("ArrowRight");
+  assert.equal(await splitter.getAttribute("aria-valuenow"), "55");
   await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
   await page.getByRole("button", { name: "Configuration" }).click();
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
@@ -481,6 +504,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
+  assert.equal(await page.locator(".layout.project-focus-layout > .nav").isHidden(), true);
   await assert.doesNotReject(page.getByRole("button", { name: "Versions (1)" }).waitFor());
   await assert.doesNotReject(page.locator(".project-editor iframe").waitFor());
   const projectEditor = page.frameLocator(".project-editor iframe");
@@ -506,6 +530,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("link", { name: /Digital Clock/ }).click();
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
+  const guest = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await guest.goto(`http://resources-edge.localhost:${port}/tiny-tools/digital-clock`, { waitUntil: "networkidle" });
+  assert.equal(await guest.locator(".layout.project-focus-layout > .nav").isHidden(), true);
+  await assert.doesNotReject(guest.getByRole("heading", { name: "Digital Clock" }).waitFor());
+  await guest.close();
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {

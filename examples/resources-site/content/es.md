@@ -143,12 +143,12 @@
 - **projectCreate.slug**: Identificador del proyecto
 - **projectCreate.description**: Descripción (opcional)
 - **projectCreate.namespace**: Espacio de nombres
-- **projectCreate.template**: Plantilla
+- **projectCreate.template**: Punto de partida
 - **projectCreate.visibility**: Visibilidad
-- **projectCreate.blank**: Vacío
-- **projectCreate.html**: HTML
-- **projectCreate.svg**: SVG
-- **projectCreate.canvas**: Canvas
+- **projectCreate.blank**: Proyecto vacío
+- **projectCreate.html**: Página HTML
+- **projectCreate.svg**: Ilustración SVG
+- **projectCreate.canvas**: Boceto en Canvas
 - **projectCreate.submit**: Crear proyecto
 - **projectCreate.content**: Contenido del proyecto
 - **projectCreate.editor**: Editor de proyecto aislado

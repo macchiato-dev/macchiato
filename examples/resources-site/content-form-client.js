@@ -11,6 +11,70 @@ function slugify(value) {
 const EDITOR_PROTOCOL = "resources-project-editor-v1";
 const DRAFT_KEY = "resources_project_draft_v1";
 const CHECKPOINT_MS = 300_000;
+const STARTING_POINTS = Object.freeze({
+  html: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello</h1>\n    <p>Edit this page to make it yours.</p>\n  </main>\n  <script src=\"./script.js\"></script>\n</body>\n</html>\n" },
+      { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
+      { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
+    ],
+    config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
+  },
+  canvas: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Canvas sketch</title>\n<link rel=\"stylesheet\" href=\"./style.css\">\n<canvas width=\"720\" height=\"480\" aria-label=\"Canvas sketch\"></canvas>\n<script src=\"./script.js\"></script>\n" },
+      { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
+    ],
+    config: { entry: "index.html", sandbox: { network: false, storage: "memory" } },
+  },
+  svg: {
+    files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
+    config: { entry: "image.svg", sandbox: { network: false, storage: "memory" } },
+  },
+  blank: {
+    files: [{ path: "index.html", content: "" }],
+    config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
+  },
+});
+
+const generatedSlugs = new WeakMap();
+function slugPair(source) {
+  const slugId = source.dataset.slugSource || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
+  const slug = document.getElementById(slugId);
+  const error = document.getElementById(slug?.getAttribute("aria-describedby"));
+  return slug && error ? { slug, error } : null;
+}
+function validateSlug(slug, error, touched = true) {
+  const invalid = slug.value !== "" && !slugPattern.test(slug.value);
+  slug.setCustomValidity(invalid ? error.dataset.message : "");
+  slug.setAttribute("aria-invalid", invalid ? "true" : "false");
+  error.hidden = !invalid || !touched;
+}
+document.addEventListener("input", (event) => {
+  const source = event.target.closest?.("[data-slug-source], #project-name, #organization-name");
+  if (source) {
+    const pair = slugPair(source);
+    if (!pair) return;
+    const previous = generatedSlugs.get(source) ?? pair.slug.value;
+    if (pair.slug.value !== "" && pair.slug.value !== previous) return;
+    const generated = slugify(source.value);
+    generatedSlugs.set(source, generated);
+    pair.slug.value = generated;
+    validateSlug(pair.slug, pair.error, false);
+    return;
+  }
+  const slug = event.target.closest?.("#project-slug, #organization-slug");
+  if (!slug) return;
+  const error = document.getElementById(slug.getAttribute("aria-describedby"));
+  if (error) validateSlug(slug, error);
+});
+document.addEventListener("focusout", (event) => {
+  const slug = event.target.closest?.("#project-slug, #organization-slug");
+  if (!slug) return;
+  const error = document.getElementById(slug.getAttribute("aria-describedby"));
+  if (error) validateSlug(slug, error);
+});
 
 function draftHistory(snapshot) {
   const empty = emptyProjectSnapshot();
@@ -71,7 +135,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!ready) return;
     suppressChange = true;
     root.dataset.editorLoading = "true";
-    iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode() }, "*");
+    iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode(), snapshot: state }, "*");
   }
 
   function renderTabs() {
@@ -273,34 +337,18 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderTabs();
     sendContent();
   });
+  const startingPoint = root.closest("form")?.querySelector("[data-project-starting-point]");
+  startingPoint?.addEventListener("change", () => {
+    const next = STARTING_POINTS[startingPoint.value];
+    if (!next) return;
+    selected = next.files[0].path;
+    updateSnapshot(next, { destructive: true });
+    renderTabs();
+    sendContent();
+  });
   versionButton.addEventListener("click", () => { historyPanel.hidden = false; draft ? renderDraftVersions() : renderStoredVersions(); });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
-}
-
-for (const source of document.querySelectorAll("[data-slug-source]")) {
-  const slug = document.getElementById(source.dataset.slugSource);
-  const error = document.getElementById(slug?.getAttribute("aria-describedby"));
-  if (!slug || !error) continue;
-  let generated = slug.value === "";
-  let touched = false;
-  function validate() {
-    const invalid = slug.value !== "" && !slugPattern.test(slug.value);
-    slug.setCustomValidity(invalid ? error.dataset.message : "");
-    slug.setAttribute("aria-invalid", invalid ? "true" : "false");
-    error.hidden = !invalid || !touched;
-  }
-  source.addEventListener("input", () => {
-    if (!generated) return;
-    slug.value = slugify(source.value);
-    validate();
-  });
-  slug.addEventListener("input", (event) => {
-    if (event.isTrusted) generated = slug.value === slugify(source.value);
-    touched = true;
-    validate();
-  });
-  slug.addEventListener("blur", () => { touched = true; validate(); });
 }
