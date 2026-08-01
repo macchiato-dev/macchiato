@@ -478,7 +478,13 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "HTML page", "Canvas sketch", "SVG illustration", "Blank project"]);
   assert.equal(await template.inputValue(), "article");
   assert.equal(await container.inputValue(), "article");
-  assert.match(await page.locator("[data-container-outline]").textContent(), /article.*header.*h1.*p.*a/);
+  const elementTags = page.locator("[data-container-outline] [data-element-tag]");
+  assert.deepEqual(await elementTags.allTextContents(), ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"]);
+  assert.equal(await page.locator("[data-element-tag='html']").getAttribute("title"), "Parents: document. Attributes: lang.");
+  assert.equal(await page.locator("[data-element-tag='title']").getAttribute("title"), "Parents: head. Attributes: none.");
+  await page.locator("[data-element-tag='a']").hover();
+  assert.equal(await page.locator("[data-element-tag='a']").getAttribute("title"), "Parents: p, li. Attributes: href, title.");
+  await page.screenshot({ path: "/tmp/resources-element-tags.png" });
   const linkPatterns = page.getByLabel("Allowed Link URL Patterns");
   assert.equal(await linkPatterns.inputValue(), "*.wikipedia.org");
   const linkPatternsHeight = await linkPatterns.evaluate((element) => element.getBoundingClientRect().height);
@@ -544,6 +550,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
   await template.selectOption("canvas");
   assert.equal(await container.inputValue(), "canvas");
+  assert.deepEqual(await page.locator("[data-container-outline] [data-element-tag]").allTextContents(), ["html", "head", "meta", "title", "body", "canvas", "script"]);
   assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
   await page.getByRole("button", { name: "script.js", exact: true }).click();
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);

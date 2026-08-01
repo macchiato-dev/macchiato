@@ -1,5 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
+import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -26,7 +27,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
       { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
-    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: ["main", "h1", "p"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: containerElementNames("page") }, sandbox: { network: false, storage: "session" } },
   },
   canvas: {
     files: [
@@ -34,15 +35,15 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
       { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
     ],
-    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: ["canvas"] }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: containerElementNames("canvas") }, sandbox: { network: false, storage: "memory" } },
   },
   svg: {
     files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
-    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: ["svg", "title", "rect", "circle", "path"] }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: containerElementNames("svg") }, sandbox: { network: false, storage: "memory" } },
   },
   blank: {
     files: [{ path: "index.html", content: "" }],
-    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: [] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: containerElementNames("page") }, sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -358,18 +359,18 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const container = form?.querySelector("[data-project-container]");
   const containerOutline = form?.querySelector("[data-container-outline]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
-  const containerElements = Object.freeze({
-    article: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"],
-    page: ["main", "section", "header", "footer", "h1", "h2", "p", "a", "img", "ul", "li"],
-    canvas: ["canvas"],
-    svg: ["svg", "title", "g", "path", "rect", "circle", "line", "text"],
-  });
-  const containerOutlines = Object.freeze({
-    article: "html → head (meta, title, link) + body → article (header, h1, p, a, strong, em, ul, li, code)",
-    page: "html → head (meta, title, link) + body → main (section, header, footer, h1, h2, p, a, img, ul, li)",
-    canvas: "html → head (meta, title) + body → canvas",
-    svg: "svg → title, g, path, rect, circle, line, text",
-  });
+  function renderContainerElements(name) {
+    if (!containerOutline) return;
+    containerOutline.replaceChildren(...containerElementNames(name).map((element) => {
+      const tag = document.createElement("span");
+      tag.className = "element-tag";
+      tag.tabIndex = 0;
+      tag.dataset.elementTag = element;
+      tag.textContent = element;
+      tag.title = describeContainerElement(name, element);
+      return tag;
+    }));
+  }
   function growTextarea(textarea) {
     if (!textarea) return;
     textarea.style.height = "auto";
@@ -377,8 +378,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   function updateContainer() {
     if (!container) return;
-    const allowedElements = containerElements[container.value] || [];
-    if (containerOutline) containerOutline.textContent = containerOutlines[container.value] || `${container.value} → no elements yet`;
+    const allowedElements = containerElementNames(container.value);
+    renderContainerElements(container.value);
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     try {
       validateAllowedUrlPatterns(allowedLinkPatterns);
@@ -398,7 +399,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (container) container.value = next.config.container?.name || "page";
     if (linkPatterns) linkPatterns.value = (next.config.container?.allowedLinkPatterns || []).join("\n");
     growTextarea(linkPatterns);
-    if (containerOutline) containerOutline.textContent = containerOutlines[container.value] || `${container.value} → no elements yet`;
+    renderContainerElements(container.value);
     selected = next.files[0].path;
     updateSnapshot(next, { destructive: true });
     renderTabs();
