@@ -9,7 +9,7 @@ import {
 } from "../../../examples/resources-site/models/content.js";
 import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
 
-async function stores() {
+async function stores({ now = () => 200 } = {}) {
   const db = new DatabaseSync(":memory:");
   db.exec("PRAGMA foreign_keys = ON");
   const client = createNodeSqliteClient(db);
@@ -23,7 +23,7 @@ async function stores() {
     emailVerified: true,
   });
   let id = 0;
-  return { account, content: createContentStore(client, { now: () => 200, randomId: () => `content-${++id}` }) };
+  return { account, content: createContentStore(client, { now, randomId: () => `content-${++id}` }) };
 }
 
 test("content store creates organizations and namespaced projects", async () => {
@@ -85,4 +85,50 @@ test("content store validates inputs, ownership, and namespace uniqueness", asyn
     }),
     /organization is not available/,
   );
+});
+
+test("content store versions multi-file project state periodically and around destructive changes", async () => {
+  let clock = 1_000;
+  const { account, content } = await stores({ now: () => clock });
+  const created = await content.createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "history", name: "History",
+    description: "", visibility: "private", template: "html",
+    snapshot: {
+      files: [{ path: "index.html", content: "<h1>One</h1>" }, { path: "app.js", content: "one();" }],
+      config: { sandbox: { network: false }, entry: "index.html" },
+    },
+  });
+  let workspace = await content.getProjectWorkspace("latte", "history", account.id);
+  assert.equal(workspace.versionCount, 1);
+  assert.equal((await content.listProjectVersions(created.id, account.id)).length, 1);
+
+  clock += 60_000;
+  await content.saveProjectSnapshot(account.id, created.id, {
+    files: [{ path: "index.html", content: "<h1>Two</h1>" }, { path: "app.js", content: "one();" }],
+    config: workspace.snapshot.config,
+  });
+  assert.equal((await content.listProjectVersions(created.id, account.id)).length, 1);
+
+  clock += 300_000;
+  await content.saveProjectSnapshot(account.id, created.id, {
+    files: [{ path: "index.html", content: "<h1>Three</h1>" }, { path: "app.js", content: "one();" }],
+    config: workspace.snapshot.config,
+  });
+  assert.equal((await content.listProjectVersions(created.id, account.id)).length, 2);
+
+  clock += 10_000;
+  const destructive = await content.saveProjectSnapshot(account.id, created.id, {
+    files: [{ path: "index.html", content: "<h1>Three</h1>" }],
+    config: { sandbox: { network: false }, entry: "index.html" },
+  });
+  assert.equal(destructive.versionCount, 3);
+  assert.equal((await content.getProjectVersion(created.id, 2, account.id)).files.length, 2);
+  assert.equal((await content.getProjectVersion(created.id, 3, account.id)).files.length, 1);
+
+  clock += 10_000;
+  const restored = await content.restoreProjectVersion(account.id, created.id, 1);
+  assert.equal(restored.versionCount, 4);
+  workspace = await content.getProjectWorkspace("latte", "history", account.id);
+  assert.equal(workspace.snapshot.files.find((file) => file.path === "index.html").content, "<h1>One</h1>");
+  assert.equal(workspace.snapshot.files.length, 2);
 });

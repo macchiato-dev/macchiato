@@ -1,3 +1,11 @@
+import {
+  applyProjectPatch,
+  diffProjectSnapshots,
+  emptyProjectSnapshot,
+  normalizeProjectSnapshot,
+  projectPatchIsEmpty,
+} from "./project-history.js";
+
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS resource_organizations (
     id TEXT PRIMARY KEY,
@@ -27,6 +35,33 @@ const SCHEMA = [
   ) STRICT`,
   `CREATE INDEX IF NOT EXISTS resource_projects_owner
     ON resource_projects(owner_user_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS resource_project_state (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    snapshot_json TEXT NOT NULL,
+    checkpoint_snapshot_json TEXT NOT NULL,
+    last_version_sequence INTEGER NOT NULL,
+    last_version_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS resource_project_versions (
+    project_id TEXT NOT NULL REFERENCES resource_projects(id) ON DELETE CASCADE,
+    sequence INTEGER NOT NULL,
+    reason TEXT NOT NULL CHECK (reason IN ('initial', 'periodic', 'before_destructive', 'destructive', 'restore', 'manual')),
+    patch_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (project_id, sequence)
+  ) STRICT`,
+  `CREATE INDEX IF NOT EXISTS resource_project_versions_created
+    ON resource_project_versions(project_id, created_at DESC)`,
+  `INSERT OR IGNORE INTO resource_project_state
+      (project_id, snapshot_json, checkpoint_snapshot_json,
+       last_version_sequence, last_version_at, updated_at)
+    SELECT id, '{"files":[],"config":{}}', '{"files":[],"config":{}}', 1, created_at, updated_at
+    FROM resource_projects`,
+  `INSERT OR IGNORE INTO resource_project_versions
+      (project_id, sequence, reason, patch_json, created_at)
+    SELECT id, 1, 'initial', '{"version":1,"files":[],"config":[]}', created_at
+    FROM resource_projects`,
 ];
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -71,6 +106,7 @@ function isUniqueError(error) {
 function project(row) {
   return Object.freeze({
     id: String(row.id),
+    ownerUserId: String(row.owner_user_id),
     namespaceKind: String(row.namespace_kind),
     namespace: String(row.namespace_slug),
     slug: String(row.slug),
@@ -80,6 +116,24 @@ function project(row) {
     template: String(row.template),
     createdAt: Number(row.created_at),
   });
+}
+
+function snapshotJson(value) {
+  return JSON.stringify(normalizeProjectSnapshot(value));
+}
+
+function parsedSnapshot(value) {
+  return normalizeProjectSnapshot(JSON.parse(String(value)));
+}
+
+function parsedPatch(value) {
+  const patch = JSON.parse(String(value));
+  if (!patch || patch.version !== 1 || !Array.isArray(patch.files) || !Array.isArray(patch.config)) throw new Error("Stored project patch is invalid");
+  return patch;
+}
+
+function destructivePatch(patch) {
+  return patch.files.some((operation) => operation.op === "delete") || patch.config.length > 0;
 }
 
 function organization(row) {
@@ -115,6 +169,61 @@ export function createContentStore(client, {
       return project(row);
     },
 
+    async getProjectWorkspace(namespace, projectSlug, userId) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at,
+                     s.snapshot_json, s.last_version_sequence, s.updated_at
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
+                AND p.owner_user_id = ?`,
+        args: [slug(namespace), slug(projectSlug), String(userId)],
+      });
+      const row = found.rows[0];
+      if (!row) return null;
+      return Object.freeze({
+        project: project(row),
+        snapshot: parsedSnapshot(row.snapshot_json),
+        versionCount: Number(row.last_version_sequence),
+        updatedAt: Number(row.updated_at),
+      });
+    },
+
+    async listProjectVersions(projectId, userId) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT v.sequence, v.reason, v.created_at
+              FROM resource_project_versions v
+              JOIN resource_projects p ON p.id = v.project_id
+              WHERE v.project_id = ? AND p.owner_user_id = ?
+              ORDER BY v.sequence DESC`,
+        args: [String(projectId), String(userId)],
+      });
+      return Object.freeze(found.rows.map((row) => Object.freeze({
+        sequence: Number(row.sequence), reason: String(row.reason), createdAt: Number(row.created_at),
+      })));
+    },
+
+    async getProjectVersion(projectId, sequence, userId) {
+      await initialize();
+      const target = Number(sequence);
+      if (!Number.isSafeInteger(target) || target < 1) throw new ContentValidationError("version", "version is invalid");
+      const found = await client.execute({
+        sql: `SELECT v.sequence, v.patch_json
+              FROM resource_project_versions v
+              JOIN resource_projects p ON p.id = v.project_id
+              WHERE v.project_id = ? AND p.owner_user_id = ? AND v.sequence <= ?
+              ORDER BY v.sequence`,
+        args: [String(projectId), String(userId), target],
+      });
+      if (!found.rows.length || Number(found.rows.at(-1).sequence) !== target) return null;
+      let snapshot = emptyProjectSnapshot();
+      for (const row of found.rows) snapshot = applyProjectPatch(snapshot, parsedPatch(row.patch_json));
+      return snapshot;
+    },
+
     async listForUser(userId) {
       await initialize();
       const [organizations, projects] = await Promise.all([
@@ -125,7 +234,7 @@ export function createContentStore(client, {
           args: [String(userId)],
         }),
         client.execute({
-          sql: `SELECT id, namespace_kind, namespace_slug, slug, name,
+          sql: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
                        description, visibility, template, created_at
                 FROM resource_projects WHERE owner_user_id = ?
                 ORDER BY updated_at DESC, name COLLATE NOCASE`,
@@ -187,6 +296,7 @@ export function createContentStore(client, {
       }
       const value = {
         id: randomId(),
+        owner_user_id: user,
         namespace_kind: namespaceKind,
         namespace_id: namespaceId,
         namespace_slug: namespaceSlug,
@@ -197,8 +307,10 @@ export function createContentStore(client, {
         template,
       };
       const timestamp = now();
+      const initialSnapshot = normalizeProjectSnapshot(input.snapshot || { files: [], config: {} });
+      const initialPatch = diffProjectSnapshots(emptyProjectSnapshot(), initialSnapshot);
       try {
-        await client.execute({
+        await client.batch([{
           sql: `INSERT INTO resource_projects
                   (id, owner_user_id, namespace_kind, namespace_id, namespace_slug,
                    slug, name, description, visibility, template, created_at, updated_at)
@@ -208,12 +320,93 @@ export function createContentStore(client, {
             value.slug, value.name, value.description, value.visibility, value.template,
             timestamp, timestamp,
           ],
-        });
+        }, {
+          sql: `INSERT INTO resource_project_state
+                  (project_id, snapshot_json, checkpoint_snapshot_json,
+                   last_version_sequence, last_version_at, updated_at)
+                VALUES (?, ?, ?, 1, ?, ?)`,
+          args: [value.id, snapshotJson(initialSnapshot), snapshotJson(initialSnapshot), timestamp, timestamp],
+        }, {
+          sql: `INSERT INTO resource_project_versions
+                  (project_id, sequence, reason, patch_json, created_at)
+                VALUES (?, 1, 'initial', ?, ?)`,
+          args: [value.id, JSON.stringify(initialPatch), timestamp],
+        }]);
       } catch (error) {
         if (isUniqueError(error)) throw new ContentConflictError("project");
         throw error;
       }
       return project({ ...value, created_at: timestamp });
+    },
+
+    async saveProjectSnapshot(userId, projectId, snapshotValue, { reason = "periodic", checkpointIntervalMs = 300_000, destructive = false } = {}) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT s.snapshot_json, s.checkpoint_snapshot_json, s.last_version_sequence,
+                     s.last_version_at, s.updated_at
+              FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?`,
+        args: [String(projectId), String(userId)],
+      });
+      const row = found.rows[0];
+      if (!row) return null;
+      const current = parsedSnapshot(row.snapshot_json);
+      const checkpoint = parsedSnapshot(row.checkpoint_snapshot_json);
+      const next = normalizeProjectSnapshot(snapshotValue);
+      const change = diffProjectSnapshots(current, next);
+      if (projectPatchIsEmpty(change)) return Object.freeze({ changed: false, versionCount: Number(row.last_version_sequence), snapshot: current });
+      const timestamp = now();
+      const isDestructive = destructive || destructivePatch(change) || reason === "restore";
+      let sequence = Number(row.last_version_sequence);
+      let versionSnapshot = checkpoint;
+      const queries = [];
+      if (isDestructive) {
+        const pending = diffProjectSnapshots(versionSnapshot, current);
+        if (!projectPatchIsEmpty(pending)) {
+          sequence++;
+          queries.push({
+            sql: `INSERT INTO resource_project_versions (project_id, sequence, reason, patch_json, created_at)
+                  VALUES (?, ?, 'before_destructive', ?, ?)`,
+            args: [String(projectId), sequence, JSON.stringify(pending), timestamp],
+          });
+          versionSnapshot = current;
+        }
+        sequence++;
+        queries.push({
+          sql: `INSERT INTO resource_project_versions (project_id, sequence, reason, patch_json, created_at)
+                VALUES (?, ?, ?, ?, ?)`,
+          args: [String(projectId), sequence, reason === "restore" ? "restore" : "destructive", JSON.stringify(diffProjectSnapshots(versionSnapshot, next)), timestamp],
+        });
+        versionSnapshot = next;
+      } else if (timestamp - Number(row.last_version_at) >= checkpointIntervalMs || reason === "manual") {
+        sequence++;
+        queries.push({
+          sql: `INSERT INTO resource_project_versions (project_id, sequence, reason, patch_json, created_at)
+                VALUES (?, ?, ?, ?, ?)`,
+          args: [String(projectId), sequence, reason === "manual" ? "manual" : "periodic", JSON.stringify(diffProjectSnapshots(versionSnapshot, next)), timestamp],
+        });
+        versionSnapshot = next;
+      }
+      queries.push({
+        sql: `UPDATE resource_project_state
+              SET snapshot_json = ?, checkpoint_snapshot_json = ?, last_version_sequence = ?,
+                  last_version_at = ?, updated_at = ?
+              WHERE project_id = ?`,
+        args: [snapshotJson(next), snapshotJson(versionSnapshot), sequence,
+          versionSnapshot === checkpoint ? Number(row.last_version_at) : timestamp, timestamp, String(projectId)],
+      }, {
+        sql: `UPDATE resource_projects SET updated_at = ? WHERE id = ?`,
+        args: [timestamp, String(projectId)],
+      });
+      await client.batch(queries);
+      return Object.freeze({ changed: true, versionCount: sequence, snapshot: next });
+    },
+
+    async restoreProjectVersion(userId, projectId, sequence) {
+      const snapshot = await this.getProjectVersion(projectId, sequence, userId);
+      if (!snapshot) return null;
+      return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
     },
   });
 }
