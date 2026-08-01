@@ -34,6 +34,15 @@ function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+const focusedHomeIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>`;
+
+function focusedProjectDocument(html, namespace, slug) {
+  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
+  return html
+    .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 focused-view" data-view="focused">`)
+    .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
+}
+
 function message(messages, key, fallback) {
   return escapeHtml(messages?.[key] || fallback);
 }
@@ -67,9 +76,10 @@ function createMenuHtml(messages) {
   </details>`;
 }
 
-function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" } = {}) {
+function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/", focused = false } = {}) {
+  const shellClass = `box userbar edge-status${focused ? " toolbar--cardless" : ""}`;
   if (!session) {
-    return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+    return `<aside class="${shellClass}" data-screen-label="runtime-status">
       ${renderResourcesCommandPalette()}
       ${notificationMenuHtml(messages)}
       ${createMenuHtml(messages)}
@@ -79,7 +89,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" 
     </aside>`;
   }
   const initials = session.login.slice(0, 2).toUpperCase();
-  return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+  return `<aside class="${shellClass}" data-screen-label="runtime-status">
     ${renderResourcesCommandPalette()}
     ${notificationMenuHtml(messages)}
     ${createMenuHtml(messages)}
@@ -109,7 +119,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" 
 
 function renderSessionHtml(html, session, messages, options) {
   return html
-    .replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
+    .replace(/<aside class="box userbar edge-status(?: toolbar--cardless)?"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
     .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script><script type="module" src="/-/resources-site/content-form.js"></script></body>`);
 }
 
@@ -136,16 +146,16 @@ function requestEditorOrigin(configuredOrigin, requestUrl) {
 }
 
 function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", editorUrl, messages, draft = false }) {
-  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}">
+  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div>
       <div class="project-editor__tools"><button class="project-editor__tool" type="button" data-project-add-file aria-label="${message(messages, "projectEditor.addFile", "Add file")}">+</button><button class="project-editor__tool" type="button" data-project-remove-file aria-label="${message(messages, "projectEditor.removeFile", "Remove selected file")}">−</button></div>
-      <button class="project-editor__versions" type="button" data-project-versions>${message(messages, "projectEditor.versions", "Versions")} (<span>${versionCount}</span>)</button>
+      <button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><span aria-hidden="true">⌄</span></button>
     </div>
     <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
     <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
     <div class="project-editor__status" role="status" data-project-status>${message(messages, "projectEditor.saved", "Saved")}</div>
-    <aside class="project-editor__history" data-project-history hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
+    <aside class="project-editor__history" data-project-history role="dialog" aria-label="${message(messages, "projectEditor.history", "Version history")}" hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
   </section>`;
 }
 
@@ -466,6 +476,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
           html = html.replace(ACCOUNT_CONTENT_MARKER, projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token, `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`));
+          html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
         } else if (ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
@@ -478,7 +489,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, dynamic);
         }
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname });
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" });
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

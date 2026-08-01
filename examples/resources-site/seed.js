@@ -799,44 +799,57 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .form-field-error { color: #ffb3b3; font-size: 13px; }
 .project-create__heading { margin-bottom: 18px; }
 .project-create .create-form { max-width: none; margin-top: 0; }
-.project-create__layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 270px); gap: clamp(10px, 1.2vw, 16px); min-height: calc(100vh - 105px); }
+.project-create__layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 270px); gap: 0; min-height: calc(100vh - 54px); }
 .project-create__fields { display: grid; align-content: start; gap: 14px; }
 .project-create__fields .create-form textarea { min-height: 72px; }
 .project-create__fields .create-actions { gap: 8px; margin-top: 2px; }
 .project-editor { position: relative; min-width: 0; min-height: 650px; border: 1px solid var(--track-border); border-radius: 10px; background: #151717; }
-.project-editor__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px; color: var(--muted); background: var(--track); }
+.project-editor__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px; color: #cbd4ff; background: #17226e; }
 .project-editor__tabs { display: flex; align-items: center; gap: 3px; min-width: 0; }
 .project-editor__tools { display: flex; align-items: center; gap: 2px; }
 .project-editor__tab, .project-editor__tool, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
 .project-editor__tab:hover, .project-editor__tool:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
 .project-editor__tool:disabled { opacity: .4; cursor: default; }
 .project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
-.project-editor__versions { flex: 0 0 auto; }
+.project-editor__versions { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; }
+.project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
 .project-editor iframe { display: block; width: 100%; height: calc(100% - 70px); min-height: 615px; border: none; background: #151717; }
 .project-editor[data-editor-loading="true"] iframe { pointer-events: none; }
 .project-editor__status { min-height: 31px; padding: 7px 11px; color: var(--muted); background: #151717; font-size: 11px; }
 .project-editor__status[data-error="true"] { color: #ffb3b3; }
 .project-editor__history { position: absolute; top: 48px; right: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
-.project-editor__history-head, .project-editor__version-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .project-editor__history-head { padding: 3px 5px 9px; }
-.project-editor__version-row { padding: 7px 5px; color: var(--muted); font-size: 12px; }
 .project-editor__version { width: 100%; text-align: left; }
-.project-editor__version-row .project-editor__version { width: auto; }
+.project-editor__version[aria-current="true"] { color: var(--text); background: var(--hover); opacity: 1; cursor: default; }
 .layout.project-create-layout > .brand,
 .layout.project-create-layout > .edge-status { min-height: 48px; padding: 4px 23px; }
 .layout.project-create-layout > .main { max-width: none; padding: clamp(14px, 2vw, 28px); }
+html:has(.focused-view),
+body:has(.focused-view) { background: var(--pop-bg); }
 body:has(.focused-view) { padding: 0; }
-.layout.focused-view { width: 100%; max-width: none; margin: 0; gap: 0; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main main" "footer footer"; }
+.layout.focused-view { width: 100%; max-width: none; min-height: 100vh; margin: 0; gap: 0; background: var(--pop-bg); grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main main"; }
 .layout.focused-view > .focused-header,
-.layout.focused-view > .brand { min-height: 54px; justify-self: stretch; padding: 8px 16px; border-radius: 0; }
-.layout.focused-view > .edge-status { min-height: 54px; justify-self: stretch; padding: 7px 16px; border-radius: 0; }
+.layout.focused-view > .brand { min-height: 54px; justify-self: stretch; padding: 0 9px; border: none; border-radius: 0; background: #17226e; box-shadow: none; }
+.layout.focused-view > .userbar { min-height: 54px; justify-self: stretch; padding: 7px 9px 7px 0; border: none; border-radius: 0; background: #17226e; box-shadow: none; }
 .layout.focused-view > .nav { display: none; }
+.layout.focused-view > .footer { display: none; }
 .layout.focused-view > .main { max-width: none; padding: 0; }
 .layout.focused-view > .main > .crumb { display: none; }
 .layout.focused-view .content-root, .layout.focused-view .content-block { width: 100%; }
-.layout.focused-view .content-block { padding: 0; }
+.layout.focused-view .content-block { padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; }
 .focused-header { display: flex; align-items: center; }
-.focused-header .crumb { margin: 0; box-shadow: none; }
+.focused-header .crumb { margin: 0; padding: 0; box-shadow: none; }
+.toolbar--cardless { border: none; border-radius: 0; box-shadow: none; }
+.focused-view .project-editor { border-radius: 0; }
+.focused-view .project-create__fields { padding: 16px; border: 1px solid var(--track-border); border-radius: 0; }
+.focused-view .create-form input,
+.focused-view .create-form textarea,
+.focused-view .create-form select { border-radius: 3px; background: transparent; }
+.focused-view .project-view__identity { padding: 16px; }
+.focused-view .project-view__meta { margin: 0; padding: 0 16px 16px; }
+.focused-view .project-view__meta span { border-radius: 3px; background: transparent; }
+.focused-view .project-surface { border-radius: 0; }
 .project-create-layout .content-root { width: 100%; }
 .project-create-layout .content-block { width: 100%; }
 .layout:has(.project-workspace) > .main { max-width: none; }
@@ -1220,7 +1233,7 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
   const view = viewForPath(path);
   return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
     ${brandHeaderHtml(path)}
-    ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
+    ${documentRuntime ? renderResourcesEdgeStatus({ cardless: view === "focused" }) : renderResourcesUserMenu({ cardless: view === "focused" })}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n, blogExamplesOrigin })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey, menu)}

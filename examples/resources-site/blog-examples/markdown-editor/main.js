@@ -1,7 +1,11 @@
+import { basicSetup } from "codemirror";
+import { css } from "@codemirror/lang-css";
+import { html } from "@codemirror/lang-html";
+import { javascript } from "@codemirror/lang-javascript";
 import { markdown } from "@codemirror/lang-markdown";
-import { EditorState } from "@codemirror/state";
-import { drawSelection, EditorView, keymap } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { Compartment, EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { oneDark } from "@codemirror/theme-one-dark";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkHtml from "remark-html";
@@ -16,6 +20,14 @@ const embedded = window.parent !== window;
 const initial = embedded ? "" : demo;
 const preview = document.querySelector("#preview");
 const projectPreview = document.querySelector("#project-preview");
+const language = new Compartment();
+function languageExtension(name) {
+  if (name === "javascript") return javascript();
+  if (name === "html") return html();
+  if (name === "css") return css();
+  if (name === "markdown") return markdown();
+  return [];
+}
 async function render(source) {
   const result = await unified().use(remarkParse).use(remarkHtml, { sanitize: true }).process(source);
   preview.innerHTML = String(result);
@@ -38,7 +50,7 @@ const view = new EditorView({
   parent: document.querySelector("#editor"),
   state: EditorState.create({
     doc: initial,
-    extensions: [history(), markdown(), drawSelection(), keymap.of([...defaultKeymap, ...historyKeymap]), EditorView.lineWrapping, EditorView.updateListener.of((update) => {
+    extensions: [basicSetup, oneDark, language.of(markdown()), EditorView.lineWrapping, EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         const content = update.state.doc.toString();
         render(content);
@@ -85,7 +97,10 @@ if (embedded) {
     if (event.source !== parent || message?.protocol !== "resources-project-editor-v1") return;
     if (message.type === "set-content" && typeof message.content === "string" && message.content.length <= 1_000_000) {
       document.body.dataset.mode = message.mode === "markdown" ? "markdown" : "code";
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: message.content } });
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: message.content },
+        effects: language.reconfigure(languageExtension(message.language)),
+      });
       if (message.mode === "markdown") {
         projectPreview.hidden = true;
         preview.hidden = false;

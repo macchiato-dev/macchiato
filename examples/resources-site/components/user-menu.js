@@ -108,15 +108,15 @@ export const resourcesUserMenuSandboxSource = createExclusiveUserMenuSandboxSour
   bindingsFunction: "__resourcesUserbarBindings",
 });
 
-export function renderResourcesUserMenu() {
+export function renderResourcesUserMenu({ cardless = false } = {}) {
   return renderUserMenu(RESOURCES_USER_MENU).replace(
     '<section class="box userbar" data-screen-label="userbar">',
-    `<section class="box userbar" data-screen-label="userbar">${renderResourcesCommandPalette()}`,
+    `<section class="box userbar${cardless ? " toolbar--cardless" : ""}" data-screen-label="userbar">${renderResourcesCommandPalette()}`,
   );
 }
 
-export function renderResourcesEdgeStatus() {
-  return `<aside class="box userbar edge-status" data-screen-label="runtime-status">
+export function renderResourcesEdgeStatus({ cardless = false } = {}) {
+  return `<aside class="box userbar edge-status${cardless ? " toolbar--cardless" : ""}" data-screen-label="runtime-status">
     <div class="ub-guest"></div>
   </aside>`;
 }
