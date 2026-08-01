@@ -485,6 +485,17 @@ should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
 The SDK is pinned through `deno.json` and `deno.lock`; the edge script does not
 import executable code from a third-party CDN such as esm.sh.
 
+### Future Deno module publication
+
+Projects will shortly need a space for JavaScript that Deno can import over
+HTTPS. This should be a separate deployment authority and origin, not another
+path in the Resources document bucket. Published releases should use immutable,
+versioned or content-addressed URLs and an explicit manifest recording module
+paths, media types, and hashes. The origin should expose only the CORS needed by
+Deno and approved browser consumers. Declarative project configuration will pin
+exact module URLs; a mutable `latest` URL must not become part of a reproducible
+or security-sensitive deployment.
+
 ## Audit boundaries
 
 The entrypoint only wires environment configuration into the handler. Review
