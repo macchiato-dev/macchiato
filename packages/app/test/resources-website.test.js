@@ -483,7 +483,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-element-tag='html']").getAttribute("title"), "Parents: document. Attributes: lang.");
   assert.equal(await page.locator("[data-element-tag='title']").getAttribute("title"), "Parents: head. Attributes: none.");
   await page.locator("[data-element-tag='a']").hover();
-  assert.equal(await page.locator("[data-element-tag='a']").getAttribute("title"), "Parents: p, li. Attributes: href, title.");
+  assert.equal(await page.locator("[data-element-tag='a']").getAttribute("title"), "Parents: p, li. Attributes: href, title, target.");
   await page.screenshot({ path: "/tmp/resources-element-tags.png" });
   const linkPatterns = page.getByLabel("Allowed Link URL Patterns");
   assert.equal(await linkPatterns.inputValue(), "*.wikipedia.org");
@@ -514,6 +514,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "WebAssembly" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Capability-based security" }).waitFor());
+  assert.deepEqual(await newEditor.locator("[data-project-preview] a").evaluateAll((links) => links.map((link) => link.target)), ["_blank", "_blank", "_blank"]);
   assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "Constrained view example");
   assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);

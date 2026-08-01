@@ -1,5 +1,5 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
-import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
+import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
 import { mountResourcesProjectEditor } from "/-/resources-site/project-editor-runtime.js";
 
@@ -11,7 +11,7 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
 }
 
-const DRAFT_KEY = "resources_project_draft_v3";
+const DRAFT_KEY = "resources_project_draft_v4";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
   article: {
@@ -19,7 +19,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Constrained view example</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
   html: {
     files: [
@@ -27,7 +27,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
       { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
-    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: containerElementNames("page") }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: containerElementNames("page"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
   canvas: {
     files: [
@@ -35,15 +35,15 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
       { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
     ],
-    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: containerElementNames("canvas") }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: containerElementNames("canvas"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
   svg: {
     files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
-    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: containerElementNames("svg") }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: containerElementNames("svg"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
   blank: {
     files: [{ path: "index.html", content: "" }],
-    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: containerElementNames("page") }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: containerElementNames("page"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -219,7 +219,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const element = node.namespaceURI === "http://www.w3.org/2000/svg"
         ? document.createElementNS("http://www.w3.org/2000/svg", name)
         : document.createElement(name);
-      if (name === "a" && node.getAttribute("href")) element.setAttribute("href", node.getAttribute("href"));
+      if (name === "a" && node.getAttribute("href")) {
+        const href = node.getAttribute("href");
+        const patterns = state.config?.container?.allowedLinkPatterns || [];
+        if (urlMatchesAllowedPatterns(href, patterns)) {
+          element.setAttribute("href", href);
+          const authoredTarget = node.getAttribute("target");
+          if (authoredTarget) element.setAttribute("target", authoredTarget);
+          else if (state.config?.container?.links?.addTargetBlank !== false) element.setAttribute("target", "_blank");
+        }
+      }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
         const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id"]);
         for (const attribute of node.attributes) {
@@ -462,7 +471,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       linkPatterns?.setAttribute("aria-invalid", "true");
       return;
     }
-    updateSnapshot({ files: state.files, config: { ...state.config, container: { name: container.value, allowedElements, allowedLinkPatterns } } }, { destructive: true });
+    updateSnapshot({ files: state.files, config: { ...state.config, container: { ...state.config.container, name: container.value, allowedElements, allowedLinkPatterns } } }, { destructive: true });
     sendContent();
   }
   template?.addEventListener("change", () => {
@@ -491,6 +500,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
+    const rootRect = root.getBoundingClientRect();
+    const buttonRect = versionButton.getBoundingClientRect();
+    const panelWidth = historyPanel.getBoundingClientRect().width;
+    historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.left - rootRect.left, rootRect.width - panelWidth - 8))}px`;
+    historyPanel.style.top = `${buttonRect.bottom - rootRect.top + 6}px`;
     draft ? renderDraftVersions() : renderStoredVersions();
   });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });

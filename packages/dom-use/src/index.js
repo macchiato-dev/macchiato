@@ -276,6 +276,13 @@ class GuestElement extends GuestNode {
       return;
     }
     this.attributes[name] = String(value);
+    if (this.tagName === "a" && String(name).toLowerCase() === "href"
+      && this.ownerDocument.domUse.schema.links?.addTargetBlank === true
+      && this.attributes.target === undefined) {
+      this.ownerDocument.domUse.validateAttributeValue("_blank");
+      this.ownerDocument.domUse.assertAttributeBudget(this, "target");
+      this.attributes.target = "_blank";
+    }
   }
 
   getAttribute(name) {

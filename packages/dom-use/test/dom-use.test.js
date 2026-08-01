@@ -209,6 +209,31 @@ test("allows URL attributes only when the URL matches an explicit rule", () => {
   );
 });
 
+test("can add target blank to links as a declared projection policy", () => {
+  const domUse = articleDomUse({
+    links: { addTargetBlank: true },
+    urls: { href: /^https:\/\/library\.example\// },
+  });
+  const doc = domUse.createDocument();
+  const link = doc.createElement("a");
+  link.setAttribute("href", "https://library.example/events");
+  assert.equal(link.getAttribute("target"), "_blank");
+  assert.match(domUse.getOuterHTML(link), /target="_blank"/);
+});
+
+test("target blank projection preserves an explicitly configured target", () => {
+  const domUse = articleDomUse({
+    nodes: { a: { attrs: ["href", "target"], children: ["#text"] } },
+    links: { addTargetBlank: true },
+    urls: { href: /^https:\/\/library\.example\// },
+  });
+  const doc = domUse.createDocument();
+  const link = doc.createElement("a");
+  link.setAttribute("target", "_self");
+  link.setAttribute("href", "https://library.example/events");
+  assert.equal(link.getAttribute("target"), "_self");
+});
+
 test("enforces configurable text and attribute length limits", () => {
   const domUse = articleDomUse({
     limits: {
