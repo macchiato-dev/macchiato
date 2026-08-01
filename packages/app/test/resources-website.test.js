@@ -465,7 +465,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.getByLabel("Project slug").getAttribute("aria-invalid"), "false");
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
-  assert.equal(await page.locator(".layout.project-focus-layout > .nav").isHidden(), true);
+  assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   const startingPoint = page.getByLabel("Starting point");
   assert.deepEqual(await startingPoint.locator("option").allTextContents(), ["HTML page", "Canvas sketch", "SVG illustration", "Blank project"]);
   await startingPoint.selectOption("canvas");
@@ -504,7 +504,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
-  assert.equal(await page.locator(".layout.project-focus-layout > .nav").isHidden(), true);
+  assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   await assert.doesNotReject(page.getByRole("button", { name: "Versions (1)" }).waitFor());
   await assert.doesNotReject(page.locator(".project-editor iframe").waitFor());
   const projectEditor = page.frameLocator(".project-editor iframe");
@@ -532,7 +532,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
   const guest = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await guest.goto(`http://resources-edge.localhost:${port}/tiny-tools/digital-clock`, { waitUntil: "networkidle" });
-  assert.equal(await guest.locator(".layout.project-focus-layout > .nav").isHidden(), true);
+  assert.equal(await guest.locator(".layout.focused-view > .nav").isHidden(), true);
   await assert.doesNotReject(guest.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await guest.close();
 });
@@ -778,17 +778,21 @@ test("resources sqlite site transitions between friendly paths in a real browser
   await assert.doesNotReject(page.locator("h1", { hasText: "App" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/macchiato/app");
   assert.equal((await page.locator("#brand-path").textContent()).replace(/\s+/g, ""), "/macchiato/app");
-  assert.equal(await page.locator(".project-identity").count(), 1);
-  assert.equal(await page.locator(".project-identity__home[aria-label='Resources.co home'] svg").count(), 1);
-  assert.equal(await page.locator(".project-identity__owner", { hasText: "macchiato" }).count(), 1);
-  assert.equal(await page.locator(".project-identity__name--current", { hasText: "app" }).count(), 1);
+  assert.equal(await page.locator(".focused-header").count(), 1);
+  assert.equal(await page.locator(".focused-header .home-ic[aria-label='Home'] svg").count(), 1);
+  assert.equal(await page.locator(".focused-header a", { hasText: "macchiato" }).count(), 1);
+  assert.equal(await page.locator(".focused-header .here", { hasText: "app" }).count(), 1);
+  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
+  assert.equal(await page.locator(".nav").isHidden(), true);
   assert.equal(await page.locator(".brand__home").count(), 0);
-  await assert.doesNotReject(page.locator(".crumb", { hasText: "macchiato" }).waitFor());
+  await assert.doesNotReject(page.locator(".focused-header .crumb", { hasText: "macchiato" }).waitFor());
 
   await page.locator("#brand-path a[href='/macchiato']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "macchiato" }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/macchiato");
   assert.equal((await page.locator("#brand-path").textContent()).trim(), "macchiato");
+  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "standard");
+  assert.equal(await page.locator(".nav").isVisible(), true);
 
   await page.locator(".nav a[data-section='home']").click();
   await assert.doesNotReject(page.locator("h1", { hasText: "Infrastructure you own, composed from parts." }).waitFor());

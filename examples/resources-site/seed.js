@@ -825,14 +825,18 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .layout.project-create-layout > .brand,
 .layout.project-create-layout > .edge-status { min-height: 48px; padding: 4px 23px; }
 .layout.project-create-layout > .main { max-width: none; padding: clamp(14px, 2vw, 28px); }
-.layout.project-focus-layout { width: 100%; max-width: none; margin: 0; gap: 0; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main main" "footer footer"; }
-.layout.project-focus-layout > .project-identity,
-.layout.project-focus-layout > .brand { min-height: 54px; justify-self: stretch; padding: 8px 16px; border-radius: 0; }
-.layout.project-focus-layout > .edge-status { min-height: 54px; justify-self: stretch; padding: 7px 16px; border-radius: 0; }
-.layout.project-focus-layout > .nav { display: none; }
-.layout.project-focus-layout > .main { max-width: none; padding: clamp(8px, 1.2vw, 16px); }
-.layout.project-focus-layout > .main > .crumb { display: none; }
-.layout.project-focus-layout .content-root, .layout.project-focus-layout .content-block { width: 100%; }
+body:has(.focused-view) { padding: 0; }
+.layout.focused-view { width: 100%; max-width: none; margin: 0; gap: 0; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main main" "footer footer"; }
+.layout.focused-view > .focused-header,
+.layout.focused-view > .brand { min-height: 54px; justify-self: stretch; padding: 8px 16px; border-radius: 0; }
+.layout.focused-view > .edge-status { min-height: 54px; justify-self: stretch; padding: 7px 16px; border-radius: 0; }
+.layout.focused-view > .nav { display: none; }
+.layout.focused-view > .main { max-width: none; padding: 0; }
+.layout.focused-view > .main > .crumb { display: none; }
+.layout.focused-view .content-root, .layout.focused-view .content-block { width: 100%; }
+.layout.focused-view .content-block { padding: 0; }
+.focused-header { display: flex; align-items: center; }
+.focused-header .crumb { margin: 0; box-shadow: none; }
 .project-create-layout .content-root { width: 100%; }
 .project-create-layout .content-block { width: 100%; }
 .layout:has(.project-workspace) > .main { max-width: none; }
@@ -1037,9 +1041,23 @@ function brandSegmentsForPath(path) {
   return [];
 }
 
+function viewForPath(path) {
+  return path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"))
+    ? "focused"
+    : "standard";
+}
+
 function brandHeaderHtml(path) {
-  const focusedProject = path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"));
-  if (PROJECTS[path] || focusedProject) {
+  if (viewForPath(path) === "focused") {
+    const parts = projectSegmentsForPath(path).map((segment, index) => {
+      const sep = `<span class="sep">/</span>`;
+      return segment.href
+        ? `${sep}<a href="${segment.href}">${escapeHtml(segment.label)}</a>`
+        : `${sep}<span class="here">${escapeHtml(segment.label)}</span>`;
+    });
+    return `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${homeIcon()}</a>${parts.join("")}</nav></header>`;
+  }
+  if (PROJECTS[path]) {
     const parts = projectSegmentsForPath(path).map((segment, index) => {
       const sep = index === 0 ? "" : `<span class="project-identity__sep">/</span>`;
       const cls = segment.owner ? "project-identity__owner" : "project-identity__name";
@@ -1199,8 +1217,8 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
     blog: i18n.text("nav.blog"),
     about: i18n.text("nav.about"),
   });
-  const focusedProject = path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"));
-  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${focusedProject ? " project-focus-layout" : ""}">
+  const view = viewForPath(path);
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus() : renderResourcesUserMenu()}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
@@ -1617,11 +1635,18 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     const nextCrumb = nextDoc.getElementById("crumb");
     const currentBrand = document.querySelector("[data-screen-label='brand']");
     const nextBrand = nextDoc.querySelector("[data-screen-label='brand']");
+    const currentLayout = document.querySelector("main.layout");
+    const nextLayout = nextDoc.querySelector("main.layout");
     if (!nextContent || !currentContent) {
       location.href = url.href;
       return;
     }
     document.title = nextDoc.title;
+    if (currentLayout && nextLayout) {
+      const view = nextLayout.dataset.view === "focused" ? "focused" : "standard";
+      currentLayout.dataset.view = view;
+      currentLayout.classList.toggle("focused-view", view === "focused");
+    }
     if (currentBrand && nextBrand) currentBrand.outerHTML = await sanitizedOuterHTML(nextBrand);
     if (currentCrumb && nextCrumb) currentCrumb.outerHTML = await sanitizedOuterHTML(nextCrumb);
     else if (currentCrumb) currentCrumb.remove();

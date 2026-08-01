@@ -195,7 +195,6 @@ function dashboardHtml(content, messages) {
 function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "", editorUrl = "") {
   const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, editorUrl, messages }) : "";
   return `<div class="account-dashboard project-view${workspace ? " project-workspace" : ""}">
-    <a class="project-view__back" href="/dashboard">← ${message(messages, "account.projects", "Your projects")}</a>
     <div class="project-view__identity">
       <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
       <h1>${escapeHtml(project.name)}</h1>
