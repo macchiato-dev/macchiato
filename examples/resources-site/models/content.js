@@ -94,7 +94,7 @@ function text(value, field, { min = 0, max }) {
 function slug(value) {
   const result = text(value, "slug", { min: 1, max: 63 }).toLowerCase();
   if (!SLUG.test(result)) {
-    throw new ContentValidationError("slug", "slug must use lowercase letters, numbers, and single hyphens");
+    throw new ContentValidationError("slug", "name must use lowercase letters, numbers, and single hyphens");
   }
   return result;
 }

@@ -139,11 +139,17 @@
 - **projectCreate.title**: Create a project - Resources.co
 - **projectCreate.heading**: Create a project
 - **projectCreate.intro**: Pick a template, give it a name, then create.
-- **projectCreate.name**: Project name
-- **projectCreate.slug**: Project slug
+- **projectCreate.name**: Title
+- **projectCreate.slug**: Name
 - **projectCreate.description**: Description (optional)
 - **projectCreate.namespace**: Namespace
-- **projectCreate.template**: Starting point
+- **projectCreate.template**: Template
+- **projectCreate.container**: Container
+- **projectCreate.article**: Article
+- **projectCreate.page**: Page
+- **projectCreate.allowedElements**: Allowed elements
+- **projectCreate.allowedLinks**: Allowed Link URL Patterns
+- **projectCreate.allowedLinksHelp**: One regular expression per line. Patterns must match the complete URL; escape dots and use .* for any sequence of characters.
 - **projectCreate.visibility**: Visibility
 - **projectCreate.blank**: Blank project
 - **projectCreate.html**: HTML page
@@ -166,8 +172,8 @@
 - **organizationCreate.title**: Create an organization - Resources.co
 - **organizationCreate.heading**: Create an organization
 - **organizationCreate.intro**: Organizations give related projects a shared namespace.
-- **organizationCreate.name**: Organization name
-- **organizationCreate.slug**: Organization slug
+- **organizationCreate.name**: Title
+- **organizationCreate.slug**: Name
 - **organizationCreate.description**: Description (optional)
 - **organizationCreate.submit**: Create organization
 - **content.error**: Check the form and try again.

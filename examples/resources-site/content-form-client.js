@@ -9,16 +9,23 @@ function slugify(value) {
 }
 
 const EDITOR_PROTOCOL = "resources-project-editor-v1";
-const DRAFT_KEY = "resources_project_draft_v1";
+const DRAFT_KEY = "resources_project_draft_v2";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
+  article: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
+      { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
+    ],
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$"] }, sandbox: { network: false, storage: "session" } },
+  },
   html: {
     files: [
       { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello</h1>\n    <p>Edit this page to make it yours.</p>\n  </main>\n  <script src=\"./script.js\"></script>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
       { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
-    config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: ["main", "h1", "p"] }, sandbox: { network: false, storage: "session" } },
   },
   canvas: {
     files: [
@@ -26,15 +33,15 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
       { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
     ],
-    config: { entry: "index.html", sandbox: { network: false, storage: "memory" } },
+    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: ["canvas"] }, sandbox: { network: false, storage: "memory" } },
   },
   svg: {
     files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
-    config: { entry: "image.svg", sandbox: { network: false, storage: "memory" } },
+    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: ["svg", "title", "rect", "circle", "path"] }, sandbox: { network: false, storage: "memory" } },
   },
   blank: {
     files: [{ path: "index.html", content: "" }],
-    config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: [] }, sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -367,15 +374,45 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderTabs();
     sendContent();
   });
-  const startingPoint = root.closest("form")?.querySelector("[data-project-starting-point]");
-  startingPoint?.addEventListener("change", () => {
-    const next = STARTING_POINTS[startingPoint.value];
+  const form = root.closest("form");
+  const template = form?.querySelector("[data-project-template]");
+  const container = form?.querySelector("[data-project-container]");
+  const containerOutline = form?.querySelector("[data-container-outline]");
+  const linkPatterns = form?.querySelector("#project-link-patterns");
+  const containerElements = Object.freeze({
+    article: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"],
+    page: ["main", "section", "header", "footer", "h1", "h2", "p", "a", "img", "ul", "li"],
+    canvas: ["canvas"],
+    svg: ["svg", "title", "g", "path", "rect", "circle", "line", "text"],
+  });
+  function growPatterns() {
+    if (!linkPatterns) return;
+    linkPatterns.style.height = "auto";
+    linkPatterns.style.height = `${linkPatterns.scrollHeight}px`;
+  }
+  function updateContainer() {
+    if (!container) return;
+    const allowedElements = containerElements[container.value] || [];
+    if (containerOutline) containerOutline.textContent = `${container.value} → ${allowedElements.join(", ") || "no elements yet"}`;
+    const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    updateSnapshot({ files: state.files, config: { ...state.config, container: { name: container.value, allowedElements, allowedLinkPatterns } } }, { destructive: true });
+    sendContent();
+  }
+  template?.addEventListener("change", () => {
+    const next = STARTING_POINTS[template.value];
     if (!next) return;
+    if (container) container.value = next.config.container?.name || "page";
+    if (linkPatterns) linkPatterns.value = (next.config.container?.allowedLinkPatterns || []).join("\n");
+    growPatterns();
+    if (containerOutline) containerOutline.textContent = `${container.value} → ${(next.config.container?.allowedElements || []).join(", ") || "no elements yet"}`;
     selected = next.files[0].path;
     updateSnapshot(next, { destructive: true });
     renderTabs();
     sendContent();
   });
+  container?.addEventListener("change", updateContainer);
+  linkPatterns?.addEventListener("input", () => { growPatterns(); updateContainer(); });
+  growPatterns();
   versionButton.addEventListener("click", () => { historyPanel.hidden = false; versionButton.setAttribute("aria-expanded", "true"); draft ? renderDraftVersions() : renderStoredVersions(); });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });

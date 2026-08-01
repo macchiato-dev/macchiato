@@ -139,11 +139,17 @@
 - **projectCreate.title**: Crear un proyecto - Resources.co
 - **projectCreate.heading**: Crear un proyecto
 - **projectCreate.intro**: Elige una plantilla, dale un nombre y créalo.
-- **projectCreate.name**: Nombre del proyecto
-- **projectCreate.slug**: Identificador del proyecto
+- **projectCreate.name**: Título
+- **projectCreate.slug**: Nombre
 - **projectCreate.description**: Descripción (opcional)
 - **projectCreate.namespace**: Espacio de nombres
-- **projectCreate.template**: Punto de partida
+- **projectCreate.template**: Plantilla
+- **projectCreate.container**: Contenedor
+- **projectCreate.article**: Artículo
+- **projectCreate.page**: Página
+- **projectCreate.allowedElements**: Elementos permitidos
+- **projectCreate.allowedLinks**: Patrones de URL de enlaces permitidos
+- **projectCreate.allowedLinksHelp**: Una expresión regular por línea. Los patrones deben coincidir con la URL completa; escapa los puntos y usa .* para cualquier secuencia de caracteres.
 - **projectCreate.visibility**: Visibilidad
 - **projectCreate.blank**: Proyecto vacío
 - **projectCreate.html**: Página HTML
@@ -166,8 +172,8 @@
 - **organizationCreate.title**: Crear una organización - Resources.co
 - **organizationCreate.heading**: Crear una organización
 - **organizationCreate.intro**: Las organizaciones dan a proyectos relacionados un espacio de nombres compartido.
-- **organizationCreate.name**: Nombre de la organización
-- **organizationCreate.slug**: Identificador de la organización
+- **organizationCreate.name**: Título
+- **organizationCreate.slug**: Nombre
 - **organizationCreate.description**: Descripción (opcional)
 - **organizationCreate.submit**: Crear organización
 - **content.error**: Revisa el formulario e inténtalo de nuevo.
