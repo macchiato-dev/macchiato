@@ -149,7 +149,7 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
     <div class="project-editor__toolbar">
       <div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div>
       <div class="project-editor__tools"><button class="project-editor__tool" type="button" data-project-add-file aria-label="${message(messages, "projectEditor.addFile", "Add file")}">+</button><button class="project-editor__tool" type="button" data-project-remove-file aria-label="${message(messages, "projectEditor.removeFile", "Remove selected file")}">−</button></div>
-      <button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><span aria-hidden="true">⌄</span></button>
+      <button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><span aria-hidden="true">▾</span></button>
     </div>
     <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
     <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
