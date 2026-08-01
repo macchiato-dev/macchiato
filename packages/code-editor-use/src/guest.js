@@ -1,6 +1,9 @@
 import { basicSetup } from "codemirror";
 import { javascript } from "@codemirror/lang-javascript";
-import { EditorState, findClusterBreak } from "@codemirror/state";
+import { css } from "@codemirror/lang-css";
+import { html } from "@codemirror/lang-html";
+import { markdown } from "@codemirror/lang-markdown";
+import { Compartment, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { redo, undo } from "@codemirror/commands";
@@ -8,18 +11,28 @@ import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 
 const parent = document.getElementById("editor");
+const language = new Compartment();
+let applyingHostContent = false;
+function languageExtension(name) {
+  if (name === "javascript") return javascript();
+  if (name === "html") return html();
+  if (name === "css") return css();
+  if (name === "markdown") return markdown();
+  return [];
+}
 const state = EditorState.create({
   doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
   extensions: [
     basicSetup,
     lineNumbers(),
-    javascript(),
+    language.of(javascript()),
     oneDark,
     EditorView.updateListener.of((update) => {
       if (update.docChanged || update.viewportChanged) renderLineNumbers();
-      if (update.docChanged) {
+      if (update.docChanged && !applyingHostContent) {
         globalThis.__browserUseNotify(JSON.stringify({
           type: "change",
+          content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
         }));
@@ -136,6 +149,25 @@ globalThis.__codeEditorInspect = () => {
     selection: { anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to },
     viewport: { from: view.viewport.from, to: view.viewport.to },
   });
+};
+globalThis.__codeEditorSetContent = (json) => {
+  const request = JSON.parse(json);
+  if (typeof request.content !== "string" || request.content.length > 1_000_000) {
+    throw new TypeError("Editor content must be a string no larger than 1,000,000 characters");
+  }
+  const view = globalThis.__codeEditorView;
+  applyingHostContent = true;
+  try {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: request.content },
+      selection: { anchor: 0 },
+      effects: language.reconfigure(languageExtension(request.language)),
+    });
+  } finally {
+    applyingHostContent = false;
+  }
+  renderLineNumbers();
+  return JSON.stringify({ characters: view.state.doc.length, lines: view.state.doc.lines });
 };
 let searchPanel = null;
 let searchInput = null;
