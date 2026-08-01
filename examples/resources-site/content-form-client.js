@@ -16,7 +16,7 @@ const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
   article: {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Constrained view example</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
     config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
@@ -131,6 +131,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const status = root.querySelector("[data-project-status]");
   const versionButton = root.querySelector("[data-project-versions]");
   const versionCount = versionButton.querySelector(".project-editor__version-count");
+  const currentVersion = versionButton.querySelector("[data-current-version]");
   const historyPanel = root.querySelector("[data-project-history]");
   const versionList = root.querySelector("[data-project-version-list]");
   const projectId = root.dataset.projectId;
@@ -145,6 +146,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let saving = false;
   let localHistory = null;
   let editorController = null;
+
+  function showCurrentVersion() {
+    currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
+    currentVersion.removeAttribute("title");
+  }
+
+  function showSelectedVersion(label, timestamp) {
+    currentVersion.textContent = label;
+    currentVersion.title = new Date(Number(timestamp)).toLocaleString();
+  }
 
   if (draft) {
     const navigationType = performance.getEntriesByType("navigation")[0]?.type;
@@ -205,8 +216,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         for (const child of node.childNodes) copy(child, parent);
         return;
       }
-      const element = document.createElement(name);
+      const element = node.namespaceURI === "http://www.w3.org/2000/svg"
+        ? document.createElementNS("http://www.w3.org/2000/svg", name)
+        : document.createElement(name);
       if (name === "a" && node.getAttribute("href")) element.setAttribute("href", node.getAttribute("href"));
+      if (node.namespaceURI === "http://www.w3.org/2000/svg") {
+        const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id"]);
+        for (const attribute of node.attributes) {
+          if (svgAttributes.has(attribute.name) && /^[- A-Za-z0-9.,#()%]+$/.test(attribute.value)) element.setAttribute(attribute.name, attribute.value);
+        }
+      }
       for (const child of node.childNodes) copy(child, element);
       parent.append(element);
     }
@@ -241,6 +260,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function updateSnapshot(next, { destructive = false } = {}) {
+    showCurrentVersion();
     state = normalizeProjectSnapshot(next);
     snapshotField.value = JSON.stringify(state);
     pending = true;
@@ -331,6 +351,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         historyPanel.hidden = true;
         sendContent();
         setStatus(`Restored version ${sequence}`);
+        showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
       });
       versionList.append(button);
     });
@@ -356,8 +377,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         versionCount.textContent = String(result.versionCount);
         snapshotField.value = JSON.stringify(state);
         historyPanel.hidden = true;
+        renderTabs();
         sendContent();
-        location.reload();
+        showSelectedVersion(button.textContent, version.createdAt);
+        setStatus(`Viewing ${button.textContent}`);
       });
       versionList.append(button);
     }

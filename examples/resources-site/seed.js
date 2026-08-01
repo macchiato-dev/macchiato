@@ -842,7 +842,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__mount .cm-scroller { overflow: auto; }
 .project-editor__splitter { position: relative; cursor: col-resize; background: #242928; outline: none; }
 .project-editor__splitter::after { content: ""; position: absolute; top: 45%; left: 2px; width: 3px; height: 10%; border-radius: 2px; background: #64706e; }
-.project-editor__preview > header { position: sticky; top: 0; z-index: 2; display: flex; min-height: 38px; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; color: #eef2ff; background: #17226e; font-size: 12px; }
+.project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: #eef2ff; font-size: 12px; }
 .project-editor__preview > [data-project-preview] { padding: 20px; color: #edf3f2; }
 .project-editor__view-controls { display: flex; gap: 2px; }
 .project-editor__view-controls button { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; }

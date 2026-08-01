@@ -97,6 +97,10 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
     to: selectAllOnFirstPress.document.length,
   });
   assert.equal(await page.locator("#editor.cm-native-selection").count(), 1);
+  await page.keyboard.press("Meta+ArrowDown");
+  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).selection.head, selectAllOnFirstPress.document.length);
+  await page.keyboard.press("Meta+ArrowUp");
+  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).selection.head, 0);
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowLeft");
   const beforeEmacsForward = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().selection.head);

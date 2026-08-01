@@ -96,6 +96,11 @@ function moveSelection(event) {
       next = head === line.to ? head + 1 : line.from + findClusterBreak(line.text, head - line.from, true);
     }
   } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    if (event.mod) {
+      next = event.key === "ArrowUp" ? 0 : view.state.doc.length;
+      setSelection(event.shiftKey ? selection.anchor : next, next);
+      return true;
+    }
     const line = view.state.doc.lineAt(head);
     const targetNumber = line.number + (event.key === "ArrowUp" ? -1 : 1);
     if (targetNumber >= 1 && targetNumber <= view.state.doc.lines) {
