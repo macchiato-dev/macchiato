@@ -72,6 +72,7 @@
         "default",
         "pointer",
         "text",
+        "col-resize",
         "grab",
         "grabbing"
       ]
@@ -694,7 +695,7 @@
     "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
   },
   "limits": {
-    "maxStylesheetLength": 50000,
+    "maxStylesheetLength": 54000,
     "maxPropertyLength": 64,
     "maxValueLength": 900,
     "maxUrlLength": 100,

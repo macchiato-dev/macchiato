@@ -13,6 +13,7 @@ const directory = dirname(fileURLToPath(import.meta.url));
 const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
+const generatedDirectory = join(directory, "generated");
 const fontNames = ["space-grotesk-latin.woff2", "space-grotesk-latin-ext.woff2", "space-grotesk-vietnamese.woff2"];
 
 function routeRow(route) {
@@ -50,6 +51,8 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     }
   }
   files.set("/-/resources-site/content-form.js", bytes(readFileSync(join(directory, "content-form-client.js"))));
+  files.set("/-/resources-site/project-editor-runtime.js", bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"))));
+  files.set("/-/resources-site/project-editor-guest.js", bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js"))));
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(directory, "models", "url-pattern.js"))));
   files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(directory, "models", "container-elements.js"))));

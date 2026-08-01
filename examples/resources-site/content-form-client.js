@@ -1,6 +1,7 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
+import { mountResourcesProjectEditor } from "/-/resources-site/project-editor-runtime.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -10,7 +11,6 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
 }
 
-const EDITOR_PROTOCOL = "resources-project-editor-v1";
 const DRAFT_KEY = "resources_project_draft_v3";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
@@ -125,7 +125,8 @@ function versionChoice(label, timestamp, { current = false, sequence = 0 } = {})
 }
 
 for (const root of document.querySelectorAll("[data-project-editor]")) {
-  const iframe = root.querySelector("iframe");
+  const editorMount = root.querySelector("[data-project-editor-mount]");
+  const preview = root.querySelector("[data-project-preview]");
   const snapshotField = root.querySelector("[data-project-snapshot]");
   const status = root.querySelector("[data-project-status]");
   const versionButton = root.querySelector("[data-project-versions]");
@@ -143,6 +144,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let changeGeneration = 0;
   let saving = false;
   let localHistory = null;
+  let editorController = null;
 
   if (draft) {
     const navigationType = performance.getEntriesByType("navigation")[0]?.type;
@@ -179,9 +181,36 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function sendContent() {
-    if (!ready) return;
+    if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
-    iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode(), language: language(), snapshot: state }, "*");
+    editorController.setContent(selectedContent(), language());
+    renderPreview();
+    delete root.dataset.editorLoading;
+  }
+
+  function renderPreview() {
+    const entry = state.config?.entry || "index.html";
+    const source = state.files.find((file) => file.path === entry)?.content || "";
+    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
+    root.querySelector("[data-preview-title]").textContent = title;
+    const parsed = new DOMParser().parseFromString(source, "text/html");
+    const allowed = new Set(state.config?.container?.allowedElements || []);
+    const fragment = document.createDocumentFragment();
+    function copy(node, parent) {
+      if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const name = node.localName;
+      if (!allowed.has(name) || ["script", "style", "link", "meta", "title", "head", "html", "body"].includes(name)) {
+        for (const child of node.childNodes) copy(child, parent);
+        return;
+      }
+      const element = document.createElement(name);
+      if (name === "a" && node.getAttribute("href")) element.setAttribute("href", node.getAttribute("href"));
+      for (const child of node.childNodes) copy(child, element);
+      parent.append(element);
+    }
+    for (const child of parsed.body.childNodes) copy(child, fragment);
+    preview.replaceChildren(fragment);
   }
 
   function renderTabs() {
@@ -333,19 +362,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
   }
 
-  addEventListener("message", (event) => {
-    const message = event.data;
-    if (event.source !== iframe.contentWindow || message?.protocol !== EDITOR_PROTOCOL) return;
-    if (message.type === "ready") { ready = true; sendContent(); return; }
-    if (message.type === "content-set") { delete root.dataset.editorLoading; return; }
-    if (message.type !== "change" || typeof message.content !== "string") return;
+  function receiveEditorChange(content) {
+    if (typeof content !== "string") return;
     try {
-      if (selected === "config") updateSnapshot({ files: state.files, config: JSON.parse(message.content) });
-      else updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content: message.content } : file), config: state.config });
+      if (selected === "config") updateSnapshot({ files: state.files, config: JSON.parse(content) });
+      else updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
+      renderPreview();
     } catch {
       setStatus("Configuration must be valid JSON", true);
     }
-  });
+  }
   root.querySelector(".project-editor__tabs").addEventListener("click", (event) => {
     const file = event.target.closest("[data-project-file]");
     if (file) selected = file.dataset.projectFile;
@@ -353,6 +379,28 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     else return;
     renderTabs();
     sendContent();
+  });
+  const workspace = root.querySelector(".project-editor__workspace");
+  const splitter = root.querySelector(".project-editor__splitter");
+  function setSplit(clientX) {
+    const rect = workspace.getBoundingClientRect();
+    const percent = Math.max(20, Math.min(80, ((clientX - rect.left) / rect.width) * 100));
+    workspace.style.setProperty("--source-width", `${percent}%`);
+    splitter.setAttribute("aria-valuenow", String(Math.round(percent)));
+  }
+  splitter.addEventListener("pointerdown", (event) => { splitter.setPointerCapture(event.pointerId); setSplit(event.clientX); });
+  splitter.addEventListener("pointermove", (event) => { if (splitter.hasPointerCapture(event.pointerId)) setSplit(event.clientX); });
+  splitter.addEventListener("keydown", (event) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const next = Math.max(20, Math.min(80, Number(splitter.getAttribute("aria-valuenow")) + (event.key === "ArrowRight" ? 5 : -5)));
+    workspace.style.setProperty("--source-width", `${next}%`);
+    splitter.setAttribute("aria-valuenow", String(next));
+  });
+  for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
+    workspace.dataset.view = button.dataset.projectView;
+    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === button ? "true" : "false");
+    if (button.dataset.projectView !== "preview") editorController?.focus();
   });
   const form = root.closest("form");
   const template = form?.querySelector("[data-project-template]");
@@ -425,4 +473,14 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
+  mountResourcesProjectEditor({
+    root: editorMount,
+    onChange: receiveEditorChange,
+    onViolation(error) { setStatus(`Editor stopped: ${error.message}`, true); },
+  }).then((controller) => {
+    editorController = controller;
+    ready = true;
+    sendContent();
+  }).catch((error) => setStatus(`Editor failed to start: ${error.message}`, true));
+  addEventListener("pagehide", () => editorController?.destroy(), { once: true });
 }

@@ -50,6 +50,22 @@ rather than a separate page shell, leaves room for the navigation layer to
 transition between views later; routes that need fresh editor initialization
 may continue using full-document navigation.
 
+### Project editor environment
+
+The focused project view mounts `code-editor-use` directly into a bounded page
+subtree; it does not use an iframe. CodeMirror state, extensions, and commands
+run in a dedicated QuickJS WebAssembly runtime with declared heap and stack
+limits. The host owns only the constrained DOM renderer and filtered input
+bridge, and disposes their listeners, handles, context, and runtime on page
+teardown. Build its two cacheable assets with `npm run build:resources-editor`:
+the native controller/provider bundle and the CodeMirror guest bundle remain
+separate to avoid a large combined parse/allocation spike.
+
+The project program is not executed in the editor runtime. A playground will
+instantiate a separate container environment with its own VM, capabilities,
+and lifetime. The current preview is deliberately non-executable and renders
+only elements admitted by the selected container configuration.
+
 Both profiles now use the Resources.co teal/blue theme by default, render the
 same brand, content, project metadata, navigation, footer, fonts, responsive
 breakpoints, and friendly URLs. Both headers retain the compact notification,
