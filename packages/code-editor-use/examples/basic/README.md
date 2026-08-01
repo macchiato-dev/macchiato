@@ -4,7 +4,7 @@ This directory is a self-contained nested npm project, deliberately excluded
 from the root workspace. Install and run it directly:
 
 ```bash
-cd packages/code-editor-use/example
+cd packages/code-editor-use/examples/basic
 npm install
 npm start
 ```
@@ -120,7 +120,7 @@ selection, search, completion, undo/redo, focus, and fail-closed mutation.
 
 ## Execution order and dependencies
 
-The browser bootstrap is `packages/code-editor-use/example/client.js`. The guest starts
+The browser bootstrap is `packages/code-editor-use/examples/basic/client.js`. The guest starts
 in this order:
 
 1. the plain `packages/browser-use/guest/quickjs-dom-environment.js` environment;

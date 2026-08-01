@@ -8,7 +8,7 @@ import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
-import { codeEditorUseHandler } from "../../code-editor-use/example/handler.js";
+import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 
@@ -70,10 +70,10 @@ export const BUILTIN_APPS = [
     description: "CodeMirror 6 behind a shape-checked browser-use adapter and QuickJS controller.",
     handler: codeEditorUseHandler,
     sourceFiles: [
-      "packages/code-editor-use/example/handler.js",
-      "packages/code-editor-use/example/client.js",
-      "packages/code-editor-use/example/controller.js",
-      "packages/code-editor-use/example/style.css",
+      "packages/code-editor-use/examples/basic/handler.js",
+      "packages/code-editor-use/examples/basic/client.js",
+      "packages/code-editor-use/examples/basic/controller.js",
+      "packages/code-editor-use/examples/basic/style.css",
       "packages/browser-use/src/index.js",
       "packages/browser-use/src/quickjs-guest.js",
       "packages/code-editor-use/src/index.js",

@@ -6,7 +6,7 @@ import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-em
 import { createStandardWebAppHandler, readStandardAppConfig } from "@macchiato-dev/declarative-app-server";
 
 const directory = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(directory, "../../..");
+const repoRoot = resolve(directory, "../../../..");
 let guestBundlePromise;
 let hostBundlePromise;
 
@@ -24,6 +24,7 @@ export function codeEditorUseImportMap() {
   }
   imports["@macchiato-dev/browser-use/quickjs-guest"] = "/browser-use-quickjs-guest.js";
   imports["@macchiato-dev/browser-use/quickjs-dom-guest"] = "/browser-use-quickjs-dom-guest.js";
+  imports["@macchiato-dev/code-editor-use/controller"] = "/code-editor-controller.js";
   return JSON.stringify({ imports });
 }
 
@@ -61,12 +62,13 @@ async function codeEditorGuestBundle() {
 
 async function codeEditorHostBundle() {
   hostBundlePromise ||= build({
-    entryPoints: [join(repoRoot, "packages/code-editor-use/src/host.js")],
+    entryPoints: [join(repoRoot, "packages/code-editor-use/src/controller.js")],
     bundle: true,
     format: "esm",
     platform: "browser",
     write: false,
     sourcemap: false,
+    external: ["@macchiato-dev/browser-use/quickjs-dom-guest", "@macchiato-dev/quickjs-emscripten-sandbox"],
   }).then((result) => result.outputFiles[0].text);
   return hostBundlePromise;
 }
@@ -87,7 +89,7 @@ export async function codeEditorUseAssetHandler(request) {
   if (pathname === "/code-editor-guest.js") {
     return new Response(await codeEditorGuestBundle(), { headers: { "content-type": contentType(pathname) } });
   }
-  if (pathname === "/code-editor-host.js") {
+  if (pathname === "/code-editor-controller.js") {
     return new Response(await codeEditorHostBundle(), { headers: { "content-type": contentType(pathname) } });
   }
   if (pathname === "/style.css") {
