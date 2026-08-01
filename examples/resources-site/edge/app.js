@@ -84,7 +84,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" 
     ${notificationMenuHtml(messages)}
     ${createMenuHtml(messages)}
     <details class="edge-user-menu">
-      <summary class="edge-user-menu__trigger" aria-label="${message(messages, "account.menu", "Account menu")}">
+      <summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}">
         <span class="ub-avatar">${escapeHtml(initials)}</span>
         <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
       </summary>
@@ -153,7 +153,7 @@ function dashboardHtml(content, messages) {
     : `<div class="account-empty">${message(messages, "dashboard.noOrganizations", "No organizations yet.")}</div>`;
   return `<div class="account-dashboard">
     <div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.heading", "Your projects")}</h1><p class="account-dashboard__intro">${message(messages, "dashboard.intro", "Projects and organizations owned by your account.")}</p></div>
-      <a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New project")}</a></div>
+      <a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div>
     <div class="create-actions"><a class="account-action account-action--secondary" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a></div>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${projects}</section>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.organizations", "Organizations")}</h2></div>${organizations}</section>
@@ -186,24 +186,33 @@ function formError(url, messages) {
     : "";
 }
 
-function projectFormHtml(session, content, token, messages, url) {
+function projectFormHtml(session, content, token, messages, url, blogExamplesOrigin) {
   const namespaceOptions = [
     `<option value="user">@${escapeHtml(session.login)}</option>`,
     ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`),
   ].join("");
-  return `<div class="account-dashboard">
-    <h1>${message(messages, "projectCreate.heading", "Create a project")}</h1>
-    <p class="account-dashboard__intro">${message(messages, "projectCreate.intro", "Pick a template, give it a name, then create.")}</p>
+  const editorUrl = `${blogExamplesOrigin}/-/blog-examples/markdown-editor/index.html`;
+  return `<div class="account-dashboard project-create">
+    <div class="project-create__heading"><h1>${message(messages, "projectCreate.heading", "Create a project")}</h1>
+    <p class="account-dashboard__intro">${message(messages, "projectCreate.intro", "Pick a template, give it a name, then create.")}</p></div>
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
-      <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Project name")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
-      <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Project slug")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
-      <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
-      <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
-      <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template"><option value="blank">${message(messages, "projectCreate.blank", "Blank")}</option><option value="html">${message(messages, "projectCreate.html", "HTML")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas")}</option></select></div>
-      <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
-      <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
+      <div class="project-create__layout">
+        <div class="project-create__fields">
+          <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Project name")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
+          <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Project slug")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
+          <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
+          <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
+          <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template"><option value="blank">${message(messages, "projectCreate.blank", "Blank")}</option><option value="html">${message(messages, "projectCreate.html", "HTML")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas")}</option></select></div>
+          <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
+          <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
+        </div>
+        <section class="project-create__editor" aria-label="${message(messages, "projectCreate.content", "Project content")}">
+          <div class="project-create__editor-label">${message(messages, "projectCreate.content", "Project content")}</div>
+          <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
+        </section>
+      </div>
     </form>
   </div>`;
 }
@@ -240,7 +249,7 @@ async function readCreateForm(request, session, action, authConfig, now) {
   return form;
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, fetchImpl = fetch, now = Date.now, logger = console } = {}) {
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
@@ -386,13 +395,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const dynamic = pathname === "/dashboard"
             ? dashboardHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
-              ? projectFormHtml(session, content, token, manifest.messages[locale], url)
+              ? projectFormHtml(session, content, token, manifest.messages[locale], url, blogExamplesOrigin)
               : organizationFormHtml(token, manifest.messages[locale], url);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, dynamic);
         }
         body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname });
-        headers.set("cache-control", "private, no-store");
+        headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");
       return new Response(body, {

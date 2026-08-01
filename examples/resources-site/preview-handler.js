@@ -59,7 +59,10 @@ function handlerFor(environment = {}, db = null) {
   const client = db ? createNodeSqliteClient(db) : null;
   const accountStore = client ? createAccountStore(client) : null;
   const contentStore = client ? createContentStore(client) : null;
-  cachedHandler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, accountStore, contentStore, fetchImpl });
+  cachedHandler = createResourcesEdgeHandler({
+    config, authConfig, gitlabAuthConfig, accountStore, contentStore, fetchImpl,
+    blogExamplesOrigin: previewEnv.BLOG_EXAMPLES_ORIGIN || "http://blog-examples.localhost:3030",
+  });
   return cachedHandler;
 }
 

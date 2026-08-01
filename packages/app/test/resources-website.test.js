@@ -447,7 +447,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("button", { name: "Create organization" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Tiny Tools" }).waitFor());
 
-  await page.getByRole("link", { name: "New project" }).first().click();
+  await page.getByRole("link", { name: "New Project" }).first().click();
   await page.getByLabel("Project name").fill("Digital Clock");
   assert.equal(await page.getByLabel("Project slug").inputValue(), "digital-clock");
   await page.getByLabel("Project slug").fill("Digital Clock");

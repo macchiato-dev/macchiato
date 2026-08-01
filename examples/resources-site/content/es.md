@@ -150,6 +150,8 @@
 - **projectCreate.svg**: SVG
 - **projectCreate.canvas**: Canvas
 - **projectCreate.submit**: Crear proyecto
+- **projectCreate.content**: Contenido del proyecto
+- **projectCreate.editor**: Editor de proyecto aislado
 - **projectView.empty**: Este proyecto está listo para su primer documento.
 - **projectView.manage**: Gestionar proyectos
 - **organizationCreate.title**: Crear una organización - Resources.co

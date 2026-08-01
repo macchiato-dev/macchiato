@@ -179,6 +179,8 @@ test("edge locale negotiation serves localized HTML and persists explicit switch
     headers: { "accept-language": "fr;q=0.9, es-MX;q=0.8, en;q=0.7" },
   }));
   assert.equal(spanish.headers.get("content-language"), "es");
+  assert.equal(spanish.headers.get("cache-control"), "public, max-age=30, stale-while-revalidate=60");
+  assert.equal(spanish.headers.get("vary"), "accept-language, cookie");
   assert.match(await spanish.text(), /Acerca de/);
   assert.equal(requests.at(-1).endsWith("/locales/es/about/index.html"), true);
 

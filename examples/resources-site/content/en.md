@@ -125,7 +125,7 @@
 - **account.create**: Create
 - **account.notifications**: Notifications
 - **account.noNotifications**: You're all caught up.
-- **account.newProject**: New project
+- **account.newProject**: New Project
 - **account.newOrganization**: New organization
 - **dashboard.title**: Your projects - Resources.co
 - **dashboard.heading**: Your projects
@@ -150,6 +150,8 @@
 - **projectCreate.svg**: SVG
 - **projectCreate.canvas**: Canvas
 - **projectCreate.submit**: Create project
+- **projectCreate.content**: Project content
+- **projectCreate.editor**: Sandboxed project editor
 - **projectView.empty**: This project is ready for its first document.
 - **projectView.manage**: Manage projects
 - **organizationCreate.title**: Create an organization - Resources.co
