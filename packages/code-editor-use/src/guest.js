@@ -1,7 +1,7 @@
 import { basicSetup } from "codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { EditorState, findClusterBreak } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, lineNumbers } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
@@ -12,9 +12,11 @@ const state = EditorState.create({
   doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
   extensions: [
     basicSetup,
+    lineNumbers(),
     javascript(),
     oneDark,
     EditorView.updateListener.of((update) => {
+      if (update.docChanged || update.viewportChanged) renderLineNumbers();
       if (update.docChanged) {
         globalThis.__browserUseNotify(JSON.stringify({
           type: "change",
@@ -27,6 +29,29 @@ const state = EditorState.create({
 });
 
 globalThis.__codeEditorView = new EditorView({ state, parent });
+let lineNumberGutter = null;
+function renderLineNumbers() {
+  const view = globalThis.__codeEditorView;
+  if (!view) return;
+  if (!lineNumberGutter) {
+    const gutters = document.createElement("div");
+    gutters.className = "cm-gutters";
+    lineNumberGutter = document.createElement("div");
+    lineNumberGutter.className = "cm-gutter cm-lineNumbers";
+    gutters.appendChild(lineNumberGutter);
+    view.scrollDOM.insertBefore(gutters, view.contentDOM);
+  }
+  while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
+  const first = view.state.doc.lineAt(view.viewport.from).number;
+  const last = view.state.doc.lineAt(view.viewport.to).number;
+  for (let number = first; number <= last; number += 1) {
+    const item = document.createElement("div");
+    item.className = "cm-gutterElement";
+    item.textContent = String(number);
+    lineNumberGutter.appendChild(item);
+  }
+}
+renderLineNumbers();
 function setSelection(anchor, head = anchor) {
   const view = globalThis.__codeEditorView;
   const length = view.state.doc.length;
@@ -127,6 +152,17 @@ function findSearchMatch({ restart = false } = {}) {
   view.dispatch({ selection: { anchor: from, head: from + searchQuery.length }, scrollIntoView: true });
   return true;
 }
+function findPreviousSearchMatch() {
+  if (!searchQuery) return false;
+  const view = globalThis.__codeEditorView;
+  const text = view.state.doc.toString();
+  const before = Math.max(0, view.state.selection.main.from - 1);
+  let from = text.lastIndexOf(searchQuery, before);
+  if (from < 0) from = text.lastIndexOf(searchQuery);
+  if (from < 0) return false;
+  view.dispatch({ selection: { anchor: from, head: from + searchQuery.length }, scrollIntoView: true });
+  return true;
+}
 function showSearchPanel() {
   if (searchPanel) {
     searchInput.focus();
@@ -150,7 +186,25 @@ function showSearchPanel() {
       event.preventDefault();
     }
   });
+  const previous = document.createElement("button");
+  previous.type = "button";
+  previous.setAttribute("aria-label", "Previous match");
+  previous.textContent = "↑";
+  previous.addEventListener("click", findPreviousSearchMatch);
+  const next = document.createElement("button");
+  next.type = "button";
+  next.setAttribute("aria-label", "Next match");
+  next.textContent = "↓";
+  next.addEventListener("click", () => findSearchMatch());
+  const close = document.createElement("button");
+  close.type = "button";
+  close.setAttribute("aria-label", "Close search");
+  close.textContent = "×";
+  close.addEventListener("click", () => { hideOverlays(); globalThis.__codeEditorView.focus(); });
   panel.appendChild(input);
+  panel.appendChild(previous);
+  panel.appendChild(next);
+  panel.appendChild(close);
   searchPanel.appendChild(panel);
   globalThis.__codeEditorView.dom.appendChild(searchPanel);
   searchInput = input;
@@ -211,6 +265,17 @@ globalThis.__codeEditorBeforeInput = (json) => {
   let insert = "";
   if (event.inputType === "insertText" || event.inputType === "insertCompositionText") {
     insert = event.data || "";
+    const pairs = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'", "`": "`" };
+    const closing = new Set(Object.values(pairs));
+    if (from === to && pairs[insert]) {
+      view.dispatch({ changes: { from, to, insert: insert + pairs[insert] }, selection: { anchor: from + 1 }, userEvent: "input" });
+      const pairedSelection = view.state.selection.main;
+      return JSON.stringify({ handled: true, from: pairedSelection.from, to: pairedSelection.to });
+    }
+    if (from === to && closing.has(insert) && view.state.doc.sliceString(from, from + 1) === insert) {
+      setSelection(from + 1);
+      return JSON.stringify({ handled: true, from: from + 1, to: from + 1 });
+    }
   } else if (event.inputType === "insertLineBreak" || event.inputType === "insertParagraph") {
     insert = "\\n";
   } else if (event.inputType === "deleteContentBackward") {

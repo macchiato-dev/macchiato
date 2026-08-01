@@ -257,6 +257,9 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.ok(searchLayout.scrollerHeight > 200);
   assert.ok(Math.abs(searchLayout.editorBottom - searchLayout.panelsBottom) < 1);
   await search.fill("item8");
+  assert.equal(await page.getByRole("button", { name: "Previous match" }).count(), 1);
+  assert.equal(await page.getByRole("button", { name: "Next match" }).count(), 1);
+  assert.equal(await page.getByRole("button", { name: "Close search" }).count(), 1);
   assert.equal(await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document), documentBeforeSearch);
   assert.match(await page.evaluate(() => {
     const state = globalThis.__codeEditorBridge.inspect();
@@ -282,6 +285,12 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.equal(await linuxPage.evaluate(() => document.activeElement.classList.contains("cm-content")), true);
   await linuxPage.close();
 
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\n{");
+  assert.match((await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document)), /\{\}$/);
+  await page.keyboard.press("Control+z");
+  assert.equal(await page.locator(".cm-gutters .cm-gutterElement").count() > 1, true);
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\ncon");
