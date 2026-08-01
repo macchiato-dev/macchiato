@@ -160,6 +160,7 @@
 - **organizationCreate.description**: Descripción (opcional)
 - **organizationCreate.submit**: Crear organización
 - **content.error**: Revisa el formulario e inténtalo de nuevo.
+- **content.slugError**: Usa letras minúsculas, números y guiones simples.
 
 ## No encontrado y marco
 

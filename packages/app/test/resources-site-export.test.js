@@ -40,6 +40,7 @@ test("exports resources site as static files", async (t) => {
   assert.equal(manifest.files.includes("/-/blog-examples/vtv/app.js"), true);
   assert.equal(manifest.files.includes("/-/blog-examples/vtv/app.css"), true);
   assert.equal(manifest.files.includes("/-/user-menu-use/client.js"), true);
+  assert.equal(manifest.files.includes("/-/resources-site/content-form.js"), true);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);

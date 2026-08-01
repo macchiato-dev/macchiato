@@ -796,6 +796,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .create-form__options label { display: flex; align-items: center; gap: 7px; font-weight: 500; }
 .create-form__options input { width: auto; }
 .form-error { padding: 11px 13px; border: 1px solid #ff6b6b; border-radius: 10px; color: #ffb3b3; }
+.form-field-error { color: #ffb3b3; font-size: 13px; }
 
 .content-root[data-loading="true"] {
   width: 100%;
