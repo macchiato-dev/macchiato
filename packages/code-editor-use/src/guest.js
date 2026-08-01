@@ -14,6 +14,9 @@ import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 const parent = document.getElementById("editor");
 const language = new Compartment();
 const editability = new Compartment();
+const nativeSelectionTheme = EditorView.theme({
+  ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" },
+});
 let applyingHostContent = false;
 function languageExtension(name) {
   if (name === "javascript") return javascript();
@@ -34,6 +37,7 @@ const state = EditorState.create({
       EditorView.contentAttributes.of({ "aria-readonly": "false" }),
     ]),
     oneDark,
+    nativeSelectionTheme,
     EditorView.updateListener.of((update) => {
       if (update.docChanged || update.viewportChanged) renderLineNumbers();
       if (update.docChanged && !applyingHostContent) {

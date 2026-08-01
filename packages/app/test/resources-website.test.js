@@ -510,12 +510,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.mouse.move(selectionEnd.x + 110, selectionEnd.y + selectionEnd.height / 2, { steps: 10 });
   await page.mouse.up();
   assert.ok(await newEditor.locator(".cm-selectionBackground").count() >= 2, "multiline selection should remain visible after mouseup");
+  assert.notEqual(await newEditor.locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
   await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "WebAssembly" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Capability-based security" }).waitFor());
   assert.deepEqual(await newEditor.locator("[data-project-preview] a").evaluateAll((links) => links.map((link) => link.target)), ["_blank", "_blank", "_blank"]);
   assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "Constrained view example");
+  assert.equal((await newEditor.locator("[data-project-snapshot]").inputValue()).includes("</html>\\n"), false);
   assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);
   const versionPlacement = await page.evaluate(() => {

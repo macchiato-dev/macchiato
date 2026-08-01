@@ -30432,6 +30432,9 @@
   var parent = document.getElementById("editor");
   var language2 = new Compartment();
   var editability = new Compartment();
+  var nativeSelectionTheme = EditorView.theme({
+    ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" }
+  });
   var applyingHostContent = false;
   function languageExtension(name2) {
     if (name2 === "javascript") return javascript();
@@ -30452,6 +30455,7 @@
         EditorView.contentAttributes.of({ "aria-readonly": "false" })
       ]),
       oneDark,
+      nativeSelectionTheme,
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.viewportChanged) renderLineNumbers();
         if (update.docChanged && !applyingHostContent) {
