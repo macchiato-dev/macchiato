@@ -607,6 +607,12 @@
         "min-width": {
           "$ref": "length"
         },
+        "overflow": {
+          "enum": [
+            "auto",
+            "hidden"
+          ]
+        },
         "padding": {
           "$ref": "spacing"
         },
