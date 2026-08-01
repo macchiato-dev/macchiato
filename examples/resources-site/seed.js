@@ -320,11 +320,28 @@ function sectionsFor(i18n) {
         h1: t("help.heading"),
         paras: [t("help.p1")],
         items: [
+          [t("docs.heading"), t("docs.p1"), "/docs"],
           [t("help.browse"), t("help.browseDesc"), "/browse"],
           [t("help.about"), t("help.aboutDesc"), "/about"],
         ],
       },
     ],
+  },
+  "/docs": {
+    navKey: "",
+    title: t("docs.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("docs.crumb") }],
+    blocks: [{
+      h1: t("docs.heading"),
+      paras: [t("docs.p1")],
+      items: [[t("docs.domUse"), t("docs.domUseDesc"), "/docs/dom-use", { newTab: true }]],
+    }],
+  },
+  "/docs/dom-use": {
+    navKey: "",
+    title: t("docs.domUseTitle"),
+    crumb: [{ icon: true, href: "/" }, { label: t("docs.crumb"), href: "/docs" }, { label: t("docs.domUseHeading") }],
+    blocks: [{ h1: t("docs.domUseHeading"), paras: [t("docs.domUseP1"), t("docs.domUseP2")] }],
   },
   "/dashboard": {
     navKey: "",
@@ -1066,7 +1083,7 @@ function brandSegmentsForPath(path) {
 }
 
 function viewForPath(path) {
-  return path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/"))
+  return path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
     ? "focused"
     : "standard";
 }
@@ -1128,8 +1145,9 @@ function blockHtml(block, options = {}) {
   }
   if (block.items) {
     bits.push(`<div class="items">${block.items.map((item) => {
-      const [name, desc, href = "#"] = item;
-      return `<a href="${href}"><span class="it-name">${escapeHtml(name)}</span><span class="it-desc">${escapeHtml(desc)}</span></a>`;
+      const [name, desc, href = "#", linkOptions = {}] = item;
+      const external = linkOptions.newTab ? ` target="_blank" rel="noopener noreferrer"` : "";
+      return `<a href="${href}"${external}><span class="it-name">${escapeHtml(name)}</span><span class="it-desc">${escapeHtml(desc)}</span></a>`;
     }).join("")}</div>`);
   }
   bits.push(`</section>`);
