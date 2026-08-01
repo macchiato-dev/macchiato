@@ -850,7 +850,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor__status { min-height: 31px; padding: 7px 11px; color: var(--muted); background: #151717; font-size: 11px; }
 .project-editor__status[data-error="true"] { color: #ffb3b3; }
-.project-editor__history { position: absolute; top: 48px; right: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
+.project-editor__history { position: absolute; top: 48px; left: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .project-editor__history-head { padding: 3px 5px 9px; }
 .project-editor__version { width: 100%; text-align: left; }

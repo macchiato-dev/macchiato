@@ -124,6 +124,20 @@ new DomUse({
 });
 ```
 
+An audited container can also project links into a new browsing context when
+the author did not choose a target. This is disabled unless declared:
+
+```javascript
+new DomUse({
+  nodes: { a: { attrs: ["href"], children: ["#text"] } },
+  urls: { href: /^https:\/\/example\.test\// },
+  links: { addTargetBlank: true },
+});
+```
+
+The resulting link receives `target="_blank"`. An existing allowed `target`
+attribute is preserved.
+
 ## Layer above: hydration and dynamic loading
 
 `dom-use` now provides the reusable pieces needed to build that layer:

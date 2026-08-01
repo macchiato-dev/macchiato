@@ -5,7 +5,7 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
     html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset", "name", "content"]),
     title: rule(["head"]), link: rule(["head"], ["rel", "href"]), body: rule(["html"], ["class"]),
     article: rule(["body", "main"], ["class"]), header: rule(["article"], ["class"]), h1: rule(["article", "header"], ["class", "id"]),
-    p: rule(["article", "header", "li"], ["class"]), a: rule(["p", "li"], ["href", "title"]), strong: rule(["p", "li", "a"]),
+    p: rule(["article", "header", "li"], ["class"]), a: rule(["p", "li"], ["href", "title", "target"]), strong: rule(["p", "li", "a"]),
     em: rule(["p", "li", "a"]), ul: rule(["article"], ["class"]), li: rule(["ul"], ["class"]), code: rule(["p", "li"], ["class"]),
   }),
   page: Object.freeze({
@@ -13,7 +13,7 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
     title: rule(["head"]), link: rule(["head"], ["rel", "href"]), body: rule(["html"], ["class"]), main: rule(["body"], ["class", "id"]),
     section: rule(["main", "section"], ["class", "id"]), header: rule(["body", "main", "section"], ["class"]), footer: rule(["body", "main", "section"], ["class"]),
     h1: rule(["main", "header", "section"], ["class", "id"]), h2: rule(["main", "section"], ["class", "id"]), p: rule(["main", "section", "footer"], ["class"]),
-    a: rule(["p", "li", "header", "footer"], ["href", "title"]), img: rule(["main", "section", "a"], ["src", "alt", "width", "height"]),
+    a: rule(["p", "li", "header", "footer"], ["href", "title", "target"]), img: rule(["main", "section", "a"], ["src", "alt", "width", "height"]),
     ul: rule(["main", "section"], ["class"]), li: rule(["ul"], ["class"]),
   }),
   canvas: Object.freeze({ html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset"]), title: rule(["head"]), body: rule(["html"], ["class"]), canvas: rule(["body"], ["width", "height", "aria-label"]), script: rule(["body"], ["src"]) }),
