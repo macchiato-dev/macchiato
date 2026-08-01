@@ -25,6 +25,8 @@ test("exports resources site as static files", async (t) => {
   const archivedPost = await readFile(join(out, "locales", "en", "blog", "a-markdown-based-code-playground", "index.html"), "utf8");
   const visualEditorPost = await readFile(join(out, "locales", "en", "blog", "building-a-visual-json-editor-part-3", "index.html"), "utf8");
   const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
+  const contentForm = await readFile(join(out, "-", "resources-site", "content-form.js"), "utf8");
+  const editorRuntime = await readFile(join(out, "-", "resources-site", "project-editor-runtime.js"), "utf8");
   const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
 
   assert.equal(result.routes, manifest.routes.length);
@@ -42,6 +44,8 @@ test("exports resources site as static files", async (t) => {
   assert.equal(manifest.files.includes("/-/blog-examples/vtv/app.css"), true);
   assert.equal(manifest.files.includes("/-/user-menu-use/client.js"), true);
   assert.equal(manifest.files.includes("/-/resources-site/content-form.js"), true);
+  assert.match(contentForm, /project-editor-runtime\.js\?v=[a-f0-9]{12}/);
+  assert.match(editorRuntime, /project-editor-guest\.js\?v=[a-f0-9]{12}/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);
