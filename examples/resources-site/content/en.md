@@ -155,6 +155,7 @@
 - **projectEditor.files**: Project files
 - **projectEditor.configuration**: Configuration
 - **projectEditor.versions**: Versions
+- **projectEditor.currentVersion**: Current Version
 - **projectEditor.saved**: Saved
 - **projectEditor.history**: Version history
 - **projectEditor.closeHistory**: Close version history

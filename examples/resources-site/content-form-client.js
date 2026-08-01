@@ -78,7 +78,8 @@ document.addEventListener("focusout", (event) => {
 
 function draftHistory(snapshot) {
   const empty = emptyProjectSnapshot();
-  return { snapshot, checkpoint: snapshot, patches: [diffProjectSnapshots(empty, snapshot)], createdAt: Date.now(), lastVersionAt: Date.now() };
+  const createdAt = Date.now();
+  return { snapshot, checkpoint: snapshot, patches: [diffProjectSnapshots(empty, snapshot)], versionTimes: [createdAt], createdAt, lastVersionAt: createdAt };
 }
 
 function rebuildDraft(patches, sequence = patches.length) {
@@ -87,12 +88,39 @@ function rebuildDraft(patches, sequence = patches.length) {
   return snapshot;
 }
 
+function relativeVersionTime(timestamp, now = Date.now()) {
+  const deltaSeconds = Math.round((Number(timestamp) - now) / 1000);
+  const absolute = Math.abs(deltaSeconds);
+  const [value, unit] = absolute < 60
+    ? [deltaSeconds, "second"]
+    : absolute < 3600
+      ? [Math.round(deltaSeconds / 60), "minute"]
+      : absolute < 86_400
+        ? [Math.round(deltaSeconds / 3600), "hour"]
+        : [Math.round(deltaSeconds / 86_400), "day"];
+  return new Intl.RelativeTimeFormat(document.documentElement.lang || "en", { numeric: "always" }).format(value, unit);
+}
+
+function versionChoice(label, timestamp, { current = false, sequence = 0 } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "project-editor__version";
+  button.textContent = label;
+  button.title = new Date(Number(timestamp)).toLocaleString();
+  if (sequence) button.dataset.versionSequence = String(sequence);
+  if (current) {
+    button.setAttribute("aria-current", "true");
+    button.disabled = true;
+  }
+  return button;
+}
+
 for (const root of document.querySelectorAll("[data-project-editor]")) {
   const iframe = root.querySelector("iframe");
   const snapshotField = root.querySelector("[data-project-snapshot]");
   const status = root.querySelector("[data-project-status]");
   const versionButton = root.querySelector("[data-project-versions]");
-  const versionCount = versionButton.querySelector("span");
+  const versionCount = versionButton.querySelector(".project-editor__version-count");
   const historyPanel = root.querySelector("[data-project-history]");
   const versionList = root.querySelector("[data-project-version-list]");
   const projectId = root.dataset.projectId;
@@ -113,6 +141,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
       if (stored?.patches?.length) {
         localHistory = stored;
+        localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
         state = normalizeProjectSnapshot(stored.snapshot);
       }
     } catch {
@@ -131,11 +160,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     return selected.endsWith(".md") ? "markdown" : "code";
   }
 
+  function language() {
+    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".ts")) return "javascript";
+    if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
+    if (selected.endsWith(".css")) return "css";
+    if (selected.endsWith(".md")) return "markdown";
+    return "plain";
+  }
+
   function sendContent() {
     if (!ready) return;
     suppressChange = true;
     root.dataset.editorLoading = "true";
-    iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode(), snapshot: state }, "*");
+    iframe.contentWindow.postMessage({ protocol: EDITOR_PROTOCOL, type: "set-content", content: selectedContent(), mode: mode(), language: language(), snapshot: state }, "*");
   }
 
   function renderTabs() {
@@ -186,6 +223,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const patch = diffProjectSnapshots(localHistory.checkpoint, state);
     if (projectPatchIsEmpty(patch)) return;
     localHistory.patches.push(patch);
+    localHistory.versionTimes.push(now);
     localHistory.checkpoint = state;
     localHistory.lastVersionAt = now;
     localHistory.snapshot = state;
@@ -236,17 +274,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderDraftVersions() {
     versionList.replaceChildren();
+    versionList.append(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
     [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
       const sequence = localHistory.patches.length - reverseIndex;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "project-editor__version";
-      button.textContent = `Version ${sequence}`;
+      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
       button.addEventListener("click", () => {
         checkpointDraft({ destructive: true });
         const target = rebuildDraft(localHistory.patches, sequence);
         const restore = diffProjectSnapshots(localHistory.checkpoint, target);
         if (!projectPatchIsEmpty(restore)) localHistory.patches.push(restore);
+        if (!projectPatchIsEmpty(restore)) localHistory.versionTimes.push(Date.now());
         localHistory.snapshot = localHistory.checkpoint = state = target;
         localHistory.lastVersionAt = Date.now();
         snapshotField.value = JSON.stringify(state);
@@ -267,15 +304,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
     const { versions } = await response.json();
     versionList.replaceChildren();
+    versionList.append(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
     for (const version of versions) {
-      const row = document.createElement("div");
-      row.className = "project-editor__version-row";
-      const label = document.createElement("span");
-      label.textContent = `Version ${version.sequence} · ${version.reason.replaceAll("_", " ")}`;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "project-editor__version";
-      button.textContent = "Restore";
+      const button = versionChoice(relativeVersionTime(version.createdAt), version.createdAt, { sequence: version.sequence });
       button.addEventListener("click", async () => {
         await save();
         const restored = await fetch(`/api/projects/${encodeURIComponent(projectId)}/restore/${version.sequence}`, {
@@ -290,8 +321,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         sendContent();
         location.reload();
       });
-      row.append(label, button);
-      versionList.append(row);
+      versionList.append(button);
     }
   }
 
@@ -346,8 +376,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderTabs();
     sendContent();
   });
-  versionButton.addEventListener("click", () => { historyPanel.hidden = false; draft ? renderDraftVersions() : renderStoredVersions(); });
-  root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; });
+  versionButton.addEventListener("click", () => { historyPanel.hidden = false; versionButton.setAttribute("aria-expanded", "true"); draft ? renderDraftVersions() : renderStoredVersions(); });
+  root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
