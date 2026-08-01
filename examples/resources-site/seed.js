@@ -821,14 +821,14 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-create__fields .create-form textarea { min-height: 72px; }
 .project-create__fields .create-actions { gap: 8px; margin-top: 2px; }
 .project-editor { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 650px; border: 1px solid var(--track-border); border-radius: 10px; background: #151717; }
-.project-editor__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px; color: #cbd4ff; background: #17226e; }
+.project-editor__toolbar { display: flex; align-items: center; gap: 10px; padding: 7px; color: #cbd4ff; background: #17226e; }
+.project-editor__source-toolbar { display: flex; width: 50%; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
 .project-editor__tabs { display: flex; align-items: center; gap: 3px; min-width: 0; }
-.project-editor__tools { display: flex; align-items: center; gap: 2px; }
-.project-editor__tab, .project-editor__tool, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-.project-editor__tab:hover, .project-editor__tool:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
-.project-editor__tool:disabled { opacity: .4; cursor: default; }
+.project-editor__tab, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.project-editor__tab:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
 .project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
 .project-editor__versions { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; }
+.project-editor__versions svg { width: 12px; height: 12px; }
 .project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
 .project-editor iframe { display: block; width: 100%; height: 100%; min-height: 0; border: none; background: #151717; }
 .project-editor[data-editor-loading="true"] iframe { pointer-events: none; }
@@ -860,15 +860,21 @@ body:has(.focused-view) { padding: 0; }
 .toolbar--cardless { border: none; border-radius: 0; box-shadow: none; }
 .focused-view .project-editor { border-radius: 0; }
 .focused-view .account-dashboard.project-create, .focused-view .project-create .create-form { height: 100%; min-height: 0; }
-.focused-view .project-create__fields { padding: 16px; border: 1px solid var(--track-border); border-radius: 0; }
+.focused-view .project-create__fields { gap: 9px; padding: 10px 12px; border: 1px solid var(--track-border); border-radius: 0; }
+.focused-view .project-create__fields .create-form__field { gap: 4px; }
+.focused-view .project-create__fields .create-form__field label,
+.focused-view .project-create__fields legend { font-size: 11px; letter-spacing: 0.02em; }
 .focused-view .create-form input,
 .focused-view .create-form textarea,
-.focused-view .create-form select { border-radius: 3px; background: transparent; }
+.focused-view .create-form select { padding: 7px 9px; border-radius: 3px; background: transparent; font-size: 13px; }
+.focused-view .create-form__options { gap: 10px; margin-top: 3px; font-size: 12px; }
+.focused-view .create-actions { gap: 6px; }
+.focused-view .account-action { min-height: 34px; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
 .focused-view .project-view__identity { padding: 16px; }
 .focused-view .project-view__meta { margin: 0; padding: 0 16px 16px; }
 .focused-view .project-view__meta span { border-radius: 3px; background: transparent; }
 .focused-view .project-surface { border-radius: 0; }
-.container-outline { padding: 10px 12px; border: 1px solid var(--track-border); color: var(--muted); font-size: 12px; }
+.container-outline { padding: 7px 9px; border: 1px solid var(--track-border); color: var(--muted); font-size: 11px; }
 .container-outline strong { display: block; margin-bottom: 6px; color: var(--text); }
 .container-outline code { color: var(--accent); }
 .field-label-with-help { display: flex; align-items: center; gap: 6px; }

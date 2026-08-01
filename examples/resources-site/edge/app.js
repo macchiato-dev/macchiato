@@ -118,10 +118,11 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/",
   </aside>`;
 }
 
-function renderSessionHtml(html, session, messages, options) {
+function renderSessionHtml(html, session, messages, options, contentFormVersion = "") {
+  const contentFormSrc = `/-/resources-site/content-form.js${contentFormVersion ? `?v=${contentFormVersion}` : ""}`;
   return html
     .replace(/<aside class="box userbar edge-status(?: toolbar--cardless)?"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
-    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script><script type="module" src="/-/resources-site/content-form.js"></script></body>`);
+    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script><script type="module" src="${contentFormSrc}"></script></body>`);
 }
 
 function checked(value, expected) {
@@ -134,7 +135,7 @@ function initialProjectSnapshot() {
       { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
   };
 }
 
@@ -159,9 +160,7 @@ function validateProjectUrlPatterns(snapshot) {
 function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", editorUrl, messages, draft = false }) {
   return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
     <div class="project-editor__toolbar">
-      <div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div>
-      <div class="project-editor__tools"><button class="project-editor__tool" type="button" data-project-add-file aria-label="${message(messages, "projectEditor.addFile", "Add file")}">+</button><button class="project-editor__tool" type="button" data-project-remove-file aria-label="${message(messages, "projectEditor.removeFile", "Remove selected file")}">−</button></div>
-      <button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><span aria-hidden="true">▾</span></button>
+      <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
     </div>
     <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
     <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
@@ -239,12 +238,12 @@ function formError(url, messages) {
     : "";
 }
 
-function projectFormHtml(session, content, token, messages, url, blogExamplesOrigin) {
+function projectFormHtml(session, content, token, messages, url, blogExamplesOrigin, editorVersion = "") {
   const namespaceOptions = [
     `<option value="user">@${escapeHtml(session.login)}</option>`,
     ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`),
   ].join("");
-  const editorUrl = `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`;
+  const editorUrl = `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html${editorVersion ? `?v=${editorVersion}` : ""}`;
   const snapshot = initialProjectSnapshot();
   return `<div class="account-dashboard project-create">
     ${formError(url, messages)}
@@ -256,9 +255,9 @@ function projectFormHtml(session, content, token, messages, url, blogExamplesOri
           <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
           <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
           <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="html">${message(messages, "projectCreate.html", "HTML page")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas sketch")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG illustration")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
-          <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="page">${message(messages, "projectCreate.page", "Page")}</option><option value="canvas">Canvas</option><option value="svg">SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><code data-container-outline>article → header, h1, p, a, strong, em, ul, li, code</code></div></div>
+          <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="page">${message(messages, "projectCreate.page", "Page")}</option><option value="canvas">Canvas</option><option value="svg">SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><code data-container-outline>html → head (meta, title, link) + body → article (header, h1, p, a, strong, em, ul, li, code)</code></div></div>
           <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>*.wikipedia.org</textarea></div>
-          <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
+          <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow></textarea></div>
           <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
           <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
           <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
@@ -484,13 +483,20 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const headers = publicResponseHeaders(key, upstream.headers);
       if (key.startsWith("locales/") && key.endsWith(".html")) headers.set("content-language", locale);
       let body = request.method === "HEAD" ? null : upstream.body;
+      const contentFormVersion = manifest.artifacts.get("-/resources-site/content-form.js")?.sha256.slice(0, 12) || "";
+      const editorVersion = manifest.artifacts.get("-/blog-examples/markdown-editor/app.js")?.sha256.slice(0, 12) || "";
+      if (key === "-/blog-examples/markdown-editor/index.html" && request.method !== "HEAD") {
+        const editorHtml = await upstream.text();
+        const styleVersion = manifest.artifacts.get("-/blog-examples/markdown-editor/app.css")?.sha256.slice(0, 12) || editorVersion;
+        body = editorHtml.replace("./app.css", `./app.css?v=${styleVersion}`).replace("./app.js", `./app.js?v=${editorVersion}`);
+      }
       if (authConfig && key.startsWith("locales/") && key.endsWith(".html") && request.method !== "HEAD") {
         let html = await upstream.text();
         if (dynamicProject) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token, `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`));
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token, `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html?v=${editorVersion}`));
           html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
         } else if (ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
@@ -499,12 +505,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const dynamic = pathname === "/dashboard"
             ? dashboardHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
-              ? projectFormHtml(session, content, token, manifest.messages[locale], url, requestEditorOrigin(blogExamplesOrigin, url))
+              ? projectFormHtml(session, content, token, manifest.messages[locale], url, requestEditorOrigin(blogExamplesOrigin, url), editorVersion)
               : organizationFormHtml(token, manifest.messages[locale], url);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" });
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" }, contentFormVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

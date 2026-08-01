@@ -464,7 +464,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByText("Use lowercase letters, numbers, and single hyphens.").waitFor());
   await page.getByLabel("Name", { exact: true }).fill("digital-clock");
   assert.equal(await page.getByLabel("Name", { exact: true }).getAttribute("aria-invalid"), "false");
-  await page.getByLabel("Description (optional)").fill("A small HTML clock.");
+  const description = page.getByLabel("Description (optional)");
+  const descriptionOneLineHeight = await description.evaluate((element) => element.getBoundingClientRect().height);
+  await description.fill("First line\nSecond line");
+  assert.ok(await description.evaluate((element) => element.getBoundingClientRect().height) > descriptionOneLineHeight);
+  await description.fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
@@ -479,6 +483,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await linkPatterns.inputValue(), "*.wikipedia.org");
   const linkPatternsHeight = await linkPatterns.evaluate((element) => element.getBoundingClientRect().height);
   assert.ok(linkPatternsHeight <= 52, `Expected a one-line URL pattern field, got ${linkPatternsHeight}px`);
+  await linkPatterns.fill("*.wikipedia.org\n`https://example.test/specific`");
+  assert.ok(await linkPatterns.evaluate((element) => element.getBoundingClientRect().height) > linkPatternsHeight);
+  await linkPatterns.fill("*.wikipedia.org");
   const initialSnapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
   assert.equal(initialSnapshot.config.container.name, "article");
   assert.deepEqual(initialSnapshot.config.container.allowedLinkPatterns, ["*.wikipedia.org"]);
@@ -486,9 +493,34 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
   assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
   const newEditor = page.frameLocator(".project-editor iframe");
+  assert.match(await page.locator(".project-editor iframe").getAttribute("src"), /index\.html\?v=[a-f0-9]{12}$/);
+  assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 1);
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
   await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
   await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
+  assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "A small, useful article");
+  await newEditor.locator(".preview-identity").hover();
+  await assert.doesNotReject(newEditor.getByRole("tooltip").waitFor({ state: "visible" }));
+  assert.match((await newEditor.getByRole("tooltip").innerText()).replace(/\s+/g, " "), /A small, useful article \/index\.html/);
+  assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);
+  const versionPlacement = await page.evaluate(() => {
+    const editor = document.querySelector("[data-project-editor]").getBoundingClientRect();
+    const versions = document.querySelector("[data-project-versions]").getBoundingClientRect();
+    return { versionsRight: versions.right, sourceRight: editor.left + editor.width / 2 };
+  });
+  assert.ok(versionPlacement.versionsRight <= versionPlacement.sourceRight + 1);
+  const editorScrollModel = await newEditor.locator("html").evaluate(() => ({
+    documentHeight: document.documentElement.scrollHeight,
+    viewportHeight: document.documentElement.clientHeight,
+    sourceOverflow: getComputedStyle(document.querySelector(".source")).overflow,
+    previewOverflow: getComputedStyle(document.querySelector(".preview")).overflow,
+    codeOverflow: getComputedStyle(document.querySelector(".cm-scroller")).overflow,
+  }));
+  assert.equal(editorScrollModel.documentHeight, editorScrollModel.viewportHeight);
+  assert.equal(editorScrollModel.sourceOverflow, "hidden");
+  assert.equal(editorScrollModel.previewOverflow, "hidden");
+  assert.equal(editorScrollModel.codeOverflow, "auto");
   const topBarHeights = await page.locator(".focused-header, .layout.focused-view > .userbar").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
   assert.deepEqual(topBarHeights, [54, 54]);
   const focusedGeometry = await page.evaluate(() => {
@@ -529,8 +561,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await template.selectOption("article");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
+  await template.selectOption("svg");
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await assert.doesNotReject(page.getByRole("button", { name: "image.svg", exact: true }).waitFor());
+  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("circle", { exact: false }).waitFor());
+  await assert.doesNotReject(newEditor.frameLocator("#project-preview").locator("circle").waitFor());
   await template.selectOption("html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("Edit this page to make it yours", { exact: false }).waitFor());
   await newEditor.locator(".cm-content").click();
   await assert.doesNotReject(newEditor.locator(".cm-cursor").waitFor({ state: "visible" }));
   await newEditor.getByRole("button", { name: "Preview" }).click();

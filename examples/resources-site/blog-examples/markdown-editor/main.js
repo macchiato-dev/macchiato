@@ -20,6 +20,9 @@ const embedded = window.parent !== window;
 const initial = embedded ? "" : demo;
 const preview = document.querySelector("#preview");
 const projectPreview = document.querySelector("#project-preview");
+const previewTitle = document.querySelector("[data-preview-title]");
+const previewFullTitle = document.querySelector("[data-preview-full-title]");
+const previewUrl = document.querySelector("[data-preview-url]");
 const language = new Compartment();
 let applyingHostContent = false;
 function languageExtension(name) {
@@ -43,6 +46,14 @@ function projectDocument(snapshot) {
   return source;
 }
 function renderProject(snapshot) {
+  const entry = snapshot?.config?.entry || "index.html";
+  const source = (snapshot?.files || []).find((file) => file.path === entry)?.content || "";
+  const parsedTitle = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim();
+  const title = parsedTitle || entry;
+  const url = snapshot?.config?.url || `/${entry}`;
+  previewTitle.textContent = title;
+  previewFullTitle.textContent = title;
+  previewUrl.textContent = url;
   preview.hidden = true;
   projectPreview.hidden = false;
   projectPreview.srcdoc = projectDocument(snapshot);
