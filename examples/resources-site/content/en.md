@@ -152,6 +152,14 @@
 - **projectCreate.submit**: Create project
 - **projectCreate.content**: Project content
 - **projectCreate.editor**: Sandboxed project editor
+- **projectEditor.files**: Project files
+- **projectEditor.configuration**: Configuration
+- **projectEditor.versions**: Versions
+- **projectEditor.saved**: Saved
+- **projectEditor.history**: Version history
+- **projectEditor.closeHistory**: Close version history
+- **projectEditor.addFile**: Add file
+- **projectEditor.removeFile**: Remove selected file
 - **projectView.empty**: This project is ready for its first document.
 - **projectView.manage**: Manage projects
 - **organizationCreate.title**: Create an organization - Resources.co

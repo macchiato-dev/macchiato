@@ -85,7 +85,9 @@ dynamic `/{namespace}/{slug}` views. `/projects/new` and `/organizations/new`
 are ordinary server-rendered forms; a project POST redirects directly to its
 new view, while an organization POST returns to the dashboard. The forms carry short-lived, signed,
 account-and-action-specific CSRF tokens and also require a same-origin request.
-Bodies are URL-encoded and size-limited.
+Bodies are URL-encoded and size-limited. Project snapshot autosaves and version
+restores use size-limited JSON, the same origin check, and a project-specific
+CSRF token.
 
 Projects use either the user's namespace or an organization owned by that user.
 Database uniqueness constraints protect organization slugs and project slugs
@@ -95,6 +97,13 @@ values. The static export contains validated placeholder routes and layout;
 user-authored markup or browser script crosses that boundary. Private project
 lookups require the owning user ID; public projects can resolve without a
 session.
+
+Project content is multi-file and configuration-aware. `resource_project_state`
+holds the current and last-checkpoint snapshots; `resource_project_versions`
+holds ordered, verified patches. Five-minute periodic checkpoints bound normal
+typing history, while destructive changes and restores create immediate
+boundaries. Version reconstruction starts at the empty snapshot and rejects a
+patch whose expected file text or configuration value does not match.
 
 ## Localized content
 
