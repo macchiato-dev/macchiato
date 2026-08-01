@@ -131,7 +131,7 @@
   },
   "nodes": {
     "a": {
-      "attrs": ["class", "aria-current", "aria-label", "href", "data-section"],
+      "attrs": ["class", "aria-current", "aria-label", "href", "data-section", "target", "rel"],
       "children": ["#text", "div", "span", "svg"]
     },
     "button": {

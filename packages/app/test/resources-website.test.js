@@ -476,14 +476,15 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await container.inputValue(), "article");
   assert.match(await page.locator("[data-container-outline]").textContent(), /article.*header.*h1.*p.*a/);
   const linkPatterns = page.getByLabel("Allowed Link URL Patterns");
-  assert.equal(await linkPatterns.inputValue(), "^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$");
+  assert.equal(await linkPatterns.inputValue(), "*.wikipedia.org");
   const linkPatternsHeight = await linkPatterns.evaluate((element) => element.getBoundingClientRect().height);
   assert.ok(linkPatternsHeight <= 52, `Expected a one-line URL pattern field, got ${linkPatternsHeight}px`);
   const initialSnapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
   assert.equal(initialSnapshot.config.container.name, "article");
-  assert.deepEqual(initialSnapshot.config.container.allowedLinkPatterns, ["^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$"]);
-  await page.getByLabel(/One regular expression per line/).hover();
+  assert.deepEqual(initialSnapshot.config.container.allowedLinkPatterns, ["*.wikipedia.org"]);
+  await page.getByLabel(/One pattern per line/).hover();
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
+  assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
   const newEditor = page.frameLocator(".project-editor iframe");
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
   await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
@@ -657,6 +658,8 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   const homeHtml = await home.text();
   const project = await fetch(`http://resources-co.localhost:${port}/macchiato/app`);
   const projectHtml = await project.text();
+  const docs = await fetch(`http://resources-co.localhost:${port}/docs`);
+  const docsHtml = await docs.text();
   const missing = await fetch(`http://resources-co.localhost:${port}/export/index.html`);
   const missingHtml = await missing.text();
 
@@ -671,6 +674,9 @@ test("resources sqlite site is mounted on a subdomain with friendly paths", asyn
   assert.match(projectHtml, /aria-label="Breadcrumb"/);
   assert.match(projectHtml, /href="\/macchiato"/);
   assert.match(projectHtml, /<h1>App<\/h1>/);
+  assert.equal(docs.status, 200);
+  assert.match(docsHtml, /href="\/docs\/dom-use" target="_blank" rel="noopener noreferrer"/);
+  assert.match(docsHtml, /Structured, schema-controlled DOM access/);
   assert.equal(missing.status, 404);
   assert.match(missingHtml, /This block has not been composed yet\./);
   assert.match(missingHtml, /href="\/browse"/);

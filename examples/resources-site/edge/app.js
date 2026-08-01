@@ -9,6 +9,7 @@ import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 import { seal, unseal } from "../auth/session.js";
 import { ContentConflictError, ContentValidationError } from "../models/content.js";
+import { validateAllowedUrlPatterns } from "../models/url-pattern.js";
 import {
   renderResourcesCommandPalette,
   resourcesAppearanceHtml,
@@ -133,7 +134,7 @@ function initialProjectSnapshot() {
       { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
   };
 }
 
@@ -142,6 +143,17 @@ function requestEditorOrigin(configuredOrigin, requestUrl) {
   const request = new URL(requestUrl);
   if (configured.hostname.endsWith(".localhost") && request.hostname.endsWith(".localhost")) configured.port = request.port;
   return configured.origin;
+}
+
+function validateProjectUrlPatterns(snapshot) {
+  const patterns = snapshot?.config?.container?.allowedLinkPatterns;
+  if (patterns === undefined) return;
+  if (!Array.isArray(patterns) || patterns.some((pattern) => typeof pattern !== "string")) throw new ContentValidationError("snapshot", "allowed link URL patterns must be strings");
+  try {
+    validateAllowedUrlPatterns(patterns);
+  } catch (error) {
+    throw new ContentValidationError("snapshot", error.message);
+  }
 }
 
 function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", editorUrl, messages, draft = false }) {
@@ -245,7 +257,7 @@ function projectFormHtml(session, content, token, messages, url, blogExamplesOri
           <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
           <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="html">${message(messages, "projectCreate.html", "HTML page")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas sketch")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG illustration")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
           <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="page">${message(messages, "projectCreate.page", "Page")}</option><option value="canvas">Canvas</option><option value="svg">SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><code data-container-outline>article → header, h1, p, a, strong, em, ul, li, code</code></div></div>
-          <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "One regular expression per line. Patterns must match the complete URL; escape dots and use .* for any sequence of characters.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$</textarea></div>
+          <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>*.wikipedia.org</textarea></div>
           <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
           <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
           <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
@@ -377,6 +389,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         }
         if (request.method === "POST" && operation === "snapshot" && !sequence) {
           const value = await readProjectJson(request, session, `project:${projectId}`, authConfig, now);
+          validateProjectUrlPatterns(value.snapshot);
           const saved = await contentStore.saveProjectSnapshot(session.sub, projectId, value.snapshot, { reason: value.manual ? "manual" : "periodic", destructive: value.destructive === true });
           return saved ? Response.json(saved, { headers: { "cache-control": "no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
         }
@@ -409,6 +422,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           } catch {
             throw new ContentValidationError("snapshot", "project snapshot is invalid");
           }
+          validateProjectUrlPatterns(snapshot);
           const created = await contentStore.createProject(session.sub, {
             userSlug: session.login,
             name: form.get("name"),

@@ -1,4 +1,5 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
+import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -17,7 +18,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["^https://(?:[a-z]+\\.)?wikipedia\\.org/.*$"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
   },
   html: {
     files: [
@@ -394,6 +395,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const allowedElements = containerElements[container.value] || [];
     if (containerOutline) containerOutline.textContent = `${container.value} → ${allowedElements.join(", ") || "no elements yet"}`;
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    try {
+      validateAllowedUrlPatterns(allowedLinkPatterns);
+      linkPatterns?.setCustomValidity("");
+      linkPatterns?.setAttribute("aria-invalid", "false");
+    } catch (error) {
+      linkPatterns?.setCustomValidity(error.message);
+      linkPatterns?.setAttribute("aria-invalid", "true");
+      return;
+    }
     updateSnapshot({ files: state.files, config: { ...state.config, container: { name: container.value, allowedElements, allowedLinkPatterns } } }, { destructive: true });
     sendContent();
   }

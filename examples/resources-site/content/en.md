@@ -90,6 +90,16 @@
 - **help.browseDesc**: Inspect the building blocks already available.
 - **help.about**: About Resources.co
 - **help.aboutDesc**: Read how the pieces are intended to fit together.
+- **docs.title**: Docs - Resources.co
+- **docs.crumb**: Docs
+- **docs.heading**: Documentation
+- **docs.p1**: Guides for the capabilities and declarative application model behind Resources.co.
+- **docs.domUse**: dom-use
+- **docs.domUseDesc**: Structured, schema-controlled DOM access for sandboxed applications. Opens in a new tab.
+- **docs.domUseTitle**: dom-use - Resources.co Docs
+- **docs.domUseHeading**: dom-use
+- **docs.domUseP1**: dom-use is the top-level DOM capability used by guest contexts. It validates nodes, attributes, URLs, content, and mutations against an explicit schema.
+- **docs.domUseP2**: URL-bearing attributes are denied by default. A schema must deliberately allow destinations before a guest can create them.
 
 ## Authentication
 
@@ -149,7 +159,7 @@
 - **projectCreate.page**: Page
 - **projectCreate.allowedElements**: Allowed elements
 - **projectCreate.allowedLinks**: Allowed Link URL Patterns
-- **projectCreate.allowedLinksHelp**: One regular expression per line. Patterns must match the complete URL; escape dots and use .* for any sequence of characters.
+- **projectCreate.allowedLinksHelp**: One pattern per line. Use a hostname with wildcards such as *.wikipedia.org, optionally with a specific path such as *.wikipedia.org/wiki/*. Surround a specific URL with backquotes, or use JavaScript regular expression syntax between forward slashes.
 - **projectCreate.visibility**: Visibility
 - **projectCreate.blank**: Blank project
 - **projectCreate.html**: HTML page

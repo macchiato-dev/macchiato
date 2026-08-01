@@ -17,7 +17,8 @@ export const RESOURCES_COMMAND_PALETTE = defineCommandPalette({
     { id: "browse", label: "Browse resources", href: "/browse" },
     { id: "projects", label: "Your projects", href: "/dashboard" },
     { id: "settings", label: "Settings", href: "/settings" },
-    { id: "help", label: "Help and documentation", href: "/help" },
+    { id: "docs", label: "Documentation", href: "/docs" },
+    { id: "help", label: "Help", href: "/help" },
   ],
 });
 

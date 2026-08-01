@@ -90,6 +90,16 @@
 - **help.browseDesc**: Examina las piezas que ya están disponibles.
 - **help.about**: Acerca de Resources.co
 - **help.aboutDesc**: Descubre cómo están pensadas para encajar las piezas.
+- **docs.title**: Documentación - Resources.co
+- **docs.crumb**: Documentación
+- **docs.heading**: Documentación
+- **docs.p1**: Guías sobre las capacidades y el modelo de aplicaciones declarativas detrás de Resources.co.
+- **docs.domUse**: dom-use
+- **docs.domUseDesc**: Acceso estructurado al DOM, controlado por esquemas, para aplicaciones aisladas. Se abre en una pestaña nueva.
+- **docs.domUseTitle**: dom-use - Documentación de Resources.co
+- **docs.domUseHeading**: dom-use
+- **docs.domUseP1**: dom-use es la capacidad DOM principal que usan los contextos invitados. Valida nodos, atributos, URL, contenido y mutaciones mediante un esquema explícito.
+- **docs.domUseP2**: Los atributos que contienen URL se deniegan de forma predeterminada. Un esquema debe permitir deliberadamente los destinos antes de que un invitado pueda crearlos.
 
 ## Autenticación
 
@@ -149,7 +159,7 @@
 - **projectCreate.page**: Página
 - **projectCreate.allowedElements**: Elementos permitidos
 - **projectCreate.allowedLinks**: Patrones de URL de enlaces permitidos
-- **projectCreate.allowedLinksHelp**: Una expresión regular por línea. Los patrones deben coincidir con la URL completa; escapa los puntos y usa .* para cualquier secuencia de caracteres.
+- **projectCreate.allowedLinksHelp**: Un patrón por línea. Usa un hostname con comodines como *.wikipedia.org, opcionalmente con una ruta como *.wikipedia.org/wiki/*. Rodea una URL exacta con comillas invertidas, o usa la sintaxis de expresión regular de JavaScript entre barras inclinadas.
 - **projectCreate.visibility**: Visibilidad
 - **projectCreate.blank**: Proyecto vacío
 - **projectCreate.html**: Página HTML
