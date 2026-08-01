@@ -502,6 +502,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".project-editor iframe").count(), 0);
   assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 1);
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
+  assert.ok(await newEditor.locator(".cm-content span").count() > 10, "HTML syntax should be tokenized");
   await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
   assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "A small, useful article");

@@ -29,6 +29,10 @@ function bytes(value) {
   return typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
 }
 
+function version(content) {
+  return createHash("sha256").update(content).digest("hex").slice(0, 12);
+}
+
 export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date().toISOString(), blogExamplesOrigin = "" } = {}) {
   const messages = loadResourcesLocales();
   const routesByLocale = Object.fromEntries(RESOURCE_LOCALES.map((locale) => [
@@ -50,9 +54,14 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
       files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
     }
   }
-  files.set("/-/resources-site/content-form.js", bytes(readFileSync(join(directory, "content-form-client.js"))));
-  files.set("/-/resources-site/project-editor-runtime.js", bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"))));
-  files.set("/-/resources-site/project-editor-guest.js", bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js"))));
+  const editorGuest = bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js")));
+  const editorRuntime = bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"), "utf8")
+    .replace("/-/resources-site/project-editor-guest.js", `/-/resources-site/project-editor-guest.js?v=${version(editorGuest)}`));
+  const contentForm = bytes(readFileSync(join(directory, "content-form-client.js"), "utf8")
+    .replace("/-/resources-site/project-editor-runtime.js", `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`));
+  files.set("/-/resources-site/content-form.js", contentForm);
+  files.set("/-/resources-site/project-editor-runtime.js", editorRuntime);
+  files.set("/-/resources-site/project-editor-guest.js", editorGuest);
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(directory, "models", "url-pattern.js"))));
   files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(directory, "models", "container-elements.js"))));

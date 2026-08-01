@@ -34,7 +34,7 @@ export const CODE_EDITOR_DOM_POLICY = Object.freeze({
     id: "^[A-Za-z0-9_-]{1,120}$",
     title: "^[^<>]{0,160}$",
     placeholder: "^[^<>]{0,160}$",
-    "data-language": "^(?:javascript)$",
+    "data-language": "^(?:javascript|html|css|json|markdown)$",
     form: "^$",
     "main-field": "^true$",
   },

@@ -173,6 +173,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function language() {
+    if (selected === "config") return "json";
     if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".ts")) return "javascript";
     if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
     if (selected.endsWith(".css")) return "css";
