@@ -160,6 +160,7 @@
 - **organizationCreate.description**: Description (optional)
 - **organizationCreate.submit**: Create organization
 - **content.error**: Check the form and try again.
+- **content.slugError**: Use lowercase letters, numbers, and single hyphens.
 
 ## Not found and chrome
 

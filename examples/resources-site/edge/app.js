@@ -110,7 +110,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/" 
 function renderSessionHtml(html, session, messages, options) {
   return html
     .replace(/<aside class="box userbar edge-status"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
-    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script></body>`);
+    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script><script type="module" src="/-/resources-site/content-form.js"></script></body>`);
 }
 
 function checked(value, expected) {
@@ -180,8 +180,9 @@ function projectViewHtml(project, messages) {
 }
 
 function formError(url, messages) {
-  return url.searchParams.has("error")
-    ? `<p class="form-error" role="alert">${message(messages, "content.error", "Check the form and try again.")}</p>`
+  const error = url.searchParams.get("error");
+  return error
+    ? `<p class="form-error" role="alert">${error === "slug" ? message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.") : message(messages, "content.error", "Check the form and try again.")}</p>`
     : "";
 }
 
@@ -196,8 +197,8 @@ function projectFormHtml(session, content, token, messages, url) {
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
-      <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Project name")}</label><input id="project-name" name="name" maxlength="80" required></div>
-      <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Project slug")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" required></div>
+      <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Project name")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
+      <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Project slug")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
       <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
       <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
       <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template"><option value="blank">${message(messages, "projectCreate.blank", "Blank")}</option><option value="html">${message(messages, "projectCreate.html", "HTML")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas")}</option></select></div>
@@ -214,8 +215,8 @@ function organizationFormHtml(token, messages, url) {
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/organizations">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
-      <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Organization name")}</label><input id="organization-name" name="name" maxlength="80" required></div>
-      <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Organization slug")}</label><input id="organization-slug" name="slug" maxlength="63" pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?" required></div>
+      <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Organization name")}</label><input id="organization-name" name="name" maxlength="80" data-slug-source="organization-slug" required></div>
+      <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Organization slug")}</label><input id="organization-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="organization-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="organization-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
       <div class="create-form__field"><label for="organization-description">${message(messages, "organizationCreate.description", "Description (optional)")}</label><textarea id="organization-description" name="description" maxlength="500"></textarea></div>
       <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
     </form>

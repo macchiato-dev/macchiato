@@ -301,7 +301,7 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
   });
   assert.equal(response.status(), 200);
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
   assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
@@ -351,7 +351,7 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
   await assert.doesNotReject(page.locator(".nav").waitFor());
   await assert.doesNotReject(page.locator(".footer").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
@@ -442,14 +442,19 @@ test("Resources.co edge account creates organizations and projects in a real bro
 
   await page.getByRole("link", { name: "New organization" }).first().click();
   await page.getByLabel("Organization name").fill("Tiny Tools");
-  await page.getByLabel("Organization slug").fill("tiny-tools");
+  assert.equal(await page.getByLabel("Organization slug").inputValue(), "tiny-tools");
   await page.getByLabel("Description (optional)").fill("Small, focused tools.");
   await page.getByRole("button", { name: "Create organization" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Tiny Tools" }).waitFor());
 
   await page.getByRole("link", { name: "New project" }).first().click();
   await page.getByLabel("Project name").fill("Digital Clock");
+  assert.equal(await page.getByLabel("Project slug").inputValue(), "digital-clock");
+  await page.getByLabel("Project slug").fill("Digital Clock");
+  assert.equal(await page.getByLabel("Project slug").getAttribute("aria-invalid"), "true");
+  await assert.doesNotReject(page.getByText("Use lowercase letters, numbers, and single hyphens.").waitFor());
   await page.getByLabel("Project slug").fill("digital-clock");
+  assert.equal(await page.getByLabel("Project slug").getAttribute("aria-invalid"), "false");
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   await page.getByLabel("Template").selectOption("html");
@@ -461,7 +466,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByRole("link", { name: "Manage projects" }).click();
   await page.getByRole("link", { name: /Digital Clock/ }).click();
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 3);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {
