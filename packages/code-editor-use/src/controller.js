@@ -38,9 +38,9 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   host.start();
   let destroyed = false;
   return Object.freeze({
-    setContent(content, language = "plain") {
+    setContent(content, language = "plain", { readOnly = false } = {}) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language });
+      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
       sandbox.callJsonFunction("__browserUseFlush", {});
       return result;
     },

@@ -4288,6 +4288,7 @@ var CODE_EDITOR_DOM_POLICY = Object.freeze({
     "aria-haspopup": "^listbox$",
     "aria-autocomplete": "^(?:list|none)$",
     "aria-multiline": "^(?:true|false)$",
+    "aria-readonly": "^(?:true|false)$",
     "aria-controls": "^[A-Za-z0-9_-]{0,120}$",
     "aria-activedescendant": "^[A-Za-z0-9_-]{0,120}$",
     contenteditable: "^(?:true|false)$",
@@ -4483,7 +4484,7 @@ var CodeMirrorInputBridge = class {
       event.stopImmediatePropagation();
     }, true);
     this.listen(window, "mousemove", (event) => {
-      if (this.dragAnchor == null || !(event.buttons & 1)) return;
+      if (this.dragAnchor == null) return;
       this.pendingDragPoint = { clientX: event.clientX, clientY: event.clientY };
       if (!this.dragFrame) {
         this.dragFrame = requestAnimationFrame(() => {
@@ -4590,9 +4591,9 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
   host.start();
   let destroyed = false;
   return Object.freeze({
-    setContent(content, language = "plain") {
+    setContent(content, language = "plain", { readOnly = false } = {}) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language });
+      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
       sandbox.callJsonFunction("__browserUseFlush", {});
       return result;
     },

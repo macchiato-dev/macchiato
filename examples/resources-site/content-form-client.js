@@ -175,7 +175,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function selectedContent() {
-    if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
+    if (selected === "config") {
+      const container = state.config?.container || {};
+      const { allowedElements: _derivedAllowedElements, ...containerConfiguration } = container;
+      return JSON.stringify({ ...state.config, container: containerConfiguration }, null, 2) + "\n";
+    }
     return state.files.find((file) => file.path === selected)?.content ?? "";
   }
 
@@ -195,7 +199,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function sendContent() {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
-    editorController.setContent(selectedContent(), language());
+    editorController.setContent(selectedContent(), language(), { readOnly: selected === "config" });
     renderPreview();
     delete root.dataset.editorLoading;
   }
@@ -397,13 +401,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function receiveEditorChange(content) {
     if (typeof content !== "string") return;
+    if (selected === "config") return;
     try {
-      if (selected === "config") updateSnapshot({ files: state.files, config: JSON.parse(content) });
-      else updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
+      updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
       renderPreview();
-    } catch {
-      setStatus("Configuration must be valid JSON", true);
-    }
+    } catch {}
   }
   root.querySelector(".project-editor__tabs").addEventListener("click", (event) => {
     const file = event.target.closest("[data-project-file]");

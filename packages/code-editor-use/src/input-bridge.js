@@ -175,7 +175,7 @@ export class CodeMirrorInputBridge {
       event.stopImmediatePropagation();
     }, true);
     this.listen(window, "mousemove", (event) => {
-      if (this.dragAnchor == null || !(event.buttons & 1)) return;
+      if (this.dragAnchor == null) return;
       this.pendingDragPoint = { clientX: event.clientX, clientY: event.clientY };
       if (!this.dragFrame) {
         this.dragFrame = requestAnimationFrame(() => {
