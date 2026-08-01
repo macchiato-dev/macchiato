@@ -21,6 +21,29 @@ make arbitrary browser libraries compatible: each guest still needs an
 explicit, auditable subset of browser APIs. See
 `packages/code-editor-use/example/`.
 
+### Container isolation profiles
+
+Iframe-free is a property of a particular `*-use` configuration, not a blanket
+property of the package. A host may mount a guest directly into a granted DOM
+subtree when the selected container profile has bounded elements, attributes,
+CSS, events, depth, text, and element count. A more flexible configuration of
+the same module may be unsuitable for user-generated content in the host
+document. Custom editors and containers whose resulting shape is not known
+well enough run in a sandboxed iframe on a separate origin instead.
+
+Each mounted direct-DOM guest owns a disposable QuickJS context/runtime, its
+DOM handle table, observers, and forwarded event listeners. Removing or
+replacing the view must destroy those resources and drop the host's references,
+making the WebAssembly runtime the lifecycle boundary much as an iframe is for
+the cross-origin profile.
+
+The editor UI and the program being edited are separate trust domains. The
+constrained CodeMirror UI runs in its editor QuickJS sandbox. Executing or
+previewing project code creates a different WebAssembly VM and/or QuickJS
+context with independent DOM, network, storage, time, and memory capabilities.
+The playground runtime is disposable without destroying editor state and must
+never inherit the editor's DOM capability.
+
 ## Status
 
 Macchiato has the first pieces of a constrained app runtime, but it does not
