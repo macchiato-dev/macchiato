@@ -318,7 +318,7 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
     return { background: style.backgroundColor, border: style.borderColor };
   });
   assert.notEqual(accountHover.background, accountResting.background);
-  assert.equal(accountHover.border, accountResting.border);
+  assert.notEqual(accountHover.border, accountResting.border);
   await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).waitFor());
   assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 1);
@@ -436,6 +436,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
     httpOnly: true,
     sameSite: "Lax",
   }]);
+  const projectErrors = [];
+  page.on("pageerror", (error) => projectErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") projectErrors.push(message.text()); });
+  page.on("response", (response) => { if (response.status() >= 500) projectErrors.push(`${response.status()} ${response.url()}`); });
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: "Your projects", exact: true }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/dashboard");
@@ -448,6 +452,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByRole("heading", { name: "Tiny Tools" }).waitFor());
 
   await page.getByRole("link", { name: "New Project" }).first().click();
+  assert.deepEqual(projectErrors, []);
   await page.getByLabel("Project name").fill("Digital Clock");
   assert.equal(await page.getByLabel("Project slug").inputValue(), "digital-clock");
   await page.getByLabel("Project slug").fill("Digital Clock");
@@ -458,12 +463,46 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   await page.getByLabel("Template").selectOption("html");
+  const newEditor = page.frameLocator(".project-editor iframe");
+  await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
+  await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
+  await page.getByRole("button", { name: "Configuration" }).click();
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await newEditor.locator(".cm-content").fill('{"entry":"index.html","sandbox":{"network":false,"storage":"local"}}\n');
+  await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Draft saved in this session");
+  await page.getByRole("button", { name: "Versions (2)" }).click();
+  await page.locator("[data-project-version-list]").getByRole("button", { name: "Version 1", exact: true }).click();
+  await assert.doesNotReject(page.getByRole("button", { name: "Versions (3)" }).waitFor());
+  await page.getByRole("button", { name: "index.html", exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
+  await page.waitForFunction(() => document.querySelector("[data-project-snapshot]")?.value.includes("Digital Clock"));
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Digital Clock" }).waitFor());
   await assert.doesNotReject(page.getByText("tiny-tools/").waitFor());
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
-  await assert.doesNotReject(page.getByText("This project is ready for its first document.").waitFor());
-  await page.getByRole("link", { name: "Manage projects" }).click();
+  await assert.doesNotReject(page.getByRole("button", { name: "Versions (1)" }).waitFor());
+  await assert.doesNotReject(page.locator(".project-editor iframe").waitFor());
+  const projectEditor = page.frameLocator(".project-editor iframe");
+  await assert.doesNotReject(projectEditor.getByText("Digital Clock", { exact: false }).waitFor());
+  await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
+  await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Unsaved changes");
+  await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Saved");
+  await page.getByRole("button", { name: "Configuration" }).click();
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await projectEditor.locator(".cm-content").fill('{"entry":"index.html","sandbox":{"network":false,"storage":"local"}}\n');
+  await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Unsaved changes");
+  assert.equal(await page.locator("[data-project-snapshot]").evaluate((node) => JSON.parse(node.value).config.sandbox.storage), "local");
+  await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Saved");
+  const versionsButton = page.locator("[data-project-versions]");
+  assert.equal((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), "Versions (3)");
+  await versionsButton.click();
+  await assert.doesNotReject(page.getByText("Version 3 · destructive").waitFor());
+  const versionRows = page.locator(".project-editor__version-row");
+  await versionRows.filter({ hasText: "Version 1" }).getByRole("button", { name: "Restore" }).click();
+  await page.waitForLoadState("networkidle");
+  await assert.doesNotReject(page.getByRole("button", { name: "Versions (4)" }).waitFor());
+  await page.goto(`http://resources-edge.localhost:${port}/dashboard`, { waitUntil: "networkidle" });
   await page.getByRole("link", { name: /Digital Clock/ }).click();
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);

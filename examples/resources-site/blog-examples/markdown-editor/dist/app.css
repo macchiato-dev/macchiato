@@ -10,4 +10,8 @@ section + section { border-left: 1px solid #39403f; }
 .preview { overflow-wrap: anywhere; }
 .preview h1 { font-size: 1.55rem; }
 .preview strong { color: #30d5c8; }
+body[data-embedded="true"] main, body[data-embedded="true"] .cm-editor { min-height: 100vh; }
+body[data-embedded="true"] section { padding: .5rem; }
+body[data-mode="code"] main { grid-template-columns: 1fr; }
+body[data-mode="code"] .preview { display: none; }
 @media (max-width: 600px) { main { grid-template-columns: 1fr; } section + section { border-left: 0; border-top: 1px solid #39403f; } }

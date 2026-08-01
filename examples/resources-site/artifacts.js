@@ -50,6 +50,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     }
   }
   files.set("/-/resources-site/content-form.js", bytes(readFileSync(join(directory, "content-form-client.js"))));
+  files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory]]) {
     for (const name of ["index.html", "app.js", "app.css"]) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));

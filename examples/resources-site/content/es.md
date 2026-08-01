@@ -152,6 +152,14 @@
 - **projectCreate.submit**: Crear proyecto
 - **projectCreate.content**: Contenido del proyecto
 - **projectCreate.editor**: Editor de proyecto aislado
+- **projectEditor.files**: Archivos del proyecto
+- **projectEditor.configuration**: Configuración
+- **projectEditor.versions**: Versiones
+- **projectEditor.saved**: Guardado
+- **projectEditor.history**: Historial de versiones
+- **projectEditor.closeHistory**: Cerrar el historial de versiones
+- **projectEditor.addFile**: Añadir archivo
+- **projectEditor.removeFile**: Eliminar el archivo seleccionado
 - **projectView.empty**: Este proyecto está listo para su primer documento.
 - **projectView.manage**: Gestionar proyectos
 - **organizationCreate.title**: Crear una organización - Resources.co

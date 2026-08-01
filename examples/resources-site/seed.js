@@ -803,14 +803,33 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-create__fields { display: grid; align-content: start; gap: 14px; }
 .project-create__fields .create-form textarea { min-height: 72px; }
 .project-create__fields .create-actions { gap: 8px; margin-top: 2px; }
-.project-create__editor { min-width: 0; min-height: 560px; border: 1px solid var(--track-border); border-radius: 12px; background: #151717; }
-.project-create__editor-label { padding: 8px 12px; color: var(--muted); background: var(--track); font-size: 12px; font-weight: 700; }
-.project-create__editor iframe { display: block; width: 100%; height: calc(100% - 35px); min-height: 525px; border: none; background: #151717; }
+.project-editor { position: relative; min-width: 0; min-height: 560px; border: 1px solid var(--track-border); border-radius: 12px; background: #151717; }
+.project-editor__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px; color: var(--muted); background: var(--track); }
+.project-editor__tabs { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.project-editor__tools { display: flex; align-items: center; gap: 2px; }
+.project-editor__tab, .project-editor__tool, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.project-editor__tab:hover, .project-editor__tool:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
+.project-editor__tool:disabled { opacity: .4; cursor: default; }
+.project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
+.project-editor__versions { flex: 0 0 auto; }
+.project-editor iframe { display: block; width: 100%; height: calc(100% - 70px); min-height: 525px; border: none; background: #151717; }
+.project-editor[data-editor-loading="true"] iframe { pointer-events: none; }
+.project-editor__status { min-height: 31px; padding: 7px 11px; color: var(--muted); background: #151717; font-size: 11px; }
+.project-editor__status[data-error="true"] { color: #ffb3b3; }
+.project-editor__history { position: absolute; top: 48px; right: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
+.project-editor__history-head, .project-editor__version-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.project-editor__history-head { padding: 3px 5px 9px; }
+.project-editor__version-row { padding: 7px 5px; color: var(--muted); font-size: 12px; }
+.project-editor__version { width: 100%; text-align: left; }
+.project-editor__version-row .project-editor__version { width: auto; }
 .layout.project-create-layout > .brand,
 .layout.project-create-layout > .edge-status { min-height: 48px; padding: 4px 23px; }
 .layout.project-create-layout > .main { max-width: none; padding: clamp(14px, 2vw, 28px); }
 .project-create-layout .content-root { width: 100%; }
 .project-create-layout .content-block { width: 100%; }
+.layout:has(.project-workspace) > .main { max-width: none; }
+.layout:has(.project-workspace) .content-root, .layout:has(.project-workspace) .content-block { width: 100%; }
+.project-workspace .project-editor { min-height: calc(100vh - 300px); margin-top: 20px; }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -852,7 +871,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
   .account-grid { grid-template-columns: 1fr; }
   .account-dashboard__header, .account-section__header { align-items: flex-start; flex-direction: column; }
   .project-create__layout { grid-template-columns: minmax(0, 1fr); }
-  .project-create__editor { min-height: 520px; }
+  .project-editor { min-height: 520px; }
   .layout {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto minmax(0, 1fr) auto;
@@ -1064,8 +1083,10 @@ function blogExampleHtml(example, origin) {
   const sandbox = example.external
     ? "allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
     : "allow-scripts";
-  const src = example.external ? example.url : `${origin || ""}${example.url}`;
-  return `<iframe class="blog-example" src="${escapeHtml(src)}" title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`;
+  const deferred = !example.external && !origin;
+  const src = deferred ? "about:blank" : example.external ? example.url : `${origin}${example.url}`;
+  const data = deferred ? ` data-example-path="${escapeHtml(example.url)}"` : "";
+  return `<iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`;
 }
 
 function projectSummaryHtml(block) {
@@ -1442,7 +1463,10 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
         .then(async (response) => {
           if (!response.ok) throw new Error("Route fetch failed");
           const html = await response.text();
-          return new DOMParser().parseFromString(html, "text/html");
+          const inertHtml = html
+            .replace(new RegExp("<head\\\\b[\\\\s\\\\S]*?</head>", "i"), "<head></head>")
+            .replace(new RegExp("<script\\\\b[\\\\s\\\\S]*?</scr" + "ipt>", "gi"), "");
+          return new DOMParser().parseFromString(inertHtml, "text/html");
         })
         .catch((error) => {
           routeCache.delete(key);
@@ -1507,10 +1531,21 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     }
   }
 
+  function prepareLocalExamples(rootNode = document) {
+    rootNode.querySelectorAll("iframe[data-example-path]").forEach((frame) => {
+      const path = frame.dataset.examplePath;
+      if (!new RegExp("^/-/blog-examples/[A-Za-z0-9._~?&=/%+-]+$").test(path)) return;
+      const port = location.port ? ":" + location.port : "";
+      frame.src = location.protocol + "//blog-examples.localhost" + port + path;
+      delete frame.dataset.examplePath;
+    });
+  }
+
   applyTheme(root.getAttribute("data-theme") || "dark");
   applyAuthState(initialAuthState());
   prepareUserbarMenus();
   preparePrefetching();
+  prepareLocalExamples();
   document.addEventListener("click", (event) => {
     const provider = event.target.closest(".auth-provider");
     if (provider) {
@@ -1580,6 +1615,7 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     syncActiveNav(nextDoc);
     applyTheme(root.getAttribute("data-theme") || "dark");
     preparePrefetching(currentContent);
+    prepareLocalExamples(currentContent);
     if (historyMode === "push") history.pushState(null, "", url.pathname);
     scrollTo({ top: 0, behavior: "auto" });
   }

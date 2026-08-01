@@ -132,6 +132,14 @@ function parsedPatch(value) {
   return patch;
 }
 
+function validatedSnapshot(value) {
+  try {
+    return normalizeProjectSnapshot(value);
+  } catch (error) {
+    throw new ContentValidationError("snapshot", error.message);
+  }
+}
+
 function destructivePatch(patch) {
   return patch.files.some((operation) => operation.op === "delete") || patch.config.length > 0;
 }
@@ -307,7 +315,7 @@ export function createContentStore(client, {
         template,
       };
       const timestamp = now();
-      const initialSnapshot = normalizeProjectSnapshot(input.snapshot || { files: [], config: {} });
+      const initialSnapshot = validatedSnapshot(input.snapshot || { files: [], config: {} });
       const initialPatch = diffProjectSnapshots(emptyProjectSnapshot(), initialSnapshot);
       try {
         await client.batch([{
@@ -353,7 +361,7 @@ export function createContentStore(client, {
       if (!row) return null;
       const current = parsedSnapshot(row.snapshot_json);
       const checkpoint = parsedSnapshot(row.checkpoint_snapshot_json);
-      const next = normalizeProjectSnapshot(snapshotValue);
+      const next = validatedSnapshot(snapshotValue);
       const change = diffProjectSnapshots(current, next);
       if (projectPatchIsEmpty(change)) return Object.freeze({ changed: false, versionCount: Number(row.last_version_sequence), snapshot: current });
       const timestamp = now();

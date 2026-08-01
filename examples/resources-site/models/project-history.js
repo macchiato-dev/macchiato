@@ -2,6 +2,7 @@ const PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
 const MAX_FILES = 64;
 const MAX_FILE_BYTES = 1_000_000;
 const MAX_CONFIG_BYTES = 64_000;
+const MAX_SNAPSHOT_BYTES = 2_000_000;
 
 function own(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -41,6 +42,7 @@ export function normalizeProjectSnapshot(value = {}) {
   const config = jsonValue(value.config ?? {}, "Project configuration");
   if (!config || Array.isArray(config) || typeof config !== "object") throw new Error("Project configuration must be an object");
   if (new TextEncoder().encode(JSON.stringify(config)).byteLength > MAX_CONFIG_BYTES) throw new Error("Project configuration is too large");
+  if (new TextEncoder().encode(JSON.stringify({ files, config })).byteLength > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
   return Object.freeze({ files: Object.freeze(files), config: Object.freeze(config) });
 }
 

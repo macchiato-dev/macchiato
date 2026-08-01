@@ -117,6 +117,38 @@ function checked(value, expected) {
   return value === expected ? " checked" : "";
 }
 
+function initialProjectSnapshot() {
+  return {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n</head>\n<body>\n  <h1>Hello</h1>\n</body>\n</html>\n" },
+      { path: "style.css", content: "body {\n  font-family: system-ui, sans-serif;\n}\n" },
+      { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
+    ],
+    config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
+  };
+}
+
+function requestEditorOrigin(configuredOrigin, requestUrl) {
+  const configured = new URL(configuredOrigin);
+  const request = new URL(requestUrl);
+  if (configured.hostname.endsWith(".localhost") && request.hostname.endsWith(".localhost")) configured.port = request.port;
+  return configured.origin;
+}
+
+function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", editorUrl, messages, draft = false }) {
+  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}">
+    <div class="project-editor__toolbar">
+      <div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div>
+      <div class="project-editor__tools"><button class="project-editor__tool" type="button" data-project-add-file aria-label="${message(messages, "projectEditor.addFile", "Add file")}">+</button><button class="project-editor__tool" type="button" data-project-remove-file aria-label="${message(messages, "projectEditor.removeFile", "Remove selected file")}">−</button></div>
+      <button class="project-editor__versions" type="button" data-project-versions>${message(messages, "projectEditor.versions", "Versions")} (<span>${versionCount}</span>)</button>
+    </div>
+    <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
+    <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
+    <div class="project-editor__status" role="status" data-project-status>${message(messages, "projectEditor.saved", "Saved")}</div>
+    <aside class="project-editor__history" data-project-history hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
+  </section>`;
+}
+
 function projectRoute(pathname) {
   try {
     const match = /^\/([^/]+)\/([^/]+)$/.exec(decodeURIComponent(pathname));
@@ -160,8 +192,9 @@ function dashboardHtml(content, messages) {
   </div>`;
 }
 
-function projectViewHtml(project, messages) {
-  return `<div class="account-dashboard project-view">
+function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "", editorUrl = "") {
+  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, editorUrl, messages }) : "";
+  return `<div class="account-dashboard project-view${workspace ? " project-workspace" : ""}">
     <a class="project-view__back" href="/dashboard">← ${message(messages, "account.projects", "Your projects")}</a>
     <div class="project-view__identity">
       <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
@@ -172,10 +205,10 @@ function projectViewHtml(project, messages) {
       <span>${message(messages, `dashboard.${project.visibility}`, project.visibility)}</span>
       <span>${escapeHtml(project.template.toUpperCase())}</span>
     </div>
-    <section class="project-surface" aria-label="${escapeHtml(project.name)} workspace">
+    ${workspace ? editor : `<section class="project-surface" aria-label="${escapeHtml(project.name)} workspace">
       <p>${message(messages, "projectView.empty", "This project is ready for its first document.")}</p>
       <a class="account-action account-action--secondary" href="/dashboard">${message(messages, "projectView.manage", "Manage projects")}</a>
-    </section>
+    </section>`}
   </div>`;
 }
 
@@ -191,7 +224,8 @@ function projectFormHtml(session, content, token, messages, url, blogExamplesOri
     `<option value="user">@${escapeHtml(session.login)}</option>`,
     ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`),
   ].join("");
-  const editorUrl = `${blogExamplesOrigin}/-/blog-examples/markdown-editor/index.html`;
+  const editorUrl = `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`;
+  const snapshot = initialProjectSnapshot();
   return `<div class="account-dashboard project-create">
     <div class="project-create__heading"><h1>${message(messages, "projectCreate.heading", "Create a project")}</h1>
     <p class="account-dashboard__intro">${message(messages, "projectCreate.intro", "Pick a template, give it a name, then create.")}</p></div>
@@ -208,10 +242,7 @@ function projectFormHtml(session, content, token, messages, url, blogExamplesOri
           <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
           <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
         </div>
-        <section class="project-create__editor" aria-label="${message(messages, "projectCreate.content", "Project content")}">
-          <div class="project-create__editor-label">${message(messages, "projectCreate.content", "Project content")}</div>
-          <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
-        </section>
+        ${projectEditorHtml({ snapshot, editorUrl, messages, draft: true })}
       </div>
     </form>
   </div>`;
@@ -236,7 +267,7 @@ async function readCreateForm(request, session, action, authConfig, now) {
   if (request.headers.get("content-type")?.split(";")[0] !== "application/x-www-form-urlencoded") {
     throw new ContentValidationError("form", "unsupported form encoding");
   }
-  if (Number(request.headers.get("content-length") || 0) > 8_192) {
+  if (Number(request.headers.get("content-length") || 0) > 2_200_000) {
     throw new ContentValidationError("form", "form is too large");
   }
   if (request.headers.get("origin") !== new URL(request.url).origin) {
@@ -247,6 +278,14 @@ async function readCreateForm(request, session, action, authConfig, now) {
     throw new ContentValidationError("form", "invalid form token");
   }
   return form;
+}
+
+async function readProjectJson(request, session, action, authConfig, now) {
+  if (request.headers.get("content-type")?.split(";")[0] !== "application/json") throw new ContentValidationError("request", "JSON is required");
+  if (Number(request.headers.get("content-length") || 0) > 2_200_000) throw new ContentValidationError("request", "project update is too large");
+  if (request.headers.get("origin") !== new URL(request.url).origin) throw new ContentValidationError("request", "invalid request origin");
+  if (!await validCsrf(request.headers.get("x-resources-csrf"), session, action, authConfig, now)) throw new ContentValidationError("request", "invalid request token");
+  return request.json();
 }
 
 export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
@@ -314,6 +353,36 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       return finishGitlabAuth(request, gitlabAuthConfig, { fetchImpl, now, accountStore });
     }
     if (authConfig && request.method === "POST" && pathname === "/logout") return signOut(authConfig);
+    const projectApi = /^\/api\/projects\/([A-Za-z0-9-]+)\/(snapshot|versions|restore)(?:\/(\d+))?$/.exec(pathname);
+    if (projectApi) {
+      const session = authConfig && await readSession(request, authConfig, now);
+      if (!session) return Response.json({ error: "authentication_required" }, { status: 401, headers: { "cache-control": "no-store" } });
+      if (!contentStore) return Response.json({ error: "content_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
+      const [, projectId, operation, sequence] = projectApi;
+      try {
+        if (request.method === "GET" && operation === "versions" && sequence) {
+          const snapshot = await contentStore.getProjectVersion(projectId, Number(sequence), session.sub);
+          return snapshot ? Response.json({ snapshot }, { headers: { "cache-control": "private, no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
+        }
+        if (request.method === "GET" && operation === "versions" && !sequence) {
+          return Response.json({ versions: await contentStore.listProjectVersions(projectId, session.sub) }, { headers: { "cache-control": "private, no-store" } });
+        }
+        if (request.method === "POST" && operation === "snapshot" && !sequence) {
+          const value = await readProjectJson(request, session, `project:${projectId}`, authConfig, now);
+          const saved = await contentStore.saveProjectSnapshot(session.sub, projectId, value.snapshot, { reason: value.manual ? "manual" : "periodic", destructive: value.destructive === true });
+          return saved ? Response.json(saved, { headers: { "cache-control": "no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
+        }
+        if (request.method === "POST" && operation === "restore" && sequence) {
+          await readProjectJson(request, session, `project:${projectId}`, authConfig, now);
+          const restored = await contentStore.restoreProjectVersion(session.sub, projectId, Number(sequence));
+          return restored ? Response.json(restored, { headers: { "cache-control": "no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
+        }
+        return Response.json({ error: "method_not_allowed" }, { status: 405, headers: { allow: operation === "versions" ? "GET" : "POST", "cache-control": "no-store" } });
+      } catch (error) {
+        if (!(error instanceof ContentValidationError)) throw error;
+        return Response.json({ error: error.field || "invalid" }, { status: 400, headers: { "cache-control": "no-store" } });
+      }
+    }
     const createAction = request.method === "POST" && (pathname === "/projects" || pathname === "/organizations");
     if (createAction) {
       const session = authConfig && await readSession(request, authConfig, now);
@@ -326,6 +395,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             name: form.get("name"), slug: form.get("slug"), description: form.get("description"),
           });
         } else {
+          let snapshot;
+          try {
+            snapshot = JSON.parse(String(form.get("snapshot") || "{}"));
+          } catch {
+            throw new ContentValidationError("snapshot", "project snapshot is invalid");
+          }
           const created = await contentStore.createProject(session.sub, {
             userSlug: session.login,
             name: form.get("name"),
@@ -334,6 +409,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             namespace: form.get("namespace"),
             template: form.get("template"),
             visibility: form.get("visibility"),
+            snapshot,
           });
           return new Response(null, {
             status: 303,
@@ -364,6 +440,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const dynamicProject = requestedProject && contentStore?.getProject
         ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
         : null;
+      const projectWorkspace = dynamicProject && session && contentStore?.getProjectWorkspace
+        ? await contentStore.getProjectWorkspace(requestedProject.namespace, requestedProject.slug, session.sub)
+        : null;
       if (session && contentStore && pathname === "/") {
         return new Response(null, { status: 302, headers: { location: "/dashboard", "cache-control": "private, no-store" } });
       }
@@ -387,7 +466,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         let html = await upstream.text();
         if (dynamicProject) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          html = html.replace(ACCOUNT_CONTENT_MARKER, projectViewHtml(dynamicProject, manifest.messages[locale]));
+          const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
+          const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
+          html = html.replace(ACCOUNT_CONTENT_MARKER, projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token, `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`));
         } else if (ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
@@ -395,7 +476,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const dynamic = pathname === "/dashboard"
             ? dashboardHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
-              ? projectFormHtml(session, content, token, manifest.messages[locale], url, blogExamplesOrigin)
+              ? projectFormHtml(session, content, token, manifest.messages[locale], url, requestEditorOrigin(blogExamplesOrigin, url))
               : organizationFormHtml(token, manifest.messages[locale], url);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, dynamic);
