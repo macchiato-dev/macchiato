@@ -344,6 +344,26 @@ This produces a single Edge Script at
 `dist/resources-bunny/site`. The bundle is currently about 240 KB, well below
 Bunny's 10 MB script limit.
 
+### Update an existing staging deployment manually
+
+1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
+2. Upload the *contents* of `dist/resources-bunny/site/` to the existing
+   `resources-co/` Storage prefix, preserving paths and replacing matching
+   objects. Uploading `manifest.json` last keeps the old manifest active until
+   its complete artifact set is present.
+3. Replace the staging Edge Script editor contents with
+   `dist/resources-bunny/resources-bunny.js`, then save and deploy it.
+4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
+   and both locale choices before testing OAuth.
+
+For cacheable anonymous HTML, configure Bunny's cookie vary list with
+`resources_locale` and `__Host-resources_session`, and vary by the
+`Accept-Language` request header for visitors who have not selected a language.
+Anonymous localized documents use a short public cache lifetime. Responses
+with a valid session remain `private, no-store`; do not override that policy
+with a broad HTML cache rule. Immutable scripts, styles, fonts, and example
+assets may retain their long public lifetime.
+
 1. Upload the *contents* of `examples/resources-site/exported` beneath the
    configured `BUNNY_BUCKET_PREFIX` in a private Bunny Storage zone.
 2. Create a Bunny standalone Edge Script connected to this repository. Use

@@ -19,6 +19,10 @@ const databaseClient = createClient({
 });
 const accountStore = createAccountStore(databaseClient);
 const contentStore = createContentStore(databaseClient);
-const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, accountStore, contentStore, fetchImpl: fetch });
+const handler = createResourcesEdgeHandler({
+  config, authConfig, gitlabAuthConfig, accountStore, contentStore,
+  blogExamplesOrigin: process.env.BLOG_EXAMPLES_ORIGIN,
+  fetchImpl: fetch,
+});
 
 BunnySDK.net.http.serve(handler);
