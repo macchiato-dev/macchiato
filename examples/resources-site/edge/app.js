@@ -140,13 +140,6 @@ function initialProjectSnapshot() {
   };
 }
 
-function requestEditorOrigin(configuredOrigin, requestUrl) {
-  const configured = new URL(configuredOrigin);
-  const request = new URL(requestUrl);
-  if (configured.hostname.endsWith(".localhost") && request.hostname.endsWith(".localhost")) configured.port = request.port;
-  return configured.origin;
-}
-
 function validateProjectUrlPatterns(snapshot) {
   const patterns = snapshot?.config?.container?.allowedLinkPatterns;
   if (patterns === undefined) return;
@@ -162,13 +155,17 @@ function containerElementTags(container) {
   return containerElementNames(container).map((element) => `<span class="element-tag" tabindex="0" title="${escapeHtml(describeContainerElement(container, element))}" data-element-tag="${escapeHtml(element)}">${escapeHtml(element)}</span>`).join("");
 }
 
-function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", editorUrl, messages, draft = false }) {
+function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, draft = false }) {
   return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
     </div>
     <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
-    <iframe src="${escapeHtml(editorUrl)}" title="${message(messages, "projectCreate.editor", "Sandboxed project editor")}" sandbox="allow-scripts"></iframe>
+    <div class="project-editor__workspace" data-view="split">
+      <section class="project-editor__source" aria-label="${message(messages, "projectCreate.editor", "Sandboxed project editor")}"><div id="editor" class="project-editor__mount" data-project-editor-mount></div></section>
+      <div class="project-editor__splitter" role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0"></div>
+      <section class="project-editor__preview" aria-label="Project preview"><header><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button></div></header><div data-project-preview></div></section>
+    </div>
     <div class="project-editor__status" role="status" data-project-status>${message(messages, "projectEditor.saved", "Saved")}</div>
     <aside class="project-editor__history" data-project-history role="dialog" aria-label="${message(messages, "projectEditor.history", "Version history")}" hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
   </section>`;
@@ -217,8 +214,8 @@ function dashboardHtml(content, messages) {
   </div>`;
 }
 
-function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "", editorUrl = "") {
-  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, editorUrl, messages }) : "";
+function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "") {
+  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages }) : "";
   return `<div class="account-dashboard project-view${workspace ? " project-workspace" : ""}">
     <div class="project-view__identity">
       <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
@@ -243,19 +240,18 @@ function formError(url, messages) {
     : "";
 }
 
-function projectFormHtml(session, content, token, messages, url, blogExamplesOrigin, editorVersion = "") {
+function projectFormHtml(session, content, token, messages, url) {
   const namespaceOptions = [
     `<option value="user">@${escapeHtml(session.login)}</option>`,
     ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`),
   ].join("");
-  const editorUrl = `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html${editorVersion ? `?v=${editorVersion}` : ""}`;
   const snapshot = initialProjectSnapshot();
   return `<div class="account-dashboard project-create">
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
       <div class="project-create__layout">
-        ${projectEditorHtml({ snapshot, editorUrl, messages, draft: true })}
+        ${projectEditorHtml({ snapshot, messages, draft: true })}
         <div class="project-create__fields">
           <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
           <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
@@ -501,7 +497,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token, `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html?v=${editorVersion}`));
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token));
           html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
         } else if (ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
@@ -510,7 +506,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const dynamic = pathname === "/dashboard"
             ? dashboardHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
-              ? projectFormHtml(session, content, token, manifest.messages[locale], url, requestEditorOrigin(blogExamplesOrigin, url), editorVersion)
+              ? projectFormHtml(session, content, token, manifest.messages[locale], url)
               : organizationFormHtml(token, manifest.messages[locale], url);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);

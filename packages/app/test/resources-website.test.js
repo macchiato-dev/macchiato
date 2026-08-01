@@ -498,16 +498,13 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel(/One pattern per line/).hover();
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
   assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
-  const newEditor = page.frameLocator(".project-editor iframe");
-  assert.match(await page.locator(".project-editor iframe").getAttribute("src"), /index\.html\?v=[a-f0-9]{12}$/);
+  const newEditor = page.locator(".project-editor");
+  assert.equal(await page.locator(".project-editor iframe").count(), 0);
   assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 1);
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
   await assert.doesNotReject(newEditor.getByText("Split", { exact: true }).waitFor());
-  await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
+  await assert.doesNotReject(newEditor.getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
   assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "A small, useful article");
-  await newEditor.locator(".preview-identity").hover();
-  await assert.doesNotReject(newEditor.getByRole("tooltip").waitFor({ state: "visible" }));
-  assert.match((await newEditor.getByRole("tooltip").innerText()).replace(/\s+/g, " "), /A small, useful article \/index\.html/);
   assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);
   const versionPlacement = await page.evaluate(() => {
@@ -516,16 +513,16 @@ test("Resources.co edge account creates organizations and projects in a real bro
     return { versionsRight: versions.right, sourceRight: editor.left + editor.width / 2 };
   });
   assert.ok(versionPlacement.versionsRight <= versionPlacement.sourceRight + 1);
-  const editorScrollModel = await newEditor.locator("html").evaluate(() => ({
+  const editorScrollModel = await newEditor.evaluate(() => ({
     documentHeight: document.documentElement.scrollHeight,
     viewportHeight: document.documentElement.clientHeight,
-    sourceOverflow: getComputedStyle(document.querySelector(".source")).overflow,
-    previewOverflow: getComputedStyle(document.querySelector(".preview")).overflow,
+    sourceOverflow: getComputedStyle(document.querySelector(".project-editor__source")).overflow,
+    previewOverflow: getComputedStyle(document.querySelector(".project-editor__preview")).overflow,
     codeOverflow: getComputedStyle(document.querySelector(".cm-scroller")).overflow,
   }));
   assert.equal(editorScrollModel.documentHeight, editorScrollModel.viewportHeight);
   assert.equal(editorScrollModel.sourceOverflow, "hidden");
-  assert.equal(editorScrollModel.previewOverflow, "hidden");
+  assert.equal(editorScrollModel.previewOverflow, "auto");
   assert.equal(editorScrollModel.codeOverflow, "auto");
   const topBarHeights = await page.locator(".focused-header, .layout.focused-view > .userbar").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
   assert.deepEqual(topBarHeights, [54, 54]);
@@ -567,21 +564,21 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.match(await newEditor.locator(".cm-content").innerText(), /\{\}$/);
   await template.selectOption("article");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await assert.doesNotReject(newEditor.frameLocator("#project-preview").getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
+  await assert.doesNotReject(newEditor.getByRole("link", { name: "hypertext on Wikipedia" }).waitFor());
   await template.selectOption("svg");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(page.getByRole("button", { name: "image.svg", exact: true }).waitFor());
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("circle", { exact: false }).waitFor());
-  await assert.doesNotReject(newEditor.frameLocator("#project-preview").locator("circle").waitFor());
+  await assert.doesNotReject(newEditor.locator("[data-project-preview] circle").waitFor());
   await template.selectOption("html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("Edit this page to make it yours", { exact: false }).waitFor());
   await newEditor.locator(".cm-content").click();
   await assert.doesNotReject(newEditor.locator(".cm-cursor").waitFor({ state: "visible" }));
   await newEditor.getByRole("button", { name: "Preview" }).click();
-  assert.equal(await newEditor.locator("main").getAttribute("data-view"), "preview");
+  assert.equal(await newEditor.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   await newEditor.getByRole("button", { name: "Editor" }).click();
-  assert.equal(await newEditor.locator("main").getAttribute("data-view"), "editor");
+  assert.equal(await newEditor.locator(".project-editor__workspace").getAttribute("data-view"), "editor");
   await newEditor.getByRole("button", { name: "Split" }).click();
   const splitter = newEditor.getByRole("separator", { name: "Resize editor and preview" });
   await splitter.press("ArrowRight");
@@ -612,8 +609,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
   await assert.doesNotReject(page.locator("[data-project-versions] .project-editor__version-count", { hasText: "1" }).waitFor());
-  await assert.doesNotReject(page.locator(".project-editor iframe").waitFor());
-  const projectEditor = page.frameLocator(".project-editor iframe");
+  await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
+  const projectEditor = page.locator(".project-editor");
   await assert.doesNotReject(projectEditor.getByText("Digital Clock", { exact: false }).waitFor());
   await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
   await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Unsaved changes");
