@@ -18,7 +18,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small, useful article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <header><p><strong>Resources.co example</strong></p><h1>A small, useful article</h1></header>\n    <p>This Article container accepts a deliberately limited set of elements.</p>\n    <p>Learn more about <a href=\"https://en.wikipedia.org/wiki/Hypertext\">hypertext on Wikipedia</a>.</p>\n  </article>\n</body>\n</html>\n" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"] }, sandbox: { network: false, storage: "session" } },
   },
   html: {
     files: [
@@ -202,7 +202,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     config.setAttribute("aria-selected", selected === "config" ? "true" : "false");
     config.textContent = root.dataset.configLabel || "Configuration";
     tabs.append(config);
-    root.querySelector("[data-project-remove-file]").disabled = selected === "config" || state.files.length === 1;
   }
 
   function setStatus(text, error = false) {
@@ -354,46 +353,32 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderTabs();
     sendContent();
   });
-  root.querySelector("[data-project-add-file]").addEventListener("click", () => {
-    const path = prompt("File path");
-    if (!path) return;
-    try {
-      const next = normalizeProjectSnapshot({ files: [...state.files, { path, content: "" }], config: state.config });
-      selected = path;
-      updateSnapshot(next, { destructive: true });
-      renderTabs();
-      sendContent();
-    } catch (error) { setStatus(error.message, true); }
-  });
-  root.querySelector("[data-project-remove-file]").addEventListener("click", () => {
-    if (selected === "config" || state.files.length === 1 || !confirm(`Remove ${selected}?`)) return;
-    const removed = selected;
-    const files = state.files.filter((file) => file.path !== removed);
-    selected = files[0].path;
-    updateSnapshot({ files, config: state.config }, { destructive: true });
-    renderTabs();
-    sendContent();
-  });
   const form = root.closest("form");
   const template = form?.querySelector("[data-project-template]");
   const container = form?.querySelector("[data-project-container]");
   const containerOutline = form?.querySelector("[data-container-outline]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
   const containerElements = Object.freeze({
-    article: ["article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"],
+    article: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"],
     page: ["main", "section", "header", "footer", "h1", "h2", "p", "a", "img", "ul", "li"],
     canvas: ["canvas"],
     svg: ["svg", "title", "g", "path", "rect", "circle", "line", "text"],
   });
-  function growPatterns() {
-    if (!linkPatterns) return;
-    linkPatterns.style.height = "auto";
-    linkPatterns.style.height = `${linkPatterns.scrollHeight}px`;
+  const containerOutlines = Object.freeze({
+    article: "html → head (meta, title, link) + body → article (header, h1, p, a, strong, em, ul, li, code)",
+    page: "html → head (meta, title, link) + body → main (section, header, footer, h1, h2, p, a, img, ul, li)",
+    canvas: "html → head (meta, title) + body → canvas",
+    svg: "svg → title, g, path, rect, circle, line, text",
+  });
+  function growTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight + 2}px`;
   }
   function updateContainer() {
     if (!container) return;
     const allowedElements = containerElements[container.value] || [];
-    if (containerOutline) containerOutline.textContent = `${container.value} → ${allowedElements.join(", ") || "no elements yet"}`;
+    if (containerOutline) containerOutline.textContent = containerOutlines[container.value] || `${container.value} → no elements yet`;
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     try {
       validateAllowedUrlPatterns(allowedLinkPatterns);
@@ -412,16 +397,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!next) return;
     if (container) container.value = next.config.container?.name || "page";
     if (linkPatterns) linkPatterns.value = (next.config.container?.allowedLinkPatterns || []).join("\n");
-    growPatterns();
-    if (containerOutline) containerOutline.textContent = `${container.value} → ${(next.config.container?.allowedElements || []).join(", ") || "no elements yet"}`;
+    growTextarea(linkPatterns);
+    if (containerOutline) containerOutline.textContent = containerOutlines[container.value] || `${container.value} → no elements yet`;
     selected = next.files[0].path;
     updateSnapshot(next, { destructive: true });
     renderTabs();
     sendContent();
   });
   container?.addEventListener("change", updateContainer);
-  linkPatterns?.addEventListener("input", () => { growPatterns(); updateContainer(); });
-  growPatterns();
+  for (const textarea of form?.querySelectorAll("textarea[data-autogrow]") || []) {
+    textarea.addEventListener("input", () => growTextarea(textarea));
+    growTextarea(textarea);
+  }
+  linkPatterns?.addEventListener("input", updateContainer);
   versionButton.addEventListener("click", () => {
     if (!historyPanel.hidden) {
       historyPanel.hidden = true;
