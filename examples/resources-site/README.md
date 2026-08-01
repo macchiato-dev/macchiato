@@ -39,6 +39,17 @@ locally or the platform `fetch` against private Bunny Storage in production.
 
 ## Presentation parity and intentional differences
 
+### Standard and focused views
+
+Resources uses one layout with two declared view states. `standard` retains the
+centered modular content and navigation sidebar. `focused` makes that same
+layout full-bleed, places the unchanged breadcrumb contents in the top bar,
+hides the sidebar, and removes outer workspace padding. New-project and project
+detail routes are the first focused views. Keeping this as `data-view` state,
+rather than a separate page shell, leaves room for the navigation layer to
+transition between views later; routes that need fresh editor initialization
+may continue using full-document navigation.
+
 Both profiles now use the Resources.co teal/blue theme by default, render the
 same brand, content, project metadata, navigation, footer, fonts, responsive
 breakpoints, and friendly URLs. Both headers retain the compact notification,

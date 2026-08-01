@@ -2,12 +2,13 @@
   "definitions": {
     "layout": {
       "element": "main.layout",
-      "attrs": ["class"],
+      "attrs": ["class", "data-view"],
       "children": [
         {
           "oneOf": [
             "$brand",
             "$project-identity",
+            "$focused-header",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
@@ -24,6 +25,11 @@
     },
     "project-identity": {
       "element": "header.box.project-identity",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["nav"]
+    },
+    "focused-header": {
+      "element": "header.box.focused-header",
       "attrs": ["class", "data-screen-label"],
       "children": ["nav"]
     },
@@ -181,12 +187,13 @@
       "children": []
     },
     "main": {
-      "attrs": ["class"],
+      "attrs": ["class", "data-view"],
       "children": [
         {
           "oneOf": [
             "$brand",
             "$project-identity",
+            "$focused-header",
             "$theme-toggle-block",
             "$mobile-menu",
             "$main-column",
