@@ -162,6 +162,14 @@ public project paths such as `macchiato/app/es.md`. The in-repo
   the same transport.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
+- Add a separately published, versioned JavaScript module space for project
+  artifacts that Deno can import by HTTPS. Keep it outside the site-document
+  prefix, give immutable releases content-addressed or versioned URLs, publish
+  an explicit module manifest with media types and hashes, and serve it from a
+  dedicated origin with a narrow CORS policy. Treat the module publisher as an
+  executable-code authority distinct from the Resources site and its sandboxed
+  blog examples; projects should opt into exact module URLs rather than a
+  mutable latest alias.
 - Reconsider a native browser client only when an interaction needs it. Keep its
   code and CSP capability separate from the current document-only profile.
 
