@@ -19,9 +19,25 @@ The adapter fixes the CodeMirror extensions and continuously checks the
 resulting subtree. Shape violations destroy and clear the editor. This does not
 make arbitrary browser libraries compatible: each guest still needs an
 explicit, auditable subset of browser APIs. See
-`packages/code-editor-use/example/`.
+`packages/code-editor-use/examples/basic/`.
 
 ### Container isolation profiles
+
+In this architecture a **container** is a reusable declarative recipe. It may
+pin one or more WebAssembly machines or QuickJS contexts, the `*-use` modules
+granted to each context, their concrete configurations, resource budgets, and
+the allowed communication paths between them. An **environment** is one
+resolved, running instance of that recipe, with its own data, secrets, and
+lifetime. This keeps compositions reusable without conflating configuration
+with a live sandbox. A container may be built in and audited, or custom and
+treated as less trusted.
+
+The recipe also declares an execution mode. `sandboxed` is the default and
+enforces the boundary with WebAssembly/QuickJS or an iframe profile. A future
+explicit `trusted-direct` production mode may run operator-audited code without
+the VM overhead. It is a deployment decision, never an automatic optimization;
+the resolved manifest must make it visible, and the same `*-use` capability
+configuration remains the contract and an input to human or automated audits.
 
 Iframe-free is a property of a particular `*-use` configuration, not a blanket
 property of the package. A host may mount a guest directly into a granted DOM

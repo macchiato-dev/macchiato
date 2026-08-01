@@ -2,10 +2,15 @@ import { browserUseQuickJsDomGuestSource } from "@macchiato-dev/browser-use/quic
 import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 import { BrowserDomHost, CODE_EDITOR_DOM_POLICY, CodeMirrorInputBridge } from "./host.js";
 
-export async function mountQuickJsCodeEditor({ root, guestSource, onChange = () => {}, onReady = () => {}, onViolation = console.error }) {
+export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange = () => {}, onReady = () => {}, onViolation = console.error }) {
   if (!(root instanceof Element)) throw new TypeError("A DOM root is required");
   if (typeof guestSource !== "string") throw new TypeError("QuickJS guest source is required");
-  let sandbox = await createSandbox();
+  const originalRootId = root.id;
+  if (!root.id) root.id = "editor";
+  let sandbox = await createSandbox({
+    memoryLimitBytes: limits.memoryLimitBytes ?? 128 * 1024 * 1024,
+    maxStackBytes: limits.maxStackBytes ?? 4 * 1024 * 1024,
+  });
   let stopped = false;
   let inputBridge;
   const host = new BrowserDomHost(root, CODE_EDITOR_DOM_POLICY, {
@@ -43,6 +48,12 @@ export async function mountQuickJsCodeEditor({ root, guestSource, onChange = () 
       if (destroyed) throw new Error("Editor sandbox has been disposed");
       return sandbox.callJsonFunction("__codeEditorInspect", {});
     },
+    command(payload) {
+      if (destroyed) throw new Error("Editor sandbox has been disposed");
+      const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
+      sandbox.callJsonFunction("__browserUseFlush", {});
+      return result;
+    },
     focus() { root.querySelector(".cm-content")?.focus(); },
     destroy() {
       if (destroyed) return;
@@ -50,6 +61,7 @@ export async function mountQuickJsCodeEditor({ root, guestSource, onChange = () 
       inputBridge?.destroy();
       host.stop();
       root.replaceChildren();
+      if (!originalRootId) root.removeAttribute("id");
       sandbox?.dispose();
       sandbox = null;
     },

@@ -40,6 +40,8 @@ export class Sandbox {
    * @param {Record<string, string|(() => string)>} [options.modules]
    * @param {(moduleName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleLoader]
    * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
+   * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
+   * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
    */
   constructor(options = {}) {
     this.options = options;
@@ -56,8 +58,16 @@ export class Sandbox {
     if (this.disposed) throw new Error("Sandbox has been disposed");
     if (this.runtime) return;
 
+    if (this.options.memoryLimitBytes !== undefined) {
+      if (!Number.isSafeInteger(this.options.memoryLimitBytes) || this.options.memoryLimitBytes <= 0) throw new TypeError("memoryLimitBytes must be a positive safe integer");
+    }
+    if (this.options.maxStackBytes !== undefined) {
+      if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
+    }
     const mod = await getModule();
     this.runtime = mod.newRuntime();
+    if (this.options.memoryLimitBytes !== undefined) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
+    if (this.options.maxStackBytes !== undefined) this.runtime.setMaxStackSize(this.options.maxStackBytes);
     this.installModuleLoader();
     this.context = this.runtime.newContext();
   }

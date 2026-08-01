@@ -17,7 +17,7 @@ bootstrap. `macchiato-detect-app` reports whether this configuration is present
 and complete so other programs—and eventually a skill—can use one stable
 detection contract.
 
-`packages/code-editor-use/example` is an independent nested npm project demonstrating
+`packages/code-editor-use/examples/basic` is an independent nested npm project demonstrating
 both modes. `npm start` uses its minimal server and `PORT` (or a system-selected
 free port). `app install code-editor-use` records an optional main-server
 subdomain mapping. In that second mode SQLite is only the operator's catalog;

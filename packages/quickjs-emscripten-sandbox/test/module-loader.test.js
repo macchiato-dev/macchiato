@@ -3,6 +3,20 @@ import test from "node:test";
 
 import { createSandbox, nodeHttpModuleSource, nodeSqliteModuleSource } from "../src/index.js";
 
+test("sandbox accepts per-runtime memory and stack limits", async () => {
+  const sandbox = await createSandbox({ memoryLimitBytes: 16 * 1024 * 1024, maxStackBytes: 512 * 1024 });
+  try {
+    assert.deepEqual(sandbox.run("6 * 7"), { ok: true, value: 42 });
+  } finally {
+    sandbox.dispose();
+  }
+});
+
+test("sandbox rejects invalid runtime limits", async () => {
+  await assert.rejects(createSandbox({ memoryLimitBytes: 0 }), /positive safe integer/);
+  await assert.rejects(createSandbox({ maxStackBytes: -1 }), /positive safe integer/);
+});
+
 test("loads explicit guest modules", async () => {
   const sandbox = await createSandbox({
     modules: {
