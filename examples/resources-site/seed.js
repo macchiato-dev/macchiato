@@ -876,7 +876,9 @@ body:has(.focused-view) { padding: 0; }
 .focused-view .project-surface { border-radius: 0; }
 .container-outline { padding: 7px 9px; border: 1px solid var(--track-border); color: var(--muted); font-size: 11px; }
 .container-outline strong { display: block; margin-bottom: 6px; color: var(--text); }
-.container-outline code { color: var(--accent); }
+.element-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.element-tag { display: inline-flex; align-items: center; padding: 2px 6px; border: 1px solid var(--track-border); border-radius: 999px; color: var(--accent); background: var(--track); font-family: "Space Mono", monospace; font-size: 10px; line-height: 1.3; }
+.element-tag:hover, .element-tag:focus { border-color: var(--accent); color: var(--text); background: var(--hover); }
 .field-label-with-help { display: flex; align-items: center; gap: 6px; }
 .field-help { position: relative; display: inline-flex; }
 .field-help__trigger { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; border: 1px solid var(--muted); border-radius: 999px; color: var(--muted); font-size: 11px; }
