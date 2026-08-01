@@ -120,8 +120,8 @@ function checked(value, expected) {
 function initialProjectSnapshot() {
   return {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n</head>\n<body>\n  <h1>Hello</h1>\n</body>\n</html>\n" },
-      { path: "style.css", content: "body {\n  font-family: system-ui, sans-serif;\n}\n" },
+      { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello</h1>\n    <p>Edit this page to make it yours.</p>\n  </main>\n  <script src=\"./script.js\"></script>\n</body>\n</html>\n" },
+      { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
       { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
     config: { entry: "index.html", sandbox: { network: false, storage: "session" } },
@@ -227,22 +227,20 @@ function projectFormHtml(session, content, token, messages, url, blogExamplesOri
   const editorUrl = `${requestEditorOrigin(blogExamplesOrigin, url)}/-/blog-examples/markdown-editor/index.html`;
   const snapshot = initialProjectSnapshot();
   return `<div class="account-dashboard project-create">
-    <div class="project-create__heading"><h1>${message(messages, "projectCreate.heading", "Create a project")}</h1>
-    <p class="account-dashboard__intro">${message(messages, "projectCreate.intro", "Pick a template, give it a name, then create.")}</p></div>
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
       <div class="project-create__layout">
+        ${projectEditorHtml({ snapshot, editorUrl, messages, draft: true })}
         <div class="project-create__fields">
           <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Project name")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
           <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Project slug")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
           <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500"></textarea></div>
           <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
-          <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template"><option value="blank">${message(messages, "projectCreate.blank", "Blank")}</option><option value="html">${message(messages, "projectCreate.html", "HTML")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas")}</option></select></div>
+          <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Starting point")}</label><select id="project-template" name="template" data-project-starting-point><option value="html" selected>${message(messages, "projectCreate.html", "HTML page")}</option><option value="canvas">${message(messages, "projectCreate.canvas", "Canvas sketch")}</option><option value="svg">${message(messages, "projectCreate.svg", "SVG illustration")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
           <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
           <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
         </div>
-        ${projectEditorHtml({ snapshot, editorUrl, messages, draft: true })}
       </div>
     </form>
   </div>`;
