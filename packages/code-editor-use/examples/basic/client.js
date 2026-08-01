@@ -30,6 +30,7 @@ if (readyMessage) updateSummary();
 globalThis.__codeEditorBridge = Object.freeze({
   command: (payload) => controller.command(payload),
   inspect: () => controller.inspect(),
+  setContent: (content, language, options) => controller.setContent(content, language, options),
   destroy: () => controller.destroy(),
 });
 addEventListener("pagehide", () => controller.destroy(), { once: true });

@@ -597,7 +597,13 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
   await page.getByRole("button", { name: "Configuration" }).click();
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await newEditor.locator(".cm-content").fill('{"entry":"index.html","sandbox":{"network":false,"storage":"local"}}\n');
+  assert.equal(await newEditor.locator(".cm-content").getAttribute("aria-readonly"), "true");
+  const visibleConfiguration = await newEditor.locator(".cm-content").innerText();
+  assert.doesNotMatch(visibleConfiguration, /allowedElements/);
+  assert.match(visibleConfiguration, /"container"/);
+  await newEditor.locator(".cm-content").focus();
+  await page.keyboard.type("not editable");
+  assert.equal(await newEditor.locator(".cm-content").innerText(), visibleConfiguration);
   await page.waitForFunction(() => document.querySelector("[data-project-status]")?.textContent === "Draft saved in this session");
   await page.locator("[data-project-versions]").click();
   assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");

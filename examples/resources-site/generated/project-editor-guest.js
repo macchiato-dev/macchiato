@@ -30431,6 +30431,7 @@
   // packages/code-editor-use/src/guest.js
   var parent = document.getElementById("editor");
   var language2 = new Compartment();
+  var editability = new Compartment();
   var applyingHostContent = false;
   function languageExtension(name2) {
     if (name2 === "javascript") return javascript();
@@ -30446,6 +30447,10 @@
       basicSetup,
       lineNumbers(),
       language2.of(javascript()),
+      editability.of([
+        EditorState.readOnly.of(false),
+        EditorView.contentAttributes.of({ "aria-readonly": "false" })
+      ]),
       oneDark,
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.viewportChanged) renderLineNumbers();
@@ -30583,7 +30588,13 @@
       view.dispatch({
         changes: { from: 0, to: view.state.doc.length, insert: request.content },
         selection: { anchor: 0 },
-        effects: language2.reconfigure(languageExtension(request.language))
+        effects: [
+          language2.reconfigure(languageExtension(request.language)),
+          editability.reconfigure([
+            EditorState.readOnly.of(request.readOnly === true),
+            EditorView.contentAttributes.of({ "aria-readonly": request.readOnly === true ? "true" : "false" })
+          ])
+        ]
       });
     } finally {
       applyingHostContent = false;
@@ -30717,6 +30728,7 @@
     const event = JSON.parse(json2);
     const view = globalThis.__codeEditorView;
     const selection2 = view.state.selection.main;
+    if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection2.from, to: selection2.to });
     let from = selection2.from;
     let to = selection2.to;
     let insert2 = "";

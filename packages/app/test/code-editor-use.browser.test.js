@@ -87,6 +87,15 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
     bridge: "object",
   });
 
+  const editableDocument = await page.evaluate(() => globalThis.__codeEditorBridge.inspect().document);
+  await page.evaluate((document) => globalThis.__codeEditorBridge.setContent(document, "javascript", { readOnly: true }), editableDocument);
+  assert.equal(await page.locator(".cm-content").getAttribute("aria-readonly"), "true");
+  await page.locator(".cm-content").focus();
+  await page.keyboard.type("SHOULD_NOT_APPEAR");
+  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).document, editableDocument);
+  await page.evaluate((document) => globalThis.__codeEditorBridge.setContent(document, "javascript"), editableDocument);
+  assert.equal(await page.locator(".cm-content").getAttribute("aria-readonly"), "false");
+
   await page.locator(".cm-content").click();
   await page.keyboard.press("Meta+a");
   const selectAllOnFirstPress = await page.evaluate(() => globalThis.__codeEditorBridge.inspect());

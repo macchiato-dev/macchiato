@@ -13,6 +13,7 @@ import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 
 const parent = document.getElementById("editor");
 const language = new Compartment();
+const editability = new Compartment();
 let applyingHostContent = false;
 function languageExtension(name) {
   if (name === "javascript") return javascript();
@@ -28,6 +29,10 @@ const state = EditorState.create({
     basicSetup,
     lineNumbers(),
     language.of(javascript()),
+    editability.of([
+      EditorState.readOnly.of(false),
+      EditorView.contentAttributes.of({ "aria-readonly": "false" }),
+    ]),
     oneDark,
     EditorView.updateListener.of((update) => {
       if (update.docChanged || update.viewportChanged) renderLineNumbers();
@@ -168,7 +173,13 @@ globalThis.__codeEditorSetContent = (json) => {
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: request.content },
       selection: { anchor: 0 },
-      effects: language.reconfigure(languageExtension(request.language)),
+      effects: [
+        language.reconfigure(languageExtension(request.language)),
+        editability.reconfigure([
+          EditorState.readOnly.of(request.readOnly === true),
+          EditorView.contentAttributes.of({ "aria-readonly": request.readOnly === true ? "true" : "false" }),
+        ]),
+      ],
     });
   } finally {
     applyingHostContent = false;
@@ -299,6 +310,7 @@ globalThis.__codeEditorBeforeInput = (json) => {
   const event = JSON.parse(json);
   const view = globalThis.__codeEditorView;
   const selection = view.state.selection.main;
+  if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection.from, to: selection.to });
   let from = selection.from;
   let to = selection.to;
   let insert = "";

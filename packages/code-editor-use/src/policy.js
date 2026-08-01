@@ -17,6 +17,7 @@ export const CODE_EDITOR_DOM_POLICY = Object.freeze({
     "aria-haspopup": "^listbox$",
     "aria-autocomplete": "^(?:list|none)$",
     "aria-multiline": "^(?:true|false)$",
+    "aria-readonly": "^(?:true|false)$",
     "aria-controls": "^[A-Za-z0-9_-]{0,120}$",
     "aria-activedescendant": "^[A-Za-z0-9_-]{0,120}$",
     contenteditable: "^(?:true|false)$",
