@@ -1,0 +1,7 @@
+{
+  "name": "@macchiato-dev/canvas-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A bounded Canvas 2D capability for QuickJS browser guests",
+  "exports": { ".": "./src/index.js" }
+}
