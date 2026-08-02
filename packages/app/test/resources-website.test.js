@@ -47,7 +47,7 @@ function startApp(port, dataDir, environment = {}) {
     "development",
   ], {
     cwd: repoRoot,
-    env: { ...process.env, ...environment },
+    env: { ...process.env, RESOURCES_PREVIEW_SIGNUPS_ENABLED: "true", ...environment },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";

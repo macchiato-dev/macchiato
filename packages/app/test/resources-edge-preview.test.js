@@ -3,7 +3,8 @@ import test from "node:test";
 import { resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
 
 test("local edge adapter serves the Bunny profile from memory", async () => {
-  const home = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/"));
+  const app = { environment: { SIGNUPS_ENABLED: "true" } };
+  const home = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/"), app);
   const text = await home.text();
   assert.equal(home.status, 200);
   assert.match(text, /Resources\.co/);
@@ -14,11 +15,11 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(home.headers.get("content-security-policy"), /script-src 'self'/);
   assert.match(text, /type="module".*command-palette-use\/client\.js/);
 
-  const project = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/macchiato/app"));
+  const project = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/macchiato/app"), app);
   assert.equal(project.status, 200);
   assert.match(await project.text(), /<h1>App<\/h1>/);
   assert.equal((await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/private.txt"))).status, 404);
-  const login = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/login"));
+  const login = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/login"), app);
   assert.equal(login.status, 200);
   const loginHtml = await login.text();
   assert.match(loginHtml, /<main class="layout document-runtime auth-layout"/);
