@@ -436,6 +436,12 @@ ${base}
 .footer .copy a { color: var(--accent); text-decoration: underline; }
 .footer .copy a:visited { color: var(--accent); }
 .footer .copy a:hover, .footer .copy a:focus-visible { color: var(--text); }
+.layout.home-view { grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "brand userbar" "main nav" "main social" "footer footer"; }
+.home-social { grid-area: social; align-self: start; padding: 18px 20px; }
+.home-social h2 { margin: 0 0 5px; font-size: 14px; }
+.home-social p { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+.home-social__links { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-social__links a { color: var(--accent); font-size: 13px; font-weight: 600; }
 .language-switcher { display: inline-flex; align-items: center; gap: 6px; }
 .language-switcher label { display: inline-flex; align-items: center; gap: 6px; }
 .language-switcher select { padding: 4px 24px 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; }
@@ -963,6 +969,7 @@ body:has(.focused-view) { padding: 0; }
       "main main"
       "footer footer";
   }
+  .layout.home-view { grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "brand menu" "main main" "social social" "footer footer"; }
   .toggle,
   .nav {
     display: none;
@@ -1003,6 +1010,7 @@ body:has(.focused-view) { padding: 0; }
       "main"
       "footer";
   }
+  .layout.document-runtime.home-view { grid-template-rows: auto auto auto minmax(0, 1fr) auto auto; grid-template-areas: "brand" "userbar" "nav" "main" "social" "footer"; }
   .document-runtime .nav {
     display: flex;
   }
@@ -1290,12 +1298,14 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
     about: i18n.text("nav.about"),
   });
   const view = viewForPath(path);
-  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
+  const homeSocial = path === "/" ? `<aside class="box home-social" data-screen-label="home-social"><h2>${escapeHtml(i18n.text("social.heading"))}</h2><p>${escapeHtml(i18n.text("social.intro"))}</p><div class="home-social__links"><a href="https://x.com/ResourcesCo" target="_blank" rel="noopener">${escapeHtml(i18n.text("social.x"))}</a><a href="https://www.linkedin.com/company/resources-co/" target="_blank" rel="noopener">${escapeHtml(i18n.text("social.linkedin"))}</a></div></aside>` : "";
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${path === "/" ? " home-view" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus({ cardless: view === "focused" }) : renderResourcesUserMenu({ cardless: view === "focused" })}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n, blogExamplesOrigin })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
+    ${homeSocial}
     <footer class="box footer" data-screen-label="footer"><div class="copy"><span>${escapeHtml(i18n.text("chrome.copyright"))}</span><a href="/terms">${escapeHtml(i18n.text("auth.termsOfUse"))}</a><a href="/privacy">${escapeHtml(i18n.text("auth.privacy"))}</a></div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module" src="${themeUseClientPath}"></script>

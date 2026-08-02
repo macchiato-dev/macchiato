@@ -3,7 +3,7 @@ import test from "node:test";
 import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../examples/resources-site/auth/github.js";
 import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../examples/resources-site/auth/gitlab.js";
 import { accountErrorResponse } from "../../../examples/resources-site/auth/account-response.js";
-import { AccountConflictError } from "../../../examples/resources-site/models/accounts.js";
+import { AccountConflictError, AccountSignupDisabledError } from "../../../examples/resources-site/models/accounts.js";
 
 const config = createAuthConfig({
   PUBLIC_ORIGIN: "https://resources.example",
@@ -31,6 +31,27 @@ test("account collision response does not disclose existing sign-in providers", 
   assert.equal(response.status, 409);
   assert.match(body, /existing method/);
   assert.doesNotMatch(body, /GitHub|GitLab/);
+});
+
+test("closed registration response gives public update links without account details", async () => {
+  const response = accountErrorResponse(new AccountSignupDisabledError(), "https://resources.example");
+  const body = await response.text();
+  assert.equal(response.status, 403);
+  assert.match(body, /Sign up is not currently enabled/);
+  assert.match(body, /https:\/\/x\.com\/ResourcesCo/);
+  assert.match(body, /https:\/\/www\.linkedin\.com\/company\/resources-co\//);
+  assert.doesNotMatch(body, /GitHub|GitLab|email address/);
+});
+
+test("SIGNUPS_ENABLED accepts only the explicit true value", () => {
+  assert.equal(config.signupsEnabled, false);
+  assert.equal(createAuthConfig({
+    PUBLIC_ORIGIN: "https://resources.example",
+    GITHUB_CLIENT_ID: "client-id",
+    GITHUB_CLIENT_SECRET: "client-secret",
+    SESSION_SIGNING_KEY: "test-signing-key-that-is-not-used-in-production",
+    SIGNUPS_ENABLED: "true",
+  }).signupsEnabled, true);
 });
 
 test("GitHub auth uses signed state, PKCE, and a secure flow cookie", async () => {

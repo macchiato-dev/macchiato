@@ -13,6 +13,7 @@
             "$mobile-menu",
             "$main-column",
             "$primary-nav",
+            "$home-social",
             "$site-footer"
           ]
         }
@@ -102,6 +103,11 @@
       "element": "nav.box.nav",
       "attrs": ["class", "data-screen-label", "aria-label"],
       "children": ["a"]
+    },
+    "home-social": {
+      "element": "aside.box.home-social",
+      "attrs": ["class", "data-screen-label"],
+      "children": ["h2", "p", "div"]
     },
     "menu-panel": {
       "element": "div.box.menu-panel",

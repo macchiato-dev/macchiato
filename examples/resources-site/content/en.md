@@ -64,6 +64,10 @@
 - **about.fit**: How it fits together
 - **about.fitP1**: Every building block is designed to be self-hosted and to compose with the others. The project catalogue is generated from package metadata rather than a hand-maintained list.
 - **about.fitP2**: Package names become public project paths, so @macchiato-dev/dom-use appears as macchiato/dom-use.
+- **social.heading**: Follow Resources.co
+- **social.intro**: Product updates and new releases.
+- **social.x**: X
+- **social.linkedin**: LinkedIn
 - **blog.title**: Blog - Resources.co
 - **blog.heading**: Blog
 - **blog.intro**: Notes from the Resources.co archive and new work on secure, portable applications.
@@ -123,6 +127,8 @@
 - **auth.new**: New to Resources.co?
 - **auth.createAccount**: Create an account
 - **auth.realSession**: GitHub and GitLab create a real Resources.co session.
+- **auth.signupDisabled**: Sign up is not currently enabled
+- **auth.signupDisabledUpdates**: Follow us on X or LinkedIn for updates.
 - **account.menu**: Account menu
 - **account.projects**: Your projects
 - **account.profile**: Your profile

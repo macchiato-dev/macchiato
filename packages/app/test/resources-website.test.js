@@ -34,7 +34,7 @@ function tempDir() {
   return mkdtemp(join(tmpdir(), "macchiato-resources-test-"));
 }
 
-function startApp(port, dataDir) {
+function startApp(port, dataDir, environment = {}) {
   const child = spawn(process.execPath, [
     appCli,
     "--data-dir",
@@ -47,6 +47,7 @@ function startApp(port, dataDir) {
     "development",
   ], {
     cwd: repoRoot,
+    env: { ...process.env, ...environment },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
@@ -65,6 +66,29 @@ function startApp(port, dataDir) {
   });
   return { child, waitForReady };
 }
+
+test("Resources Edge closes registration without adding social links to every page", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir, { RESOURCES_PREVIEW_SIGNUPS_ENABLED: "false" });
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByRole("complementary").filter({ hasText: "Follow Resources.co" }).waitFor());
+  await page.getByLabel("Account menu").click();
+  assert.equal(await page.getByRole("link", { name: "Sign up" }).count(), 0);
+  await page.screenshot({ path: "/tmp/resources-signups-disabled-home.png" });
+  await page.goto(`http://resources-edge.localhost:${port}/about`, { waitUntil: "networkidle" });
+  assert.equal(await page.getByText("Follow Resources.co", { exact: true }).count(), 0);
+  await page.goto(`http://resources-edge.localhost:${port}/signup`, { waitUntil: "networkidle" });
+  await assert.doesNotReject(page.getByRole("heading", { name: "Sign up is not currently enabled" }).waitFor());
+  assert.equal(await page.getByRole("link", { name: "X", exact: true }).getAttribute("href"), "https://x.com/ResourcesCo");
+  assert.equal(await page.getByRole("link", { name: "LinkedIn" }).getAttribute("href"), "https://www.linkedin.com/company/resources-co/");
+  assert.equal(await page.getByRole("link", { name: /Continue with/ }).count(), 0);
+});
 
 async function stopChild(child) {
   if (child.exitCode !== null) return;

@@ -186,6 +186,22 @@ Its CSS passes through the site's `style-use` capability before an artifact can
 be published. GitHub and GitLab render as real OAuth links; Google and Apple are
 visibly unavailable until adapters exist.
 
+Registration is closed by default. Set the declarative app environment value
+`SIGNUPS_ENABLED=true` to show signup entry points and allow a previously
+unknown OAuth identity to create an account. With any other value, existing
+linked identities can still log in, `/signup` explains that registration is
+unavailable, and an unknown identity completing OAuth receives that message
+without creating an account. The home page alone shows X and LinkedIn update
+links in a small block below its sidebar.
+
+```sh
+node packages/macchiato/src/macchiato.js app env set resources-edge SIGNUPS_ENABLED true
+```
+
+Restart the local app after changing its stored environment. On Bunny, set the
+same non-secret variable on the Edge Script and deploy it; purge cached HTML
+when changing the value.
+
 Both implemented providers validate signed state and PKCE, exchange the code
 only at the edge, fetch the provider identity, discard the provider token, and
 issue a signed `Secure`, `HttpOnly`, `SameSite=Lax` session cookie. The edge
@@ -446,6 +462,8 @@ assets may retain their long public lifetime.
    - `GITLAB_CLIENT_SECRET`: an environment **secret**.
    - `SESSION_SIGNING_KEY`: a random environment **secret** of at least 32
      bytes; rotating it signs everyone out.
+   - `SIGNUPS_ENABLED`: set exactly to `true` to accept new OAuth
+     registrations; omit it or set `false` to keep registration closed.
    - `BUNNY_DATABASE_URL`, `BUNNY_DATABASE_AUTH_TOKEN`, and
      `BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN`: added by connecting the staging
      Bunny Database to the script. The read-only token is retained for the

@@ -64,6 +64,10 @@
 - **about.fit**: Cómo encaja todo
 - **about.fitP1**: Cada pieza está diseñada para alojarse por cuenta propia y combinarse con las demás. El catálogo se genera desde los metadatos de los paquetes, no desde una lista mantenida a mano.
 - **about.fitP2**: Los nombres de paquetes se convierten en rutas públicas; por ejemplo, @macchiato-dev/dom-use aparece como macchiato/dom-use.
+- **social.heading**: Sigue a Resources.co
+- **social.intro**: Novedades del producto y nuevos lanzamientos.
+- **social.x**: X
+- **social.linkedin**: LinkedIn
 - **blog.title**: Blog - Resources.co
 - **blog.heading**: Blog
 - **blog.intro**: Notas del archivo de Resources.co y novedades sobre aplicaciones seguras y portátiles.
@@ -123,6 +127,8 @@
 - **auth.new**: ¿Eres nuevo en Resources.co?
 - **auth.createAccount**: Crear una cuenta
 - **auth.realSession**: GitHub y GitLab crean una sesión real de Resources.co.
+- **auth.signupDisabled**: El registro no está disponible actualmente
+- **auth.signupDisabledUpdates**: Síguenos en X o LinkedIn para recibir novedades.
 - **account.menu**: Menú de cuenta
 - **account.projects**: Tus proyectos
 - **account.profile**: Tu perfil
