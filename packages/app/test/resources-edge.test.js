@@ -152,7 +152,7 @@ test("edge HTML renders escaped session identity without executable browser code
       ? Response.json(manifest)
       : new Response(html),
   });
-  const response = await handler(new Request("https://resources.example/", {
+  const response = await handler(new Request("https://resources.example/about", {
     headers: { cookie: `__Host-resources_session=${session}` },
   }));
   const body = await response.text();
