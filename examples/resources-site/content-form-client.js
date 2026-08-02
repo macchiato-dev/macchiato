@@ -11,15 +11,15 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
 }
 
-const DRAFT_KEY = "resources_project_draft_v4";
+const DRAFT_KEY = "resources_project_draft_v5";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
   article: {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Constrained view example</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>" },
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: "article", containerOptions: { allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
   html: {
     files: [
@@ -27,7 +27,7 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
       { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
-    config: { entry: "index.html", template: "html", container: { name: "page", allowedElements: containerElementNames("page"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "html", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
   canvas: {
     files: [
@@ -35,15 +35,15 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
       { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
     ],
-    config: { entry: "index.html", template: "canvas", container: { name: "canvas", allowedElements: containerElementNames("canvas"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "index.html", template: "canvas", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
   svg: {
     files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
-    config: { entry: "image.svg", template: "svg", container: { name: "svg", allowedElements: containerElementNames("svg"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "image.svg", template: "svg", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
   blank: {
     files: [{ path: "index.html", content: "" }],
-    config: { entry: "index.html", template: "blank", container: { name: "page", allowedElements: containerElementNames("page"), links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "blank", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -88,7 +88,7 @@ document.addEventListener("focusout", (event) => {
 function draftHistory(snapshot) {
   const empty = emptyProjectSnapshot();
   const createdAt = Date.now();
-  return { snapshot, checkpoint: snapshot, patches: [diffProjectSnapshots(empty, snapshot)], versionTimes: [createdAt], createdAt, lastVersionAt: createdAt };
+  return { snapshot, checkpoint: snapshot, snapshots: [snapshot], patches: [diffProjectSnapshots(empty, snapshot)], versionTimes: [createdAt], createdAt, lastVersionAt: createdAt };
 }
 
 function rebuildDraft(patches, sequence = patches.length) {
@@ -119,7 +119,6 @@ function versionChoice(label, timestamp, { current = false, sequence = 0 } = {})
   if (sequence) button.dataset.versionSequence = String(sequence);
   if (current) {
     button.setAttribute("aria-current", "true");
-    button.disabled = true;
   }
   return button;
 }
@@ -137,6 +136,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const projectId = root.dataset.projectId;
   const draft = root.dataset.draft === "true";
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  let currentSnapshot = state;
+  let viewingHistorical = false;
   let selected = state.files[0]?.path || "config";
   let ready = false;
   let pending = false;
@@ -165,6 +166,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (stored?.patches?.length) {
         localHistory = stored;
         localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
+        localHistory.snapshots ||= stored.patches.map((_, index) => rebuildDraft(stored.patches, index + 1));
         state = normalizeProjectSnapshot(stored.snapshot);
       }
     } catch {
@@ -175,11 +177,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function selectedContent() {
-    if (selected === "config") {
-      const container = state.config?.container || {};
-      const { allowedElements: _derivedAllowedElements, ...containerConfiguration } = container;
-      return JSON.stringify({ ...state.config, container: containerConfiguration }, null, 2) + "\n";
-    }
+    if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
     return state.files.find((file) => file.path === selected)?.content ?? "";
   }
 
@@ -210,7 +208,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
     const parsed = new DOMParser().parseFromString(source, "text/html");
-    const allowed = new Set(state.config?.container?.allowedElements || []);
+    const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
     const fragment = document.createDocumentFragment();
     function copy(node, parent) {
       if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
@@ -225,12 +223,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         : document.createElement(name);
       if (name === "a" && node.getAttribute("href")) {
         const href = node.getAttribute("href");
-        const patterns = state.config?.container?.allowedLinkPatterns || [];
+        const patterns = state.config?.containerOptions?.allowedLinkPatterns || state.config?.container?.allowedLinkPatterns || [];
         if (urlMatchesAllowedPatterns(href, patterns)) {
           element.setAttribute("href", href);
           const authoredTarget = node.getAttribute("target");
           if (authoredTarget) element.setAttribute("target", authoredTarget);
-          else if (state.config?.container?.links?.addTargetBlank !== false) element.setAttribute("target", "_blank");
+          else if ((state.config?.containerOptions?.links || state.config?.container?.links)?.addTargetBlank !== false) element.setAttribute("target", "_blank");
         }
       }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
@@ -273,12 +271,17 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function updateSnapshot(next, { destructive = false } = {}) {
+    const normalized = normalizeProjectSnapshot(next);
+    if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
+    const branchedFromHistory = viewingHistorical;
     showCurrentVersion();
-    state = normalizeProjectSnapshot(next);
+    viewingHistorical = false;
+    state = normalized;
+    currentSnapshot = state;
     snapshotField.value = JSON.stringify(state);
     pending = true;
     changeGeneration += 1;
-    pendingDestructive ||= destructive;
+    pendingDestructive ||= destructive || branchedFromHistory;
     setStatus("Unsaved changes");
     if (draft) {
       localHistory.snapshot = state;
@@ -286,14 +289,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1_500);
+    return true;
   }
 
   function checkpointDraft({ destructive = false } = {}) {
     const now = Date.now();
     if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
-    const patch = diffProjectSnapshots(localHistory.checkpoint, state);
+    const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
     if (projectPatchIsEmpty(patch)) return;
     localHistory.patches.push(patch);
+    localHistory.snapshots.push(state);
     localHistory.versionTimes.push(now);
     localHistory.checkpoint = state;
     localHistory.lastVersionAt = now;
@@ -345,25 +350,37 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderDraftVersions() {
     versionList.replaceChildren();
-    versionList.append(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
+    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
+    current.addEventListener("click", () => {
+      if (!viewingHistorical) return;
+      state = currentSnapshot;
+      viewingHistorical = false;
+      snapshotField.value = JSON.stringify(state);
+      historyPanel.hidden = true;
+      versionButton.setAttribute("aria-expanded", "false");
+      renderTabs();
+      sendContent();
+      showCurrentVersion();
+      setStatus("Current version");
+    });
+    versionList.append(current);
     [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
       const sequence = localHistory.patches.length - reverseIndex;
       const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
       button.addEventListener("click", () => {
-        checkpointDraft({ destructive: true });
-        const target = rebuildDraft(localHistory.patches, sequence);
-        const restore = diffProjectSnapshots(localHistory.checkpoint, target);
-        if (!projectPatchIsEmpty(restore)) localHistory.patches.push(restore);
-        if (!projectPatchIsEmpty(restore)) localHistory.versionTimes.push(Date.now());
-        localHistory.snapshot = localHistory.checkpoint = state = target;
-        localHistory.lastVersionAt = Date.now();
+        if (pending) checkpointDraft({ destructive: pendingDestructive });
+        pending = false;
+        pendingDestructive = false;
+        currentSnapshot = localHistory.snapshot;
+        const target = normalizeProjectSnapshot(localHistory.snapshots[sequence - 1] || rebuildDraft(localHistory.patches, sequence));
+        state = target;
+        viewingHistorical = true;
         snapshotField.value = JSON.stringify(state);
         renderTabs();
-        versionCount.textContent = String(localHistory.patches.length);
-        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
         historyPanel.hidden = true;
+        versionButton.setAttribute("aria-expanded", "false");
         sendContent();
-        setStatus(`Restored version ${sequence}`);
+        setStatus(`Viewing version ${sequence}`);
         showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
       });
       versionList.append(button);
@@ -376,20 +393,33 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
     const { versions } = await response.json();
     versionList.replaceChildren();
-    versionList.append(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
+    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
+    current.addEventListener("click", () => {
+      if (!viewingHistorical) return;
+      state = currentSnapshot;
+      viewingHistorical = false;
+      snapshotField.value = JSON.stringify(state);
+      historyPanel.hidden = true;
+      versionButton.setAttribute("aria-expanded", "false");
+      renderTabs();
+      sendContent();
+      showCurrentVersion();
+      setStatus("Current version");
+    });
+    versionList.append(current);
     for (const version of versions) {
       const button = versionChoice(relativeVersionTime(version.createdAt), version.createdAt, { sequence: version.sequence });
       button.addEventListener("click", async () => {
         await save();
-        const restored = await fetch(`/api/projects/${encodeURIComponent(projectId)}/restore/${version.sequence}`, {
-          method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": root.dataset.csrf }, body: "{}",
-        });
-        if (!restored.ok) { setStatus("Restore failed", true); return; }
-        const result = await restored.json();
+        currentSnapshot = state;
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions/${version.sequence}`);
+        if (!response.ok) { setStatus("Version unavailable", true); return; }
+        const result = await response.json();
         state = normalizeProjectSnapshot(result.snapshot);
-        versionCount.textContent = String(result.versionCount);
+        viewingHistorical = true;
         snapshotField.value = JSON.stringify(state);
         historyPanel.hidden = true;
+        versionButton.setAttribute("aria-expanded", "false");
         renderTabs();
         sendContent();
         showSelectedVersion(button.textContent, version.createdAt);
@@ -461,7 +491,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   function updateContainer() {
     if (!container) return;
-    const allowedElements = containerElementNames(container.value);
     renderContainerElements(container.value);
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     try {
@@ -473,18 +502,32 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       linkPatterns?.setAttribute("aria-invalid", "true");
       return;
     }
-    updateSnapshot({ files: state.files, config: { ...state.config, container: { ...state.config.container, name: container.value, allowedElements, allowedLinkPatterns } } }, { destructive: true });
+    updateSnapshot({ files: state.files, config: { ...state.config, container: container.value, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
     sendContent();
   }
   template?.addEventListener("change", () => {
     const next = STARTING_POINTS[template.value];
     if (!next) return;
-    if (container) container.value = next.config.container?.name || "page";
-    if (linkPatterns) linkPatterns.value = (next.config.container?.allowedLinkPatterns || []).join("\n");
+    if (pending) checkpointDraft({ destructive: true });
+    if (container) container.value = next.config.container || "page";
+    if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
     growTextarea(linkPatterns);
     renderContainerElements(container.value);
     selected = next.files[0].path;
-    updateSnapshot(next, { destructive: true });
+    state = normalizeProjectSnapshot(next);
+    currentSnapshot = state;
+    viewingHistorical = false;
+    snapshotField.value = JSON.stringify(state);
+    localHistory.snapshot = state;
+    localHistory.checkpoint = state;
+    localHistory.lastVersionAt = Date.now();
+    pending = false;
+    pendingDestructive = false;
+    clearTimeout(saveTimer);
+    showCurrentVersion();
+    versionCount.textContent = String(localHistory.patches.length);
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+    setStatus("Template selected");
     renderTabs();
     sendContent();
   });
@@ -510,6 +553,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     draft ? renderDraftVersions() : renderStoredVersions();
   });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
+  document.addEventListener("pointerdown", (event) => {
+    if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
+    historyPanel.hidden = true;
+    versionButton.setAttribute("aria-expanded", "false");
+  });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();

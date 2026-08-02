@@ -141,6 +141,7 @@
 - **dashboard.heading**: Your projects
 - **dashboard.intro**: Projects and organizations owned by your Resources.co account.
 - **dashboard.projects**: Projects
+- **dashboard.viewAllProjects**: View all projects
 - **dashboard.organizations**: Organizations
 - **dashboard.noProjects**: No projects yet. Create one from a small starting template.
 - **dashboard.noOrganizations**: No organizations yet. Create one when a project needs a shared namespace.
