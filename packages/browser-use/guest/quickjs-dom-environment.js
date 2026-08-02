@@ -33,6 +33,21 @@
       },
     });
   }
+  function canvasContext(id, contextType) {
+    const call = (method, args = []) => host({ op: "canvas", id, contextType, action: "call", method, args });
+    return new Proxy({}, {
+      get(_target, property) {
+        if (["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"].includes(property)) {
+          return (...args) => call(property, args);
+        }
+        return undefined;
+      },
+      set(_target, property, value) {
+        host({ op: "canvas", id, contextType, action: "set", property: String(property), value });
+        return true;
+      },
+    });
+  }
   function node(id) {
     id = String(id);
     if (cache.has(id)) return cache.get(id);
@@ -53,6 +68,7 @@
         if (id === "document" && property === "hasFocus") return document.hasFocus;
         if (id === "document" && property === "head") return document.head;
         if (property === "style") return style(id);
+        if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));
         if (property === "addEventListener") return (type, callback) => {
           const listenerId = String(++callbackId);
           callbacks.set(listenerId, callback);
@@ -131,8 +147,10 @@
     },
     requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },
     cancelAnimationFrame() {},
-    setTimeout(callback) { callbacks.set("timer:" + (++callbackId), callback); return callbackId; },
-    clearTimeout() {},
+    setTimeout(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: false }); return callbackId; },
+    clearTimeout(id) { callbacks.delete("timer:" + id); },
+    setInterval(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: true }); return callbackId; },
+    clearInterval(id) { callbacks.delete("timer:" + id); },
     addEventListener() {},
     removeEventListener() {},
     matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },
@@ -156,7 +174,7 @@
     for (const [id, pending] of Array.from(callbacks)) {
       if (id.startsWith("frame:") || id.startsWith("timer:")) {
         callbacks.delete(id);
-        pending(Date.now());
+        (pending.callback || pending)(Date.now());
       }
     }
     return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });
@@ -175,9 +193,19 @@
       if (!pendingCallbacks.length) break;
       for (const [id, pending] of pendingCallbacks) {
         if (count++ >= 100) break;
-        callbacks.delete(id);
-        pending(Date.now());
+        if (!pending.interval) callbacks.delete(id);
+        (pending.callback || pending)(Date.now());
       }
+    }
+    return JSON.stringify({ count });
+  };
+  globalThis.__browserUseTick = () => {
+    const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));
+    let count = 0;
+    for (const [id, pending] of pendingCallbacks) {
+      if (!pending.interval) callbacks.delete(id);
+      (pending.callback || pending)(Date.now());
+      count += 1;
     }
     return JSON.stringify({ count });
   };
