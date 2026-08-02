@@ -32,6 +32,7 @@ export function createAuthConfig(env = {}) {
     clientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
     clientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
     sessionSecret,
+    signupsEnabled: env.SIGNUPS_ENABLED === "true",
     secureCookies: !allowLocalHttp,
     sessionSeconds: 60 * 60 * 24 * 14,
   });
@@ -118,7 +119,7 @@ export async function finishGithubAuth(request, config, { fetchImpl = fetch, now
   let account;
   try {
     account = accountStore
-      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null })
+      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null, allowCreate: config.signupsEnabled })
       : { id: `github:${user.id}`, ...identity };
   } catch (error) {
     return accountErrorResponse(error, config.publicOrigin);

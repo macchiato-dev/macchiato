@@ -189,6 +189,7 @@ export const BUILTIN_APPS = [
       GITLAB_CLIENT_ID: { description: "GitLab OAuth application ID." },
       GITLAB_CLIENT_SECRET: { secret: true, description: "GitLab OAuth application secret." },
       SESSION_SIGNING_KEY: { secret: true, description: "At least 32 random characters used to sign local sessions." },
+      SIGNUPS_ENABLED: { description: "Set to true to allow OAuth identities without an existing account to register." },
     },
     site: {
       storage: "in-memory export manifest",

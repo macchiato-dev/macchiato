@@ -67,7 +67,11 @@ test("exports resources site as static files", async (t) => {
   assert.equal(manifest.artifacts["/locales/en/index.html"].bytes, Buffer.byteLength(home));
   assert.doesNotMatch(home, /<script type="module"|<script type="importmap"|src="\/-\/quickjs/);
   assert.match(home, /<script type="application\/json" id="macchiato-site-transitions">/);
-  assert.match(home, /class="layout document-runtime"/);
+  assert.match(home, /class="layout document-runtime home-view"/);
+  assert.match(home, /class="box home-social"/);
+  assert.match(home, /href="https:\/\/x\.com\/ResourcesCo"/);
+  assert.match(home, /href="https:\/\/www\.linkedin\.com\/company\/resources-co\/"/);
+  assert.doesNotMatch(project, /class="box home-social"/);
   assert.doesNotMatch(home, /class="box userbar"|class="box menu"/);
   assert.match(home, /"mode":"document"/);
   assert.equal(manifest.routes.includes("/macchiato/app"), true);

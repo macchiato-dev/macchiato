@@ -39,6 +39,14 @@ export class AccountConflictError extends Error {
   }
 }
 
+export class AccountSignupDisabledError extends Error {
+  constructor() {
+    super("Sign up is not currently enabled");
+    this.name = "AccountSignupDisabledError";
+    this.code = "signup_disabled";
+  }
+}
+
 function normalizeEmail(value) {
   const email = String(value || "").trim();
   const separator = email.lastIndexOf("@");
@@ -87,7 +95,7 @@ export function createAccountStore(client, {
   }
 
   return Object.freeze({
-    async authenticateIdentity(identity, { linkToUserId = null } = {}) {
+    async authenticateIdentity(identity, { linkToUserId = null, allowCreate = true } = {}) {
       await initialize();
       if (!providers.has(identity.provider)) throw new Error("Unsupported identity provider");
       const providerUserId = String(identity.providerUserId);
@@ -125,6 +133,8 @@ export function createAccountStore(client, {
           username: identity.login,
         });
       }
+
+      if (!linkToUserId && !allowCreate) throw new AccountSignupDisabledError();
 
       const emailResult = await client.execute({
         sql: `SELECT users.id, users.display_name, users.username

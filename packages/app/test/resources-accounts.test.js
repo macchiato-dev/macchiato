@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import {
   AccountConflictError,
+  AccountSignupDisabledError,
   createAccountStore,
 } from "../../../examples/resources-site/models/accounts.js";
 import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
@@ -26,6 +27,17 @@ const gitlab = {
   email: "Latte@example.com",
   emailVerified: true,
 };
+
+test("account store permits existing logins but blocks registration when signups are disabled", async (t) => {
+  const { db, store } = setup();
+  t.after(() => db.close());
+  const created = await store.authenticateIdentity(gitlab);
+  assert.equal((await store.authenticateIdentity(gitlab, { allowCreate: false })).id, created.id);
+  await assert.rejects(
+    store.authenticateIdentity({ ...gitlab, providerUserId: 85, email: "new@example.test" }, { allowCreate: false }),
+    AccountSignupDisabledError,
+  );
+});
 
 test("account model creates a provider-neutral user for a verified identity", async (t) => {
   const { db, store } = setup();

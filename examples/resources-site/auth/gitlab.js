@@ -25,6 +25,7 @@ export function createGitlabAuthConfig(env = {}, sessionConfig) {
     sessionSecret: sessionConfig.sessionSecret,
     sessionSeconds: sessionConfig.sessionSeconds,
     secureCookies: sessionConfig.secureCookies,
+    signupsEnabled: sessionConfig.signupsEnabled,
     clientId: required(env.GITLAB_CLIENT_ID, "GITLAB_CLIENT_ID"),
     clientSecret: required(env.GITLAB_CLIENT_SECRET, "GITLAB_CLIENT_SECRET"),
   });
@@ -106,7 +107,7 @@ export async function finishGitlabAuth(request, config, { fetchImpl = fetch, now
   let account;
   try {
     account = accountStore
-      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null })
+      ? await accountStore.authenticateIdentity(identity, { linkToUserId: flow.linkToUserId || null, allowCreate: config.signupsEnabled })
       : { id: `gitlab:${user.id}`, ...identity };
   } catch (error) {
     return accountErrorResponse(error, config.publicOrigin);

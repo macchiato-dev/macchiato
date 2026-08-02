@@ -79,7 +79,7 @@ function createMenuHtml(messages) {
   </details>`;
 }
 
-function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/", focused = false } = {}) {
+function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/", focused = false, signupsEnabled = false } = {}) {
   const shellClass = `box userbar edge-status${focused ? " toolbar--cardless" : ""}`;
   if (!session) {
     return `<aside class="${shellClass}" data-screen-label="runtime-status">
@@ -87,7 +87,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/",
       ${notificationMenuHtml(messages)}
       ${createMenuHtml(messages)}
       <details class="edge-user-menu edge-guest-menu"><summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}">${resourcesBlankAvatarHtml}<svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></summary>
-        <div class="popover edge-user-menu__panel"><a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a><a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div>${languageMenuHtml(locale, pathname, messages)}<div class="menu__sep"></div><a class="item" href="/login">${message(messages, "auth.login", "Log in")}</a><a class="item" href="/signup">${message(messages, "auth.signup", "Sign up")}</a></div>
+        <div class="popover edge-user-menu__panel"><a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a><a class="item" href="/help">${message(messages, "account.help", "Help & docs")}</a><div class="menu__sep"></div>${resourcesAppearanceHtml}<div class="menu__sep"></div>${languageMenuHtml(locale, pathname, messages)}<div class="menu__sep"></div><a class="item" href="/login">${message(messages, "auth.login", "Log in")}</a>${signupsEnabled ? `<a class="item" href="/signup">${message(messages, "auth.signup", "Sign up")}</a>` : ""}</div>
       </details>
     </aside>`;
   }
@@ -118,6 +118,18 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/",
       </div>
     </details>
   </aside>`;
+}
+
+function signupDisabledCard(messages) {
+  return `<section class="box block auth-card"><div class="auth-eyebrow">${message(messages, "auth.signup", "Sign up")}</div><h1>${message(messages, "auth.signupDisabled", "Sign up is not currently enabled")}</h1><p>${message(messages, "auth.signupDisabledUpdates", "Follow us on X or LinkedIn for updates.")}</p><div class="auth-alt"><a href="https://x.com/ResourcesCo" target="_blank" rel="noopener">X</a> · <a href="https://www.linkedin.com/company/resources-co/" target="_blank" rel="noopener">LinkedIn</a></div><div class="auth-alt"><a href="/login">${message(messages, "auth.login", "Log in")}</a></div></section>`;
+}
+
+function applySignupPolicy(html, pathname, messages, signupsEnabled) {
+  if (signupsEnabled) return html;
+  html = html.replace(/<a class="item" href="\/signup">[\s\S]*?<\/a>/g, "");
+  if (pathname === "/signup") return html.replace(/<section class="box block auth-card">[\s\S]*?<\/section>/, signupDisabledCard(messages));
+  if (pathname === "/login") return html.replace(/<div class="auth-alt">[\s\S]*?<\/div>/, "");
+  return html;
 }
 
 function renderSessionHtml(html, session, messages, options, contentFormVersion = "") {
@@ -528,7 +540,8 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" }, contentFormVersion);
+        html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new", signupsEnabled: authConfig.signupsEnabled }, contentFormVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");
