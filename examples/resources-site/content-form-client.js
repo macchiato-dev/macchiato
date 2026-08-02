@@ -224,6 +224,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderPreview() {
     const generation = ++previewGeneration;
+    previewController?.destroy();
+    previewController = null;
     const entry = state.config?.entry || "index.html";
     const source = state.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
@@ -282,12 +284,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     preview.replaceChildren(fragment);
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
-      previewController?.destroy();
-      previewController = null;
       if (generation !== previewGeneration) return;
       try {
         const controller = await mountResourcesProjectPreview({
-          root: preview, scripts, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "title", "link", "script", "style"].includes(tag)),
+          root: preview, scripts, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
           onViolation(error) { setStatus(`Preview stopped: ${error.message}`, true); },
         });
         if (generation !== previewGeneration) controller.destroy();

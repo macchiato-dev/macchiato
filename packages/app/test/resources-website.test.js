@@ -592,6 +592,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(newEditor.locator("[data-project-preview] circle").waitFor());
   await template.selectOption("chart");
   await assert.doesNotReject(newEditor.locator("[data-project-preview] rect").nth(2).waitFor());
+  assert.doesNotMatch(await page.locator("[data-project-status]").textContent(), /Preview stopped/);
   await template.selectOption("stars");
   await page.waitForFunction(() => Number(document.querySelector("[data-project-preview]")?.dataset.canvasCommands) > 100);
   assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");

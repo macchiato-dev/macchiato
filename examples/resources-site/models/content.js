@@ -65,7 +65,7 @@ const SCHEMA = [
 ];
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-const TEMPLATES = new Set(["blank", "html", "svg", "canvas"]);
+const TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
 
 export class ContentConflictError extends Error {
   constructor(kind) {
