@@ -49,7 +49,7 @@ function handlerFor(environment = {}, db = null) {
     GITLAB_CLIENT_ID: environment.GITLAB_CLIENT_ID || previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_ID || "local-preview",
     GITLAB_CLIENT_SECRET: environment.GITLAB_CLIENT_SECRET || previewEnv.RESOURCES_PREVIEW_GITLAB_CLIENT_SECRET || "local-preview-not-a-provider-secret",
     SESSION_SIGNING_KEY: environment.SESSION_SIGNING_KEY || previewEnv.RESOURCES_PREVIEW_SESSION_SIGNING_KEY || "local-preview-session-signing-key",
-    SIGNUPS_ENABLED: environment.SIGNUPS_ENABLED || previewEnv.RESOURCES_PREVIEW_SIGNUPS_ENABLED || "true",
+    SIGNUPS_ENABLED: environment.SIGNUPS_ENABLED || previewEnv.RESOURCES_PREVIEW_SIGNUPS_ENABLED || "false",
   };
   const key = JSON.stringify(effective);
   if (key === cachedEnvironmentKey && db === cachedDatabase) return cachedHandler;
