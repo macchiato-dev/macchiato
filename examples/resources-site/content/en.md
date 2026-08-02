@@ -163,9 +163,12 @@
 - **projectCreate.allowedLinksHelp**: One pattern per line. Use a hostname with wildcards such as *.wikipedia.org, optionally with a specific path such as *.wikipedia.org/wiki/*. Surround a specific URL with backquotes, or use JavaScript regular expression syntax between forward slashes.
 - **projectCreate.visibility**: Visibility
 - **projectCreate.blank**: Blank project
-- **projectCreate.html**: HTML page
-- **projectCreate.svg**: SVG illustration
-- **projectCreate.canvas**: Canvas sketch
+- **projectCreate.hello**: Hello, HTML
+- **projectCreate.clock**: Digital clock
+- **projectCreate.mark**: Logo mark
+- **projectCreate.chart**: Bar chart
+- **projectCreate.ball**: Bouncing ball
+- **projectCreate.stars**: Starfield
 - **projectCreate.submit**: Create project
 - **projectCreate.content**: Project content
 - **projectCreate.editor**: Sandboxed project editor

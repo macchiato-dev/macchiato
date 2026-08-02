@@ -11,13 +11,13 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
   page: Object.freeze({
     html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset", "name", "content"]),
     title: rule(["head"]), link: rule(["head"], ["rel", "href"]), body: rule(["html"], ["class"]), main: rule(["body"], ["class", "id"]),
-    section: rule(["main", "section"], ["class", "id"]), header: rule(["body", "main", "section"], ["class"]), footer: rule(["body", "main", "section"], ["class"]),
+    section: rule(["main", "section"], ["class", "id"]), div: rule(["body", "main", "section", "div"], ["class", "id"]), header: rule(["body", "main", "section"], ["class"]), footer: rule(["body", "main", "section"], ["class"]),
     h1: rule(["main", "header", "section"], ["class", "id"]), h2: rule(["main", "section"], ["class", "id"]), p: rule(["main", "section", "footer"], ["class"]),
     a: rule(["p", "li", "header", "footer"], ["href", "title", "target"]), img: rule(["main", "section", "a"], ["src", "alt", "width", "height"]),
     ul: rule(["main", "section"], ["class"]), li: rule(["ul"], ["class"]),
   }),
   canvas: Object.freeze({ html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset"]), title: rule(["head"]), body: rule(["html"], ["class"]), canvas: rule(["body"], ["width", "height", "aria-label"]), script: rule(["body"], ["src"]) }),
-  svg: Object.freeze({ svg: rule(["document", "body"], ["viewBox", "role", "aria-labelledby"]), title: rule(["svg"], ["id"]), g: rule(["svg", "g"], ["fill", "stroke", "transform"]), path: rule(["svg", "g"], ["d", "fill", "stroke"]), rect: rule(["svg", "g"], ["x", "y", "width", "height", "fill"]), circle: rule(["svg", "g"], ["cx", "cy", "r", "fill"]), line: rule(["svg", "g"], ["x1", "y1", "x2", "y2", "stroke"]), text: rule(["svg", "g"], ["x", "y", "fill"]) }),
+  svg: Object.freeze({ svg: rule(["document", "body"], ["viewBox", "role", "aria-labelledby"]), title: rule(["svg"], ["id"]), defs: rule(["svg"]), linearGradient: rule(["defs"], ["id", "x1", "y1", "x2", "y2", "gradientUnits"]), stop: rule(["linearGradient"], ["offset", "stop-color"]), g: rule(["svg", "g"], ["fill", "stroke", "transform"]), path: rule(["svg", "g"], ["d", "fill", "stroke", "stroke-width"]), rect: rule(["svg", "g"], ["x", "y", "width", "height", "rx", "ry", "fill"]), circle: rule(["svg", "g"], ["cx", "cy", "r", "fill"]), line: rule(["svg", "g"], ["x1", "y1", "x2", "y2", "stroke", "stroke-width"]), text: rule(["svg", "g"], ["x", "y", "fill"]) }),
 });
 
 export function containerElementNames(container) {

@@ -3669,7 +3669,7 @@ var init_emscripten_module_browser_XIKQQPVU = __esm({
 });
 
 // packages/browser-use/src/quickjs-dom-guest.js
-var browserUseQuickJsDomGuestSource = '(() => {\n  const callbacks = new Map();\n  let callbackId = 0;\n  function host(message) {\n    const result = JSON.parse(globalThis.__browserUseHost(JSON.stringify(message)));\n    if (result && result.__error) throw new Error(result.__error);\n    return result;\n  }\n  function decode(result) {\n    if (!result) return undefined;\n    if ("handle" in result) return node(result.handle);\n    if ("list" in result) return result.list.map(decode);\n    return result.value;\n  }\n  const cache = new Map();\n  const rpc = (action, data = {}) => decode(host({ op: "remote", action, ...data }));\n  function style(id) {\n    return new Proxy({}, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "setProperty") return (name, value) => host({ op: "remote", action: "styleSet", id, property: name, value });\n        if (property === "removeProperty") return (name) => host({ op: "remote", action: "styleSet", id, property: name, value: "" });\n        return host({ op: "remote", action: "styleGet", id, property: String(property) }).value;\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "styleSet", id, property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function node(id) {\n    id = String(id);\n    if (cache.has(id)) return cache.get(id);\n    const target = { __handle: id };\n    const proxy = new Proxy(target, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "__handle") return id;\n        if (property === "setActive") return Reflect.get(_target, property);\n        if (property === "toJSON") return () => ({ __handle: id });\n        if (property === "ownerDocument") return document;\n        if (id === "document" && property === "defaultView") return window;\n        if (id === "document" && property === "getSelection") return document.getSelection;\n        if (id === "document" && property === "addEventListener") return document.addEventListener;\n        if (id === "document" && property === "removeEventListener") return document.removeEventListener;\n        if (id === "document" && property === "createRange") return document.createRange;\n        if (id === "document" && property === "hasFocus") return document.hasFocus;\n        if (id === "document" && property === "head") return document.head;\n        if (property === "style") return style(id);\n        if (property === "addEventListener") return (type, callback) => {\n          const listenerId = String(++callbackId);\n          callbacks.set(listenerId, callback);\n          host({ op: "listen", id, type, listenerId });\n        };\n        if (property === "removeEventListener") return () => {};\n        if (property === "classList") return {\n          add: (...names) => {\n            const current = rpc("get", { id, property: "className" }) || "";\n            proxy.className = [...new Set(current.split(/\\\\s+/).filter(Boolean).concat(names))].join(" ");\n          },\n          remove: (...names) => {\n            const remove = new Set(names);\n            proxy.className = (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).filter((name) => name && !remove.has(name)).join(" ");\n          },\n          contains: (name) => (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).includes(name),\n          toggle: (name, force) => {\n            const present = proxy.classList.contains(name);\n            const next = force === undefined ? !present : Boolean(force);\n            if (next) proxy.classList.add(name); else proxy.classList.remove(name);\n            return next;\n          },\n        };\n        const methods = new Set(["appendChild", "blur", "contains", "focus", "getAttribute", "getBoundingClientRect",\n          "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",\n          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",\n          "setAttribute", "setSelectionRange", "addRange", "collapse", "collapseToEnd", "collapseToStart",\n          "extend", "getRangeAt", "removeAllRanges", "setBaseAndExtent", "selectNode", "selectNodeContents", "setEnd", "setEndAfter",\n          "setEndBefore", "setStart", "setStartAfter", "setStartBefore"]);\n        if (methods.has(property)) return (...args) => rpc("call", {\n          id, method: property, args: args.map((arg) => arg?.__handle ? { __handle: arg.__handle } : arg),\n        });\n        return rpc("get", { id, property: String(property) });\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol" || String(property).startsWith("cm") || property === "setActive") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "set", id, property: String(property), value: value?.__handle ? { __handle: value.__handle } : value });\n        return true;\n      },\n    });\n    cache.set(id, proxy);\n    return proxy;\n  }\n  const document = {\n    createElement: (tag) => rpc("createElement", { tag }),\n    createTextNode: (text) => rpc("createTextNode", { text }),\n    getElementById: (id) => rpc("getElementById", { id }),\n    querySelector: (selector) => node("root").querySelector(selector),\n    querySelectorAll: (selector) => node("root").querySelectorAll(selector),\n    documentElement: { style: {} },\n    body: node("root"),\n    head: node("root"),\n    createRange: () => rpc("createRange"),\n    getSelection: () => rpc("getSelection"),\n    hasFocus: () => true,\n    addEventListener() {},\n    removeEventListener() {},\n    get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },\n  };\n  const window = globalThis;\n  Object.assign(globalThis, {\n    document, window, self: window,\n    console: { log() {}, info() {}, warn() {}, error() {} },\n    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "" },\n    HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Window: class { static [Symbol.hasInstance](value) { return value === window; } },\n    Element: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },\n    ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },\n    getComputedStyle(element) {\n      return new Proxy({}, { get: (_target, property) => element.style[property] || "" });\n    },\n    requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },\n    cancelAnimationFrame() {},\n    setTimeout(callback) { callbacks.set("timer:" + (++callbackId), callback); return callbackId; },\n    clearTimeout() {},\n    addEventListener() {},\n    removeEventListener() {},\n    matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },\n  });\n  globalThis.__browserUseDispatchEvent = (json) => {\n    const envelope = JSON.parse(json);\n    const callback = callbacks.get(String(envelope.listenerId));\n    if (!callback) return JSON.stringify({});\n    let prevented = false;\n    let stopped = false;\n    const event = {\n      ...envelope.event,\n      target: node(envelope.event.target),\n      currentTarget: node(envelope.currentTarget || envelope.event.target),\n      preventDefault() { prevented = true; },\n      stopPropagation() { stopped = true; },\n      stopImmediatePropagation() { stopped = true; },\n      get defaultPrevented() { return prevented; },\n    };\n    callback(event);\n    for (const [id, pending] of Array.from(callbacks)) {\n      if (id.startsWith("frame:") || id.startsWith("timer:")) {\n        callbacks.delete(id);\n        pending(Date.now());\n      }\n    }\n    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });\n  };\n  globalThis.__browserUseConfigureEnvironment = (json) => {\n    const environment = JSON.parse(json);\n    if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);\n    if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);\n    if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);\n    return JSON.stringify({ platform: navigator.platform });\n  };\n  globalThis.__browserUseFlush = () => {\n    let count = 0;\n    for (let round = 0; round < 10; round++) {\n      const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));\n      if (!pendingCallbacks.length) break;\n      for (const [id, pending] of pendingCallbacks) {\n        if (count++ >= 100) break;\n        callbacks.delete(id);\n        pending(Date.now());\n      }\n    }\n    return JSON.stringify({ count });\n  };\n})();\n';
+var browserUseQuickJsDomGuestSource = '(() => {\n  const callbacks = new Map();\n  let callbackId = 0;\n  function host(message) {\n    const result = JSON.parse(globalThis.__browserUseHost(JSON.stringify(message)));\n    if (result && result.__error) throw new Error(result.__error);\n    return result;\n  }\n  function decode(result) {\n    if (!result) return undefined;\n    if ("handle" in result) return node(result.handle);\n    if ("list" in result) return result.list.map(decode);\n    return result.value;\n  }\n  const cache = new Map();\n  const rpc = (action, data = {}) => decode(host({ op: "remote", action, ...data }));\n  function style(id) {\n    return new Proxy({}, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "setProperty") return (name, value) => host({ op: "remote", action: "styleSet", id, property: name, value });\n        if (property === "removeProperty") return (name) => host({ op: "remote", action: "styleSet", id, property: name, value: "" });\n        return host({ op: "remote", action: "styleGet", id, property: String(property) }).value;\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "styleSet", id, property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function canvasContext(id, contextType) {\n    const call = (method, args = []) => host({ op: "canvas", id, contextType, action: "call", method, args });\n    return new Proxy({}, {\n      get(_target, property) {\n        if (["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"].includes(property)) {\n          return (...args) => call(property, args);\n        }\n        return undefined;\n      },\n      set(_target, property, value) {\n        host({ op: "canvas", id, contextType, action: "set", property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function node(id) {\n    id = String(id);\n    if (cache.has(id)) return cache.get(id);\n    const target = { __handle: id };\n    const proxy = new Proxy(target, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "__handle") return id;\n        if (property === "setActive") return Reflect.get(_target, property);\n        if (property === "toJSON") return () => ({ __handle: id });\n        if (property === "ownerDocument") return document;\n        if (id === "document" && property === "defaultView") return window;\n        if (id === "document" && property === "getSelection") return document.getSelection;\n        if (id === "document" && property === "addEventListener") return document.addEventListener;\n        if (id === "document" && property === "removeEventListener") return document.removeEventListener;\n        if (id === "document" && property === "createRange") return document.createRange;\n        if (id === "document" && property === "hasFocus") return document.hasFocus;\n        if (id === "document" && property === "head") return document.head;\n        if (property === "style") return style(id);\n        if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));\n        if (property === "addEventListener") return (type, callback) => {\n          const listenerId = String(++callbackId);\n          callbacks.set(listenerId, callback);\n          host({ op: "listen", id, type, listenerId });\n        };\n        if (property === "removeEventListener") return () => {};\n        if (property === "classList") return {\n          add: (...names) => {\n            const current = rpc("get", { id, property: "className" }) || "";\n            proxy.className = [...new Set(current.split(/\\\\s+/).filter(Boolean).concat(names))].join(" ");\n          },\n          remove: (...names) => {\n            const remove = new Set(names);\n            proxy.className = (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).filter((name) => name && !remove.has(name)).join(" ");\n          },\n          contains: (name) => (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).includes(name),\n          toggle: (name, force) => {\n            const present = proxy.classList.contains(name);\n            const next = force === undefined ? !present : Boolean(force);\n            if (next) proxy.classList.add(name); else proxy.classList.remove(name);\n            return next;\n          },\n        };\n        const methods = new Set(["appendChild", "blur", "contains", "focus", "getAttribute", "getBoundingClientRect",\n          "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",\n          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",\n          "setAttribute", "setSelectionRange", "addRange", "collapse", "collapseToEnd", "collapseToStart",\n          "extend", "getRangeAt", "removeAllRanges", "setBaseAndExtent", "selectNode", "selectNodeContents", "setEnd", "setEndAfter",\n          "setEndBefore", "setStart", "setStartAfter", "setStartBefore"]);\n        if (methods.has(property)) return (...args) => rpc("call", {\n          id, method: property, args: args.map((arg) => arg?.__handle ? { __handle: arg.__handle } : arg),\n        });\n        return rpc("get", { id, property: String(property) });\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol" || String(property).startsWith("cm") || property === "setActive") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "set", id, property: String(property), value: value?.__handle ? { __handle: value.__handle } : value });\n        return true;\n      },\n    });\n    cache.set(id, proxy);\n    return proxy;\n  }\n  const document = {\n    createElement: (tag) => rpc("createElement", { tag }),\n    createTextNode: (text) => rpc("createTextNode", { text }),\n    getElementById: (id) => rpc("getElementById", { id }),\n    querySelector: (selector) => node("root").querySelector(selector),\n    querySelectorAll: (selector) => node("root").querySelectorAll(selector),\n    documentElement: { style: {} },\n    body: node("root"),\n    head: node("root"),\n    createRange: () => rpc("createRange"),\n    getSelection: () => rpc("getSelection"),\n    hasFocus: () => true,\n    addEventListener() {},\n    removeEventListener() {},\n    get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },\n  };\n  const window = globalThis;\n  Object.assign(globalThis, {\n    document, window, self: window,\n    console: { log() {}, info() {}, warn() {}, error() {} },\n    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "" },\n    HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Window: class { static [Symbol.hasInstance](value) { return value === window; } },\n    Element: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },\n    ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },\n    getComputedStyle(element) {\n      return new Proxy({}, { get: (_target, property) => element.style[property] || "" });\n    },\n    requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },\n    cancelAnimationFrame() {},\n    setTimeout(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: false }); return callbackId; },\n    clearTimeout(id) { callbacks.delete("timer:" + id); },\n    setInterval(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: true }); return callbackId; },\n    clearInterval(id) { callbacks.delete("timer:" + id); },\n    addEventListener() {},\n    removeEventListener() {},\n    matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },\n  });\n  globalThis.__browserUseDispatchEvent = (json) => {\n    const envelope = JSON.parse(json);\n    const callback = callbacks.get(String(envelope.listenerId));\n    if (!callback) return JSON.stringify({});\n    let prevented = false;\n    let stopped = false;\n    const event = {\n      ...envelope.event,\n      target: node(envelope.event.target),\n      currentTarget: node(envelope.currentTarget || envelope.event.target),\n      preventDefault() { prevented = true; },\n      stopPropagation() { stopped = true; },\n      stopImmediatePropagation() { stopped = true; },\n      get defaultPrevented() { return prevented; },\n    };\n    callback(event);\n    for (const [id, pending] of Array.from(callbacks)) {\n      if (id.startsWith("frame:") || id.startsWith("timer:")) {\n        if (!pending.interval) callbacks.delete(id);\n        (pending.callback || pending)(Date.now());\n      }\n    }\n    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });\n  };\n  globalThis.__browserUseConfigureEnvironment = (json) => {\n    const environment = JSON.parse(json);\n    if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);\n    if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);\n    if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);\n    return JSON.stringify({ platform: navigator.platform });\n  };\n  globalThis.__browserUseFlush = () => {\n    let count = 0;\n    for (let round = 0; round < 10; round++) {\n      const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));\n      if (!pendingCallbacks.length) break;\n      for (const [id, pending] of pendingCallbacks) {\n        if (count++ >= 100) break;\n        if (!pending.interval) callbacks.delete(id);\n        (pending.callback || pending)(Date.now());\n      }\n    }\n    return JSON.stringify({ count });\n  };\n  globalThis.__browserUseTick = () => {\n    const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));\n    let count = 0;\n    for (const [id, pending] of pendingCallbacks) {\n      if (!pending.interval) callbacks.delete(id);\n      (pending.callback || pending)(Date.now());\n      count += 1;\n    }\n    return JSON.stringify({ count });\n  };\n})();\n';
 
 // node_modules/quickjs-emscripten-core/dist/index.mjs
 init_dist();
@@ -4623,11 +4623,141 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
   });
 }
 
+// packages/canvas-use/src/index.js
+var METHODS = /* @__PURE__ */ new Set(["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"]);
+var PROPERTIES = /* @__PURE__ */ new Set(["fillStyle", "strokeStyle", "lineWidth"]);
+var COLOR = /^(?:#[0-9a-f]{3,8}|rgba?\([0-9., %]+\)|[a-z]{1,20})$/i;
+function finite(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || Math.abs(number) > 1e5) throw new Error("canvas-use rejected an unbounded number");
+  return number;
+}
+var CanvasUseHost = class {
+  constructor(domHost, { maxCommands = 5e4 } = {}) {
+    this.domHost = domHost;
+    this.maxCommands = Math.max(1, Math.min(Number(maxCommands), 1e5));
+    this.commands = 0;
+    this.contexts = /* @__PURE__ */ new Map();
+  }
+  dispatch(message) {
+    const canvas = this.domHost.remoteNode(message.id);
+    if (canvas?.localName !== "canvas") throw new Error("canvas-use requires an owned canvas");
+    if (message.contextType !== "2d") throw new Error("canvas-use only grants a 2D context");
+    const context = this.contexts.get(message.id) || canvas.getContext("2d");
+    this.contexts.set(message.id, context);
+    if (++this.commands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
+    if (message.action === "set") {
+      if (!PROPERTIES.has(message.property)) throw new Error(`canvas-use rejected property: ${message.property}`);
+      context[message.property] = message.property === "lineWidth" ? Math.max(0, finite(message.value)) : COLOR.test(String(message.value)) ? String(message.value) : (() => {
+        throw new Error("canvas-use rejected color");
+      })();
+      return {};
+    }
+    if (message.action !== "call" || !METHODS.has(message.method)) throw new Error(`canvas-use rejected method: ${message.method}`);
+    context[message.method](...(message.args || []).map(finite));
+    return {};
+  }
+  inspect() {
+    return Object.freeze({ commands: this.commands, canvases: this.contexts.size });
+  }
+};
+
 // examples/resources-site/project-editor-runtime.js
 async function mountResourcesProjectEditor(options) {
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
   return mountQuickJsCodeEditor({ ...options, guestSource });
 }
+function previewPolicy(tags) {
+  return {
+    tags,
+    events: ["click", "input", "change", "keydown", "keyup"],
+    attributes: {
+      id: "^[A-Za-z][A-Za-z0-9_-]{0,80}$",
+      class: "^[A-Za-z0-9 _-]{0,160}$",
+      href: "^https://",
+      target: "^_blank$",
+      title: "^[^<>]{0,200}$",
+      width: "^[0-9]{1,5}$",
+      height: "^[0-9]{1,5}$",
+      "aria-label": "^[^<>]{0,160}$",
+      role: "^(?:img|link|article)$",
+      "aria-labelledby": "^[A-Za-z][A-Za-z0-9_-]{0,80}$",
+      viewBox: "^[-0-9. ]+$",
+      x: "^[-0-9.]+$",
+      y: "^[-0-9.]+$",
+      x1: "^[-0-9.]+$",
+      y1: "^[-0-9.]+$",
+      x2: "^[-0-9.]+$",
+      y2: "^[-0-9.]+$",
+      cx: "^[-0-9.]+$",
+      cy: "^[-0-9.]+$",
+      r: "^[0-9.]+$",
+      rx: "^[0-9.]+$",
+      ry: "^[0-9.]+$",
+      d: "^[- A-Za-z0-9.,]+$",
+      points: "^[- 0-9.,]+$",
+      fill: "^(?:none|#[0-9A-Fa-f]{3,8}|url\\(#[A-Za-z0-9_-]+\\))$",
+      stroke: "^(?:none|#[0-9A-Fa-f]{3,8})$",
+      "stroke-width": "^[0-9.]+$",
+      offset: "^[0-9.%]+$",
+      "stop-color": "^#[0-9A-Fa-f]{3,8}$",
+      gradientUnits: "^userSpaceOnUse$",
+      xlink: "^[A-Za-z0-9_-]+$"
+    },
+    classNames: ["^[A-Za-z][A-Za-z0-9_-]*$"],
+    maxElements: 1e3,
+    maxDepth: 30,
+    maxTextLength: 2e5
+  };
+}
+async function mountResourcesProjectPreview({ root, scripts, tags, onViolation = () => {
+} }) {
+  let sandbox;
+  const host = new BrowserDomHost(root, previewPolicy(tags), {
+    onViolation,
+    onEvent(listenerId, event, nativeEvent) {
+      const result = sandbox?.callJsonFunction("__browserUseDispatchEvent", { listenerId, event }) || {};
+      if (result.preventDefault) nativeEvent.preventDefault();
+      if (result.stopPropagation) nativeEvent.stopPropagation();
+    }
+  });
+  const canvas = new CanvasUseHost(host);
+  host.start();
+  if (!scripts.length) return { inspect: () => ({ runtime: "static", canvas: canvas.inspect() }), destroy: () => host.stop() };
+  try {
+    sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
+    sandbox.installJsonHostFunction("__browserUseHost", (message) => message.op === "canvas" ? canvas.dispatch(message) : host.dispatch(message));
+    sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
+    scripts.forEach((script) => sandbox.evalGlobal(script.code, script.source));
+  } catch (error) {
+    host.stop();
+    sandbox?.dispose?.();
+    throw error;
+  }
+  root.dataset.previewRuntime = "quickjs";
+  let stopped = false;
+  const timer = setInterval(() => {
+    if (stopped) return;
+    try {
+      sandbox.callJsonFunction("__browserUseTick", {});
+      root.dataset.canvasCommands = String(canvas.inspect().commands);
+    } catch (error) {
+      stopped = true;
+      clearInterval(timer);
+      onViolation(error);
+    }
+  }, 50);
+  return {
+    inspect: () => ({ runtime: "quickjs", canvas: canvas.inspect() }),
+    destroy() {
+      stopped = true;
+      clearInterval(timer);
+      host.stop();
+      sandbox.dispose?.();
+    }
+  };
+}
 export {
-  mountResourcesProjectEditor
+  mountResourcesProjectEditor,
+  mountResourcesProjectPreview
 };

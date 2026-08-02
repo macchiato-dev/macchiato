@@ -1,7 +1,7 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
-import { mountResourcesProjectEditor } from "/-/resources-site/project-editor-runtime.js";
+import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -21,25 +21,42 @@ const STARTING_POINTS = Object.freeze({
     ],
     config: { entry: "index.html", template: "article", container: "article", containerOptions: { allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
-  html: {
+  hello: {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>New project</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello</h1>\n    <p>Edit this page to make it yours.</p>\n  </main>\n  <script src=\"./script.js\"></script>\n</body>\n</html>\n" },
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Hello, HTML</title>\n</head>\n<body>\n  <main>\n    <h1>Hello, HTML</h1>\n    <p>This small page is made from familiar HTML elements.</p>\n    <ul><li>A heading</li><li>A paragraph</li><li>A list</li></ul>\n  </main>\n</body>\n</html>" },
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
-      { path: "script.js", content: "console.log(\"Hello from Resources.co\");\n" },
     ],
-    config: { entry: "index.html", template: "html", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "hello", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   },
-  canvas: {
+  clock: {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Canvas sketch</title>\n<link rel=\"stylesheet\" href=\"./style.css\">\n<canvas width=\"720\" height=\"480\" aria-label=\"Canvas sketch\"></canvas>\n<script src=\"./script.js\"></script>\n" },
-      { path: "style.css", content: "body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #171a1a; }\ncanvas { max-width: calc(100% - 2rem); background: #222727; }\n" },
-      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#30d5c8\";\ncontext.fillRect(120, 100, 480, 280);\n" },
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Digital clock</title>\n<main><h1 id=\"time\">--:--:--</h1><p id=\"date\">Waiting for the sandbox…</p></main>\n<script src=\"./script.js\"></script>" },
+      { path: "style.css", content: "body { margin: 0; font-family: ui-monospace, monospace; color: #f5f7f7; background: #171a1a; }\nmain { padding: 3rem; text-align: center; }\nh1 { font-size: clamp(2rem, 10vw, 5rem); }\n" },
+      { path: "script.js", content: "const pad = (value) => String(value).padStart(2, \"0\");\nfunction tick() {\n  const now = new Date();\n  document.getElementById(\"time\").textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;\n  document.getElementById(\"date\").textContent = now.toLocaleDateString();\n}\ntick();\nsetInterval(tick, 1000);" },
     ],
-    config: { entry: "index.html", template: "canvas", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+    config: { entry: "index.html", template: "clock", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
-  svg: {
-    files: [{ path: "image.svg", content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 500\" role=\"img\" aria-labelledby=\"title\">\n  <title id=\"title\">A new illustration</title>\n  <rect width=\"800\" height=\"500\" fill=\"#171a1a\"/>\n  <circle cx=\"400\" cy=\"250\" r=\"150\" fill=\"#30d5c8\"/>\n</svg>\n" }],
-    config: { entry: "image.svg", template: "svg", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  mark: {
+    files: [{ path: "image.svg", content: "<svg viewBox=\"0 0 640 420\" role=\"img\" aria-labelledby=\"mark-title\">\n  <title id=\"mark-title\">Logo mark</title>\n  <defs><linearGradient id=\"mark-gradient\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#30d5c8\"/><stop offset=\"100%\" stop-color=\"#3267e3\"/></linearGradient></defs>\n  <circle cx=\"320\" cy=\"210\" r=\"160\" fill=\"url(#mark-gradient)\"/>\n  <path d=\"M 245 285 L 320 120 L 395 285 Z\" fill=\"#151717\"/>\n</svg>" }],
+    config: { entry: "image.svg", template: "mark", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  chart: {
+    files: [{ path: "image.svg", content: "<svg viewBox=\"0 0 720 440\" role=\"img\" aria-labelledby=\"chart-title\">\n  <title id=\"chart-title\">Bar chart</title>\n  <line x1=\"80\" y1=\"360\" x2=\"660\" y2=\"360\" stroke=\"#839099\"/>\n  <rect x=\"130\" y=\"210\" width=\"90\" height=\"150\" rx=\"8\" fill=\"#30d5c8\"/>\n  <rect x=\"315\" y=\"120\" width=\"90\" height=\"240\" rx=\"8\" fill=\"#3267e3\"/>\n  <rect x=\"500\" y=\"170\" width=\"90\" height=\"190\" rx=\"8\" fill=\"#ae79ff\"/>\n  <text x=\"148\" y=\"395\" fill=\"#eef2ff\">HTML</text><text x=\"340\" y=\"395\" fill=\"#eef2ff\">SVG</text><text x=\"510\" y=\"395\" fill=\"#eef2ff\">Canvas</text>\n</svg>" }],
+    config: { entry: "image.svg", template: "chart", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  ball: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Bouncing ball</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Animated bouncing ball\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\nlet x = 90, y = 80, dx = 5, dy = 4;\nfunction frame() {\n  x += dx; y += dy;\n  if (x < 28 || x > canvas.width - 28) dx *= -1;\n  if (y < 28 || y > canvas.height - 28) dy *= -1;\n  context.clearRect(0, 0, canvas.width, canvas.height);\n  context.fillStyle = \"#30d5c8\"; context.beginPath(); context.arc(x, y, 26, 0, Math.PI * 2); context.fill();\n  requestAnimationFrame(frame);\n}\nframe();" },
+    ],
+    config: { entry: "index.html", template: "ball", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  stars: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Starfield</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Animated starfield\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\nconst stars = Array.from({ length: 60 }, (_, index) => ({ x: (index * 97) % canvas.width, y: (index * 53) % canvas.height, speed: 1 + index % 3 }));\nfunction frame() {\n  context.fillStyle = \"#111827\"; context.fillRect(0, 0, canvas.width, canvas.height); context.fillStyle = \"#eef2ff\";\n  for (const star of stars) { star.y = (star.y + star.speed) % canvas.height; context.beginPath(); context.arc(star.x, star.y, star.speed, 0, Math.PI * 2); context.fill(); }\n  requestAnimationFrame(frame);\n}\nframe();" },
+    ],
+    config: { entry: "index.html", template: "stars", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
   blank: {
     files: [{ path: "index.html", content: "" }],
@@ -147,6 +164,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let saving = false;
   let localHistory = null;
   let editorController = null;
+  let previewController = null;
+  let previewTimer = 0;
+  let previewGeneration = 0;
 
   function showCurrentVersion() {
     currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
@@ -203,24 +223,42 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function renderPreview() {
+    const generation = ++previewGeneration;
     const entry = state.config?.entry || "index.html";
     const source = state.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
     const parsed = new DOMParser().parseFromString(source, "text/html");
     const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
+    const scripts = [];
+    for (const script of parsed.querySelectorAll("script")) {
+      const src = script.getAttribute("src");
+      if (src) {
+        const path = src.replace(/^\.\//, "");
+        const file = state.files.find((candidate) => candidate.path === path);
+        if (file) scripts.push({ source: path, code: file.content });
+      } else if (script.textContent.trim()) scripts.push({ source: entry, code: script.textContent });
+    }
     const fragment = document.createDocumentFragment();
     function copy(node, parent) {
       if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       const name = node.localName;
-      if (!allowed.has(name) || ["script", "style", "link", "meta", "title", "head", "html", "body"].includes(name)) {
+      const structural = ["script", "style", "link", "meta", "head", "html", "body"].includes(name)
+        || (name === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
+      if (!allowed.has(name) || structural) {
         for (const child of node.childNodes) copy(child, parent);
         return;
       }
       const element = node.namespaceURI === "http://www.w3.org/2000/svg"
         ? document.createElementNS("http://www.w3.org/2000/svg", name)
         : document.createElement(name);
+      for (const attribute of ["id", "class", "title", "role", "aria-label"]) {
+        if (node.hasAttribute(attribute) && /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))) element.setAttribute(attribute, node.getAttribute(attribute));
+      }
+      if (name === "canvas") {
+        for (const attribute of ["width", "height"]) if (/^[0-9]{1,5}$/.test(node.getAttribute(attribute) || "")) element.setAttribute(attribute, node.getAttribute(attribute));
+      }
       if (name === "a" && node.getAttribute("href")) {
         const href = node.getAttribute("href");
         const patterns = state.config?.containerOptions?.allowedLinkPatterns || state.config?.container?.allowedLinkPatterns || [];
@@ -232,7 +270,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         }
       }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
-        const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id"]);
+        const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
         for (const attribute of node.attributes) {
           if (svgAttributes.has(attribute.name) && /^[- A-Za-z0-9.,#()%]+$/.test(attribute.value)) element.setAttribute(attribute.name, attribute.value);
         }
@@ -242,6 +280,22 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     for (const child of parsed.body.childNodes) copy(child, fragment);
     preview.replaceChildren(fragment);
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+      previewController?.destroy();
+      previewController = null;
+      if (generation !== previewGeneration) return;
+      try {
+        const controller = await mountResourcesProjectPreview({
+          root: preview, scripts, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "title", "link", "script", "style"].includes(tag)),
+          onViolation(error) { setStatus(`Preview stopped: ${error.message}`, true); },
+        });
+        if (generation !== previewGeneration) controller.destroy();
+        else previewController = controller;
+      } catch (error) {
+        setStatus(`Preview stopped: ${error.message}`, true);
+      }
+    }, 120);
   }
 
   function renderTabs() {
@@ -570,5 +624,5 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     ready = true;
     sendContent();
   }).catch((error) => setStatus(`Editor failed to start: ${error.message}`, true));
-  addEventListener("pagehide", () => editorController?.destroy(), { once: true });
+  addEventListener("pagehide", () => { editorController?.destroy(); previewController?.destroy(); }, { once: true });
 }
