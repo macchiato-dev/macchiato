@@ -208,8 +208,8 @@ the stronger capability boundaries. Provider identities remain separate rows
 so account-linking policy can be added without changing OAuth callbacks.
 
 The signed-in workspace from the July 22 reference is implemented in the edge
-profile. Signed-in `/` redirects to `/dashboard`, where projects and
-organizations are read from Bunny Database (or the same SQLite schema in the
+profile. Signed-in `/` is the account dashboard, while `/projects` lists every
+project. Projects and organizations are read from Bunny Database (or the same SQLite schema in the
 local preview). The create menu and dashboard link to server-rendered project
 and organization forms. Projects can use the personal namespace or an owned
 organization namespace. All mutations use validated URL-encoded POSTs,
@@ -233,6 +233,11 @@ version is a patch from an empty snapshot. Ordinary editing checkpoints at
 most once every five minutes; configuration changes, file deletion, and
 restoration checkpoint the destructive boundary immediately. Restoring an old
 version creates a new version, so the state being left remains recoverable.
+The browser first views historical snapshots without writing; returning to
+Current Version is also read-only. Editing a historical snapshot is the action
+that creates a branch boundary. Project configuration invokes a reusable
+container by name, with only container options stored alongside that name;
+the allowed DOM rules are derived from the container registry.
 
 The next design slices include richer template-specific creation and moving
 the embedded editor from the isolated reference bundle to the complete

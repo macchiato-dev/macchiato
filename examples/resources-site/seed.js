@@ -349,16 +349,22 @@ function sectionsFor(i18n) {
     crumb: [{ icon: true, href: "/" }, { label: t("dashboard.heading") }],
     blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
   },
+  "/projects": {
+    navKey: "",
+    title: t("dashboard.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("dashboard.projects") }],
+    blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
+  },
   "/projects/new": {
     navKey: "",
     title: t("projectCreate.title"),
-    crumb: [{ icon: true, href: "/dashboard" }, { label: t("projectCreate.heading") }],
+    crumb: [{ icon: true, href: "/" }, { label: t("dashboard.projects"), href: "/projects" }, { label: t("projectCreate.heading") }],
     blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
   },
   "/organizations/new": {
     navKey: "",
     title: t("organizationCreate.title"),
-    crumb: [{ icon: true, href: "/dashboard" }, { label: t("organizationCreate.heading") }],
+    crumb: [{ icon: true, href: "/" }, { label: t("organizationCreate.heading") }],
     blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
   },
   };

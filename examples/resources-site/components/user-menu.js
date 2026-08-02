@@ -15,7 +15,7 @@ const guestHtml = `<div class="ub-guest">
 export const RESOURCES_COMMAND_PALETTE = defineCommandPalette({
   commands: [
     { id: "browse", label: "Browse resources", href: "/browse" },
-    { id: "projects", label: "Your projects", href: "/dashboard" },
+    { id: "projects", label: "Your projects", href: "/projects" },
     { id: "settings", label: "Settings", href: "/settings" },
     { id: "docs", label: "Documentation", href: "/docs" },
     { id: "help", label: "Help", href: "/help" },

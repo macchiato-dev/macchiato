@@ -24,7 +24,8 @@ import { userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
-const ACCOUNT_PATHS = new Set(["/dashboard", "/projects/new", "/organizations/new"]);
+const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new"]);
+const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new"]);
 
 async function fetchStorage(fetchImpl, request) {
   const response = await fetchImpl(request);
@@ -39,7 +40,7 @@ function escapeHtml(value) {
 const focusedHomeIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>`;
 
 function focusedProjectDocument(html, namespace, slug) {
-  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
+  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/projects">projects</a><span class="sep">/</span><span>${escapeHtml(namespace)}</span><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
   return html
     .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 focused-view" data-view="focused">`)
     .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
@@ -103,7 +104,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/",
       <div class="popover edge-user-menu__panel">
         <div class="menu__acct"><span class="ub-avatar">${escapeHtml(initials)}</span><div class="menu__acct-meta"><b>${escapeHtml(session.name)}</b><span>@${escapeHtml(session.login)}</span></div></div>
         <div class="menu__sep"></div>
-        <a class="item" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a>
+        <a class="item" href="/projects">${message(messages, "account.projects", "Your projects")}</a>
         <a class="item" href="/profile">${message(messages, "account.profile", "Your profile")}</a>
         <div class="menu__sep"></div>
         <a class="item" href="/settings">${message(messages, "account.settings", "Settings")}</a>
@@ -133,15 +134,15 @@ function checked(value, expected) {
 function initialProjectSnapshot() {
   return {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Constrained view example</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>" },
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>" },
       { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
     ],
-    config: { entry: "index.html", template: "article", container: { name: "article", allowedElements: ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"], allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "article", container: "article", containerOptions: { allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
   };
 }
 
 function validateProjectUrlPatterns(snapshot) {
-  const patterns = snapshot?.config?.container?.allowedLinkPatterns;
+  const patterns = snapshot?.config?.containerOptions?.allowedLinkPatterns || snapshot?.config?.container?.allowedLinkPatterns;
   if (patterns === undefined) return;
   if (!Array.isArray(patterns) || patterns.some((pattern) => typeof pattern !== "string")) throw new ContentValidationError("snapshot", "allowed link URL patterns must be strings");
   try {
@@ -210,9 +211,21 @@ function dashboardHtml(content, messages) {
     <div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.heading", "Your projects")}</h1><p class="account-dashboard__intro">${message(messages, "dashboard.intro", "Projects and organizations owned by your account.")}</p></div>
       <a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div>
     <div class="create-actions"><a class="account-action account-action--secondary" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a></div>
-    <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${projects}</section>
+    <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${projects}<div class="create-actions"><a class="account-action account-action--secondary" href="/projects">${message(messages, "dashboard.viewAllProjects", "View all projects")}</a></div></section>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.organizations", "Organizations")}</h2></div>${organizations}</section>
   </div>`;
+}
+
+function projectsHtml(content, messages) {
+  const projects = content.projects.length
+    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
+        <span class="account-card__namespace">${escapeHtml(item.namespace)}/</span>
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
+        <span class="account-card__meta">${message(messages, `dashboard.${item.visibility}`, item.visibility)}</span>
+      </a>`).join("")}</div>`
+    : `<div class="account-empty">${message(messages, "dashboard.noProjects", "No projects yet.")}</div>`;
+  return `<div class="account-dashboard"><div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.projects", "Projects")}</h1></div><a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div><section class="account-section">${projects}</section></div>`;
 }
 
 function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "") {
@@ -229,7 +242,7 @@ function projectViewHtml(project, messages, workspace = null, versions = [], csr
     </div>
     ${workspace ? editor : `<section class="project-surface" aria-label="${escapeHtml(project.name)} workspace">
       <p>${message(messages, "projectView.empty", "This project is ready for its first document.")}</p>
-      <a class="account-action account-action--secondary" href="/dashboard">${message(messages, "projectView.manage", "Manage projects")}</a>
+      <a class="account-action account-action--secondary" href="/projects">${message(messages, "projectView.manage", "Manage projects")}</a>
     </section>`}
   </div>`;
 }
@@ -262,7 +275,7 @@ function projectFormHtml(session, content, token, messages, url) {
           <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow></textarea></div>
           <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
           <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
-          <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
+          <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button></div>
         </div>
       </div>
     </form>
@@ -279,7 +292,7 @@ function organizationFormHtml(token, messages, url) {
       <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Title")}</label><input id="organization-name" name="name" maxlength="80" data-slug-source="organization-slug" required></div>
       <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Name")}</label><input id="organization-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="organization-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="organization-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
       <div class="create-form__field"><label for="organization-description">${message(messages, "organizationCreate.description", "Description (optional)")}</label><textarea id="organization-description" name="description" maxlength="500"></textarea></div>
-      <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button><a class="account-action account-action--secondary" href="/dashboard">${message(messages, "account.projects", "Your projects")}</a></div>
+      <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button><a class="account-action account-action--secondary" href="/projects">${message(messages, "account.projects", "Your projects")}</a></div>
     </form>
   </div>`;
 }
@@ -442,7 +455,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             },
           });
         }
-        return new Response(null, { status: 303, headers: { location: "/dashboard", "cache-control": "no-store" } });
+        return new Response(null, { status: 303, headers: { location: "/", "cache-control": "no-store" } });
       } catch (error) {
         if (!(error instanceof ContentValidationError) && !(error instanceof ContentConflictError)) throw error;
         const target = pathname === "/projects" ? "/projects/new" : "/organizations/new";
@@ -466,13 +479,14 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const projectWorkspace = dynamicProject && session && contentStore?.getProjectWorkspace
         ? await contentStore.getProjectWorkspace(requestedProject.namespace, requestedProject.slug, session.sub)
         : null;
-      if (session && contentStore && pathname === "/") {
-        return new Response(null, { status: 302, headers: { location: "/dashboard", "cache-control": "private, no-store" } });
+      if (pathname === "/dashboard") {
+        return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
       }
-      if (ACCOUNT_PATHS.has(pathname) && !session) {
+      if (PROTECTED_ACCOUNT_PATHS.has(pathname) && !session) {
         return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
       }
-      const key = localizedObjectKey(locale, dynamicProject ? pathToObjectKey("/dashboard") : publicKey);
+      const accountShellPath = pathname === "/" && session ? "/dashboard" : pathname;
+      const key = localizedObjectKey(locale, dynamicProject ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
       if (upstream.status === 404) return new Response("Not found", { status: 404 });
@@ -500,12 +514,14 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token));
           html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
-        } else if (ACCOUNT_PATHS.has(pathname)) {
+        } else if (session && ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
           const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : "/organizations", authConfig, now);
-          const dynamic = pathname === "/dashboard"
+          const dynamic = pathname === "/"
             ? dashboardHtml(content, manifest.messages[locale])
+            : pathname === "/projects"
+              ? projectsHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
               ? projectFormHtml(session, content, token, manifest.messages[locale], url)
               : organizationFormHtml(token, manifest.messages[locale], url);

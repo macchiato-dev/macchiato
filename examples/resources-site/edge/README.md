@@ -79,8 +79,8 @@ Provider names belong in connection settings, not the account menu.
 
 ## Account content
 
-Signed-in `/` redirects to `/dashboard`. That page lists projects and
-organizations owned by the stable Resources.co user ID. Project cards open
+Signed-in `/` is the account dashboard. `/projects` lists projects owned by the
+stable Resources.co user ID; the dashboard also lists organizations. Project cards open
 dynamic `/{namespace}/{slug}` views. `/projects/new` and `/organizations/new`
 are ordinary server-rendered forms; a project POST redirects directly to its
 new view, while an organization POST returns to the dashboard. The forms carry short-lived, signed,
@@ -104,6 +104,9 @@ holds ordered, verified patches. Five-minute periodic checkpoints bound normal
 typing history, while destructive changes and restores create immediate
 boundaries. Version reconstruction starts at the empty snapshot and rejects a
 patch whose expected file text or configuration value does not match.
+Selecting history in the editor is a read-only view until it is actually
+edited. Container configuration names a registered container (`article`,
+`page`, `canvas`, or `svg`) rather than embedding its DOM schema.
 
 ## Localized content
 
