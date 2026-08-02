@@ -62,9 +62,10 @@ never inherit the editor's DOM capability.
 
 ## Status
 
-Macchiato has the first pieces of a constrained app runtime, but it does not
-yet automatically run app scripts inside QuickJS or connect those scripts to a
-live host-rendered DOM.
+Macchiato has the first pieces of a constrained app runtime. The Resources
+project preview is the first integrated prototype that extracts project
+scripts, runs them in a separate QuickJS context, and connects them to a live
+host-rendered DOM. This is not yet the shared declarative-app runtime contract.
 
 Current pieces:
 
@@ -77,6 +78,13 @@ Current pieces:
   caller-provided element factory.
 - `@macchiato-dev/style-use` validates allowed CSS properties and rejects
   dangerous style values.
+- `@macchiato-dev/browser-use` exposes policy-bound live DOM handles and
+  continuously checks the resulting subtree shape.
+- `@macchiato-dev/canvas-use` exposes a small Canvas 2D command capability with
+  finite-number, color, method, property, and command-budget checks.
+- The Resources preview recognizes inline scripts and same-project `src`
+  files, evaluates them in source order in a disposable QuickJS runtime, and
+  advances guest timers from a bounded host clock.
 - `examples/dom-use-demo` stores a page fragment, stylesheet, DOM schema, and
   CSS schema that can be imported into SQLite and served as a sandboxed page.
   Schemas may be stored inline on the page row or referenced by name, such as
@@ -88,9 +96,10 @@ Missing pieces:
   documents are not yet managed as live runtime documents.
 - Server-side rendering and browser hydration do not yet share one app runtime
   contract.
-- `<script>` tags are not extracted and run in QuickJS.
-- Guest scripts do not receive a DOM capability inside QuickJS.
-- Browser events are not forwarded into QuickJS.
+- Script extraction, DOM forwarding, and timers currently exist in the
+  Resources preview rather than a reusable declarative-app orchestrator.
+- The prototype supports only the audited browser and Canvas subsets needed by
+  its starter containers; it is intentionally not a general Web API shim.
 - Guest DOM mutations are not streamed or batched into a live host renderer.
 - There is no no-WebAssembly browser mode for dynamic pages.
 - Authored Content Security Policy is not yet validated against schema policy.

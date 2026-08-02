@@ -173,7 +173,7 @@
     callback(event);
     for (const [id, pending] of Array.from(callbacks)) {
       if (id.startsWith("frame:") || id.startsWith("timer:")) {
-        callbacks.delete(id);
+        if (!pending.interval) callbacks.delete(id);
         (pending.callback || pending)(Date.now());
       }
     }

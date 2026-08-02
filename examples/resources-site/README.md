@@ -61,10 +61,21 @@ teardown. Build its two cacheable assets with `npm run build:resources-editor`:
 the native controller/provider bundle and the CodeMirror guest bundle remain
 separate to avoid a large combined parse/allocation spike.
 
-The project program is not executed in the editor runtime. A playground will
-instantiate a separate container environment with its own VM, capabilities,
-and lifetime. The current preview is deliberately non-executable and renders
-only elements admitted by the selected container configuration.
+The project program is not executed in the editor runtime. Each executable
+preview gets a second, disposable QuickJS runtime with its own memory limit,
+DOM handle table, timer pump, capabilities, and lifetime. The preview extracts
+inline and same-project scripts before projecting the declared container DOM;
+those scripts run only inside QuickJS. `browser-use` forwards the admitted DOM
+subset and `canvas-use` forwards a bounded Canvas 2D command set. Static
+templates remain projection-only. Changing a file or template destroys the
+old preview runtime before mounting the replacement.
+
+The starter gallery mirrors the Resources design reference: Hello HTML,
+Digital clock, Logo mark, Bar chart, Bouncing ball, and Starfield, alongside
+the product's Article and Blank starters. They reuse the named `page`, `svg`,
+and `canvas` containers rather than embedding copied element schemas in each
+project. The clock and both animations are browser-tested for observable work
+originating in their QuickJS guest.
 
 Both profiles now use the Resources.co teal/blue theme by default, render the
 same brand, content, project metadata, navigation, footer, fonts, responsive

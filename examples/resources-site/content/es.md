@@ -163,9 +163,12 @@
 - **projectCreate.allowedLinksHelp**: Un patrón por línea. Usa un hostname con comodines como *.wikipedia.org, opcionalmente con una ruta como *.wikipedia.org/wiki/*. Rodea una URL exacta con comillas invertidas, o usa la sintaxis de expresión regular de JavaScript entre barras inclinadas.
 - **projectCreate.visibility**: Visibilidad
 - **projectCreate.blank**: Proyecto vacío
-- **projectCreate.html**: Página HTML
-- **projectCreate.svg**: Ilustración SVG
-- **projectCreate.canvas**: Boceto en Canvas
+- **projectCreate.hello**: Hola, HTML
+- **projectCreate.clock**: Reloj digital
+- **projectCreate.mark**: Símbolo de logotipo
+- **projectCreate.chart**: Gráfico de barras
+- **projectCreate.ball**: Pelota rebotando
+- **projectCreate.stars**: Campo de estrellas
 - **projectCreate.submit**: Crear proyecto
 - **projectCreate.content**: Contenido del proyecto
 - **projectCreate.editor**: Editor de proyecto aislado
