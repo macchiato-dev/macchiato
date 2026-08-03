@@ -62,6 +62,8 @@ test("content store creates organizations and namespaced projects", async () => 
   assert.equal(await content.getProject("tiny-tools", "clock"), null);
   assert.equal((await content.getProject("latte", "logo")).visibility, "public");
   assert.deepEqual((await content.listPublicProjects()).map(({ namespace, slug }) => [namespace, slug]), [["latte", "logo"]]);
+  assert.deepEqual(await content.listPublicProjects({ namespaces: ["benatkin", "resources", "macchiato"] }), []);
+  assert.deepEqual((await content.listPublicProjects({ namespaces: ["LATTE", "latte"] })).map(({ namespace, slug }) => [namespace, slug]), [["latte", "logo"]]);
   assert.equal((await content.getPublicProjectWorkspace("latte", "logo")).project.visibility, "public");
   assert.equal(await content.getPublicProjectWorkspace("tiny-tools", "clock"), null);
 });
