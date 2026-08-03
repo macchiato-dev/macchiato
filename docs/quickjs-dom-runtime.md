@@ -60,6 +60,41 @@ context with independent DOM, network, storage, time, and memory capabilities.
 The playground runtime is disposable without destroying editor state and must
 never inherit the editor's DOM capability.
 
+### Development and production distributions
+
+Containers may publish separate `development` and `production` distributions.
+This is a diagnostics distinction, not a policy distinction: given the same
+container configuration, both distributions must accept and reject the same
+operations. The resolved manifest should record the distribution, container
+version, capability configuration, and policy hash so a production result can
+be reproduced under development diagnostics.
+
+The host remains authoritative in both distributions. Declarative HTML, CSS,
+configuration, and other instructions are validated before delivery to a
+guest; input such as a disallowed element may therefore never reach QuickJS.
+Operations originating inside a guest cross the capability bridge and are
+validated again by the host. A guest can supply diagnostic context, but it
+cannot approve an operation, weaken a rule, or decide whether execution may
+continue.
+
+A development distribution may include source names, guest stack traces,
+operation and node paths, the rejected value in safely bounded form, the
+specific schema rule, and remediation hints. Guest environment code may catch
+an exception and attach useful intent such as the API call being attempted.
+All guest-provided diagnostic fields are untrusted labels: the host bounds,
+escapes, and clearly distinguishes them from its own finding. Development UI
+may retain a violation until the relevant source or configuration validates
+again, even while unrelated states such as saving continue to update.
+
+A production distribution should return a small stable violation category and
+optionally a correlation identifier, while keeping detailed diagnostics in
+appropriately protected host logs. It should omit source maps, guest source,
+schema internals, host paths, secrets, and rejected private content. Some
+containers may use identical executable artifacts in both distributions and
+vary only the diagnostic adapter; others may remove development-only code at
+build time. Either approach must preserve fail-closed enforcement and resource
+limits.
+
 ## Status
 
 Macchiato has the first pieces of a constrained app runtime. The Resources
