@@ -845,11 +845,11 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-create__fields { display: grid; align-content: start; gap: 14px; min-height: 0; overflow: auto; }
 .project-create__fields .create-form textarea { min-height: 72px; }
 .project-create__fields .create-actions { gap: 8px; margin-top: 2px; }
-.draft-flash { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 28px 8px 10px; border: 1px solid #c99b37; border-radius: 8px; color: #ffe2a3; background: #3c3018; font-size: 11px; }
+.draft-flash { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 28px 8px 10px; border: 1px solid #5269e8; border-radius: 8px; color: #d9dfff; background: #1b2454; font-size: 11px; }
 .draft-flash__revert, .draft-flash__dismiss { border: 1px solid transparent; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .draft-flash__revert { padding: 0; text-decoration: underline; }
 .draft-flash__dismiss { position: absolute; top: 4px; right: 5px; width: 22px; height: 22px; padding: 0; border-radius: 5px; font-size: 16px; }
-.draft-flash__dismiss:hover { background: #59451d; }
+.draft-flash__dismiss:hover { background: #303a70; }
 .project-editor { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; min-height: 650px; border: 1px solid var(--track-border); border-radius: 10px; background: #151717; }
 .project-editor__toolbar { display: flex; align-items: center; gap: 10px; padding: 7px; color: #cbd4ff; background: #17226e; }
 .project-editor__source-toolbar { display: flex; width: 50%; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }

@@ -184,7 +184,7 @@
 - **projectEditor.currentVersion**: Versión actual
 - **projectEditor.templateReplaced**: La plantilla reemplazó el proyecto.
 - **common.undo**: Deshacer
-- **projectView.unsavedDraft**: Este borrador tiene cambios sin guardar.
+- **projectView.unpublishedDraft**: Este proyecto tiene un borrador sin publicar.
 - **projectView.revertPublished**: Volver a la versión publicada
 - **common.dismiss**: Cerrar
 - **projectEditor.saved**: Guardado
