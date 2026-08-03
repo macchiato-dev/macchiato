@@ -10,7 +10,11 @@ import { createContentStore } from "./models/content.js";
 
 // This file is intentionally wiring only. Security policy and storage behavior
 // live in dependency-free, unit-tested models under ./edge/.
-const config = createEdgeConfig(process.env);
+// The build replaces this marker with the seven-character Git revision. Keep
+// the resolved storage prefix in the deployed function rather than mutable
+// Edge Script environment configuration.
+const storagePrefix = "resources-co-__MACCHIATO_GIT_REVISION__";
+const config = createEdgeConfig({ ...process.env, BUNNY_BUCKET_PREFIX: storagePrefix });
 const authConfig = createAuthConfig(process.env);
 const gitlabAuthConfig = createGitlabAuthConfig(process.env, authConfig);
 const databaseClient = createClient({

@@ -32,7 +32,7 @@ export function createAuthConfig(env = {}) {
     clientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
     clientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
     sessionSecret,
-    signupsEnabled: env.SIGNUPS_ENABLED === "true",
+    signupsEnabled: env.SIGNUPS_ENABLED !== "false",
     secureCookies: !allowLocalHttp,
     sessionSeconds: 60 * 60 * 24 * 14,
   });

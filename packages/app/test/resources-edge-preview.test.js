@@ -3,7 +3,7 @@ import test from "node:test";
 import { resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
 
 test("local edge adapter serves the Bunny profile from memory", async () => {
-  const app = { environment: { SIGNUPS_ENABLED: "true" } };
+  const app = { environment: {} };
   const home = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/"), app);
   const text = await home.text();
   assert.equal(home.status, 200);
