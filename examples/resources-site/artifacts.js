@@ -14,7 +14,9 @@ const fontDirectory = join(directory, "..", "resources-website", "assets", "font
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
 const generatedDirectory = join(directory, "generated");
+const blogImageDirectory = join(directory, "assets", "blog");
 const fontNames = ["space-grotesk-latin.woff2", "space-grotesk-latin-ext.woff2", "space-grotesk-vietnamese.woff2"];
+const blogImageNames = ["webassembly-capability-container.png", "webassembly-container-surfaces.png"];
 
 function routeRow(route) {
   return { ...route, navJson: JSON.stringify(route.nav || []), transitionJson: JSON.stringify(route.transition || {}) };
@@ -48,6 +50,9 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   }
   for (const name of fontNames) {
     files.set(`/-/fonts/resourcesco-space-grotesk/${name}`, bytes(readFileSync(join(fontDirectory, name))));
+  }
+  for (const name of blogImageNames) {
+    files.set(`/-/blog-images/${name}`, bytes(readFileSync(join(blogImageDirectory, name))));
   }
   for (const set of [commandPaletteUseBrowserAssets, themeUseBrowserAssets, userMenuUseBrowserAssets]) {
     for (const asset of set.files) {

@@ -485,6 +485,12 @@ ${base}
 .content-block p a:focus-visible {
   color: var(--text);
 }
+.blog-list { margin: 16px 0 22px 22px; display: grid; gap: 12px; }
+.blog-list li { padding: 0 0 0 4px; color: var(--muted); line-height: 1.65; }
+.blog-list a { color: var(--accent); text-decoration: underline; font-weight: 600; }
+.blog-figure { margin: 24px 0; }
+.blog-figure img { display: block; width: 100%; height: auto; border: 1px solid var(--card-border); border-radius: 12px; }
+.blog-figure figcaption { margin-top: 9px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 
 .project-summary {
   display: grid;
@@ -1180,6 +1186,8 @@ function blockHtml(block, options = {}) {
   for (const para of block.markdownParas || []) bits.push(`<p>${renderBlogInline(para, escapeHtml)}</p>`);
   for (const item of block.blogBody || []) {
     if (item.type === "paragraph") bits.push(`<p>${renderBlogInline(item.markdown, escapeHtml)}</p>`);
+    else if (item.type === "list") bits.push(`<ul class="blog-list">${item.items.map((entry) => `<li>${renderBlogInline(entry, escapeHtml)}</li>`).join("")}</ul>`);
+    else if (item.type === "image") bits.push(`<figure class="blog-figure"><img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}" loading="lazy"><figcaption>${escapeHtml(item.caption)}</figcaption></figure>`);
     else bits.push(blogExampleHtml(item.example, options.blogExamplesOrigin));
   }
   for (const example of block.examples || []) {

@@ -155,6 +155,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
+  if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
+    state = normalizeProjectSnapshot(STARTING_POINTS[requestedTemplate]);
+    snapshotField.value = JSON.stringify(state);
+  }
   let currentSnapshot = state;
   let viewingHistorical = false;
   let selected = state.files[0]?.path || "config";
