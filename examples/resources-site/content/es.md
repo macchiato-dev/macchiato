@@ -185,6 +185,12 @@
 - **projectEditor.saved**: Guardado
 - **projectEditor.history**: Historial de versiones
 - **projectEditor.closeHistory**: Cerrar el historial de versiones
+- **try.title**: Probar - Resources.co
+- **try.heading**: Probar
+- **try.intro**: Experimenta con un proyecto aislado. Los cambios no se guardan.
+- **try.button**: Probar
+- **try.buttonDescription**: Abre un proyecto aislado sin crear una cuenta ni guardarlo.
+- **publicProjects.empty**: Todavía no se ha publicado ningún proyecto público.
 - **projectEditor.addFile**: Añadir archivo
 - **projectEditor.removeFile**: Eliminar el archivo seleccionado
 - **projectView.empty**: Este proyecto está listo para su primer documento.

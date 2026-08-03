@@ -185,6 +185,12 @@
 - **projectEditor.saved**: Saved
 - **projectEditor.history**: Version history
 - **projectEditor.closeHistory**: Close version history
+- **try.title**: Try - Resources.co
+- **try.heading**: Try
+- **try.intro**: Experiment with a sandboxed project. Changes are not saved.
+- **try.button**: Try
+- **try.buttonDescription**: Open a sandboxed project without creating an account or saving it.
+- **publicProjects.empty**: No public projects have been published yet.
 - **projectEditor.addFile**: Add file
 - **projectEditor.removeFile**: Remove selected file
 - **projectView.empty**: This project is ready for its first document.

@@ -221,8 +221,9 @@ function sectionsFor(i18n) {
           t("home.p1"),
           t("home.p2"),
         ],
+        items: [[t("try.button"), t("try.buttonDescription"), "/try"]],
       },
-      { h2: t("home.featured"), items: projectLinks(i18n) },
+      { h2: t("home.featured"), paras: ["__RESOURCES_PUBLIC_PROJECTS__"] },
     ],
   },
   "/browse": {
@@ -235,7 +236,7 @@ function sectionsFor(i18n) {
         paras: [t("browse.p1")],
         tags: [...new Set(REPO_PROJECT_METADATA.projects.map((project) => project.kind))],
       },
-      ...projectGroups(i18n),
+      { paras: ["__RESOURCES_PUBLIC_PROJECTS__"] },
     ],
   },
   "/collections": {
@@ -359,6 +360,12 @@ function sectionsFor(i18n) {
     navKey: "",
     title: t("projectCreate.title"),
     crumb: [{ icon: true, href: "/" }, { label: t("dashboard.projects"), href: "/projects" }, { label: t("projectCreate.heading") }],
+    blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
+  },
+  "/try": {
+    navKey: "",
+    title: t("try.title"),
+    crumb: [{ icon: true, href: "/" }, { label: t("try.heading") }],
     blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
   },
   "/organizations/new": {
@@ -1121,7 +1128,7 @@ function brandSegmentsForPath(path) {
 }
 
 function viewForPath(path) {
-  return path === "/projects/new" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
+  return path === "/projects/new" || path === "/try" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
     ? "focused"
     : "standard";
 }

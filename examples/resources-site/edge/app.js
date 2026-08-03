@@ -24,6 +24,7 @@ import { userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
+const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
 const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new"]);
 const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new"]);
 
@@ -168,8 +169,8 @@ function containerElementTags(container) {
   return containerElementNames(container).map((element) => `<span class="element-tag" tabindex="0" title="${escapeHtml(describeContainerElement(container, element))}" data-element-tag="${escapeHtml(element)}">${escapeHtml(element)}</span>`).join("");
 }
 
-function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, draft = false }) {
-  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-draft="${draft ? "true" : "false"}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
+function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored" }) {
+  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
       <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button></div></div>
@@ -240,8 +241,8 @@ function projectsHtml(content, messages) {
   return `<div class="account-dashboard"><div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.projects", "Projects")}</h1></div><a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div><section class="account-section">${projects}</section></div>`;
 }
 
-function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "") {
-  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages }) : "";
+function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "", owner = false) {
+  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory" }) : "";
   return `<div class="account-dashboard project-view${workspace ? " project-workspace" : ""}">
     <div class="project-view__identity">
       <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
@@ -277,7 +278,7 @@ function projectFormHtml(session, content, token, messages, url) {
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
       <div class="project-create__layout">
-        ${projectEditorHtml({ snapshot, messages, draft: true })}
+        ${projectEditorHtml({ snapshot, messages, persistence: "session" })}
         <div class="project-create__fields">
           <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
           <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
@@ -292,6 +293,15 @@ function projectFormHtml(session, content, token, messages, url) {
       </div>
     </form>
   </div>`;
+}
+
+function tryProjectHtml(messages) {
+  return `<div class="account-dashboard project-view project-workspace"><div class="project-view__identity"><h1>${message(messages, "try.heading", "Try")}</h1><p class="account-dashboard__intro">${message(messages, "try.intro", "Experiment with a sandboxed project. Changes are not saved.")}</p></div>${projectEditorHtml({ snapshot: initialProjectSnapshot(), messages, persistence: "memory" })}</div>`;
+}
+
+function publicProjectsHtml(projects, messages) {
+  if (!projects.length) return `<div class="account-empty">${message(messages, "publicProjects.empty", "No public projects have been published yet.")}</div>`;
+  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><span class="account-card__namespace">${escapeHtml(item.namespace)}/</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
 }
 
 function organizationFormHtml(token, messages, url) {
@@ -491,6 +501,10 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const projectWorkspace = dynamicProject && session && contentStore?.getProjectWorkspace
         ? await contentStore.getProjectWorkspace(requestedProject.namespace, requestedProject.slug, session.sub)
         : null;
+      const publicProjectWorkspace = dynamicProject && !projectWorkspace && dynamicProject.visibility === "public" && contentStore?.getPublicProjectWorkspace
+        ? await contentStore.getPublicProjectWorkspace(requestedProject.namespace, requestedProject.slug)
+        : null;
+      const visibleWorkspace = projectWorkspace || publicProjectWorkspace;
       if (pathname === "/dashboard") {
         return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
       }
@@ -524,8 +538,11 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], projectWorkspace, versions, token));
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, versions, token, Boolean(projectWorkspace)));
           html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
+        } else if (pathname === "/try") {
+          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => tryProjectHtml(manifest.messages[locale]));
         } else if (session && ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
@@ -540,8 +557,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
+        if ((pathname === "/" && !session) || pathname === "/browse") {
+          if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error(`Public projects marker missing from ${key}`);
+          const projects = contentStore?.listPublicProjects ? await contentStore.listPublicProjects({ limit: pathname === "/" ? 6 : 48 }) : [];
+          html = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml(projects, manifest.messages[locale]));
+        }
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new", signupsEnabled: authConfig.signupsEnabled }, contentFormVersion);
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try", signupsEnabled: authConfig.signupsEnabled }, contentFormVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");
