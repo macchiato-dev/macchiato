@@ -201,13 +201,19 @@ test("Resources.co blog container examples render and surface schema errors in t
   await editor.waitFor();
   await editor.click();
   await page.keyboard.press("Control+A");
-  await page.keyboard.type("<iframe></iframe>");
+  await page.keyboard.type('<article><h1 id="allowed">Waiting</h1><iframe><p>Blocked subtree</p></iframe></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
   await page.locator("[data-project-status][data-state='error']").waitFor();
+  await page.locator("[data-project-preview] h1").getByText("Allowed guest code still runs", { exact: true }).waitFor();
   await page.waitForTimeout(2_000);
-  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "rejected");
+  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
+  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-violations"), "1");
+  assert.equal(await page.locator("[data-project-preview] h1").textContent(), "Allowed guest code still runs");
+  assert.equal(await page.locator("[data-project-preview] iframe").count(), 0);
+  assert.equal(await page.locator("[data-project-preview]").getByText("Blocked subtree").count(), 0);
+  assert.match(await editor.innerText(), /<iframe>.*Blocked subtree.*<\/iframe>/s);
   assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "error");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
-  assert.match(await page.locator("[data-project-error]").textContent(), /iframe.*not allowed/i);
+  assert.match(await page.locator("[data-project-error]").textContent(), /^Blocked:.*iframe.*omitted/i);
   assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
 });
 

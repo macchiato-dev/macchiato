@@ -257,6 +257,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     tipControls.hidden = false;
     statusError.hidden = true;
     statusError.textContent = "";
+    delete preview.dataset.previewRuntime;
+    delete preview.dataset.previewViolations;
     previewController?.destroy();
     previewController = null;
     const entry = state.config?.entry || "index.html";
@@ -267,10 +269,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
     const scripts = [];
     const violations = [];
+    const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName)
+      || (node.localName === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
     const reject = (message) => {
       if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
     };
     for (const script of parsed.querySelectorAll("script")) {
+      let ancestor = script.parentElement;
+      let blocked = false;
+      while (ancestor && ancestor !== parsed.body) {
+        if (!structuralElement(ancestor) && !allowed.has(ancestor.localName)) { blocked = true; break; }
+        ancestor = ancestor.parentElement;
+      }
+      if (blocked) continue;
       const src = script.getAttribute("src");
       if (src) {
         const path = src.replace(/^\.\//, "");
@@ -283,10 +294,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       const name = node.localName;
-      const structural = ["script", "style", "link", "meta", "head", "html", "body"].includes(name)
-        || (name === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
+      const structural = structuralElement(node);
       if (!allowed.has(name) || structural) {
-        if (!structural) reject(`<${name}> is not allowed by the ${state.config?.container || "selected"} container schema.`);
+        if (!structural) {
+          reject(`<${name}> was omitted because the ${state.config?.container || "selected"} container schema does not allow it.`);
+          return;
+        }
         for (const child of node.childNodes) copy(child, parent);
         return;
       }
@@ -308,7 +321,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           if (authoredTarget) element.setAttribute("target", authoredTarget);
           else if ((state.config?.containerOptions?.links || state.config?.container?.links)?.addTargetBlank !== false) element.setAttribute("target", "_blank");
         } else {
-          reject(`${href} is outside the allowed link URL patterns.`);
+          reject(`The href for ${href} was omitted because it is outside the allowed URL patterns.`);
         }
       }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
@@ -328,12 +341,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       try {
         const controller = await mountResourcesProjectPreview({
           root: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
-          onViolation(error) { if (generation === previewGeneration) setStatus(`Preview stopped: ${error.message}`, "error"); },
+          onViolation(error) { if (generation === previewGeneration) setStatus(`Blocked: ${error.message}`, "error"); },
         });
         if (generation !== previewGeneration) controller.destroy();
         else previewController = controller;
       } catch (error) {
-        setStatus(`Preview stopped: ${error.message}`, true);
+        setStatus(`Blocked: ${error.message}`, true);
       }
     }, 120);
   }

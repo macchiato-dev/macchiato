@@ -4724,13 +4724,12 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
   const canvas = new CanvasUseHost(host);
   host.start();
   if (violations.length) {
-    root.dataset.previewRuntime = "rejected";
+    root.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
-    return { inspect: () => ({ runtime: "rejected", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.stop() };
   }
   if (!scripts.length) {
     root.dataset.previewRuntime = "static";
-    return { inspect: () => ({ runtime: "static", canvas: canvas.inspect() }), destroy: () => host.stop() };
+    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.stop() };
   }
   try {
     sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
@@ -4756,7 +4755,7 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
     }
   }, 50);
   return {
-    inspect: () => ({ runtime: "quickjs", canvas: canvas.inspect() }),
+    inspect: () => ({ runtime: "quickjs", violations: violations.length, canvas: canvas.inspect() }),
     destroy() {
       stopped = true;
       clearInterval(timer);
