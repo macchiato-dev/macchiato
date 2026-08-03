@@ -158,6 +158,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const persistence = root.dataset.persistence || "stored";
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
+  const readOnly = root.dataset.readOnly === "true";
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
   const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
   if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
@@ -245,7 +246,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function sendContent() {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
-    editorController.setContent(selectedContent(), language(), { readOnly: selected === "config" });
+    editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config" });
     renderPreview();
     delete root.dataset.editorLoading;
   }
@@ -551,7 +552,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function receiveEditorChange(content) {
     if (typeof content !== "string") return;
-    if (selected === "config") return;
+    if (readOnly || selected === "config") return;
     try {
       updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
       renderPreview();
@@ -670,7 +671,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const panelWidth = historyPanel.getBoundingClientRect().width;
     historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.left - rootRect.left, rootRect.width - panelWidth - 8))}px`;
     historyPanel.style.top = `${buttonRect.bottom - rootRect.top + 6}px`;
-    (draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions();
+    if (readOnly) {
+      versionList.replaceChildren(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
+    } else {
+      (draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions();
+    }
   });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
   document.addEventListener("pointerdown", (event) => {
@@ -679,7 +684,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     versionButton.setAttribute("aria-expanded", "false");
   });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
-  setInterval(() => { if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
+  setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
   mountResourcesProjectEditor({
     root: editorMount,
