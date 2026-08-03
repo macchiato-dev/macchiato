@@ -8,10 +8,11 @@ test("WebAssembly containers post is complete in English and Spanish", () => {
   for (const locale of ["en", "es"]) {
     const post = loadBlogPosts(undefined, locale).find(({ slug }) => slug === "webassembly-based-sandboxed-containers");
     assert.ok(post);
-    assert.match(post.paragraphs.at(-1), locale === "en" ? /practical middle ground/ : /punto medio práctico/);
+    assert.match(post.paragraphs.at(-2), locale === "en" ? /practical middle ground/ : /punto medio práctico/);
+    assert.match(post.paragraphs.at(-1), locale === "en" ? /backend and full-stack containers/ : /contenedores de backend y full stack/);
     assert.ok(post.paragraphs.length >= 10);
     assert.equal(post.body.filter(({ type }) => type === "image").length, 2);
-    assert.equal(post.body.find(({ type }) => type === "list").items.length, 5);
+    assert.equal(post.body.find(({ type }) => type === "list").items.length, 4);
   }
 });
 
