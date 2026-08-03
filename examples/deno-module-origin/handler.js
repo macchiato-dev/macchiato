@@ -1,4 +1,8 @@
-const MODULE_PATH = /^\/[A-Za-z0-9._~/-]+\.(?:js|mjs|ts)$/;
+// Every public module is immutable and visibly tied to the source deployment.
+// Examples: app-7c3b59e.js, packages/dom-use-7c3b59e.js.
+const MODULE_PATH = /^\/[A-Za-z0-9._~/-]+-[0-9a-f]{7}\.(?:js|mjs|ts)$/;
+const IMPORT_KEY_PLACEHOLDER = "__MACCHIATO_MODULE_IMPORT_KEY__";
+const MAX_MODULE_BYTES = 1_000_000;
 
 function required(env, name) {
   const value = String(env[name] || "").trim();
@@ -26,10 +30,14 @@ function moduleKey(pathname) {
   } catch {
     return null;
   }
-  if (!MODULE_PATH.test(decoded) || decoded.includes("//")) return null;
+  if (decoded.includes("//")) return null;
   const segments = decoded.slice(1).split("/");
+  if (segments.length < 2) return null;
+  const suppliedKey = segments.shift();
+  const modulePath = `/${segments.join("/")}`;
+  if (!MODULE_PATH.test(modulePath)) return null;
   if (segments.some((part) => part === "." || part === "..")) return null;
-  return segments.join("/");
+  return { suppliedKey, storageKey: segments.join("/") };
 }
 
 function contentType(pathname) {
@@ -55,16 +63,17 @@ export function createModuleOriginHandler(env = {}, fetchImpl = fetch) {
       return new Response("Not found", { status: 404 });
     }
     const requestUrl = new URL(request.url);
-    const key = moduleKey(requestUrl.pathname);
-    const authorization = request.headers.get("authorization") || "";
+    const moduleRequest = moduleKey(requestUrl.pathname);
     if (
-      !key || requestUrl.search || !safeEqual(authorization, `Bearer ${token}`)
+      !moduleRequest || requestUrl.search ||
+      !safeEqual(moduleRequest.suppliedKey, token)
     ) {
       return new Response("Not found", {
         status: 404,
         headers: { "cache-control": "no-store" },
       });
     }
+    const key = moduleRequest.storageKey;
 
     const upstreamUrl = new URL(
       key,
@@ -84,11 +93,29 @@ export function createModuleOriginHandler(env = {}, fetchImpl = fetch) {
     if (!upstream.ok) {
       return new Response("Storage unavailable", { status: 502 });
     }
-    return new Response(request.method === "HEAD" ? null : upstream.body, {
+    if (request.method === "HEAD") {
+      return new Response(null, {
+        status: 200,
+        headers: {
+          "content-type": contentType(key),
+          "cache-control": "public, max-age=31536000, immutable",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+    const source = await upstream.text();
+    if (new TextEncoder().encode(source).byteLength > MAX_MODULE_BYTES) {
+      return new Response("Module too large", { status: 502 });
+    }
+    const servedSource = source.replaceAll(
+      IMPORT_KEY_PLACEHOLDER,
+      encodeURIComponent(token),
+    );
+    return new Response(servedSource, {
       status: 200,
       headers: {
         "content-type": contentType(key),
-        "cache-control": "private, max-age=300",
+        "cache-control": "public, max-age=31536000, immutable",
         "x-content-type-options": "nosniff",
       },
     });
