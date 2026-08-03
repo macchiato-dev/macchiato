@@ -793,7 +793,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.reload({ waitUntil: "networkidle" });
   const draftFlash = page.locator("[data-draft-flash]");
   await assert.doesNotReject(draftFlash.getByRole("button", { name: "Revert to published version" }).waitFor());
-  assert.match(await draftFlash.textContent(), /unsaved changes/i);
+  assert.match(await draftFlash.textContent(), /unpublished draft/i);
+  assert.equal(await draftFlash.evaluate((element) => getComputedStyle(element).borderColor), "rgb(82, 105, 232)");
   await page.screenshot({ path: "/tmp/resources-draft-flash.png" });
   await draftFlash.getByRole("button", { name: "Dismiss" }).click();
   assert.equal(await draftFlash.count(), 0);

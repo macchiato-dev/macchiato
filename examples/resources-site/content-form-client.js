@@ -430,7 +430,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     pending = true;
     changeGeneration += 1;
     pendingDestructive ||= destructive || branchedFromHistory;
-    setStatus("Unsaved changes", "warning");
+    setStatus("Unsaved changes");
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
       if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
@@ -483,7 +483,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         pendingDestructive = false;
         setStatus("Saved");
       } else {
-        setStatus("Unsaved changes", "warning");
+        setStatus("Unsaved changes");
       }
     } catch (error) {
       setStatus(error.message, true);
