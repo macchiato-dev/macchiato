@@ -12,9 +12,19 @@ I developed a project, [ristretto](https://news.ycombinator.com/item?id=41022890
 
 Today I present the beginning of a project to run code in WebAssembly with containers that only allow limited interactions. This means that code that is sandboxed and resistant to exfiltration can run without an iFrame and it controls its behavior. The containers are currently alpha, but conceptually they should limit the code running in WebAssembly to only be able to access specific things. Something that predates this and inspires it is [WASM-4](https://wasm4.org/), which grants access only to a pixel-based display and input, but this extends it further, by allowing access to various resources in a web page, and controlling the size and complexity and frequency of interactions.
 
+![Private data enters a WebAssembly sandbox whose narrow capability channels produce a browser document.](/-/blog-images/webassembly-capability-container.png "A WebAssembly container exposes selected capabilities instead of the surrounding browser.")
+
 Here are the current containers:
 
-The Article container allows a small set of semantic HTML elements, constrained styles, and links that match configured URL patterns. The Page container supports more general layouts while keeping its DOM and CSS controlled by schemas. The SVG container provides a bounded vector surface, and the Canvas container provides limited drawing and animation operations instead of access to the surrounding browser. A container is a reusable environment made from WebAssembly machines, *-use modules, and their configurations, so a project can select a reviewed capability set rather than rebuilding one each time.
+- [Article](/try?template=article): a small set of semantic HTML elements, constrained styles, and links that match configured URL patterns.
+- [Page](/try?template=hello): a more general layout vocabulary whose DOM and CSS remain controlled by schemas.
+- [SVG](/try?template=mark): a bounded vector surface for declarative shapes, paths, text, and gradients.
+- [Canvas](/try?template=ball): limited drawing and animation operations instead of access to the surrounding browser.
+- [Code Editor Use](/try?template=article): a constrained CodeMirror surface used by the playground to edit the selected container's files.
+
+![Five bounded surfaces represent article, page, SVG, canvas, and code editor containers.](/-/blog-images/webassembly-container-surfaces.png "Containers assemble WebAssembly machines, *-use modules, and reviewed configurations for a particular kind of document.")
+
+A container is a reusable environment made from WebAssembly machines, *-use modules, and their configurations, so a project can select a reviewed capability set rather than rebuilding one each time.
 
 These are backed by components like dom-use, which takes the concept of *browser use*, and applies it to specific parts of the DOM.
 

@@ -28,11 +28,18 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
     offset += 1;
   }
   if (lines[offset] !== "" || lines[offset + 1] !== "## Body" || lines[offset + 2] !== "") throw new Error(`${filename}: expected a Body heading after metadata`);
-  const body = lines.slice(offset + 3).join("\n").trim().split(/\n{2,}/).map((value) => value.replace(/\n/g, " ").trim()).filter(Boolean).map((value) => (
-    value.startsWith("- Example: ")
-      ? Object.freeze({ type: "example", example: parseExample(value) })
-      : Object.freeze({ type: "paragraph", markdown: value })
-  ));
+  const parseBodyBlock = (value) => {
+    const blockLines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (blockLines.every((line) => line.startsWith("- ")) && !blockLines.some((line) => line.startsWith("- Example: "))) {
+      return Object.freeze({ type: "list", items: Object.freeze(blockLines.map((line) => line.slice(2))) });
+    }
+    const flat = blockLines.join(" ");
+    if (flat.startsWith("- Example: ")) return Object.freeze({ type: "example", example: parseExample(flat) });
+    const image = /^!\[([^\]]{1,300})\]\((\/-\/blog-images\/[a-z0-9]+(?:-[a-z0-9]+)*\.png) "([^"]{1,500})"\)$/.exec(flat);
+    if (image) return Object.freeze({ type: "image", alt: image[1], src: image[2], caption: image[3] });
+    return Object.freeze({ type: "paragraph", markdown: flat });
+  };
+  const body = lines.slice(offset + 3).join("\n").trim().split(/\n{2,}/).map(parseBodyBlock);
   const paragraphs = body.filter((item) => item.type === "paragraph").map((item) => item.markdown);
   if (!paragraphs.length || paragraphs.some((value) => value.length > 5_000)) throw new Error(`${filename}: invalid body`);
   const orderedBody = examples.length
@@ -72,7 +79,7 @@ export function renderBlogInline(markdown, escapeHtml) {
   };
   let output = "";
   let cursor = 0;
-  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
+  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/try\?template=(?:article|hello|mark|ball))\)/g;
   for (const match of markdown.matchAll(links)) {
     output += renderText(markdown.slice(cursor, match.index));
     const external = match[2].startsWith("https://");

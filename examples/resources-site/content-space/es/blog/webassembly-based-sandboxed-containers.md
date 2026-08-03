@@ -12,9 +12,19 @@ Desarrollé un proyecto llamado [ristretto](https://news.ycombinator.com/item?id
 
 Hoy presento el comienzo de un proyecto para ejecutar código en WebAssembly mediante contenedores que permiten únicamente interacciones limitadas. Esto permite que código diseñado para resistir la exfiltración se ejecute sin un iframe y conserve el control de su propio comportamiento. Los contenedores se encuentran actualmente en fase alfa, pero conceptualmente limitan el código que se ejecuta en WebAssembly a capacidades específicas. Una inspiración anterior es [WASM-4](https://wasm4.org/), que concede acceso solamente a una pantalla basada en píxeles y a la entrada. Este proyecto amplía la idea permitiendo acceso cuidadosamente acotado a recursos de una página web y controlando el tamaño, la complejidad y la frecuencia de las interacciones.
 
+![Los datos privados entran en un entorno aislado WebAssembly cuyos canales de capacidades producen un documento del navegador.](/-/blog-images/webassembly-capability-container.png "Un contenedor WebAssembly expone capacidades seleccionadas en lugar del navegador circundante.")
+
 Estos son los contenedores actuales:
 
-El contenedor Article permite un conjunto deliberadamente pequeño de HTML semántico, estilos restringidos y enlaces que coincidan con patrones de URL explícitos. El contenedor Page amplía ese vocabulario para diseños más generales sin abandonar el control por esquemas del DOM y del CSS. El contenedor SVG ofrece una superficie vectorial acotada, y el contenedor Canvas ofrece una capacidad limitada de dibujo y animación en lugar de exponer el navegador circundante. Son entornos compuestos con piezas como dom-use, html-use, style-use y canvas-use, con límites elegidos para un tipo concreto de documento en vez de conceder una API de navegador de propósito general.
+- [Article](/try?template=article): un conjunto pequeño de HTML semántico, estilos restringidos y enlaces que coinciden con patrones de URL configurados.
+- [Page](/try?template=hello): un vocabulario de diseño más general cuyo DOM y CSS siguen controlados por esquemas.
+- [SVG](/try?template=mark): una superficie vectorial acotada para formas, trazados, texto y gradientes declarativos.
+- [Canvas](/try?template=ball): operaciones limitadas de dibujo y animación en vez de acceso al navegador circundante.
+- [Code Editor Use](/try?template=article): una superficie restringida de CodeMirror que el área de pruebas utiliza para editar los archivos del contenedor seleccionado.
+
+![Cinco superficies acotadas representan los contenedores article, page, SVG, canvas y editor de código.](/-/blog-images/webassembly-container-surfaces.png "Los contenedores componen máquinas WebAssembly, módulos *-use y configuraciones revisadas para un tipo concreto de documento.")
+
+Un contenedor es un entorno reutilizable compuesto por máquinas WebAssembly, módulos *-use y sus configuraciones, de modo que un proyecto pueda seleccionar un conjunto revisado de capacidades en vez de reconstruirlo cada vez.
 
 Estos contenedores se apoyan en componentes como dom-use, que toma el concepto de *browser use* y lo aplica a partes específicas del DOM. El host valida la forma del DOM, los atributos, las URL, los estilos, las suscripciones a eventos y las mutaciones. Un contenedor puede combinar varios de estos módulos *-use y sus configuraciones sin repetir la política para cada proyecto.
 
