@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check:generated": "npm run check:guest -w @macchiato-dev/browser-use",
+    "test:publish-core": "node scripts/test-publish-core.js",
     "build:resources-editor": "node examples/resources-site/build-project-editor.js",
     "export:resources": "node examples/resources-site/export-static.js",
     "export:focused-app": "node examples/focused-app/export-static.js",
