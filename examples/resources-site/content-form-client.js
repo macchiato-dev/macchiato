@@ -178,6 +178,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewController = null;
   let previewTimer = 0;
   let previewGeneration = 0;
+  let activeError = "";
+  let persistenceState = status.dataset.state || "normal";
   const tipMessages = JSON.parse(root.dataset.tips || "{}");
   let tipIndex = 0;
 
@@ -250,6 +252,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderPreview() {
     const generation = ++previewGeneration;
+    activeError = "";
+    status.dataset.state = persistenceState;
+    tipControls.hidden = false;
+    statusError.hidden = true;
+    statusError.textContent = "";
     previewController?.destroy();
     previewController = null;
     const entry = state.config?.entry || "index.html";
@@ -259,6 +266,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const parsed = new DOMParser().parseFromString(source, "text/html");
     const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
     const scripts = [];
+    const violations = [];
+    const reject = (message) => {
+      if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
+    };
     for (const script of parsed.querySelectorAll("script")) {
       const src = script.getAttribute("src");
       if (src) {
@@ -275,7 +286,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const structural = ["script", "style", "link", "meta", "head", "html", "body"].includes(name)
         || (name === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
       if (!allowed.has(name) || structural) {
-        if (!structural) setStatus(`Preview stopped: <${name}> is not allowed by the ${state.config?.container || "selected"} container schema.`, true);
+        if (!structural) reject(`<${name}> is not allowed by the ${state.config?.container || "selected"} container schema.`);
         for (const child of node.childNodes) copy(child, parent);
         return;
       }
@@ -297,7 +308,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           if (authoredTarget) element.setAttribute("target", authoredTarget);
           else if ((state.config?.containerOptions?.links || state.config?.container?.links)?.addTargetBlank !== false) element.setAttribute("target", "_blank");
         } else {
-          setStatus(`Preview stopped: ${href} is outside the allowed link URL patterns.`, "error");
+          reject(`${href} is outside the allowed link URL patterns.`);
         }
       }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
@@ -316,8 +327,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (generation !== previewGeneration) return;
       try {
         const controller = await mountResourcesProjectPreview({
-          root: preview, scripts, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
-          onViolation(error) { setStatus(`Preview stopped: ${error.message}`, true); },
+          root: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
+          onViolation(error) { if (generation === previewGeneration) setStatus(`Preview stopped: ${error.message}`, "error"); },
         });
         if (generation !== previewGeneration) controller.destroy();
         else previewController = controller;
@@ -349,16 +360,17 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function setStatus(text, severity = "normal") {
-    const state = severity === true ? "error" : severity;
-    const problem = state === "error" || state === "warning";
-    status.dataset.state = state;
-    tipControls.hidden = problem;
-    statusError.hidden = !problem;
-    statusError.textContent = problem ? text : "";
-    if (!problem) {
+    const nextState = severity === true ? "error" : severity;
+    if (nextState === "error") activeError = text;
+    else {
+      persistenceState = nextState;
       statusSave.textContent = text;
-      renderTip();
     }
+    status.dataset.state = activeError ? "error" : persistenceState;
+    tipControls.hidden = Boolean(activeError);
+    statusError.hidden = !activeError;
+    statusError.textContent = activeError;
+    if (!activeError) renderTip();
   }
 
   root.querySelector("[data-project-tip-prev]").addEventListener("click", () => { tipIndex -= 1; renderTip(); });

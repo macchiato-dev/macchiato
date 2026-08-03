@@ -203,6 +203,9 @@ test("Resources.co blog container examples render and surface schema errors in t
   await page.keyboard.press("Control+A");
   await page.keyboard.type("<iframe></iframe>");
   await page.locator("[data-project-status][data-state='error']").waitFor();
+  await page.waitForTimeout(2_000);
+  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "rejected");
+  assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "error");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
   assert.match(await page.locator("[data-project-error]").textContent(), /iframe.*not allowed/i);
   assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
