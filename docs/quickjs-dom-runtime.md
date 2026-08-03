@@ -85,6 +85,23 @@ All guest-provided diagnostic fields are untrusted labels: the host bounds,
 escapes, and clearly distinguishes them from its own finding. Development UI
 may retain a violation until the relevant source or configuration validates
 again, even while unrelated states such as saving continue to update.
+Rejecting output must not rewrite or discard an editor buffer, uploaded file,
+or stored project. The renderer omits the denied element, attribute, subtree,
+or mutation from the capability output and development diagnostics identify
+what was omitted. This lets a user correct or copy their original input without
+the sandbox becoming a destructive sanitizer.
+
+Preserving the current buffer is only the baseline. A productivity container
+should keep recoverable drafts and a navigable history of authored input and
+configuration, including changes made immediately before a guest bug, crash,
+or policy violation. That history belongs to a host-owned persistence
+capability outside the fallible guest. Retention can be bounded and configurable,
+but pruning must be explicit rather than an accidental consequence of rendering
+or sandbox teardown. This goal is informed by Jef Raskin's work on
+[The Humane Environment, later Archy](https://raskincenter.org/rchi/demos/),
+particularly its emphasis on broadly recoverable interaction and undo. It does
+not require copying that interface; it adopts the humane expectation that an
+application bug should not make a person's work disappear.
 
 A production distribution should return a small stable violation category and
 optionally a correlation identifier, while keeping detailed diagnostics in
@@ -94,6 +111,9 @@ containers may use identical executable artifacts in both distributions and
 vary only the diagnostic adapter; others may remove development-only code at
 build time. Either approach must preserve fail-closed enforcement and resource
 limits.
+
+Related article outlines are tracked in
+[`development-blog-ideas.md`](development-blog-ideas.md).
 
 ## Status
 
