@@ -126,6 +126,19 @@ test("edge handler fails closed on storage redirects and manifest failures", asy
     logger: { error() {} },
   });
   assert.equal((await invalidHandler(new Request("https://resources.example/about"))).status, 503);
+
+  const errors = [];
+  const missingHandler = createResourcesEdgeHandler({
+    config,
+    fetchImpl: async () => new Response("private upstream detail", { status: 404, statusText: "Not Found" }),
+    logger: { error(...values) { errors.push(values.join(" ")); } },
+  });
+  assert.equal((await missingHandler(new Request("https://resources.example/about"))).status, 503);
+  assert.match(errors[0], /404 Not Found/);
+  assert.match(errors[0], /object key="public\/resources-co\/manifest\.json"/);
+  assert.match(errors[0], /storage origin="https:\/\/storage\.example\.test\/zone"/);
+  assert.match(errors[0], /ends at the Storage zone root/);
+  assert.doesNotMatch(errors[0], /test-secret|private upstream detail/);
 });
 
 test("edge HTML renders escaped session identity without executable browser code", async () => {
