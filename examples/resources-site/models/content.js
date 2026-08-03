@@ -603,6 +603,15 @@ export function createContentStore(client, {
       return Number(result.rowsAffected) > 0;
     },
 
+    async deleteProject(userId, projectId) {
+      await initialize();
+      const result = await client.execute({
+        sql: "DELETE FROM resource_projects WHERE id = ? AND owner_user_id = ?",
+        args: [String(projectId), String(userId)],
+      });
+      return Number(result.rowsAffected) > 0;
+    },
+
     async revertProjectToPublished(userId, projectId) {
       await initialize();
       const found = await client.execute({
