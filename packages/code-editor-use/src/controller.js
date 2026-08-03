@@ -1,8 +1,8 @@
 import { browserUseQuickJsDomGuestSource } from "@macchiato-dev/browser-use/quickjs-dom-guest";
 import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
-import { BrowserDomHost, CODE_EDITOR_DOM_POLICY, CodeMirrorInputBridge } from "./host.js";
+import { BrowserDomHost, CodeMirrorInputBridge, createCodeEditorDomPolicy, normalizeCodeEditorLimits } from "./host.js";
 
-export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange = () => {}, onReady = () => {}, onViolation = console.error }) {
+export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange = () => {}, onLimit = () => {}, onReady = () => {}, onViolation = console.error }) {
   if (!(root instanceof Element)) throw new TypeError("A DOM root is required");
   if (typeof guestSource !== "string") throw new TypeError("QuickJS guest source is required");
   const originalRootId = root.id;
@@ -13,19 +13,31 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   });
   let stopped = false;
   let inputBridge;
-  const host = new BrowserDomHost(root, CODE_EDITOR_DOM_POLICY, {
+  const editorLimits = normalizeCodeEditorLimits(limits);
+  const violate = (error) => {
+    if (stopped) return;
+    stopped = true;
+    onViolation(error);
+  };
+  const host = new BrowserDomHost(root, createCodeEditorDomPolicy(editorLimits), {
     onViolation(error) { stopped = true; onViolation(error); },
     onEvent(listenerId, event, nativeEvent) {
       if (!sandbox || stopped) return;
-      const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
-      if (result.preventDefault) nativeEvent.preventDefault();
-      if (result.stopPropagation) nativeEvent.stopPropagation();
-      inputBridge?.reconcileSelection();
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
+        if (result.preventDefault) nativeEvent.preventDefault();
+        if (result.stopPropagation) nativeEvent.stopPropagation();
+        inputBridge?.reconcileSelection();
+      } catch (error) {
+        violate(error);
+      }
     },
   });
   sandbox.installJsonHostFunction("__browserUseHost", (message) => host.dispatch(message));
   sandbox.installJsonHostFunction("__browserUseNotify", (message) => {
     if (message.type === "change") onChange(message.content);
+    if (message.type === "limit") onLimit(message);
     if (message.type === "ready") onReady(message);
     return {};
   });
@@ -34,30 +46,48 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
     platform: navigator.platform, userAgent: navigator.userAgent, vendor: navigator.vendor,
   });
   sandbox.evalGlobal(guestSource, "code-editor-guest.js");
+  sandbox.callJsonFunction("__codeEditorConfigureLimits", {
+    maxLines: editorLimits.maxLines,
+    maxCharacters: editorLimits.maxCharacters,
+  });
   inputBridge = new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
   host.start();
+  const refillTimer = setInterval(() => host.renewOperationBudget(), editorLimits.surfaceRefillMs);
   let destroyed = false;
   return Object.freeze({
     setContent(content, language = "plain", { readOnly = false } = {}) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
-      sandbox.callJsonFunction("__browserUseFlush", {});
-      return result;
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
+        sandbox.callJsonFunction("__browserUseFlush", {});
+        return result;
+      } catch (error) {
+        if (/operation gas exhausted/.test(error.message)) violate(error);
+        throw error;
+      }
     },
     inspect() {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      return sandbox.callJsonFunction("__codeEditorInspect", {});
+      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), surface: host.inspectSurface() };
     },
     command(payload) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
-      sandbox.callJsonFunction("__browserUseFlush", {});
-      return result;
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
+        sandbox.callJsonFunction("__browserUseFlush", {});
+        return result;
+      } catch (error) {
+        if (/operation gas exhausted/.test(error.message)) violate(error);
+        throw error;
+      }
     },
     focus() { root.querySelector(".cm-content")?.focus(); },
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      clearInterval(refillTimer);
       inputBridge?.destroy();
       host.stop();
       root.replaceChildren();

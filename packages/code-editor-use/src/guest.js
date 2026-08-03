@@ -18,6 +18,24 @@ const nativeSelectionTheme = EditorView.theme({
   ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" },
 });
 let applyingHostContent = false;
+let documentLimits = { maxLines: 5_000, maxCharacters: 1_000_000 };
+function documentUsage(doc) {
+  return {
+    characters: doc.length,
+    lines: doc.lines,
+    remainingCharacters: documentLimits.maxCharacters - doc.length,
+    remainingLines: documentLimits.maxLines - doc.lines,
+  };
+}
+const documentLimitFilter = EditorState.transactionFilter.of((transaction) => {
+  if (transaction.newDoc.length <= documentLimits.maxCharacters && transaction.newDoc.lines <= documentLimits.maxLines) return transaction;
+  globalThis.__browserUseNotify(JSON.stringify({
+    type: "limit",
+    ...documentUsage(transaction.newDoc),
+    limits: documentLimits,
+  }));
+  return [];
+});
 function languageExtension(name) {
   if (name === "javascript") return javascript();
   if (name === "html") return html();
@@ -38,6 +56,7 @@ const state = EditorState.create({
     ]),
     oneDark,
     nativeSelectionTheme,
+    documentLimitFilter,
     EditorView.updateListener.of((update) => {
       if (update.docChanged || update.viewportChanged) renderLineNumbers();
       if (update.docChanged && !applyingHostContent) {
@@ -67,7 +86,10 @@ function renderLineNumbers() {
   }
   while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
   const first = view.state.doc.lineAt(view.viewport.from).number;
-  const last = view.state.doc.lineAt(view.viewport.to).number;
+  // The virtual DOM cannot provide CodeMirror's normal synchronous geometry.
+  // Keep this guest-assisted gutter viewport bounded even if its conservative
+  // viewport estimate temporarily spans the entire document.
+  const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
   for (let number = first; number <= last; number += 1) {
     const item = document.createElement("div");
     item.className = "cm-gutterElement";
@@ -164,12 +186,24 @@ globalThis.__codeEditorInspect = () => {
     document: view.state.doc.toString(),
     selection: { anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to },
     viewport: { from: view.viewport.from, to: view.viewport.to },
+    usage: documentUsage(view.state.doc),
+    limits: documentLimits,
   });
+};
+globalThis.__codeEditorConfigureLimits = (json) => {
+  const request = JSON.parse(json);
+  for (const name of ["maxLines", "maxCharacters"]) {
+    if (!Number.isSafeInteger(request[name]) || request[name] < 1) throw new TypeError(`${name} must be a positive integer`);
+  }
+  documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
+  return JSON.stringify({ limits: documentLimits, ...documentUsage(globalThis.__codeEditorView.state.doc) });
 };
 globalThis.__codeEditorSetContent = (json) => {
   const request = JSON.parse(json);
-  if (typeof request.content !== "string" || request.content.length > 1_000_000) {
-    throw new TypeError("Editor content must be a string no larger than 1,000,000 characters");
+  if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
+  const requestedLines = request.content.split("\n").length;
+  if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
+    throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
   const view = globalThis.__codeEditorView;
   applyingHostContent = true;
@@ -189,7 +223,7 @@ globalThis.__codeEditorSetContent = (json) => {
     applyingHostContent = false;
   }
   renderLineNumbers();
-  return JSON.stringify({ characters: view.state.doc.length, lines: view.state.doc.lines });
+  return JSON.stringify(documentUsage(view.state.doc));
 };
 let searchPanel = null;
 let searchInput = null;
