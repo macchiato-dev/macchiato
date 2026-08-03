@@ -3956,6 +3956,7 @@ var BrowserDomHost = class {
     this.listeners = /* @__PURE__ */ new Map();
     this.operations = 0;
     this.windowOperations = 0;
+    this.peakWindowOperations = 0;
   }
   register(node) {
     if (!this.root.contains(node) && node !== this.root) throw new Error("DOM handle is outside the granted root");
@@ -3993,7 +3994,11 @@ var BrowserDomHost = class {
         tags: Object.freeze(Object.fromEntries(Object.entries(tagLimits).map(([tag, limit]) => [tag, limit - (shape.tags[tag] || 0)]))),
         operations: this.policy.maxOperations - this.windowOperations
       }),
-      operations: Object.freeze({ total: this.operations, window: this.windowOperations })
+      operations: Object.freeze({
+        total: this.operations,
+        window: this.windowOperations,
+        peakWindow: this.peakWindowOperations
+      })
     });
   }
   get surface() {
@@ -4263,7 +4268,9 @@ var BrowserDomHost = class {
   }
   dispatch(message) {
     this.operations += 1;
-    if (++this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
+    this.windowOperations += 1;
+    this.peakWindowOperations = Math.max(this.peakWindowOperations, this.windowOperations);
+    if (this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
     switch (message.op) {
       case "query":
         return this.query(message.selector, Boolean(message.all));
@@ -4296,7 +4303,7 @@ var CODE_EDITOR_LINE_LIMITS = Object.freeze({
 var DEFAULT_CODE_EDITOR_LIMITS = Object.freeze({
   maxLines: CODE_EDITOR_LINE_LIMITS.large,
   maxCharacters: 1e6,
-  maxSurfaceOperations: 1e5,
+  maxSurfaceOperations: 75e3,
   surfaceRefillMs: 1e3
 });
 function boundedInteger2(value, fallback, maximum, label) {
@@ -4316,6 +4323,7 @@ function normalizeCodeEditorLimits(input = {}) {
 }
 function createCodeEditorDomPolicy(input = {}) {
   const limits = normalizeCodeEditorLimits(input);
+  const maxElements = Math.min(1e4, limits.maxLines * 2 + 600);
   return Object.freeze({
     tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
     events: [
@@ -4386,12 +4394,18 @@ function createCodeEditorDomPolicy(input = {}) {
       "main-field": "^true$"
     },
     classNames: ["^cm-[A-Za-z0-9_-]+$", "^tok-[A-Za-z0-9_-]+$", "^\u037C[A-Za-z0-9]+$"],
-    // The QuickJS DOM currently gives CodeMirror conservative geometry, so its
-    // content viewport may retain one div per allowed line. Keep the ceiling
-    // close to the 5,000-line document maximum rather than pretending native
-    // browser virtualization is available.
-    maxElements: limits.maxLines + 600,
-    maxTagCounts: { div: limits.maxLines + 360, span: 320, input: 24, button: 32, ul: 8, li: 120, style: 12 },
+    // CodeMirror normally virtualizes rows, but conservative guest geometry can
+    // transiently retain one div per allowed line during a large replacement.
+    maxElements,
+    maxTagCounts: {
+      div: limits.maxLines + 360,
+      span: Math.min(maxElements, limits.maxLines * 4 + 256),
+      input: 24,
+      button: 32,
+      ul: 8,
+      li: 120,
+      style: 12
+    },
     maxDepth: 16,
     maxTextLength: limits.maxCharacters,
     maxOperations: limits.maxSurfaceOperations

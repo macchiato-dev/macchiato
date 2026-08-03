@@ -7,7 +7,7 @@ export const CODE_EDITOR_LINE_LIMITS = Object.freeze({
 export const DEFAULT_CODE_EDITOR_LIMITS = Object.freeze({
   maxLines: CODE_EDITOR_LINE_LIMITS.large,
   maxCharacters: 1_000_000,
-  maxSurfaceOperations: 100_000,
+  maxSurfaceOperations: 75_000,
   surfaceRefillMs: 1_000,
 });
 
@@ -30,6 +30,7 @@ export function normalizeCodeEditorLimits(input = {}) {
 
 export function createCodeEditorDomPolicy(input = {}) {
   const limits = normalizeCodeEditorLimits(input);
+  const maxElements = Math.min(10_000, limits.maxLines * 2 + 600);
   return Object.freeze({
     tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
     events: [
@@ -72,12 +73,14 @@ export function createCodeEditorDomPolicy(input = {}) {
       "main-field": "^true$",
     },
     classNames: ["^cm-[A-Za-z0-9_-]+$", "^tok-[A-Za-z0-9_-]+$", "^ͼ[A-Za-z0-9]+$"],
-    // The QuickJS DOM currently gives CodeMirror conservative geometry, so its
-    // content viewport may retain one div per allowed line. Keep the ceiling
-    // close to the 5,000-line document maximum rather than pretending native
-    // browser virtualization is available.
-    maxElements: limits.maxLines + 600,
-    maxTagCounts: { div: limits.maxLines + 360, span: 320, input: 24, button: 32, ul: 8, li: 120, style: 12 },
+    // CodeMirror normally virtualizes rows, but conservative guest geometry can
+    // transiently retain one div per allowed line during a large replacement.
+    maxElements,
+    maxTagCounts: {
+      div: limits.maxLines + 360,
+      span: Math.min(maxElements, limits.maxLines * 4 + 256),
+      input: 24, button: 32, ul: 8, li: 120, style: 12,
+    },
     maxDepth: 16,
     maxTextLength: limits.maxCharacters,
     maxOperations: limits.maxSurfaceOperations,

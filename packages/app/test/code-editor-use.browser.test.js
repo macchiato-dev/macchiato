@@ -352,6 +352,21 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
     await limitedPage.close();
   }
 
+  const churnPage = await browser.newPage();
+  await churnPage.goto(`http://code-editor-use.localhost:${port}/?maxLines=1000`, { waitUntil: "networkidle" });
+  await churnPage.locator("body[data-ready='true']").waitFor();
+  await churnPage.locator(".cm-content").fill(
+    Array.from({ length: 250 }, (_, index) => `const value${index} = ${index};`).join("\n"),
+  );
+  await churnPage.waitForTimeout(200);
+  const churnReport = await churnPage.evaluate(() => globalThis.__codeEditorBridge.inspect());
+  assert.ok(churnReport.usage.lines >= 250);
+  assert.ok(churnReport.surface.elements < churnReport.surface.limits.elements);
+  assert.ok(churnReport.surface.tags.span > 1_000, "syntax churn should exercise the span budget");
+  assert.ok(churnReport.surface.operations.peakWindow < churnReport.surface.limits.operations);
+  assert.equal(await churnPage.locator(".cm-content").count(), 1);
+  await churnPage.close();
+
   await page.locator(".cm-line").first().evaluate((node) => node.setAttribute("onclick", "alert(1)"));
   await assert.doesNotReject(page.getByText(/Editor stopped: DOM shape rejected attribute: onclick/).waitFor());
   assert.equal(await page.locator("#editor").getByRole("textbox").count(), 0);
