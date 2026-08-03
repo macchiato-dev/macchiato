@@ -426,9 +426,21 @@ build validates the conventional seven-character form. The exact prefix is
 compiled into the generated Edge Script, so a runtime variable cannot
 accidentally point that deployment at another release.
 
+Set `RESOURCES_RELEASE_CHANNEL` to put a deployment channel before the
+revision. For example, staging produces `resources-co-staging-e599fb4`:
+
+```sh
+RESOURCES_RELEASE_CHANNEL=staging \
+  BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co \
+  ./scripts/build-resources-bunny.sh
+```
+
+An unset channel retains `resources-co-<revision>`. Channel names are validated
+as lowercase letters/numbers separated by single hyphens.
+
 ### Update an existing staging deployment manually
 
-1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
+1. Run `RESOURCES_RELEASE_CHANNEL=staging BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
 2. Read `dist/resources-bunny/release.json`. Create its `bucketPrefix` in
    Storage, then upload the contents of its `storageDirectory` there,
    preserving paths. Upload `manifest.json` last. Never overwrite an older

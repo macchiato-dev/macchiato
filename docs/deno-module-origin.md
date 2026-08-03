@@ -18,8 +18,8 @@ Imports hardcode the module origin, carry the same suffix explicitly, and use a
 fixed key placeholder:
 
 ```js
-import { DomUse } from "https://modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/dom-use-7c3b59e.js";
-import { StyleUse } from "https://modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/style-use-7c3b59e.js";
+import { DomUse } from "https://staging-modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/dom-use-7c3b59e.js";
+import { StyleUse } from "https://staging-modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/style-use-7c3b59e.js";
 ```
 
 This is deliberately less magical than an import map. A deployment can be
@@ -51,7 +51,7 @@ and unauthenticated requests fail closed.
 The initially pasted Bunny script includes the capability once:
 
 ```js
-import "https://modules.resources.co/THE_PRIVATE_IMPORT_KEY/resources-edge-7c3b59e.js";
+import "https://staging-modules.resources.co/THE_PRIVATE_IMPORT_KEY/resources-edge-7c3b59e.js";
 ```
 
 Successful module responses use `public, max-age=31536000, immutable`. The
