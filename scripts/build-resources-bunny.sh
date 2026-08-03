@@ -8,7 +8,16 @@ if [[ ! "$revision" =~ ^[0-9a-f]{7}$ ]]; then
   echo "Expected a seven-character lowercase hexadecimal Git revision, got: $revision" >&2
   exit 1
 fi
-bucket_prefix="resources-co-$revision"
+release_channel="${RESOURCES_RELEASE_CHANNEL:-}"
+if [[ -n "$release_channel" && ! "$release_channel" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "RESOURCES_RELEASE_CHANNEL must use lowercase letters, numbers, and single hyphens" >&2
+  exit 1
+fi
+if [[ -n "$release_channel" ]]; then
+  bucket_prefix="resources-co-$release_channel-$revision"
+else
+  bucket_prefix="resources-co-$revision"
+fi
 storage_dir="$out_dir/storage/$bucket_prefix"
 
 rm -rf "$out_dir"
@@ -35,6 +44,7 @@ rm "$entry"
 cat > "$out_dir/release.json" <<EOF
 {
   "revision": "$revision",
+  "channel": "$release_channel",
   "bucketPrefix": "$bucket_prefix",
   "edgeScript": "resources-bunny.js",
   "storageDirectory": "storage/$bucket_prefix"
