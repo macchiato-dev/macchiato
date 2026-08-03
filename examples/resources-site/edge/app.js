@@ -34,6 +34,15 @@ async function fetchStorage(fetchImpl, request) {
   return response;
 }
 
+function storageResponseError(config, key, response, label = "Storage") {
+  const status = `${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
+  const objectKey = [...config.bucketPrefix.split("/"), ...String(key).split("/")].join("/");
+  const hint = response.status === 404
+    ? " Confirm BUNNY_STORAGE_ORIGIN ends at the Storage zone root and that this exact object key exists."
+    : " Check the Storage endpoint, access key permissions, and Bunny service status.";
+  return new Error(`${label} response: ${status}; object key=${JSON.stringify(objectKey)}; storage origin=${JSON.stringify(config.storageOrigin)}.${hint}`);
+}
+
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -367,7 +376,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
     if (!manifestPromise) {
       manifestPromise = (async () => {
         const response = await fetchStorage(fetchImpl, storageRequest(config, MANIFEST_KEY));
-        if (!response.ok) throw new Error(`Manifest storage response: ${response.status}`);
+        if (!response.ok) throw storageResponseError(config, MANIFEST_KEY, response, "Manifest storage");
         const contentLength = Number(response.headers.get("content-length") || 0);
         if (contentLength > 256_000) throw new Error("Export manifest is too large");
         const manifest = normalizeExportManifest(await response.json());
