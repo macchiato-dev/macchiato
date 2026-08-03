@@ -147,9 +147,19 @@
     },
     requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },
     cancelAnimationFrame() {},
-    setTimeout(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: false }); return callbackId; },
+    setTimeout(callback, delay = 0) {
+      const id = ++callbackId;
+      const wait = Math.max(0, Number(delay) || 0);
+      callbacks.set("timer:" + id, { callback, interval: false, delay: wait, dueAt: Date.now() + wait });
+      return id;
+    },
     clearTimeout(id) { callbacks.delete("timer:" + id); },
-    setInterval(callback) { callbacks.set("timer:" + (++callbackId), { callback, interval: true }); return callbackId; },
+    setInterval(callback, delay = 0) {
+      const id = ++callbackId;
+      const wait = Math.max(0, Number(delay) || 0);
+      callbacks.set("timer:" + id, { callback, interval: true, delay: wait, dueAt: Date.now() + wait });
+      return id;
+    },
     clearInterval(id) { callbacks.delete("timer:" + id); },
     addEventListener() {},
     removeEventListener() {},
@@ -172,9 +182,9 @@
     };
     callback(event);
     for (const [id, pending] of Array.from(callbacks)) {
-      if (id.startsWith("frame:") || id.startsWith("timer:")) {
-        if (!pending.interval) callbacks.delete(id);
-        (pending.callback || pending)(Date.now());
+      if (id.startsWith("frame:")) {
+        callbacks.delete(id);
+        pending(Date.now());
       }
     }
     return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });
@@ -200,10 +210,13 @@
     return JSON.stringify({ count });
   };
   globalThis.__browserUseTick = () => {
-    const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));
+    const now = Date.now();
+    const pendingCallbacks = Array.from(callbacks).filter(([id, pending]) =>
+      id.startsWith("frame:") || (id.startsWith("timer:") && pending.dueAt <= now));
     let count = 0;
     for (const [id, pending] of pendingCallbacks) {
       if (!pending.interval) callbacks.delete(id);
+      else pending.dueAt = now + pending.delay;
       (pending.callback || pending)(Date.now());
       count += 1;
     }
