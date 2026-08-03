@@ -262,6 +262,22 @@ layout as creation: owners can edit and save it, while visitors see locked
 metadata but can still modify the source in an explicitly non-persistent,
 in-memory playground.
 
+Draft and version preservation is also a resource-safety feature. Editing may
+contain expensive or rate-limited work produced with a user’s LLM credits, so
+navigation, a failed publish, or an accidental template change should not make
+that work disappear. A pristine New Project page is not treated as a draft;
+the draft lifecycle begins only after a real editor or container change.
+Project versions will also roll up into the project chat: chat entries can
+reference the version produced by an agent or user turn, while the version
+store remains the authoritative snapshot/diff history. This preserves both the
+conversation that motivated a change and the exact files and configuration it
+produced without duplicating project state inside chat records.
+New-project state is explicitly `clean`, `dirty`, or a session-saved draft, so
+merely opening the editor does not create disposable state. Draft discard and
+owned-project deletion both require a confirmation step; deleting a project
+also removes its draft, publication, and version history through database
+cascades.
+
 `models/project-history.js` implements the history format without a diff
 dependency. Each changed file is represented by one verified contiguous text
 splice (or an add/delete), while configuration uses verified nested set/delete

@@ -184,9 +184,15 @@
 - **projectEditor.currentVersion**: Current Version
 - **projectEditor.templateReplaced**: Template replaced the project.
 - **common.undo**: Undo
-- **projectView.unpublishedDraft**: This project has an unpublished draft.
+- **projectView.unsavedDraft**: This draft has unsaved changes.
 - **projectView.revertPublished**: Revert to published version
 - **common.dismiss**: Dismiss
+- **common.cancel**: Cancel
+- **projectCreate.discardDraft**: Discard draft
+- **projectCreate.discardWarning**: Discard this project draft? This cannot be undone.
+- **projectCreate.restoredDraft**: This unsaved project is stored as a session draft.
+- **projectView.delete**: Delete project
+- **projectView.deleteWarning**: Delete this project and its version history? This cannot be undone.
 - **projectEditor.saved**: Saved
 - **projectEditor.notSaved**: Changes are not saved
 - **projectEditor.history**: Version history

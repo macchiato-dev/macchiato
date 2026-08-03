@@ -184,9 +184,15 @@
 - **projectEditor.currentVersion**: Versión actual
 - **projectEditor.templateReplaced**: La plantilla reemplazó el proyecto.
 - **common.undo**: Deshacer
-- **projectView.unpublishedDraft**: Este proyecto tiene un borrador sin publicar.
+- **projectView.unsavedDraft**: Este borrador tiene cambios sin guardar.
 - **projectView.revertPublished**: Volver a la versión publicada
 - **common.dismiss**: Cerrar
+- **common.cancel**: Cancelar
+- **projectCreate.discardDraft**: Descartar borrador
+- **projectCreate.discardWarning**: ¿Descartar este borrador de proyecto? Esta acción no se puede deshacer.
+- **projectCreate.restoredDraft**: Este proyecto sin guardar está almacenado como borrador de sesión.
+- **projectView.delete**: Eliminar proyecto
+- **projectView.deleteWarning**: ¿Eliminar este proyecto y su historial de versiones? Esta acción no se puede deshacer.
 - **projectEditor.saved**: Guardado
 - **projectEditor.notSaved**: Los cambios no están guardados
 - **projectEditor.history**: Historial de versiones
