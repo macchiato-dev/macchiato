@@ -83,3 +83,25 @@ test("generated QuickJS environment matches its directly runnable source", async
   assert.equal(typeof context.__browserUseDispatchEvent, "function");
   assert.equal(typeof context.__browserUseConfigureEnvironment, "function");
 });
+
+test("QuickJS guest timers honor their requested delay", () => {
+  let now = 1_000;
+  class GuestDate extends Date { static now() { return now; } }
+  const context = { Date: GuestDate, __browserUseHost() { throw new Error("host should not run"); } };
+  vm.runInNewContext(browserUseQuickJsDomGuestSource, context);
+  vm.runInNewContext("globalThis.fires = 0; setInterval(() => { fires += 1; }, 5000);", context);
+
+  context.__browserUseTick();
+  now = 5_999;
+  context.__browserUseTick();
+  assert.equal(context.fires, 0);
+  now = 6_000;
+  context.__browserUseTick();
+  assert.equal(context.fires, 1);
+  now = 10_999;
+  context.__browserUseTick();
+  assert.equal(context.fires, 1);
+  now = 11_000;
+  context.__browserUseTick();
+  assert.equal(context.fires, 2);
+});

@@ -180,6 +180,7 @@ test("Resources.co blog container examples render and surface schema errors in t
   const examples = [
     ["article", "article", "article h1"],
     ["hello", "page", "h1"],
+    ["clock", "page", "#time"],
     ["mark", "svg", "svg circle"],
     ["ball", "canvas", "canvas"],
   ];
@@ -195,6 +196,19 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
+    if (template === "clock") {
+      await page.locator("[data-preview-runtime='quickjs']").waitFor();
+      await page.getByRole("button", { name: "script.js", exact: true }).click();
+      const scriptEditor = page.locator(".cm-content");
+      await scriptEditor.press("Control+A");
+      await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000"));
+      await page.waitForTimeout(500);
+      await page.locator("[data-preview-runtime='quickjs']").waitFor();
+      const initialTime = await page.locator("[data-project-preview] #time").textContent();
+      await page.waitForTimeout(1_500);
+      assert.equal(await page.locator("[data-project-preview] #time").textContent(), initialTime);
+      await page.waitForFunction((previous) => document.querySelector("[data-project-preview] #time")?.textContent !== previous, initialTime, { timeout: 5_500 });
+    }
     if (template === "article") {
       await page.getByLabel("Template").selectOption("mark");
       await assert.doesNotReject(page.getByRole("button", { name: "image.svg", exact: true }).waitFor());
