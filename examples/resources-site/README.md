@@ -438,6 +438,21 @@ RESOURCES_RELEASE_CHANNEL=staging \
 An unset channel retains `resources-co-<revision>`. Channel names are validated
 as lowercase letters/numbers separated by single hyphens.
 
+Build the complete promotion set from one commit with:
+
+```sh
+./scripts/build-resources-bunny-release-set.sh
+```
+
+It creates independent staging (`resources-co-staging-<revision>`), preprod
+(`resources-co-preprod-<revision>`), and production
+(`resources-co-<revision>`) exports and scripts. Promote by deploying the
+already-built artifact for the next environment; do not rebuild between
+environments if byte-for-byte promotion is required. The module-origin bundle
+is environment-neutral, but deploy it as three Edge Scripts named
+`staging-modules`, `preprod-modules`, and `modules`, each with different
+credentials and hostnames.
+
 ### Update an existing staging deployment manually
 
 1. Run `RESOURCES_RELEASE_CHANNEL=staging BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
