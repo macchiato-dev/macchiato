@@ -520,6 +520,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".footer").isVisible(), true);
 
   await page.getByRole("link", { name: "New organization" }).first().click();
+  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "standard");
+  assert.equal(await page.locator(".layout > .nav").isVisible(), true);
+  assert.equal(await page.locator(".create-form").getByRole("link", { name: "Your projects" }).count(), 0);
   await page.getByLabel("Title", { exact: true }).fill("Tiny Tools");
   assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), "tiny-tools");
   await page.getByLabel("Description (optional)").fill("Small, focused tools.");
