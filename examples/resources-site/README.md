@@ -253,7 +253,11 @@ contains an ordered set of validated `{ path, content }` files and one JSON
 configuration object. Unsaved new-project drafts keep the same diff chain in
 session storage; creating the project sends the current snapshot with the
 metadata form. Existing projects autosave through a same-origin JSON endpoint
-with an action-specific CSRF token. Their focused view uses the same metadata
+with an action-specific CSRF token. Autosave updates a private draft; public
+visitors continue to receive the separately stored published snapshot. “Save
+project” publishes the current draft. Returning to a divergent draft presents
+a dismissible warning and a server-validated action to revert it to the
+published snapshot. Their focused view uses the same metadata
 layout as creation: owners can edit and save it, while visitors see locked
 metadata but can still modify the source in an explicitly non-persistent,
 in-memory playground.

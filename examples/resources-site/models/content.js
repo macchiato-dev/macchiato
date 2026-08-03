@@ -61,6 +61,11 @@ export const CONTENT_SCHEMA = Object.freeze([
   ) STRICT`,
   `CREATE INDEX IF NOT EXISTS resource_project_versions_created
     ON resource_project_versions(project_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS resource_project_publications (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    snapshot_json TEXT NOT NULL,
+    published_at INTEGER NOT NULL
+  ) STRICT`,
   `CREATE TRIGGER IF NOT EXISTS resource_organizations_owner_limit
     BEFORE INSERT ON resource_organizations
     WHEN (SELECT COUNT(*) FROM resource_organizations WHERE owner_user_id = NEW.owner_user_id) >= 5
@@ -74,6 +79,8 @@ export const CONTENT_SCHEMA = Object.freeze([
       (project_id, sequence, reason, patch_json, created_at)
     SELECT id, 1, 'initial', '{"version":1,"files":[],"config":[]}', created_at
     FROM resource_projects`,
+  `INSERT OR IGNORE INTO resource_project_publications (project_id, snapshot_json, published_at)
+    SELECT project_id, snapshot_json, updated_at FROM resource_project_state`,
 ]);
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -204,9 +211,11 @@ export function createContentStore(client, {
       const found = await client.execute({
         sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at,
-                     s.snapshot_json, s.last_version_sequence, s.updated_at
+                     s.snapshot_json, s.last_version_sequence, s.updated_at,
+                     pub.snapshot_json AS published_snapshot_json
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
+              JOIN resource_project_publications pub ON pub.project_id = p.id
               WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
                 AND p.owner_user_id = ?`,
         args: [slug(namespace), slug(projectSlug), String(userId)],
@@ -216,6 +225,8 @@ export function createContentStore(client, {
       return Object.freeze({
         project: project(row),
         snapshot: parsedSnapshot(row.snapshot_json),
+        publishedSnapshot: parsedSnapshot(row.published_snapshot_json),
+        hasUnpublishedChanges: String(row.snapshot_json) !== String(row.published_snapshot_json),
         versionCount: Number(row.last_version_sequence),
         updatedAt: Number(row.updated_at),
       });
@@ -226,9 +237,10 @@ export function createContentStore(client, {
       const found = await client.execute({
         sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at,
-                     s.snapshot_json, s.last_version_sequence, s.updated_at
+                     pub.snapshot_json, s.last_version_sequence, s.updated_at
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
+              JOIN resource_project_publications pub ON pub.project_id = p.id
               WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
                 AND p.visibility = 'public'`,
         args: [slug(namespace), slug(projectSlug)],
@@ -441,6 +453,10 @@ export function createContentStore(client, {
                   (project_id, sequence, reason, patch_json, created_at)
                 VALUES (?, 1, 'initial', ?, ?)`,
           args: [value.id, JSON.stringify(initialPatch), timestamp],
+        }, {
+          sql: `INSERT INTO resource_project_publications (project_id, snapshot_json, published_at)
+                VALUES (?, ?, ?)`,
+          args: [value.id, snapshotJson(initialSnapshot), timestamp],
         }]);
       } catch (error) {
         const limited = limitError(error);
@@ -553,8 +569,13 @@ export function createContentStore(client, {
         args: [snapshotJson(next), snapshotJson(versionSnapshot), sequence,
           versionSnapshot === checkpoint ? Number(row.last_version_at) : timestamp, timestamp, String(projectId)],
       }, {
-        sql: `UPDATE resource_projects SET updated_at = ? WHERE id = ?`,
-        args: [timestamp, String(projectId)],
+        sql: `UPDATE resource_projects
+              SET updated_at = ?, template = CASE WHEN ? = '' THEN template ELSE ? END
+              WHERE id = ?`,
+        args: [timestamp,
+          TEMPLATES.has(String(next.config?.template || "")) ? String(next.config.template) : "",
+          TEMPLATES.has(String(next.config?.template || "")) ? String(next.config.template) : "",
+          String(projectId)],
       });
       await client.batch(queries);
       return Object.freeze({ changed: true, versionCount: sequence, snapshot: next });
@@ -564,6 +585,34 @@ export function createContentStore(client, {
       const snapshot = await this.getProjectVersion(projectId, sequence, userId);
       if (!snapshot) return null;
       return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
+    },
+
+    async publishProject(userId, projectId) {
+      await initialize();
+      const timestamp = now();
+      const result = await client.execute({
+        sql: `UPDATE resource_project_publications
+              SET snapshot_json = (SELECT s.snapshot_json FROM resource_project_state s
+                                   JOIN resource_projects p ON p.id = s.project_id
+                                   WHERE s.project_id = ? AND p.owner_user_id = ?),
+                  published_at = ?
+              WHERE project_id = ?
+                AND EXISTS (SELECT 1 FROM resource_projects p WHERE p.id = ? AND p.owner_user_id = ?)`,
+        args: [String(projectId), String(userId), timestamp, String(projectId), String(projectId), String(userId)],
+      });
+      return Number(result.rowsAffected) > 0;
+    },
+
+    async revertProjectToPublished(userId, projectId) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT pub.snapshot_json FROM resource_project_publications pub
+              JOIN resource_projects p ON p.id = pub.project_id
+              WHERE pub.project_id = ? AND p.owner_user_id = ?`,
+        args: [String(projectId), String(userId)],
+      });
+      if (!found.rows[0]) return null;
+      return this.saveProjectSnapshot(userId, projectId, parsedSnapshot(found.rows[0].snapshot_json), { reason: "restore", destructive: true });
     },
   });
 }
