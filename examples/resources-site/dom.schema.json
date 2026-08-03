@@ -215,7 +215,11 @@
     },
     "p": {
       "attrs": [],
-      "children": ["#text", "a"]
+      "children": ["#text", "a", "em"]
+    },
+    "em": {
+      "attrs": [],
+      "children": ["#text"]
     },
     "path": {
       "attrs": ["d", "fill"],
