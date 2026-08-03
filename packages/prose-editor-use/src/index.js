@@ -54,14 +54,34 @@ export const PROSE_EDITOR_SCHEMA = new Schema({
   },
 });
 
-export const PROSE_EDITOR_DOM_POLICY = Object.freeze({
-  tags: ["div", "p", "strong", "em", "code", "br"],
-  attributes: {
-    class: "^(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak)(?:\\s+(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak))*$",
+export const MESSAGE_EDITOR_SURFACE_BASE = Object.freeze({
+  tags: ["p", "strong", "em", "code", "br"],
+  attributes: Object.freeze({
     contenteditable: "^(?:true|false)$",
     translate: "^(?:yes|no)$",
     spellcheck: "^(?:true|false)$",
     "aria-label": "^Message$",
+  }),
+  maxElements: 800,
+  maxDepth: 24,
+  maxTextLength: MAX_CHARACTERS,
+  maxOperations: 20_000,
+});
+
+export function createMessageEditorSurfacePolicy({ tags = [], attributes = {}, classNames = [], maxTagCounts = {} } = {}) {
+  return Object.freeze({
+    ...MESSAGE_EDITOR_SURFACE_BASE,
+    tags: [...MESSAGE_EDITOR_SURFACE_BASE.tags, ...tags],
+    attributes: { ...MESSAGE_EDITOR_SURFACE_BASE.attributes, ...attributes },
+    classNames,
+    maxTagCounts: { p: 500, strong: 400, em: 400, code: 400, br: 500, ...maxTagCounts },
+  });
+}
+
+export const PROSE_EDITOR_DOM_POLICY = createMessageEditorSurfacePolicy({
+  tags: ["div"],
+  attributes: {
+    class: "^(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak)(?:\\s+(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak))*$",
     "data-pm-slice": "^[0-9]+ [0-9]+(?: -?[0-9]+)?(?: \\[[^<>]{0,200}\\])?$",
   },
   classNames: [
@@ -71,19 +91,13 @@ export const PROSE_EDITOR_DOM_POLICY = Object.freeze({
     "^ProseMirror-separator$",
     "^ProseMirror-trailingBreak$",
   ],
-  maxElements: 800,
-  maxDepth: 24,
-  maxTextLength: MAX_CHARACTERS,
+  maxTagCounts: { div: 40 },
 });
 
-export const WORDGARD_EDITOR_DOM_POLICY = Object.freeze({
-  tags: ["wordgard-editor", "wg-announced", "wg-scroller", "wg-content", "wg-cursor-layer", "wg-cursor", "div", "p", "strong", "em", "code", "br"],
+export const WORDGARD_EDITOR_DOM_POLICY = createMessageEditorSurfacePolicy({
+  tags: ["wordgard-editor", "wg-announced", "wg-scroller", "wg-content", "wg-cursor-layer", "wg-cursor", "div"],
   attributes: {
     class: "^[^<>\"']{0,240}$",
-    contenteditable: "^(?:true|false)$",
-    translate: "^(?:yes|no)$",
-    spellcheck: "^(?:true|false)$",
-    "aria-label": "^Message$",
     "aria-live": "^(?:polite|assertive)$",
     "aria-atomic": "^(?:true|false)$",
     "aria-multiline": "^(?:true|false)$",
@@ -96,10 +110,32 @@ export const WORDGARD_EDITOR_DOM_POLICY = Object.freeze({
     "^wg-[A-Za-z0-9_-]+$",
     "^ͼ[A-Za-z0-9]+$",
   ],
-  maxElements: 800,
-  maxDepth: 24,
-  maxTextLength: MAX_CHARACTERS,
+  maxTagCounts: {
+    "wordgard-editor": 1, "wg-announced": 2, "wg-scroller": 1,
+    "wg-content": 1, "wg-cursor-layer": 2, "wg-cursor": 8, div: 80,
+  },
 });
+
+function attachMessageEditorSurface({ parent, policy, dispose, onShape, onViolation, stop }) {
+  const surface = new BrowserDomHost(parent, policy, {
+    onViolation(error) {
+      stop();
+      dispose();
+      parent.replaceChildren();
+      onViolation(error);
+    },
+  });
+  try {
+    surface.start();
+    onShape(surface.inspectSurface());
+    return surface;
+  } catch (error) {
+    stop();
+    dispose();
+    parent.replaceChildren();
+    throw error;
+  }
+}
 
 function documentFromText(value) {
   const paragraphs = String(value)
@@ -168,23 +204,10 @@ export function createProseEditor({
       spellcheck: "true",
     },
   });
-  browserDom = new BrowserDomHost(parent, PROSE_EDITOR_DOM_POLICY, {
-    onViolation(error) {
-      stopped = true;
-      view.destroy();
-      parent.replaceChildren();
-      onViolation(error);
-    },
+  browserDom = attachMessageEditorSurface({
+    parent, policy: PROSE_EDITOR_DOM_POLICY, dispose: () => view.destroy(), onShape, onViolation,
+    stop: () => { stopped = true; },
   });
-  try {
-    browserDom.start();
-    onShape(browserDom.inspect());
-  } catch (error) {
-    stopped = true;
-    view.destroy();
-    parent.replaceChildren();
-    throw error;
-  }
 
   const run = (command) => {
     if (stopped) return false;
@@ -208,7 +231,7 @@ export function createProseEditor({
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1, view.state.doc.content.size - 1)));
       view.focus();
     },
-    inspect: () => browserDom.inspect(),
+    inspect: () => browserDom.inspectSurface(),
     destroy() {
       stopped = true;
       browserDom.stop();
@@ -263,23 +286,10 @@ export function createWordgardEditor({
     ],
   });
   editor.flush();
-  browserDom = new BrowserDomHost(parent, WORDGARD_EDITOR_DOM_POLICY, {
-    onViolation(error) {
-      stopped = true;
-      editor.dom.remove();
-      parent.replaceChildren();
-      onViolation(error);
-    },
+  browserDom = attachMessageEditorSurface({
+    parent, policy: WORDGARD_EDITOR_DOM_POLICY, dispose: () => editor.dom.remove(), onShape, onViolation,
+    stop: () => { stopped = true; },
   });
-  try {
-    browserDom.start();
-    onShape(browserDom.inspect());
-  } catch (error) {
-    stopped = true;
-    editor.dom.remove();
-    parent.replaceChildren();
-    throw error;
-  }
   const run = (command) => {
     if (stopped) return false;
     const handled = Command.dispatch(editor, command);
@@ -297,7 +307,7 @@ export function createWordgardEditor({
     toggleCode: () => run(wordgardCode.button.run),
     undo: () => run(wordgardUndo),
     redo: () => run(wordgardRedo),
-    inspect: () => browserDom.inspect(),
+    inspect: () => browserDom.inspectSurface(),
     destroy() {
       stopped = true;
       browserDom.stop();
