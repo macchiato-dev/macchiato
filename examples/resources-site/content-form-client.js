@@ -481,7 +481,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       pendingDestructive = false;
       delete root.dataset.draftDirty;
       root.dataset.draftState = "saved";
-      setStatus(memoryOnly ? "Changes are not saved" : "Draft saved in this session", memoryOnly ? "warning" : "normal");
+      setStatus(memoryOnly ? "" : "Draft saved in this session");
       return;
     }
     const savingGeneration = changeGeneration;

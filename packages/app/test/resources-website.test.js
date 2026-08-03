@@ -190,8 +190,8 @@ test("Resources.co blog container examples render and surface schema errors in t
     const snapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
     assert.equal(snapshot.config.container, container);
     assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
-    assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "warning");
-    assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
+    assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
+    assert.equal(await page.locator("[data-project-save]").textContent(), "");
     await page.close();
   }
 
@@ -214,7 +214,7 @@ test("Resources.co blog container examples render and surface schema errors in t
   assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "error");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
   assert.match(await page.locator("[data-project-error]").textContent(), /^Blocked:.*iframe.*omitted/i);
-  assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
+  assert.equal(await page.locator("[data-project-save]").textContent(), "");
 });
 
 test("apps directory lists available app subdomains", async (t) => {
@@ -847,6 +847,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(guestEditor.waitFor());
   await guestEditor.fill("<h1>Visitor experiment</h1>");
   await assert.doesNotReject(guest.locator("[data-project-preview] h1", { hasText: "Visitor experiment" }).waitFor());
+  await guest.waitForTimeout(1_700);
+  assert.equal(await guest.locator("[data-project-save]").textContent(), "");
+  assert.equal(await guest.locator("[data-project-status]").getAttribute("data-state"), "normal");
   await guest.close();
   await page.getByRole("button", { name: "Delete project", exact: true }).click();
   const deleteDialog = page.getByRole("alertdialog", { name: "Delete project" });

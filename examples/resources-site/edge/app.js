@@ -592,9 +592,6 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         ? await contentStore.getPublicProjectWorkspace(requestedProject.namespace, requestedProject.slug)
         : null;
       const visibleWorkspace = projectWorkspace || publicProjectWorkspace;
-      const namespaceCandidate = requestedNamespace && contentStore?.getNamespace
-        ? await contentStore.getNamespace(requestedNamespace, session?.sub)
-        : null;
       if (pathname === "/dashboard") {
         return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
       }
@@ -603,7 +600,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       }
       const accountShellPath = pathname === "/" && session ? "/dashboard" : pathname;
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
-      const dynamicNamespace = manifest.files.has(staticKey) ? null : namespaceCandidate;
+      const dynamicNamespace = !manifest.files.has(staticKey) && requestedNamespace && contentStore?.getNamespace
+        ? await contentStore.getNamespace(requestedNamespace, session?.sub)
+        : null;
       const key = localizedObjectKey(locale, (dynamicProject || dynamicNamespace) ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
