@@ -103,6 +103,14 @@ document.addEventListener("focusout", (event) => {
 });
 document.addEventListener("click", (event) => {
   event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
+  const open = event.target.closest?.("[data-open-draft-delete], [data-open-project-delete]");
+  if (open) open.closest(".destructive-actions")?.querySelector("[data-destructive-confirm]")?.removeAttribute("hidden");
+  const cancel = event.target.closest?.("[data-cancel-delete]");
+  if (cancel) cancel.closest("[data-destructive-confirm]")?.setAttribute("hidden", "");
+  if (event.target.closest?.("[data-confirm-draft-delete]")) {
+    sessionStorage.removeItem(DRAFT_KEY);
+    location.reload();
+  }
 });
 
 function draftHistory(snapshot) {
@@ -163,6 +171,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   const readOnly = root.dataset.readOnly === "true";
+  root.dataset.draftState = "clean";
+  let restoredDraft = false;
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
   const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
   if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
@@ -217,6 +227,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       try {
         const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
         if (stored?.patches?.length) {
+          restoredDraft = true;
           localHistory = stored;
           localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
           localHistory.snapshots ||= stored.patches.map((_, index) => rebuildDraft(stored.patches, index + 1));
@@ -228,6 +239,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     localHistory ||= draftHistory(state);
     versionCount.textContent = String(localHistory.patches.length);
+  }
+  if (restoredDraft) {
+    root.dataset.draftState = "saved";
+    root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
+    root.closest("form")?.querySelector("[data-new-draft-flash]")?.removeAttribute("hidden");
   }
 
   function selectedContent() {
@@ -428,9 +444,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     currentSnapshot = state;
     snapshotField.value = JSON.stringify(state);
     pending = true;
+    root.dataset.draftDirty = "true";
+    root.dataset.draftState = "dirty";
+    if (draft) root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
     changeGeneration += 1;
     pendingDestructive ||= destructive || branchedFromHistory;
-    setStatus("Unsaved changes");
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
       if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
@@ -461,6 +479,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       checkpointDraft({ destructive: pendingDestructive || selected === "config" });
       pending = false;
       pendingDestructive = false;
+      delete root.dataset.draftDirty;
+      root.dataset.draftState = "saved";
       setStatus(memoryOnly ? "Changes are not saved" : "Draft saved in this session", memoryOnly ? "warning" : "normal");
       return;
     }
@@ -481,9 +501,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (changeGeneration === savingGeneration) {
         pending = false;
         pendingDestructive = false;
+        delete root.dataset.draftDirty;
+        root.dataset.draftState = "saved";
         setStatus("Saved");
       } else {
-        setStatus("Unsaved changes");
+        setStatus("Saving…");
       }
     } catch (error) {
       setStatus(error.message, true);

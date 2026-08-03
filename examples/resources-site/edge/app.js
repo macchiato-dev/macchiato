@@ -199,12 +199,8 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
     change: messages?.["projectEditor.tipChange"] || "Try changing the code. Schema violations and other errors replace this tip.",
     navigate: messages?.["projectEditor.tipNavigate"] || "Use the arrows to move through tips, and Editor, Split, or Preview to change the workspace view.",
   };
-  const initialSaveState = readOnly
-    ? message(messages, "projectEditor.readOnly", "Read only")
-    : persistence === "memory"
-    ? message(messages, "projectEditor.notSaved", "Changes are not saved")
-    : message(messages, "projectEditor.saved", "Saved");
-  const initialStatusState = persistence === "memory" ? "warning" : "normal";
+  const initialSaveState = readOnly ? message(messages, "projectEditor.readOnly", "Read only") : "";
+  const initialStatusState = "normal";
   return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
@@ -292,7 +288,7 @@ function formError(url, messages) {
     : "";
 }
 
-function projectFieldsHtml({ session, content, project = null, snapshot, messages, editable, submitLabel, hasUnpublishedChanges = false }) {
+function projectFieldsHtml({ session, content, project = null, snapshot, messages, editable, submitLabel, hasUnpublishedChanges = false, draft = false }) {
   const disabled = editable ? "" : " disabled";
   const container = String(snapshot?.config?.container || "article");
   const templateName = String(snapshot?.config?.template || project?.template || "article");
@@ -310,8 +306,10 @@ function projectFieldsHtml({ session, content, project = null, snapshot, message
     <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow${disabled}>${escapeHtml(project?.description || "")}</textarea></div>
     <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace"${disabled}>${namespaceOptions}</select></div>
     <fieldset${disabled}><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked(project?.visibility || "public", "public")}${disabled}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"${checked(project?.visibility, "private")}${disabled}> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
-    ${editable && hasUnpublishedChanges ? `<div class="draft-flash" data-draft-flash><span>${message(messages, "projectView.unpublishedDraft", "This project has an unpublished draft.")}</span><button class="draft-flash__revert" type="submit" name="intent" value="revert" formnovalidate>${message(messages, "projectView.revertPublished", "Revert to published version")}</button><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
+    ${draft ? `<div class="draft-flash" data-draft-flash data-new-draft-flash hidden><span>${message(messages, "projectCreate.restoredDraft", "This unsaved project is stored as a session draft.")}</span><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
+    ${editable && hasUnpublishedChanges ? `<div class="draft-flash" data-draft-flash><span>${message(messages, "projectView.unsavedDraft", "This draft has unsaved changes.")}</span><button class="draft-flash__revert" type="submit" name="intent" value="revert" formnovalidate>${message(messages, "projectView.revertPublished", "Revert to published version")}</button><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
     ${editable ? `<div class="create-actions"><button class="account-action" type="submit">${submitLabel}</button></div>` : ""}
+    ${editable ? `<div class="destructive-actions"${draft ? " data-draft-actions hidden" : ""}><button class="destructive-link" type="button" ${draft ? "data-open-draft-delete" : "data-open-project-delete"}>${draft ? message(messages, "projectCreate.discardDraft", "Discard draft") : message(messages, "projectView.delete", "Delete project")}</button><div class="destructive-confirm" data-destructive-confirm role="alertdialog" aria-label="${draft ? message(messages, "projectCreate.discardDraft", "Discard draft") : message(messages, "projectView.delete", "Delete project")}" hidden><strong>${draft ? message(messages, "projectCreate.discardWarning", "Discard this project draft? This cannot be undone.") : message(messages, "projectView.deleteWarning", "Delete this project and its version history? This cannot be undone.")}</strong><div><button type="button" data-cancel-delete>${message(messages, "common.cancel", "Cancel")}</button>${draft ? `<button type="button" data-confirm-draft-delete>${message(messages, "projectCreate.discardDraft", "Discard draft")}</button>` : `<button type="submit" name="intent" value="delete" formnovalidate>${message(messages, "projectView.delete", "Delete project")}</button>`}</div></div></div>` : ""}
   </div>`;
 }
 
@@ -332,7 +330,7 @@ function projectFormHtml(session, content, token, messages, url) {
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
       <div class="project-create__layout">
         ${projectEditorHtml({ snapshot, messages, persistence: "session" })}
-        ${projectFieldsHtml({ session, content, snapshot, messages, editable: true, submitLabel: message(messages, "projectCreate.submit", "Create project") })}
+        ${projectFieldsHtml({ session, content, snapshot, messages, editable: true, submitLabel: message(messages, "projectCreate.submit", "Create project"), draft: true })}
       </div>
     </form>
   </div>`;
@@ -539,6 +537,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const projectId = updateProjectAction[1];
       try {
         const form = await readCreateForm(request, session, `project:${projectId}`, authConfig, now);
+        if (form.get("intent") === "delete") {
+          const deleted = await contentStore.deleteProject(session.sub, projectId);
+          return deleted
+            ? new Response(null, { status: 303, headers: { location: "/projects", "cache-control": "no-store" } })
+            : new Response("Not found", { status: 404 });
+        }
         if (form.get("intent") === "revert") {
           const reverted = await contentStore.revertProjectToPublished(session.sub, projectId);
           if (!reverted) return new Response("Not found", { status: 404 });
