@@ -183,8 +183,15 @@
 - **projectEditor.versions**: Versiones
 - **projectEditor.currentVersion**: Versión actual
 - **projectEditor.saved**: Guardado
+- **projectEditor.notSaved**: Los cambios no están guardados
 - **projectEditor.history**: Historial de versiones
 - **projectEditor.closeHistory**: Cerrar el historial de versiones
+- **projectEditor.tipArticle**: Añade un <iframe> para ver cómo el contenedor Article rechaza un elemento fuera de su esquema.
+- **projectEditor.tipPage**: Añade un <video> para ver cómo el contenedor Page rechaza un elemento fuera de su esquema.
+- **projectEditor.tipSvg**: Añade un <foreignObject> para ver cómo el contenedor SVG rechaza un elemento fuera de su esquema.
+- **projectEditor.tipCanvas**: Añade una <img> para ver cómo el contenedor Canvas rechaza un elemento fuera de su esquema.
+- **projectEditor.tipChange**: Cambia el código. Las infracciones del esquema y otros errores reemplazan este consejo.
+- **projectEditor.tipNavigate**: Usa las flechas para recorrer los consejos y Editor, Dividido o Vista previa para cambiar la vista.
 - **try.title**: Probar - Resources.co
 - **try.heading**: Probar
 - **try.intro**: Experimenta con un proyecto aislado. Los cambios no se guardan.

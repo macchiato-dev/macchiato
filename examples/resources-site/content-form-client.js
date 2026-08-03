@@ -23,7 +23,7 @@ const STARTING_POINTS = Object.freeze({
   },
   hello: {
     files: [
-      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Hello, HTML</title>\n</head>\n<body>\n  <main>\n    <h1>Hello, HTML</h1>\n    <p>This small page is made from familiar HTML elements.</p>\n    <ul><li>A heading</li><li>A paragraph</li><li>A list</li></ul>\n  </main>\n</body>\n</html>" },
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Hello, HTML</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello, HTML</h1>\n    <p>This small page is made from familiar HTML elements.</p>\n    <ul><li>A heading</li><li>A paragraph</li><li>A list</li></ul>\n  </main>\n</body>\n</html>" },
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
     ],
     config: { entry: "index.html", template: "hello", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
@@ -145,6 +145,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const preview = root.querySelector("[data-project-preview]");
   const snapshotField = root.querySelector("[data-project-snapshot]");
   const status = root.querySelector("[data-project-status]");
+  const statusSave = root.querySelector("[data-project-save]");
+  const statusError = root.querySelector("[data-project-error]");
+  const tipControls = root.querySelector("[data-project-tip-controls]");
+  const tipText = root.querySelector("[data-project-tip]");
   const versionButton = root.querySelector("[data-project-versions]");
   const versionCount = versionButton.querySelector(".project-editor__version-count");
   const currentVersion = versionButton.querySelector("[data-current-version]");
@@ -174,6 +178,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewController = null;
   let previewTimer = 0;
   let previewGeneration = 0;
+  const tipMessages = JSON.parse(root.dataset.tips || "{}");
+  let tipIndex = 0;
+
+  function tips() {
+    const container = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
+    return [tipMessages[container] || tipMessages.page, tipMessages.change, tipMessages.navigate].filter(Boolean);
+  }
+
+  function renderTip() {
+    const available = tips();
+    tipIndex = ((tipIndex % available.length) + available.length) % available.length;
+    tipText.textContent = available[tipIndex] || "";
+  }
 
   function showCurrentVersion() {
     currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
@@ -258,6 +275,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const structural = ["script", "style", "link", "meta", "head", "html", "body"].includes(name)
         || (name === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
       if (!allowed.has(name) || structural) {
+        if (!structural) setStatus(`Preview stopped: <${name}> is not allowed by the ${state.config?.container || "selected"} container schema.`, true);
         for (const child of node.childNodes) copy(child, parent);
         return;
       }
@@ -278,6 +296,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           const authoredTarget = node.getAttribute("target");
           if (authoredTarget) element.setAttribute("target", authoredTarget);
           else if ((state.config?.containerOptions?.links || state.config?.container?.links)?.addTargetBlank !== false) element.setAttribute("target", "_blank");
+        } else {
+          setStatus(`Preview stopped: ${href} is outside the allowed link URL patterns.`, "error");
         }
       }
       if (node.namespaceURI === "http://www.w3.org/2000/svg") {
@@ -328,10 +348,22 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     tabs.append(config);
   }
 
-  function setStatus(text, error = false) {
-    status.textContent = text;
-    status.dataset.error = error ? "true" : "false";
+  function setStatus(text, severity = "normal") {
+    const state = severity === true ? "error" : severity;
+    const problem = state === "error" || state === "warning";
+    status.dataset.state = state;
+    tipControls.hidden = problem;
+    statusError.hidden = !problem;
+    statusError.textContent = problem ? text : "";
+    if (!problem) {
+      statusSave.textContent = text;
+      renderTip();
+    }
   }
+
+  root.querySelector("[data-project-tip-prev]").addEventListener("click", () => { tipIndex -= 1; renderTip(); });
+  root.querySelector("[data-project-tip-next]").addEventListener("click", () => { tipIndex += 1; renderTip(); });
+  renderTip();
 
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);
@@ -345,7 +377,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     pending = true;
     changeGeneration += 1;
     pendingDestructive ||= destructive || branchedFromHistory;
-    setStatus("Unsaved changes");
+    setStatus("Unsaved changes", "warning");
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
       if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
@@ -376,7 +408,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       checkpointDraft({ destructive: pendingDestructive || selected === "config" });
       pending = false;
       pendingDestructive = false;
-      setStatus(memoryOnly ? "Changes are not saved" : "Draft saved in this session");
+      setStatus(memoryOnly ? "Changes are not saved" : "Draft saved in this session", memoryOnly ? "warning" : "normal");
       return;
     }
     const savingGeneration = changeGeneration;
@@ -398,7 +430,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         pendingDestructive = false;
         setStatus("Saved");
       } else {
-        setStatus("Unsaved changes");
+        setStatus("Unsaved changes", "warning");
       }
     } catch (error) {
       setStatus(error.message, true);
