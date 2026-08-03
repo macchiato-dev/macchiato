@@ -61,6 +61,9 @@ test("content store creates organizations and namespaced projects", async () => 
   assert.equal((await content.getProject("tiny-tools", "clock", account.id)).id, privateProject.id);
   assert.equal(await content.getProject("tiny-tools", "clock"), null);
   assert.equal((await content.getProject("latte", "logo")).visibility, "public");
+  assert.deepEqual((await content.listPublicProjects()).map(({ namespace, slug }) => [namespace, slug]), [["latte", "logo"]]);
+  assert.equal((await content.getPublicProjectWorkspace("latte", "logo")).project.visibility, "public");
+  assert.equal(await content.getPublicProjectWorkspace("tiny-tools", "clock"), null);
 });
 
 test("content store validates inputs, ownership, and namespace uniqueness", async () => {

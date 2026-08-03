@@ -151,7 +151,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const historyPanel = root.querySelector("[data-project-history]");
   const versionList = root.querySelector("[data-project-version-list]");
   const projectId = root.dataset.projectId;
-  const draft = root.dataset.draft === "true";
+  const persistence = root.dataset.persistence || "stored";
+  const draft = persistence === "session";
+  const memoryOnly = persistence === "memory";
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
   let currentSnapshot = state;
   let viewingHistorical = false;
@@ -178,19 +180,21 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     currentVersion.title = new Date(Number(timestamp)).toLocaleString();
   }
 
-  if (draft) {
-    const navigationType = performance.getEntriesByType("navigation")[0]?.type;
-    if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
-    try {
-      const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
-      if (stored?.patches?.length) {
-        localHistory = stored;
-        localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
-        localHistory.snapshots ||= stored.patches.map((_, index) => rebuildDraft(stored.patches, index + 1));
-        state = normalizeProjectSnapshot(stored.snapshot);
+  if (draft || memoryOnly) {
+    if (draft) {
+      const navigationType = performance.getEntriesByType("navigation")[0]?.type;
+      if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      try {
+        const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+        if (stored?.patches?.length) {
+          localHistory = stored;
+          localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
+          localHistory.snapshots ||= stored.patches.map((_, index) => rebuildDraft(stored.patches, index + 1));
+          state = normalizeProjectSnapshot(stored.snapshot);
+        }
+      } catch {
+        sessionStorage.removeItem(DRAFT_KEY);
       }
-    } catch {
-      sessionStorage.removeItem(DRAFT_KEY);
     }
     localHistory ||= draftHistory(state);
     versionCount.textContent = String(localHistory.patches.length);
@@ -337,9 +341,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     changeGeneration += 1;
     pendingDestructive ||= destructive || branchedFromHistory;
     setStatus("Unsaved changes");
-    if (draft) {
+    if (draft || memoryOnly) {
       localHistory.snapshot = state;
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+      if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
     }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1_500);
@@ -358,16 +362,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     localHistory.lastVersionAt = now;
     localHistory.snapshot = state;
     versionCount.textContent = String(localHistory.patches.length);
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+    if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
   }
 
   async function save() {
     if (!pending || saving) return;
-    if (draft) {
+    if (draft || memoryOnly) {
       checkpointDraft({ destructive: pendingDestructive || selected === "config" });
       pending = false;
       pendingDestructive = false;
-      setStatus("Draft saved in this session");
+      setStatus(memoryOnly ? "Changes are not saved" : "Draft saved in this session");
       return;
     }
     const savingGeneration = changeGeneration;
@@ -604,7 +608,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const panelWidth = historyPanel.getBoundingClientRect().width;
     historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.left - rootRect.left, rootRect.width - panelWidth - 8))}px`;
     historyPanel.style.top = `${buttonRect.bottom - rootRect.top + 6}px`;
-    draft ? renderDraftVersions() : renderStoredVersions();
+    (draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions();
   });
   root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
   document.addEventListener("pointerdown", (event) => {
@@ -613,7 +617,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     versionButton.setAttribute("aria-expanded", "false");
   });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
-  setInterval(() => { if (draft) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
+  setInterval(() => { if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
   mountResourcesProjectEditor({
     root: editorMount,

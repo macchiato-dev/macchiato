@@ -199,6 +199,39 @@ export function createContentStore(client, {
       });
     },
 
+    async getPublicProjectWorkspace(namespace, projectSlug) {
+      await initialize();
+      const found = await client.execute({
+        sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at,
+                     s.snapshot_json, s.last_version_sequence, s.updated_at
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
+                AND p.visibility = 'public'`,
+        args: [slug(namespace), slug(projectSlug)],
+      });
+      const row = found.rows[0];
+      if (!row) return null;
+      return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json), versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
+    },
+
+    async listPublicProjects({ limit = 24 } = {}) {
+      await initialize();
+      const bounded = Math.max(1, Math.min(100, Number(limit) || 24));
+      const found = await client.execute({
+        sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              WHERE p.visibility = 'public'
+              ORDER BY p.updated_at DESC, p.name COLLATE NOCASE
+              LIMIT ?`,
+        args: [bounded],
+      });
+      return Object.freeze(found.rows.map(project));
+    },
+
     async listProjectVersions(projectId, userId) {
       await initialize();
       const found = await client.execute({
