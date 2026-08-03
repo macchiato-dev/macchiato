@@ -171,10 +171,10 @@ function containerElementTags(container) {
 
 function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored" }) {
   const tips = {
-    article: messages?.["projectEditor.tipArticle"] || "Try adding an <iframe> to see the Article container reject an element outside its schema.",
-    page: messages?.["projectEditor.tipPage"] || "Try adding a <video> to see the Page container reject an element outside its schema.",
-    svg: messages?.["projectEditor.tipSvg"] || "Try adding a <foreignObject> to see the SVG container reject an element outside its schema.",
-    canvas: messages?.["projectEditor.tipCanvas"] || "Try adding an <img> to see the Canvas container reject an element outside its schema.",
+    article: messages?.["projectEditor.tipArticle"] || "Try adding an <iframe> to see the Article container block an element outside its schema.",
+    page: messages?.["projectEditor.tipPage"] || "Try adding a <video> to see the Page container block an element outside its schema.",
+    svg: messages?.["projectEditor.tipSvg"] || "Try adding a <foreignObject> to see the SVG container block an element outside its schema.",
+    canvas: messages?.["projectEditor.tipCanvas"] || "Try adding an <img> to see the Canvas container block an element outside its schema.",
     change: messages?.["projectEditor.tipChange"] || "Try changing the code. Schema violations and other errors replace this tip.",
     navigate: messages?.["projectEditor.tipNavigate"] || "Use the arrows to move through tips, and Editor, Split, or Preview to change the workspace view.",
   };

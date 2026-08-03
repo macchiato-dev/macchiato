@@ -186,10 +186,10 @@
 - **projectEditor.notSaved**: Changes are not saved
 - **projectEditor.history**: Version history
 - **projectEditor.closeHistory**: Close version history
-- **projectEditor.tipArticle**: Try adding an <iframe> to see the Article container reject an element outside its schema.
-- **projectEditor.tipPage**: Try adding a <video> to see the Page container reject an element outside its schema.
-- **projectEditor.tipSvg**: Try adding a <foreignObject> to see the SVG container reject an element outside its schema.
-- **projectEditor.tipCanvas**: Try adding an <img> to see the Canvas container reject an element outside its schema.
+- **projectEditor.tipArticle**: Try adding an <iframe> to see the Article container block an element outside its schema.
+- **projectEditor.tipPage**: Try adding a <video> to see the Page container block an element outside its schema.
+- **projectEditor.tipSvg**: Try adding a <foreignObject> to see the SVG container block an element outside its schema.
+- **projectEditor.tipCanvas**: Try adding an <img> to see the Canvas container block an element outside its schema.
 - **projectEditor.tipChange**: Try changing the code. Schema violations and other errors replace this tip.
 - **projectEditor.tipNavigate**: Use the arrows to move through tips, and Editor, Split, or Preview to change the workspace view.
 - **try.title**: Try - Resources.co
