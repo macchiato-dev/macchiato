@@ -418,17 +418,21 @@ For a reproducible local build:
 ```
 
 This produces a single Edge Script at
-`dist/resources-bunny/resources-bunny.js` and the validated Storage objects at
-`dist/resources-bunny/site`. The bundle is currently about 240 KB, well below
-Bunny's 10 MB script limit.
+`dist/resources-bunny/resources-bunny.js`, `release.json`, and validated
+Storage objects under a revisioned directory such as
+`dist/resources-bunny/storage/resources-co-e599fb4`. Git abbreviated object
+IDs are lowercase hexadecimal; this repository currently uses SHA-1 and the
+build validates the conventional seven-character form. The exact prefix is
+compiled into the generated Edge Script, so a runtime variable cannot
+accidentally point that deployment at another release.
 
 ### Update an existing staging deployment manually
 
 1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
-2. Upload the *contents* of `dist/resources-bunny/site/` to the existing
-   `resources-co/` Storage prefix, preserving paths and replacing matching
-   objects. Uploading `manifest.json` last keeps the old manifest active until
-   its complete artifact set is present.
+2. Read `dist/resources-bunny/release.json`. Create its `bucketPrefix` in
+   Storage, then upload the contents of its `storageDirectory` there,
+   preserving paths. Upload `manifest.json` last. Never overwrite an older
+   revision prefix; it remains a rollback target.
 3. Replace the staging Edge Script editor contents with
    `dist/resources-bunny/resources-bunny.js`, then save and deploy it.
 4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
@@ -451,7 +455,9 @@ assets may retain their long public lifetime.
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
      if required by the selected endpoint.
-   - `BUNNY_BUCKET_PREFIX`: export subdirectory, default `resources-co`.
+   - `BUNNY_BUCKET_PREFIX`: only used by the ungenerated development entry.
+     Release builds compile the revisioned prefix from `release.json` into the
+     script and ignore this runtime value.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
