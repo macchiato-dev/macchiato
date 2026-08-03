@@ -51,7 +51,7 @@ function escapeHtml(value) {
 const focusedHomeIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>`;
 
 function focusedProjectDocument(html, namespace, slug) {
-  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/projects">projects</a><span class="sep">/</span><span>${escapeHtml(namespace)}</span><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
+  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/projects">projects</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
   return html
     .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 focused-view" data-view="focused">`)
     .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
@@ -154,6 +154,10 @@ function checked(value, expected) {
   return value === expected ? " checked" : "";
 }
 
+function selected(value, expected) {
+  return value === expected ? " selected" : "";
+}
+
 function initialProjectSnapshot() {
   return {
     files: [
@@ -179,7 +183,7 @@ function containerElementTags(container) {
   return containerElementNames(container).map((element) => `<span class="element-tag" tabindex="0" title="${escapeHtml(describeContainerElement(container, element))}" data-element-tag="${escapeHtml(element)}">${escapeHtml(element)}</span>`).join("");
 }
 
-function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored" }) {
+function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored", readOnly = false }) {
   const tips = {
     article: messages?.["projectEditor.tipArticle"] || "Try adding an <iframe> to see the Article container block an element outside its schema.",
     page: messages?.["projectEditor.tipPage"] || "Try adding a <video> to see the Page container block an element outside its schema.",
@@ -188,11 +192,13 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
     change: messages?.["projectEditor.tipChange"] || "Try changing the code. Schema violations and other errors replace this tip.",
     navigate: messages?.["projectEditor.tipNavigate"] || "Use the arrows to move through tips, and Editor, Split, or Preview to change the workspace view.",
   };
-  const initialSaveState = persistence === "memory"
+  const initialSaveState = readOnly
+    ? message(messages, "projectEditor.readOnly", "Read only")
+    : persistence === "memory"
     ? message(messages, "projectEditor.notSaved", "Changes are not saved")
     : message(messages, "projectEditor.saved", "Saved");
   const initialStatusState = persistence === "memory" ? "warning" : "normal";
-  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
+  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
       <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button></div></div>
@@ -212,6 +218,15 @@ function projectRoute(pathname) {
   try {
     const match = /^\/([^/]+)\/([^/]+)$/.exec(decodeURIComponent(pathname));
     return match ? { namespace: match[1], slug: match[2] } : null;
+  } catch {
+    return null;
+  }
+}
+
+function namespaceRoute(pathname) {
+  try {
+    const match = /^\/([^/]+)$/.exec(decodeURIComponent(pathname));
+    return match ? match[1] : null;
   } catch {
     return null;
   }
@@ -263,25 +278,6 @@ function projectsHtml(content, messages) {
   return `<div class="account-dashboard"><div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.projects", "Projects")}</h1></div><a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div><section class="account-section">${projects}</section></div>`;
 }
 
-function projectViewHtml(project, messages, workspace = null, versions = [], csrf = "", owner = false) {
-  const editor = workspace ? projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory" }) : "";
-  return `<div class="account-dashboard project-view${workspace ? " project-workspace" : ""}">
-    <div class="project-view__identity">
-      <span class="account-card__namespace">${escapeHtml(project.namespace)}/</span>
-      <h1>${escapeHtml(project.name)}</h1>
-      <p class="account-dashboard__intro">${escapeHtml(project.description || `${project.template.toUpperCase()} project`)}</p>
-    </div>
-    <div class="project-view__meta">
-      <span>${message(messages, `dashboard.${project.visibility}`, project.visibility)}</span>
-      <span>${escapeHtml(project.template.toUpperCase())}</span>
-    </div>
-    ${workspace ? editor : `<section class="project-surface" aria-label="${escapeHtml(project.name)} workspace">
-      <p>${message(messages, "projectView.empty", "This project is ready for its first document.")}</p>
-      <a class="account-action account-action--secondary" href="/projects">${message(messages, "projectView.manage", "Manage projects")}</a>
-    </section>`}
-  </div>`;
-}
-
 function formError(url, messages) {
   const error = url.searchParams.get("error");
   return error
@@ -289,11 +285,37 @@ function formError(url, messages) {
     : "";
 }
 
+function projectFieldsHtml({ session, content, project = null, snapshot, messages, editable, submitLabel }) {
+  const disabled = editable ? "" : " disabled";
+  const container = String(snapshot?.config?.container || "article");
+  const patterns = snapshot?.config?.containerOptions?.allowedLinkPatterns || [];
+  const namespaceOptions = session ? [
+    `<option value="user"${selected(project?.namespaceKind || "user", "user")}>@${escapeHtml(session.login)}</option>`,
+    ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}"${selected(project?.namespace === item.slug ? item.id : "", item.id)}>${escapeHtml(item.name)}</option>`),
+  ].join("") : `<option>${escapeHtml(project?.namespace || "")}</option>`;
+  return `<div class="project-create__fields" data-project-fields>
+    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template${disabled}><option value="article"${selected(project?.template || "article", "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="hello"${selected(project?.template, "hello")}>${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="clock"${selected(project?.template, "clock")}>${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark"${selected(project?.template, "mark")}>${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart"${selected(project?.template, "chart")}>${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball"${selected(project?.template, "ball")}>${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars"${selected(project?.template, "stars")}>${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank"${selected(project?.template, "blank")}>${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
+    <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container${disabled}><option value="article"${selected(container, "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="page"${selected(container, "page")}>${message(messages, "projectCreate.page", "Page")}</option><option value="canvas"${selected(container, "canvas")}>Canvas</option><option value="svg"${selected(container, "svg")}>SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><div class="element-tags" data-container-outline>${containerElementTags(container)}</div></div></div>
+    <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow${disabled}>${escapeHtml(patterns.join("\n"))}</textarea></div>
+    <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" value="${escapeHtml(project?.name || "")}" data-slug-source="project-slug" required${disabled}></div>
+    <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" value="${escapeHtml(project?.slug || "")}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required${disabled}><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
+    <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow${disabled}>${escapeHtml(project?.description || "")}</textarea></div>
+    <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace"${disabled}>${namespaceOptions}</select></div>
+    <fieldset${disabled}><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked(project?.visibility || "public", "public")}${disabled}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"${checked(project?.visibility, "private")}${disabled}> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
+    ${editable ? `<div class="create-actions"><button class="account-action" type="submit">${submitLabel}</button></div>` : ""}
+  </div>`;
+}
+
+function projectViewHtml(project, messages, workspace, csrf, owner, session, content, url) {
+  const form = owner ? `<form class="create-form" method="post" action="/projects/${encodeURIComponent(project.id)}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">` : `<div class="create-form" aria-label="Project details">`;
+  const close = owner ? "</form>" : "</div>";
+  return `<div class="account-dashboard project-create project-view project-workspace">${form}${formError(url, messages)}<div class="project-create__layout">
+    ${projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory" })}
+    ${projectFieldsHtml({ session, content, project, snapshot: workspace.snapshot, messages, editable: owner, submitLabel: message(messages, "projectView.save", "Save project") })}
+  </div>${close}</div>`;
+}
+
 function projectFormHtml(session, content, token, messages, url) {
-  const namespaceOptions = [
-    `<option value="user">@${escapeHtml(session.login)}</option>`,
-    ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`),
-  ].join("");
   const snapshot = initialProjectSnapshot();
   return `<div class="account-dashboard project-create">
     ${formError(url, messages)}
@@ -301,17 +323,7 @@ function projectFormHtml(session, content, token, messages, url) {
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
       <div class="project-create__layout">
         ${projectEditorHtml({ snapshot, messages, persistence: "session" })}
-        <div class="project-create__fields">
-          <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" data-slug-source="project-slug" required></div>
-          <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
-          <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="hello">${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="clock">${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark">${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart">${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball">${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars">${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
-          <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container><option value="article" selected>${message(messages, "projectCreate.article", "Article")}</option><option value="page">${message(messages, "projectCreate.page", "Page")}</option><option value="canvas">Canvas</option><option value="svg">SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><div class="element-tags" data-container-outline>${containerElementTags("article")}</div></div></div>
-          <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>*.wikipedia.org</textarea></div>
-          <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow></textarea></div>
-          <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
-          <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked("public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
-          <div class="create-actions"><button class="account-action" type="submit">${message(messages, "projectCreate.submit", "Create project")}</button></div>
-        </div>
+        ${projectFieldsHtml({ session, content, snapshot, messages, editable: true, submitLabel: message(messages, "projectCreate.submit", "Create project") })}
       </div>
     </form>
   </div>`;
@@ -326,6 +338,10 @@ function publicProjectsHtml(projects, messages) {
   return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><span class="account-card__namespace">${escapeHtml(item.namespace)}/</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
 }
 
+function namespaceProjectsHtml(namespace, messages) {
+  return `<div class="account-dashboard namespace-view"><div class="account-dashboard__header"><div><span class="account-card__namespace">${message(messages, namespace.kind === "organization" ? "common.organization" : "common.user", namespace.kind)}</span><h1>${escapeHtml(namespace.name)}</h1><p class="account-dashboard__intro">@${escapeHtml(namespace.namespace)}</p></div></div><section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${publicProjectsHtml(namespace.projects, messages)}</section></div>`;
+}
+
 function organizationFormHtml(token, messages, url) {
   return `<div class="account-dashboard">
     <h1>${message(messages, "organizationCreate.heading", "Create an organization")}</h1>
@@ -333,8 +349,8 @@ function organizationFormHtml(token, messages, url) {
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/organizations">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">
-      <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Title")}</label><input id="organization-name" name="name" maxlength="80" data-slug-source="organization-slug" required></div>
-      <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Name")}</label><input id="organization-slug" name="slug" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="organization-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="organization-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
+      <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Title")}</label><input id="organization-name" name="name" minlength="4" maxlength="80" data-slug-source="organization-slug" required></div>
+      <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Name")}</label><input id="organization-slug" name="slug" minlength="4" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="organization-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="organization-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
       <div class="create-form__field"><label for="organization-description">${message(messages, "organizationCreate.description", "Description (optional)")}</label><textarea id="organization-description" name="description" maxlength="500"></textarea></div>
       <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button><a class="account-action account-action--secondary" href="/projects">${message(messages, "account.projects", "Your projects")}</a></div>
     </form>
@@ -506,6 +522,34 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         return new Response(null, { status: 303, headers: { location: `${target}?error=${encodeURIComponent(error.code || error.field || "form")}`, "cache-control": "no-store" } });
       }
     }
+    const updateProjectAction = request.method === "POST" && /^\/projects\/([A-Za-z0-9-]+)$/.exec(pathname);
+    if (updateProjectAction) {
+      const session = authConfig && await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
+      if (!contentStore) return new Response("Account content unavailable", { status: 503 });
+      const projectId = updateProjectAction[1];
+      try {
+        const form = await readCreateForm(request, session, `project:${projectId}`, authConfig, now);
+        let snapshot;
+        try {
+          snapshot = JSON.parse(String(form.get("snapshot") || "{}"));
+        } catch {
+          throw new ContentValidationError("snapshot", "project snapshot is invalid");
+        }
+        validateProjectUrlPatterns(snapshot);
+        const updated = await contentStore.updateProject(session.sub, projectId, {
+          userSlug: session.login, name: form.get("name"), slug: form.get("slug"),
+          description: form.get("description"), namespace: form.get("namespace"),
+          template: form.get("template"), visibility: form.get("visibility"),
+        });
+        if (!updated) return new Response("Not found", { status: 404 });
+        await contentStore.saveProjectSnapshot(session.sub, projectId, snapshot, { reason: "manual" });
+        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(updated.namespace)}/${encodeURIComponent(updated.slug)}`, "cache-control": "no-store" } });
+      } catch (error) {
+        if (!(error instanceof ContentValidationError) && !(error instanceof ContentConflictError)) throw error;
+        return new Response(null, { status: 303, headers: { location: `${request.headers.get("referer") || "/projects"}?error=${encodeURIComponent(error.code || error.field || "form")}`, "cache-control": "no-store" } });
+      }
+    }
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
     }
@@ -517,6 +561,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
       const requestedProject = projectRoute(pathname);
+      const requestedNamespace = !requestedProject ? namespaceRoute(pathname) : null;
       const dynamicProject = requestedProject && contentStore?.getProject
         ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
         : null;
@@ -527,6 +572,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         ? await contentStore.getPublicProjectWorkspace(requestedProject.namespace, requestedProject.slug)
         : null;
       const visibleWorkspace = projectWorkspace || publicProjectWorkspace;
+      const namespaceCandidate = requestedNamespace && contentStore?.getNamespace
+        ? await contentStore.getNamespace(requestedNamespace, session?.sub)
+        : null;
       if (pathname === "/dashboard") {
         return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
       }
@@ -534,7 +582,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
       }
       const accountShellPath = pathname === "/" && session ? "/dashboard" : pathname;
-      const key = localizedObjectKey(locale, dynamicProject ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
+      const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
+      const dynamicNamespace = manifest.files.has(staticKey) ? null : namespaceCandidate;
+      const key = localizedObjectKey(locale, (dynamicProject || dynamicNamespace) ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
       if (upstream.status === 404) return new Response("Not found", { status: 404 });
@@ -560,8 +610,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const versions = projectWorkspace ? await contentStore.listProjectVersions(dynamicProject.id, session.sub) : [];
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, versions, token, Boolean(projectWorkspace)));
+          const content = projectWorkspace ? await contentStore.listForUser(session.sub) : { organizations: [], projects: [] };
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, token, Boolean(projectWorkspace), session, content, url));
           html = focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
+        } else if (dynamicNamespace) {
+          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
         } else if (pathname === "/try") {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => tryProjectHtml(manifest.messages[locale]));
