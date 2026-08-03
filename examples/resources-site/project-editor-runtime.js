@@ -63,6 +63,7 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
   const timer = setInterval(() => {
     if (stopped) return;
     try {
+      canvas.renewCommandBudget();
       sandbox.callJsonFunction("__browserUseTick", {});
       root.dataset.canvasCommands = String(canvas.inspect().commands);
     } catch (error) {

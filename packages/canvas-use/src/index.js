@@ -13,6 +13,7 @@ export class CanvasUseHost {
     this.domHost = domHost;
     this.maxCommands = Math.max(1, Math.min(Number(maxCommands), 100_000));
     this.commands = 0;
+    this.windowCommands = 0;
     this.contexts = new Map();
   }
 
@@ -22,7 +23,8 @@ export class CanvasUseHost {
     if (message.contextType !== "2d") throw new Error("canvas-use only grants a 2D context");
     const context = this.contexts.get(message.id) || canvas.getContext("2d");
     this.contexts.set(message.id, context);
-    if (++this.commands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
+    this.commands += 1;
+    if (++this.windowCommands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
     if (message.action === "set") {
       if (!PROPERTIES.has(message.property)) throw new Error(`canvas-use rejected property: ${message.property}`);
       context[message.property] = message.property === "lineWidth"
@@ -34,6 +36,8 @@ export class CanvasUseHost {
     context[message.method](...(message.args || []).map(finite));
     return {};
   }
+
+  renewCommandBudget() { this.windowCommands = 0; }
 
   inspect() { return Object.freeze({ commands: this.commands, canvases: this.contexts.size }); }
 }

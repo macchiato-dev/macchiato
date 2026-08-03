@@ -422,6 +422,8 @@ function css(theme = {}) {
 
 ${base}
 
+button:not(:disabled) { cursor: pointer; }
+
 .crumb a {
   appearance: none;
   background: none;

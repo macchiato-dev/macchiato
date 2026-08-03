@@ -695,7 +695,7 @@
     "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
   },
   "limits": {
-    "maxStylesheetLength": 54000,
+    "maxStylesheetLength": 56000,
     "maxPropertyLength": 64,
     "maxValueLength": 900,
     "maxUrlLength": 100,

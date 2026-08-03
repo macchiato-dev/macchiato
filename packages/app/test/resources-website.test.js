@@ -866,6 +866,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await guest.evaluate(() => document.querySelector(".project-editor").getBoundingClientRect().top - document.querySelector(".focused-header").getBoundingClientRect().bottom), 0);
   assert.equal(await guest.getByLabel("Title", { exact: true }).inputValue(), "Digital Clock");
   assert.equal(await guest.getByLabel("Title", { exact: true }).isDisabled(), true);
+  assert.equal(await guest.getByLabel("Namespace").count(), 0);
+  assert.equal(await guest.getByText("Visibility", { exact: true }).count(), 0);
   assert.equal(await guest.getByRole("button", { name: "Save project" }).count(), 0);
   const guestEditor = guest.locator(".project-editor .cm-content");
   await assert.doesNotReject(guestEditor.waitFor());
