@@ -10,19 +10,28 @@
 import { StyleUse } from "@macchiato-dev/style-use";
 import { parseHTML, serializeHTML } from "@macchiato-dev/html-use";
 
-const URL_ATTRS = new Set([
+export const URL_CAPABILITY_ATTRIBUTES = Object.freeze([
   "action",
+  "archive",
   "background",
   "cite",
+  "codebase",
   "data",
   "formaction",
   "href",
   "icon",
+  "imagesrcset",
+  "longdesc",
   "manifest",
+  "ping",
   "poster",
+  "profile",
   "src",
   "srcset",
+  "usemap",
+  "xlink:href",
 ]);
+const URL_ATTRS = new Set(URL_CAPABILITY_ATTRIBUTES);
 
 const DEFAULT_LIMITS = {
   maxTextLength: 10000,
@@ -697,6 +706,7 @@ export class DomUse {
       if (nodeUrls?.["*"] !== undefined) return nodeUrls["*"];
     }
     if (globalUrls === true || globalUrls === false) return globalUrls;
+    if (globalUrls[`${tag}.${name}`] !== undefined) return globalUrls[`${tag}.${name}`];
     if (globalUrls[name] !== undefined) return globalUrls[name];
     if (globalUrls["*"] !== undefined) return globalUrls["*"];
     return undefined;
@@ -705,12 +715,13 @@ export class DomUse {
   attrUrls(attr, value) {
     const name = String(attr).toLowerCase();
     const text = String(value).trim();
-    if (name === "srcset") {
+    if (name === "srcset" || name === "imagesrcset") {
       return text
         .split(",")
         .map((part) => part.trim().split(/\s+/)[0])
         .filter(Boolean);
     }
+    if (name === "ping" || name === "archive") return text.split(/\s+/).filter(Boolean);
     return [text];
   }
 
