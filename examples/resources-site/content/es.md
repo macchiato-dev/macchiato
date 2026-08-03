@@ -182,6 +182,8 @@
 - **projectEditor.configuration**: Configuración
 - **projectEditor.versions**: Versiones
 - **projectEditor.currentVersion**: Versión actual
+- **projectEditor.templateReplaced**: La plantilla reemplazó el proyecto.
+- **common.undo**: Deshacer
 - **projectEditor.saved**: Guardado
 - **projectEditor.notSaved**: Los cambios no están guardados
 - **projectEditor.history**: Historial de versiones

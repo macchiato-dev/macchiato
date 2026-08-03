@@ -182,6 +182,8 @@
 - **projectEditor.configuration**: Configuration
 - **projectEditor.versions**: Versions
 - **projectEditor.currentVersion**: Current Version
+- **projectEditor.templateReplaced**: Template replaced the project.
+- **common.undo**: Undo
 - **projectEditor.saved**: Saved
 - **projectEditor.notSaved**: Changes are not saved
 - **projectEditor.history**: Version history
