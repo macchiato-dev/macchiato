@@ -63,3 +63,9 @@ new StyleUse({
 
 - `@macchiato-dev/dom-use` — structured DOM access that delegates style
   validation to `style-use`
+
+The [browser network-capability
+inventory](../../docs/network-capability-inventory.md) covers CSS image/font
+functions, SVG presentation attributes, HTML URLs, script APIs, and response
+headers such as `Link` prefetch/preload. A CSS property grant never implicitly
+grants one of those effects.

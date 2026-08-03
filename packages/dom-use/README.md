@@ -41,6 +41,13 @@ Schemas must explicitly add URL allow rules through `urls` before those
 attributes can load or point at external resources. The default posture is zero
 unintentional exfiltration.
 
+Element context still matters: `img.src` loads automatically, `a.href`
+navigates after interaction, and `link.href` can prefetch depending on `rel`.
+Global URL rules can use qualified keys such as `a.href` and `img.src`. See the
+[browser network-capability
+inventory](../../docs/network-capability-inventory.md) for HTML, SVG, CSS,
+script APIs, redirects, and request-causing response headers.
+
 `dom-use` also applies resource and content defaults. By default, a document can
 create up to 1000 guest nodes, text nodes can contain up to 10000 characters,
 attribute values up to 2048 characters, attribute names up to 128 characters,
