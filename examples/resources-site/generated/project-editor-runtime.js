@@ -4637,6 +4637,7 @@ var CanvasUseHost = class {
     this.domHost = domHost;
     this.maxCommands = Math.max(1, Math.min(Number(maxCommands), 1e5));
     this.commands = 0;
+    this.windowCommands = 0;
     this.contexts = /* @__PURE__ */ new Map();
   }
   dispatch(message) {
@@ -4645,7 +4646,8 @@ var CanvasUseHost = class {
     if (message.contextType !== "2d") throw new Error("canvas-use only grants a 2D context");
     const context = this.contexts.get(message.id) || canvas.getContext("2d");
     this.contexts.set(message.id, context);
-    if (++this.commands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
+    this.commands += 1;
+    if (++this.windowCommands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
     if (message.action === "set") {
       if (!PROPERTIES.has(message.property)) throw new Error(`canvas-use rejected property: ${message.property}`);
       context[message.property] = message.property === "lineWidth" ? Math.max(0, finite(message.value)) : COLOR.test(String(message.value)) ? String(message.value) : (() => {
@@ -4656,6 +4658,9 @@ var CanvasUseHost = class {
     if (message.action !== "call" || !METHODS.has(message.method)) throw new Error(`canvas-use rejected method: ${message.method}`);
     context[message.method](...(message.args || []).map(finite));
     return {};
+  }
+  renewCommandBudget() {
+    this.windowCommands = 0;
   }
   inspect() {
     return Object.freeze({ commands: this.commands, canvases: this.contexts.size });
@@ -4746,6 +4751,7 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
   const timer = setInterval(() => {
     if (stopped) return;
     try {
+      canvas.renewCommandBudget();
       sandbox.callJsonFunction("__browserUseTick", {});
       root.dataset.canvasCommands = String(canvas.inspect().commands);
     } catch (error) {

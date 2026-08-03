@@ -29,3 +29,14 @@ test("canvas-use rejects capabilities outside its declaration", () => {
   assert.throws(() => host.dispatch({ id: "1", contextType: "2d", action: "call", method: "drawImage", args: [] }), /rejected method/);
   assert.throws(() => host.dispatch({ id: "1", contextType: "2d", action: "set", property: "fillStyle", value: "url(https://example.com)" }), /rejected color/);
 });
+
+test("canvas-use renews its bounded command allowance", () => {
+  const { host } = fixture();
+  host.maxCommands = 1;
+  const fill = () => host.dispatch({ id: "1", contextType: "2d", action: "call", method: "fillRect", args: [0, 0, 1, 1] });
+  fill();
+  assert.throws(fill, /command budget exceeded/);
+  host.renewCommandBudget();
+  assert.doesNotThrow(fill);
+  assert.equal(host.inspect().commands, 3);
+});
