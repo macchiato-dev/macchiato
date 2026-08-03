@@ -106,6 +106,7 @@ export class BrowserDomHost {
     this.listeners = new Map();
     this.operations = 0;
     this.windowOperations = 0;
+    this.peakWindowOperations = 0;
   }
 
   register(node) {
@@ -147,7 +148,11 @@ export class BrowserDomHost {
         tags: Object.freeze(Object.fromEntries(Object.entries(tagLimits).map(([tag, limit]) => [tag, limit - (shape.tags[tag] || 0)]))),
         operations: this.policy.maxOperations - this.windowOperations,
       }),
-      operations: Object.freeze({ total: this.operations, window: this.windowOperations }),
+      operations: Object.freeze({
+        total: this.operations,
+        window: this.windowOperations,
+        peakWindow: this.peakWindowOperations,
+      }),
     });
   }
 
@@ -362,7 +367,9 @@ export class BrowserDomHost {
 
   dispatch(message) {
     this.operations += 1;
-    if (++this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
+    this.windowOperations += 1;
+    this.peakWindowOperations = Math.max(this.peakWindowOperations, this.windowOperations);
+    if (this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
     switch (message.op) {
       case "query": return this.query(message.selector, Boolean(message.all));
       case "read": return this.read(message.id, message.property);
