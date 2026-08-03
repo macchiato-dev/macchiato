@@ -1155,7 +1155,7 @@ function brandSegmentsForPath(path) {
 }
 
 function viewForPath(path) {
-  return path === "/projects/new" || path === "/try" || (/^\/[^/]+\/[^/]+$/.test(path) && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
+  return path === "/projects/new" || path === "/try" || (/^\/[^/]+\/[^/]+$/.test(path) && path !== "/organizations/new" && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
     ? "focused"
     : "standard";
 }

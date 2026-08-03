@@ -278,6 +278,15 @@ owned-project deletion both require a confirmation step; deleting a project
 also removes its draft, publication, and version history through database
 cascades.
 
+Planned organization work keeps the namespace page in the standard site
+layout. An owner will be able to open an organization from the dashboard and
+edit its title, URL name, description, and membership. Invitations will create
+explicit pending membership records and surface in the invited user’s bell
+menu; accepting or declining there will resolve the invitation. Authorization
+must be checked server-side for every organization edit, invitation, and
+membership change. The current release intentionally implements none of that
+workflow yet.
+
 `models/project-history.js` implements the history format without a diff
 dependency. Each changed file is represented by one verified contiguous text
 splice (or an add/delete), while configuration uses verified nested set/delete

@@ -359,7 +359,7 @@ function organizationFormHtml(token, messages, url) {
       <div class="create-form__field"><label for="organization-name">${message(messages, "organizationCreate.name", "Title")}</label><input id="organization-name" name="name" minlength="4" maxlength="80" data-slug-source="organization-slug" required></div>
       <div class="create-form__field"><label for="organization-slug">${message(messages, "organizationCreate.slug", "Name")}</label><input id="organization-slug" name="slug" minlength="4" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="organization-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required><p id="organization-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
       <div class="create-form__field"><label for="organization-description">${message(messages, "organizationCreate.description", "Description (optional)")}</label><textarea id="organization-description" name="description" maxlength="500"></textarea></div>
-      <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button><a class="account-action account-action--secondary" href="/projects">${message(messages, "account.projects", "Your projects")}</a></div>
+      <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button></div>
     </form>
   </div>`;
 }
