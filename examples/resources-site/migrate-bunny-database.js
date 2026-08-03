@@ -1,0 +1,35 @@
+#!/usr/bin/env -S deno run --allow-env --allow-net
+import process from "node:process";
+import { createClient } from "@libsql/client/web";
+import { createAccountStore } from "./models/accounts.js";
+import { createContentStore } from "./models/content.js";
+
+const url = process.env.BUNNY_DATABASE_URL;
+const authToken = process.env.BUNNY_DATABASE_AUTH_TOKEN;
+if (!url || !authToken) {
+  throw new Error("BUNNY_DATABASE_URL and the full-access BUNNY_DATABASE_AUTH_TOKEN are required");
+}
+
+const client = createClient({ url, authToken });
+const accounts = createAccountStore(client);
+const content = createContentStore(client);
+
+await accounts.initialize();
+await content.initialize();
+
+const expected = [
+  "resource_organizations", "resource_project_state", "resource_project_versions",
+  "resource_projects", "user_emails", "user_identities", "users",
+];
+const result = await client.execute({
+  sql: `SELECT name FROM sqlite_schema
+        WHERE type = 'table' AND name IN (${expected.map(() => "?").join(", ")})
+        ORDER BY name`,
+  args: expected,
+});
+const found = result.rows.map((row) => String(row.name));
+const missing = expected.filter((name) => !found.includes(name));
+if (missing.length) throw new Error(`Database migration verification failed; missing: ${missing.join(", ")}`);
+
+console.log(`Resources database ready: ${found.join(", ")}`);
+client.close();

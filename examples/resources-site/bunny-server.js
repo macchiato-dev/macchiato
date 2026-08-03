@@ -23,6 +23,10 @@ const databaseClient = createClient({
 });
 const accountStore = createAccountStore(databaseClient);
 const contentStore = createContentStore(databaseClient);
+// A fresh database must be ready before the SDK accepts traffic. Ordering is
+// significant because content ownership foreign keys reference account tables.
+await accountStore.initialize();
+await contentStore.initialize();
 const handler = createResourcesEdgeHandler({
   config, authConfig, gitlabAuthConfig, accountStore, contentStore,
   blogExamplesOrigin: process.env.BLOG_EXAMPLES_ORIGIN,

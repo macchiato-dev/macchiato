@@ -1,4 +1,4 @@
-const SCHEMA = [
+export const ACCOUNT_SCHEMA = Object.freeze([
   `CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,
@@ -26,7 +26,7 @@ const SCHEMA = [
     ON user_identities(user_id)`,
   `CREATE INDEX IF NOT EXISTS user_emails_user_id
     ON user_emails(user_id)`,
-];
+]);
 
 export class AccountConflictError extends Error {
   constructor(code, providers = []) {
@@ -82,7 +82,7 @@ export function createAccountStore(client, {
   let initialized;
 
   function initialize() {
-    initialized ||= client.batch(SCHEMA.map((sql) => ({ sql, args: [] })));
+    initialized ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] })));
     return initialized;
   }
 
@@ -95,6 +95,7 @@ export function createAccountStore(client, {
   }
 
   return Object.freeze({
+    initialize,
     async authenticateIdentity(identity, { linkToUserId = null, allowCreate = true } = {}) {
       await initialize();
       if (!providers.has(identity.provider)) throw new Error("Unsupported identity provider");

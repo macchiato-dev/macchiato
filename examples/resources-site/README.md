@@ -490,6 +490,23 @@ identity upserts, replication behavior, backup/export, and rollback before
 production. Keep the Storage, provider, session, and database credentials as
 separate authorities.
 
+The Edge Script now completes idempotent account and project schema
+initialization before accepting traffic. To initialize or verify a database
+independently before deployment, provide its full-access credentials in the
+environment and run:
+
+```sh
+deno run --config examples/resources-site/deno.json \
+  --allow-env=BUNNY_DATABASE_URL,BUNNY_DATABASE_AUTH_TOKEN \
+  --allow-net \
+  examples/resources-site/migrate-bunny-database.js
+```
+
+The command creates only `CREATE ... IF NOT EXISTS` schema objects and verifies
+all expected tables through `sqlite_schema`. It never uses the read-only token;
+application reads can move to that separate client once the planned
+query/mutation capability split is implemented.
+
 The manual GitHub Actions workflow
 `.github/workflows/deploy-resources-bunny.yml` takes a `staging` (default) or
 `production` target, builds both artifacts, uploads the site, deploys the

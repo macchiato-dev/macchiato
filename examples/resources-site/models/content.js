@@ -6,7 +6,7 @@ import {
   projectPatchIsEmpty,
 } from "./project-history.js";
 
-const SCHEMA = [
+export const CONTENT_SCHEMA = Object.freeze([
   `CREATE TABLE IF NOT EXISTS resource_organizations (
     id TEXT PRIMARY KEY,
     owner_user_id TEXT NOT NULL REFERENCES users(id),
@@ -62,7 +62,7 @@ const SCHEMA = [
       (project_id, sequence, reason, patch_json, created_at)
     SELECT id, 1, 'initial', '{"version":1,"files":[],"config":[]}', created_at
     FROM resource_projects`,
-];
+]);
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
@@ -160,9 +160,10 @@ export function createContentStore(client, {
 } = {}) {
   if (!client?.execute || !client?.batch) throw new Error("Content store requires a libSQL-compatible client");
   let initialized;
-  const initialize = () => (initialized ||= client.batch(SCHEMA.map((sql) => ({ sql, args: [] }))));
+  const initialize = () => (initialized ||= client.batch(CONTENT_SCHEMA.map((sql) => ({ sql, args: [] }))));
 
   return Object.freeze({
+    initialize,
     async getProject(namespace, projectSlug, viewerUserId = null) {
       await initialize();
       const found = await client.execute({
