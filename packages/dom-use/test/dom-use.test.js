@@ -209,6 +209,26 @@ test("allows URL attributes only when the URL matches an explicit rule", () => {
   );
 });
 
+test("can scope global URL capabilities to an element and attribute pair", () => {
+  const domUse = articleDomUse({
+    nodes: {
+      a: { attrs: ["href"], children: ["#text"] },
+      img: { attrs: ["src"], children: [] },
+    },
+    urls: {
+      "a.href": /^https:\/\/articles\.example\//,
+      "img.src": /^https:\/\/images\.example\//,
+    },
+  });
+  const doc = domUse.createDocument();
+  const link = doc.createElement("a");
+  const image = doc.createElement("img");
+  link.setAttribute("href", "https://articles.example/one");
+  image.setAttribute("src", "https://images.example/one.png");
+  assert.throws(() => link.setAttribute("href", "https://images.example/one.png"), /URL not allowed/);
+  assert.throws(() => image.setAttribute("src", "https://articles.example/one"), /URL not allowed/);
+});
+
 test("can add target blank to links as a declared projection policy", () => {
   const domUse = articleDomUse({
     links: { addTargetBlank: true },
