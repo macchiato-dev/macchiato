@@ -18,8 +18,9 @@ test("code editor maps document and gas limits into its surface policy", () => {
   const policy = createCodeEditorDomPolicy({ maxLines: 100, maxCharacters: 2_000, maxSurfaceOperations: 321 });
   assert.equal(policy.maxTextLength, 2_000);
   assert.equal(policy.maxOperations, 321);
-  assert.equal(policy.maxElements, 700);
+  assert.equal(policy.maxElements, 800);
   assert.equal(policy.maxTagCounts.div, 460);
+  assert.equal(policy.maxTagCounts.span, 656);
   assert.equal(policy.tags.includes("a"), false);
   assert.equal(policy.tags.includes("iframe"), false);
 });
