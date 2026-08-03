@@ -1,66 +1,77 @@
-# Private Deno module origin
+# Revisioned Deno module origin
 
-`examples/deno-module-origin` is a small Bunny Edge Script that exposes a
-private, read-only JavaScript/TypeScript prefix from Bunny Storage. It accepts
-GET and HEAD for `.js`, `.mjs`, and `.ts`, rejects redirects and unsafe paths,
-and forwards the private Storage key only to the configured HTTPS Storage
-origin.
+`examples/deno-module-origin` is intentionally a small Bunny Edge Script. It
+serves authenticated, read-only JavaScript and TypeScript files directly from
+private Bunny Storage. It does not resolve packages, interpret import maps, or
+rewrite source code.
 
-Build the script:
+Every public filename must end in a hyphen followed by the conventional
+seven-character lowercase Git revision:
+
+```text
+resources-edge-7c3b59e.js
+packages/dom-use-7c3b59e.js
+packages/style-use-7c3b59e.js
+```
+
+Imports hardcode the module origin, carry the same suffix explicitly, and use a
+fixed key placeholder:
+
+```js
+import { DomUse } from "https://modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/dom-use-7c3b59e.js";
+import { StyleUse } from "https://modules.resources.co/__MACCHIATO_MODULE_IMPORT_KEY__/packages/style-use-7c3b59e.js";
+```
+
+This is deliberately less magical than an import map. A deployment can be
+audited from its entry source, old files are immutable rollback targets, and the
+serving function only validates the URL capability, maps the requested path
+straight to the same private Storage key, and substitutes its stable import key
+for `__MACCHIATO_MODULE_IMPORT_KEY__` in the response. This propagates the
+capability to every static transitive import without an import map.
+
+Build the serving function:
 
 ```sh
 ./scripts/build-deno-module-origin-bunny.sh
 ```
 
-Paste `dist/deno-module-origin-bunny/deno-module-origin-bunny.js` into a
-separate Edge Script. Configure these secrets/variables there:
+Paste `dist/deno-module-origin-bunny/deno-module-origin-bunny.js` into its own
+Bunny Edge Script and configure:
 
 - `MODULE_IMPORT_TOKEN`: a long random bearer token; secret.
 - `STORAGE_API_KEY`: the Bunny Storage read key; secret.
 - `BUNNY_STORAGE_ORIGIN`: the credential-free HTTPS Storage API origin,
   including its zone path when required.
 
-The module prefix is intentionally not an Edge Script variable. It belongs in
-each import-map target, making the complete dependency selection visible and
-reviewable by the importing application. Upload modules beneath an immutable
-Storage directory such as `modules-7ef0564/`.
+There is no module-prefix environment variable. A request for
+`/packages/dom-use-7c3b59e.js` reads exactly that key below the configured
+Storage origin. Unknown extensions, unsuffixed files, unsafe paths, redirects,
+and unauthenticated requests fail closed.
 
-Use named trailing-slash aliases. `@/` works as an import-map key, but commonly
-means “the current app's source root” and becomes ambiguous in a map containing
-several packages. This project uses names such as `@resources/` and
-`@macchiato/`:
+The initially pasted Bunny script includes the capability once:
 
-```json
-{
-  "imports": {
-    "@resources/": "https://modules-preprod.resources.co/modules-7ef0564/resources/",
-    "@macchiato/dom-use": "https://modules-preprod.resources.co/modules-7ef0564/macchiato/dom-use/mod.ts",
-    "@macchiato/": "https://modules-preprod.resources.co/modules-7ef0564/macchiato/"
-  }
-}
+```js
+import "https://modules.resources.co/THE_PRIVATE_IMPORT_KEY/resources-edge-7c3b59e.js";
 ```
 
-Exact entries take precedence over prefix entries. A prefix key and its target
-must both end in `/`. Pin the revision in every remote target; do not map an
-alias to a mutable `latest` directory.
+Successful module responses use `public, max-age=31536000, immutable`. The
+revision suffix makes that safe, while the one-year lifetime keeps compilation
+and Deno imports off the Edge Script after the first cache fill.
 
-Deno already has a standard way to authenticate HTTPS imports. Put the token in
-the importing process, not in source code:
+`MODULE_IMPORT_TOKEN` is an intentionally stable, read-only URL capability for
+published modules. It can be visible in Bunny's stored script, compiled module
+URLs, CDN access logs, and developer tooling. Never reuse the Bunny Storage key
+or any credential with write access. Rotate this key only when revoking readers
+is worth invalidating all existing import URLs.
 
-```sh
-export DENO_AUTH_TOKENS="$(pass show resources/preprod/module-import-token)@modules-preprod.resources.co"
-deno cache --config deno.json --allow-import=modules-preprod.resources.co \
-  @resources/example/mod.ts
-unset DENO_AUTH_TOKENS
-```
+## Server module boundaries
 
-`DENO_AUTH_TOKENS=token@host` sends `Authorization: Bearer token`; a
-`username:password@host` entry would send Basic authentication. This endpoint
-uses Bearer. Bunny does not need a Deno-specific password feature: the Edge
-Script checks the standard header and keeps the backing Storage private.
+The Resources Bunny entry is only wiring. Its runtime implementation is split
+across `edge/`, `auth/`, and `models/`. Substantive server modules stay below
+1,000 lines and represent a cohesive policy, protocol, or model. Tiny entry
+points are acceptable; otherwise prefer adding behavior to the owning module
+over creating fragments with only a handful of lines.
 
-For a Bunny application script, authenticate only while resolving/bundling its
-remote dependencies. Upload the resulting self-contained bundle. Do not inject
-the module token into that bundle or the browser-facing application source. Pin
-import URLs to immutable revision directories so rebuilding the same deployment
-cannot silently change its dependency graph.
+Build-time route generation and generated browser/QuickJS artifacts are not part
+of the server runtime module graph. Their generated size is checked and reviewed
+separately from the hand-authored server-module limit.
