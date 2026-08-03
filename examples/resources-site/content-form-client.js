@@ -101,6 +101,7 @@ document.addEventListener("focusout", (event) => {
   const error = document.getElementById(slug.getAttribute("aria-describedby"));
   if (error) validateSlug(slug, error);
 });
+document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
 document.addEventListener("click", (event) => {
   event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
   const open = event.target.closest?.("[data-open-draft-delete], [data-open-project-delete]");
@@ -664,6 +665,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight + 2}px`;
   }
+  if (template && state.config?.template) template.value = state.config.template;
+  if (container && state.config?.container) container.value = state.config.container;
+  if (linkPatterns) linkPatterns.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+  growTextarea(linkPatterns);
+  renderContainerElements(container?.value);
   function updateContainer() {
     if (!container) return;
     renderContainerElements(container.value);

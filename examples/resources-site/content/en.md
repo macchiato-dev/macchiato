@@ -206,6 +206,7 @@
 - **try.title**: Try - Resources.co
 - **try.heading**: Try
 - **try.intro**: Experiment with a sandboxed project. Changes are not saved.
+- **try.settings**: Playground settings
 - **try.button**: Try
 - **try.buttonDescription**: Open a sandboxed project without creating an account or saving it.
 - **publicProjects.empty**: No public projects have been published yet.

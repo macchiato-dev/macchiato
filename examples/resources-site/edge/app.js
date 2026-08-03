@@ -336,8 +336,16 @@ function projectFormHtml(session, content, token, messages, url) {
   </div>`;
 }
 
+function tryFieldsHtml(messages) {
+  return `<aside class="project-create__fields try-fields" aria-label="${message(messages, "try.settings", "Playground settings")}">
+    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article">${message(messages, "projectCreate.article", "Article")}</option><option value="hello">${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="clock">${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark">${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart">${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball">${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars">${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
+    <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container><option value="article">${message(messages, "projectCreate.article", "Article")}</option><option value="page">${message(messages, "projectCreate.page", "Page")}</option><option value="canvas">Canvas</option><option value="svg">SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><div class="element-tags" data-container-outline>${containerElementTags("article")}</div></div></div>
+    <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>*.wikipedia.org</textarea></div>
+  </aside>`;
+}
+
 function tryProjectHtml(messages) {
-  return `<div class="account-dashboard project-view project-workspace"><div class="project-view__identity"><h1>${message(messages, "try.heading", "Try")}</h1><p class="account-dashboard__intro">${message(messages, "try.intro", "Experiment with a sandboxed project. Changes are not saved.")}</p></div>${projectEditorHtml({ snapshot: initialProjectSnapshot(), messages, persistence: "memory" })}</div>`;
+  return `<div class="account-dashboard project-create project-view project-workspace"><form class="create-form" data-try-form><div class="project-create__layout">${projectEditorHtml({ snapshot: initialProjectSnapshot(), messages, persistence: "memory" })}${tryFieldsHtml(messages)}</div></form></div>`;
 }
 
 function publicProjectsHtml(projects, messages) {

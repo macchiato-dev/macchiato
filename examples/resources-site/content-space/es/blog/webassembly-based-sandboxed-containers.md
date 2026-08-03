@@ -20,7 +20,6 @@ Estos son los contenedores actuales:
 - [Page](/try?template=hello): un vocabulario de diseño más general cuyo DOM y CSS siguen controlados por esquemas.
 - [SVG](/try?template=mark): una superficie vectorial acotada para formas, trazados, texto y gradientes declarativos.
 - [Canvas](/try?template=ball): operaciones limitadas de dibujo y animación en vez de acceso al navegador circundante.
-- [Code Editor Use](/try?template=article): una superficie restringida de CodeMirror que el área de pruebas utiliza para editar los archivos del contenedor seleccionado.
 
 ![Cinco superficies acotadas representan los contenedores article, page, SVG, canvas y editor de código.](/-/blog-images/webassembly-container-surfaces.png "Los contenedores componen máquinas WebAssembly, módulos *-use y configuraciones revisadas para un tipo concreto de documento.")
 
