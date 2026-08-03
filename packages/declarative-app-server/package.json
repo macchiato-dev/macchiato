@@ -9,6 +9,8 @@
   "exports": {
     ".": "./src/index.js"
   },
+  "files": ["src", "README.md"],
+  "publishConfig": { "access": "public" },
   "dependencies": {
     "@macchiato-dev/html-use": "0.1.0",
     "@macchiato-dev/style-use": "0.1.0"

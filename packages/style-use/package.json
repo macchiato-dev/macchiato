@@ -7,5 +7,9 @@
     ".": "./src/index.js",
     "./browser-assets": "./src/browser-assets.js"
   },
+  "files": ["src", "README.md"],
+  "sideEffects": false,
+  "publishConfig": { "access": "public" },
+  "scripts": { "test": "node --test test/*.test.js" },
   "dependencies": {}
 }

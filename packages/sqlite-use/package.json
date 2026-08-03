@@ -5,5 +5,8 @@
   "type": "module",
   "main": "./src/index.js",
   "exports": { ".": "./src/index.js" },
-  "files": ["src"]
+  "files": ["src", "README.md"],
+  "sideEffects": false,
+  "publishConfig": { "access": "public" },
+  "scripts": { "test": "node --test test/*.test.js" }
 }

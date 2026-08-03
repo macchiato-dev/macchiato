@@ -9,6 +9,10 @@
     "./guest-runtime": "./src/guest-runtime.js",
     "./browser-assets": "./src/browser-assets.js"
   },
+  "files": ["src", "README.md"],
+  "sideEffects": ["./src/guest-runtime.js"],
+  "publishConfig": { "access": "public" },
+  "scripts": { "test": "node --test test/*.test.js" },
   "dependencies": {
     "@macchiato-dev/style-use": "0.1.0",
     "@macchiato-dev/html-use": "0.1.0"
