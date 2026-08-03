@@ -493,6 +493,55 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   assert.deepEqual(errors, []);
 });
 
+test("Resources project workspace adapts to mobile without changing desktop", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await page.locator(".project-editor .cm-content").waitFor();
+  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "editor");
+  assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), false);
+  assert.equal(await page.locator(".project-editor__tabs").isVisible(), false);
+  assert.equal(await page.locator("[data-project-file-picker]").isVisible(), true);
+  await page.getByLabel("Template").selectOption("clock");
+  await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  const fileTrigger = page.locator("[data-project-file-trigger]");
+  await fileTrigger.click();
+  await page.getByRole("menuitemradio", { name: "script.js" }).click();
+  assert.equal(await page.locator("[data-project-file-current]").textContent(), "script.js");
+  await fileTrigger.click();
+  await page.mouse.click(380, 300);
+  assert.equal(await page.locator("[data-project-file-menu]").isHidden(), true);
+  await page.getByRole("button", { name: "Preview" }).click();
+  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
+  assert.equal(await page.locator(".project-editor__source").isHidden(), true);
+  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.previewRuntime === "quickjs");
+  assert.deepEqual(await page.evaluate(() => ({
+    viewport: document.documentElement.clientHeight,
+    document: document.documentElement.scrollHeight,
+  })), { viewport: 844, document: 844 });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await page.locator(".project-editor .cm-content").waitFor();
+  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "split");
+  assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), true);
+  assert.equal(await page.locator(".project-editor__tabs").isVisible(), true);
+  assert.equal(await page.locator("[data-project-file-picker]").isHidden(), true);
+  assert.deepEqual(errors, []);
+});
+
 test("Resources.co edge account creates organizations and projects in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

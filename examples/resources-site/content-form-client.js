@@ -373,23 +373,32 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderTabs() {
     const tabs = root.querySelector(".project-editor__tabs");
+    const menu = root.querySelector("[data-project-file-menu]");
     tabs.replaceChildren();
-    for (const file of state.files) {
+    menu.replaceChildren();
+    function addChoice({ path, label, config = false }) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "project-editor__tab";
-      button.dataset.projectFile = file.path;
-      button.setAttribute("aria-selected", file.path === selected ? "true" : "false");
-      button.textContent = file.path;
+      if (config) button.dataset.projectConfig = "";
+      else button.dataset.projectFile = path;
+      button.setAttribute("aria-selected", (config ? selected === "config" : path === selected) ? "true" : "false");
+      button.textContent = label;
       tabs.append(button);
+      const option = button.cloneNode(true);
+      option.className = "project-editor__file-option";
+      option.setAttribute("role", "menuitemradio");
+      option.setAttribute("aria-checked", button.getAttribute("aria-selected"));
+      option.removeAttribute("aria-selected");
+      menu.append(option);
     }
-    const config = document.createElement("button");
-    config.type = "button";
-    config.className = "project-editor__tab";
-    config.dataset.projectConfig = "";
-    config.setAttribute("aria-selected", selected === "config" ? "true" : "false");
-    config.textContent = root.dataset.configLabel || "Configuration";
-    tabs.append(config);
+    for (const file of state.files) {
+      addChoice({ path: file.path, label: file.path });
+    }
+    addChoice({ label: root.dataset.configLabel || "Configuration", config: true });
+    root.querySelector("[data-project-file-current]").textContent = selected === "config"
+      ? root.dataset.configLabel || "Configuration"
+      : selected;
   }
 
   function renderStatusState() {
@@ -613,13 +622,46 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       renderPreview();
     } catch {}
   }
-  root.querySelector(".project-editor__tabs").addEventListener("click", (event) => {
+  function selectProjectFile(event) {
     const file = event.target.closest("[data-project-file]");
     if (file) selected = file.dataset.projectFile;
     else if (event.target.closest("[data-project-config]")) selected = "config";
     else return;
     renderTabs();
     sendContent();
+  }
+  root.querySelector(".project-editor__tabs").addEventListener("click", selectProjectFile);
+  const fileTrigger = root.querySelector("[data-project-file-trigger]");
+  const fileMenu = root.querySelector("[data-project-file-menu]");
+  function closeFileMenu({ focus = false } = {}) {
+    fileMenu.hidden = true;
+    fileTrigger.setAttribute("aria-expanded", "false");
+    if (focus) fileTrigger.focus();
+  }
+  fileTrigger.addEventListener("click", () => {
+    const opening = fileMenu.hidden;
+    fileMenu.hidden = !opening;
+    fileTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) fileMenu.querySelector('[aria-checked="true"]')?.focus();
+  });
+  fileMenu.addEventListener("click", (event) => { selectProjectFile(event); closeFileMenu({ focus: true }); });
+  fileMenu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeFileMenu({ focus: true });
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]')];
+    const current = Math.max(0, options.indexOf(document.activeElement));
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? options.length - 1
+        : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+    options[next]?.focus();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!root.querySelector("[data-project-file-picker]").contains(event.target)) closeFileMenu();
   });
   const workspace = root.querySelector(".project-editor__workspace");
   const splitter = root.querySelector(".project-editor__splitter");
@@ -643,6 +685,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === button ? "true" : "false");
     if (button.dataset.projectView !== "preview") editorController?.focus();
   });
+  const narrowWorkspace = matchMedia("(max-width: 760px)");
+  function avoidMobileSplit() {
+    if (!narrowWorkspace.matches || workspace.dataset.view !== "split") return;
+    const editorButton = root.querySelector('[data-project-view="editor"]');
+    workspace.dataset.view = "editor";
+    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === editorButton ? "true" : "false");
+  }
+  avoidMobileSplit();
+  narrowWorkspace.addEventListener?.("change", avoidMobileSplit);
   const form = root.closest("form");
   const template = form?.querySelector("[data-project-template]");
   const container = form?.querySelector("[data-project-container]");
