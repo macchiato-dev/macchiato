@@ -209,4 +209,6 @@ test("template replacement and undo keep project metadata aligned with the snaps
   restored = await content.getProjectWorkspace("latte", "template-undo", account.id);
   assert.deepEqual(restored.snapshot, mark);
   assert.equal(restored.hasUnpublishedChanges, false);
+  assert.equal(await content.deleteProject(account.id, created.id), true);
+  assert.equal(await content.getProject("latte", "template-undo", account.id), null);
 });
