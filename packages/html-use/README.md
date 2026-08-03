@@ -1,7 +1,8 @@
 # @macchiato-dev/html-use
 
-HTML parser, serializer, and sanitizer. `html-use` is a lower-level toolkit that
-`dom-use` consumes — it does not know about `dom-use` schemas directly.
+HTML parser, serializer, and structural sanitizer. `html-use` is a lower-level
+toolkit that `dom-use` consumes—it does not implement the complete `dom-use`
+policy by itself.
 
 Instead, `dom-use` passes its schema constraints and element factory into
 `html-use` at runtime. This avoids a circular dependency: `dom-use` depends on
@@ -12,8 +13,8 @@ Instead, `dom-use` passes its schema constraints and element factory into
 - **parseHTML** — parses an HTML string into a tree of guest nodes using a
   caller-provided `createElement` factory
 - **serializeHTML** — serializes a guest node tree back to an HTML string
-- **sanitizeHTML** — parses, validates against a schema, and returns a clean
-  HTML string
+- **sanitizeHTML** — filters element names using a small structural schema and
+  returns a clean HTML string
 - **Style validation** — delegates to `style-use` for `style` attributes and
   `<style>` element content
 
@@ -33,6 +34,12 @@ const fragment = parseHTML("<p>hello</p>", {
 
 `html-use` never imports `dom-use`. It receives everything it needs through
 its options object.
+
+For a security boundary that enforces attributes, URLs, parent/child rules,
+content limits, and operation gas, use `DomUse#sanitizeHTML`. The standalone
+helper here is intentionally only a structural convenience; passing a
+`dom-use`-owned element factory to `parseHTML` applies the full policy while
+the tree is constructed.
 
 ## Related
 
