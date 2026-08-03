@@ -61,6 +61,10 @@ expose its transitive dependency tree over the network.
 This policy is pragmatic, not dogmatic — exceptions may exist where
 strict exact-version pinning would create unnecessary friction.
 
+The proposed npm release groups, dependency order, and release gates are in
+[docs/npm-publishing.md](docs/npm-publishing.md). Public publishing is blocked
+until the repository has an explicit license.
+
 ## Running with Deno
 
 `deno install` grants permissions — it cannot preset environment variables.
