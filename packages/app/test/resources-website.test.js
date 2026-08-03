@@ -168,6 +168,46 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   assert.match(configText, /Bunny Storage/);
 });
 
+test("Resources.co blog container examples render and surface schema errors in the status rail", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+
+  const examples = [
+    ["article", "article", "article h1"],
+    ["hello", "page", "h1"],
+    ["mark", "svg", "svg circle"],
+    ["ball", "canvas", "canvas"],
+  ];
+  for (const [template, container, previewSelector] of examples) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(`http://resources-edge.localhost:${port}/try?template=${template}`, { waitUntil: "domcontentloaded" });
+    await page.locator(".cm-editor").waitFor();
+    const snapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
+    assert.equal(snapshot.config.container, container);
+    assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
+    assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "warning");
+    assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
+    await page.close();
+  }
+
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
+  const editor = page.locator(".cm-content");
+  await editor.waitFor();
+  await editor.click();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("<iframe></iframe>");
+  await page.locator("[data-project-status][data-state='error']").waitFor();
+  assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
+  assert.match(await page.locator("[data-project-error]").textContent(), /iframe.*not allowed/i);
+  assert.equal(await page.locator("[data-project-save]").textContent(), "Changes are not saved");
+});
+
 test("apps directory lists available app subdomains", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

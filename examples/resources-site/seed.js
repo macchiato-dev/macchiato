@@ -873,8 +873,16 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__view-controls button { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; }
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #2d3c98; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
-.project-editor__status { min-height: 31px; padding: 7px 11px; color: var(--muted); background: #151717; font-size: 11px; }
-.project-editor__status[data-error="true"] { color: #ffb3b3; }
+.project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
+.project-editor__status[data-state="error"] { border-color: #d45b62; color: #ffd0d2; background: #421f23; }
+.project-editor__tip { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.project-editor__tip[hidden], .project-editor__error[hidden] { display: none; }
+.project-editor__tip span { overflow: hidden; }
+.project-editor__tip button { width: 22px; height: 22px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font: inherit; cursor: pointer; }
+.project-editor__tip button:hover, .project-editor__tip button:focus-visible { color: #fff; background: #303a70; }
+.project-editor__error { min-width: 0; overflow: hidden; }
+.project-editor__save { flex: 0 0 auto; }
 .project-editor__history { position: absolute; top: 48px; left: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .project-editor__history-head { padding: 3px 5px 9px; }
