@@ -292,16 +292,17 @@ function formError(url, messages) {
     : "";
 }
 
-function projectFieldsHtml({ session, content, project = null, snapshot, messages, editable, submitLabel }) {
+function projectFieldsHtml({ session, content, project = null, snapshot, messages, editable, submitLabel, hasUnpublishedChanges = false }) {
   const disabled = editable ? "" : " disabled";
   const container = String(snapshot?.config?.container || "article");
+  const templateName = String(snapshot?.config?.template || project?.template || "article");
   const patterns = snapshot?.config?.containerOptions?.allowedLinkPatterns || [];
   const namespaceOptions = session ? [
     `<option value="user"${selected(project?.namespaceKind || "user", "user")}>@${escapeHtml(session.login)}</option>`,
     ...content.organizations.map((item) => `<option value="${escapeHtml(item.id)}"${selected(project?.namespace === item.slug ? item.id : "", item.id)}>${escapeHtml(item.name)}</option>`),
   ].join("") : `<option>${escapeHtml(project?.namespace || "")}</option>`;
   return `<div class="project-create__fields" data-project-fields>
-    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template${disabled}><option value="article"${selected(project?.template || "article", "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="hello"${selected(project?.template, "hello")}>${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="clock"${selected(project?.template, "clock")}>${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark"${selected(project?.template, "mark")}>${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart"${selected(project?.template, "chart")}>${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball"${selected(project?.template, "ball")}>${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars"${selected(project?.template, "stars")}>${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank"${selected(project?.template, "blank")}>${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
+    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template${disabled}><option value="article"${selected(templateName, "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="hello"${selected(templateName, "hello")}>${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="clock"${selected(templateName, "clock")}>${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark"${selected(templateName, "mark")}>${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart"${selected(templateName, "chart")}>${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball"${selected(templateName, "ball")}>${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars"${selected(templateName, "stars")}>${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank"${selected(templateName, "blank")}>${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
     <div class="create-form__field"><label for="project-container">${message(messages, "projectCreate.container", "Container")}</label><select id="project-container" name="container" data-project-container${disabled}><option value="article"${selected(container, "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="page"${selected(container, "page")}>${message(messages, "projectCreate.page", "Page")}</option><option value="canvas"${selected(container, "canvas")}>Canvas</option><option value="svg"${selected(container, "svg")}>SVG</option></select><div class="container-outline" data-container-details><strong>${message(messages, "projectCreate.allowedElements", "Allowed elements")}</strong><div class="element-tags" data-container-outline>${containerElementTags(container)}</div></div></div>
     <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow${disabled}>${escapeHtml(patterns.join("\n"))}</textarea></div>
     <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" value="${escapeHtml(project?.name || "")}" data-slug-source="project-slug" required${disabled}></div>
@@ -309,6 +310,7 @@ function projectFieldsHtml({ session, content, project = null, snapshot, message
     <div class="create-form__field"><label for="project-description">${message(messages, "projectCreate.description", "Description (optional)")}</label><textarea id="project-description" name="description" maxlength="500" rows="1" data-autogrow${disabled}>${escapeHtml(project?.description || "")}</textarea></div>
     <div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace"${disabled}>${namespaceOptions}</select></div>
     <fieldset${disabled}><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked(project?.visibility || "public", "public")}${disabled}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"${checked(project?.visibility, "private")}${disabled}> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>
+    ${editable && hasUnpublishedChanges ? `<div class="draft-flash" data-draft-flash><span>${message(messages, "projectView.unsavedDraft", "This draft has unsaved changes.")}</span><button class="draft-flash__revert" type="submit" name="intent" value="revert" formnovalidate>${message(messages, "projectView.revertPublished", "Revert to published version")}</button><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
     ${editable ? `<div class="create-actions"><button class="account-action" type="submit">${submitLabel}</button></div>` : ""}
   </div>`;
 }
@@ -318,7 +320,7 @@ function projectViewHtml(project, messages, workspace, csrf, owner, session, con
   const close = owner ? "</form>" : "</div>";
   return `<div class="account-dashboard project-create project-view project-workspace">${form}${formError(url, messages)}<div class="project-create__layout">
     ${projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory" })}
-    ${projectFieldsHtml({ session, content, project, snapshot: workspace.snapshot, messages, editable: owner, submitLabel: message(messages, "projectView.save", "Save project") })}
+    ${projectFieldsHtml({ session, content, project, snapshot: workspace.snapshot, messages, editable: owner, submitLabel: message(messages, "projectView.save", "Save project"), hasUnpublishedChanges: workspace.hasUnpublishedChanges })}
   </div>${close}</div>`;
 }
 
@@ -537,6 +539,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const projectId = updateProjectAction[1];
       try {
         const form = await readCreateForm(request, session, `project:${projectId}`, authConfig, now);
+        if (form.get("intent") === "revert") {
+          const reverted = await contentStore.revertProjectToPublished(session.sub, projectId);
+          if (!reverted) return new Response("Not found", { status: 404 });
+          const referer = new URL(request.headers.get("referer") || "/projects", request.url);
+          return new Response(null, { status: 303, headers: { location: referer.pathname, "cache-control": "no-store" } });
+        }
         let snapshot;
         try {
           snapshot = JSON.parse(String(form.get("snapshot") || "{}"));
@@ -551,6 +559,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         });
         if (!updated) return new Response("Not found", { status: 404 });
         await contentStore.saveProjectSnapshot(session.sub, projectId, snapshot, { reason: "manual" });
+        await contentStore.publishProject(session.sub, projectId);
         return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(updated.namespace)}/${encodeURIComponent(updated.slug)}`, "cache-control": "no-store" } });
       } catch (error) {
         if (!(error instanceof ContentValidationError) && !(error instanceof ContentConflictError)) throw error;

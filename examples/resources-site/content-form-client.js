@@ -101,6 +101,9 @@ document.addEventListener("focusout", (event) => {
   const error = document.getElementById(slug.getAttribute("aria-describedby"));
   if (error) validateSlug(slug, error);
 });
+document.addEventListener("click", (event) => {
+  event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
+});
 
 function draftHistory(snapshot) {
   const empty = emptyProjectSnapshot();
