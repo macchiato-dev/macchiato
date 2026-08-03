@@ -181,3 +181,32 @@ test("content store versions multi-file project state periodically and around de
   assert.equal(workspace.snapshot.files.find((file) => file.path === "index.html").content, "<h1>One</h1>");
   assert.equal(workspace.snapshot.files.length, 2);
 });
+
+test("template replacement and undo keep project metadata aligned with the snapshot", async () => {
+  let clock = 10_000;
+  const { account, content } = await stores({ now: () => ++clock });
+  const hello = { files: [{ path: "index.html", content: "<h1>Hello</h1>" }], config: { entry: "index.html", template: "hello", container: "page" } };
+  const mark = { files: [{ path: "image.svg", content: "<svg></svg>" }], config: { entry: "image.svg", template: "mark", container: "svg" } };
+  const created = await content.createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "template-undo", name: "Template undo",
+    description: "", visibility: "public", template: "hello", snapshot: hello,
+  });
+  await content.saveProjectSnapshot(account.id, created.id, mark, { destructive: true });
+  assert.equal((await content.getProject("latte", "template-undo", account.id)).template, "mark");
+  assert.equal((await content.getProjectWorkspace("latte", "template-undo", account.id)).hasUnpublishedChanges, true);
+  assert.deepEqual((await content.getPublicProjectWorkspace("latte", "template-undo")).snapshot, hello);
+  await content.saveProjectSnapshot(account.id, created.id, hello, { destructive: true });
+  let restored = await content.getProjectWorkspace("latte", "template-undo", account.id);
+  assert.equal(restored.project.template, "hello");
+  assert.deepEqual(restored.snapshot, hello);
+  assert.equal(restored.hasUnpublishedChanges, false);
+  assert.equal(restored.versionCount, 3);
+  await content.saveProjectSnapshot(account.id, created.id, mark, { destructive: true });
+  assert.equal(await content.publishProject(account.id, created.id), true);
+  assert.deepEqual((await content.getPublicProjectWorkspace("latte", "template-undo")).snapshot, mark);
+  await content.saveProjectSnapshot(account.id, created.id, hello, { destructive: true });
+  await content.revertProjectToPublished(account.id, created.id);
+  restored = await content.getProjectWorkspace("latte", "template-undo", account.id);
+  assert.deepEqual(restored.snapshot, mark);
+  assert.equal(restored.hasUnpublishedChanges, false);
+});
