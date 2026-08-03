@@ -241,14 +241,22 @@ local preview). The create menu and dashboard link to server-rendered project
 and organization forms. Projects can use the personal namespace or an owned
 organization namespace. All mutations use validated URL-encoded POSTs,
 short-lived signed CSRF tokens, same-origin checks, parameterized SQL, and a
-`303` redirect back to the list.
+`303` redirect. A namespace URL such as `/benatkin` or `/resources` lists the
+projects visible under that user or organization, and project breadcrumbs link
+back to it. Database triggers cap the installation at 50,000 projects, each
+account at 20 projects and 5 organizations. Organization titles are 4–80
+characters and their URL names are at least 4 characters; the short reserved namespace list includes administrative and
+infrastructure names such as `admin`, `api`, `root`, `support`, and `www`.
 
 New and existing projects share an editor-first workspace. A project snapshot
 contains an ordered set of validated `{ path, content }` files and one JSON
 configuration object. Unsaved new-project drafts keep the same diff chain in
 session storage; creating the project sends the current snapshot with the
 metadata form. Existing projects autosave through a same-origin JSON endpoint
-with an action-specific CSRF token.
+with an action-specific CSRF token. Their focused view uses the same metadata
+layout as creation: owners can edit and save it, while visitors see locked
+metadata but can still modify the source in an explicitly non-persistent,
+in-memory playground.
 
 `models/project-history.js` implements the history format without a diff
 dependency. Each changed file is represented by one verified contiguous text
