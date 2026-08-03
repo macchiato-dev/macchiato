@@ -60,16 +60,26 @@ export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resol
 }
 
 export function renderBlogInline(markdown, escapeHtml) {
+  const renderText = (value) => {
+    let rendered = "";
+    let offset = 0;
+    for (const match of String(value).matchAll(/\*([^*\n]{1,200})\*/g)) {
+      rendered += escapeHtml(value.slice(offset, match.index));
+      rendered += `<em>${escapeHtml(match[1])}</em>`;
+      offset = match.index + match[0].length;
+    }
+    return rendered + escapeHtml(value.slice(offset));
+  };
   let output = "";
   let cursor = 0;
   const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
   for (const match of markdown.matchAll(links)) {
-    output += escapeHtml(markdown.slice(cursor, match.index));
+    output += renderText(markdown.slice(cursor, match.index));
     const external = match[2].startsWith("https://");
     const href = new URL(match[2], "https://resources.invalid");
     if (href.username || href.password) throw new Error("Blog links cannot contain credentials");
     output += `<a href="${escapeHtml(external ? href.href : `${href.pathname}${href.search}`)}">${escapeHtml(match[1])}</a>`;
     cursor = match.index + match[0].length;
   }
-  return output + escapeHtml(markdown.slice(cursor));
+  return output + renderText(markdown.slice(cursor));
 }
