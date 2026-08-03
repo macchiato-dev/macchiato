@@ -186,16 +186,16 @@ Its CSS passes through the site's `style-use` capability before an artifact can
 be published. GitHub and GitLab render as real OAuth links; Google and Apple are
 visibly unavailable until adapters exist.
 
-Registration is closed by default. Set the declarative app environment value
-`SIGNUPS_ENABLED=true` to show signup entry points and allow a previously
-unknown OAuth identity to create an account. With any other value, existing
-linked identities can still log in, `/signup` explains that registration is
-unavailable, and an unknown identity completing OAuth receives that message
-without creating an account. The home page alone shows X and LinkedIn update
-links in a small block below its sidebar.
+Registration is open by default. Set the declarative app environment value
+`SIGNUPS_ENABLED=false` to hide signup entry points and prevent a previously
+unknown OAuth identity from creating an account. Existing linked identities
+can still log in; `/signup` explains that registration is unavailable, and an
+unknown identity completing OAuth receives that message without creating an
+account. The home page alone shows X and LinkedIn update links in a small block
+below its sidebar.
 
 ```sh
-node packages/macchiato/src/macchiato.js app env set resources-edge SIGNUPS_ENABLED true
+node packages/macchiato/src/macchiato.js app env set resources-edge SIGNUPS_ENABLED false
 ```
 
 Restart the local app after changing its stored environment. On Bunny, set the
@@ -419,16 +419,18 @@ For a reproducible local build:
 
 This produces a single Edge Script at
 `dist/resources-bunny/resources-bunny.js` and the validated Storage objects at
-`dist/resources-bunny/site`. The bundle is currently about 240 KB, well below
-Bunny's 10 MB script limit.
+`dist/resources-bunny/site/resources-co-<sha>/`, where `<sha>` is the
+seven-character Git revision. The same resolved prefix is embedded only in the
+generated function JavaScript; it is not a Bunny environment variable. The
+bundle remains well below Bunny's 10 MB script limit.
 
 ### Update an existing staging deployment manually
 
 1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
-2. Upload the *contents* of `dist/resources-bunny/site/` to the existing
-   `resources-co/` Storage prefix, preserving paths and replacing matching
-   objects. Uploading `manifest.json` last keeps the old manifest active until
-   its complete artifact set is present.
+2. Upload the *contents* of `dist/resources-bunny/site/` to the Storage zone
+   root. This creates the revisioned directory already embedded in the
+   function. Upload its `manifest.json` last, then keep older revisioned
+   directories until the new function is deployed and verified.
 3. Replace the staging Edge Script editor contents with
    `dist/resources-bunny/resources-bunny.js`, then save and deploy it.
 4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
@@ -442,8 +444,9 @@ with a valid session remain `private, no-store`; do not override that policy
 with a broad HTML cache rule. Immutable scripts, styles, fonts, and example
 assets may retain their long public lifetime.
 
-1. Upload the *contents* of `examples/resources-site/exported` beneath the
-   configured `BUNNY_BUCKET_PREFIX` in a private Bunny Storage zone.
+1. Build the deployment and upload the *contents* of
+   `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
+   The build-created revision directory is part of every uploaded object key.
 2. Create a Bunny standalone Edge Script connected to this repository. Use
    `examples/resources-site/bunny-server.js` as the entrypoint and
    `examples/resources-site/deno.json` as its Deno configuration.
@@ -451,7 +454,6 @@ assets may retain their long public lifetime.
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
      if required by the selected endpoint.
-   - `BUNNY_BUCKET_PREFIX`: export subdirectory, default `resources-co`.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
@@ -462,8 +464,8 @@ assets may retain their long public lifetime.
    - `GITLAB_CLIENT_SECRET`: an environment **secret**.
    - `SESSION_SIGNING_KEY`: a random environment **secret** of at least 32
      bytes; rotating it signs everyone out.
-   - `SIGNUPS_ENABLED`: set exactly to `true` to accept new OAuth
-     registrations; omit it or set `false` to keep registration closed.
+   - `SIGNUPS_ENABLED`: registration is enabled when omitted; set exactly to
+     `false` to prevent unknown OAuth identities from creating accounts.
    - `BUNNY_DATABASE_URL`, `BUNNY_DATABASE_AUTH_TOKEN`, and
      `BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN`: added by connecting the staging
      Bunny Database to the script. The read-only token is retained for the
@@ -501,7 +503,6 @@ give each environment its own values for:
 | GitHub secret | `BUNNY_SCRIPT_ID` |
 | GitHub secret | `BUNNY_DEPLOY_KEY` |
 | GitHub variable | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
-| GitHub variable | `BUNNY_BUCKET_PREFIX` |
 | GitHub variable | `PUBLIC_ORIGIN` |
 | GitHub variable | `BLOG_EXAMPLES_ORIGIN` |
 

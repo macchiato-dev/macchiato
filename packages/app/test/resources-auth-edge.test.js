@@ -43,8 +43,8 @@ test("closed registration response gives public update links without account det
   assert.doesNotMatch(body, /GitHub|GitLab|email address/);
 });
 
-test("SIGNUPS_ENABLED accepts only the explicit true value", () => {
-  assert.equal(config.signupsEnabled, false);
+test("SIGNUPS_ENABLED defaults on and accepts an explicit false value", () => {
+  assert.equal(config.signupsEnabled, true);
   assert.equal(createAuthConfig({
     PUBLIC_ORIGIN: "https://resources.example",
     GITHUB_CLIENT_ID: "client-id",
@@ -52,6 +52,13 @@ test("SIGNUPS_ENABLED accepts only the explicit true value", () => {
     SESSION_SIGNING_KEY: "test-signing-key-that-is-not-used-in-production",
     SIGNUPS_ENABLED: "true",
   }).signupsEnabled, true);
+  assert.equal(createAuthConfig({
+    PUBLIC_ORIGIN: "https://resources.example",
+    GITHUB_CLIENT_ID: "client-id",
+    GITHUB_CLIENT_SECRET: "client-secret",
+    SESSION_SIGNING_KEY: "test-signing-key-that-is-not-used-in-production",
+    SIGNUPS_ENABLED: "false",
+  }).signupsEnabled, false);
 });
 
 test("GitHub auth uses signed state, PKCE, and a secure flow cookie", async () => {

@@ -46,11 +46,9 @@ jobs:
         env:
           STORAGE_API_KEY: ${{ secrets.BUNNY_STORAGE_UPLOAD_KEY }}
           STORAGE_ORIGIN: ${{ vars.BUNNY_STORAGE_UPLOAD_ORIGIN }}
-          STORAGE_PREFIX: ${{ vars.BUNNY_BUCKET_PREFIX }}
         run: |
           test -n "$STORAGE_API_KEY"
           test -n "$STORAGE_ORIGIN"
-          test -n "$STORAGE_PREFIX"
           find dist/resources-bunny/site -type f -print0 |
             while IFS= read -r -d '' file; do
               key="${file#dist/resources-bunny/site/}"
@@ -58,7 +56,7 @@ jobs:
                 --request PUT \
                 --header "AccessKey: $STORAGE_API_KEY" \
                 --upload-file "$file" \
-                "${STORAGE_ORIGIN%/}/${STORAGE_PREFIX#/}/$key"
+                "${STORAGE_ORIGIN%/}/$key"
             done
 
       - name: Deploy standalone Edge Script
