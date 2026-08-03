@@ -444,14 +444,13 @@ Build the complete promotion set from one commit with:
 ./scripts/build-resources-bunny-release-set.sh
 ```
 
-It creates independent staging (`resources-co-staging-<revision>`), preprod
-(`resources-co-preprod-<revision>`), and production
-(`resources-co-<revision>`) exports and scripts. Promote by deploying the
-already-built artifact for the next environment; do not rebuild between
-environments if byte-for-byte promotion is required. The module-origin bundle
-is environment-neutral, but deploy it as three Edge Scripts named
-`staging-modules`, `preprod-modules`, and `modules`, each with different
-credentials and hostnames.
+It creates staging (`resources-co-staging-<revision>`) and production
+(`resources-co-<revision>`) exports and scripts. The production deployment is
+first exposed through the preprod hostname; production is promotion of that
+same script, Storage prefix, database, and module origin rather than a third
+build. Do not rebuild between preprod verification and production activation.
+The module-origin bundle is environment-neutral: deploy it as
+`staging-modules` for staging and `modules` for the production deployment.
 
 ### Update an existing staging deployment manually
 
