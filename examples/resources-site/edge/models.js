@@ -141,7 +141,7 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   if (key.startsWith("-/blog-examples/")) headers.set("access-control-allow-origin", "*");
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co https://preprod-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   headers.set("cache-control", key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" : "public, max-age=31536000, immutable");
   const etag = upstreamHeaders.get("etag");
   const lastModified = upstreamHeaders.get("last-modified");
