@@ -27,6 +27,7 @@ const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
 const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
 const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new"]);
 const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new"]);
+const DISCOVERABLE_PROJECT_NAMESPACES = Object.freeze(["benatkin", "resources", "macchiato"]);
 
 async function fetchStorage(fetchImpl, request) {
   const response = await fetchImpl(request);
@@ -580,7 +581,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         }
         if ((pathname === "/" && !session) || pathname === "/browse") {
           if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error(`Public projects marker missing from ${key}`);
-          const projects = contentStore?.listPublicProjects ? await contentStore.listPublicProjects({ limit: pathname === "/" ? 6 : 48 }) : [];
+          const projects = contentStore?.listPublicProjects
+            ? await contentStore.listPublicProjects({ limit: pathname === "/" ? 6 : 48, namespaces: DISCOVERABLE_PROJECT_NAMESPACES })
+            : [];
           html = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml(projects, manifest.messages[locale]));
         }
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);

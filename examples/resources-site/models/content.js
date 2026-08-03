@@ -217,18 +217,27 @@ export function createContentStore(client, {
       return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json), versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
     },
 
-    async listPublicProjects({ limit = 24 } = {}) {
+    async listPublicProjects({ limit = 24, namespaces } = {}) {
       await initialize();
       const bounded = Math.max(1, Math.min(100, Number(limit) || 24));
+      let allowedNamespaces = null;
+      if (namespaces !== undefined) {
+        if (!Array.isArray(namespaces)) throw new ContentValidationError("namespaces", "namespaces must be a list");
+        allowedNamespaces = [...new Set(namespaces.map(slug))];
+        if (!allowedNamespaces.length) return Object.freeze([]);
+      }
+      const namespaceClause = allowedNamespaces
+        ? ` AND p.namespace_slug COLLATE NOCASE IN (${allowedNamespaces.map(() => "?").join(", ")})`
+        : "";
       const found = await client.execute({
         sql: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
-              WHERE p.visibility = 'public'
+              WHERE p.visibility = 'public'${namespaceClause}
               ORDER BY p.updated_at DESC, p.name COLLATE NOCASE
               LIMIT ?`,
-        args: [bounded],
+        args: [...(allowedNamespaces || []), bounded],
       });
       return Object.freeze(found.rows.map(project));
     },

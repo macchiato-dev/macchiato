@@ -507,6 +507,11 @@ all expected tables through `sqlite_schema`. It never uses the read-only token;
 application reads can move to that separate client once the planned
 query/mutation capability split is implemented.
 
+Home and Browse are curated discovery surfaces. They list public projects only
+from the `benatkin`, `resources`, and `macchiato` namespaces. This does not make
+other public projects private: their direct namespace/project URLs continue to
+work, and account project lists remain complete.
+
 The manual GitHub Actions workflow
 `.github/workflows/deploy-resources-bunny.yml` takes a `staging` (default) or
 `production` target, builds both artifacts, uploads the site, deploys the
