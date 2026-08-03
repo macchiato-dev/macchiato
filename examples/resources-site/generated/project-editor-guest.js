@@ -30436,6 +30436,24 @@
     ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" }
   });
   var applyingHostContent = false;
+  var documentLimits = { maxLines: 5e3, maxCharacters: 1e6 };
+  function documentUsage(doc2) {
+    return {
+      characters: doc2.length,
+      lines: doc2.lines,
+      remainingCharacters: documentLimits.maxCharacters - doc2.length,
+      remainingLines: documentLimits.maxLines - doc2.lines
+    };
+  }
+  var documentLimitFilter = EditorState.transactionFilter.of((transaction) => {
+    if (transaction.newDoc.length <= documentLimits.maxCharacters && transaction.newDoc.lines <= documentLimits.maxLines) return transaction;
+    globalThis.__browserUseNotify(JSON.stringify({
+      type: "limit",
+      ...documentUsage(transaction.newDoc),
+      limits: documentLimits
+    }));
+    return [];
+  });
   function languageExtension(name2) {
     if (name2 === "javascript") return javascript();
     if (name2 === "html") return html();
@@ -30456,6 +30474,7 @@
       ]),
       oneDark,
       nativeSelectionTheme,
+      documentLimitFilter,
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.viewportChanged) renderLineNumbers();
         if (update.docChanged && !applyingHostContent) {
@@ -30484,7 +30503,7 @@
     }
     while (lineNumberGutter2.firstChild) lineNumberGutter2.firstChild.remove();
     const first = view.state.doc.lineAt(view.viewport.from).number;
-    const last = view.state.doc.lineAt(view.viewport.to).number;
+    const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
     for (let number2 = first; number2 <= last; number2 += 1) {
       const item = document.createElement("div");
       item.className = "cm-gutterElement";
@@ -30578,13 +30597,25 @@
     return JSON.stringify({
       document: view.state.doc.toString(),
       selection: { anchor: selection2.anchor, head: selection2.head, from: selection2.from, to: selection2.to },
-      viewport: { from: view.viewport.from, to: view.viewport.to }
+      viewport: { from: view.viewport.from, to: view.viewport.to },
+      usage: documentUsage(view.state.doc),
+      limits: documentLimits
     });
+  };
+  globalThis.__codeEditorConfigureLimits = (json2) => {
+    const request = JSON.parse(json2);
+    for (const name2 of ["maxLines", "maxCharacters"]) {
+      if (!Number.isSafeInteger(request[name2]) || request[name2] < 1) throw new TypeError(`${name2} must be a positive integer`);
+    }
+    documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
+    return JSON.stringify({ limits: documentLimits, ...documentUsage(globalThis.__codeEditorView.state.doc) });
   };
   globalThis.__codeEditorSetContent = (json2) => {
     const request = JSON.parse(json2);
-    if (typeof request.content !== "string" || request.content.length > 1e6) {
-      throw new TypeError("Editor content must be a string no larger than 1,000,000 characters");
+    if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
+    const requestedLines = request.content.split("\n").length;
+    if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
+      throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
     }
     const view = globalThis.__codeEditorView;
     applyingHostContent = true;
@@ -30604,7 +30635,7 @@
       applyingHostContent = false;
     }
     renderLineNumbers();
-    return JSON.stringify({ characters: view.state.doc.length, lines: view.state.doc.lines });
+    return JSON.stringify(documentUsage(view.state.doc));
   };
   var searchPanel = null;
   var searchInput = null;

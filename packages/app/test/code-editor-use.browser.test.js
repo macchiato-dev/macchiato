@@ -118,7 +118,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   assert.equal(afterEmacsForward, beforeEmacsForward + 1);
   assert.equal(await page.locator(".cm-search").count(), 0);
   assert.equal(await page.locator(".editor-shell").evaluate((node) => getComputedStyle(node).borderRadius), "2px");
-  assert.match(await page.locator("#status").textContent(), /QuickJS owns \d+ characters across 2 lines/);
+  assert.match(await page.locator("#status").textContent(), /QuickJS owns \d+ characters across 2 of 5000 lines/);
 
   await page.locator(".cm-content").click();
   const contentBox = await page.locator(".cm-content").boundingBox();
@@ -236,7 +236,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   for (let index = 0; index < 12; index += 1) {
     await page.keyboard.type(`\nconst item${index} = ${index};`);
   }
-  await assert.doesNotReject(page.getByText(/across 14 lines/).waitFor());
+  await assert.doesNotReject(page.getByText(/across 14 of 5000 lines/).waitFor());
   assert.equal((await page.locator(".cm-line").allTextContents()).at(-1), "const item11 = 11;");
 
   const finalLine = page.locator(".cm-line").last();
@@ -316,6 +316,41 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.locator(".cm-content").click();
   assert.equal(await page.locator(".cm-focused").count(), 1);
   assert.deepEqual(errors, []);
+
+  const defaultLimit = await page.evaluate(() => {
+    const document = Array.from({ length: 5_000 }, (_, index) => `line ${index + 1}`).join("\n");
+    globalThis.__codeEditorBridge.setContent(document, "plain");
+    return globalThis.__codeEditorBridge.inspect();
+  });
+  assert.equal(defaultLimit.usage.lines, 5_000);
+  assert.equal(defaultLimit.usage.remainingLines, 0);
+  assert.equal(defaultLimit.limits.maxLines, 5_000);
+  assert.ok(defaultLimit.surface.operations.window > 0);
+  assert.ok(defaultLimit.surface.operations.window <= defaultLimit.surface.limits.operations);
+  assert.ok(defaultLimit.surface.elements < defaultLimit.surface.limits.elements);
+  assert.ok(defaultLimit.surface.elements < 5_500, "the 5,000-line surface should remain close to one element per line");
+  assert.ok(await page.locator(".cm-gutterElement").count() <= 100, "the guest-assisted gutter should remain viewport-sized");
+  await assert.rejects(
+    page.evaluate(() => globalThis.__codeEditorBridge.setContent("x\n".repeat(5_000), "plain")),
+    /exceeds its document budget \(5001\/5000 lines/,
+  );
+
+  for (const maxLines of [100, 1_000]) {
+    const limitedPage = await browser.newPage();
+    await limitedPage.goto(`http://code-editor-use.localhost:${port}/?maxLines=${maxLines}`, { waitUntil: "networkidle" });
+    await limitedPage.locator("body[data-ready='true']").waitFor();
+    const report = await limitedPage.evaluate((limit) => {
+      globalThis.__codeEditorBridge.setContent(Array.from({ length: limit }, () => "x").join("\n"), "plain");
+      return globalThis.__codeEditorBridge.inspect();
+    }, maxLines);
+    assert.equal(report.usage.lines, maxLines);
+    assert.equal(report.limits.maxLines, maxLines);
+    await assert.rejects(
+      limitedPage.evaluate((limit) => globalThis.__codeEditorBridge.setContent("x\n".repeat(limit), "plain"), maxLines),
+      new RegExp(`exceeds its document budget \\(${maxLines + 1}/${maxLines} lines`),
+    );
+    await limitedPage.close();
+  }
 
   await page.locator(".cm-line").first().evaluate((node) => node.setAttribute("onclick", "alert(1)"));
   await assert.doesNotReject(page.getByText(/Editor stopped: DOM shape rejected attribute: onclick/).waitFor());

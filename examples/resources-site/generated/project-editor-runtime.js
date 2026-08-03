@@ -3865,6 +3865,11 @@ function attributeEntries(element) {
 function elementChildren(element) {
   return Array.from(element.children || []).filter((child) => child?.nodeType === void 0 || child.nodeType === 1);
 }
+function boundedInteger(value, fallback, maximum, label) {
+  const number = value === void 0 ? fallback : Number(value);
+  if (!Number.isSafeInteger(number) || number < 0 || number > maximum) throw new Error(`${label} must be an integer from 0 to ${maximum}`);
+  return number;
+}
 function ownsNativeInput(target) {
   const name = String(target?.localName || target?.tagName || "").toLowerCase();
   return ["input", "select", "textarea"].includes(name);
@@ -3878,14 +3883,22 @@ function compileDomShapePolicy(input = {}) {
   ]));
   const classNames = (input.classNames || []).map((value) => pattern(value, "class name"));
   const events = new Set((input.events || []).map((event) => String(event).toLowerCase()));
+  const maxElements = Math.max(1, boundedInteger(input.maxElements, 500, 1e4, "maxElements"));
+  const maxTagCounts = Object.fromEntries(Object.entries(input.maxTagCounts || {}).map(([tag, value]) => {
+    const name = String(tag).toLowerCase();
+    if (!tags.has(name)) throw new Error(`DOM shape count references undeclared tag: ${name}`);
+    return [name, boundedInteger(value, maxElements, maxElements, `maxTagCounts.${name}`)];
+  }));
   return Object.freeze({
     tags,
     attributes: Object.freeze(attributes),
     classNames: Object.freeze(classNames),
     events,
-    maxElements: Math.max(1, Math.min(Number(input.maxElements || 500), 1e4)),
-    maxDepth: Math.max(1, Math.min(Number(input.maxDepth || 20), 100)),
-    maxTextLength: Math.max(0, Math.min(Number(input.maxTextLength || 1e5), 1e6))
+    maxElements,
+    maxTagCounts: Object.freeze(maxTagCounts),
+    maxDepth: Math.max(1, boundedInteger(input.maxDepth, 20, 100, "maxDepth")),
+    maxTextLength: boundedInteger(input.maxTextLength, 1e5, 1e6, "maxTextLength"),
+    maxOperations: Math.max(1, boundedInteger(input.maxOperations, 1e4, 1e5, "maxOperations"))
   });
 }
 function assertAttribute(policy, name, value) {
@@ -3912,6 +3925,9 @@ function inspectDomShape(root, policyInput) {
     elements += 1;
     if (elements > policy.maxElements) throw new Error(`DOM shape exceeds ${policy.maxElements} elements`);
     tags[tag] = (tags[tag] || 0) + 1;
+    if (policy.maxTagCounts[tag] !== void 0 && tags[tag] > policy.maxTagCounts[tag]) {
+      throw new Error(`DOM shape exceeds ${policy.maxTagCounts[tag]} ${tag} elements`);
+    }
     for (const [name, value] of attributeEntries(element)) assertAttribute(policy, name, value);
     for (const child of Array.from(element.childNodes || [])) {
       if (child.nodeType === 3) textLength += String(child.textContent || "").length;
@@ -3938,6 +3954,8 @@ var BrowserDomHost = class {
     this.nextId = 1;
     this.observer = null;
     this.listeners = /* @__PURE__ */ new Map();
+    this.operations = 0;
+    this.windowOperations = 0;
   }
   register(node) {
     if (!this.root.contains(node) && node !== this.root) throw new Error("DOM handle is outside the granted root");
@@ -3956,6 +3974,33 @@ var BrowserDomHost = class {
   }
   inspect() {
     return inspectDomShape(this.root, this.policy);
+  }
+  inspectSurface() {
+    const shape = this.inspect();
+    const tagLimits = this.policy.maxTagCounts;
+    return Object.freeze({
+      ...shape,
+      limits: Object.freeze({
+        elements: this.policy.maxElements,
+        textLength: this.policy.maxTextLength,
+        depth: this.policy.maxDepth,
+        tags: tagLimits,
+        operations: this.policy.maxOperations
+      }),
+      remaining: Object.freeze({
+        elements: this.policy.maxElements - shape.elements,
+        textLength: this.policy.maxTextLength - shape.textLength,
+        tags: Object.freeze(Object.fromEntries(Object.entries(tagLimits).map(([tag, limit]) => [tag, limit - (shape.tags[tag] || 0)]))),
+        operations: this.policy.maxOperations - this.windowOperations
+      }),
+      operations: Object.freeze({ total: this.operations, window: this.windowOperations })
+    });
+  }
+  get surface() {
+    return this.inspectSurface();
+  }
+  renewOperationBudget() {
+    this.windowOperations = 0;
   }
   query(selector, all = false) {
     if (typeof selector !== "string" || selector.length > 120 || /[,:+~[\]]/.test(selector)) {
@@ -4217,6 +4262,8 @@ var BrowserDomHost = class {
     this.listeners.clear();
   }
   dispatch(message) {
+    this.operations += 1;
+    if (++this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
     switch (message.op) {
       case "query":
         return this.query(message.selector, Boolean(message.all));
@@ -4241,80 +4288,116 @@ var BrowserDomHost = class {
 };
 
 // packages/code-editor-use/src/policy.js
-var CODE_EDITOR_DOM_POLICY = Object.freeze({
-  tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
-  events: [
-    "beforeinput",
-    "blur",
-    "change",
-    "click",
-    "compositionend",
-    "compositionstart",
-    "compositionupdate",
-    "contextmenu",
-    "copy",
-    "cut",
-    "dragend",
-    "dragenter",
-    "dragleave",
-    "dragover",
-    "dragstart",
-    "drop",
-    "focus",
-    "input",
-    "keydown",
-    "keyup",
-    "mousedown",
-    "mousemove",
-    "mouseup",
-    "mousewheel",
-    "paste",
-    "scroll",
-    "touchcancel",
-    "touchend",
-    "touchmove",
-    "touchstart",
-    "wheel"
-  ],
-  attributes: {
-    class: `^[^<>"']{0,240}$`,
-    style: `^[^<>"']{0,2400}$`,
-    role: "^(?:textbox|presentation|status|button|listbox|option)$",
-    "aria-label": "^[^<>]{0,160}$",
-    "aria-live": "^(?:polite|assertive|off)$",
-    "aria-hidden": "^(?:true|false)$",
-    "aria-selected": "^(?:true|false)$",
-    "aria-expanded": "^(?:true|false)$",
-    "aria-haspopup": "^listbox$",
-    "aria-autocomplete": "^(?:list|none)$",
-    "aria-multiline": "^(?:true|false)$",
-    "aria-readonly": "^(?:true|false)$",
-    "aria-controls": "^[A-Za-z0-9_-]{0,120}$",
-    "aria-activedescendant": "^[A-Za-z0-9_-]{0,120}$",
-    contenteditable: "^(?:true|false)$",
-    tabindex: "^-?\\d+$",
-    spellcheck: "^(?:true|false)$",
-    writingsuggestions: "^(?:true|false)$",
-    autocorrect: "^(?:on|off)$",
-    autocapitalize: "^(?:on|off|none)$",
-    translate: "^(?:yes|no)$",
-    src: "^data:image/gif;base64,[A-Za-z0-9+/=]+$",
-    alt: "^[^<>]{0,80}$",
-    type: "^(?:text|checkbox|button)$",
-    name: "^[A-Za-z0-9_-]{0,80}$",
-    value: "^[^<>]{0,500}$",
-    id: "^[A-Za-z0-9_-]{1,120}$",
-    title: "^[^<>]{0,160}$",
-    placeholder: "^[^<>]{0,160}$",
-    "data-language": "^(?:javascript|html|css|json|markdown)$",
-    form: "^$",
-    "main-field": "^true$"
-  },
-  classNames: ["^cm-[A-Za-z0-9_-]+$", "^tok-[A-Za-z0-9_-]+$", "^\u037C[A-Za-z0-9]+$"],
-  maxElements: 600,
-  maxDepth: 16,
-  maxTextLength: 2e5
+var CODE_EDITOR_LINE_LIMITS = Object.freeze({
+  compact: 100,
+  standard: 1e3,
+  large: 5e3
 });
+var DEFAULT_CODE_EDITOR_LIMITS = Object.freeze({
+  maxLines: CODE_EDITOR_LINE_LIMITS.large,
+  maxCharacters: 1e6,
+  maxSurfaceOperations: 1e5,
+  surfaceRefillMs: 1e3
+});
+function boundedInteger2(value, fallback, maximum, label) {
+  const number = value === void 0 ? fallback : Number(value);
+  if (!Number.isSafeInteger(number) || number < 1 || number > maximum) {
+    throw new TypeError(`${label} must be an integer from 1 to ${maximum}`);
+  }
+  return number;
+}
+function normalizeCodeEditorLimits(input = {}) {
+  return Object.freeze({
+    maxLines: boundedInteger2(input.maxLines, DEFAULT_CODE_EDITOR_LIMITS.maxLines, 5e3, "maxLines"),
+    maxCharacters: boundedInteger2(input.maxCharacters, DEFAULT_CODE_EDITOR_LIMITS.maxCharacters, 1e6, "maxCharacters"),
+    maxSurfaceOperations: boundedInteger2(input.maxSurfaceOperations, DEFAULT_CODE_EDITOR_LIMITS.maxSurfaceOperations, 1e6, "maxSurfaceOperations"),
+    surfaceRefillMs: boundedInteger2(input.surfaceRefillMs, DEFAULT_CODE_EDITOR_LIMITS.surfaceRefillMs, 6e4, "surfaceRefillMs")
+  });
+}
+function createCodeEditorDomPolicy(input = {}) {
+  const limits = normalizeCodeEditorLimits(input);
+  return Object.freeze({
+    tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
+    events: [
+      "beforeinput",
+      "blur",
+      "change",
+      "click",
+      "compositionend",
+      "compositionstart",
+      "compositionupdate",
+      "contextmenu",
+      "copy",
+      "cut",
+      "dragend",
+      "dragenter",
+      "dragleave",
+      "dragover",
+      "dragstart",
+      "drop",
+      "focus",
+      "input",
+      "keydown",
+      "keyup",
+      "mousedown",
+      "mousemove",
+      "mouseup",
+      "mousewheel",
+      "paste",
+      "scroll",
+      "touchcancel",
+      "touchend",
+      "touchmove",
+      "touchstart",
+      "wheel"
+    ],
+    attributes: {
+      class: `^[^<>"']{0,240}$`,
+      style: `^[^<>"']{0,2400}$`,
+      role: "^(?:textbox|presentation|status|button|listbox|option)$",
+      "aria-label": "^[^<>]{0,160}$",
+      "aria-live": "^(?:polite|assertive|off)$",
+      "aria-hidden": "^(?:true|false)$",
+      "aria-selected": "^(?:true|false)$",
+      "aria-expanded": "^(?:true|false)$",
+      "aria-haspopup": "^listbox$",
+      "aria-autocomplete": "^(?:list|none)$",
+      "aria-multiline": "^(?:true|false)$",
+      "aria-readonly": "^(?:true|false)$",
+      "aria-controls": "^[A-Za-z0-9_-]{0,120}$",
+      "aria-activedescendant": "^[A-Za-z0-9_-]{0,120}$",
+      contenteditable: "^(?:true|false)$",
+      tabindex: "^-?\\d+$",
+      spellcheck: "^(?:true|false)$",
+      writingsuggestions: "^(?:true|false)$",
+      autocorrect: "^(?:on|off)$",
+      autocapitalize: "^(?:on|off|none)$",
+      translate: "^(?:yes|no)$",
+      src: "^data:image/gif;base64,[A-Za-z0-9+/=]+$",
+      alt: "^[^<>]{0,80}$",
+      type: "^(?:text|checkbox|button)$",
+      name: "^[A-Za-z0-9_-]{0,80}$",
+      value: "^[^<>]{0,500}$",
+      id: "^[A-Za-z0-9_-]{1,120}$",
+      title: "^[^<>]{0,160}$",
+      placeholder: "^[^<>]{0,160}$",
+      "data-language": "^(?:javascript|html|css|json|markdown)$",
+      form: "^$",
+      "main-field": "^true$"
+    },
+    classNames: ["^cm-[A-Za-z0-9_-]+$", "^tok-[A-Za-z0-9_-]+$", "^\u037C[A-Za-z0-9]+$"],
+    // The QuickJS DOM currently gives CodeMirror conservative geometry, so its
+    // content viewport may retain one div per allowed line. Keep the ceiling
+    // close to the 5,000-line document maximum rather than pretending native
+    // browser virtualization is available.
+    maxElements: limits.maxLines + 600,
+    maxTagCounts: { div: limits.maxLines + 360, span: 320, input: 24, button: 32, ul: 8, li: 120, style: 12 },
+    maxDepth: 16,
+    maxTextLength: limits.maxCharacters,
+    maxOperations: limits.maxSurfaceOperations
+  });
+}
+var CODE_EDITOR_DOM_POLICY = createCodeEditorDomPolicy();
 
 // packages/code-editor-use/src/input-bridge.js
 var CodeMirrorInputBridge = class {
@@ -4549,6 +4632,7 @@ var CodeMirrorInputBridge = class {
 
 // packages/code-editor-use/src/controller.js
 async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange = () => {
+}, onLimit = () => {
 }, onReady = () => {
 }, onViolation = console.error }) {
   if (!(root instanceof Element)) throw new TypeError("A DOM root is required");
@@ -4561,22 +4645,34 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
   });
   let stopped = false;
   let inputBridge;
-  const host = new BrowserDomHost(root, CODE_EDITOR_DOM_POLICY, {
+  const editorLimits = normalizeCodeEditorLimits(limits);
+  const violate = (error) => {
+    if (stopped) return;
+    stopped = true;
+    onViolation(error);
+  };
+  const host = new BrowserDomHost(root, createCodeEditorDomPolicy(editorLimits), {
     onViolation(error) {
       stopped = true;
       onViolation(error);
     },
     onEvent(listenerId, event, nativeEvent) {
       if (!sandbox || stopped) return;
-      const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
-      if (result.preventDefault) nativeEvent.preventDefault();
-      if (result.stopPropagation) nativeEvent.stopPropagation();
-      inputBridge?.reconcileSelection();
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
+        if (result.preventDefault) nativeEvent.preventDefault();
+        if (result.stopPropagation) nativeEvent.stopPropagation();
+        inputBridge?.reconcileSelection();
+      } catch (error) {
+        violate(error);
+      }
     }
   });
   sandbox.installJsonHostFunction("__browserUseHost", (message) => host.dispatch(message));
   sandbox.installJsonHostFunction("__browserUseNotify", (message) => {
     if (message.type === "change") onChange(message.content);
+    if (message.type === "limit") onLimit(message);
     if (message.type === "ready") onReady(message);
     return {};
   });
@@ -4587,25 +4683,42 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
     vendor: navigator.vendor
   });
   sandbox.evalGlobal(guestSource, "code-editor-guest.js");
+  sandbox.callJsonFunction("__codeEditorConfigureLimits", {
+    maxLines: editorLimits.maxLines,
+    maxCharacters: editorLimits.maxCharacters
+  });
   inputBridge = new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
   host.start();
+  const refillTimer = setInterval(() => host.renewOperationBudget(), editorLimits.surfaceRefillMs);
   let destroyed = false;
   return Object.freeze({
     setContent(content, language = "plain", { readOnly = false } = {}) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
-      sandbox.callJsonFunction("__browserUseFlush", {});
-      return result;
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
+        sandbox.callJsonFunction("__browserUseFlush", {});
+        return result;
+      } catch (error) {
+        if (/operation gas exhausted/.test(error.message)) violate(error);
+        throw error;
+      }
     },
     inspect() {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      return sandbox.callJsonFunction("__codeEditorInspect", {});
+      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), surface: host.inspectSurface() };
     },
     command(payload) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
-      sandbox.callJsonFunction("__browserUseFlush", {});
-      return result;
+      host.renewOperationBudget();
+      try {
+        const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
+        sandbox.callJsonFunction("__browserUseFlush", {});
+        return result;
+      } catch (error) {
+        if (/operation gas exhausted/.test(error.message)) violate(error);
+        throw error;
+      }
     },
     focus() {
       root.querySelector(".cm-content")?.focus();
@@ -4613,6 +4726,7 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      clearInterval(refillTimer);
       inputBridge?.destroy();
       host.stop();
       root.replaceChildren();
