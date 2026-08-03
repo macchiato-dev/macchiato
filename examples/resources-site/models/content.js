@@ -35,6 +35,14 @@ export const CONTENT_SCHEMA = Object.freeze([
   ) STRICT`,
   `CREATE INDEX IF NOT EXISTS resource_projects_owner
     ON resource_projects(owner_user_id, created_at)`,
+  `CREATE TRIGGER IF NOT EXISTS resource_projects_global_limit
+    BEFORE INSERT ON resource_projects
+    WHEN (SELECT COUNT(*) FROM resource_projects) >= 50000
+    BEGIN SELECT RAISE(ABORT, 'resource_projects_global_limit'); END`,
+  `CREATE TRIGGER IF NOT EXISTS resource_projects_owner_limit
+    BEFORE INSERT ON resource_projects
+    WHEN (SELECT COUNT(*) FROM resource_projects WHERE owner_user_id = NEW.owner_user_id) >= 20
+    BEGIN SELECT RAISE(ABORT, 'resource_projects_owner_limit'); END`,
   `CREATE TABLE IF NOT EXISTS resource_project_state (
     project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
     snapshot_json TEXT NOT NULL,
@@ -53,6 +61,10 @@ export const CONTENT_SCHEMA = Object.freeze([
   ) STRICT`,
   `CREATE INDEX IF NOT EXISTS resource_project_versions_created
     ON resource_project_versions(project_id, created_at DESC)`,
+  `CREATE TRIGGER IF NOT EXISTS resource_organizations_owner_limit
+    BEFORE INSERT ON resource_organizations
+    WHEN (SELECT COUNT(*) FROM resource_organizations WHERE owner_user_id = NEW.owner_user_id) >= 5
+    BEGIN SELECT RAISE(ABORT, 'resource_organizations_owner_limit'); END`,
   `INSERT OR IGNORE INTO resource_project_state
       (project_id, snapshot_json, checkpoint_snapshot_json,
        last_version_sequence, last_version_at, updated_at)
@@ -66,6 +78,7 @@ export const CONTENT_SCHEMA = Object.freeze([
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
+const RESERVED_ORGANIZATION_NAMES = new Set(["admin", "administrator", "api", "root", "security", "support", "system", "www"]);
 
 export class ContentConflictError extends Error {
   constructor(kind) {
@@ -101,6 +114,14 @@ function slug(value) {
 
 function isUniqueError(error) {
   return /unique constraint/i.test(String(error?.message || error));
+}
+
+function limitError(error) {
+  const message = String(error?.message || error);
+  if (message.includes("resource_projects_global_limit")) return new ContentValidationError("project_limit", "The site project limit has been reached");
+  if (message.includes("resource_projects_owner_limit")) return new ContentValidationError("project_limit", "An account can have at most 20 projects");
+  if (message.includes("resource_organizations_owner_limit")) return new ContentValidationError("organization_limit", "An account can have at most 5 organizations");
+  return null;
 }
 
 function project(row) {
@@ -242,6 +263,35 @@ export function createContentStore(client, {
       return Object.freeze(found.rows.map(project));
     },
 
+    async getNamespace(namespaceValue, viewerUserId = null) {
+      await initialize();
+      const namespace = slug(namespaceValue);
+      const identity = await client.execute({
+        sql: `SELECT 'user' AS kind, username AS slug, display_name AS name
+              FROM users WHERE username = ? COLLATE NOCASE
+              UNION ALL
+              SELECT 'organization' AS kind, slug, name
+              FROM resource_organizations WHERE slug = ? COLLATE NOCASE
+              LIMIT 1`,
+        args: [namespace, namespace],
+      });
+      if (!identity.rows[0]) return null;
+      const found = await client.execute({
+        sql: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects
+              WHERE namespace_slug = ? COLLATE NOCASE
+                AND (visibility = 'public' OR owner_user_id = ?)
+              ORDER BY updated_at DESC, name COLLATE NOCASE
+              LIMIT 100`,
+        args: [namespace, String(viewerUserId || "")],
+      });
+      return Object.freeze({
+        kind: String(identity.rows[0].kind), namespace: String(identity.rows[0].slug),
+        name: String(identity.rows[0].name), projects: Object.freeze(found.rows.map(project)),
+      });
+    },
+
     async listProjectVersions(projectId, userId) {
       await initialize();
       const found = await client.execute({
@@ -300,10 +350,17 @@ export function createContentStore(client, {
 
     async createOrganization(userId, input) {
       await initialize();
+      const organizationSlug = slug(input.slug);
+      if (organizationSlug.length < 4) {
+        throw new ContentValidationError("organization_name", "organization name must be at least 4 characters");
+      }
+      if (RESERVED_ORGANIZATION_NAMES.has(organizationSlug)) {
+        throw new ContentValidationError("organization_name", "That organization name is reserved");
+      }
       const value = {
         id: randomId(),
-        slug: slug(input.slug),
-        name: text(input.name, "name", { min: 1, max: 80 }),
+        slug: organizationSlug,
+        name: text(input.name, "name", { min: 4, max: 80 }),
         description: text(input.description, "description", { max: 500 }),
       };
       const timestamp = now();
@@ -315,6 +372,8 @@ export function createContentStore(client, {
           args: [value.id, String(userId), value.slug, value.name, value.description, timestamp, timestamp],
         });
       } catch (error) {
+        const limited = limitError(error);
+        if (limited) throw limited;
         if (isUniqueError(error)) throw new ContentConflictError("organization");
         throw error;
       }
@@ -384,10 +443,57 @@ export function createContentStore(client, {
           args: [value.id, JSON.stringify(initialPatch), timestamp],
         }]);
       } catch (error) {
+        const limited = limitError(error);
+        if (limited) throw limited;
         if (isUniqueError(error)) throw new ContentConflictError("project");
         throw error;
       }
       return project({ ...value, created_at: timestamp });
+    },
+
+    async updateProject(userId, projectId, input) {
+      await initialize();
+      const user = String(userId);
+      const namespace = String(input.namespace || "user");
+      let namespaceKind = "user";
+      let namespaceId = user;
+      let namespaceSlug = text(input.userSlug, "userSlug", { min: 1, max: 63 });
+      if (namespace !== "user") {
+        const found = await client.execute({
+          sql: "SELECT id, slug FROM resource_organizations WHERE id = ? AND owner_user_id = ?",
+          args: [namespace, user],
+        });
+        if (!found.rows[0]) throw new ContentValidationError("namespace", "organization is not available");
+        namespaceKind = "organization";
+        namespaceId = String(found.rows[0].id);
+        namespaceSlug = String(found.rows[0].slug);
+      }
+      const template = String(input.template || "blank");
+      if (!TEMPLATES.has(template)) throw new ContentValidationError("template", "template is not available");
+      const visibility = String(input.visibility || "public");
+      if (visibility !== "public" && visibility !== "private") throw new ContentValidationError("visibility", "visibility is not available");
+      try {
+        const result = await client.execute({
+          sql: `UPDATE resource_projects
+                SET namespace_kind = ?, namespace_id = ?, namespace_slug = ?, slug = ?,
+                    name = ?, description = ?, visibility = ?, template = ?, updated_at = ?
+                WHERE id = ? AND owner_user_id = ?`,
+          args: [namespaceKind, namespaceId, namespaceSlug, slug(input.slug),
+            text(input.name, "name", { min: 1, max: 80 }), text(input.description, "description", { max: 500 }),
+            visibility, template, now(), String(projectId), user],
+        });
+        if (!Number(result.rowsAffected)) return null;
+      } catch (error) {
+        if (isUniqueError(error)) throw new ContentConflictError("project");
+        throw error;
+      }
+      const found = await client.execute({
+        sql: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects WHERE id = ?`,
+        args: [String(projectId)],
+      });
+      return found.rows[0] ? project(found.rows[0]) : null;
     },
 
     async saveProjectSnapshot(userId, projectId, snapshotValue, { reason = "periodic", checkpointIntervalMs = 300_000, destructive = false } = {}) {

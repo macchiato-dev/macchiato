@@ -3,6 +3,7 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { createAccountStore } from "../../../examples/resources-site/models/accounts.js";
 import {
+  CONTENT_SCHEMA,
   ContentConflictError,
   ContentValidationError,
   createContentStore,
@@ -25,6 +26,10 @@ async function stores({ now = () => 200 } = {}) {
   let id = 0;
   return { account, content: createContentStore(client, { now, randomId: () => `content-${++id}` }) };
 }
+
+test("content schema caps the site at 50,000 projects", () => {
+  assert.match(CONTENT_SCHEMA.join("\n"), /COUNT\(\*\) FROM resource_projects\) >= 50000/);
+});
 
 test("content store creates organizations and namespaced projects", async () => {
   const { account, content } = await stores();
@@ -74,6 +79,14 @@ test("content store validates inputs, ownership, and namespace uniqueness", asyn
     content.createOrganization(account.id, { slug: "../bad", name: "Bad", description: "" }),
     ContentValidationError,
   );
+  await assert.rejects(
+    content.createOrganization(account.id, { slug: "admin", name: "Admin team", description: "" }),
+    /reserved/,
+  );
+  await assert.rejects(
+    content.createOrganization(account.id, { slug: "abc", name: "Valid title", description: "" }),
+    /at least 4 characters/,
+  );
   await content.createOrganization(account.id, { slug: "team", name: "Team", description: "" });
   await assert.rejects(
     content.createOrganization(account.id, { slug: "team", name: "Again", description: "" }),
@@ -90,6 +103,37 @@ test("content store validates inputs, ownership, and namespace uniqueness", asyn
     }),
     /organization is not available/,
   );
+});
+
+test("content store enforces account limits and exposes namespace pages", async () => {
+  const { account, content } = await stores();
+  for (let index = 1; index <= 5; index++) {
+    await content.createOrganization(account.id, { slug: `team-${index}`, name: `Team ${index}`, description: "" });
+  }
+  await assert.rejects(
+    content.createOrganization(account.id, { slug: "team-6", name: "Team 6", description: "" }),
+    /at most 5 organizations/,
+  );
+  let first;
+  for (let index = 1; index <= 20; index++) {
+    const created = await content.createProject(account.id, {
+      namespace: "user", userSlug: account.login, slug: `project-${index}`,
+      name: `Project ${index}`, description: "", visibility: index === 1 ? "private" : "public", template: "blank",
+    });
+    first ||= created;
+  }
+  await assert.rejects(
+    content.createProject(account.id, { namespace: "user", userSlug: account.login, slug: "project-21", name: "Project 21", template: "blank" }),
+    /at most 20 projects/,
+  );
+  assert.equal((await content.getNamespace("latte")).projects.length, 19);
+  assert.equal((await content.getNamespace("latte", account.id)).projects.length, 20);
+  const updated = await content.updateProject(account.id, first.id, {
+    namespace: "user", userSlug: account.login, slug: "renamed", name: "Renamed",
+    description: "Updated", visibility: "public", template: "article",
+  });
+  assert.equal(updated.slug, "renamed");
+  assert.equal(updated.template, "article");
 });
 
 test("content store versions multi-file project state periodically and around destructive changes", async () => {
