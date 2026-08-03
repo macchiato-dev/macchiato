@@ -40,17 +40,6 @@ function contentType(pathname) {
 export function createModuleOriginHandler(env = {}, fetchImpl = fetch) {
   const token = required(env, "MODULE_IMPORT_TOKEN");
   const storageKey = required(env, "STORAGE_API_KEY");
-  const prefix = required(env, "MODULE_BUCKET_PREFIX").replace(
-    /^\/+|\/+$/g,
-    "",
-  );
-  if (
-    !prefix.split("/").every((part) =>
-      /^[A-Za-z0-9._~-]+$/.test(part) && part !== "." && part !== ".."
-    )
-  ) {
-    throw new Error("MODULE_BUCKET_PREFIX is invalid");
-  }
   const origin = new URL(required(env, "BUNNY_STORAGE_ORIGIN"));
   if (
     origin.protocol !== "https:" || origin.username || origin.password ||
@@ -78,7 +67,7 @@ export function createModuleOriginHandler(env = {}, fetchImpl = fetch) {
     }
 
     const upstreamUrl = new URL(
-      `${prefix}/${key}`,
+      key,
       origin.href.endsWith("/") ? origin : `${origin.href}/`,
     );
     const upstream = await fetchImpl(upstreamUrl, {
