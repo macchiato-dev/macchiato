@@ -16,3 +16,15 @@ and incremental rendering are browser layout capabilities. Pretending those
 are plain serialized DOM would make `dom-use` less predictable. `browser-use`
 instead supplies scoped live handles to QuickJS and keeps native layout inside
 an explicit specialized adapter.
+
+## Entry points
+
+- `@macchiato-dev/code-editor-use` exports only the DOM policy contract and
+  does not initialize an editor or sandbox.
+- `@macchiato-dev/code-editor-use/controller` exports
+  `mountQuickJsCodeEditor` and requires the declared `browser-use` and
+  `quickjs-emscripten-sandbox` peers.
+
+The CodeMirror setup in `src/guest.js` is build input for an application-owned
+guest bundle. CodeMirror packages and the bundler therefore remain development
+dependencies; applications choose and build the guest code they execute.

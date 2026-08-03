@@ -3,5 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "A bounded Canvas 2D capability for QuickJS browser guests",
-  "exports": { ".": "./src/index.js" }
+  "exports": { ".": "./src/index.js" },
+  "files": ["src", "README.md"],
+  "sideEffects": false,
+  "publishConfig": { "access": "public" },
+  "scripts": { "test": "node --test test/*.test.js" }
 }

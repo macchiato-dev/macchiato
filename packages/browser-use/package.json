@@ -11,5 +11,7 @@
     ".": "./src/index.js",
     "./quickjs-guest": "./src/quickjs-guest.js",
     "./quickjs-dom-guest": "./src/quickjs-dom-guest.js"
-  }
+  },
+  "files": ["src", "guest", "scripts", "README.md"],
+  "publishConfig": { "access": "public" }
 }
