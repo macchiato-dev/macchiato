@@ -40,6 +40,30 @@ test("browser-use rejects undeclared elements, attributes, and classes", () => {
   assert.throws(() => inspectDomShape(element("root", {}, [element("div", { class: "escape" })]), policy), /rejected class/);
 });
 
+test("browser-use accounts for per-element surface budgets", () => {
+  const policy = compileDomShapePolicy({ tags: ["div", "span"], maxElements: 4, maxTagCounts: { span: 1 } });
+  const allowed = element("root", {}, [element("div", {}, [element("span")])]);
+  assert.deepEqual(inspectDomShape(allowed, policy).tags, { div: 1, span: 1 });
+  assert.throws(
+    () => inspectDomShape(element("root", {}, [element("div", {}, [element("span"), element("span")])]), policy),
+    /exceeds 1 span elements/,
+  );
+});
+
+test("browser-use exhausts and renews operation gas", () => {
+  const ownerDocument = {};
+  const root = element("root", {}, [element("div")]);
+  Object.assign(root, { ownerDocument, querySelectorAll() { return []; } });
+  const host = new BrowserDomHost(root, { tags: ["div"], maxOperations: 2 });
+  host.dispatch({ op: "inspect" });
+  host.dispatch({ op: "inspect" });
+  assert.throws(() => host.dispatch({ op: "inspect" }), /operation gas exhausted/);
+  assert.deepEqual(host.surface.operations, { total: 3, window: 3 });
+  host.renewOperationBudget();
+  assert.doesNotThrow(() => host.dispatch({ op: "inspect" }));
+  assert.equal(host.surface.remaining.operations, 1);
+});
+
 test("browser-use filters guest event subscriptions through policy", () => {
   const ownerDocument = {};
   const root = {

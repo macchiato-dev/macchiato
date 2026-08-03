@@ -12,6 +12,12 @@ function elementChildren(element) {
   return Array.from(element.children || []).filter((child) => child?.nodeType === undefined || child.nodeType === 1);
 }
 
+function boundedInteger(value, fallback, maximum, label) {
+  const number = value === undefined ? fallback : Number(value);
+  if (!Number.isSafeInteger(number) || number < 0 || number > maximum) throw new Error(`${label} must be an integer from 0 to ${maximum}`);
+  return number;
+}
+
 export function ownsNativeInput(target) {
   const name = String(target?.localName || target?.tagName || "").toLowerCase();
   return ["input", "select", "textarea"].includes(name);
@@ -26,14 +32,22 @@ export function compileDomShapePolicy(input = {}) {
   ]));
   const classNames = (input.classNames || []).map((value) => pattern(value, "class name"));
   const events = new Set((input.events || []).map((event) => String(event).toLowerCase()));
+  const maxElements = Math.max(1, boundedInteger(input.maxElements, 500, 10_000, "maxElements"));
+  const maxTagCounts = Object.fromEntries(Object.entries(input.maxTagCounts || {}).map(([tag, value]) => {
+    const name = String(tag).toLowerCase();
+    if (!tags.has(name)) throw new Error(`DOM shape count references undeclared tag: ${name}`);
+    return [name, boundedInteger(value, maxElements, maxElements, `maxTagCounts.${name}`)];
+  }));
   return Object.freeze({
     tags,
     attributes: Object.freeze(attributes),
     classNames: Object.freeze(classNames),
     events,
-    maxElements: Math.max(1, Math.min(Number(input.maxElements || 500), 10_000)),
-    maxDepth: Math.max(1, Math.min(Number(input.maxDepth || 20), 100)),
-    maxTextLength: Math.max(0, Math.min(Number(input.maxTextLength || 100_000), 1_000_000)),
+    maxElements,
+    maxTagCounts: Object.freeze(maxTagCounts),
+    maxDepth: Math.max(1, boundedInteger(input.maxDepth, 20, 100, "maxDepth")),
+    maxTextLength: boundedInteger(input.maxTextLength, 100_000, 1_000_000, "maxTextLength"),
+    maxOperations: Math.max(1, boundedInteger(input.maxOperations, 10_000, 100_000, "maxOperations")),
   });
 }
 
@@ -62,6 +76,9 @@ export function inspectDomShape(root, policyInput) {
     elements += 1;
     if (elements > policy.maxElements) throw new Error(`DOM shape exceeds ${policy.maxElements} elements`);
     tags[tag] = (tags[tag] || 0) + 1;
+    if (policy.maxTagCounts[tag] !== undefined && tags[tag] > policy.maxTagCounts[tag]) {
+      throw new Error(`DOM shape exceeds ${policy.maxTagCounts[tag]} ${tag} elements`);
+    }
     for (const [name, value] of attributeEntries(element)) assertAttribute(policy, name, value);
     for (const child of Array.from(element.childNodes || [])) {
       if (child.nodeType === 3) textLength += String(child.textContent || "").length;
@@ -87,6 +104,8 @@ export class BrowserDomHost {
     this.nextId = 1;
     this.observer = null;
     this.listeners = new Map();
+    this.operations = 0;
+    this.windowOperations = 0;
   }
 
   register(node) {
@@ -109,6 +128,32 @@ export class BrowserDomHost {
   inspect() {
     return inspectDomShape(this.root, this.policy);
   }
+
+  inspectSurface() {
+    const shape = this.inspect();
+    const tagLimits = this.policy.maxTagCounts;
+    return Object.freeze({
+      ...shape,
+      limits: Object.freeze({
+        elements: this.policy.maxElements,
+        textLength: this.policy.maxTextLength,
+        depth: this.policy.maxDepth,
+        tags: tagLimits,
+        operations: this.policy.maxOperations,
+      }),
+      remaining: Object.freeze({
+        elements: this.policy.maxElements - shape.elements,
+        textLength: this.policy.maxTextLength - shape.textLength,
+        tags: Object.freeze(Object.fromEntries(Object.entries(tagLimits).map(([tag, limit]) => [tag, limit - (shape.tags[tag] || 0)]))),
+        operations: this.policy.maxOperations - this.windowOperations,
+      }),
+      operations: Object.freeze({ total: this.operations, window: this.windowOperations }),
+    });
+  }
+
+  get surface() { return this.inspectSurface(); }
+
+  renewOperationBudget() { this.windowOperations = 0; }
 
   query(selector, all = false) {
     if (typeof selector !== "string" || selector.length > 120 || /[,:+~[\]]/.test(selector)) {
@@ -316,6 +361,8 @@ export class BrowserDomHost {
   }
 
   dispatch(message) {
+    this.operations += 1;
+    if (++this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
     switch (message.op) {
       case "query": return this.query(message.selector, Boolean(message.all));
       case "read": return this.read(message.id, message.property);
