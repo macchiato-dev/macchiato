@@ -147,6 +147,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const status = root.querySelector("[data-project-status]");
   const statusSave = root.querySelector("[data-project-save]");
   const statusError = root.querySelector("[data-project-error]");
+  const statusNotice = root.querySelector("[data-project-notice]");
   const tipControls = root.querySelector("[data-project-tip-controls]");
   const tipText = root.querySelector("[data-project-tip]");
   const versionButton = root.querySelector("[data-project-versions]");
@@ -180,6 +181,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewTimer = 0;
   let previewGeneration = 0;
   let activeError = "";
+  let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
   const tipMessages = JSON.parse(root.dataset.tips || "{}");
   let tipIndex = 0;
@@ -254,10 +256,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function renderPreview() {
     const generation = ++previewGeneration;
     activeError = "";
-    status.dataset.state = persistenceState;
-    tipControls.hidden = false;
-    statusError.hidden = true;
-    statusError.textContent = "";
+    renderStatusState();
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
     previewController?.destroy();
@@ -373,6 +372,35 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     tabs.append(config);
   }
 
+  function renderStatusState() {
+    status.dataset.state = activeError ? "error" : activeNotice ? "warning" : persistenceState;
+    tipControls.hidden = Boolean(activeError || activeNotice);
+    statusNotice.hidden = !activeNotice || Boolean(activeError);
+    statusError.hidden = !activeError;
+    statusError.textContent = activeError;
+    if (!activeError && !activeNotice) renderTip();
+  }
+
+  function clearNotice() {
+    activeNotice = false;
+    statusNotice.replaceChildren();
+    renderStatusState();
+  }
+
+  function showTemplateNotice(previousSnapshot) {
+    activeNotice = true;
+    statusNotice.replaceChildren(document.createTextNode(`${root.dataset.templateReplacedLabel || "Template replaced the project."} `));
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = root.dataset.undoLabel || "Undo";
+    undo.addEventListener("click", () => {
+      clearNotice();
+      applyTemplateSnapshot(previousSnapshot, { notice: false });
+    }, { once: true });
+    statusNotice.append(undo);
+    renderStatusState();
+  }
+
   function setStatus(text, severity = "normal") {
     const nextState = severity === true ? "error" : severity;
     if (nextState === "error") activeError = text;
@@ -380,11 +408,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       persistenceState = nextState;
       statusSave.textContent = text;
     }
-    status.dataset.state = activeError ? "error" : persistenceState;
-    tipControls.hidden = Boolean(activeError);
-    statusError.hidden = !activeError;
-    statusError.textContent = activeError;
-    if (!activeError) renderTip();
+    renderStatusState();
   }
 
   root.querySelector("[data-project-tip-prev]").addEventListener("click", () => { tipIndex -= 1; renderTip(); });
@@ -473,6 +497,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     versionList.replaceChildren();
     const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
     current.addEventListener("click", () => {
+      clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
@@ -489,6 +514,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const sequence = localHistory.patches.length - reverseIndex;
       const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
       button.addEventListener("click", () => {
+        clearNotice();
         if (pending) checkpointDraft({ destructive: pendingDestructive });
         pending = false;
         pendingDestructive = false;
@@ -516,6 +542,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     versionList.replaceChildren();
     const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
     current.addEventListener("click", () => {
+      clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
@@ -531,6 +558,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     for (const version of versions) {
       const button = versionChoice(relativeVersionTime(version.createdAt), version.createdAt, { sequence: version.sequence });
       button.addEventListener("click", async () => {
+        clearNotice();
         await save();
         currentSnapshot = state;
         const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions/${version.sequence}`);
@@ -552,8 +580,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function receiveEditorChange(content) {
     if (typeof content !== "string") return;
-    if (readOnly || selected === "config") return;
+    if (readOnly || selected === "config" || content === selectedContent()) return;
     try {
+      clearNotice();
       updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
       renderPreview();
     } catch {}
@@ -623,34 +652,33 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       linkPatterns?.setAttribute("aria-invalid", "true");
       return;
     }
+    clearNotice();
     updateSnapshot({ files: state.files, config: { ...state.config, container: container.value, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
     sendContent();
   }
-  template?.addEventListener("change", () => {
-    const next = STARTING_POINTS[template.value];
-    if (!next) return;
-    if (pending) checkpointDraft({ destructive: true });
+
+  function applyTemplateSnapshot(next, { notice = true, previousSnapshot = state } = {}) {
     if (container) container.value = next.config.container || "page";
     if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
+    if (template) template.value = next.config.template || "blank";
     growTextarea(linkPatterns);
     renderContainerElements(container.value);
     selected = next.files[0].path;
-    state = normalizeProjectSnapshot(next);
-    currentSnapshot = state;
-    viewingHistorical = false;
-    snapshotField.value = JSON.stringify(state);
-    localHistory.snapshot = state;
-    localHistory.checkpoint = state;
-    localHistory.lastVersionAt = Date.now();
-    pending = false;
-    pendingDestructive = false;
-    clearTimeout(saveTimer);
-    showCurrentVersion();
-    versionCount.textContent = String(localHistory.patches.length);
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
-    setStatus("Template selected");
+    updateSnapshot(next, { destructive: true });
     renderTabs();
     sendContent();
+    if (notice) showTemplateNotice(previousSnapshot);
+  }
+
+  template?.addEventListener("change", async () => {
+    const next = STARTING_POINTS[template.value];
+    if (!next) return;
+    if (pending) {
+      if (draft || memoryOnly) checkpointDraft({ destructive: true });
+      else await save();
+    }
+    const previousSnapshot = state;
+    applyTemplateSnapshot(next, { previousSnapshot });
   });
   container?.addEventListener("change", updateContainer);
   for (const textarea of form?.querySelectorAll("textarea[data-autogrow]") || []) {

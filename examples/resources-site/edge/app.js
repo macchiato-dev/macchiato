@@ -57,6 +57,13 @@ function focusedProjectDocument(html, namespace, slug) {
     .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
 }
 
+function namespaceDocument(html, namespace) {
+  const crumb = `<nav class="box crumb" id="crumb" aria-label="Breadcrumb"><a class="home-ic" aria-label="Home" href="/">${focusedHomeIcon}</a><span class="sep">/</span><span class="here">${escapeHtml(namespace.namespace)}</span></nav>`;
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(namespace.name)} - Resources.co</title>`)
+    .replace(/<nav class="box crumb" id="crumb"[\s\S]*?<\/nav>/, crumb);
+}
+
 function message(messages, key, fallback) {
   return escapeHtml(messages?.[key] || fallback);
 }
@@ -198,7 +205,7 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
     ? message(messages, "projectEditor.notSaved", "Changes are not saved")
     : message(messages, "projectEditor.saved", "Saved");
   const initialStatusState = persistence === "memory" ? "warning" : "normal";
-  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}">
+  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" role="tablist" aria-label="${message(messages, "projectEditor.files", "Project files")}"></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
       <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button></div></div>
@@ -209,7 +216,7 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
       <div class="project-editor__splitter" role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0"></div>
       <section class="project-editor__preview" aria-label="Project preview"><div data-project-preview></div></section>
     </div>
-    <div class="project-editor__status" role="status" data-project-status data-state="${initialStatusState}"><div class="project-editor__tip" data-project-tip-controls><button type="button" data-project-tip-prev aria-label="Previous tip">←</button><span data-project-tip></span><button type="button" data-project-tip-next aria-label="Next tip">→</button></div><span class="project-editor__error" data-project-error hidden></span><span class="project-editor__save" data-project-save>${initialSaveState}</span></div>
+    <div class="project-editor__status" role="status" data-project-status data-state="${initialStatusState}"><div class="project-editor__tip" data-project-tip-controls><button type="button" data-project-tip-prev aria-label="Previous tip">←</button><span data-project-tip></span><button type="button" data-project-tip-next aria-label="Next tip">→</button></div><span class="project-editor__notice" data-project-notice hidden></span><span class="project-editor__error" data-project-error hidden></span><span class="project-editor__save" data-project-save>${initialSaveState}</span></div>
     <aside class="project-editor__history" data-project-history role="dialog" aria-label="${message(messages, "projectEditor.history", "Version history")}" hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
   </section>`;
 }
@@ -616,6 +623,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         } else if (dynamicNamespace) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
+          html = namespaceDocument(html, dynamicNamespace);
         } else if (pathname === "/try") {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => tryProjectHtml(manifest.messages[locale]));
