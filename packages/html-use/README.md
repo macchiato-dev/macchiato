@@ -46,3 +46,8 @@ the tree is constructed.
 - `@macchiato-dev/dom-use` — the top-level package that orchestrates `html-use`
   and `style-use` into a schema-bound DOM capability
 - `@macchiato-dev/style-use` — CSS validation that `html-use` delegates to
+
+Parsing is not itself a network grant. `dom-use` owns that schema even though
+this package does not depend on it directly. See the [browser
+network-capability inventory](../../docs/network-capability-inventory.md);
+standalone structural sanitization is not an exfiltration boundary.

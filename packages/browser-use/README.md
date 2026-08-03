@@ -32,3 +32,18 @@ The host compiles a policy for tags, attributes, classes, event subscription
 types, size, and depth. Guest DOM handles are opaque. Reads, writes, methods,
 and listener registration cross the JSON host function and fail closed when
 the operation is outside that policy.
+
+The host calls this accounted capability a **surface**. `host.surface` reports
+the current shape, limits, and remaining capacity, including optional per-tag
+ceilings. `maxOperations` adds renewable operation gas;
+`renewOperationBudget()` begins a new allocation while retaining the cumulative
+audit count. A specialized `*-use` module decides when renewal is justified by
+a native event, command, or bounded timer.
+
+Surfaces compose as owned subtrees rather than one application-wide allowance.
+See [Composable use surfaces](../../docs/use-surfaces.md).
+
+DOM-shape permission is separate from network permission. Specialized adapters
+may avoid the general `dom-use` runtime overhead, but must respect and be
+audited against the [browser network-capability
+inventory](../../docs/network-capability-inventory.md).
