@@ -189,9 +189,19 @@ test("Resources.co blog container examples render and surface schema errors in t
     await page.locator(".cm-editor").waitFor();
     const snapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
     assert.equal(snapshot.config.container, container);
+    assert.equal(await page.getByLabel("Template").inputValue(), template);
+    assert.equal(await page.locator(".project-create__fields").isVisible(), true);
+    assert.equal(await page.locator(".project-view__identity").count(), 0);
     assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
+    if (template === "article") {
+      await page.getByLabel("Template").selectOption("mark");
+      await assert.doesNotReject(page.getByRole("button", { name: "image.svg", exact: true }).waitFor());
+      assert.equal(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).config.template, "mark");
+      await page.waitForTimeout(1_700);
+      assert.equal(await page.locator("[data-project-save]").textContent(), "");
+    }
     await page.close();
   }
 

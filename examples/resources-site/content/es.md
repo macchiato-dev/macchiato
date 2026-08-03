@@ -206,6 +206,7 @@
 - **try.title**: Probar - Resources.co
 - **try.heading**: Probar
 - **try.intro**: Experimenta con un proyecto aislado. Los cambios no se guardan.
+- **try.settings**: Configuración del área de pruebas
 - **try.button**: Probar
 - **try.buttonDescription**: Abre un proyecto aislado sin crear una cuenta ni guardarlo.
 - **publicProjects.empty**: Todavía no se ha publicado ningún proyecto público.

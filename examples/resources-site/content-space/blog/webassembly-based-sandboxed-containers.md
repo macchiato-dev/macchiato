@@ -20,7 +20,6 @@ Here are the current containers:
 - [Page](/try?template=hello): a more general layout vocabulary whose DOM and CSS remain controlled by schemas.
 - [SVG](/try?template=mark): a bounded vector surface for declarative shapes, paths, text, and gradients.
 - [Canvas](/try?template=ball): limited drawing and animation operations instead of access to the surrounding browser.
-- [Code Editor Use](/try?template=article): a constrained CodeMirror surface used by the playground to edit the selected container's files.
 
 ![Five bounded surfaces represent article, page, SVG, canvas, and code editor containers.](/-/blog-images/webassembly-container-surfaces.png "Containers assemble WebAssembly machines, *-use modules, and reviewed configurations for a particular kind of document.")
 
