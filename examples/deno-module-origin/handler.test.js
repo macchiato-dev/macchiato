@@ -5,7 +5,6 @@ import { createModuleOriginHandler } from "./handler.js";
 const env = {
   MODULE_IMPORT_TOKEN: "module-secret",
   STORAGE_API_KEY: "storage-secret",
-  MODULE_BUCKET_PREFIX: "modules-e599fb4",
   BUNNY_STORAGE_ORIGIN: "https://storage.example.test/zone/",
 };
 
@@ -16,7 +15,7 @@ test("serves an authenticated immutable module without exposing either key", asy
     return new Response("export const answer = 42;");
   });
   const response = await handler(
-    new Request("https://modules.example.test/pkg/mod.ts", {
+    new Request("https://modules.example.test/modules-e599fb4/pkg/mod.ts", {
       headers: { authorization: "Bearer module-secret" },
     }),
   );
