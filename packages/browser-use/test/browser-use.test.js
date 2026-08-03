@@ -58,10 +58,11 @@ test("browser-use exhausts and renews operation gas", () => {
   host.dispatch({ op: "inspect" });
   host.dispatch({ op: "inspect" });
   assert.throws(() => host.dispatch({ op: "inspect" }), /operation gas exhausted/);
-  assert.deepEqual(host.surface.operations, { total: 3, window: 3 });
+  assert.deepEqual(host.surface.operations, { total: 3, window: 3, peakWindow: 3 });
   host.renewOperationBudget();
   assert.doesNotThrow(() => host.dispatch({ op: "inspect" }));
   assert.equal(host.surface.remaining.operations, 1);
+  assert.equal(host.surface.operations.peakWindow, 3);
 });
 
 test("browser-use filters guest event subscriptions through policy", () => {
