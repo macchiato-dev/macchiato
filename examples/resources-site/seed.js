@@ -894,6 +894,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__view-controls { display: flex; gap: 2px; }
 .project-editor__view-controls button { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; }
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #2d3c98; }
+.project-editor__view-controls [data-project-view="details"] { display: none; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
@@ -1010,9 +1011,18 @@ body:has(.focused-view) { padding: 0; }
   .project-editor__source-toolbar { width: 100%; }
   .project-editor__tabs { display: none; }
   .project-editor__file-picker { display: block; flex: 1 1 auto; }
-  .project-editor__preview-toolbar { justify-content: flex-end; }
+  .project-editor__preview-toolbar { order: -1; flex-basis: 100%; justify-content: flex-start; }
   .project-editor__preview-toolbar > [data-preview-title] { display: none; }
   .project-editor__view-controls [data-project-view="split"] { display: none; }
+  .project-editor__view-controls [data-project-view="details"] { display: block; }
+  .project-editor__view-controls { width: 100%; gap: 5px; }
+  .project-editor__view-controls button { min-height: 34px; padding: 6px 11px; font-size: 14px; }
+  .project-create__layout[data-mobile-view="details"] { grid-template-rows: auto minmax(0, 1fr); }
+  .project-create__layout[data-mobile-view="details"] .project-editor { min-height: 0; grid-template-rows: auto; }
+  .project-create__layout[data-mobile-view="details"] .project-editor__source-toolbar,
+  .project-create__layout[data-mobile-view="details"] .project-editor__workspace,
+  .project-create__layout[data-mobile-view="details"] .project-editor__status { display: none; }
+  .project-create__layout[data-mobile-view="details"] .project-create__fields { grid-row: 2; }
   .project-editor__workspace[data-view="split"] { grid-template-columns: 1fr; }
   .project-editor__workspace[data-view="split"] .project-editor__preview,
   .project-editor__workspace[data-view="split"] .project-editor__splitter { display: none; }

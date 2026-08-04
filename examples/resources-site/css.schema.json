@@ -252,6 +252,9 @@
         "flex": {
           "$ref": "flex"
         },
+        "flex-basis": {
+          "$ref": "length"
+        },
         "flex-direction": {
           "enum": [
             "row",
@@ -281,6 +284,9 @@
         "grid-template-rows": {
           "$ref": "gridTracks"
         },
+        "grid-row": {
+          "$ref": "integer"
+        },
         "justify-content": {
           "$ref": "align"
         },
@@ -292,6 +298,9 @@
         },
         "place-items": {
           "$ref": "align"
+        },
+        "order": {
+          "$ref": "integer"
         }
       }
     },
