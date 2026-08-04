@@ -691,14 +691,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (button.dataset.projectView === "editor") editorController?.focus();
   });
   const narrowWorkspace = matchMedia("(max-width: 760px)");
-  function avoidMobileSplit() {
-    if (!narrowWorkspace.matches || workspace.dataset.view !== "split") return;
-    const previewButton = root.querySelector('[data-project-view="preview"]');
-    workspace.dataset.view = "preview";
-    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === previewButton ? "true" : "false");
+  function syncResponsiveWorkspace() {
+    const projectLayout = root.closest(".project-create__layout");
+    const view = narrowWorkspace.matches ? "preview" : "split";
+    const selectedButton = root.querySelector(`[data-project-view="${view}"]`);
+    if (!narrowWorkspace.matches) delete projectLayout.dataset.mobileView;
+    workspace.dataset.view = view;
+    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
   }
-  avoidMobileSplit();
-  narrowWorkspace.addEventListener?.("change", avoidMobileSplit);
+  syncResponsiveWorkspace();
+  narrowWorkspace.addEventListener?.("change", syncResponsiveWorkspace);
   const form = root.closest("form");
   const template = form?.querySelector("[data-project-template]");
   const container = form?.querySelector("[data-project-container]");

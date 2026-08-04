@@ -514,13 +514,18 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), false);
   assert.equal(await page.locator(".project-editor__tabs").isVisible(), false);
   assert.equal(await page.locator("[data-project-file-picker]").isVisible(), true);
+  assert.equal(await page.locator(".project-create__fields").isHidden(), true);
+  assert.equal(await page.locator(".command-trigger [data-command-shortcut]").isHidden(), true);
+  assert.equal(await page.locator(".command-trigger__icon").isVisible(), true);
   const mobileViewControls = page.locator(".project-editor__view-controls");
   const controlsBox = await mobileViewControls.boundingBox();
   const filesBox = await page.locator(".project-editor__source-toolbar").boundingBox();
   assert.ok(controlsBox && filesBox && controlsBox.y < filesBox.y);
   assert.ok(Number.parseFloat(await page.getByRole("button", { name: "Preview" }).evaluate((node) => getComputedStyle(node).fontSize)) >= 14);
+  await page.getByRole("button", { name: "Details" }).click();
   await page.getByLabel("Template").selectOption("clock");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
+  await page.getByRole("button", { name: "Preview" }).click();
   const fileTrigger = page.locator("[data-project-file-trigger]");
   await fileTrigger.click();
   await page.getByRole("menuitemradio", { name: "script.js" }).click();
@@ -535,6 +540,7 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   await page.getByRole("button", { name: "Details" }).click();
   assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), "details");
   assert.equal(await page.locator(".project-editor__workspace").isHidden(), true);
+  assert.equal(await page.locator(".project-create__fields").isVisible(), true);
   assert.equal(await page.getByLabel("Template").isVisible(), true);
   await page.getByRole("button", { name: "Editor" }).click();
   assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), null);
@@ -545,12 +551,14 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   })), { viewport: 844, document: 844 });
 
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-content").waitFor();
+  await page.waitForFunction(() => document.querySelector(".project-editor__workspace")?.dataset.view === "split");
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "split");
   assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), true);
   assert.equal(await page.locator(".project-editor__tabs").isVisible(), true);
   assert.equal(await page.locator("[data-project-file-picker]").isHidden(), true);
+  assert.equal(await page.locator(".project-create__fields").isVisible(), true);
+  assert.equal(await page.locator(".command-trigger [data-command-shortcut]").isVisible(), true);
+  assert.equal(await page.locator(".command-trigger__icon").isHidden(), true);
   assert.deepEqual(errors, []);
 });
 
