@@ -509,11 +509,16 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-content").waitFor();
-  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "editor");
+  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), false);
   assert.equal(await page.locator(".project-editor__tabs").isVisible(), false);
   assert.equal(await page.locator("[data-project-file-picker]").isVisible(), true);
+  const mobileViewControls = page.locator(".project-editor__view-controls");
+  const controlsBox = await mobileViewControls.boundingBox();
+  const filesBox = await page.locator(".project-editor__source-toolbar").boundingBox();
+  assert.ok(controlsBox && filesBox && controlsBox.y < filesBox.y);
+  assert.ok(Number.parseFloat(await page.getByRole("button", { name: "Preview" }).evaluate((node) => getComputedStyle(node).fontSize)) >= 14);
   await page.getByLabel("Template").selectOption("clock");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   const fileTrigger = page.locator("[data-project-file-trigger]");
@@ -527,6 +532,13 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   assert.equal(await page.locator(".project-editor__source").isHidden(), true);
   await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.previewRuntime === "quickjs");
+  await page.getByRole("button", { name: "Details" }).click();
+  assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), "details");
+  assert.equal(await page.locator(".project-editor__workspace").isHidden(), true);
+  assert.equal(await page.getByLabel("Template").isVisible(), true);
+  await page.getByRole("button", { name: "Editor" }).click();
+  assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), null);
+  assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "editor");
   assert.deepEqual(await page.evaluate(() => ({
     viewport: document.documentElement.clientHeight,
     document: document.documentElement.scrollHeight,

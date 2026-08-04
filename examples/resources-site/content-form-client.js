@@ -681,16 +681,21 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     splitter.setAttribute("aria-valuenow", String(next));
   });
   for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
-    workspace.dataset.view = button.dataset.projectView;
+    const projectLayout = root.closest(".project-create__layout");
+    if (button.dataset.projectView === "details") projectLayout.dataset.mobileView = "details";
+    else {
+      delete projectLayout.dataset.mobileView;
+      workspace.dataset.view = button.dataset.projectView;
+    }
     for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === button ? "true" : "false");
-    if (button.dataset.projectView !== "preview") editorController?.focus();
+    if (button.dataset.projectView === "editor") editorController?.focus();
   });
   const narrowWorkspace = matchMedia("(max-width: 760px)");
   function avoidMobileSplit() {
     if (!narrowWorkspace.matches || workspace.dataset.view !== "split") return;
-    const editorButton = root.querySelector('[data-project-view="editor"]');
-    workspace.dataset.view = "editor";
-    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === editorButton ? "true" : "false");
+    const previewButton = root.querySelector('[data-project-view="preview"]');
+    workspace.dataset.view = "preview";
+    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === previewButton ? "true" : "false");
   }
   avoidMobileSplit();
   narrowWorkspace.addEventListener?.("change", avoidMobileSplit);
