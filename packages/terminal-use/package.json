@@ -1,0 +1,17 @@
+{
+  "name": "@macchiato-dev/terminal-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A constrained terminal surface capability for browser guests",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
