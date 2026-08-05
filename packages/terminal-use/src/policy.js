@@ -32,8 +32,10 @@ export function createTerminalDomPolicy(input = {}) {
       autocapitalize: "^(?:on|off|none)$", cols: "^\\d{1,4}$", dir: "^(?:ltr|rtl|auto)$", readonly: "^$",
     },
     classNames: ["^xterm(?:-[A-Za-z0-9_-]+)?$", "^(?:terminal|composition-view|active|focus|invisible|live-region|enable-mouse-events|column-select|scrollbar|slider|horizontal|vertical)$"],
-    maxElements: Math.min(2_000, limits.rows * 10 + 200),
-    maxTagCounts: { div: Math.min(1_200, limits.rows * 6 + 120), span: Math.min(800, limits.rows * 4 + 80), textarea: 1, canvas: 8, style: 4 },
+    // xterm's DOM renderer can use a span per visible styled cell. Scrollback
+    // remains internal; only the current rows × columns viewport is budgeted.
+    maxElements: Math.min(10_000, limits.rows * limits.columns + 250),
+    maxTagCounts: { div: Math.min(1_200, limits.rows * 6 + 120), span: Math.min(9_500, limits.rows * limits.columns + 100), textarea: 1, canvas: 8, style: 4 },
     maxDepth: 12,
     maxTextLength: Math.min(1_000_000, (limits.rows + limits.scrollback) * limits.columns * 2),
     maxOperations: limits.maxSurfaceOperations,

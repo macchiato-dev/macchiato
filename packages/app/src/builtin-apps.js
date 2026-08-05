@@ -95,6 +95,7 @@ export const BUILTIN_APPS = [
       "packages/terminal-use/examples/basic/handler.js",
       "packages/terminal-use/examples/basic/client.js",
       "packages/terminal-use/examples/basic/style.css",
+      "packages/terminal-use/examples/basic/xterm.css",
       "packages/terminal-use/src/controller.js",
       "packages/terminal-use/src/guest.js",
       "packages/terminal-use/src/policy.js",
