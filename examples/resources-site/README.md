@@ -272,6 +272,12 @@ reference the version produced by an agent or user turn, while the version
 store remains the authoritative snapshot/diff history. This preserves both the
 conversation that motivated a change and the exact files and configuration it
 produced without duplicating project state inside chat records.
+The proposed activity model treats components as visibly distinct participants
+and records host diagnostics in the same chronological stream. Unread errors
+remain pinned per viewer until explicitly read; reading and resolving are
+separate states. Projects inherit a user or organization container whose
+identity, membership, and row policy scope database capabilities. See
+[`docs/project-activity-log.md`](../../docs/project-activity-log.md).
 New-project state is explicitly `clean`, `dirty`, or a session-saved draft, so
 merely opening the editor does not create disposable state. Draft discard and
 owned-project deletion both require a confirmation step; deleting a project

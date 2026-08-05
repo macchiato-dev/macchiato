@@ -112,6 +112,13 @@ vary only the diagnostic adapter; others may remove development-only code at
 build time. Either approach must preserve fail-closed enforcement and resource
 limits.
 
+Project-facing diagnostics can be referenced from the chat-like
+[project activity log](project-activity-log.md). Their chronological entry does
+not replace host diagnostic storage. Unread errors are additionally pinned per
+viewer until read, while acknowledgement and resolution remain explicit later
+states. The owning user or organization container supplies the row-security
+context used to store and retrieve that activity.
+
 Related article outlines are tracked in
 [`development-blog-ideas.md`](development-blog-ideas.md).
 
