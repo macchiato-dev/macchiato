@@ -31,7 +31,7 @@ export function createTerminalDomPolicy(input = {}) {
       spellcheck: "^(?:true|false)$", autocorrect: "^(?:on|off)$",
       autocapitalize: "^(?:on|off|none)$", cols: "^\\d{1,4}$", dir: "^(?:ltr|rtl|auto)$", readonly: "^$",
     },
-    classNames: ["^xterm(?:-[A-Za-z0-9_-]+)?$", "^(?:terminal|composition-view|active|focus|invisible|live-region|enable-mouse-events|column-select|scrollbar|slider|horizontal|vertical)$"],
+    classNames: ["^xterm(?:-[A-Za-z0-9_-]+)?$", "^(?:terminal|composition-view|active|focus|invisible|live-region|enable-mouse-events|column-select|scrollbar|slider|horizontal|vertical|mac)$"],
     // xterm's DOM renderer can use a span per visible styled cell. Scrollback
     // remains internal; only the current rows × columns viewport is budgeted.
     maxElements: Math.min(10_000, limits.rows * limits.columns + 250),

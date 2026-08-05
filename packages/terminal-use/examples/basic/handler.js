@@ -60,6 +60,10 @@ const standardHandler = createStandardWebAppHandler({
 export async function terminalUseHandler(request) {
   const response = await (await standardHandler)(request);
   const headers = new Headers(response.headers);
+  // These bundles are generated from workspace source on demand. Development
+  // reloads must not combine an old guest/controller/CSS response with new
+  // policy code from a restarted server.
+  headers.set("cache-control", "no-store");
   headers.set("content-security-policy", "default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
   headers.set("x-content-type-options", "nosniff");
   return new Response(response.body, { status: response.status, headers });
