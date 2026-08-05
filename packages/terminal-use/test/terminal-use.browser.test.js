@@ -21,6 +21,8 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(url, { waitUntil: "networkidle" });
   await page.locator("body[data-ready=true]").waitFor();
+  await page.getByText(/Pong running/).waitFor();
+  assert.equal((await page.request.get(`${url}/terminal-guest.js`)).headers()["cache-control"], "no-store");
   assert.equal(await page.evaluate(() => typeof globalThis.Terminal), "undefined");
   await page.locator(".terminal-shell").click({ position: { x: 300, y: 180 } });
   assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("xterm-helper-textarea")), true);
@@ -38,4 +40,27 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   assert.ok(inspection.surface.elements <= inspection.surface.limits.elements);
   assert.ok(inspection.surface.operations.peakWindow < inspection.surface.limits.operations);
   assert.deepEqual(errors, []);
+
+  const macContext = await browser.newContext({
+    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36",
+  });
+  const macPage = await macContext.newPage();
+  const macErrors = [];
+  macPage.on("pageerror", (error) => macErrors.push(error.message));
+  await macPage.addInitScript(() => Object.defineProperty(navigator, "platform", { configurable: true, value: "MacIntel" }));
+  await macPage.goto(url, { waitUntil: "networkidle" });
+  await macPage.getByText(/Pong running/).waitFor();
+  assert.equal(await macPage.locator("#terminal .xterm-scrollable-element.mac").count(), 1);
+  await macPage.locator(".terminal-shell").click({ position: { x: 300, y: 180 } });
+  const macBefore = await macPage.evaluate(() => globalThis.__terminalBridge.inspect().pong.playerY);
+  await macPage.keyboard.press("ArrowUp");
+  await macPage.waitForTimeout(50);
+  assert.equal(await macPage.evaluate(() => globalThis.__terminalBridge.inspect().pong.playerY), macBefore - 1);
+  assert.deepEqual(macErrors, []);
+
+  const violationPage = await browser.newPage();
+  await violationPage.goto(url, { waitUntil: "networkidle" });
+  await violationPage.getByText(/Pong running/).waitFor();
+  await violationPage.locator("#terminal .xterm").evaluate((element) => element.classList.add("undeclared-terminal-shape"));
+  await violationPage.getByText(/Terminal blocked: DOM shape rejected class: undeclared-terminal-shape/).waitFor();
 });
