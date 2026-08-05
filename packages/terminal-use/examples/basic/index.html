@@ -1,0 +1,3 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Constrained xterm.js</title><link rel="stylesheet" href="style.css"></head>
+<body><main><p class="eyebrow">terminal-use / browser-use</p><h1>Constrained xterm.js</h1><p>xterm.js runs inside a dedicated QuickJS/WASM guest. This first terminal only echoes input in memory; it has no shell, process, network, filesystem, or clipboard capability.</p><div class="terminal-shell"><div id="terminal" aria-label="Terminal"></div></div><div class="runtime"><span id="status" role="status">Starting QuickJS…</span><span id="shape"></span></div></main><script type="module" src="/terminal-guest.js"></script></body></html>

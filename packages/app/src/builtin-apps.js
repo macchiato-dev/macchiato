@@ -9,6 +9,7 @@ import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
+import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 
@@ -81,6 +82,26 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM controller + native constrained adapter",
       hostCapabilities: ["browser-use scoped DOM", "code-editor-use CodeMirror 6 subtree"],
+    },
+  },
+  {
+    name: "Constrained xterm.js",
+    pluginId: "terminal-use",
+    subdomain: "terminal-use",
+    kind: "sandboxed browser component",
+    description: "xterm.js in a dedicated QuickJS guest behind a bounded terminal surface.",
+    handler: terminalUseHandler,
+    sourceFiles: [
+      "packages/terminal-use/examples/basic/handler.js",
+      "packages/terminal-use/examples/basic/client.js",
+      "packages/terminal-use/examples/basic/style.css",
+      "packages/terminal-use/src/controller.js",
+      "packages/terminal-use/src/guest.js",
+      "packages/terminal-use/src/policy.js",
+    ],
+    sandbox: {
+      runtime: "QuickJS WASM",
+      hostCapabilities: ["browser-use scoped DOM", "terminal-use in-memory byte stream"],
     },
   },
   {
