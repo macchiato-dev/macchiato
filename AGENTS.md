@@ -84,3 +84,18 @@ node packages/macchiato/src/macchiato.js site add-page \
 
 The app server routes by subdomain, so a `dom-use` row is served at
 `http://dom-use.localhost:<port>`.
+
+## Copying Container Files to the macOS Clipboard
+
+The repository normally runs in the `macchiato-vibe` Podman container inside
+Lima, while `pbcopy` belongs to the macOS host. To copy a generated or source
+file out of the container, stream it through `podman exec` and pipe it to the
+host clipboard. In an environment that uses `!` for host shell commands, copy
+the Bunny nested-worker probe with:
+
+```bash
+!lima podman exec macchiato-vibe cat /root/macchiato/examples/bunny-edge-worker-probe/worker-probe.js | pbcopy
+```
+
+Use the same form for other files, changing only the absolute container path.
+Do not run `pbcopy` inside the container.
