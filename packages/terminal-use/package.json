@@ -4,7 +4,8 @@
   "type": "module",
   "description": "A constrained terminal surface capability for browser guests",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./controller": "./src/controller.js"
   },
   "files": [
     "src",
@@ -13,5 +14,13 @@
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "@macchiato-dev/browser-use": "^0.1.0",
+    "@macchiato-dev/quickjs-emscripten-sandbox": "^0.1.0"
+  },
+  "devDependencies": {
+    "@xterm/xterm": "^6.0.0",
+    "esbuild": "^0.28.1"
   }
 }

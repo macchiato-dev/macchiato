@@ -1,2 +1,1 @@
-// Intentionally blank. The first implementation follows in a separate commit.
-export {};
+export { DEFAULT_TERMINAL_LIMITS, TERMINAL_DOM_POLICY, createTerminalDomPolicy, normalizeTerminalLimits } from "./policy.js";
