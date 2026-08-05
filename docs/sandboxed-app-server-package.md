@@ -382,20 +382,35 @@ decisions should run there whenever they fit the isolate envelope.
 Bunny's documented Edge Scripting ceilings also make measurement important:
 128 MB active memory per isolate, a 500 ms startup limit, 30 seconds of CPU per
 request, and 50 subrequests. Those constraints are useful design pressure for
-small bundles, lazy component initialization, bounded QuickJS/Wasm guests, and
+small entry modules, lazy component loading, bounded QuickJS/Wasm guests, and
 moving genuinely heavy work to a machine tier rather than growing one edge
 process indefinitely.
 
-Nested Deno Web Workers are a promising additional tool, not the basis of the
-multi-machine model. Standard Deno supports module workers and permission
-narrowing; a worker can isolate a component event loop or VM within an edge
-instance, although it is still same-machine parallelism. Bunny documents a
-Deno/V8 environment with standard Web APIs but does not yet call out the
-`Worker` constructor specifically. Deploy a positive capability probe that
-constructs a module worker from bundled code, exchanges structured messages,
-loads WebAssembly, terminates cleanly, and measures startup and memory. If it
-works reliably, use it enthusiastically for per-component isolation while
-retaining a transport-compatible fallback to a separate placement target.
+Where server code is audited or otherwise highly trusted, prefer one edge
+isolate with dynamically loaded modules over a collection of workers. The
+request router can import and initialize only the authentication, page, policy,
+or capability module needed for that request, cache the resulting module within
+the warm isolate, and release component-specific state afterward. This keeps
+source boundaries and independent initialization without duplicating a runtime,
+module graph, and baseline memory for every component.
+
+The deployment build must preserve that laziness. If Bunny's script artifact
+cannot fetch or resolve a module as a separate deployed file, the bundler can
+retain `import()` boundaries or generate a lazy module/factory registry inside
+the single artifact. “Dynamic” means deferred parse/initialization and selective
+construction where the runtime permits it; it must not quietly become arbitrary
+network imports or an integrity bypass. Module names and versions come from the
+declarative app/container configuration and resolve through a host-owned map.
+
+Nested Deno Web Workers remain useful, but should be selected for a reason: a
+meaningfully lower-trust module, independent failure/termination domain,
+CPU-heavy parallel work, blocking behavior, or a component that benefits from
+dropping an entire heap. Standard Deno supports module workers and permission
+narrowing, though they remain same-machine parallelism rather than multi-machine
+placement. Bunny does not yet call out the `Worker` constructor specifically,
+so a deployed probe should still test bundled module workers, structured
+messages, WebAssembly, termination, startup, and memory. A successful probe adds
+a valuable isolation option; it does not make worker-per-component the default.
 
 ### Bunny Magic Containers
 
