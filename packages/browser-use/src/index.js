@@ -316,6 +316,12 @@ export class BrowserDomHost {
       return {};
     }
     if (message.action === "styleGet") return { value: node.style[String(message.property)] || "" };
+    if (message.action === "computedStyleGet") {
+      const property = String(message.property);
+      if (!/^(?:[a-z-]{1,80}|[a-zA-Z]{1,80})$/.test(property)) throw new Error("Computed style property is outside the browser-use subset");
+      const computed = node.ownerDocument?.defaultView?.getComputedStyle(node);
+      return { value: computed?.getPropertyValue(property) || computed?.[property] || "" };
+    }
     if (message.action === "styleSet") {
       node.style[String(message.property)] = String(message.value);
       return {};

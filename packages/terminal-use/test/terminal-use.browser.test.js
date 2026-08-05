@@ -22,7 +22,8 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await page.goto(url, { waitUntil: "networkidle" });
   await page.locator("body[data-ready=true]").waitFor();
   assert.equal(await page.evaluate(() => typeof globalThis.Terminal), "undefined");
-  await page.locator("#terminal textarea").evaluate((element) => element.focus());
+  await page.locator(".terminal-shell").click({ position: { x: 300, y: 180 } });
+  assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("xterm-helper-textarea")), true);
   const initial = await page.evaluate(() => globalThis.__terminalBridge.inspect());
   await page.keyboard.press("ArrowUp");
   await page.waitForTimeout(1_400);

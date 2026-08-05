@@ -130,6 +130,7 @@
     hasFocus: () => true,
     addEventListener() {},
     removeEventListener() {},
+    get defaultView() { return window; },
     get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },
   };
   const window = globalThis;
@@ -146,7 +147,10 @@
     ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },
     performance: { now: () => Date.now() },
     getComputedStyle(element) {
-      return new Proxy({}, { get: (_target, property) => element.style[property] || "" });
+      const read = (property) => host({ op: "remote", action: "computedStyleGet", id: element.__handle, property: String(property) }).value;
+      return new Proxy({}, {
+        get: (_target, property) => property === "getPropertyValue" ? (name) => read(name) : read(property),
+      });
     },
     requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },
     cancelAnimationFrame() {},
@@ -175,10 +179,21 @@
     if (!callback) return JSON.stringify({});
     let prevented = false;
     let stopped = false;
+    const target = node(envelope.event.target);
     const event = {
       ...envelope.event,
-      target: node(envelope.event.target),
+      target,
       currentTarget: node(envelope.currentTarget || envelope.event.target),
+      composedPath() {
+        const path = [];
+        let current = target;
+        for (let depth = 0; current && depth < 20; depth += 1) {
+          path.push(current);
+          if (current.__handle === "root") break;
+          current = current.parentNode;
+        }
+        return path;
+      },
       preventDefault() { prevented = true; },
       stopPropagation() { stopped = true; },
       stopImmediatePropagation() { stopped = true; },
