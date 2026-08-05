@@ -251,10 +251,10 @@ export class BrowserDomHost {
   remote(message) {
     const allowedProperties = new Set([
       "activeElement", "assignedSlot", "attributes", "childNodes", "children", "className", "clientHeight", "clientWidth",
-      "contentEditable", "dataset", "firstChild", "firstElementChild", "height", "innerHTML", "lastChild",
+      "contentEditable", "dataset", "dir", "firstChild", "firstElementChild", "height", "innerHTML", "isConnected", "lastChild",
       "lastElementChild", "localName", "name", "nextSibling", "nodeName", "nodeType", "nodeValue",
       "offsetHeight", "offsetLeft", "offsetParent", "offsetTop", "offsetWidth", "ownerDocument",
-      "parentElement", "parentNode", "previousSibling", "scrollHeight", "scrollLeft", "scrollTop",
+      "parentElement", "parentNode", "previousSibling", "readOnly", "scrollHeight", "scrollLeft", "scrollTop",
       "scrollWidth", "selectionEnd", "selectionStart", "spellcheck", "style", "tabIndex", "textContent",
       "type", "value", "width", "rangeCount", "anchorNode", "anchorOffset", "focusNode", "focusOffset",
     ]);
@@ -296,6 +296,7 @@ export class BrowserDomHost {
       : value;
     if (message.action === "createElement") return encode(this.root.ownerDocument.createElement(String(message.tag)));
     if (message.action === "createTextNode") return encode(this.root.ownerDocument.createTextNode(String(message.text)));
+    if (message.action === "createDocumentFragment") return encode(this.root.ownerDocument.createDocumentFragment());
     if (message.action === "createRange") return encode(this.root.ownerDocument.createRange());
     if (message.action === "getSelection") return encode(this.root.ownerDocument.getSelection());
     if (message.action === "getElementById") {

@@ -118,6 +118,7 @@
   const document = {
     createElement: (tag) => rpc("createElement", { tag }),
     createTextNode: (text) => rpc("createTextNode", { text }),
+    createDocumentFragment: () => rpc("createDocumentFragment"),
     getElementById: (id) => rpc("getElementById", { id }),
     querySelector: (selector) => node("root").querySelector(selector),
     querySelectorAll: (selector) => node("root").querySelectorAll(selector),
@@ -135,18 +136,21 @@
   Object.assign(globalThis, {
     document, window, self: window,
     console: { log() {}, info() {}, warn() {}, error() {} },
-    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "" },
+    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "", language: "en", maxTouchPoints: 0 },
     HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },
+    Document: class { static [Symbol.hasInstance](value) { return value === document; } },
     Window: class { static [Symbol.hasInstance](value) { return value === window; } },
     Element: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },
     Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },
     MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },
     ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },
+    performance: { now: () => Date.now() },
     getComputedStyle(element) {
       return new Proxy({}, { get: (_target, property) => element.style[property] || "" });
     },
     requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },
     cancelAnimationFrame() {},
+    queueMicrotask(callback) { callbacks.set("frame:" + (++callbackId), callback); },
     setTimeout(callback, delay = 0) {
       const id = ++callbackId;
       const wait = Math.max(0, Number(delay) || 0);
