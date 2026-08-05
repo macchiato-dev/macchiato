@@ -8,8 +8,9 @@ input, selection, accessibility, and an explicitly accounted DOM subtree.
 
 The first rough implementation embeds xterm.js 6 in a dedicated QuickJS/WASM
 guest and projects its browser operations through `browser-use`. The basic app
-is an in-memory echo terminal: it deliberately does not emulate a shell or
-grant access to a process.
+is an in-memory Pong game that exercises ANSI cursor movement, color, screen
+clearing, animation, and xterm keyboard sequences. It deliberately does not
+emulate a shell or grant access to a process.
 
 ## Run the rough example
 

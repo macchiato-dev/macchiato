@@ -33,11 +33,11 @@ export async function mountQuickJsTerminal({ root, guestSource, limits = {}, onD
   sandbox.callJsonFunction("__terminalConfigure", terminalLimits);
   host.start();
   sandbox.callJsonFunction("__browserUseFlush", {});
-  const timer = setInterval(() => {
+  const tickTimer = setInterval(() => {
     if (stopped || !sandbox) return;
-    host.renewOperationBudget();
     try { sandbox.callJsonFunction("__browserUseTick", {}); } catch (error) { violate(error); }
-  }, terminalLimits.surfaceRefillMs);
+  }, 32);
+  const refillTimer = setInterval(() => host.renewOperationBudget(), terminalLimits.surfaceRefillMs);
   return Object.freeze({
     write(text) {
       if (stopped || !sandbox) throw new Error("Terminal sandbox is not running");
@@ -47,8 +47,13 @@ export async function mountQuickJsTerminal({ root, guestSource, limits = {}, onD
       sandbox.callJsonFunction("__browserUseFlush", {});
       return result;
     },
+    startPong() {
+      if (stopped || !sandbox) throw new Error("Terminal sandbox is not running");
+      host.renewOperationBudget();
+      return sandbox.callJsonFunction("__terminalStartPong", {});
+    },
     inspect() { return { ...sandbox.callJsonFunction("__terminalInspect", {}), surface: host.inspectSurface() }; },
     focus() { root.querySelector("textarea")?.focus(); },
-    destroy() { clearInterval(timer); host.stop(); root.replaceChildren(); sandbox?.dispose(); sandbox = null; },
+    destroy() { clearInterval(tickTimer); clearInterval(refillTimer); host.stop(); root.replaceChildren(); sandbox?.dispose(); sandbox = null; },
   });
 }
