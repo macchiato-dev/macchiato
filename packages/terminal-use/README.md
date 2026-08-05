@@ -6,8 +6,35 @@ following the same broad architecture as `code-editor-use`: terminal state and
 setup code belong to the guest, while a small host adapter owns browser layout,
 input, selection, accessibility, and an explicitly accounted DOM subtree.
 
-This package is currently a blank starting point. It does not yet initialize
-xterm.js, create a sandbox, emulate a shell, or grant access to a process.
+The first rough implementation embeds xterm.js 6 in a dedicated QuickJS/WASM
+guest and projects its browser operations through `browser-use`. The basic app
+is an in-memory echo terminal: it deliberately does not emulate a shell or
+grant access to a process.
+
+## Run the rough example
+
+```bash
+cd packages/terminal-use/examples/basic
+npm install
+npm start
+```
+
+The command prints the randomly selected local URL. In the full Macchiato
+development app set, the same declarative app is mapped to
+`http://terminal-use.localhost:<port>` by the `terminal-use` plugin entry.
+
+The example is intentionally split at the trust boundary:
+
+- `src/guest.js` imports xterm.js and runs inside QuickJS;
+- `src/controller.js` creates and disposes the VM and moves bounded JSON across
+  the boundary;
+- `src/policy.js` declares the DOM shape, events, dimensions, scrollback,
+  output size, and renewable operation budget; and
+- `examples/basic/client.js` supplies the unprivileged in-memory echo behavior.
+
+This is an alpha compatibility pass. Typing, composition, selection, resize,
+scrollback, accessibility, sustained output, and tighter gas measurements still
+need broader Playwright coverage before the package is suitable for publishing.
 
 ## Intended boundary
 
@@ -38,13 +65,11 @@ the terminal's declared byte-stream interface without gaining DOM authority.
 
 ## First milestones
 
-1. Record the minimal DOM shape produced by a fixed xterm.js configuration.
-2. Run that configuration inside a dedicated QuickJS instance and project its
-   DOM operations through a specialized `browser-use` policy.
-3. Provide an in-memory example with a prompt, echo, clear, and bounded output.
-4. Exercise typing, paste, selection, resize, scrollback, accessibility, and
+1. Finish recording the minimal DOM shape produced by the fixed xterm.js 6
+   configuration and reduce the provisional limits.
+2. Exercise typing, paste, selection, resize, scrollback, accessibility, and
    output churn in Playwright while measuring peak surface and gas use.
-5. Add optional, separately declared process or remote-stream adapters only
+3. Add optional, separately declared process or remote-stream adapters only
    after the display/input contract is stable.
 
 The example should eventually live under `packages/terminal-use/examples/`, be
