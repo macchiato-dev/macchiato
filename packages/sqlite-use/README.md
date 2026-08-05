@@ -25,6 +25,15 @@ part of its readable projection. This package does not open databases, run
 migrations, authorize users, or expose arbitrary SQL. Those remain application
 or adapter responsibilities.
 
+The planned container model adds a scoped layer above this primitive. A user or
+organization container supplies an authenticated actor, owning container ID,
+membership/role, and row policy to a named database capability. Guest code must
+not provide its own trusted tenant ID or authorization predicate. SQLite does
+not need native row-level-security syntax for the contract: an adapter can bind
+host-owned predicates into prepared operations and fail closed, while database
+backends with native RLS can enforce the same matrix again. See
+[`docs/project-activity-log.md`](../../docs/project-activity-log.md#user-and-organization-containers).
+
 The database object only needs the synchronous `prepare().all/get/run`
 interface used by `node:sqlite`, so compatible adapters can provide the same
 surface.
