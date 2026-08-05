@@ -371,26 +371,75 @@ diagnostics.
 
 ### Bunny Edge Scripting
 
-Bunny Edge Scripting is a useful request router and lightweight execution tier,
-but nested Deno Web Workers should not yet be assumed. Standard Deno supports
-module workers and permission narrowing; that provides same-machine isolation
-and parallelism, not multi-machine placement. Bunny documents a Deno/V8 runtime
-with standard Web APIs, but does not currently document the `Worker` constructor
-as a supported Edge Scripting API.
+Bunny Edge Scripting is the preferred first hosted execution and routing tier.
+It already matches important parts of the architecture: globally placed
+Deno/V8 isolates, standalone request handlers and CDN middleware, standard Web
+APIs, secrets, subrequests, and direct Bunny Database integration without
+operating a server fleet. Small capability brokers, authentication, page/API
+composition, row-policy enforcement, activity ingestion, and placement
+decisions should run there whenever they fit the isolate envelope.
 
 Bunny's documented Edge Scripting ceilings also make measurement important:
 128 MB active memory per isolate, a 500 ms startup limit, 30 seconds of CPU per
-request, and 50 subrequests. Before using nested workers, deploy a probe that
-constructs a module worker from bundled code, exchanges structured messages,
-loads WebAssembly, terminates cleanly, and records memory/error behavior. Treat
-failure or undocumented behavior as “unsupported,” not as a polyfill target.
+request, and 50 subrequests. Those constraints are useful design pressure for
+small bundles, lazy component initialization, bounded QuickJS/Wasm guests, and
+moving genuinely heavy work to a machine tier rather than growing one edge
+process indefinitely.
 
-The architecture should work without that feature: use separate Edge Scripts
-or edge instances for lightweight capability endpoints, Bunny Database/object
-storage for durable state, and Magic Containers or ordinary self-hosted
-machines for heavier/warm workers. A later confirmed nested-worker path can be
-an optimization inside one placement target without changing guest capability
-contracts.
+Nested Deno Web Workers are a promising additional tool, not the basis of the
+multi-machine model. Standard Deno supports module workers and permission
+narrowing; a worker can isolate a component event loop or VM within an edge
+instance, although it is still same-machine parallelism. Bunny documents a
+Deno/V8 environment with standard Web APIs but does not yet call out the
+`Worker` constructor specifically. Deploy a positive capability probe that
+constructs a module worker from bundled code, exchanges structured messages,
+loads WebAssembly, terminates cleanly, and measures startup and memory. If it
+works reliably, use it enthusiastically for per-component isolation while
+retaining a transport-compatible fallback to a separate placement target.
+
+### Bunny Magic Containers
+
+Bunny Magic Containers are a natural companion machine tier and should be an
+early deployment target, not merely a fallback. They provide globally deployed
+container applications, integrated anycast/load balancing, CPU-based regional
+autoscaling, and persistent volumes. They can host warm component pools,
+longer-lived collaboration processes, native dependencies, build jobs, larger
+WebAssembly runtimes, and services that exceed Edge Scripting's memory or
+startup envelope while staying in Bunny's network and database ecosystem.
+
+The edge script remains the public policy and routing boundary. It can issue a
+short-lived, scoped work envelope to a container worker and record the result in
+durable activity/version storage. Containers should still be disposable:
+persistent volumes are useful for caches and explicitly placed data, but project
+truth should follow the declared database/object-storage policy rather than an
+accidental replica filesystem.
+
+### Smol Machines
+
+Smol Machines are especially interesting for the stronger-isolation and
+self-hosting side. `smolvm` runs OCI workloads in hardware-isolated Linux
+microVMs on KVM or Apple's Hypervisor framework, with network disabled by
+default and optional host allowlists. The same SDK and `.smolmachine` artifact
+model targets a developer laptop, managed Smol cloud, or self-hosted machines.
+That aligns closely with Macchiato's goal of developing once and choosing
+hosted, local, or self-hosted execution without changing the capability model.
+
+Potential uses include untrusted agent jobs, auditable backend/full-stack
+containers, prepared warm environments, browser/build tooling, and customers
+who want a real guest-kernel boundary. Portable prebuilt artifacts and VM forks
+are also promising cold-start controls: prepare an environment once, then start
+or fork bounded jobs without reinstalling their toolchain. This target should
+be prototyped behind the same machine-driver interface as Bunny Containers so
+placement remains a policy choice rather than an app rewrite.
+
+The intended hosted ladder is therefore positive and composable:
+
+```text
+Bunny Edge Scripting   request policy, routing, lightweight guests
+Bunny Magic Containers warm/heavy services inside the Bunny platform
+Smol Machines          portable hardware-isolated jobs, local/cloud/self-hosted
+browser QuickJS/Wasm   client-owned scale-to-zero components
+```
 
 ## Use Modules
 
