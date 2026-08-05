@@ -102,6 +102,13 @@ tables and retention rules. Sequence allocation must be transactional per
 project. IDs should be stable enough for offline drafts and later synchronization
 without relying on wall-clock ordering.
 
+The same rule supports multi-machine execution. Component events may arrive
+from several workers, but workers do not assign authoritative project order.
+They submit stable event IDs, container/worker epochs, and correlation IDs; the
+durable activity service allocates project sequence positions transactionally
+and deduplicates retries. A component moving between machines remains the same
+logical participant while its run/instance metadata changes.
+
 ## Capability and privacy boundary
 
 Components receive a narrow `activity.append` capability scoped by project,

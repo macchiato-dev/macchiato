@@ -331,6 +331,67 @@ clock.now()
 
 The syntax changes by language; the permission model should not.
 
+## Multi-machine placement
+
+Multi-machine operation is a priority, not a late scaling retrofit. A component,
+guest VM, or container should be addressable as a scheduling unit with explicit
+resource limits and a serializable capability contract. The logical application
+must not assume that its layout, editor, preview, backend action, database
+broker, and activity service share a process or machine.
+
+The first placement model should distinguish:
+
+- **request-local edge work**, which is stateless and cheap to start;
+- **warm component workers**, retained opportunistically for interactive work;
+- **durable services**, whose state lives in a database, object store, or
+  append-oriented log rather than worker memory; and
+- **heavier containers**, used when memory, native dependencies, long-lived
+  work, or a broader audited runtime makes edge isolates unsuitable.
+
+Placement is a host concern. Guests address named capabilities and component
+instances, not machine addresses. A broker may colocate components, move them,
+or recreate them from durable state. Sticky routing is an optimization, never
+the only copy of authored input or version history.
+
+Every remotely runnable operation needs a bounded request envelope, stable
+project/container identity, idempotency key where mutation is possible,
+deadline, cancellation behavior, and correlation ID. Component messages must
+be versioned. Leases or epochs prevent an old worker from continuing to write
+after ownership moves. Activity/version sequence allocation remains
+transactional in durable storage rather than relying on arrival order from
+several machines.
+
+This decomposition helps control cold starts and memory in both directions. A
+small request should not load every app component, while frequently used
+components may be kept warm within an aggregate memory ceiling. The scheduler
+needs measurements for bundle/VM initialization time, active and retained
+memory, operation gas, last use, queue depth, and reconstruction cost. Eviction
+must dispose guests and revoke leases without losing drafts or unreported
+diagnostics.
+
+### Bunny Edge Scripting
+
+Bunny Edge Scripting is a useful request router and lightweight execution tier,
+but nested Deno Web Workers should not yet be assumed. Standard Deno supports
+module workers and permission narrowing; that provides same-machine isolation
+and parallelism, not multi-machine placement. Bunny documents a Deno/V8 runtime
+with standard Web APIs, but does not currently document the `Worker` constructor
+as a supported Edge Scripting API.
+
+Bunny's documented Edge Scripting ceilings also make measurement important:
+128 MB active memory per isolate, a 500 ms startup limit, 30 seconds of CPU per
+request, and 50 subrequests. Before using nested workers, deploy a probe that
+constructs a module worker from bundled code, exchanges structured messages,
+loads WebAssembly, terminates cleanly, and records memory/error behavior. Treat
+failure or undocumented behavior as “unsupported,” not as a polyfill target.
+
+The architecture should work without that feature: use separate Edge Scripts
+or edge instances for lightweight capability endpoints, Bunny Database/object
+storage for durable state, and Magic Containers or ordinary self-hosted
+machines for heavier/warm workers. A later confirmed nested-worker path can be
+an optimization inside one placement target without changing guest capability
+contracts.
+
 ## Use Modules
 
 The `*-use` package pattern should apply beyond DOM and CSS. A WeKan-class app
