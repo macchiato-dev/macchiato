@@ -712,6 +712,21 @@ export class DomUse {
     return undefined;
   }
 
+  fragmentRuleFor(tagNameOrNode) {
+    const nodeUrlRules = this.nodeRules(tagNameOrNode)
+      .map((rule) => rule.urls)
+      .filter((rule) => rule !== undefined);
+    const globalUrls = this.schema.urls;
+
+    for (const nodeUrls of nodeUrlRules) {
+      if (nodeUrls === false) return false;
+      if (nodeUrls?.fragments !== undefined) return nodeUrls.fragments;
+    }
+    if (globalUrls === false) return false;
+    if (globalUrls?.fragments !== undefined) return globalUrls.fragments;
+    return true;
+  }
+
   attrUrls(attr, value) {
     const name = String(attr).toLowerCase();
     const text = String(value).trim();
@@ -728,12 +743,20 @@ export class DomUse {
   validateAttrUrl(tagNameOrNode, attr, value) {
     const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
     const rule = this.urlRuleFor(tagNameOrNode, attr);
-    if (rule === undefined || rule === false) {
-      throw new Error(`URL attribute not allowed on ${tagName}: ${attr}`);
-    }
     for (const url of this.attrUrls(attr, value)) {
       if (!this.styleUse.rejectDangerousValue(url)) {
         throw new Error(`Disallowed URL on ${tagName}.${attr}`);
+      }
+      if (url.startsWith("#")) {
+        const fragmentRule = this.fragmentRuleFor(tagNameOrNode);
+        const matcher = typeof fragmentRule === "string" ? new RegExp(fragmentRule) : fragmentRule;
+        if (matcher === false || (matcher !== true && !this.styleUse.isAllowedByRule(matcher, url, `${tagName}.${attr} fragment`))) {
+          throw new Error(`Fragment URL not allowed on ${tagName}.${attr}: ${url}`);
+        }
+        continue;
+      }
+      if (rule === undefined || rule === false) {
+        throw new Error(`URL attribute not allowed on ${tagName}: ${attr}`);
       }
       const urlRule = typeof rule === "string" ? new RegExp(rule) : rule;
       if (urlRule !== true && !this.styleUse.isAllowedByRule(urlRule, url, `${tagName}.${attr}`)) {

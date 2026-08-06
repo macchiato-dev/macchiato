@@ -175,7 +175,7 @@ test("strict sanitization rejects markup that permissive sanitization drops", ()
   );
 });
 
-test("denies URL attributes by default even when attribute names are allowed", () => {
+test("denies external URL values when no URL authority is granted", () => {
   const domUse = articleDomUse();
   const doc = domUse.createDocument();
   const link = doc.createElement("a");
@@ -206,6 +206,39 @@ test("allows URL attributes only when the URL matches an explicit rule", () => {
   assert.throws(
     () => image.setAttribute("srcset", "https://images.example/a.jpg 1x, https://tracker.example/b.jpg 2x"),
     /URL not allowed/,
+  );
+});
+
+test("allows same-document fragments without granting external URL authority", () => {
+  const domUse = articleDomUse({ urls: undefined });
+  const doc = domUse.createDocument();
+  const link = doc.createElement("a");
+
+  link.setAttribute("href", "#borrowing-rules");
+  assert.equal(link.getAttribute("href"), "#borrowing-rules");
+  assert.throws(() => link.setAttribute("href", "/borrowing-rules"), /URL attribute not allowed/);
+  assert.throws(() => link.setAttribute("href", "https://library.example/"), /URL attribute not allowed/);
+});
+
+test("can explicitly deny or constrain same-document fragments", () => {
+  const allDenied = articleDomUse({ urls: false });
+  const denied = articleDomUse({ urls: { fragments: false } });
+  const constrained = articleDomUse({ urls: { fragments: /^#section-[a-z]+$/ } });
+  const allDeniedLink = allDenied.createDocument().createElement("a");
+  const deniedLink = denied.createDocument().createElement("a");
+  const constrainedLink = constrained.createDocument().createElement("a");
+
+  assert.throws(() => allDeniedLink.setAttribute("href", "#details"), /Fragment URL not allowed/);
+  assert.throws(() => deniedLink.setAttribute("href", "#details"), /Fragment URL not allowed/);
+  constrainedLink.setAttribute("href", "#section-details");
+  assert.throws(() => constrainedLink.setAttribute("href", "#dialog"), /Fragment URL not allowed/);
+});
+
+test("preserves allowed fragments while sanitizing HTML", () => {
+  const domUse = articleDomUse({ urls: undefined });
+  assert.equal(
+    domUse.sanitizeHTML('<a href="#hours">Hours</a><a href="https://tracker.example/">Tracker</a>'),
+    '<a href="#hours">Hours</a>',
   );
 });
 

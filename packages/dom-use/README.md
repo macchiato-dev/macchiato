@@ -35,11 +35,22 @@ stays acyclic and the public API surface remains at dom-use.
 - **innerHTML / outerHTML** — delegated to `html-use` with dom-use's schema
   and element factory injected at call time
 
-URL-bearing DOM attributes such as `href`, `src`, `srcset`, and `action` are
-denied by default, even when the attribute name is otherwise listed in `attrs`.
-Schemas must explicitly add URL allow rules through `urls` before those
-attributes can load or point at external resources. The default posture is zero
-unintentional exfiltration.
+Listing a URL-bearing DOM attribute such as `href`, `src`, `srcset`, or `action`
+in `attrs` admits the attribute but does not by itself grant external URL
+authority. Without a matching `urls` rule, path-bearing and external values are
+therefore effectively denied. Omitting the attribute from `attrs` remains the
+direct way to prohibit it entirely. This two-part check makes the default
+posture zero unintentional network exfiltration without giving `attrs` a second,
+surprising meaning.
+
+A fragment-only value such as `href="#details"` is different: it refers to the
+current document and cannot initiate a network request, so it is allowed by
+default once `href` itself is admitted by `attrs`. Applications that interpret
+hashes as commands or do not want in-document navigation can set `urls: false`
+to deny every URL-bearing value, or `urls: { fragments: false }` to deny only
+fragments. A fragment rule may also be a pattern, for example
+`urls: { fragments: /^#section-[a-z]+$/ }`. Values containing a path, origin,
+or other non-fragment URL material still require an explicit URL allow rule.
 
 Element context still matters: `img.src` loads automatically, `a.href`
 navigates after interaction, and `link.href` can prefetch depending on `rel`.
@@ -130,6 +141,44 @@ new DomUse({
   },
 });
 ```
+
+Rules match the attribute's trimmed, unresolved text. To allow relative URLs
+without also accepting scheme-relative `//host/path` URLs, use a rule that
+excludes schemes, a leading `//`, whitespace, and backslashes:
+
+```javascript
+new DomUse({
+  nodes: {
+    a: { attrs: ["href"], children: ["#text"] },
+  },
+  urls: {
+    href: /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s\\]+$/i,
+  },
+});
+```
+
+That admits values such as `/docs`, `./next`, `../index`, `notes/today`, and
+`?page=2`. Fragment-only values are handled by the fragment policy described
+above. Adjust the pattern if an application wants only a narrower relative
+form—for example, `^/(?!/)` admits root-relative paths only.
+
+A URL beginning with `//` is scheme-relative, not local: the browser uses the
+current page's `http` or `https` scheme and makes a request to the named host.
+Grant it as external network authority and constrain the host explicitly:
+
+```javascript
+new DomUse({
+  nodes: {
+    img: { attrs: ["src"], children: [] },
+  },
+  urls: {
+    "img.src": /^\/\/images\.example\.test(?:\/|$)/,
+  },
+});
+```
+
+Avoid a broad `^//` rule unless every network host is intentionally available
+to the guest.
 
 An audited container can also project links into a new browsing context when
 the author did not choose a target. This is disabled unless declared:
