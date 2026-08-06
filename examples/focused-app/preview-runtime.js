@@ -36,7 +36,7 @@ async function waitForPreviewLoad(iframe, token) {
 export async function previewDeclarativeApp(iframe, app, onStatus = () => {}) {
   const currentGeneration = ++generation;
   const token = String(currentGeneration);
-  active?.host.stop();
+  active?.host.destroy();
   active?.sandbox?.dispose?.();
   iframe.srcdoc = safeDocument(app, token);
   if (!await waitForPreviewLoad(iframe, token) || currentGeneration !== generation) return;

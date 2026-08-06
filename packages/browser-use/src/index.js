@@ -18,6 +18,8 @@ function boundedInteger(value, fallback, maximum, label) {
   return number;
 }
 
+let nextHostGeneration = 1;
+
 export function ownsNativeInput(target) {
   const name = String(target?.localName || target?.tagName || "").toLowerCase();
   return ["input", "select", "textarea"].includes(name);
@@ -94,26 +96,72 @@ export class BrowserDomHost {
   constructor(root, policy, { onViolation = () => {}, onEvent = () => {} } = {}) {
     if (!root?.querySelectorAll) throw new Error("BrowserDomHost requires a browser root");
     this.root = root;
+    this.document = root.ownerDocument;
     this.policy = compileDomShapePolicy(policy);
     this.onViolation = onViolation;
     this.onEvent = onEvent;
     this.nodes = new Map([["root", root]]);
     this.ids = new WeakMap([[root, "root"]]);
-    this.nodes.set("document", root.ownerDocument);
-    this.ids.set(root.ownerDocument, "document");
+    this.nodes.set("document", this.document);
+    this.ids.set(this.document, "document");
+    this.ownedNodes = new WeakSet();
+    this.scopedObjects = new WeakSet();
+    this.generation = nextHostGeneration++;
     this.nextId = 1;
     this.observer = null;
     this.listeners = new Map();
     this.operations = 0;
     this.windowOperations = 0;
     this.peakWindowOperations = 0;
+    this.destroyed = false;
+  }
+
+  assertAlive() {
+    if (this.destroyed) throw new Error("Browser DOM host has been destroyed");
+  }
+
+  allocateId() {
+    return `${this.generation}:${this.nextId++}`;
+  }
+
+  isWithinRoot(node) {
+    return node === this.root || Boolean(this.root?.contains?.(node));
+  }
+
+  isOwnedNode(node) {
+    if (!node || typeof node !== "object" || typeof node.nodeType !== "number") return false;
+    if (this.isWithinRoot(node) || this.ownedNodes.has(node)) return true;
+    if (node.nodeType === 2 && node.ownerElement) return this.isOwnedNode(node.ownerElement);
+    let current = node.parentNode;
+    for (let depth = 0; current && depth < this.policy.maxDepth + 1; depth += 1) {
+      if (this.isWithinRoot(current) || this.ownedNodes.has(current)) return true;
+      current = current.parentNode;
+    }
+    return false;
+  }
+
+  canExpose(value) {
+    if (value === this.document) return true;
+    if (typeof value?.nodeType === "number") return this.isOwnedNode(value);
+    return this.scopedObjects.has(value);
+  }
+
+  ownNode(node) {
+    this.ownedNodes.add(node);
+    return node;
+  }
+
+  ownScopedObject(value) {
+    if (value && (typeof value === "object" || typeof value === "function")) this.scopedObjects.add(value);
+    return value;
   }
 
   register(node) {
-    if (!this.root.contains(node) && node !== this.root) throw new Error("DOM handle is outside the granted root");
+    this.assertAlive();
+    if (!this.isWithinRoot(node)) throw new Error("DOM handle is outside the granted root");
     let id = this.ids.get(node);
     if (!id) {
-      id = String(this.nextId++);
+      id = this.allocateId();
       this.ids.set(node, id);
       this.nodes.set(id, node);
     }
@@ -121,6 +169,7 @@ export class BrowserDomHost {
   }
 
   node(id) {
+    this.assertAlive();
     const node = this.nodes.get(String(id));
     if (!node) throw new Error("DOM handle is no longer available");
     return node;
@@ -187,8 +236,8 @@ export class BrowserDomHost {
   create(tag) {
     const name = String(tag).toLowerCase();
     if (!this.policy.tags.has(name)) throw new Error(`DOM shape rejected element: ${name}`);
-    const node = this.root.ownerDocument.createElement(name);
-    const id = String(this.nextId++);
+    const node = this.ownNode(this.document.createElement(name));
+    const id = this.allocateId();
     this.ids.set(node, id);
     this.nodes.set(id, node);
     return { id };
@@ -276,9 +325,13 @@ export class BrowserDomHost {
         || (typeof value.removeAllRanges === "function" && "rangeCount" in value)
       );
       if (isNode) {
+        if (!this.canExpose(value)) return { value: null };
         return { handle: this.registerRemote(value) };
       }
-      if (isVirtualBrowserObject) return { handle: this.registerRemote(value) };
+      if (isVirtualBrowserObject) {
+        if (!this.canExpose(value)) return { value: null };
+        return { handle: this.registerRemote(value) };
+      }
       if (typeof value.length === "number" && typeof value !== "function") {
         return { list: Array.from(value, (item) => encode(item)) };
       }
@@ -294,16 +347,19 @@ export class BrowserDomHost {
     const decode = (value) => value && typeof value === "object" && value.__handle
       ? this.remoteNode(value.__handle)
       : value;
-    if (message.action === "createElement") return encode(this.root.ownerDocument.createElement(String(message.tag)));
-    if (message.action === "createTextNode") return encode(this.root.ownerDocument.createTextNode(String(message.text)));
-    if (message.action === "createDocumentFragment") return encode(this.root.ownerDocument.createDocumentFragment());
-    if (message.action === "createRange") return encode(this.root.ownerDocument.createRange());
-    if (message.action === "getSelection") return encode(this.root.ownerDocument.getSelection());
+    if (message.action === "createElement") return encode(this.ownNode(this.document.createElement(String(message.tag))));
+    if (message.action === "createTextNode") return encode(this.ownNode(this.document.createTextNode(String(message.text))));
+    if (message.action === "createDocumentFragment") return encode(this.ownNode(this.document.createDocumentFragment()));
+    if (message.action === "createRange") return encode(this.ownScopedObject(this.document.createRange()));
+    if (message.action === "getSelection") return encode(this.ownScopedObject(this.document.getSelection()));
     if (message.action === "getElementById") {
       const found = this.root.id === message.id ? this.root : this.root.querySelector(`#${CSS.escape(String(message.id))}`);
       return encode(found);
     }
     const node = this.remoteNode(message.id);
+    if (node === this.document && !(message.action === "get" && message.property === "activeElement")) {
+      throw new Error("Document access is outside the granted browser surface");
+    }
     if (message.action === "get") {
       if (!allowedProperties.has(message.property)) throw new Error(`DOM property is not readable: ${message.property}`);
       if (message.property === "style") return { style: true, handle: String(message.id) };
@@ -328,6 +384,7 @@ export class BrowserDomHost {
     }
     if (message.action === "call") {
       if (!allowedMethods.has(message.method)) throw new Error(`DOM method is not callable: ${message.method}`);
+      if (node === this.root && message.method === "remove") throw new Error("The granted browser root cannot be removed");
       const args = (message.args || []).map(decode);
       return encode(node[message.method](...args));
     }
@@ -335,9 +392,11 @@ export class BrowserDomHost {
   }
 
   registerRemote(node) {
+    this.assertAlive();
+    if (!this.canExpose(node)) throw new Error("Remote browser object is outside the granted surface");
     let id = this.ids.get(node);
     if (!id) {
-      id = String(this.nextId++);
+      id = this.allocateId();
       this.ids.set(node, id);
       this.nodes.set(id, node);
     }
@@ -345,20 +404,23 @@ export class BrowserDomHost {
   }
 
   remoteNode(id) {
+    this.assertAlive();
     const node = this.nodes.get(String(id));
     if (!node) throw new Error("Remote DOM handle is unavailable");
     return node;
   }
 
   start() {
+    this.assertAlive();
     this.inspect();
     if (typeof MutationObserver === "undefined") return;
     this.observer = new MutationObserver(() => {
       try {
         this.inspect();
       } catch (error) {
-        this.stop();
-        this.root.replaceChildren();
+        const root = this.root;
+        this.destroy();
+        root.replaceChildren();
         this.onViolation(error);
       }
     });
@@ -372,7 +434,20 @@ export class BrowserDomHost {
     this.listeners.clear();
   }
 
+  destroy() {
+    if (this.destroyed) return;
+    this.stop();
+    this.destroyed = true;
+    this.nodes.clear();
+    this.ids = new WeakMap();
+    this.ownedNodes = new WeakSet();
+    this.scopedObjects = new WeakSet();
+    this.root = null;
+    this.document = null;
+  }
+
   dispatch(message) {
+    this.assertAlive();
     this.operations += 1;
     this.windowOperations += 1;
     this.peakWindowOperations = Math.max(this.peakWindowOperations, this.windowOperations);

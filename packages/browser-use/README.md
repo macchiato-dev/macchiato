@@ -33,6 +33,21 @@ types, size, and depth. Guest DOM handles are opaque. Reads, writes, methods,
 and listener registration cross the JSON host function and fail closed when
 the operation is outside that policy.
 
+Native object identity is bidirectional and bounded to one host generation. A
+strong `Map` resolves opaque string handles to native objects while a
+`WeakMap` reuses a handle when the same native object is encountered again.
+Only the granted root and its descendants, host-created detached subtrees, and
+explicitly scoped objects such as ranges and selections can receive handles.
+Attribute nodes inherit the ownership of their `ownerElement`; traversal to a
+parent outside the root resolves to `null`. The known `document` handle exposes
+only the narrow document operations modeled by the guest facade and cannot be
+used as a mutation target.
+
+Call `destroy()` when the guest or component is discarded. It removes native
+listeners, disconnects observation, clears the strong handle map, replaces the
+weak registries, and invalidates subsequent dispatch. `stop()` only pauses
+observation and listeners and is not a substitute for final teardown.
+
 The host calls this accounted capability a **surface**. `host.surface` reports
 the current shape, limits, and remaining capacity, including optional per-tag
 ceilings. `maxOperations` adds renewable operation gas;

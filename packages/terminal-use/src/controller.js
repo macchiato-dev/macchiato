@@ -54,6 +54,6 @@ export async function mountQuickJsTerminal({ root, guestSource, limits = {}, onD
     },
     inspect() { return { ...sandbox.callJsonFunction("__terminalInspect", {}), surface: host.inspectSurface() }; },
     focus() { root.querySelector("textarea")?.focus(); },
-    destroy() { clearInterval(tickTimer); clearInterval(refillTimer); host.stop(); root.replaceChildren(); sandbox?.dispose(); sandbox = null; },
+    destroy() { clearInterval(tickTimer); clearInterval(refillTimer); host.destroy(); root.replaceChildren(); sandbox?.dispose(); sandbox = null; },
   });
 }

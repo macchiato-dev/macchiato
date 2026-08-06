@@ -89,7 +89,7 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
       destroyed = true;
       clearInterval(refillTimer);
       inputBridge?.destroy();
-      host.stop();
+      host.destroy();
       root.replaceChildren();
       if (!originalRootId) root.removeAttribute("id");
       sandbox?.dispose();

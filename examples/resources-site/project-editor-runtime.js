@@ -46,7 +46,7 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
   }
   if (!scripts.length) {
     root.dataset.previewRuntime = "static";
-    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.stop() };
+    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.destroy() };
   }
   try {
     sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
@@ -54,7 +54,7 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
     sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
     scripts.forEach((script) => sandbox.evalGlobal(script.code, script.source));
   } catch (error) {
-    host.stop();
+    host.destroy();
     sandbox?.dispose?.();
     throw error;
   }
@@ -74,6 +74,6 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
   }, 50);
   return {
     inspect: () => ({ runtime: "quickjs", violations: violations.length, canvas: canvas.inspect() }),
-    destroy() { stopped = true; clearInterval(timer); host.stop(); sandbox.dispose?.(); },
+    destroy() { stopped = true; clearInterval(timer); host.destroy(); sandbox.dispose?.(); },
   };
 }

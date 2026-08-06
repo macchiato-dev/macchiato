@@ -15,6 +15,40 @@ function element(tagName, attrs = {}, children = [], text = "") {
   };
 }
 
+function nativeSurface() {
+  const outside = { nodeType: 1, localName: "main", parentNode: null };
+  const root = {
+    nodeType: 1,
+    localName: "div",
+    parentNode: outside,
+    children: [],
+    childNodes: [],
+    querySelectorAll() { return []; },
+    contains(node) {
+      for (let current = node; current; current = current.parentNode) if (current === root) return true;
+      return false;
+    },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const makeNode = (nodeType, localName = "") => ({
+    nodeType, localName, parentNode: null, children: [], childNodes: [],
+  });
+  const range = { setStart() {}, setEnd() {} };
+  const selection = { rangeCount: 0, removeAllRanges() {} };
+  const ownerDocument = {
+    nodeType: 9,
+    createElement: (tag) => makeNode(1, tag),
+    createTextNode: (text) => ({ ...makeNode(3), textContent: text }),
+    createDocumentFragment: () => makeNode(11),
+    createRange: () => range,
+    getSelection: () => selection,
+  };
+  root.ownerDocument = ownerDocument;
+  outside.ownerDocument = ownerDocument;
+  return { root, outside, ownerDocument, range, selection, makeNode };
+}
+
 test("browser-use detects a constrained live DOM shape", () => {
   const policy = compileDomShapePolicy({
     tags: ["div", "span"],
@@ -92,6 +126,52 @@ test("browser-use recognizes DOM handles from another realm by shape", () => {
   const encoded = host.remote({ action: "get", id: "root", property: "firstChild" });
   assert.equal(typeof encoded.handle, "string");
   assert.equal(host.remoteNode(encoded.handle), iframeNode);
+});
+
+test("browser-use does not expose native nodes outside the granted surface", () => {
+  const { root, outside } = nativeSurface();
+  const host = new BrowserDomHost(root, { tags: ["div"] });
+
+  assert.deepEqual(host.remote({ action: "get", id: "root", property: "parentNode" }), { value: null });
+  assert.throws(() => host.registerRemote(outside), /outside the granted surface/);
+  assert.throws(
+    () => host.remote({ action: "call", id: "document", method: "appendChild", args: [{ __handle: "root" }] }),
+    /Document access is outside/,
+  );
+  assert.throws(() => host.remote({ action: "call", id: "root", method: "remove", args: [] }), /root cannot be removed/);
+  assert.equal(host.ids.has(outside), false);
+});
+
+test("browser-use retains handles for owned detached subtrees and scoped browser objects", () => {
+  const { root, range, selection, makeNode } = nativeSurface();
+  const host = new BrowserDomHost(root, { tags: ["div", "span"] });
+  const created = host.remote({ action: "createElement", tag: "div" });
+  const createdNode = host.remoteNode(created.handle);
+  const child = makeNode(1, "span");
+  const attribute = { nodeType: 2, name: "class", value: "cm-line", ownerElement: createdNode };
+  child.parentNode = createdNode;
+  createdNode.firstChild = child;
+  createdNode.attributes = [attribute];
+
+  const encodedChild = host.remote({ action: "get", id: created.handle, property: "firstChild" });
+  assert.equal(host.remoteNode(encodedChild.handle), child);
+  const encodedAttributes = host.remote({ action: "get", id: created.handle, property: "attributes" });
+  assert.equal(host.remoteNode(encodedAttributes.list[0].handle), attribute);
+  assert.equal(host.remoteNode(host.remote({ action: "createRange" }).handle), range);
+  assert.equal(host.remoteNode(host.remote({ action: "getSelection" }).handle), selection);
+});
+
+test("browser-use destruction releases strong handles and invalidates dispatch", () => {
+  const { root } = nativeSurface();
+  const host = new BrowserDomHost(root, { tags: ["div"] });
+  const created = host.remote({ action: "createElement", tag: "div" });
+
+  assert.ok(host.nodes.size > 2);
+  host.destroy();
+  assert.equal(host.nodes.size, 0);
+  assert.throws(() => host.remoteNode(created.handle), /destroyed/);
+  assert.throws(() => host.dispatch({ op: "inspect" }), /destroyed/);
+  assert.doesNotThrow(() => host.destroy());
 });
 
 test("native form controls retain their own text input", () => {
