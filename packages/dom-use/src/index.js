@@ -766,7 +766,9 @@ export class DomUse {
       const refresh = /(?:^|;)\s*url\s*=\s*(.+)$/i.exec(text);
       return refresh ? [refresh[1].trim().replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, "$1$2")] : [];
     }
-    if (SVG_URL_REFERENCE_ATTRS.has(name)) return this.styleUse.extractUrls(text);
+    if (SVG_URL_REFERENCE_ATTRS.has(name)) {
+      return /url\s*\(/i.test(text) ? this.styleUse.extractUrls(text) : [];
+    }
     return [text];
   }
 
