@@ -10,19 +10,19 @@ their own.
 
 | Component | Description |
 |-----------|-------------|
-| `@macchiato-dev/app` | Cross-runtime HTTP server. Routes only declaratively registered apps by subdomain and serves their handlers or SQLite-backed content. |
-| `@macchiato-dev/macchiato` | CLI and interactive shell for managing the local Macchiato database: sites, schemas, routes, fonts, and server lifecycle helpers. |
-| `@macchiato-dev/app-db-sqlite` | SQLite storage layer for app configuration. Owns schema creation, migrations, query helpers, and prepared-statement-backed access for the app database without becoming a full ORM. |
-| `@macchiato-dev/site` | SSR site framework for full HTML documents, route rows, transition policy, trusted pre-sanitized page swaps, and fallback navigation. |
-| `@macchiato-dev/dom-use` | Top-level schema-bound DOM capability. Guest code creates and mutates DOM through this package, which enforces allowed nodes, attributes, parent/child relationships, URL rules, content limits, and DOM gas budgets. |
-| `@macchiato-dev/html-use` | Lower-level HTML parser, serializer, and sanitizer used by `dom-use`. It receives the caller's element factory and schema instead of importing `dom-use` directly. |
-| `@macchiato-dev/style-use` | CSS policy engine for inline styles and stylesheets. Schemas declare allowed properties, value patterns, selectors, at-rules, URL loading, imports, and stylesheet limits. |
-| `@macchiato-dev/theme-use` | Validates named, allowlisted CSS custom-property themes and renders customizable theme declarations without permitting active CSS values. |
-| `@macchiato-dev/menu-use` | Defines one immutable primary-navigation model and renders matching desktop, mobile, and document-runtime menus. |
-| `@macchiato-dev/user-menu-use` | Compiles declarative user-menu definitions into markup, colocated `dom-use` schema capability, and an exclusive open/close state machine suitable for a sandbox. |
-| `@macchiato-dev/font-use` | Font asset cache helpers. Validates font names and paths, stores known font bytes in SQLite, emits stable `/-/fonts/...` URLs, and builds `@font-face` declarations. |
-| `@macchiato-dev/quickjs-emscripten-sandbox` | QuickJS-backed JavaScript sandbox. Runs guest JavaScript with explicit host capabilities and provides browser assets used by the DOM sandbox examples. |
-| `@macchiato-dev/dashboard` | Small management UI for local site mappings. It is a development convenience, not the core storage or policy layer. |
+| [`@macchiato-dev/app`](packages/app/) | Cross-runtime HTTP server. Routes only declaratively registered apps by subdomain and serves their handlers or SQLite-backed content. |
+| [`@macchiato-dev/macchiato`](packages/macchiato/) | CLI and interactive shell for managing the local Macchiato database: sites, schemas, routes, fonts, and server lifecycle helpers. |
+| [`@macchiato-dev/app-db-sqlite`](packages/app-db-sqlite/) | SQLite storage layer for app configuration. Owns schema creation, migrations, query helpers, and prepared-statement-backed access for the app database without becoming a full ORM. |
+| [`@macchiato-dev/site`](packages/site/) | SSR site framework for full HTML documents, route rows, transition policy, trusted pre-sanitized page swaps, and fallback navigation. |
+| [`@macchiato-dev/dom-use`](packages/dom-use/) | Top-level schema-bound DOM capability. Guest code creates and mutates DOM through this package, which enforces allowed nodes, attributes, parent/child relationships, URL rules, content limits, and DOM gas budgets. |
+| [`@macchiato-dev/html-use`](packages/html-use/) | Lower-level HTML parser, serializer, and sanitizer used by `dom-use`. It receives the caller's element factory and schema instead of importing `dom-use` directly. |
+| [`@macchiato-dev/style-use`](packages/style-use/) | CSS policy engine for inline styles and stylesheets. Schemas declare allowed properties, value patterns, selectors, at-rules, URL loading, imports, and stylesheet limits. |
+| [`@macchiato-dev/theme-use`](packages/theme-use/) | Validates named, allowlisted CSS custom-property themes and renders customizable theme declarations without permitting active CSS values. |
+| [`@macchiato-dev/menu-use`](packages/menu-use/) | Defines one immutable primary-navigation model and renders matching desktop, mobile, and document-runtime menus. |
+| [`@macchiato-dev/user-menu-use`](packages/user-menu-use/) | Compiles declarative user-menu definitions into markup, colocated `dom-use` schema capability, and an exclusive open/close state machine suitable for a sandbox. |
+| [`@macchiato-dev/font-use`](packages/font-use/) | Font asset cache helpers. Validates font names and paths, stores known font bytes in SQLite, emits stable `/-/fonts/...` URLs, and builds `@font-face` declarations. |
+| [`@macchiato-dev/quickjs-emscripten-sandbox`](packages/quickjs-emscripten-sandbox/) | QuickJS-backed JavaScript sandbox. Runs guest JavaScript with explicit host capabilities and provides browser assets used by the DOM sandbox examples. |
+| [`@macchiato-dev/dashboard`](packages/dashboard/) | Small management UI for local site mappings. It is a development convenience, not the core storage or policy layer. |
 
 The core capability stack is:
 
