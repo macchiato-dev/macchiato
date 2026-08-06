@@ -58,6 +58,36 @@ node packages/app/src/index.js --data-dir ./data --app-plugin development
 `development` is the full repository demo set; `core` is the one-app default.
 Run `macchiato app plugins` to list individual plugin IDs.
 
+### Load an example into Macchiato
+
+Repository examples are ordinary declarative apps with a small installer entry.
+For example, persist the Code Editor Use example in the default local catalog:
+
+```bash
+node packages/macchiato/src/macchiato.js app install code-editor-use
+node packages/app/src/index.js --host 127.0.0.1 --port 8765
+```
+
+It is then listed at `http://apps.localhost:8765` and runs at
+`http://code-editor-use.localhost:8765`. The declaration is stored in
+`~/.macchiato/default/macchiato.sqlite3`; source code and assets remain in the
+project rather than being copied into the database. Use `--data-dir` on both
+commands to keep a different catalog.
+
+For a disposable run, install the plugin at server startup:
+
+```bash
+node packages/app/src/index.js --host 127.0.0.1 --port 8765 \
+  --app-plugin code-editor-use
+```
+
+Application authors do not need to copy or depend on this exact example. They
+can import `@macchiato-dev/declarative-app-server` and whichever `*-use`
+packages their app needs, keep normal HTML, CSS, and guest JavaScript files,
+and provide their own `macchiato.app.json`, schemas, trusted bootstrap, and
+handler. `packages/code-editor-use/examples/basic` is a complete reference for
+that composition and can also be run independently with `npm start`.
+
 Dependencies and subdomains
 
 Each app defaults to the subdomain in its declaration, normally its plugin ID.
