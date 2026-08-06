@@ -58,6 +58,14 @@ Global URL rules can use qualified keys such as `a.href` and `img.src`. See the
 [browser network-capability
 inventory](../../docs/network-capability-inventory.md) for HTML, SVG, CSS,
 script APIs, redirects, and request-causing response headers.
+That inventory is normative for the built-in sink list and records whether a
+construct loads during parsing, follows a click, submits a form, speculates via
+prefetch/preconnect, or creates a special nested surface. Permissive HTML
+sanitization filters rejected network elements; strict sanitization and direct
+DOM mutation deny them with an error. Both unqualified URL-bearing attributes
+and qualified `tag.attribute` destinations fail closed by default. SVG
+presentation attributes are ordinary values until they contain `url(...)`, at
+which point the same URL/fragment policy applies.
 
 `dom-use` also applies resource and content defaults. By default, a document can
 create up to 1000 guest nodes, text nodes can contain up to 10000 characters,

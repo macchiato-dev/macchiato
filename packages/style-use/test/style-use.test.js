@@ -123,6 +123,10 @@ test("denies CSS URL sinks and imports by default", () => {
     () => styleUse.validateStylesheet('@import "https://example.test/base.css";'),
     /CSS imports are not allowed/,
   );
+  assert.throws(
+    () => styleUse.validateInline("background", 'image-set("https://example.test/a.png" 1x, https://example.test/b.png 2x)'),
+    /CSS URLs are not allowed for background/,
+  );
 });
 
 test("allows CSS URL sinks only when explicitly matched", () => {
@@ -139,6 +143,10 @@ test("allows CSS URL sinks only when explicitly matched", () => {
 
   assert.equal(
     styleUse.validateStylesheet('@import "https://assets.example/base.css"; body { background: url("https://assets.example/bg.png"); }'),
+    true,
+  );
+  assert.equal(
+    styleUse.validateInline("background", 'image-set("https://assets.example/a.png" 1x, https://assets.example/b.png 2x)'),
     true,
   );
   assert.throws(

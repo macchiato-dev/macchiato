@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { DomUse } from "../src/index.js";
+import { DOM_NETWORK_CAPABILITIES, DomUse, SVG_URL_REFERENCE_ATTRIBUTES, URL_CAPABILITY_ATTRIBUTES } from "../src/index.js";
 import { DomUseHostCapability, LocalStorageBackend } from "../src/bridge.js";
 
 function articleDomUse(schema = {}) {
@@ -260,6 +260,74 @@ test("can scope global URL capabilities to an element and attribute pair", () =>
   image.setAttribute("src", "https://images.example/one.png");
   assert.throws(() => link.setAttribute("href", "https://images.example/one.png"), /URL not allowed/);
   assert.throws(() => image.setAttribute("src", "https://articles.example/one"), /URL not allowed/);
+});
+
+test("network capability inventory covers loading, interaction, hints, and SVG", () => {
+  const entries = new Set(DOM_NETWORK_CAPABILITIES.map(({ namespace, tag, attribute, effect }) => `${namespace}:${tag}.${attribute}:${effect}`));
+  assert.ok(entries.has("html:img.src:load"));
+  assert.ok(entries.has("html:a.href:navigate"));
+  assert.ok(entries.has("html:link.href:hint-or-load"));
+  assert.ok(entries.has("html:link.imagesrcset:hint-or-load"));
+  assert.ok(entries.has("html:base.href:resolution"));
+  assert.ok(entries.has("html:form.action:submit"));
+  assert.ok(entries.has("html:meta.content:refresh"));
+  assert.ok(entries.has("svg:image.href:load"));
+  assert.ok(entries.has("svg:a.xlink:href:navigate"));
+  assert.ok(URL_CAPABILITY_ATTRIBUTES.includes("srcset"));
+  assert.ok(SVG_URL_REFERENCE_ATTRIBUTES.includes("filter"));
+});
+
+test("filters HTML network sinks and denies their direct URL assignments by default", () => {
+  const domUse = new DomUse({
+    nodes: {
+      main: { attrs: [], children: ["img", "link", "meta"] },
+      img: { attrs: ["src"], children: [] },
+      link: { attrs: ["rel", "href"], children: [] },
+      meta: { attrs: ["http-equiv", "content"], children: [] },
+    },
+  });
+  const doc = domUse.createDocument();
+  assert.throws(() => doc.createElement("img").setAttribute("src", "https://tracker.example/pixel"), /URL attribute not allowed/);
+  assert.throws(() => doc.createElement("link").setAttribute("href", "https://tracker.example/prefetch"), /URL attribute not allowed/);
+  const meta = doc.createElement("meta");
+  meta.setAttribute("http-equiv", "refresh");
+  assert.throws(() => meta.setAttribute("content", "0; url=https://tracker.example/next"), /URL attribute not allowed/);
+  assert.equal(
+    domUse.sanitizeHTML('<main><img src="https://tracker.example/pixel"><link rel="prefetch" href="https://tracker.example/next"><meta http-equiv="refresh" content="0;url=https://tracker.example/next"></main>'),
+    "<main></main>",
+  );
+  assert.throws(
+    () => domUse.sanitizeHTML('<main><link rel="prefetch" href="https://tracker.example/next"></main>', { strict: true }),
+    /URL attribute not allowed/,
+  );
+});
+
+test("does not treat ordinary meta content as a refresh URL", () => {
+  const domUse = new DomUse({
+    nodes: { meta: { attrs: ["name", "content"], children: [] } },
+  });
+  assert.equal(domUse.sanitizeHTML('<meta name="viewport" content="width=device-width, initial-scale=1">'), '<meta name="viewport" content="width=device-width, initial-scale=1">');
+});
+
+test("applies URL policy to SVG href and presentation references", () => {
+  const schema = {
+    nodes: {
+      svg: { attrs: [], children: ["image", "path"] },
+      image: { attrs: ["href", "xlink:href"], children: [] },
+      path: { attrs: ["fill", "filter"], children: [] },
+    },
+  };
+  const domUse = new DomUse(schema);
+  const doc = domUse.createDocument();
+  assert.throws(() => doc.createElement("image").setAttribute("href", "https://tracker.example/image.svg"), /URL attribute not allowed/);
+  assert.throws(() => doc.createElement("path").setAttribute("filter", "url(https://tracker.example/filter.svg#blur)"), /URL attribute not allowed/);
+  const path = doc.createElement("path");
+  path.setAttribute("fill", "url(#brand-gradient)");
+  assert.equal(path.getAttribute("fill"), "url(#brand-gradient)");
+  assert.equal(
+    domUse.sanitizeHTML('<svg><image href="https://tracker.example/image.svg"></image><path fill="url(#brand-gradient)"></path><path filter="url(https://tracker.example/filter.svg#blur)"></path></svg>'),
+    '<svg><path fill="url(#brand-gradient)"></path></svg>',
+  );
 });
 
 test("can add target blank to links as a declared projection policy", () => {

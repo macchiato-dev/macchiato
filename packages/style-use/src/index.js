@@ -115,6 +115,13 @@ export class StyleUse {
     for (const match of String(value).matchAll(re)) {
       urls.push((match[1] ?? match[2] ?? match[3] ?? "").trim());
     }
+    const imageSet = /(?:-webkit-)?image-set\(([\s\S]*?)\)/gi;
+    for (const match of String(value).matchAll(imageSet)) {
+      for (const candidate of match[1].matchAll(/(?:^|,)\s*(?:"([^"]+)"|'([^']+)'|([^,\s]+))/g)) {
+        const url = (candidate[1] ?? candidate[2] ?? candidate[3] ?? "").trim();
+        if (url && !/^url\(/i.test(url)) urls.push(url);
+      }
+    }
     return urls;
   }
 

@@ -33,6 +33,31 @@ export const URL_CAPABILITY_ATTRIBUTES = Object.freeze([
 ]);
 const URL_ATTRS = new Set(URL_CAPABILITY_ATTRIBUTES);
 
+export const SVG_URL_REFERENCE_ATTRIBUTES = Object.freeze([
+  "clip-path", "cursor", "fill", "filter", "marker", "marker-end",
+  "marker-mid", "marker-start", "mask", "stroke",
+]);
+const SVG_URL_REFERENCE_ATTRS = new Set(SVG_URL_REFERENCE_ATTRIBUTES);
+
+export const DOM_NETWORK_CAPABILITIES = Object.freeze([
+  ["html", "img", "src", "load"], ["html", "img", "srcset", "load"],
+  ["html", "source", "src", "load"], ["html", "source", "srcset", "load"],
+  ["html", "audio", "src", "load"], ["html", "video", "src", "load"], ["html", "video", "poster", "load"],
+  ["html", "track", "src", "load"], ["html", "script", "src", "load-execute"],
+  ["html", "iframe", "src", "embed"], ["html", "embed", "src", "embed"], ["html", "object", "data", "embed"],
+  ["html", "input", "src", "load"], ["html", "link", "href", "hint-or-load"],
+  ["html", "link", "imagesrcset", "hint-or-load"], ["html", "base", "href", "resolution"],
+  ["html", "a", "href", "navigate"], ["html", "area", "href", "navigate"], ["html", "a", "ping", "click-report"],
+  ["html", "form", "action", "submit"], ["html", "button", "formaction", "submit"], ["html", "input", "formaction", "submit"],
+  ["html", "meta", "content", "refresh"],
+  ["svg", "image", "href", "load"], ["svg", "image", "xlink:href", "load"],
+  ["svg", "use", "href", "load"], ["svg", "use", "xlink:href", "load"],
+  ["svg", "feimage", "href", "load"], ["svg", "feimage", "xlink:href", "load"],
+  ["svg", "textpath", "href", "reference"], ["svg", "mpath", "href", "reference"],
+  ["svg", "script", "href", "load-execute"], ["svg", "script", "xlink:href", "load-execute"],
+  ["svg", "a", "href", "navigate"], ["svg", "a", "xlink:href", "navigate"],
+].map(([namespace, tag, attribute, effect]) => Object.freeze({ namespace, tag, attribute, effect })));
+
 const DEFAULT_LIMITS = {
   maxTextLength: 10000,
   maxEventNameLength: 64,
@@ -737,6 +762,11 @@ export class DomUse {
         .filter(Boolean);
     }
     if (name === "ping" || name === "archive") return text.split(/\s+/).filter(Boolean);
+    if (name === "content") {
+      const refresh = /(?:^|;)\s*url\s*=\s*(.+)$/i.exec(text);
+      return refresh ? [refresh[1].trim().replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, "$1$2")] : [];
+    }
+    if (SVG_URL_REFERENCE_ATTRS.has(name)) return this.styleUse.extractUrls(text);
     return [text];
   }
 
@@ -892,7 +922,9 @@ export class DomUse {
     if (!this.allowedAttr(tagNameOrNode, attr, value)) {
       throw new Error(`Attribute not allowed on ${tagName}: ${attr}`);
     }
-    if (URL_ATTRS.has(String(attr).toLowerCase())) {
+    const name = String(attr).toLowerCase();
+    const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
+    if (URL_ATTRS.has(name) || SVG_URL_REFERENCE_ATTRS.has(name) || (tag === "meta" && name === "content")) {
       this.validateAttrUrl(tagNameOrNode, attr, value);
     }
   }
