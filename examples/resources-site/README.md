@@ -533,10 +533,12 @@ identity upserts, replication behavior, backup/export, and rollback before
 production. Keep the Storage, provider, session, and database credentials as
 separate authorities.
 
-The Edge Script now completes idempotent account and project schema
-initialization before accepting traffic. To initialize or verify a database
-independently before deployment, provide its full-access credentials in the
-environment and run:
+The Edge Script registers its HTTP server before doing any remote work so it
+stays inside Bunny's startup window. Its first request in an isolate shares one
+idempotent account-and-project schema readiness promise; a failure returns a
+non-cacheable `503` and a later request retries. Prefer initializing and
+verifying the database before deployment by providing its full-access
+credentials in the environment and running:
 
 ```sh
 deno run --config examples/resources-site/deno.json \

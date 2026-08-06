@@ -18,6 +18,14 @@ This division makes the deployed request path reviewable without reading the
 large page renderer, and makes the renderer unable to grant itself new edge
 routes after publication.
 
+The composition root calls `serve()` synchronously. Remote database schema
+readiness is awaited inside the first request and shared by concurrent requests
+in that isolate. Do not put network I/O or other substantial work before
+`serve()`: Bunny's startup allowance is intentionally much smaller than the
+normal request execution allowance. Production deployments should run the
+documented database migration before publishing so this readiness check is
+normally idempotent verification rather than first-time schema creation.
+
 ## Trust flow
 
 ```text

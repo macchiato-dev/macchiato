@@ -23,14 +23,37 @@ const databaseClient = createClient({
 });
 const accountStore = createAccountStore(databaseClient);
 const contentStore = createContentStore(databaseClient);
-// A fresh database must be ready before the SDK accepts traffic. Ordering is
-// significant because content ownership foreign keys reference account tables.
-await accountStore.initialize();
-await contentStore.initialize();
 const handler = createResourcesEdgeHandler({
   config, authConfig, gitlabAuthConfig, accountStore, contentStore,
   blogExamplesOrigin: process.env.BLOG_EXAMPLES_ORIGIN,
   fetchImpl: fetch,
 });
 
-BunnySDK.net.http.serve(handler);
+// Register the server synchronously so remote database work is not charged to
+// the Edge Script startup window. Each isolate shares one readiness promise;
+// account tables must still precede content tables because of ownership keys.
+let databaseReadyPromise = null;
+function databaseReady() {
+  if (!databaseReadyPromise) {
+    databaseReadyPromise = accountStore.initialize()
+      .then(() => contentStore.initialize())
+      .catch((error) => {
+        databaseReadyPromise = null;
+        throw error;
+      });
+  }
+  return databaseReadyPromise;
+}
+
+BunnySDK.net.http.serve(async (request) => {
+  try {
+    await databaseReady();
+    return await handler(request);
+  } catch (error) {
+    console.error("resources-edge initialization", error?.message || String(error));
+    return new Response("Edge content unavailable", {
+      status: 503,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+});
