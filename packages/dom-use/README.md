@@ -214,6 +214,39 @@ and handle concerns like:
 `dom-use` stays focused: schema-bound node creation, mutation, event policy,
 and tree validation. Higher-level orchestration belongs in the layer above.
 
+## Roadmap: surface-envelope discovery
+
+The working term for automatically learning that a surface needs a slightly
+broader schema is **surface-envelope discovery**. A surface's **declared
+capability envelope** is its allowed DOM shape, content domain, attribute
+values, limits, events, URLs, and gas. Discovery observes a rejected operation
+and describes the smallest **capability delta** that would admit it; it does not
+treat all rejected input as permission to make the schema broadly permissive.
+
+For example, a development container might begin with paragraphs whose text is
+limited to ASCII. Adding Japanese text would produce a delta such as “paragraph
+text first used the Japanese script; add that script to the content domain.” A
+longer tooltip might produce “`title` reached 173 characters; raise the
+per-attribute limit from 160 to 192,” rather than raising every attribute's
+limit. Shape examples include observing a second list level or a previously
+unused wrapper element. URL or network capabilities require a separate,
+deliberate grant and must never be inferred merely because a rejected value was
+observed.
+
+An opt-in development mode may apply low-risk deltas automatically within a
+fixed hard ceiling, while recording the exact before/after schema and the input
+that motivated it. Other deltas should remain suggestions requiring approval.
+Production stays on a reviewed, fixed envelope; discovery must not silently
+turn production failures into new authority.
+
+These observations should appear as component-authored messages in the
+project's [chat-like activity log](../../docs/project-activity-log.md). A
+message can say what changed, why, whether it was automatically applied, and
+how to accept, revert, or pin the constraint. This gives developers early
+notice of surprising international text, title lengths, DOM growth, or other
+schema drift without making them inspect a console. Equivalent observations
+should be grouped so normal typing does not create chat noise.
+
 ## Related
 
 - `@macchiato-dev/html-use` — parser/serializer that dom-use injects its

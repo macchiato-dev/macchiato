@@ -41,6 +41,7 @@ author/participant ID, kind, and bounded payload. Useful initial kinds are:
 - `version`: a reference to a project version and its producing action;
 - `error`: a reference to a host-owned diagnostic record;
 - `component`: a bounded lifecycle or result summary;
+- `capability`: a proposed or applied surface-envelope delta;
 - `decision`: a conclusion that can be found separately from discussion; and
 - `system`: publish, revert, restore, permission, and retention events.
 
@@ -54,6 +55,15 @@ Error entries refer to a diagnostic owned by the host. Production entries may
 contain only a stable category and correlation ID; development entries may show
 the bounded details described in [the QuickJS DOM runtime](quickjs-dom-runtime.md).
 Guest-supplied context remains explicitly marked as untrusted.
+
+Capability entries report schema-envelope discovery by a host validator. They
+identify the component and surface, the bounded observation, the narrow
+before/after policy delta, whether development mode applied it automatically,
+and any hard ceiling involved. For example, an editor surface may report its
+first Japanese paragraph text or a `title` value exceeding its configured
+per-attribute length. Network, storage, and other external authority cannot be
+auto-approved through this mechanism. Repeated equivalent observations should
+share a host-produced fingerprint and be grouped rather than flooding the log.
 
 Edits to human notes should be represented by a bounded revision record. The UI
 may display only the latest text while retaining “edited” provenance. Deletion
