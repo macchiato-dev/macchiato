@@ -1,0 +1,38 @@
+name: Publish use cluster
+
+on:
+  push:
+    tags:
+      - "use-cluster-v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - run: npm run check:use-cluster
+      - run: npm run test:publish-core
+      - name: Verify coordinated version
+        run: |
+          version="${GITHUB_REF_NAME#use-cluster-v}"
+          for package in style-use html-use dom-use; do
+            test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
+          done
+      - name: Verify generated output
+        run: git diff --exit-code -- packages/style-use/src packages/html-use/src packages/dom-use/src
+      - run: npm publish --workspace @macchiato-dev/style-use --access public --provenance
+      - run: npm publish --workspace @macchiato-dev/html-use --access public --provenance
+      - run: npm publish --workspace @macchiato-dev/dom-use --access public --provenance
