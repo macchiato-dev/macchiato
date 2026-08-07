@@ -904,7 +904,7 @@ body.project-presenting { overflow: hidden; }
 .project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: #eef2ff; font-size: 12px; }
 .project-editor__preview > [data-project-preview] { padding: 20px; color: #edf3f2; }
 .project-editor__view-controls { display: flex; gap: 2px; }
-.project-editor__view-controls button { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; }
+.project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #2d3c98; }
 .project-editor__view-controls [data-project-view="details"] { display: none; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
@@ -944,6 +944,19 @@ body:has(.focused-view) { padding: 0; }
 .focused-header .crumb { align-self: center; margin: 0; padding: 0; box-shadow: none; }
 .toolbar--cardless { border: none; border-radius: 0; box-shadow: none; }
 .focused-view .project-editor { border-radius: 0; }
+.layout.embed-view { display: block; width: 100%; height: 100vh; max-width: none; min-height: 0; margin: 0; overflow: hidden; background: #151717; }
+html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #151717; }
+.layout.embed-view > :not(.main) { display: none; }
+.layout.embed-view .crumb { display: none; }
+.layout.embed-view > .main, .layout.embed-view .content-root, .layout.embed-view .content-block, .layout.embed-view .account-dashboard, .layout.embed-view .create-form, .layout.embed-view .project-create__layout { width: 100%; height: 100%; min-height: 0; max-width: none; margin: 0; padding: 0; overflow: hidden; }
+.layout.embed-view .content-block, .layout.embed-view .project-editor { border: none; border-radius: 0; box-shadow: none; }
+.project-embed .project-create__layout { display: block; }
+.project-embed .project-editor { width: 100%; height: 100%; min-height: 0; }
+.project-embed .project-editor__source-toolbar, .project-embed .project-editor__source, .project-embed .project-editor__splitter, .project-embed .project-editor__status, .project-embed .project-editor__preview-toolbar > :not(.project-editor__view-controls), .project-embed .project-editor__view-controls > :not([data-project-present]) { display: none; }
+.project-embed .project-editor__toolbar { position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0; background: transparent; }
+.project-embed .project-editor__preview-toolbar { display: block; }
+.project-embed .project-editor__workspace { display: block; height: 100%; }
+.project-embed .project-editor__preview { display: block; width: 100%; height: 100%; overflow: auto; }
 .focused-view .account-dashboard.project-create, .focused-view .project-create .create-form { height: 100%; min-height: 0; }
 .focused-view .project-create__fields { gap: 9px; padding: 10px 12px; border: 1px solid var(--track-border); border-radius: 0; }
 .focused-view .project-create__fields .create-form__field { gap: 4px; }
