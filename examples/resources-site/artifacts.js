@@ -71,6 +71,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(directory, "models", "url-pattern.js"))));
   files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(directory, "models", "container-elements.js"))));
+  files.set("/-/resources-site/project-archive.js", bytes(readFileSync(join(directory, "models", "project-archive.js"))));
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));

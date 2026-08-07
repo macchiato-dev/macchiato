@@ -84,7 +84,7 @@ export const CONTENT_SCHEMA = Object.freeze([
 ]);
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-const TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
+const TEMPLATES = new Set(["article", "slides", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
 const RESERVED_ORGANIZATION_NAMES = new Set(["admin", "administrator", "api", "root", "security", "support", "system", "www"]);
 
 export class ContentConflictError extends Error {

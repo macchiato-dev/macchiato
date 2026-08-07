@@ -1,8 +1,9 @@
 const PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
 const MAX_FILES = 64;
-const MAX_FILE_BYTES = 1_000_000;
+// Binary archive entries use base64 in snapshots; 70 MiB accommodates one 50 MiB portable artifact.
+const MAX_FILE_BYTES = 70 * 1024 * 1024;
 const MAX_CONFIG_BYTES = 64_000;
-const MAX_SNAPSHOT_BYTES = 2_000_000;
+const MAX_SNAPSHOT_BYTES = 70 * 1024 * 1024;
 
 function own(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -35,7 +36,7 @@ export function normalizeProjectSnapshot(value = {}) {
     const content = String(file?.content ?? "");
     if (!PATH.test(path) || path.includes("//")) throw new Error(`Invalid project file path: ${path}`);
     if (seen.has(path)) throw new Error(`Duplicate project file path: ${path}`);
-    if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error(`Project file is too large: ${path}`);
+    if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
     seen.add(path);
     return Object.freeze({ path, content });
   }).sort((left, right) => left.path.localeCompare(right.path));
