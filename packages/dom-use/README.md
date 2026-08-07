@@ -163,8 +163,10 @@ unless the schema explicitly opts out. Override these through `limits` and
 
 `dom-use` also has a gas budget for DOM work. A document starts in the `init`
 lifecycle with a larger tank, can move to `idle`, and uses a smaller `event`
-tank while browser events are being handled. Gas refills by a configured amount
-at a configured interval, capped by the current lifecycle tank. Operation costs
+tank while browser events are being handled. `gas.refill` is a gas-per-second
+rate, capped by the current lifecycle tank. The implementation currently
+allocates one tenth of that rate every 100 milliseconds; this scheduling detail
+is deliberately not encoded in the configuration property name. Operation costs
 can be static numbers or formulas based on text length and estimated node count,
 such as `setInnerHTML`.
 
@@ -198,10 +200,8 @@ const domUse = new DomUse({
       idle: 10000,
       event: 3000,
     },
-    refill: {
-      amount: 500,
-      intervalMs: 1000,
-    },
+    // Gas units restored per second.
+    refill: 500,
     costs: {
       createElement: 4,
       appendChild: 2,

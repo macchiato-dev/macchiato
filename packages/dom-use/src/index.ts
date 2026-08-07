@@ -92,10 +92,7 @@ const DEFAULT_GAS = {
     idle: 20000,
     event: 8000,
   },
-  refill: {
-    amount: 1000,
-    intervalMs: 1000,
-  },
+  refill: 1000,
   costs: {
     createElement: 4,
     createTextNode: 4,
@@ -134,11 +131,14 @@ function patternMatches(pattern, value) {
 }
 
 function mergeGasConfig(config: any = {}) {
+  if (config.refill !== undefined && (typeof config.refill !== "number" || !Number.isFinite(config.refill) || config.refill < 0)) {
+    throw new TypeError("gas.refill must be a non-negative gas-per-second number");
+  }
   return {
     ...DEFAULT_GAS,
     ...config,
     tank: { ...DEFAULT_GAS.tank, ...(config.tank || {}) },
-    refill: { ...DEFAULT_GAS.refill, ...(config.refill || {}) },
+    refill: config.refill ?? DEFAULT_GAS.refill,
     costs: { ...DEFAULT_GAS.costs, ...(config.costs || {}) },
   };
 }
@@ -503,17 +503,17 @@ export class DomUse {
   refillGas(ownerDocument, now = Date.now()) {
     const policy = this.gasPolicy();
     if (policy.enabled === false || !ownerDocument?.gas) return;
-    const intervalMs = positiveNumber(policy.refill?.intervalMs, 0);
-    const amount = positiveNumber(policy.refill?.amount, 0);
-    if (!intervalMs || !amount) return;
+    const refillPerSecond = Number(policy.refill);
+    if (!Number.isFinite(refillPerSecond) || refillPerSecond <= 0) return;
+    const interval = 100;
     const elapsed = Math.max(0, now - ownerDocument.gas.lastRefill);
-    const intervals = Math.floor(elapsed / intervalMs);
+    const intervals = Math.floor(elapsed / interval);
     if (intervals <= 0) return;
     ownerDocument.gas.available = Math.min(
       ownerDocument.gas.capacity,
-      ownerDocument.gas.available + intervals * amount,
+      ownerDocument.gas.available + intervals * refillPerSecond / 10,
     );
-    ownerDocument.gas.lastRefill += intervals * intervalMs;
+    ownerDocument.gas.lastRefill += intervals * interval;
   }
 
   gasAvailable(ownerDocument, now = Date.now()) {

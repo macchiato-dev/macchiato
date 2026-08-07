@@ -103,10 +103,7 @@
       "idle": 60000,
       "event": 30000
     },
-    "refill": {
-      "amount": 5000,
-      "intervalMs": 1000
-    },
+    "refill": 5000,
     "costs": {
       "createElement": 4,
       "createTextNode": 4,

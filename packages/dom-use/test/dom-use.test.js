@@ -477,7 +477,7 @@ test("enforces configurable DOM gas budgets", () => {
   const domUse = articleDomUse({
     gas: {
       tank: { init: 11 },
-      refill: { amount: 0, intervalMs: 1000 },
+      refill: 0,
       costs: {
         createElement: 6,
       },
@@ -493,11 +493,11 @@ test("enforces configurable DOM gas budgets", () => {
   );
 });
 
-test("supports lifecycle tank limits and interval gas refill", () => {
+test("supports lifecycle tank limits and per-second gas refill", () => {
   const domUse = articleDomUse({
     gas: {
       tank: { init: 10, idle: 5, event: 3 },
-      refill: { amount: 2, intervalMs: 100 },
+      refill: 20,
       costs: {
         createElement: 1,
       },
@@ -514,6 +514,8 @@ test("supports lifecycle tank limits and interval gas refill", () => {
 
   doc.gas.available = 1;
   doc.gas.lastRefill = 0;
+  assert.equal(domUse.gasAvailable(doc, 99), 1);
+  assert.equal(domUse.gasAvailable(doc, 100), 3);
   assert.equal(domUse.gasAvailable(doc, 250), 5);
 
   domUse.setGasLifecycle(doc, "event", 250);
@@ -531,7 +533,7 @@ test("charges innerHTML gas from input length and estimated node count", () => {
     },
     gas: {
       tank: { init: 11 },
-      refill: { amount: 0, intervalMs: 1000 },
+      refill: 0,
       costs: {
         createElement: 0,
         createTextNode: 0,
@@ -570,7 +572,7 @@ test("host bridge preserves event lifecycle across nested event scopes", () => {
   const capability = new DomUseHostCapability({
     gas: {
       tank: { init: 100, idle: 20, event: 7 },
-      refill: { amount: 0, intervalMs: 1000 },
+      refill: 0,
       costs: {},
     },
   });
@@ -604,7 +606,7 @@ test("host bridge gives each top-level event a fresh gas tank", () => {
   const capability = new DomUseHostCapability({
     gas: {
       tank: { init: 100, idle: 20, event: 7 },
-      refill: { amount: 0, intervalMs: 1000 },
+      refill: 0,
       costs: {},
     },
   });
