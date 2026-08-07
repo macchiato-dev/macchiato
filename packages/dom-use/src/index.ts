@@ -206,8 +206,6 @@ export class DomUseGasError extends Error {
   }
 }
 
-// These nodes model the guest-visible tree. Browser nodes remain in the host
-// bridge and are associated with guest identities there, never stored here.
 class GuestNode {
   ownerDocument: GuestDocument;
   parentNode: GuestNode | null;
@@ -781,8 +779,6 @@ export class DomUse {
     return false;
   }
 
-  // URL-bearing attributes pass two gates: the node rule must name the
-  // attribute, and a separate URL rule must authorize its destination.
   urlRuleFor(tagNameOrNode, attr) {
     const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
     const name = String(attr).toLowerCase();
@@ -940,8 +936,6 @@ export class DomUse {
     return null;
   }
 
-  // Event objects do not cross the guest boundary. Only explicitly selected,
-  // size-bounded data is copied into the payload returned to the guest.
   sanitizeEventPayload(event, payload: any = {}) {
     const name = String(event).toLowerCase();
     this.validateEventName(name);
@@ -1011,8 +1005,6 @@ export class DomUse {
     }
   }
 
-  // Check the prospective relationship before appendChild mutates either tree,
-  // so a rejected move cannot partially detach or reparent the child.
   validateAppend(parent, child) {
     if (!this.allowedChild(parent, child)) {
       throw new Error(`Child ${child.tagName} not allowed in ${parent.tagName}`);
