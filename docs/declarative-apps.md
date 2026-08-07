@@ -171,7 +171,8 @@ names each direct-child file exactly and gives it an independent byte ceiling:
 
 ```bash
 node packages/macchiato/src/macchiato.js site add dom-use-tour /root/dom-use-tour \
-  --writable-file notes.md --max-bytes 65536
+  --writable-file notes.md --max-bytes 65536 \
+  --writable-file notes-archive.md --max-bytes 1048576
 ```
 
 The app reads and replaces that file through
