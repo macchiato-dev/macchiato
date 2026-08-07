@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderSiteRoute } from "@macchiato-dev/site";
@@ -13,6 +13,7 @@ const directory = dirname(fileURLToPath(import.meta.url));
 const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
+const codeTourExampleDirectory = join(directory, "blog-examples", "dom-use-tour", "dist");
 const generatedDirectory = join(directory, "generated");
 const blogImageDirectory = join(directory, "assets", "blog");
 const fontNames = ["space-grotesk-latin.woff2", "space-grotesk-latin-ext.woff2", "space-grotesk-vietnamese.woff2"];
@@ -70,8 +71,8 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(directory, "models", "url-pattern.js"))));
   files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(directory, "models", "container-elements.js"))));
-  for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory]]) {
-    for (const name of ["index.html", "app.js", "app.css"]) {
+  for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
+    for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));
     }
   }

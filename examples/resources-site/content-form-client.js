@@ -372,9 +372,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function renderTabs() {
-    const tabs = root.querySelector(".project-editor__tabs");
-    const menu = root.querySelector("[data-project-file-menu]");
-    tabs.replaceChildren();
+    const menu = root.querySelector("[data-project-file-options]");
     menu.replaceChildren();
     function addChoice({ path, label, config = false }) {
       const button = document.createElement("button");
@@ -384,8 +382,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       else button.dataset.projectFile = path;
       button.setAttribute("aria-selected", (config ? selected === "config" : path === selected) ? "true" : "false");
       button.textContent = label;
-      tabs.append(button);
-      const option = button.cloneNode(true);
+      const option = button;
       option.className = "project-editor__file-option";
       option.setAttribute("role", "menuitemradio");
       option.setAttribute("aria-checked", button.getAttribute("aria-selected"));
@@ -630,9 +627,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderTabs();
     sendContent();
   }
-  root.querySelector(".project-editor__tabs").addEventListener("click", selectProjectFile);
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
   const fileMenu = root.querySelector("[data-project-file-menu]");
+  const fileFilter = root.querySelector("[data-project-file-filter]");
+  const fileEmpty = root.querySelector("[data-project-file-empty]");
+  function filterProjectFiles() {
+    const query = fileFilter.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    for (const option of fileMenu.querySelectorAll('[role="menuitemradio"]')) {
+      option.hidden = Boolean(query && !option.textContent.toLocaleLowerCase().includes(query));
+      if (!option.hidden) visible += 1;
+    }
+    fileEmpty.hidden = visible !== 0;
+  }
   function closeFileMenu({ focus = false } = {}) {
     fileMenu.hidden = true;
     fileTrigger.setAttribute("aria-expanded", "false");
@@ -642,8 +649,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const opening = fileMenu.hidden;
     fileMenu.hidden = !opening;
     fileTrigger.setAttribute("aria-expanded", String(opening));
-    if (opening) fileMenu.querySelector('[aria-checked="true"]')?.focus();
+    if (opening) {
+      fileFilter.value = "";
+      filterProjectFiles();
+      fileFilter.focus();
+    }
   });
+  fileFilter.addEventListener("input", filterProjectFiles);
   fileMenu.addEventListener("click", (event) => { selectProjectFile(event); closeFileMenu({ focus: true }); });
   fileMenu.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -653,7 +665,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]')];
+    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]:not([hidden])')];
     const current = Math.max(0, options.indexOf(document.activeElement));
     const next = event.key === "Home" ? 0
       : event.key === "End" ? options.length - 1
