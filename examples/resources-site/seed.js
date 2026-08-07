@@ -874,6 +874,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__file-menu input:focus { border-color: #7688eb; }
 .project-editor__file-menu [data-project-file-empty] { margin: 5px; color: var(--muted); font-size: 11px; }
 .project-editor__file-option { display: block; width: 100%; padding: 8px 9px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; text-align: left; }
+.project-editor__file-option[hidden] { display: none; }
 .project-editor__file-option:hover, .project-editor__file-option:focus-visible { color: var(--text); background: var(--hover); outline: none; }
 .project-editor__file-option[aria-checked="true"] { color: #fff; background: #2d3c98; }
 .project-editor__tab, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
@@ -889,6 +890,12 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__workspace[data-view="preview"] .project-editor__source, .project-editor__workspace[data-view="preview"] .project-editor__splitter { display: none; }
 .project-editor__source, .project-editor__preview { min-width: 0; min-height: 0; overflow: auto; }
 .project-editor__source { padding: 12px; overflow: hidden; }
+.project-editor__present-close { display: none; }
+body.project-presenting { overflow: hidden; }
+.project-editor__preview--presenting { position: fixed; top: 0; left: 0; z-index: 1000; display: block; width: 100vw; height: 100vh; overflow: hidden; color: var(--text); background: #151717; }
+.project-editor__preview--presenting > [data-project-preview] { width: 100%; height: 100%; overflow: auto; }
+.project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 12px; right: 12px; z-index: 1001; display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border: 1px solid #7883b7; border-radius: 999px; color: #fff; background: #171b31; font: inherit; font-size: 23px; line-height: 1; cursor: pointer; }
+.project-editor__preview--presenting .project-editor__present-close:hover { background: #28305c; }
 .project-editor__mount, .project-editor__mount .cm-editor { height: 100%; min-height: 0; }
 .project-editor__mount .cm-editor { background: #1d2020; }
 .project-editor__mount .cm-scroller { overflow: auto; }

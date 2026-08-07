@@ -676,6 +676,35 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!root.querySelector("[data-project-file-picker]").contains(event.target)) closeFileMenu();
   });
   const workspace = root.querySelector(".project-editor__workspace");
+  const presentButton = root.querySelector("[data-project-present]");
+  const presentClose = root.querySelector("[data-project-present-close]");
+  const previewSection = root.querySelector(".project-editor__preview");
+  const previewPosition = document.createComment("project preview position");
+  function closePresentation() {
+    delete root.dataset.presenting;
+    document.body.classList.remove("project-presenting");
+    previewSection.classList.remove("project-editor__preview--presenting");
+    previewPosition.replaceWith(previewSection);
+    presentButton.setAttribute("aria-pressed", "false");
+  }
+  function openPresentation() {
+    root.dataset.presenting = "true";
+    document.body.classList.add("project-presenting");
+    previewSection.replaceWith(previewPosition);
+    previewSection.classList.add("project-editor__preview--presenting");
+    document.body.append(previewSection);
+    presentButton.setAttribute("aria-pressed", "true");
+    presentClose.focus();
+  }
+  presentButton.addEventListener("click", openPresentation);
+  presentClose.addEventListener("click", () => { closePresentation(); presentButton.focus(); });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && root.dataset.presenting === "true") {
+      event.preventDefault();
+      closePresentation();
+      presentButton.focus();
+    }
+  });
   const splitter = root.querySelector(".project-editor__splitter");
   function setSplit(clientX) {
     const rect = workspace.getBoundingClientRect();
