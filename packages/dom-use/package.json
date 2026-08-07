@@ -2,17 +2,40 @@
   "name": "@macchiato-dev/dom-use",
   "version": "0.1.0",
   "description": "Structured DOM access according to a schema — the top-level capability",
-  "repository": { "type": "git", "url": "git+https://github.com/macchiato-dev/macchiato.git", "directory": "packages/dom-use" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/macchiato-dev/macchiato.git",
+    "directory": "packages/dom-use"
+  },
   "type": "module",
   "exports": {
     ".": "./lib/index.js",
     "./bridge": "./lib/bridge.js",
     "./guest-runtime": "./lib/guest-runtime.js",
+    "./guest-runtime-microquickjs": "./lib/guest-runtime-microquickjs.js",
+    "./host": {
+      "types": "./lib/host.d.ts",
+      "default": "./lib/host.js"
+    },
     "./browser-assets": "./lib/browser-assets.js"
   },
-  "files": ["lib", "src", "scripts", "README.md", "tsconfig.json", "deno.json"],
-  "sideEffects": ["./lib/guest-runtime.js"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "lib",
+    "src",
+    "scripts",
+    "examples",
+    "README.md",
+    "tsconfig.json",
+    "babel.microquickjs.json",
+    "deno.json"
+  ],
+  "sideEffects": [
+    "./lib/guest-runtime.js",
+    "./lib/guest-runtime-microquickjs.js"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-guest.js",
@@ -26,10 +49,12 @@
     "test:unit": "node --test test/*.test.js"
   },
   "dependencies": {
-    "@macchiato-dev/style-use": "0.1.0",
-    "@macchiato-dev/html-use": "0.1.0"
+    "@macchiato-dev/html-use": "0.1.0",
+    "@macchiato-dev/style-use": "0.1.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
     "esbuild": "^0.28.1",
     "typescript": "^7.0.2"
   }

@@ -5,14 +5,15 @@ The first TypeScript cluster is `style-use` → `html-use` → `dom-use`.
 JavaScript, declarations, declaration maps, and source maps into an ignored
 `lib/` directory. `style-use` and `html-use` retain the earlier `source/` →
 `src/` layout until they are migrated separately. `npm run build:use-cluster`
-builds all three in dependency order. The one guest bootstrap is an
-explicit modern ES2022 script target built by esbuild: it must not acquire an
-ES-module wrapper because QuickJS evaluates it as a classic bootstrap script. Published packages
+builds all three in dependency order. The modern guest bootstrap is an
+explicit ES2022 script target built by esbuild; a separate Babel build emits
+the stricter MicroQuickJS artifact. Neither acquires an ES-module wrapper
+because the guest evaluates it as a classic bootstrap script. Published packages
 contain both forms: `dom-use` JavaScript consumers use `lib/`, while Deno and
 TypeScript readers can inspect or import its TypeScript sources directly.
 
-There are no runtime build helpers. TypeScript, and esbuild for the one classic
-guest script, are package development dependencies. Each package supports
+There are no runtime build helpers. TypeScript, esbuild, and the Babel
+MicroQuickJS transform are package development dependencies. Each package supports
 `build`, `lint`, `typecheck`, `test`, and
 `check`; the root `check:use-cluster` runs them in dependency order.
 
@@ -20,9 +21,11 @@ guest script, are package development dependencies. Each package supports
 
 There are two distinct QuickJS boundaries:
 
-- `guest-runtime.ts` runs inside the project's embedded QuickJS VM. Its build
-  target is an ES2022 classic IIFE, and browser tests execute that artifact in
-  the real VM.
+- `host.ts` is the single-import browser entry containing `dom-use`, its bridge,
+  and the required `html-use` and `style-use` implementation.
+- `guest-runtime.ts` produces an ES2022 classic QuickJS script and a narrower
+  ES5-syntax MicroQuickJS script. The latter has its own runtime smoke test and
+  supports `style.setProperty()` when the engine has no `Proxy`.
 - Deno 2.9 added an experimental QuickJS-ng backend for compiled Deno programs.
   Deno preserves its application API through a Rust-side V8-compatible facade;
   it does not require application TypeScript to use a special reduced dialect.

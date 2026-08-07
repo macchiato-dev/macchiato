@@ -259,6 +259,33 @@ attribute is preserved.
 - `@macchiato-dev/dom-use/guest-runtime` — guest-side minimal DOM wrapper,
   source HTML parser, inline module runner hooks, and event dispatcher
 
+## Published host and guest artifacts
+
+The browser boundary has three deliberately different entry points:
+
+- `@macchiato-dev/dom-use/host` is one ES2022 ESM bundle containing the host
+  policy engine, bridge, and the `html-use` and `style-use` code they require.
+  Its accompanying `host.d.ts` describes the combined host surface.
+- `@macchiato-dev/dom-use/guest-runtime` is the self-contained modern QuickJS
+  classic script.
+- `@macchiato-dev/dom-use/guest-runtime-microquickjs` is the self-contained
+  ES5-syntax guest with a small map fallback. Without `Proxy`, its style surface
+  supports `style.setProperty(name, value)` rather than arbitrary property
+  assignment.
+
+The MicroQuickJS artifact is intentionally a narrower compatibility target,
+not a claim that every modern guest program can run unchanged. MicroQuickJS
+implements a strict subset close to ES5; test the selected guest program and
+memory limit against the actual engine. Its bytecode is runtime-specific and
+must not be accepted from untrusted sources. See the
+[upstream MicroQuickJS contract](https://github.com/bellard/mquickjs).
+
+[`examples/wasm-browser`](examples/wasm-browser/) demonstrates the distribution
+boundary in a browser: one host import, one guest script fetch, and the
+`quickjs-emscripten` WebAssembly runtime from jsDelivr. The same example can
+switch the guest URL to the MicroQuickJS-compatible artifact when its VM adapter
+is available; the host capability does not change.
+
 A future package (possibly `page-use` or `app-use`) can sit above these pieces
 and handle concerns like:
 

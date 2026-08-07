@@ -11,7 +11,8 @@ const listenersByNode = new Map();
 function attrsFromSource(source) {
   const attrs = [];
   const re = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
-  for (const match of source.matchAll(re)) {
+  let match;
+  while ((match = re.exec(source)) !== null) {
     attrs.push([match[1], match[2] ?? match[3] ?? match[4] ?? ""]);
   }
   return attrs;
@@ -134,7 +135,13 @@ class HostElement extends HostNode {
   }
 
   get style() {
-    return new Proxy({}, {
+    const style = {
+      setProperty: (property, value) => {
+        host("setStyle", { id: this.__hostNodeId, property: String(property), value: String(value) });
+      },
+    };
+    if (typeof Proxy !== "function") return style;
+    return new Proxy(style, {
       set: (_target, property, value) => {
         host("setStyle", { id: this.__hostNodeId, property: String(property), value: String(value) });
         return true;
@@ -150,7 +157,7 @@ class HostElement extends HostNode {
     if (key === "class") this._className = text;
     if (key === "value") this._value = text;
     if (key === "checked") this.checked = true;
-    if (key.startsWith("data-")) {
+    if (key.slice(0, 5) === "data-") {
       const datasetKey = key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
       this.dataset[datasetKey] = text;
     }
@@ -183,8 +190,8 @@ class HostElement extends HostNode {
   }
 
   matches(selector) {
-    if (selector.startsWith(".")) return this.className.split(/\s+/).includes(selector.slice(1));
-    if (selector.startsWith("#")) return this.id === selector.slice(1);
+    if (selector.slice(0, 1) === ".") return this.className.split(/\s+/).indexOf(selector.slice(1)) !== -1;
+    if (selector.slice(0, 1) === "#") return this.id === selector.slice(1);
     return this.tagName === selector.toLowerCase();
   }
 
@@ -246,8 +253,9 @@ function parseInitialHtml(source) {
   const stack = [body];
   const tagRe = /<script\b([^>]*)>([\s\S]*?)<\/script>|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
 
-  for (const match of source.matchAll(tagRe)) {
-    if (match[0].startsWith("<script")) {
+  let match;
+  while ((match = tagRe.exec(source)) !== null) {
+    if (match[0].slice(0, 7) === "<script") {
       scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });
       continue;
     }
@@ -255,7 +263,7 @@ function parseInitialHtml(source) {
     if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "title" || tagName === "style") {
       continue;
     }
-    if (match[0].startsWith("</")) {
+    if (match[0].slice(0, 2) === "</") {
       while (stack.length > 1) {
         const node = stack.pop();
         if (node.tagName === tagName) break;
@@ -265,7 +273,7 @@ function parseInitialHtml(source) {
     const node = document.createElement(tagName);
     for (const [name, value] of attrsFromSource(match[4] || "")) node.setAttribute(name, value);
     stack[stack.length - 1].appendChild(node);
-    if (!["br", "input", "hr", "img", "meta", "link"].includes(tagName)) stack.push(node);
+    if (["br", "input", "hr", "img", "meta", "link"].indexOf(tagName) === -1) stack.push(node);
   }
 
   const app = document.getElementById("app");
