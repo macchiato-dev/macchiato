@@ -12,6 +12,7 @@ import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handl
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
+import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -32,6 +33,7 @@ export const BUILTIN_APPS = [
     kind: "portable sandbox workspace",
     description: "A collapsible, storage-explicit workspace for running focused sandboxed apps.",
     handler: focusedAppHandler,
+    commands: { export: { description: "Export the app as a static directory.", run: exportFocusedApp } },
     sourceFiles: [
       "examples/focused-app/index.html",
       "examples/focused-app/client.js",

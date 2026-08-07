@@ -8,12 +8,14 @@ const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 
 const handlerNames = new Map();
 const handlers = new Map([["package-browser", packageBrowserHandler]]);
+const commandHandlers = new Map();
 
 for (const app of BUILTIN_APPS) {
   if (!app.handler) continue;
   const name = `code:${app.subdomain}`;
   handlerNames.set(app.subdomain, name);
   handlers.set(name, app.handler);
+  if (app.commands) commandHandlers.set(app.pluginId || app.subdomain, app.commands);
 }
 
 function declarationForBuiltin(app) {
@@ -22,7 +24,7 @@ function declarationForBuiltin(app) {
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
-  const { aliases, pluginId, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, ...base } = app;
+  const { aliases, pluginId, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, commands, ...base } = app;
   return {
     ...base,
     handler,
@@ -43,6 +45,7 @@ function declarationForBuiltin(app) {
       site,
       adapter,
       environment,
+      commands: Object.fromEntries(Object.entries(commands || {}).map(([name, command]) => [name, { description: command.description || "" }])),
     },
   };
 }
@@ -103,6 +106,10 @@ export const APP_PLUGIN_PRESETS = {
 
 export function resolveAppHandler(name) {
   return handlers.get(name);
+}
+
+export function resolveAppCommand(pluginId, name) {
+  return commandHandlers.get(pluginId)?.[name]?.run;
 }
 
 export function appPluginIds() {

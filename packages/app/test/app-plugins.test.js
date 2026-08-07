@@ -36,3 +36,13 @@ test("plugins install dependencies with overridable, recorded subdomains", () =>
   assert.ok(getSiteRoute(db, "resources-source", "/"));
   assert.equal(getDeclarativeApp(db, "resources-edge"), null);
 });
+
+test("plugins persist inspectable CLI contracts without executable functions", () => {
+  const db = new DatabaseSync(":memory:");
+  initSqliteStore(db);
+  installAppPlugins(db, ["focused-app"]);
+
+  const app = getDeclarativeApp(db, "app");
+  assert.deepEqual(app.commands, { export: { description: "Export the app as a static directory." } });
+  assert.equal(JSON.stringify(app.options).includes("exportFocusedApp"), false);
+});

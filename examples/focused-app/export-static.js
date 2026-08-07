@@ -5,19 +5,24 @@ import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-em
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const root = resolve(directory, "../..");
-const destination = resolve(process.argv[2] || join(root, "dist/focused-app"));
-await mkdir(destination, { recursive: true });
-for (const file of ["index.html", "client.js", "model.js", "preview-runtime.js", "style.css"]) {
-  await cp(join(directory, file), join(destination, file));
+export async function exportFocusedApp([destinationArgument] = []) {
+  const destination = resolve(destinationArgument || join(root, "dist/focused-app"));
+  await mkdir(destination, { recursive: true });
+  for (const file of ["index.html", "client.js", "model.js", "preview-runtime.js", "style.css"]) {
+    await cp(join(directory, file), join(destination, file));
+  }
+  await cp(join(root, "packages/browser-use/src/index.js"), join(destination, "browser-use-host.js"));
+  await cp(join(root, "packages/browser-use/src/quickjs-dom-guest.js"), join(destination, "browser-use-quickjs-dom-guest.js"));
+  const assetDirectory = join(destination, "-/quickjs-emscripten-sandbox");
+  await mkdir(assetDirectory, { recursive: true });
+  for (const asset of quickJsEmscriptenSandboxBrowserAssets.files) {
+    let source = await readFile(asset.filePath, "utf8");
+    for (const [from, to] of Object.entries(asset.rewrites || {})) source = source.replaceAll(from, to);
+    source = source.replace(/\/\/# sourceMappingURL=.*$/m, "");
+    await writeFile(join(assetDirectory, asset.publicPath), source);
+  }
+  console.log(destination);
+  return destination;
 }
-await cp(join(root, "packages/browser-use/src/index.js"), join(destination, "browser-use-host.js"));
-await cp(join(root, "packages/browser-use/src/quickjs-dom-guest.js"), join(destination, "browser-use-quickjs-dom-guest.js"));
-const assetDirectory = join(destination, "-/quickjs-emscripten-sandbox");
-await mkdir(assetDirectory, { recursive: true });
-for (const asset of quickJsEmscriptenSandboxBrowserAssets.files) {
-  let source = await readFile(asset.filePath, "utf8");
-  for (const [from, to] of Object.entries(asset.rewrites || {})) source = source.replaceAll(from, to);
-  source = source.replace(/\/\/# sourceMappingURL=.*$/m, "");
-  await writeFile(join(assetDirectory, asset.publicPath), source);
-}
-console.log(destination);
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) await exportFocusedApp(process.argv.slice(2));

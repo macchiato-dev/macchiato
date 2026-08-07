@@ -55,6 +55,14 @@ function validateConfig(config) {
       }
     }
   }
+  if (config.options.commands !== undefined) {
+    assertObject(config.options.commands, "options.commands");
+    for (const [name, declaration] of Object.entries(config.options.commands)) {
+      if (!/^[a-z][a-z0-9-]*$/.test(name)) throw new Error(`Invalid app command name: ${name}`);
+      assertObject(declaration, `options.commands.${name}`);
+      if (typeof declaration.description !== "string") throw new Error(`options.commands.${name}.description must be a string`);
+    }
+  }
   if (config.access.fileAccess) {
     assertObject(config.access.fileAccess, "access.fileAccess");
     safeRelativePath(config.access.fileAccess.root, "file access root");
@@ -109,6 +117,7 @@ export function declarativeAppFromRow(row, environment = {}) {
     options,
     environment,
     environmentSchema: options.environment || {},
+    commands: options.commands || {},
     dependencies: options.dependencies || {},
     aliases: options.aliases || [],
     directory: Boolean(row.directory),

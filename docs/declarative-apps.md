@@ -160,6 +160,27 @@ do not commit or copy it casually. Hosted adapters such as Bunny should map the
 same declared names to their native environment-secret facility rather than
 uploading this local table.
 
+CLI interfaces
+
+A declarative app may expose named commands as well as an HTTP interface. The
+persisted `options.commands` object contains only inspectable names and short
+descriptions; executable functions remain in the installed plugin registry.
+Commands therefore use the same explicit installation boundary as web routes,
+without turning stored configuration into executable code.
+
+List or run commands by installed subdomain:
+
+```bash
+node packages/macchiato/src/macchiato.js app run app
+node packages/macchiato/src/macchiato.js app run app export ./dist/app-static
+```
+
+The runner receives trailing arguments plus app-scoped environment and
+declaration context. A web app can add a CLI interface without creating
+another kind of app or routing path. A historical code-tour configuration can use
+the same model to select an immutable source revision and bind its notes
+capability directly to an archived file; it must not replace active notes.
+
 Operator-created sites
 
 `site add`, `site add-page`, `site add-file`, and `site add-route` write both

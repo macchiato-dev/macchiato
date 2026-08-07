@@ -3,7 +3,7 @@ import { withDb } from "./db.js";
 import { readFileSync } from "node:fs";
 import { putFontAsset } from "@macchiato-dev/font-use";
 import { deleteSiteRoutes, putSiteRoute } from "@macchiato-dev/site";
-import { appPluginIds, installAppPlugins } from "../../app/src/app-plugins.js";
+import { appPluginIds, installAppPlugins, resolveAppCommand } from "../../app/src/app-plugins.js";
 import {
   addDirectorySite,
   addFileSite,
@@ -11,6 +11,7 @@ import {
   addSchema,
   listConfiguredSites,
   listAppEnvironment,
+  readAppEnvironment,
   getAppConfigRow,
   removeAppEnvironmentValue,
   listSchemas,
@@ -210,6 +211,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  font add <name> <asset-path> <file> [--mime <type>] [--provider <name>] [--source-url <url>]");
       console.log("  app install <id|preset>... [--map <id=subdomain>]");
       console.log("  app plugins                   List available app plugins and presets");
+      console.log("  app run <app> [command] [args...]  List or run an app's CLI commands");
       console.log("  app env set <app> <name> [value|--stdin]");
       console.log("  app env list <app>            List configured names (values are never shown)");
       console.log("  app env unset <app> <name>    Remove an app-scoped value");
@@ -300,6 +302,29 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
     "app plugins"() {
       console.log("Presets: core, development");
       for (const id of appPluginIds()) console.log(`  ${id}`);
+    },
+
+    async "app run"(args) {
+      const [subdomain, commandName, ...commandArgs] = args;
+      if (!subdomain) {
+        console.log("Usage: app run <app-subdomain> [command] [args...]");
+        return;
+      }
+      const row = withDb((db) => getAppConfigRow(db, subdomain), dbOptions);
+      if (!row) throw new Error(`Declarative app is not installed: ${subdomain}`);
+      const options = JSON.parse(row.options_json || "{}");
+      const commands = options.commands || {};
+      if (!commandName) {
+        const entries = Object.entries(commands);
+        if (!entries.length) console.log(`No CLI commands declared by ${subdomain}`);
+        for (const [name, declaration] of entries) console.log(`  ${name}${declaration.description ? `  ${declaration.description}` : ""}`);
+        return;
+      }
+      if (!Object.hasOwn(commands, commandName)) throw new Error(`CLI command is not declared by ${subdomain}: ${commandName}`);
+      const runner = resolveAppCommand(options.plugin, commandName);
+      if (!runner) throw new Error(`CLI implementation is unavailable for ${subdomain}: ${commandName}`);
+      const environment = withDb((db) => readAppEnvironment(db, subdomain), dbOptions);
+      await runner(commandArgs, { subdomain, environment, declaration: commands[commandName] });
     },
 
     async "app env"(args) {
