@@ -12,6 +12,39 @@ Structured DOM access according to a schema. `dom-use` is the **top-level**
 capability that guest contexts interact with. It orchestrates `html-use` and
 `style-use` but never exposes their internals directly.
 
+## Stability and trust decisions
+
+`dom-use` is currently **alpha software** (`0.1.x`). Its APIs, schemas, bridge
+protocol, limits, and security analysis can change. Treat it as a research and
+development capability boundary, not as a drop-in proof that arbitrary code is
+safe.
+
+Whether a particular deployment is appropriate for semi-trusted or untrusted
+code is a decision for that deployment's operator. It depends on the exact
+`dom-use`, `html-use`, and `style-use` versions; the schema and budgets; the
+host bridge; the guest runtime; enabled URL, CSS, event, and storage powers;
+the surrounding WebAssembly engine and browser; and the threat model. Research
+those pieces, test the rejected paths, and use defense in depth. Do not cargo
+cult an example schema merely because it is restrictive or worked for another
+application: a configuration is a statement of authority, not a security
+certification.
+
+## The guest runtime is replaceable
+
+The JavaScript guest runtime shipped by this package is a reference runtime,
+not part of the trusted enforcement boundary. From the host's perspective,
+code inside the guest is untrusted or semi-trusted and must not be relied upon
+to validate its own operations. The host bridge and configured `*-use`
+capabilities decide what becomes observable outside the guest.
+
+Applications are expected to commonly edit, replace, or generate their guest
+runtime. A deployment may also let a guest package select or supply that code;
+the host must continue treating the result as guest-controlled. JavaScript in
+QuickJS is the current reference path, not a language requirement: another
+language or runtime can use the same capability design when an adapter speaks
+the bounded host protocol. Choosing a different guest runtime does not expand
+its authority unless the host configuration grants more authority.
+
 ## Architecture
 
 ```
