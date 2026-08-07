@@ -1,24 +1,24 @@
 import { fileURLToPath } from "node:url";
-
 export const domUseBrowserAssets = {
-  namespace: "@macchiato-dev/dom-use",
-  imports: {
-    "@macchiato-dev/dom-use": "index.js",
-    "@macchiato-dev/dom-use/bridge": "bridge.js",
-    "@macchiato-dev/dom-use/guest-runtime": "guest-runtime.js",
-  },
-  files: [
-    {
-      publicPath: "index.js",
-      filePath: fileURLToPath(new URL("./index.js", import.meta.url)),
+    namespace: "@macchiato-dev/dom-use",
+    imports: {
+        "@macchiato-dev/dom-use": "index.js",
+        "@macchiato-dev/dom-use/bridge": "bridge.js",
+        "@macchiato-dev/dom-use/guest-runtime": "guest-runtime.js",
     },
-    {
-      publicPath: "bridge.js",
-      filePath: fileURLToPath(new URL("./bridge.js", import.meta.url)),
-    },
-    {
-      publicPath: "guest-runtime.js",
-      filePath: fileURLToPath(new URL("./guest-runtime.js", import.meta.url)),
-    },
-  ],
+    files: [
+        {
+            publicPath: "index.js",
+            filePath: fileURLToPath(new URL("./index.js", import.meta.url)),
+        },
+        {
+            publicPath: "bridge.js",
+            filePath: fileURLToPath(new URL("./bridge.js", import.meta.url)),
+        },
+        {
+            publicPath: "guest-runtime.js",
+            filePath: fileURLToPath(new URL("./guest-runtime.js", import.meta.url)),
+        },
+    ],
 };
+//# sourceMappingURL=browser-assets.js.map

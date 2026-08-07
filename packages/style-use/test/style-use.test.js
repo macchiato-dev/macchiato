@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { StyleUse } from "../src/index.js";
+import { StyleUse, StyleUseState, normalizeCssProperty, validateInlineStyle } from "../src/index.js";
+
+test("keeps compiled policy in stable state and exposes function operations", () => {
+  const styleUse = new StyleUse({ properties: { color: true }, limits: { maxValueLength: 20 } });
+  assert.ok(styleUse.state instanceof StyleUseState);
+  assert.equal(styleUse.effectiveProperties(), styleUse.effectiveProperties());
+  assert.equal(styleUse.limits(), styleUse.limits());
+  assert.equal(normalizeCssProperty("backgroundColor"), "background-color");
+  assert.equal(validateInlineStyle(styleUse, "color", "red"), true);
+});
 
 test("allows configured inline styles and stylesheets", () => {
   const styleUse = new StyleUse({

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { DOM_NETWORK_CAPABILITIES, DomUse, SVG_URL_REFERENCE_ATTRIBUTES, URL_CAPABILITY_ATTRIBUTES } from "../src/index.js";
+import {
+  DOM_NETWORK_CAPABILITIES, DomUse, DomUseGasState, DomUseState,
+  SVG_URL_REFERENCE_ATTRIBUTES, URL_CAPABILITY_ATTRIBUTES,
+  createDomDocument, sanitizeDomHtml,
+} from "../src/index.js";
 import { DomUseHostCapability, LocalStorageBackend } from "../src/bridge.js";
 
 function articleDomUse(schema = {}) {
@@ -21,6 +25,14 @@ function articleDomUse(schema = {}) {
     ...schema,
   });
 }
+
+test("keeps compiled capability data in stable state classes", () => {
+  const domUse = articleDomUse();
+  assert.ok(domUse.state instanceof DomUseState);
+  assert.equal(domUse.limits(), domUse.limits());
+  assert.ok(createDomDocument(domUse).gas instanceof DomUseGasState);
+  assert.equal(sanitizeDomHtml(domUse, "<main><h1>Hello</h1></main>"), "<main><h1>Hello</h1></main>");
+});
 
 test("serializes allowed article-shaped content", () => {
   const domUse = articleDomUse();

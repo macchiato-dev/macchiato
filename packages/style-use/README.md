@@ -1,5 +1,11 @@
 # @macchiato-dev/style-use
 
+The authoritative implementation is Deno-compatible TypeScript in `source/`;
+`src/` contains generated standard ESM and declarations. `StyleUseState`
+precomputes limits and effective property rules once, and function entry points
+are available for validation without forcing current method callers to migrate.
+See the [cluster build notes](../../docs/use-cluster-typescript.md).
+
 Govern what CSS styles are permitted — both inline (`element.style.*`) and
 within stylesheets. `style-use` is the foundation that `dom-use` builds on.
 

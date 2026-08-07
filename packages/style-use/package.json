@@ -2,14 +2,27 @@
   "name": "@macchiato-dev/style-use",
   "version": "0.1.0",
   "description": "Govern permitted CSS styles — inline and stylesheet",
+  "repository": { "type": "git", "url": "git+https://github.com/macchiato-dev/macchiato.git", "directory": "packages/style-use" },
   "type": "module",
   "exports": {
     ".": "./src/index.js",
     "./browser-assets": "./src/browser-assets.js"
   },
-  "files": ["src", "README.md"],
+  "files": ["src", "source", "README.md", "tsconfig.json", "deno.json"],
   "sideEffects": false,
   "publishConfig": { "access": "public" },
-  "scripts": { "test": "node --test test/*.test.js" },
-  "dependencies": {}
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('src',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "lint": "deno lint --config deno.json",
+    "deno-check": "deno check source/*.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm test",
+    "prepack": "npm run build",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
 }

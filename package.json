@@ -6,6 +6,8 @@
     "check:generated": "npm run check:guest -w @macchiato-dev/browser-use",
     "test:publish-core": "node scripts/test-publish-core.js",
     "build:resources-editor": "node examples/resources-site/build-project-editor.js",
+    "build:use-cluster": "npm run build -w @macchiato-dev/style-use && npm run build -w @macchiato-dev/html-use && npm run build -w @macchiato-dev/dom-use",
+    "check:use-cluster": "npm run check -w @macchiato-dev/style-use && npm run check -w @macchiato-dev/html-use && npm run check -w @macchiato-dev/dom-use",
     "export:resources": "node examples/resources-site/export-static.js",
     "export:focused-app": "node examples/focused-app/export-static.js",
     "test": "node --test \"packages/*/test/*.test.js\""

@@ -1,5 +1,12 @@
 # @macchiato-dev/dom-use
 
+The authoritative implementation is Deno-compatible TypeScript in `source/`;
+`src/` is the lightweight `tsc` output used by Node, browsers, and npm. See the
+[cluster build and runtime-shape notes](../../docs/use-cluster-typescript.md).
+`DomUseState`, `DomUseLimits`, and `DomUseGasState` keep hot, long-lived data in
+stable shapes. Function operations such as `sanitizeDomHtml(domUse, html)` are
+available alongside the compatibility methods.
+
 Structured DOM access according to a schema. `dom-use` is the **top-level**
 capability that guest contexts interact with. It orchestrates `html-use` and
 `style-use` but never exposes their internals directly.

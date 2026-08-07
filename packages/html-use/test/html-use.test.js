@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseHTML, sanitizeHTML, serializeHTML } from "../src/index.js";
+import { HtmlFragment, parseHTML, sanitizeHTML, serializeHTML } from "../src/index.js";
 
 function element(tagName) {
   return {
@@ -20,6 +20,7 @@ test("parses through the caller-owned element factory", () => {
     createTextNode(text) { return { tagName: "#text", textContent: text }; },
   });
 
+  assert.ok(fragment instanceof HtmlFragment);
   assert.deepEqual(created, ["article", "p"]);
   assert.equal(serializeHTML(fragment), '<article data-kind="note"><p>Hello &amp; goodbye</p></article>');
 });

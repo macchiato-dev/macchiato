@@ -2,6 +2,7 @@
   "name": "@macchiato-dev/dom-use",
   "version": "0.1.0",
   "description": "Structured DOM access according to a schema — the top-level capability",
+  "repository": { "type": "git", "url": "git+https://github.com/macchiato-dev/macchiato.git", "directory": "packages/dom-use" },
   "type": "module",
   "exports": {
     ".": "./src/index.js",
@@ -9,12 +10,26 @@
     "./guest-runtime": "./src/guest-runtime.js",
     "./browser-assets": "./src/browser-assets.js"
   },
-  "files": ["src", "README.md"],
+  "files": ["src", "source", "scripts", "README.md", "tsconfig.json", "deno.json"],
   "sideEffects": ["./src/guest-runtime.js"],
   "publishConfig": { "access": "public" },
-  "scripts": { "test": "node --test test/*.test.js" },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('src',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-guest.mjs",
+    "lint": "deno lint --config deno.json",
+    "deno-check": "deno check source/*.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm test",
+    "bench": "node bench/performance.mjs",
+    "prepack": "npm run build",
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "@macchiato-dev/style-use": "0.1.0",
     "@macchiato-dev/html-use": "0.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2"
   }
 }

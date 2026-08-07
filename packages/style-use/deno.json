@@ -1,0 +1,7 @@
+{
+  "compilerOptions": { "strict": false },
+  "lint": {
+    "include": ["source/"],
+    "rules": { "exclude": ["no-explicit-any", "no-control-regex"] }
+  }
+}

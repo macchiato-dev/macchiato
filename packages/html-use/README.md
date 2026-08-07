@@ -1,5 +1,10 @@
 # @macchiato-dev/html-use
 
+The authoritative implementation is Deno-compatible TypeScript in `source/`;
+`src/` contains generated standard ESM and declarations. `HtmlFragment` gives
+the parser root a stable data shape. The parser and serializer remain
+function-oriented. See the [cluster build notes](../../docs/use-cluster-typescript.md).
+
 HTML parser, serializer, and structural sanitizer. `html-use` is a lower-level
 toolkit that `dom-use` consumes—it does not implement the complete `dom-use`
 policy by itself.
