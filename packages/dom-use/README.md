@@ -77,7 +77,7 @@ stays acyclic and the public API surface remains at dom-use.
   and element factory injected at call time
 
 Listing a URL-bearing DOM attribute such as `href`, `src`, `srcset`, or `action`
-in `attrs` admits the attribute but does not by itself grant external URL
+in `attrs` supports the attribute but does not by itself grant external URL
 authority. Without a matching `urls` rule, path-bearing and external values are
 therefore effectively denied. Omitting the attribute from `attrs` remains the
 direct way to prohibit it entirely. This two-part check makes the default
@@ -129,11 +129,15 @@ such as `setInnerHTML`.
 import { DomUse } from "@macchiato-dev/dom-use";
 
 const domUse = new DomUse({
+  // This is a shape grant: only these elements, relationships, and attributes
+  // can exist in the synthetic document.
   nodes: {
     div: { attrs: ["class", "id", "data-*"], children: ["p", "span", "div"] },
     p: { attrs: ["class"], children: ["span", "#text"] },
     span: { attrs: ["class"], children: ["#text"] },
   },
+  // Shape and network authority are separate. No URL-bearing attribute can
+  // navigate or load a resource under this configuration.
   urls: false,
   maxDepth: 10,
   limits: {
@@ -142,6 +146,7 @@ const domUse = new DomUse({
     maxAttributes: 8,
     maxNodes: 100,
   },
+  // Lifecycle-specific gas limits initialization separately from event work.
   gas: {
     tank: {
       init: 50000,
@@ -159,6 +164,7 @@ const domUse = new DomUse({
       setInnerHTML: { base: 8, perNode: 3, perChar: 1, charUnit: 128 },
     },
   },
+  // Content rules apply independently of the node and resource ceilings.
   content: {
     allowedPattern: /^[a-z0-9 .,:'-]+$/i,
   },
@@ -206,10 +212,10 @@ new DomUse({
 });
 ```
 
-That admits values such as `/docs`, `./next`, `../index`, `notes/today`, and
+That supports values such as `/docs`, `./next`, `../index`, `notes/today`, and
 `?page=2`. Fragment-only values are handled by the fragment policy described
 above. Adjust the pattern if an application wants only a narrower relative
-form—for example, `^/(?!/)` admits root-relative paths only.
+form—for example, `^/(?!/)` supports root-relative paths only.
 
 A URL beginning with `//` is scheme-relative, not local: the browser uses the
 current page's `http` or `https` scheme and makes a request to the named host.

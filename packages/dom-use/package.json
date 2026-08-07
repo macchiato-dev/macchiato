@@ -15,12 +15,12 @@
   "publishConfig": { "access": "public" },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
-    "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-guest.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-guest.js",
     "lint": "deno lint --config deno.json",
     "deno-check": "deno check src/*.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm run test:unit",
-    "bench": "npm run build && node --expose-gc bench/performance.mjs",
+    "bench": "npm run build && node --expose-gc bench/performance.js",
     "prepack": "npm run build",
     "test": "npm run build && npm run test:unit",
     "test:unit": "node --test test/*.test.js"
