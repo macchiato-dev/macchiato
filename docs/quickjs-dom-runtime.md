@@ -311,6 +311,29 @@ node outside the root must never acquire a guest handle. Detached nodes created
 through the virtual document are owned by the guest and tracked until they are
 inserted or discarded.
 
+That root may represent an entire sandboxed page or one component embedded in a
+larger page. Whole-page governance is useful when one guest owns the complete
+application UI and one envelope should constrain its combined shape and
+network sinks. Single-container governance is useful when independently owned
+or differently trusted components share a host page. A whole-page container
+can still delegate subroots to separate guest VMs with narrower schemas and
+budgets; those guests do not inherit sibling handles merely because their roots
+share a page-level ancestor.
+
+Containment is checked whenever the bridge would resolve or return a native
+node, not merely when the root is first mounted. The node must equal an owned
+root or satisfy that root's containment check, and its ownership record must
+match the calling component. This protects against stale handles, accidental
+cross-component returns, and library APIs that discover nodes through an
+unexpected path.
+
+For many components the owned-root set contains one element. A comment editor,
+for example, can render its controls and editable content inside a single
+container while code runs in its own QuickJS VM. The VM separates execution;
+the allowed host capabilities determine what the code can access. It receives
+neither the page's other components nor a browser document through which to
+discover them.
+
 Some UI, especially a lightbox, must visually escape the app container. That
 requires a separate owned-surface capability rather than broader document
 access. The host creates a bounded document-level overlay root and records its
@@ -327,6 +350,21 @@ Removing a required dismissal path, inserting outside the owned overlay root,
 surviving owner teardown, or exceeding the declared budget is a sandbox
 violation. Tooltips, menus, dialogs, and lightboxes may share the ownership
 mechanism while selecting different dismissal and focus policies.
+
+An overlay root may be created only while needed or retained hidden for reuse.
+Either choice is declared and bounded. It remains a root of the component—not a
+grant over `body`—and owner teardown removes the root, its listeners, its node
+handles, and any pending work.
+
+Network authority remains separate. Exfiltration policy classifies tags and
+attributes that can reach servers automatically, speculatively, through form
+submission, or after a click, and requires explicit destination rules for
+them. If a guest uses HTTP, the apparent
+`fetch`-like call is normally an indirect adapter over a named capability such
+as `http-use`: the guest submits a schema-valid request, a host broker performs
+the operation, and a response schema decides what crosses back. Raw browser
+`fetch` and its ambient credentials, redirects, headers, and destinations are
+not implied by owning a DOM root.
 
 This document is evolving toward a handbook structure. Each capability should
 eventually have its own chapter covering its threat model, virtual API,

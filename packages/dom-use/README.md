@@ -12,6 +12,51 @@ Structured DOM access according to a schema. `dom-use` is the **top-level**
 capability that guest contexts interact with. It orchestrates `html-use` and
 `style-use` but never exposes their internals directly.
 
+## Isolation and component roots
+
+`dom-use` is the DOM-policy part of an isolation architecture; it does not by
+itself create a virtual machine. A sandboxed container may run guest code in a
+WebAssembly-hosted VM such as QuickJS, but isolation is primarily defined by
+what that guest can access through host capabilities. The guest receives no
+ambient browser `document`; the host grants one or more component roots and
+applies guest DOM operations only within the trees owned by those roots.
+
+Both page and component scopes are important. A sandboxed app can place its
+entire rendered page beneath one governed page root, allowing one schema to
+describe the app shell and all of its content. A larger host page can instead
+grant a single container element to a code editor, comment composer, chart, or
+article component. Page governance provides a coherent whole-app envelope;
+component governance provides composition, separate ownership, and tighter
+budgets. A page surface may aggregate component surfaces without giving one
+component handles into another.
+
+In the common component case, every bridge
+operation that resolves or returns a browser node must prove that the node is
+the root or is contained by it, belongs to that component, and still conforms
+to the configured schema and budgets. Guest-created detached nodes remain
+tracked as guest-owned and may only be attached beneath an owned root. A native
+node outside those trees must never acquire a guest handle.
+
+Some components need a second, portal-like root for a menu, dialog, tooltip, or
+lightbox. The host may create a narrowly configured overlay root as a child of
+`body`, with separate shape and quantity limits. It remains owned by the same
+component but has an explicit lifecycle: it is commonly created temporarily,
+then removed or hidden, and it must be torn down with its owner. Granting that
+root does not grant traversal of `body` or access to neighboring application
+nodes.
+
+This containment is only one part of resistance to exfiltration. The DOM schema
+must separately control tag/attribute combinations that can contact a server:
+some load automatically (`img.src`), some speculate automatically
+(`link[href]` with `prefetch` or `preconnect`), some submit data
+(`form.action`), and some navigate after a user click (`a.href`). SVG and CSS
+have corresponding request-capable constructs. These sinks remain ineffective
+without an explicit URL grant. A sandboxed guest also receives no ambient
+`fetch`; when a container grants HTTP, it normally does so indirectly through a
+broker such as `http-use`, using schema-constrained request and response
+contracts. The host therefore mediates both what resources the component can
+reach and what information it can send away.
+
 ## Stability and trust decisions
 
 `dom-use` is currently **alpha software** (`0.1.x`). Its APIs, schemas, bridge
