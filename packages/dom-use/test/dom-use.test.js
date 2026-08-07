@@ -5,8 +5,8 @@ import {
   DOM_NETWORK_CAPABILITIES, DomUse, DomUseGasState, DomUseState,
   SVG_URL_REFERENCE_ATTRIBUTES, URL_CAPABILITY_ATTRIBUTES,
   createDomDocument, sanitizeDomHtml,
-} from "../src/index.js";
-import { DomUseHostCapability, LocalStorageBackend } from "../src/bridge.js";
+} from "../lib/index.js";
+import { DomUseHostCapability, LocalStorageBackend } from "../lib/bridge.js";
 
 function articleDomUse(schema = {}) {
   return new DomUse({

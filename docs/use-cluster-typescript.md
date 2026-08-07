@@ -1,13 +1,15 @@
 # TypeScript build and runtime shapes for the DOM-use cluster
 
-The first TypeScript cluster is `style-use` → `html-use` → `dom-use`. The
-checked-in `source/*.ts` files are authoritative. `npm run build:use-cluster`
-uses `tsc` to emit standard ESM JavaScript, declarations, declaration maps, and
-source maps into each package's `src/` directory. The one guest bootstrap is an
+The first TypeScript cluster is `style-use` → `html-use` → `dom-use`.
+`dom-use` keeps maintained TypeScript in `src/` and emits standard ESM
+JavaScript, declarations, declaration maps, and source maps into an ignored
+`lib/` directory. `style-use` and `html-use` retain the earlier `source/` →
+`src/` layout until they are migrated separately. `npm run build:use-cluster`
+builds all three in dependency order. The one guest bootstrap is an
 explicit modern ES2022 script target built by esbuild: it must not acquire an
 ES-module wrapper because QuickJS evaluates it as a classic bootstrap script. Published packages
-contain both forms: JavaScript consumers use `src/`, while Deno and TypeScript
-readers can inspect or import the dependency-free TypeScript sources directly.
+contain both forms: `dom-use` JavaScript consumers use `lib/`, while Deno and
+TypeScript readers can inspect or import its TypeScript sources directly.
 
 There are no runtime build helpers. TypeScript, and esbuild for the one classic
 guest script, are package development dependencies. Each package supports

@@ -1,4 +1,4 @@
-import { DomUse, sanitizeDomHtml } from "../source/index.ts";
+import { DomUse, sanitizeDomHtml } from "../src/index.ts";
 
 const domUse = new DomUse({
   nodes: {

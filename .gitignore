@@ -6,6 +6,7 @@ vendor/
 dist/
 build/
 target/
+/packages/dom-use/lib/
 examples/resources-site/exported/
 *.egg-info/
 

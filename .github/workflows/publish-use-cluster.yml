@@ -32,7 +32,10 @@ jobs:
             test "$(node -p "require('./packages/$package/package.json').version")" = "$version"
           done
       - name: Verify generated output
-        run: git diff --exit-code -- packages/style-use/src packages/html-use/src packages/dom-use/src
+        run: |
+          git diff --exit-code -- packages/style-use/src packages/html-use/src
+          test -f packages/dom-use/lib/index.js
+          test -f packages/dom-use/lib/guest-runtime.js
       - run: npm publish --workspace @macchiato-dev/style-use --access public --provenance
       - run: npm publish --workspace @macchiato-dev/html-use --access public --provenance
       - run: npm publish --workspace @macchiato-dev/dom-use --access public --provenance

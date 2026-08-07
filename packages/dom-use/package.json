@@ -5,24 +5,25 @@
   "repository": { "type": "git", "url": "git+https://github.com/macchiato-dev/macchiato.git", "directory": "packages/dom-use" },
   "type": "module",
   "exports": {
-    ".": "./src/index.js",
-    "./bridge": "./src/bridge.js",
-    "./guest-runtime": "./src/guest-runtime.js",
-    "./browser-assets": "./src/browser-assets.js"
+    ".": "./lib/index.js",
+    "./bridge": "./lib/bridge.js",
+    "./guest-runtime": "./lib/guest-runtime.js",
+    "./browser-assets": "./lib/browser-assets.js"
   },
-  "files": ["src", "source", "scripts", "README.md", "tsconfig.json", "deno.json"],
-  "sideEffects": ["./src/guest-runtime.js"],
+  "files": ["lib", "src", "scripts", "README.md", "tsconfig.json", "deno.json"],
+  "sideEffects": ["./lib/guest-runtime.js"],
   "publishConfig": { "access": "public" },
   "scripts": {
-    "clean": "node -e \"require('node:fs').rmSync('src',{recursive:true,force:true})\"",
+    "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.json && node scripts/build-guest.mjs",
     "lint": "deno lint --config deno.json",
-    "deno-check": "deno check source/*.ts",
+    "deno-check": "deno check src/*.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm test",
+    "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm run test:unit",
     "bench": "node bench/performance.mjs",
     "prepack": "npm run build",
-    "test": "node --test test/*.test.js"
+    "test": "npm run build && npm run test:unit",
+    "test:unit": "node --test test/*.test.js"
   },
   "dependencies": {
     "@macchiato-dev/style-use": "0.1.0",

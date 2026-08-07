@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 
-import { DomUse } from "../src/index.js";
+import { DomUse } from "../lib/index.js";
 import { StyleUse } from "../../style-use/src/index.js";
 
 function measure(name, iterations, operation) {
