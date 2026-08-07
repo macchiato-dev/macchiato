@@ -71,6 +71,17 @@ function validateConfig(config) {
       }
     }
   }
+  if (config.access.writableDirectories !== undefined) {
+    assertObject(config.access.writableDirectories, "access.writableDirectories");
+    for (const [path, declaration] of Object.entries(config.access.writableDirectories)) {
+      safeRelativePath(path, "writable directory");
+      if (path.includes("/")) throw new Error(`Writable directories must be direct children: ${path}`);
+      assertObject(declaration, `access.writableDirectories.${path}`);
+      if (!Number.isInteger(declaration.maxBytes) || declaration.maxBytes < 1 || declaration.maxBytes > 16_777_216) {
+        throw new Error(`Invalid writable directory byte limit: ${path}`);
+      }
+    }
+  }
 }
 
 function resolveAccess(access) {

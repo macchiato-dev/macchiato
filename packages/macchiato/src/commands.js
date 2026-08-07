@@ -348,26 +348,32 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
     "site add"(args) {
       const [subdomain, directory] = args;
       if (!subdomain || !directory) {
-        console.log("Usage: site add <subdomain> <directory> [--writable-file <name> --max-bytes <bytes>]");
+        console.log("Usage: site add <subdomain> <directory> [--writable-file <name> --max-bytes <bytes>] [--writable-directory <name> --max-bytes <bytes>]");
         return;
       }
       const writableFiles = {};
+      const writableDirectories = {};
       for (let index = 2; index < args.length; index += 1) {
-        if (args[index] !== "--writable-file") throw new Error(`Unknown site add option: ${args[index]}`);
+        const option = args[index];
+        if (option !== "--writable-file" && option !== "--writable-directory") throw new Error(`Unknown site add option: ${option}`);
         const name = args[++index];
-        if (!name) throw new Error("--writable-file requires a filename");
-        let maxBytes = 65_536;
+        if (!name) throw new Error(`${option} requires a name`);
+        let maxBytes = option === "--writable-file" ? 65_536 : 1_048_576;
         if (args[index + 1] === "--max-bytes") {
           maxBytes = Number(args[index + 2]);
           index += 2;
         }
-        if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 1_048_576) throw new Error(`Invalid --max-bytes: ${maxBytes}`);
-        writableFiles[name] = { maxBytes };
+        const maximum = option === "--writable-file" ? 1_048_576 : 16_777_216;
+        if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > maximum) throw new Error(`Invalid --max-bytes: ${maxBytes}`);
+        (option === "--writable-file" ? writableFiles : writableDirectories)[name] = { maxBytes };
       }
       withDb((db) => {
         addDirectorySite(db, subdomain, directory);
         registerSiteApp(db, subdomain, "directory", "directory site", {
-          access: Object.keys(writableFiles).length ? { writableFiles } : {},
+          access: {
+            ...(Object.keys(writableFiles).length ? { writableFiles } : {}),
+            ...(Object.keys(writableDirectories).length ? { writableDirectories } : {}),
+          },
         });
       }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
