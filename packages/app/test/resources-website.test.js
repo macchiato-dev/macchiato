@@ -198,7 +198,8 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
     if (template === "clock") {
       await page.locator("[data-preview-runtime='quickjs']").waitFor();
-      await page.getByRole("button", { name: "script.js", exact: true }).click();
+      await page.locator("[data-project-file-trigger]").click();
+      await page.locator('[data-project-file="script.js"]').click();
       const scriptEditor = page.locator(".cm-content");
       await scriptEditor.press("Control+A");
       await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000"));
@@ -211,7 +212,8 @@ test("Resources.co blog container examples render and surface schema errors in t
     }
     if (template === "article") {
       await page.getByLabel("Template").selectOption("mark");
-      await assert.doesNotReject(page.getByRole("button", { name: "image.svg", exact: true }).waitFor());
+      await page.locator("[data-project-file-trigger]").click();
+      await assert.doesNotReject(page.locator('[data-project-file="image.svg"]').waitFor());
       assert.equal(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).config.template, "mark");
       await page.waitForTimeout(1_700);
       assert.equal(await page.locator("[data-project-save]").textContent(), "");
@@ -554,8 +556,8 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   await page.waitForFunction(() => document.querySelector(".project-editor__workspace")?.dataset.view === "split");
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "split");
   assert.equal(await page.getByRole("button", { name: "Split" }).isVisible(), true);
-  assert.equal(await page.locator(".project-editor__tabs").isVisible(), true);
-  assert.equal(await page.locator("[data-project-file-picker]").isHidden(), true);
+  assert.equal(await page.locator(".project-editor__tabs").count(), 0);
+  assert.equal(await page.locator("[data-project-file-picker]").isVisible(), true);
   assert.equal(await page.locator(".project-create__fields").isVisible(), true);
   assert.equal(await page.locator(".command-trigger [data-command-shortcut]").isVisible(), true);
   assert.equal(await page.locator(".command-trigger__icon").isHidden(), true);

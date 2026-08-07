@@ -623,6 +623,11 @@
             "hidden"
           ]
         },
+        "object-fit": {
+          "enum": [
+            "contain"
+          ]
+        },
         "padding": {
           "$ref": "spacing"
         },

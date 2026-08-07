@@ -1,6 +1,7 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
+import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
 import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -61,6 +62,10 @@ const STARTING_POINTS = Object.freeze({
   blank: {
     files: [{ path: "index.html", content: "" }],
     config: { entry: "index.html", template: "blank", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+  },
+  slides: {
+    files: [{ path: "index.html", content: "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Small presentation</title><style>html,body{margin:0;height:100%;background:#101321;color:#f4f6ff;font:20px system-ui}main{height:100%;display:grid;place-items:center;text-align:center}small{color:#9da8d8}</style></head><body><main><div><h1>Small presentation</h1><p>A portable, single-file starting point.</p><small>Import a Resources project ZIP to replace it.</small></div></main></body></html>" }],
+    config: { entry: "index.html", template: "slides", container: "presentation", sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -268,6 +273,42 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function sendContent() {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
+    const selectedFile = state.files.find((file) => file.path === selected);
+    editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
+    editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
+    const largeFile = selectedFile && new TextEncoder().encode(selectedFile.content).byteLength > 1_000_000;
+    editorMount.hidden = isProjectImage(selectedFile) || largeFile;
+    if (isProjectImage(selectedFile)) {
+      const image = document.createElement("img");
+      image.className = "project-editor__image-view";
+      image.src = selectedFile.content;
+      image.alt = selectedFile.path;
+      editorMount.parentElement.append(image);
+      renderPreview();
+      delete root.dataset.editorLoading;
+      return;
+    }
+    if (largeFile) {
+      const view = document.createElement("div");
+      view.className = "project-editor__asset-view";
+      const size = new TextEncoder().encode(selectedFile.content).byteLength;
+      view.innerHTML = `<strong>${selectedFile.path}</strong><span>${(size / 1_048_576).toFixed(2)} MB · too large for the constrained code editor</span>`;
+      const download = document.createElement("button");
+      download.type = "button";
+      download.textContent = "Download file";
+      download.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([selectedFile.content], { type: selectedFile.path.endsWith(".html") ? "text/html" : "text/plain" }));
+        link.download = selectedFile.path.split("/").at(-1);
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+      view.append(download);
+      editorMount.parentElement.append(view);
+      renderPreview();
+      delete root.dataset.editorLoading;
+      return;
+    }
     editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config" });
     renderPreview();
     delete root.dataset.editorLoading;
@@ -285,6 +326,20 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const source = state.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
+    const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
+    if (containerName === "presentation") {
+      const frame = document.createElement("iframe");
+      frame.className = "project-editor__presentation-frame";
+      frame.title = title;
+      frame.setAttribute("sandbox", "allow-scripts");
+      frame.setAttribute("referrerpolicy", "no-referrer");
+      const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline' blob:; font-src data:">`;
+      frame.srcdoc = source.replace(/<head([^>]*)>/i, `<head$1>${policy}`);
+      preview.replaceChildren(frame);
+      preview.dataset.previewRuntime = "isolated-presentation";
+      if (/<script\b/i.test(source)) setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
+      return;
+    }
     const parsed = new DOMParser().parseFromString(source, "text/html");
     const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
     const scripts = [];
@@ -675,6 +730,37 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   document.addEventListener("pointerdown", (event) => {
     if (!root.querySelector("[data-project-file-picker]").contains(event.target)) closeFileMenu();
   });
+  const archiveInput = root.querySelector("[data-project-archive-file]");
+  root.querySelector("[data-project-import]").addEventListener("click", () => archiveInput.click());
+  root.querySelector("[data-project-export]").addEventListener("click", () => {
+    try {
+      const bytes = encodeProjectArchive(state);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
+      link.download = `${state.config?.template || "project"}.zip`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) { setStatus(error.message, "error"); }
+  });
+  archiveInput.addEventListener("change", async () => {
+    try {
+      const file = archiveInput.files[0];
+      if (!file) return;
+      if (file.size > 50 * 1024 * 1024) throw new Error("Archive exceeds 50 MB");
+      const imported = normalizeProjectSnapshot(await decodeProjectArchive(await file.arrayBuffer()));
+      selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
+      updateSnapshot(imported, { destructive: true });
+      if (template) template.value = imported.config.template || "blank";
+      if (container) container.value = imported.config.container || "presentation";
+      renderContainerElements(container?.value);
+      renderTabs();
+      sendContent();
+      if (imported.config.container === "presentation" && /<script\b/i.test(imported.files.find((item) => item.path === imported.config.entry)?.content || "")) {
+        setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
+      } else setStatus("ZIP imported");
+    } catch (error) { setStatus(error.message, "error"); }
+    finally { archiveInput.value = ""; }
+  });
   const workspace = root.querySelector(".project-editor__workspace");
   const presentButton = root.querySelector("[data-project-present]");
   const presentClose = root.querySelector("[data-project-present-close]");
@@ -747,6 +833,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const container = form?.querySelector("[data-project-container]");
   const containerOutline = form?.querySelector("[data-container-outline]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
+  if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
+  if (container && !container.querySelector('option[value="presentation"]')) container.add(new Option("Presentation", "presentation", false, false));
   function renderContainerElements(name) {
     if (!containerOutline) return;
     containerOutline.replaceChildren(...containerElementNames(name).map((element) => {
