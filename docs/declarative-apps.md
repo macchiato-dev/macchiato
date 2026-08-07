@@ -165,3 +165,18 @@ Operator-created sites
 `site add`, `site add-page`, `site add-file`, and `site add-route` write both
 the content record and its app declaration. `site remove` removes both. This
 preserves the single-registry rule for directory and SQLite-backed sites.
+
+A directory app can receive a narrowly scoped writable file grant. The grant
+names each direct-child file exactly and gives it an independent byte ceiling:
+
+```bash
+node packages/macchiato/src/macchiato.js site add dom-use-tour /root/dom-use-tour \
+  --writable-file notes.md --max-bytes 65536
+```
+
+The app reads and replaces that file through
+`/-/writable-files/<encoded-name>`. Only `GET`, `HEAD`, and `PUT` are exposed;
+undeclared names do not reach the file handler, parent traversal is invalid,
+and the server checks both declared and actual request sizes. This primitive is
+for small operator-approved state such as annotations—not general directory
+write access or uploads.

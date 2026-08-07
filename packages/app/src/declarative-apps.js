@@ -60,6 +60,17 @@ function validateConfig(config) {
     safeRelativePath(config.access.fileAccess.root, "file access root");
     if (config.access.fileAccess.gitRoot !== "$repo") throw new Error("Unsupported git root token.");
   }
+  if (config.access.writableFiles !== undefined) {
+    assertObject(config.access.writableFiles, "access.writableFiles");
+    for (const [path, declaration] of Object.entries(config.access.writableFiles)) {
+      safeRelativePath(path, "writable file");
+      if (path.includes("/")) throw new Error(`Writable files must be direct children: ${path}`);
+      assertObject(declaration, `access.writableFiles.${path}`);
+      if (!Number.isInteger(declaration.maxBytes) || declaration.maxBytes < 1 || declaration.maxBytes > 1_048_576) {
+        throw new Error(`Invalid writable file byte limit: ${path}`);
+      }
+    }
+  }
 }
 
 function resolveAccess(access) {

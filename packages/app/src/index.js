@@ -20,6 +20,7 @@ import { appDirectoryHandler } from "./app-directory.js";
 import { getDeclarativeApp } from "./declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
 import { fileAppHandler } from "./file-app.js";
+import { directoryWritableFileResponse } from "./directory-file-access.js";
 import { nodeResponseHeaders } from "./node-response.js";
 import { createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
@@ -422,6 +423,8 @@ async function route(request) {
 
   const row = app.handlerName === "directory" ? store.getDirectorySite.get(subdomain) : null;
   if (row) {
+    const writableResponse = await directoryWritableFileResponse(request, app, row.directory);
+    if (writableResponse) return writableResponse;
     return serveFile(row.directory, url.pathname);
   }
 

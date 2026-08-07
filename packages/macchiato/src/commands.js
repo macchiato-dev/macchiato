@@ -20,7 +20,7 @@ import {
   setAppEnvironmentValue,
 } from "@macchiato-dev/app-db-sqlite";
 
-function registerSiteApp(db, subdomain, handler, kind) {
+function registerSiteApp(db, subdomain, handler, kind, { access = {} } = {}) {
   upsertAppConfig(db, {
     subdomain,
     name: subdomain,
@@ -28,7 +28,7 @@ function registerSiteApp(db, subdomain, handler, kind) {
     description: `Operator-configured ${kind}.`,
     handler,
     permissions: {},
-    access: {},
+    access,
     options: { plugin: "site-command", dependencies: {} },
   });
 }
@@ -348,12 +348,27 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
     "site add"(args) {
       const [subdomain, directory] = args;
       if (!subdomain || !directory) {
-        console.log("Usage: site add <subdomain> <directory>");
+        console.log("Usage: site add <subdomain> <directory> [--writable-file <name> --max-bytes <bytes>]");
         return;
+      }
+      const writableFiles = {};
+      for (let index = 2; index < args.length; index += 1) {
+        if (args[index] !== "--writable-file") throw new Error(`Unknown site add option: ${args[index]}`);
+        const name = args[++index];
+        if (!name) throw new Error("--writable-file requires a filename");
+        let maxBytes = 65_536;
+        if (args[index + 1] === "--max-bytes") {
+          maxBytes = Number(args[index + 2]);
+          index += 2;
+        }
+        if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 1_048_576) throw new Error(`Invalid --max-bytes: ${maxBytes}`);
+        writableFiles[name] = { maxBytes };
       }
       withDb((db) => {
         addDirectorySite(db, subdomain, directory);
-        registerSiteApp(db, subdomain, "directory", "directory site");
+        registerSiteApp(db, subdomain, "directory", "directory site", {
+          access: Object.keys(writableFiles).length ? { writableFiles } : {},
+        });
       }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
     },
