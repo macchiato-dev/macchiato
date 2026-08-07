@@ -20,7 +20,7 @@
     "deno-check": "deno check src/*.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "npm run lint && npm run deno-check && npm run typecheck && npm run build && npm run test:unit",
-    "bench": "node bench/performance.mjs",
+    "bench": "npm run build && node --expose-gc bench/performance.mjs",
     "prepack": "npm run build",
     "test": "npm run build && npm run test:unit",
     "test:unit": "node --test test/*.test.js"
