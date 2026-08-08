@@ -359,7 +359,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         },
         onStatus(event) {
           if (generation !== previewGeneration) return;
-          if (event.type === "blocked") setStatus(`Blocked: ${event.message}`, "error");
+          if (event.type === "mounted" && parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "ready" }, "*");
+          if (event.type === "escape") {
+            if (root.dataset.presenting === "true") closePresentation();
+            if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
+          }
+          if (event.type === "blocked") {
+            setStatus(`Blocked: ${event.message}`, "error");
+            if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "status", status: "blocked", message: event.message }, "*");
+          }
         },
       });
       preview.dataset.previewRuntime = "presentation-use";
@@ -808,8 +816,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     projectContentBlock?.style.setProperty("backdrop-filter", "none");
     projectContentBlock?.style.setProperty("transform", "none");
     presentButton.setAttribute("aria-pressed", "true");
-    if (keyboard) presentClose.focus();
-    else presentClose.blur();
+    presentClose.blur();
+    requestAnimationFrame(() => previewController?.focus?.());
   }
   presentButton.addEventListener("click", (event) => openPresentation({ keyboard: event.detail === 0 }));
   presentClose.addEventListener("click", (event) => {
@@ -822,7 +830,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       event.preventDefault();
       closePresentation();
       presentButton.focus();
+    } else if (event.key === "Escape" && parent !== window) {
+      parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
     }
+  });
+  addEventListener("message", (event) => {
+    if (event.source !== parent || event.data?.protocol !== "resources-project-presentation-v1" || event.data.type !== "focus") return;
+    previewController?.focus?.();
   });
   const splitter = root.querySelector(".project-editor__splitter");
   function setSplit(clientX) {
@@ -979,6 +993,14 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
 for (const figure of document.querySelectorAll(".blog-example-block")) {
   const button = figure.querySelector(".blog-example-fullscreen");
+  const frame = figure.querySelector(".blog-example");
+  const error = figure.querySelector(".blog-example-error");
+  let presentationReady = false;
+  function focusBlogPresentation() {
+    if (!presentationReady) return;
+    frame?.focus({ preventScroll: true });
+    frame?.contentWindow?.postMessage({ protocol: "resources-project-presentation-v1", type: "focus" }, "*");
+  }
   if (!button) continue;
   const blogContentBlock = figure.closest(".content-block");
   function closeBlogPresentation({ focus = true } = {}) {
@@ -1004,13 +1026,25 @@ for (const figure of document.querySelectorAll(".blog-example-block")) {
     document.body.classList.add("blog-example-presenting");
     button.textContent = "×";
     button.setAttribute("aria-label", "Close full screen");
-    if (event.detail === 0) button.focus();
-    else button.blur();
+    button.blur();
+    requestAnimationFrame(focusBlogPresentation);
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !figure.classList.contains("blog-example-block--fullscreen")) return;
     event.preventDefault();
     closeBlogPresentation();
+  });
+  addEventListener("message", (event) => {
+    if (event.source !== frame?.contentWindow || event.data?.protocol !== "resources-project-presentation-v1") return;
+    if (event.data.type === "ready") {
+      presentationReady = true;
+      if (figure.classList.contains("blog-example-block--fullscreen")) focusBlogPresentation();
+    }
+    if (event.data.type === "escape") closeBlogPresentation();
+    if (event.data.type === "status") {
+      error.hidden = event.data.status !== "blocked";
+      error.textContent = event.data.status === "blocked" ? `Blocked: ${event.data.message}` : "";
+    }
   });
   addEventListener("pagehide", () => closeBlogPresentation({ focus: false }), { once: true });
 }

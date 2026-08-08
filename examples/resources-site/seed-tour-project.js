@@ -51,7 +51,7 @@ const domSchema = {
   nodes: Object.fromEntries(["body", ...tags].map((tag) => [tag, { attrs: attributes, events, children: [...tags, "#text"] }])),
   urls: { "img.src": "^(?:assets/illustrations/[a-z0-9-]+\\.(?:jpg|jpeg|png|gif|webp)|data:image/(?:jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+)$", fragments: true },
   maxDepth: 40,
-  limits: { maxTextLength: 250_000, maxAttributeNameLength: 80, maxAttributeValueLength: 250_000, maxAttributes: 24, maxNodes: 1_500 },
+  limits: { maxTextLength: 250_000, maxAttributeNameLength: 80, maxAttributeValueLength: 250_000, maxAttributes: 24, maxNodes: 3_000 },
   gas: { enabled: true, tank: { init: 800_000, idle: 160_000, event: 100_000 }, refill: 20_000 },
 };
 const properties = Object.fromEntries([...css.matchAll(/([a-zA-Z-]+)\s*:\s*([^;}{]+)[;}]/g)].map((match) => [match[1].toLowerCase(), true]));

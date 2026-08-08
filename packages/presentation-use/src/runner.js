@@ -5,6 +5,11 @@ const mount = document.querySelector("[data-presentation-root]");
 let active = null;
 let channel = null;
 
+mount.tabIndex = 0;
+mount.addEventListener("pointerup", () => setTimeout(() => {
+  if (document.activeElement === document.body) mount.focus({ preventScroll: true });
+}, 0));
+
 function send(type, detail = {}) {
   parent.postMessage({ protocol: PROTOCOL, channel, type, ...detail }, "*");
 }
@@ -19,6 +24,7 @@ addEventListener("message", (event) => {
   if (event.data?.protocol !== PROTOCOL) return;
   channel = event.data.channel;
   if (event.data.type === "connect") send("ready");
+  if (event.data.type === "focus") mount.focus({ preventScroll: true });
   if (event.data.type === "destroy") active?.destroy();
   if (event.data.type === "mount") start(event.data.project).catch((error) => {
     mount.textContent = `Presentation blocked: ${error.message}`;

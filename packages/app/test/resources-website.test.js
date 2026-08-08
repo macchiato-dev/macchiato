@@ -244,7 +244,7 @@ test("Resources.co blog container examples render and surface schema errors in t
   await blogPage.keyboard.press("Escape");
   assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 0);
   await blogPage.keyboard.press("Enter");
-  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), true);
+  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), false);
   await blogPage.keyboard.press("Escape");
   await blogPage.close();
 

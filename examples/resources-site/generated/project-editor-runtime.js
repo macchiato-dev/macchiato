@@ -4931,6 +4931,10 @@ function mountPresentationUse({ root, runnerUrl, project, onStatus = () => {
   frame.addEventListener("load", () => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "connect" }, "*"), { once: true });
   return {
     frame,
+    focus() {
+      frame.focus({ preventScroll: true });
+      frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "focus" }, "*");
+    },
     inspect: () => ({ runtime: frame.dataset.runtime || "loading", sandbox: frame.getAttribute("sandbox") }),
     destroy() {
       window.removeEventListener("message", receive);

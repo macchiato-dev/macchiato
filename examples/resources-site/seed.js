@@ -486,6 +486,8 @@ button:not(:disabled) { cursor: pointer; }
 .blog-example-slug { color: #929a99; font-family: monospace; font-size: 10px; }
 .blog-example-fullscreen { padding: 0; border: none; color: #d2d7d6; background: transparent; font: inherit; font-weight: 600; }
 .blog-example-fullscreen:hover, .blog-example-fullscreen:focus-visible { color: #fff; text-decoration: underline; }
+.blog-example-error { display: block; padding: 8px 12px; border-top: 1px solid rgba(255,125,125,.45); color: #ffd8d8; background: #651d28; font-size: 13px; line-height: 1.35; }
+.blog-example-error[hidden] { display: none; }
 body.blog-example-presenting { overflow: hidden; }
 body.blog-example-presenting .content-block:has(.blog-example-block--fullscreen) { animation: blockIn 0s linear both; transform: none; }
 .blog-example-block--fullscreen .blog-example { position: fixed; top: 0; left: 0; z-index: 1000; width: 100vw; height: 100vh; min-height: 0; border: none; }
@@ -493,6 +495,7 @@ body.blog-example-presenting .content-block:has(.blog-example-block--fullscreen)
 .blog-example-block--fullscreen .blog-example-panel > :not(.blog-example-fullscreen) { display: none; }
 .blog-example-block--fullscreen .blog-example-fullscreen { position: fixed; top: 5px; right: 5px; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font-size: 20px; font-weight: 400; line-height: 1; text-decoration: none; pointer-events: auto; }
 .blog-example-block--fullscreen .blog-example-fullscreen:hover, .blog-example-block--fullscreen .blog-example-fullscreen:focus-visible { background: rgba(15,18,18,.8); text-decoration: none; }
+.blog-example-block--fullscreen .blog-example-error { position: fixed; left: 50%; bottom: 16px; z-index: 1002; width: min(680px, calc(100vw - 32px)); border: 1px solid rgba(255,160,160,.65); border-radius: 999px; box-shadow: 0 8px 28px rgba(0,0,0,.38); text-align: center; transform: translateX(-50%); }
 .content-block p a {
   color: var(--accent);
   text-decoration: underline;
@@ -1330,7 +1333,7 @@ function blogExampleHtml(example, origin) {
   const identity = example.project
     ? `<div class="blog-example-identity"><a href="${escapeHtml(example.project.url)}">${escapeHtml(projectTitle)}</a><span class="blog-example-slug">${escapeHtml(projectPath)}</span></div>`
     : `<span>${escapeHtml(example.title)}</span>`;
-  return `<figure class="blog-example-block"><iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe><figcaption class="blog-example-panel">${identity}<button class="blog-example-fullscreen" type="button" aria-label="View full screen">View full screen ↗</button></figcaption></figure>`;
+  return `<figure class="blog-example-block"><iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe><figcaption class="blog-example-panel">${identity}<button class="blog-example-fullscreen" type="button" aria-label="View full screen">View full screen ↗</button></figcaption><output class="blog-example-error" role="alert" hidden></output></figure>`;
 }
 
 function projectSummaryHtml(block) {

@@ -329,6 +329,9 @@
         "border": {
           "$ref": "border"
         },
+        "border-top": {
+          "$ref": "border"
+        },
         "border-color": {
           "$ref": "color"
         },
@@ -601,6 +604,9 @@
       "properties": {
         "aspect-ratio": {
           "$ref": "aspectRatio"
+        },
+        "bottom": {
+          "$ref": "length"
         },
         "height": {
           "$ref": "length"

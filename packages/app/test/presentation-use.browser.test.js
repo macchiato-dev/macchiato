@@ -18,14 +18,14 @@ test("presentation-use keeps guest code in QuickJS and blocks ungranted URL sink
       response.end(`<!doctype html><div id="preview"></div><output id="status"></output><script type="module">
         import { mountResourcesPresentation } from "/-/project-editor-runtime.js";
         const status = document.querySelector("#status");
-        mountResourcesPresentation({
+        window.presentationController = mountResourcesPresentation({
           root: document.querySelector("#preview"),
           project: {
             title: "URL boundary probe",
-            file: '<main id="app"><button id="image">Set image URL</button><button id="link">Set link URL</button><p id="state">ready</p><img id="picture" alt=""><a id="target">target</a></main><script>document.getElementById("image").addEventListener("click", () => { document.getElementById("picture").src = "https://tracker.example/private.png"; }); document.getElementById("link").addEventListener("click", () => { document.getElementById("target").setAttribute("href", "https://tracker.example/leak"); });<\\/script>',
+            file: '<main id="app"><button id="image">Set image URL</button><button id="link">Set link URL</button><p id="state">ready</p><img id="picture" alt=""><a id="target">target</a></main><script>document.getElementById("image").addEventListener("click", () => { document.getElementById("picture").src = "https://tracker.example/private.png"; }); document.getElementById("link").addEventListener("click", () => { document.getElementById("target").setAttribute("href", "https://tracker.example/leak"); }); document.addEventListener("keydown", (event) => { document.getElementById("state").textContent = event.key; });<\\/script>',
             domSchema: {
               nodes: {
-                body: { attrs: [], children: ["main"] },
+                body: { attrs: [], events: ["keydown"], children: ["main"] },
                 main: { attrs: ["id"], children: ["button", "p", "img", "a"] },
                 button: { attrs: ["id"], events: ["click"], children: ["#text"] },
                 p: { attrs: ["id"], children: ["#text"] },
@@ -63,11 +63,14 @@ test("presentation-use keeps guest code in QuickJS and blocks ungranted URL sink
     assert.fail(`presentation runtime did not mount: ${await page.locator("#status").textContent()} | ${await guest.locator("body").innerText()} | ${browserErrors.join(" | ")}`);
   });
   assert.equal(await guest.locator("#state").textContent(), "ready");
+  await page.evaluate(() => window.presentationController.focus());
+  await page.keyboard.press("ArrowRight");
+  await guest.locator("#state").getByText("ArrowRight").waitFor();
 
   await guest.locator("#image").click();
   await page.locator("#status").getByText(/blocked: URL not allowed on img\.src/).waitFor();
   assert.equal(await guest.locator("#picture").getAttribute("src"), null);
-  assert.equal(await guest.locator("#state").textContent(), "ready");
+  assert.equal(await guest.locator("#state").textContent(), "ArrowRight");
 
   await guest.locator("#link").click();
   await page.locator("#status").getByText(/blocked: URL not allowed on a\.href/).waitFor();

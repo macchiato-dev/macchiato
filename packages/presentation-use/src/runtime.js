@@ -28,7 +28,10 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
     maxStackBytes: project.limits?.stackBytes || 1024 * 1024,
   });
-  const render = () => { root.innerHTML = capability.serializeApp().html; };
+  const render = () => {
+    root.innerHTML = capability.serializeApp().html;
+    root.dataset.hostNodeCount = String(capability.document.createdNodes);
+  };
   try {
     sandbox.installJsonHostFunction("__macchiatoHost", (message) => capability.dispatch(message));
     const guestRuntime = project.guestRuntime || (typeof __PRESENTATION_USE_GUEST_RUNTIME__ === "string" ? __PRESENTATION_USE_GUEST_RUNTIME__ : "");
@@ -52,8 +55,11 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   const listeners = events.map((type) => {
     const listener = (event) => {
       try {
-        const result = dispatchGuestDomEvent(capability, sandbox, root, event, type, { key: event.key || "" });
+        const result = dispatchGuestDomEvent(capability, sandbox, root, event, type, { key: event.key || "" }, {
+          fallbackNodeIds: [capability.documentRootId, capability.appRootId],
+        });
         if (result) render();
+        if (type === "keydown" && event.key === "Escape") onStatus({ type: "escape" });
       } catch (error) {
         onStatus({ type: "blocked", message: error.message });
       }

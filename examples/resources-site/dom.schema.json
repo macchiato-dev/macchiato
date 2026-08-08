@@ -223,11 +223,15 @@
     },
     "figure": {
       "attrs": ["class"],
-      "children": ["img", "iframe", "figcaption"]
+      "children": ["img", "iframe", "figcaption", "output"]
     },
     "figcaption": {
       "attrs": ["class"],
       "children": ["#text", "a", "button", "div", "span"]
+    },
+    "output": {
+      "attrs": ["class", "role", "hidden"],
+      "children": ["#text"]
     },
     "img": {
       "attrs": ["src", "alt", "loading"],
