@@ -55,6 +55,7 @@ export class DomUseHostCapability {
   pendingPrune: Set<any>;
   eventDepth: number;
   appRootId: string | null;
+  documentRootId: string | null;
   nextId: number;
 
   constructor(domSchema, styleUse, options: any = {}) {
@@ -66,6 +67,7 @@ export class DomUseHostCapability {
     this.pendingPrune = new Set();
     this.eventDepth = 0;
     this.appRootId = null;
+    this.documentRootId = null;
     this.nextId = 1;
   }
 
@@ -75,6 +77,7 @@ export class DomUseHostCapability {
     this.pendingPrune = new Set();
     this.eventDepth = 0;
     this.appRootId = null;
+    this.documentRootId = null;
     this.nextId = 1;
     this.document = this.domUse.createDocument();
     return {};
@@ -164,8 +167,9 @@ export class DomUseHostCapability {
     return {};
   }
 
-  setAppRoot(id) {
+  setAppRoot(id, documentId = null) {
     this.appRootId = String(id);
+    this.documentRootId = String(documentId || id);
     return {};
   }
 
@@ -226,8 +230,8 @@ export class DomUseHostCapability {
     if (id) {
       this.nodes.delete(id);
       this.nodeIds.delete(node);
-      if (node.ownerDocument?.createdNodes > 0) node.ownerDocument.createdNodes -= 1;
     }
+    if (node.ownerDocument?.createdNodes > 0) node.ownerDocument.createdNodes -= 1;
   }
 
   flushPrunedNodes() {
@@ -265,7 +269,7 @@ export class DomUseHostCapability {
       case "removeAttribute": return this.removeAttribute(message.id, message.name);
       case "setStyle": return this.setStyle(message.id, message.property, message.value);
       case "addEventListener": return this.addEventListener(message.id, message.event);
-      case "setAppRoot": return this.setAppRoot(message.id);
+      case "setAppRoot": return this.setAppRoot(message.id, message.documentId);
       case "serializeApp": return this.serializeApp();
       case "nodeTag": return this.nodeTag(message.id);
       case "eventTarget": return this.eventTarget(message.nodeIds, message.event);
@@ -296,8 +300,9 @@ export function eventPathNodeIds(root, target) {
   return nodeIds;
 }
 
-export function eventTargetFor(capability, root, target, type) {
-  const { id } = capability.dispatch({ op: "eventTarget", nodeIds: eventPathNodeIds(root, target), event: type });
+export function eventTargetFor(capability, root, target, type, fallbackNodeIds: Array<string | null | undefined> = []) {
+  const nodeIds = [...eventPathNodeIds(root, target), ...fallbackNodeIds.filter(Boolean).map(String)];
+  const { id } = capability.dispatch({ op: "eventTarget", nodeIds, event: type });
   return id;
 }
 
@@ -313,7 +318,7 @@ export function sourceValue(root, target, options: any = {}) {
 export function dispatchGuestDomEvent(capability, sandbox, root, event, type, extraPayload = {}, options: any = {}) {
   capability.dispatch({ op: "beginEvent" });
   try {
-    const nodeId = eventTargetFor(capability, root, event.target, type);
+    const nodeId = eventTargetFor(capability, root, event.target, type, options.fallbackNodeIds);
     if (!nodeId) return null;
     const payload = sandbox.callJsonFunction("__macchiatoDispatch", {
       nodeId,

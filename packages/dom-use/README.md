@@ -37,6 +37,14 @@ to the configured schema and budgets. Guest-created detached nodes remain
 tracked as guest-owned and may only be attached beneath an owned root. A native
 node outside those trees must never acquire a guest handle.
 
+Destructive replacement releases both sides of the old subtree. Host-parsed
+nodes return their allocation to `maxNodes` even when they never had bridge
+IDs; guest wrappers are detached from parent and ID/listener indexes. Code that
+keeps an obsolete wrapper may still hold the guest object, but a later bridged
+operation fails because its host node no longer exists. This makes stale
+references explicit while preventing repeated `innerHTML` renders from
+silently consuming the surface budget.
+
 Some components need a second, portal-like root for a menu, dialog, tooltip, or
 lightbox. The host may create a narrowly configured overlay root as a child of
 `body`, with separate shape and quantity limits. It remains owned by the same

@@ -464,6 +464,9 @@ test("controls event listener registration and payloads by schema policy", () =>
       key: "Enter",
       value: "short",
       checked: true,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
       controls: [{ nodeId: "7", value: "field", checked: false }],
     },
   );
@@ -628,6 +631,25 @@ test("host bridge gives each top-level event a fresh gas tank", () => {
   assert.equal(capability.document.gas.lifecycle, "event");
   assert.equal(capability.document.gas.available, 7);
   capability.endEvent();
+});
+
+test("host bridge releases quota for host-parsed replacement subtrees", () => {
+  const capability = new DomUseHostCapability({
+    nodes: {
+      body: { attrs: [], children: ["main"] },
+      main: { attrs: [], children: ["p"] },
+      p: { attrs: [], children: ["#text"] },
+    },
+    limits: { maxNodes: 8 },
+  });
+  const { id } = capability.createElement("main");
+
+  capability.setInnerHTML(id, "<p>one</p><p>two</p>");
+  assert.equal(capability.document.createdNodes, 5);
+  capability.setInnerHTML(id, "<p>three</p>");
+  assert.equal(capability.document.createdNodes, 3);
+  capability.setInnerHTML(id, "<p>four</p>");
+  assert.equal(capability.document.createdNodes, 3);
 });
 
 test("localStorage bridge removes allowed keys", () => {

@@ -8,6 +8,13 @@ function host(op, data = {}) {
 const elementsById = new Map();
 const listenersByNode = new Map();
 
+function releaseGuestSubtree(node) {
+  for (const child of [...(node.children || [])]) releaseGuestSubtree(child);
+  if (node.id && elementsById.get(node.id) === node) elementsById.delete(node.id);
+  listenersByNode.delete(node.__hostNodeId);
+  node.parentNode = null;
+}
+
 function attrsFromSource(source) {
   const attrs = [];
   const re = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
@@ -154,9 +161,11 @@ class HostElement extends HostNode {
   }
 
   set textContent(value) {
-    this._textContent = String(value);
+    const next = String(value);
+    host("setTextContent", { id: this.__hostNodeId, value: next });
+    for (const child of this.children) releaseGuestSubtree(child);
+    this._textContent = next;
     this.children = [];
-    host("setTextContent", { id: this.__hostNodeId, value: this._textContent });
   }
 
   get innerHTML() {
@@ -164,8 +173,9 @@ class HostElement extends HostNode {
   }
 
   set innerHTML(value) {
-    this.children = [];
     host("setInnerHTML", { id: this.__hostNodeId, html: String(value) });
+    for (const child of this.children) releaseGuestSubtree(child);
+    this.children = [];
   }
 
   get value() {
@@ -429,7 +439,7 @@ function parseInitialHtml(source) {
   if (trailing.trim()) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(trailing)));
 
   const app = document.getElementById("app");
-  host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId });
+  host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId, documentId: body.__hostNodeId });
   return scripts;
 }
 
@@ -481,7 +491,9 @@ globalThis.__macchiatoDispatch = (json) => {
     const event = JSON.parse(json);
     const listeners = listenersByNode.get(String(event.nodeId))?.[event.type] || [];
     const target = host("nodeTag", { id: event.nodeId }).tagName
-      ? find(document.body, (node) => node.__hostNodeId === String(event.nodeId))
+      ? document.body?.__hostNodeId === String(event.nodeId)
+        ? document.body
+        : find(document.body, (node) => node.__hostNodeId === String(event.nodeId))
       : null;
     if (target) {
       host("beginEvent");
