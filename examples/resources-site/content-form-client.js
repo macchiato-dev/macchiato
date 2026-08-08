@@ -785,17 +785,22 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     previewPosition.replaceWith(previewSection);
     presentButton.setAttribute("aria-pressed", "false");
   }
-  function openPresentation() {
+  function openPresentation({ keyboard = false } = {}) {
     root.dataset.presenting = "true";
     document.body.classList.add("project-presenting");
     previewSection.replaceWith(previewPosition);
     previewSection.classList.add("project-editor__preview--presenting");
     document.body.append(previewSection);
     presentButton.setAttribute("aria-pressed", "true");
-    presentClose.focus();
+    if (keyboard) presentClose.focus();
+    else presentClose.blur();
   }
-  presentButton.addEventListener("click", openPresentation);
-  presentClose.addEventListener("click", () => { closePresentation(); presentButton.focus(); });
+  presentButton.addEventListener("click", (event) => openPresentation({ keyboard: event.detail === 0 }));
+  presentClose.addEventListener("click", (event) => {
+    closePresentation();
+    if (event.detail === 0) presentButton.focus();
+    else presentButton.blur();
+  });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && root.dataset.presenting === "true") {
       event.preventDefault();
@@ -969,9 +974,9 @@ for (const figure of document.querySelectorAll(".blog-example-block")) {
     button.setAttribute("aria-label", "View full screen");
     if (focus) button.focus();
   }
-  button.addEventListener("click", () => {
+  button.addEventListener("click", (event) => {
     if (figure.classList.contains("blog-example-block--fullscreen")) {
-      closeBlogPresentation();
+      closeBlogPresentation({ focus: event.detail === 0 });
       return;
     }
     figure.replaceWith(position);
@@ -980,7 +985,8 @@ for (const figure of document.querySelectorAll(".blog-example-block")) {
     document.body.classList.add("blog-example-presenting");
     button.textContent = "×";
     button.setAttribute("aria-label", "Close full screen");
-    button.focus();
+    if (event.detail === 0) button.focus();
+    else button.blur();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !figure.classList.contains("blog-example-block--fullscreen")) return;

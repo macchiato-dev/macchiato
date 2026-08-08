@@ -228,12 +228,23 @@ test("Resources.co blog container examples render and surface schema errors in t
   assert.equal(await examplePanel.locator("a").first().getAttribute("href"), "/benatkin/dom-use-tour");
   assert.equal(await examplePanel.locator(".blog-example-slug").textContent(), "benatkin/dom-use-tour");
   const blogUrl = blogPage.url();
+  const embeddedTour = blogPage.frameLocator(".blog-example");
+  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "1 of 2");
+  await embeddedTour.locator("#next").click();
+  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "2 of 2");
+  await embeddedTour.locator("#previous").click();
   await examplePanel.locator(".blog-example-fullscreen").click();
   assert.equal(blogPage.url(), blogUrl);
   assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 1);
   assert.equal(await examplePanel.locator(".blog-example-fullscreen").getAttribute("aria-label"), "Close full screen");
+  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), false);
+  await embeddedTour.locator("#next").click();
+  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "2 of 2");
   await blogPage.keyboard.press("Escape");
   assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 0);
+  await blogPage.keyboard.press("Enter");
+  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), true);
+  await blogPage.keyboard.press("Escape");
   await blogPage.close();
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
