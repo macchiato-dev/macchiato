@@ -395,6 +395,12 @@
         "flex-shrink": {
           "pattern": "^\\d+$"
         },
+        "field-sizing": {
+          "enum": [
+            "content",
+            "fixed"
+          ]
+        },
         "font-size": {
           "$ref": "fontSize"
         },
@@ -423,6 +429,9 @@
         },
         "margin": {
           "$ref": "spacing"
+        },
+        "max-height": {
+          "$ref": "length"
         },
         "min-height": {
           "$ref": "length"

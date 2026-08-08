@@ -166,7 +166,9 @@
     display: none;
     flex: 1;
     padding: 14px 15px 14px 5px;
+    field-sizing: content;
     min-height: 58px;
+    max-height: 12rem;
     font-size: 24px;
     font-family: inherit;
     font-weight: 300;
@@ -524,6 +526,7 @@ function buildApp() {
 
       const edit = doc.createElement('textarea');
       edit.className = 'edit';
+      edit.setAttribute('rows', '1');
       edit.value = todo.text;
       edit.addEventListener('keydown', e => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {

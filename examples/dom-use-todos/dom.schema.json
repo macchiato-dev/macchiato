@@ -51,7 +51,7 @@
       "children": []
     },
     "textarea": {
-      "attrs": ["class", "data-node-id"],
+      "attrs": ["class", "data-node-id", "rows"],
       "events": ["keydown", "blur"],
       "children": ["#text"]
     },
