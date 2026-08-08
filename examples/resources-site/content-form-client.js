@@ -955,3 +955,37 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }).catch((error) => setStatus(`Editor failed to start: ${error.message}`, true));
   addEventListener("pagehide", () => { editorController?.destroy(); previewController?.destroy(); }, { once: true });
 }
+
+for (const figure of document.querySelectorAll(".blog-example-block")) {
+  const button = figure.querySelector(".blog-example-fullscreen");
+  if (!button) continue;
+  const position = document.createComment("blog example position");
+  function closeBlogPresentation({ focus = true } = {}) {
+    if (!figure.classList.contains("blog-example-block--fullscreen")) return;
+    figure.classList.remove("blog-example-block--fullscreen");
+    position.replaceWith(figure);
+    document.body.classList.remove("blog-example-presenting");
+    button.textContent = "View full screen ↗";
+    button.setAttribute("aria-label", "View full screen");
+    if (focus) button.focus();
+  }
+  button.addEventListener("click", () => {
+    if (figure.classList.contains("blog-example-block--fullscreen")) {
+      closeBlogPresentation();
+      return;
+    }
+    figure.replaceWith(position);
+    figure.classList.add("blog-example-block--fullscreen");
+    document.body.append(figure);
+    document.body.classList.add("blog-example-presenting");
+    button.textContent = "×";
+    button.setAttribute("aria-label", "Close full screen");
+    button.focus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !figure.classList.contains("blog-example-block--fullscreen")) return;
+    event.preventDefault();
+    closeBlogPresentation();
+  });
+  addEventListener("pagehide", () => closeBlogPresentation({ focus: false }), { once: true });
+}

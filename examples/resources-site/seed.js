@@ -478,10 +478,20 @@ button:not(:disabled) { cursor: pointer; }
   border-radius: 0;
   background: var(--track);
 }
-.blog-example-block { margin-top: 22px; }
-.blog-example-panel { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -1px; padding: 9px 12px; border: 1px solid var(--card-border); color: var(--muted); background: var(--card); font-size: 12px; }
-.blog-example-panel a { color: var(--accent); font-weight: 600; text-decoration: none; }
-.blog-example-panel a:hover, .blog-example-panel a:focus-visible { color: var(--text); text-decoration: underline; }
+.blog-example-block { margin: 22px 0 32px; }
+.blog-example-panel { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -1px; padding: 9px 12px; border: 1px solid #414747; color: #aeb5b4; background: #252929; font-size: 12px; }
+.blog-example-identity { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.blog-example-panel a { color: #e1e5e4; font-weight: 600; text-decoration: none; }
+.blog-example-panel a:hover, .blog-example-panel a:focus-visible { color: #fff; text-decoration: underline; }
+.blog-example-slug { color: #929a99; font-family: monospace; font-size: 10px; }
+.blog-example-fullscreen { padding: 0; border: none; color: #d2d7d6; background: transparent; font: inherit; font-weight: 600; }
+.blog-example-fullscreen:hover, .blog-example-fullscreen:focus-visible { color: #fff; text-decoration: underline; }
+body.blog-example-presenting { overflow: hidden; }
+.blog-example-block--fullscreen .blog-example { position: fixed; top: 0; left: 0; z-index: 1000; width: 100vw; height: 100vh; min-height: 0; border: none; }
+.blog-example-block--fullscreen .blog-example-panel { position: fixed; top: 0; left: 0; z-index: 1001; width: 100%; padding: 0; border: none; background: transparent; pointer-events: none; }
+.blog-example-block--fullscreen .blog-example-panel > :not(.blog-example-fullscreen) { display: none; }
+.blog-example-block--fullscreen .blog-example-fullscreen { position: fixed; top: 5px; right: 5px; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font-size: 20px; font-weight: 400; line-height: 1; text-decoration: none; pointer-events: auto; }
+.blog-example-block--fullscreen .blog-example-fullscreen:hover, .blog-example-block--fullscreen .blog-example-fullscreen:focus-visible { background: rgba(15,18,18,.8); text-decoration: none; }
 .content-block p a {
   color: var(--accent);
   text-decoration: underline;
@@ -901,8 +911,8 @@ body[data-auth="out"] .ub-guest { display: flex; }
 body.project-presenting { overflow: hidden; }
 .project-editor__preview--presenting { position: fixed; top: 0; left: 0; z-index: 1000; display: block; width: 100vw; height: 100vh; overflow: hidden; color: var(--text); background: #151717; }
 .project-editor__preview--presenting > [data-project-preview] { width: 100%; height: 100%; overflow: auto; }
-.project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 12px; right: 12px; z-index: 1001; display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border: 1px solid #7883b7; border-radius: 999px; color: #fff; background: #171b31; font: inherit; font-size: 23px; line-height: 1; cursor: pointer; }
-.project-editor__preview--presenting .project-editor__present-close:hover { background: #28305c; }
+.project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 5px; right: 5px; z-index: 1001; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
+.project-editor__preview--presenting .project-editor__present-close:hover, .project-editor__preview--presenting .project-editor__present-close:focus-visible { background: rgba(15,18,18,.8); }
 .project-editor__mount, .project-editor__mount .cm-editor { height: 100%; min-height: 0; }
 .project-editor__mount[hidden] { display: none; }
 .project-editor__image-view { display: block; width: 100%; height: 100%; object-fit: contain; background: #101212; }
@@ -1311,10 +1321,13 @@ function blogExampleHtml(example, origin) {
   const deferred = !example.external && !origin;
   const src = deferred ? "about:blank" : example.external ? example.url : `${origin}${example.url}`;
   const data = deferred ? ` data-example-path="${escapeHtml(example.url)}"` : "";
+  const projectPath = example.project?.url.replace(/^\//, "") || "";
+  const projectNamespace = projectPath.split("/")[0];
+  const projectTitle = example.project?.label.replace(new RegExp(`^${projectNamespace}\\s*/\\s*`, "i"), "") || "";
   const identity = example.project
-    ? `<a href="${escapeHtml(example.project.url)}">${escapeHtml(example.project.label)}</a>`
+    ? `<div class="blog-example-identity"><a href="${escapeHtml(example.project.url)}">${escapeHtml(projectTitle)}</a><span class="blog-example-slug">${escapeHtml(projectPath)}</span></div>`
     : `<span>${escapeHtml(example.title)}</span>`;
-  return `<figure class="blog-example-block"><iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe><figcaption class="blog-example-panel">${identity}<a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer">View full screen ↗</a></figcaption></figure>`;
+  return `<figure class="blog-example-block"><iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe><figcaption class="blog-example-panel">${identity}<button class="blog-example-fullscreen" type="button" aria-label="View full screen">View full screen ↗</button></figcaption></figure>`;
 }
 
 function projectSummaryHtml(block) {

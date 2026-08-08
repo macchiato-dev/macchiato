@@ -50,7 +50,7 @@ function escapeHtml(value) {
 
 const focusedHomeIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path><path d="M9 20v-6h6v6"></path></svg>`;
 function focusedProjectDocument(html, namespace, slug) {
-  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/projects">projects</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
+  const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
   return html
     .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 focused-view" data-view="focused">`)
     .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
@@ -210,13 +210,13 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
     <span hidden data-blog-examples-origin="${escapeHtml(blogExamplesOrigin)}"></span>
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__file-picker" data-project-file-picker><button type="button" data-project-file-trigger aria-haspopup="menu" aria-expanded="false"><span data-project-file-current></span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button><div class="project-editor__file-menu" data-project-file-menu role="menu" hidden><label><span>${message(messages, "projectEditor.filterFiles", "Filter files")}</span><input type="search" data-project-file-filter autocomplete="off" placeholder="${message(messages, "projectEditor.filterFiles", "Filter files")}"></label><div data-project-file-options></div><p data-project-file-empty hidden>${message(messages, "projectEditor.noMatchingFiles", "No matching files")}</p></div></div><div class="project-editor__archive-actions"><button type="button" data-project-import>Import ZIP</button><button type="button" data-project-export>Export ZIP</button><input type="file" data-project-archive-file accept="application/zip,.zip" hidden></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
-      <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button><button type="button" data-project-view="details">Details</button>${embedHref ? `<a href="${escapeHtml(embedHref)}" target="_blank" rel="noopener">Embed view</a>` : ""}<button type="button" data-project-present>Present</button></div></div>
+      <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button><button type="button" data-project-view="details">Details</button>${embedHref ? `<a href="${escapeHtml(embedHref)}" target="_blank" rel="noopener">Embed view</a>` : ""}<button type="button" data-project-present>View full screen</button></div></div>
     </div>
     <textarea name="snapshot" data-project-snapshot hidden>${escapeHtml(JSON.stringify(snapshot))}</textarea>
     <div class="project-editor__workspace" data-view="split">
       <section class="project-editor__source" aria-label="${message(messages, "projectCreate.editor", "Sandboxed project editor")}"><div id="editor" class="project-editor__mount" data-project-editor-mount></div></section>
       <div class="project-editor__splitter" role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0"></div>
-      <section class="project-editor__preview" aria-label="Project preview"><button class="project-editor__present-close" type="button" data-project-present-close aria-label="Close presentation">×</button><div data-project-preview></div></section>
+      <section class="project-editor__preview" aria-label="Project preview"><button class="project-editor__present-close" type="button" data-project-present-close aria-label="Close full screen">×</button><div data-project-preview></div></section>
     </div>
     <div class="project-editor__status" role="status" data-project-status data-state="${initialStatusState}"><div class="project-editor__tip" data-project-tip-controls><button type="button" data-project-tip-prev aria-label="Previous tip">←</button><span data-project-tip></span><button type="button" data-project-tip-next aria-label="Next tip">→</button></div><span class="project-editor__notice" data-project-notice hidden></span><span class="project-editor__error" data-project-error hidden></span><span class="project-editor__save" data-project-save>${initialSaveState}</span></div>
     <aside class="project-editor__history" data-project-history role="dialog" aria-label="${message(messages, "projectEditor.history", "Version history")}" hidden><div class="project-editor__history-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong><button type="button" data-project-history-close aria-label="${message(messages, "projectEditor.closeHistory", "Close version history")}">×</button></div><div data-project-version-list></div></aside>
@@ -253,8 +253,8 @@ async function validCsrf(value, session, action, authConfig, now) {
 function dashboardHtml(content, messages) {
   const projects = content.projects.length
     ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
-        <span class="account-card__namespace">${escapeHtml(item.namespace)}/</span>
         <h3>${escapeHtml(item.name)}</h3>
+        <span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span>
         <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
         <span class="account-card__meta">${message(messages, `dashboard.${item.visibility}`, item.visibility)}</span>
       </a>`).join("")}</div>`
@@ -278,8 +278,8 @@ function dashboardHtml(content, messages) {
 function projectsHtml(content, messages) {
   const projects = content.projects.length
     ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
-        <span class="account-card__namespace">${escapeHtml(item.namespace)}/</span>
         <h3>${escapeHtml(item.name)}</h3>
+        <span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span>
         <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
         <span class="account-card__meta">${message(messages, `dashboard.${item.visibility}`, item.visibility)}</span>
       </a>`).join("")}</div>`
@@ -356,7 +356,7 @@ function tryProjectHtml(messages) {
 
 function publicProjectsHtml(projects, messages) {
   if (!projects.length) return `<div class="account-empty">${message(messages, "publicProjects.empty", "No public projects have been published yet.")}</div>`;
-  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><span class="account-card__namespace">${escapeHtml(item.namespace)}/</span><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
+  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
 }
 
 function namespaceProjectsHtml(namespace, messages) {

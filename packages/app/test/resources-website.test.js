@@ -224,9 +224,16 @@ test("Resources.co blog container examples render and surface schema errors in t
   const blogPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await blogPage.goto(`http://resources-edge.localhost:${port}/blog/generating-slides-from-code`);
   const examplePanel = blogPage.locator(".blog-example-panel");
-  assert.equal(await examplePanel.locator("a").first().textContent(), "benatkin / DOM use code tour");
+  assert.equal(await examplePanel.locator("a").first().textContent(), "DOM use code tour");
   assert.equal(await examplePanel.locator("a").first().getAttribute("href"), "/benatkin/dom-use-tour");
-  assert.match(await examplePanel.locator("a").last().getAttribute("href"), /^http:\/\/blog-examples\.localhost:/);
+  assert.equal(await examplePanel.locator(".blog-example-slug").textContent(), "benatkin/dom-use-tour");
+  const blogUrl = blogPage.url();
+  await examplePanel.locator(".blog-example-fullscreen").click();
+  assert.equal(blogPage.url(), blogUrl);
+  assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 1);
+  assert.equal(await examplePanel.locator(".blog-example-fullscreen").getAttribute("aria-label"), "Close full screen");
+  await blogPage.keyboard.press("Escape");
+  assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 0);
   await blogPage.close();
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
