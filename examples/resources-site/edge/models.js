@@ -137,11 +137,13 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("x-content-type-options", "nosniff");
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
-  headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") ? "cross-origin" : "same-origin");
-  if (key.startsWith("-/blog-examples/")) headers.set("access-control-allow-origin", "*");
+  const presentationAsset = key.startsWith("-/resources-site/presentation-runner.");
+  headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") || presentationAsset ? "cross-origin" : "same-origin");
+  if (key.startsWith("-/blog-examples/") || presentationAsset) headers.set("access-control-allow-origin", "*");
+  const presentationRunner = key === "-/resources-site/presentation-runner.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    : "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    : `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${presentationRunner ? "'self'" : "'none'"}; form-action 'self'`);
   headers.set("cache-control", key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" : "public, max-age=31536000, immutable");
   const etag = upstreamHeaders.get("etag");
   const lastModified = upstreamHeaders.get("last-modified");

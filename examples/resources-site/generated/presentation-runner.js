@@ -1,1489 +1,1490 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e) {
-    throw err = [e], e;
-  }
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
-var EvalFlags, IntrinsicsFlags, JSPromiseStateEnum, GetOwnPropertyNamesFlags, IsEqualOp;
-var init_dist = __esm({
-  "node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
-    EvalFlags = { JS_EVAL_TYPE_GLOBAL: 0, JS_EVAL_TYPE_MODULE: 1, JS_EVAL_TYPE_DIRECT: 2, JS_EVAL_TYPE_INDIRECT: 3, JS_EVAL_TYPE_MASK: 3, JS_EVAL_FLAG_STRICT: 8, JS_EVAL_FLAG_STRIP: 16, JS_EVAL_FLAG_COMPILE_ONLY: 32, JS_EVAL_FLAG_BACKTRACE_BARRIER: 64 };
-    IntrinsicsFlags = { BaseObjects: 1, Date: 2, Eval: 4, StringNormalize: 8, RegExp: 16, RegExpCompiler: 32, JSON: 64, Proxy: 128, MapSet: 256, TypedArrays: 512, Promise: 1024, BigInt: 2048, BigFloat: 4096, BigDecimal: 8192, OperatorOverloading: 16384, BignumExt: 32768 };
-    JSPromiseStateEnum = { Pending: 0, Fulfilled: 1, Rejected: 2 };
-    GetOwnPropertyNamesFlags = { JS_GPN_STRING_MASK: 1, JS_GPN_SYMBOL_MASK: 2, JS_GPN_PRIVATE_MASK: 4, JS_GPN_ENUM_ONLY: 16, JS_GPN_SET_ENUM: 32, QTS_GPN_NUMBER_MASK: 64, QTS_STANDARD_COMPLIANT_NUMBER: 128 };
-    IsEqualOp = { IsStrictlyEqual: 0, IsSameValue: 1, IsSameValueZero: 2 };
-  }
-});
-
-// node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
-function debugLog(...args) {
-  QTS_DEBUG && console.log("quickjs-emscripten:", ...args);
-}
-function* awaitYield(value) {
-  return yield value;
-}
-function awaitYieldOf(generator) {
-  return awaitYield(awaitEachYieldedPromise(generator));
-}
-function maybeAsyncFn(that, fn) {
-  return (...args) => {
-    let generator = fn.call(that, AwaitYield, ...args);
-    return awaitEachYieldedPromise(generator);
+(() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __esm = (fn, res, err) => function __init() {
+    if (err) throw err[0];
+    try {
+      return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+    } catch (e) {
+      throw err = [e], e;
+    }
   };
-}
-function maybeAsync(that, startGenerator) {
-  let generator = startGenerator.call(that, AwaitYield);
-  return awaitEachYieldedPromise(generator);
-}
-function awaitEachYieldedPromise(gen) {
-  function handleNextStep(step) {
-    return step.done ? step.value : step.value instanceof Promise ? step.value.then((value) => handleNextStep(gen.next(value)), (error) => handleNextStep(gen.throw(error))) : handleNextStep(gen.next(step.value));
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
+  // node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
+  var EvalFlags, IntrinsicsFlags, JSPromiseStateEnum, GetOwnPropertyNamesFlags, IsEqualOp;
+  var init_dist = __esm({
+    "node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
+      EvalFlags = { JS_EVAL_TYPE_GLOBAL: 0, JS_EVAL_TYPE_MODULE: 1, JS_EVAL_TYPE_DIRECT: 2, JS_EVAL_TYPE_INDIRECT: 3, JS_EVAL_TYPE_MASK: 3, JS_EVAL_FLAG_STRICT: 8, JS_EVAL_FLAG_STRIP: 16, JS_EVAL_FLAG_COMPILE_ONLY: 32, JS_EVAL_FLAG_BACKTRACE_BARRIER: 64 };
+      IntrinsicsFlags = { BaseObjects: 1, Date: 2, Eval: 4, StringNormalize: 8, RegExp: 16, RegExpCompiler: 32, JSON: 64, Proxy: 128, MapSet: 256, TypedArrays: 512, Promise: 1024, BigInt: 2048, BigFloat: 4096, BigDecimal: 8192, OperatorOverloading: 16384, BignumExt: 32768 };
+      JSPromiseStateEnum = { Pending: 0, Fulfilled: 1, Rejected: 2 };
+      GetOwnPropertyNamesFlags = { JS_GPN_STRING_MASK: 1, JS_GPN_SYMBOL_MASK: 2, JS_GPN_PRIVATE_MASK: 4, JS_GPN_ENUM_ONLY: 16, JS_GPN_SET_ENUM: 32, QTS_GPN_NUMBER_MASK: 64, QTS_STANDARD_COMPLIANT_NUMBER: 128 };
+      IsEqualOp = { IsStrictlyEqual: 0, IsSameValue: 1, IsSameValueZero: 2 };
+    }
+  });
+
+  // node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
+  function debugLog(...args) {
+    QTS_DEBUG && console.log("quickjs-emscripten:", ...args);
   }
-  return handleNextStep(gen.next());
-}
-function scopeFinally(scope, blockError) {
-  let disposeError;
-  try {
-    scope.dispose();
-  } catch (error) {
-    disposeError = error;
+  function* awaitYield(value) {
+    return yield value;
   }
-  if (blockError && disposeError) throw Object.assign(blockError, { message: `${blockError.message}
+  function awaitYieldOf(generator) {
+    return awaitYield(awaitEachYieldedPromise(generator));
+  }
+  function maybeAsyncFn(that, fn) {
+    return (...args) => {
+      let generator = fn.call(that, AwaitYield, ...args);
+      return awaitEachYieldedPromise(generator);
+    };
+  }
+  function maybeAsync(that, startGenerator) {
+    let generator = startGenerator.call(that, AwaitYield);
+    return awaitEachYieldedPromise(generator);
+  }
+  function awaitEachYieldedPromise(gen) {
+    function handleNextStep(step) {
+      return step.done ? step.value : step.value instanceof Promise ? step.value.then((value) => handleNextStep(gen.next(value)), (error) => handleNextStep(gen.throw(error))) : handleNextStep(gen.next(step.value));
+    }
+    return handleNextStep(gen.next());
+  }
+  function scopeFinally(scope, blockError) {
+    let disposeError;
+    try {
+      scope.dispose();
+    } catch (error) {
+      disposeError = error;
+    }
+    if (blockError && disposeError) throw Object.assign(blockError, { message: `${blockError.message}
  Then, failed to dispose scope: ${disposeError.message}`, disposeError }), blockError;
-  if (blockError || disposeError) throw blockError || disposeError;
-}
-function createDisposableArray(items) {
-  let array = items ? Array.from(items) : [];
-  function disposeAlive() {
-    return array.forEach((disposable) => disposable.alive ? disposable.dispose() : void 0);
+    if (blockError || disposeError) throw blockError || disposeError;
   }
-  function someIsAlive() {
-    return array.some((disposable) => disposable.alive);
+  function createDisposableArray(items) {
+    let array = items ? Array.from(items) : [];
+    function disposeAlive() {
+      return array.forEach((disposable) => disposable.alive ? disposable.dispose() : void 0);
+    }
+    function someIsAlive() {
+      return array.some((disposable) => disposable.alive);
+    }
+    return Object.defineProperty(array, SymbolDispose, { configurable: true, enumerable: false, value: disposeAlive }), Object.defineProperty(array, "dispose", { configurable: true, enumerable: false, value: disposeAlive }), Object.defineProperty(array, "alive", { configurable: true, enumerable: false, get: someIsAlive }), array;
   }
-  return Object.defineProperty(array, SymbolDispose, { configurable: true, enumerable: false, value: disposeAlive }), Object.defineProperty(array, "dispose", { configurable: true, enumerable: false, value: disposeAlive }), Object.defineProperty(array, "alive", { configurable: true, enumerable: false, get: someIsAlive }), array;
-}
-function isDisposable(value) {
-  return !!(value && (typeof value == "object" || typeof value == "function") && "alive" in value && typeof value.alive == "boolean" && "dispose" in value && typeof value.dispose == "function");
-}
-function intrinsicsToFlags(intrinsics) {
-  if (!intrinsics) return 0;
-  let result = 0;
-  for (let [maybeIntrinsicName, enabled] of Object.entries(intrinsics)) {
-    if (!(maybeIntrinsicName in IntrinsicsFlags)) throw new QuickJSUnknownIntrinsic(maybeIntrinsicName);
-    enabled && (result |= IntrinsicsFlags[maybeIntrinsicName]);
+  function isDisposable(value) {
+    return !!(value && (typeof value == "object" || typeof value == "function") && "alive" in value && typeof value.alive == "boolean" && "dispose" in value && typeof value.dispose == "function");
   }
-  return result;
-}
-function evalOptionsToFlags(evalOptions) {
-  if (typeof evalOptions == "number") return evalOptions;
-  if (evalOptions === void 0) return 0;
-  let { type, strict, strip, compileOnly, backtraceBarrier } = evalOptions, flags = 0;
-  return type === "global" && (flags |= EvalFlags.JS_EVAL_TYPE_GLOBAL), type === "module" && (flags |= EvalFlags.JS_EVAL_TYPE_MODULE), strict && (flags |= EvalFlags.JS_EVAL_FLAG_STRICT), strip && (flags |= EvalFlags.JS_EVAL_FLAG_STRIP), compileOnly && (flags |= EvalFlags.JS_EVAL_FLAG_COMPILE_ONLY), backtraceBarrier && (flags |= EvalFlags.JS_EVAL_FLAG_BACKTRACE_BARRIER), flags;
-}
-function getOwnPropertyNamesOptionsToFlags(options) {
-  if (typeof options == "number") return options;
-  if (options === void 0) return 0;
-  let { strings: includeStrings, symbols: includeSymbols, quickjsPrivate: includePrivate, onlyEnumerable, numbers: includeNumbers, numbersAsStrings } = options, flags = 0;
-  return includeStrings && (flags |= GetOwnPropertyNamesFlags.JS_GPN_STRING_MASK), includeSymbols && (flags |= GetOwnPropertyNamesFlags.JS_GPN_SYMBOL_MASK), includePrivate && (flags |= GetOwnPropertyNamesFlags.JS_GPN_PRIVATE_MASK), onlyEnumerable && (flags |= GetOwnPropertyNamesFlags.JS_GPN_ENUM_ONLY), includeNumbers && (flags |= GetOwnPropertyNamesFlags.QTS_GPN_NUMBER_MASK), numbersAsStrings && (flags |= GetOwnPropertyNamesFlags.QTS_STANDARD_COMPLIANT_NUMBER), flags;
-}
-function concat(...values) {
-  let result = [];
-  for (let value of values) value !== void 0 && (result = result.concat(value));
-  return result;
-}
-function getGroupId(id) {
-  return id >> 8;
-}
-function applyBaseRuntimeOptions(runtime, options) {
-  options.interruptHandler && runtime.setInterruptHandler(options.interruptHandler), options.maxStackSizeBytes !== void 0 && runtime.setMaxStackSize(options.maxStackSizeBytes), options.memoryLimitBytes !== void 0 && runtime.setMemoryLimit(options.memoryLimitBytes);
-}
-function applyModuleEvalRuntimeOptions(runtime, options) {
-  options.moduleLoader && runtime.setModuleLoader(options.moduleLoader), options.shouldInterrupt && runtime.setInterruptHandler(options.shouldInterrupt), options.memoryLimitBytes !== void 0 && runtime.setMemoryLimit(options.memoryLimitBytes), options.maxStackSizeBytes !== void 0 && runtime.setMaxStackSize(options.maxStackSizeBytes);
-}
-var __defProp2, __export2, QTS_DEBUG, errors_exports, QuickJSUnwrapError, QuickJSWrongOwner, QuickJSUseAfterFree, QuickJSNotImplemented, QuickJSAsyncifyError, QuickJSAsyncifySuspended, QuickJSMemoryLeakDetected, QuickJSEmscriptenModuleError, QuickJSUnknownIntrinsic, QuickJSPromisePending, QuickJSEmptyGetOwnPropertyNames, QuickJSHostRefRangeExceeded, QuickJSHostRefInvalid, AwaitYield, UsingDisposable, SymbolDispose, prototypeAsAny, Lifetime, StaticLifetime, WeakLifetime, Scope, AbstractDisposableResult, DisposableSuccess, DisposableFail, DisposableResult, QuickJSDeferredPromise, ModuleMemory, DefaultIntrinsics, QuickJSIterator, INT32_MIN, INT32_MAX, INVALID_HOST_REF_ID, HostRefMap, HostRef, ContextMemory, QuickJSContext, QuickJSRuntime, QuickJSEmscriptenModuleCallbacks, QuickJSModuleCallbacks, QuickJSWASMModule;
-var init_chunk_V2S4ZYJR = __esm({
-  "node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
-    init_dist();
-    init_dist();
-    __defProp2 = Object.defineProperty;
-    __export2 = (target, all) => {
-      for (var name in all) __defProp2(target, name, { get: all[name], enumerable: true });
-    };
-    QTS_DEBUG = false;
-    errors_exports = {};
-    __export2(errors_exports, { QuickJSAsyncifyError: () => QuickJSAsyncifyError, QuickJSAsyncifySuspended: () => QuickJSAsyncifySuspended, QuickJSEmptyGetOwnPropertyNames: () => QuickJSEmptyGetOwnPropertyNames, QuickJSEmscriptenModuleError: () => QuickJSEmscriptenModuleError, QuickJSHostRefInvalid: () => QuickJSHostRefInvalid, QuickJSHostRefRangeExceeded: () => QuickJSHostRefRangeExceeded, QuickJSMemoryLeakDetected: () => QuickJSMemoryLeakDetected, QuickJSNotImplemented: () => QuickJSNotImplemented, QuickJSPromisePending: () => QuickJSPromisePending, QuickJSUnknownIntrinsic: () => QuickJSUnknownIntrinsic, QuickJSUnwrapError: () => QuickJSUnwrapError, QuickJSUseAfterFree: () => QuickJSUseAfterFree, QuickJSWrongOwner: () => QuickJSWrongOwner });
-    QuickJSUnwrapError = class extends Error {
-      constructor(cause, context) {
-        let message = typeof cause == "object" && cause && "message" in cause ? String(cause.message) : String(cause);
-        super(message);
-        this.cause = cause;
-        this.context = context;
-        this.name = "QuickJSUnwrapError";
-      }
-    };
-    QuickJSWrongOwner = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSWrongOwner";
-      }
-    };
-    QuickJSUseAfterFree = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSUseAfterFree";
-      }
-    };
-    QuickJSNotImplemented = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSNotImplemented";
-      }
-    };
-    QuickJSAsyncifyError = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSAsyncifyError";
-      }
-    };
-    QuickJSAsyncifySuspended = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSAsyncifySuspended";
-      }
-    };
-    QuickJSMemoryLeakDetected = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSMemoryLeakDetected";
-      }
-    };
-    QuickJSEmscriptenModuleError = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSEmscriptenModuleError";
-      }
-    };
-    QuickJSUnknownIntrinsic = class extends TypeError {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSUnknownIntrinsic";
-      }
-    };
-    QuickJSPromisePending = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSPromisePending";
-      }
-    };
-    QuickJSEmptyGetOwnPropertyNames = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSEmptyGetOwnPropertyNames";
-      }
-    };
-    QuickJSHostRefRangeExceeded = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSHostRefRangeExceeded";
-      }
-    };
-    QuickJSHostRefInvalid = class extends Error {
-      constructor() {
-        super(...arguments);
-        this.name = "QuickJSHostRefInvalid";
-      }
-    };
-    AwaitYield = awaitYield;
-    AwaitYield.of = awaitYieldOf;
-    UsingDisposable = class {
-      [Symbol.dispose]() {
+  function intrinsicsToFlags(intrinsics) {
+    if (!intrinsics) return 0;
+    let result = 0;
+    for (let [maybeIntrinsicName, enabled] of Object.entries(intrinsics)) {
+      if (!(maybeIntrinsicName in IntrinsicsFlags)) throw new QuickJSUnknownIntrinsic(maybeIntrinsicName);
+      enabled && (result |= IntrinsicsFlags[maybeIntrinsicName]);
+    }
+    return result;
+  }
+  function evalOptionsToFlags(evalOptions) {
+    if (typeof evalOptions == "number") return evalOptions;
+    if (evalOptions === void 0) return 0;
+    let { type, strict, strip, compileOnly, backtraceBarrier } = evalOptions, flags = 0;
+    return type === "global" && (flags |= EvalFlags.JS_EVAL_TYPE_GLOBAL), type === "module" && (flags |= EvalFlags.JS_EVAL_TYPE_MODULE), strict && (flags |= EvalFlags.JS_EVAL_FLAG_STRICT), strip && (flags |= EvalFlags.JS_EVAL_FLAG_STRIP), compileOnly && (flags |= EvalFlags.JS_EVAL_FLAG_COMPILE_ONLY), backtraceBarrier && (flags |= EvalFlags.JS_EVAL_FLAG_BACKTRACE_BARRIER), flags;
+  }
+  function getOwnPropertyNamesOptionsToFlags(options) {
+    if (typeof options == "number") return options;
+    if (options === void 0) return 0;
+    let { strings: includeStrings, symbols: includeSymbols, quickjsPrivate: includePrivate, onlyEnumerable, numbers: includeNumbers, numbersAsStrings } = options, flags = 0;
+    return includeStrings && (flags |= GetOwnPropertyNamesFlags.JS_GPN_STRING_MASK), includeSymbols && (flags |= GetOwnPropertyNamesFlags.JS_GPN_SYMBOL_MASK), includePrivate && (flags |= GetOwnPropertyNamesFlags.JS_GPN_PRIVATE_MASK), onlyEnumerable && (flags |= GetOwnPropertyNamesFlags.JS_GPN_ENUM_ONLY), includeNumbers && (flags |= GetOwnPropertyNamesFlags.QTS_GPN_NUMBER_MASK), numbersAsStrings && (flags |= GetOwnPropertyNamesFlags.QTS_STANDARD_COMPLIANT_NUMBER), flags;
+  }
+  function concat(...values) {
+    let result = [];
+    for (let value of values) value !== void 0 && (result = result.concat(value));
+    return result;
+  }
+  function getGroupId(id) {
+    return id >> 8;
+  }
+  function applyBaseRuntimeOptions(runtime, options) {
+    options.interruptHandler && runtime.setInterruptHandler(options.interruptHandler), options.maxStackSizeBytes !== void 0 && runtime.setMaxStackSize(options.maxStackSizeBytes), options.memoryLimitBytes !== void 0 && runtime.setMemoryLimit(options.memoryLimitBytes);
+  }
+  function applyModuleEvalRuntimeOptions(runtime, options) {
+    options.moduleLoader && runtime.setModuleLoader(options.moduleLoader), options.shouldInterrupt && runtime.setInterruptHandler(options.shouldInterrupt), options.memoryLimitBytes !== void 0 && runtime.setMemoryLimit(options.memoryLimitBytes), options.maxStackSizeBytes !== void 0 && runtime.setMaxStackSize(options.maxStackSizeBytes);
+  }
+  var __defProp2, __export2, QTS_DEBUG, errors_exports, QuickJSUnwrapError, QuickJSWrongOwner, QuickJSUseAfterFree, QuickJSNotImplemented, QuickJSAsyncifyError, QuickJSAsyncifySuspended, QuickJSMemoryLeakDetected, QuickJSEmscriptenModuleError, QuickJSUnknownIntrinsic, QuickJSPromisePending, QuickJSEmptyGetOwnPropertyNames, QuickJSHostRefRangeExceeded, QuickJSHostRefInvalid, AwaitYield, UsingDisposable, SymbolDispose, prototypeAsAny, Lifetime, StaticLifetime, WeakLifetime, Scope, AbstractDisposableResult, DisposableSuccess, DisposableFail, DisposableResult, QuickJSDeferredPromise, ModuleMemory, DefaultIntrinsics, QuickJSIterator, INT32_MIN, INT32_MAX, INVALID_HOST_REF_ID, HostRefMap, HostRef, ContextMemory, QuickJSContext, QuickJSRuntime, QuickJSEmscriptenModuleCallbacks, QuickJSModuleCallbacks, QuickJSWASMModule;
+  var init_chunk_V2S4ZYJR = __esm({
+    "node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
+      init_dist();
+      init_dist();
+      __defProp2 = Object.defineProperty;
+      __export2 = (target, all) => {
+        for (var name in all) __defProp2(target, name, { get: all[name], enumerable: true });
+      };
+      QTS_DEBUG = false;
+      errors_exports = {};
+      __export2(errors_exports, { QuickJSAsyncifyError: () => QuickJSAsyncifyError, QuickJSAsyncifySuspended: () => QuickJSAsyncifySuspended, QuickJSEmptyGetOwnPropertyNames: () => QuickJSEmptyGetOwnPropertyNames, QuickJSEmscriptenModuleError: () => QuickJSEmscriptenModuleError, QuickJSHostRefInvalid: () => QuickJSHostRefInvalid, QuickJSHostRefRangeExceeded: () => QuickJSHostRefRangeExceeded, QuickJSMemoryLeakDetected: () => QuickJSMemoryLeakDetected, QuickJSNotImplemented: () => QuickJSNotImplemented, QuickJSPromisePending: () => QuickJSPromisePending, QuickJSUnknownIntrinsic: () => QuickJSUnknownIntrinsic, QuickJSUnwrapError: () => QuickJSUnwrapError, QuickJSUseAfterFree: () => QuickJSUseAfterFree, QuickJSWrongOwner: () => QuickJSWrongOwner });
+      QuickJSUnwrapError = class extends Error {
+        constructor(cause, context) {
+          let message = typeof cause == "object" && cause && "message" in cause ? String(cause.message) : String(cause);
+          super(message);
+          this.cause = cause;
+          this.context = context;
+          this.name = "QuickJSUnwrapError";
+        }
+      };
+      QuickJSWrongOwner = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSWrongOwner";
+        }
+      };
+      QuickJSUseAfterFree = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSUseAfterFree";
+        }
+      };
+      QuickJSNotImplemented = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSNotImplemented";
+        }
+      };
+      QuickJSAsyncifyError = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSAsyncifyError";
+        }
+      };
+      QuickJSAsyncifySuspended = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSAsyncifySuspended";
+        }
+      };
+      QuickJSMemoryLeakDetected = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSMemoryLeakDetected";
+        }
+      };
+      QuickJSEmscriptenModuleError = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSEmscriptenModuleError";
+        }
+      };
+      QuickJSUnknownIntrinsic = class extends TypeError {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSUnknownIntrinsic";
+        }
+      };
+      QuickJSPromisePending = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSPromisePending";
+        }
+      };
+      QuickJSEmptyGetOwnPropertyNames = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSEmptyGetOwnPropertyNames";
+        }
+      };
+      QuickJSHostRefRangeExceeded = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSHostRefRangeExceeded";
+        }
+      };
+      QuickJSHostRefInvalid = class extends Error {
+        constructor() {
+          super(...arguments);
+          this.name = "QuickJSHostRefInvalid";
+        }
+      };
+      AwaitYield = awaitYield;
+      AwaitYield.of = awaitYieldOf;
+      UsingDisposable = class {
+        [Symbol.dispose]() {
+          return this.dispose();
+        }
+      };
+      SymbolDispose = Symbol.dispose ?? /* @__PURE__ */ Symbol.for("Symbol.dispose");
+      prototypeAsAny = UsingDisposable.prototype;
+      prototypeAsAny[SymbolDispose] || (prototypeAsAny[SymbolDispose] = function() {
         return this.dispose();
-      }
-    };
-    SymbolDispose = Symbol.dispose ?? /* @__PURE__ */ Symbol.for("Symbol.dispose");
-    prototypeAsAny = UsingDisposable.prototype;
-    prototypeAsAny[SymbolDispose] || (prototypeAsAny[SymbolDispose] = function() {
-      return this.dispose();
-    });
-    Lifetime = class _Lifetime extends UsingDisposable {
-      constructor(_value, copier, disposer, _owner) {
-        super();
-        this._value = _value;
-        this.copier = copier;
-        this.disposer = disposer;
-        this._owner = _owner;
-        this._alive = true;
-        this._constructorStack = QTS_DEBUG ? new Error("Lifetime constructed").stack : void 0;
-      }
-      get alive() {
-        return this._alive;
-      }
-      get value() {
-        return this.assertAlive(), this._value;
-      }
-      get owner() {
-        return this._owner;
-      }
-      get dupable() {
-        return !!this.copier;
-      }
-      dup() {
-        if (this.assertAlive(), !this.copier) throw new Error("Non-dupable lifetime");
-        return new _Lifetime(this.copier(this._value), this.copier, this.disposer, this._owner);
-      }
-      consume(map) {
-        this.assertAlive();
-        let result = map(this);
-        return this.dispose(), result;
-      }
-      map(map) {
-        return this.assertAlive(), map(this);
-      }
-      tap(fn) {
-        return fn(this), this;
-      }
-      dispose() {
-        this.assertAlive(), this.disposer && this.disposer(this._value), this._alive = false;
-      }
-      assertAlive() {
-        if (!this.alive) throw this._constructorStack ? new QuickJSUseAfterFree(`Lifetime not alive
+      });
+      Lifetime = class _Lifetime extends UsingDisposable {
+        constructor(_value, copier, disposer, _owner) {
+          super();
+          this._value = _value;
+          this.copier = copier;
+          this.disposer = disposer;
+          this._owner = _owner;
+          this._alive = true;
+          this._constructorStack = QTS_DEBUG ? new Error("Lifetime constructed").stack : void 0;
+        }
+        get alive() {
+          return this._alive;
+        }
+        get value() {
+          return this.assertAlive(), this._value;
+        }
+        get owner() {
+          return this._owner;
+        }
+        get dupable() {
+          return !!this.copier;
+        }
+        dup() {
+          if (this.assertAlive(), !this.copier) throw new Error("Non-dupable lifetime");
+          return new _Lifetime(this.copier(this._value), this.copier, this.disposer, this._owner);
+        }
+        consume(map) {
+          this.assertAlive();
+          let result = map(this);
+          return this.dispose(), result;
+        }
+        map(map) {
+          return this.assertAlive(), map(this);
+        }
+        tap(fn) {
+          return fn(this), this;
+        }
+        dispose() {
+          this.assertAlive(), this.disposer && this.disposer(this._value), this._alive = false;
+        }
+        assertAlive() {
+          if (!this.alive) throw this._constructorStack ? new QuickJSUseAfterFree(`Lifetime not alive
 ${this._constructorStack}
 Lifetime used`) : new QuickJSUseAfterFree("Lifetime not alive");
-      }
-    };
-    StaticLifetime = class extends Lifetime {
-      constructor(value, owner) {
-        super(value, void 0, void 0, owner);
-      }
-      get dupable() {
-        return true;
-      }
-      dup() {
-        return this;
-      }
-      dispose() {
-      }
-    };
-    WeakLifetime = class extends Lifetime {
-      constructor(value, copier, disposer, owner) {
-        super(value, copier, disposer, owner);
-      }
-      dispose() {
-        this._alive = false;
-      }
-    };
-    Scope = class _Scope extends UsingDisposable {
-      constructor() {
-        super(...arguments);
-        this._disposables = new Lifetime(/* @__PURE__ */ new Set());
-        this.manage = (lifetime) => (this._disposables.value.add(lifetime), lifetime);
-      }
-      static withScope(block) {
-        let scope = new _Scope(), blockError;
-        try {
-          return block(scope);
-        } catch (error) {
-          throw blockError = error, error;
-        } finally {
-          scopeFinally(scope, blockError);
         }
-      }
-      static withScopeMaybeAsync(_this, block) {
-        return maybeAsync(void 0, function* (awaited) {
+      };
+      StaticLifetime = class extends Lifetime {
+        constructor(value, owner) {
+          super(value, void 0, void 0, owner);
+        }
+        get dupable() {
+          return true;
+        }
+        dup() {
+          return this;
+        }
+        dispose() {
+        }
+      };
+      WeakLifetime = class extends Lifetime {
+        constructor(value, copier, disposer, owner) {
+          super(value, copier, disposer, owner);
+        }
+        dispose() {
+          this._alive = false;
+        }
+      };
+      Scope = class _Scope extends UsingDisposable {
+        constructor() {
+          super(...arguments);
+          this._disposables = new Lifetime(/* @__PURE__ */ new Set());
+          this.manage = (lifetime) => (this._disposables.value.add(lifetime), lifetime);
+        }
+        static withScope(block) {
           let scope = new _Scope(), blockError;
           try {
-            return yield* awaited.of(block.call(_this, awaited, scope));
+            return block(scope);
           } catch (error) {
             throw blockError = error, error;
           } finally {
             scopeFinally(scope, blockError);
           }
-        });
-      }
-      static async withScopeAsync(block) {
-        let scope = new _Scope(), blockError;
-        try {
-          return await block(scope);
-        } catch (error) {
-          throw blockError = error, error;
-        } finally {
-          scopeFinally(scope, blockError);
         }
-      }
-      get alive() {
-        return this._disposables.alive;
-      }
-      dispose() {
-        let lifetimes = Array.from(this._disposables.value.values()).reverse();
-        for (let lifetime of lifetimes) lifetime.alive && lifetime.dispose();
-        this._disposables.dispose();
-      }
-    };
-    AbstractDisposableResult = class _AbstractDisposableResult extends UsingDisposable {
-      static success(value) {
-        return new DisposableSuccess(value);
-      }
-      static fail(error, onUnwrap) {
-        return new DisposableFail(error, onUnwrap);
-      }
-      static is(result) {
-        return result instanceof _AbstractDisposableResult;
-      }
-    };
-    DisposableSuccess = class extends AbstractDisposableResult {
-      constructor(value) {
-        super();
-        this.value = value;
-      }
-      get alive() {
-        return isDisposable(this.value) ? this.value.alive : true;
-      }
-      dispose() {
-        isDisposable(this.value) && this.value.dispose();
-      }
-      unwrap() {
-        return this.value;
-      }
-      unwrapOr(_fallback) {
-        return this.value;
-      }
-    };
-    DisposableFail = class extends AbstractDisposableResult {
-      constructor(error, onUnwrap) {
-        super();
-        this.error = error;
-        this.onUnwrap = onUnwrap;
-      }
-      get alive() {
-        return isDisposable(this.error) ? this.error.alive : true;
-      }
-      dispose() {
-        isDisposable(this.error) && this.error.dispose();
-      }
-      unwrap() {
-        throw this.onUnwrap(this), this.error;
-      }
-      unwrapOr(fallback) {
-        return fallback;
-      }
-    };
-    DisposableResult = AbstractDisposableResult;
-    QuickJSDeferredPromise = class extends UsingDisposable {
-      constructor(args) {
-        super();
-        this.resolve = (value) => {
-          this.resolveHandle.alive && (this.context.unwrapResult(this.context.callFunction(this.resolveHandle, this.context.undefined, value || this.context.undefined)).dispose(), this.disposeResolvers(), this.onSettled());
-        };
-        this.reject = (value) => {
-          this.rejectHandle.alive && (this.context.unwrapResult(this.context.callFunction(this.rejectHandle, this.context.undefined, value || this.context.undefined)).dispose(), this.disposeResolvers(), this.onSettled());
-        };
-        this.dispose = () => {
-          this.handle.alive && this.handle.dispose(), this.disposeResolvers();
-        };
-        this.context = args.context, this.owner = args.context.runtime, this.handle = args.promiseHandle, this.settled = new Promise((resolve) => {
-          this.onSettled = resolve;
-        }), this.resolveHandle = args.resolveHandle, this.rejectHandle = args.rejectHandle;
-      }
-      get alive() {
-        return this.handle.alive || this.resolveHandle.alive || this.rejectHandle.alive;
-      }
-      disposeResolvers() {
-        this.resolveHandle.alive && this.resolveHandle.dispose(), this.rejectHandle.alive && this.rejectHandle.dispose();
-      }
-    };
-    ModuleMemory = class {
-      constructor(module) {
-        this.module = module;
-      }
-      toPointerArray(handleArray) {
-        let typedArray = new Int32Array(handleArray.map((handle) => handle.value)), numBytes = typedArray.length * typedArray.BYTES_PER_ELEMENT, ptr = this.module._malloc(numBytes);
-        return new Uint8Array(this.module.HEAPU8.buffer, ptr, numBytes).set(new Uint8Array(typedArray.buffer)), new Lifetime(ptr, void 0, (ptr2) => this.module._free(ptr2));
-      }
-      newTypedArray(kind, length) {
-        let zeros = new kind(new Array(length).fill(0)), numBytes = zeros.length * zeros.BYTES_PER_ELEMENT, ptr = this.module._malloc(numBytes), typedArray = new kind(this.module.HEAPU8.buffer, ptr, length);
-        return typedArray.set(zeros), new Lifetime({ typedArray, ptr }, void 0, (value) => this.module._free(value.ptr));
-      }
-      newMutablePointerArray(length) {
-        return this.newTypedArray(Int32Array, length);
-      }
-      newHeapCharPointer(string) {
-        let strlen = this.module.lengthBytesUTF8(string), dataBytes = strlen + 1, ptr = this.module._malloc(dataBytes);
-        return this.module.stringToUTF8(string, ptr, dataBytes), new Lifetime({ ptr, strlen }, void 0, (value) => this.module._free(value.ptr));
-      }
-      newHeapBufferPointer(buffer) {
-        let numBytes = buffer.byteLength, ptr = this.module._malloc(numBytes);
-        return this.module.HEAPU8.set(buffer, ptr), new Lifetime({ pointer: ptr, numBytes }, void 0, (value) => this.module._free(value.pointer));
-      }
-      consumeHeapCharPointer(ptr) {
-        let str = this.module.UTF8ToString(ptr);
-        return this.module._free(ptr), str;
-      }
-    };
-    DefaultIntrinsics = Object.freeze({ BaseObjects: true, Date: true, Eval: true, StringNormalize: true, RegExp: true, JSON: true, Proxy: true, MapSet: true, TypedArrays: true, Promise: true });
-    QuickJSIterator = class extends UsingDisposable {
-      constructor(handle, context) {
-        super();
-        this.handle = handle;
-        this.context = context;
-        this._isDone = false;
-        this.owner = context.runtime;
-      }
-      [Symbol.iterator]() {
-        return this;
-      }
-      next(value) {
-        if (!this.alive || this._isDone) return { done: true, value: void 0 };
-        let nextMethod = this._next ?? (this._next = this.context.getProp(this.handle, "next"));
-        return this.callIteratorMethod(nextMethod, value);
-      }
-      return(value) {
-        if (!this.alive) return { done: true, value: void 0 };
-        let returnMethod = this.context.getProp(this.handle, "return");
-        if (returnMethod === this.context.undefined && value === void 0) return this.dispose(), { done: true, value: void 0 };
-        let result = this.callIteratorMethod(returnMethod, value);
-        return returnMethod.dispose(), this.dispose(), result;
-      }
-      throw(e) {
-        if (!this.alive) return { done: true, value: void 0 };
-        let errorHandle = e instanceof Lifetime ? e : this.context.newError(e), throwMethod = this.context.getProp(this.handle, "throw"), result = this.callIteratorMethod(throwMethod, e);
-        return errorHandle.alive && errorHandle.dispose(), throwMethod.dispose(), this.dispose(), result;
-      }
-      get alive() {
-        return this.handle.alive;
-      }
-      dispose() {
-        this._isDone = true, this.handle.dispose(), this._next?.dispose();
-      }
-      callIteratorMethod(method, input) {
-        let callResult = input ? this.context.callFunction(method, this.handle, input) : this.context.callFunction(method, this.handle);
-        if (callResult.error) return this.dispose(), { value: callResult };
-        let done = this.context.getProp(callResult.value, "done").consume((v) => this.context.dump(v)), value = this.context.getProp(callResult.value, "value");
-        return callResult.value.dispose(), done && this.dispose(), { value: DisposableResult.success(value), done };
-      }
-    };
-    INT32_MIN = -2147483648;
-    INT32_MAX = 2147483647;
-    INVALID_HOST_REF_ID = 0;
-    HostRefMap = class {
-      constructor() {
-        this.nextId = INT32_MIN;
-        this.freelist = [];
-        this.groups = /* @__PURE__ */ new Map();
-      }
-      put(value) {
-        let id = this.allocateId(), groupId = getGroupId(id), group = this.groups.get(groupId);
-        return group || (group = /* @__PURE__ */ new Map(), this.groups.set(groupId, group)), group.set(id, value), id;
-      }
-      get(id) {
-        if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("no host reference id defined");
-        let groupId = getGroupId(id), group = this.groups.get(groupId);
-        if (!group) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
-        let value = group.get(id);
-        if (!value) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
-        return value;
-      }
-      delete(id) {
-        if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("no host reference id defined");
-        let groupId = getGroupId(id), group = this.groups.get(groupId);
-        if (!group) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
-        group.delete(id), group.size === 0 && this.groups.delete(groupId), this.freelist.push(id);
-      }
-      allocateId() {
-        if (this.freelist.length > 0) return this.freelist.shift();
-        if (this.nextId === INVALID_HOST_REF_ID && this.nextId++, this.nextId > INT32_MAX) throw new QuickJSHostRefRangeExceeded(`HostRefMap: too many host refs created without disposing. Max simultaneous host refs: ${INT32_MAX - INT32_MIN}`);
-        return this.nextId++;
-      }
-    };
-    HostRef = class extends UsingDisposable {
-      constructor(runtime, handle, id) {
-        if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("cannot create HostRef with undefined id");
-        super();
-        this.runtime = runtime;
-        this.handle = handle;
-        this.id = id;
-      }
-      get alive() {
-        return this.handle.alive;
-      }
-      dispose() {
-        this.handle.dispose();
-      }
-      get value() {
-        return this.runtime.hostRefs.get(this.id);
-      }
-    };
-    ContextMemory = class extends ModuleMemory {
-      constructor(args) {
-        super(args.module);
-        this.scope = new Scope();
-        this.copyJSValue = (ptr) => this.ffi.QTS_DupValuePointer(this.ctx.value, ptr);
-        this.freeJSValue = (ptr) => {
-          this.ffi.QTS_FreeValuePointer(this.ctx.value, ptr);
-        };
-        args.ownedLifetimes?.forEach((lifetime) => this.scope.manage(lifetime)), this.owner = args.owner, this.module = args.module, this.ffi = args.ffi, this.rt = args.rt, this.ctx = this.scope.manage(args.ctx);
-      }
-      get alive() {
-        return this.scope.alive;
-      }
-      dispose() {
-        return this.scope.dispose();
-      }
-      [Symbol.dispose]() {
-        return this.dispose();
-      }
-      manage(lifetime) {
-        return this.scope.manage(lifetime);
-      }
-      consumeJSCharPointer(ptr) {
-        let str = this.module.UTF8ToString(ptr);
-        return this.ffi.QTS_FreeCString(this.ctx.value, ptr), str;
-      }
-      heapValueHandle(ptr, extraDispose) {
-        let dispose = extraDispose ? (val) => {
-          extraDispose(), this.freeJSValue(val);
-        } : this.freeJSValue;
-        return new Lifetime(ptr, this.copyJSValue, dispose, this.owner);
-      }
-      staticHeapValueHandle(ptr) {
-        return this.manage(this.heapValueHandle(ptr)), new StaticLifetime(ptr, this.owner);
-      }
-    };
-    QuickJSContext = class extends UsingDisposable {
-      constructor(args) {
-        super();
-        this._undefined = void 0;
-        this._null = void 0;
-        this._false = void 0;
-        this._true = void 0;
-        this._global = void 0;
-        this._BigInt = void 0;
-        this._Symbol = void 0;
-        this._SymbolIterator = void 0;
-        this._SymbolAsyncIterator = void 0;
-        this.cToHostCallbacks = { callFunction: (ctx, this_ptr, argc, argv, fn_id) => {
-          if (ctx !== this.ctx.value) throw new Error("QuickJSContext instance received C -> JS call with mismatched ctx");
-          let fn = this.getFunction(fn_id);
-          return Scope.withScopeMaybeAsync(this, function* (awaited, scope) {
-            let thisHandle = scope.manage(new WeakLifetime(this_ptr, this.memory.copyJSValue, this.memory.freeJSValue, this.runtime)), argHandles = new Array(argc);
-            for (let i = 0; i < argc; i++) {
-              let ptr = this.ffi.QTS_ArgvGetJSValueConstPointer(argv, i);
-              argHandles[i] = scope.manage(new WeakLifetime(ptr, this.memory.copyJSValue, this.memory.freeJSValue, this.runtime));
-            }
+        static withScopeMaybeAsync(_this, block) {
+          return maybeAsync(void 0, function* (awaited) {
+            let scope = new _Scope(), blockError;
             try {
-              let result = yield* awaited(fn.apply(thisHandle, argHandles));
-              if (result) {
-                if ("error" in result && result.error) throw this.runtime.debugLog("throw error", result.error), result.error;
-                let handle = scope.manage(result instanceof Lifetime ? result : result.value);
-                return this.ffi.QTS_DupValuePointer(this.ctx.value, handle.value);
-              }
-              return 0;
+              return yield* awaited.of(block.call(_this, awaited, scope));
             } catch (error) {
-              return this.errorToHandle(error).consume((errorHandle) => this.ffi.QTS_Throw(this.ctx.value, errorHandle.value));
+              throw blockError = error, error;
+            } finally {
+              scopeFinally(scope, blockError);
             }
           });
-        } };
-        this.runtime = args.runtime, this.module = args.module, this.ffi = args.ffi, this.rt = args.rt, this.ctx = args.ctx, this.memory = new ContextMemory({ ...args, owner: this.runtime }), args.callbacks.setContextCallbacks(this.ctx.value, this.cToHostCallbacks), this.dump = this.dump.bind(this), this.getString = this.getString.bind(this), this.getNumber = this.getNumber.bind(this), this.resolvePromise = this.resolvePromise.bind(this), this.uint32Out = this.memory.manage(this.memory.newTypedArray(Uint32Array, 1));
-      }
-      get alive() {
-        return this.memory.alive;
-      }
-      dispose() {
-        this.memory.dispose();
-      }
-      get undefined() {
-        if (this._undefined) return this._undefined;
-        let ptr = this.ffi.QTS_GetUndefined();
-        return this._undefined = new StaticLifetime(ptr);
-      }
-      get null() {
-        if (this._null) return this._null;
-        let ptr = this.ffi.QTS_GetNull();
-        return this._null = new StaticLifetime(ptr);
-      }
-      get true() {
-        if (this._true) return this._true;
-        let ptr = this.ffi.QTS_GetTrue();
-        return this._true = new StaticLifetime(ptr);
-      }
-      get false() {
-        if (this._false) return this._false;
-        let ptr = this.ffi.QTS_GetFalse();
-        return this._false = new StaticLifetime(ptr);
-      }
-      get global() {
-        if (this._global) return this._global;
-        let ptr = this.ffi.QTS_GetGlobalObject(this.ctx.value);
-        return this._global = this.memory.staticHeapValueHandle(ptr), this._global;
-      }
-      newNumber(num) {
-        return this.memory.heapValueHandle(this.ffi.QTS_NewFloat64(this.ctx.value, num));
-      }
-      newString(str) {
-        let ptr = this.memory.newHeapCharPointer(str).consume((charHandle) => this.ffi.QTS_NewString(this.ctx.value, charHandle.value.ptr));
-        return this.memory.heapValueHandle(ptr);
-      }
-      newUniqueSymbol(description) {
-        let key = (typeof description == "symbol" ? description.description : description) ?? "", ptr = this.memory.newHeapCharPointer(key).consume((charHandle) => this.ffi.QTS_NewSymbol(this.ctx.value, charHandle.value.ptr, 0));
-        return this.memory.heapValueHandle(ptr);
-      }
-      newSymbolFor(key) {
-        let description = (typeof key == "symbol" ? key.description : key) ?? "", ptr = this.memory.newHeapCharPointer(description).consume((charHandle) => this.ffi.QTS_NewSymbol(this.ctx.value, charHandle.value.ptr, 1));
-        return this.memory.heapValueHandle(ptr);
-      }
-      getWellKnownSymbol(name) {
-        return this._Symbol ?? (this._Symbol = this.memory.manage(this.getProp(this.global, "Symbol"))), this.getProp(this._Symbol, name);
-      }
-      newBigInt(num) {
-        if (!this._BigInt) {
-          let bigIntHandle2 = this.getProp(this.global, "BigInt");
-          this.memory.manage(bigIntHandle2), this._BigInt = new StaticLifetime(bigIntHandle2.value, this.runtime);
         }
-        let bigIntHandle = this._BigInt, asString = String(num);
-        return this.newString(asString).consume((handle) => this.unwrapResult(this.callFunction(bigIntHandle, this.undefined, handle)));
-      }
-      newObject(prototype) {
-        prototype && this.runtime.assertOwned(prototype);
-        let ptr = prototype ? this.ffi.QTS_NewObjectProto(this.ctx.value, prototype.value) : this.ffi.QTS_NewObject(this.ctx.value);
-        return this.memory.heapValueHandle(ptr);
-      }
-      newArray() {
-        let ptr = this.ffi.QTS_NewArray(this.ctx.value);
-        return this.memory.heapValueHandle(ptr);
-      }
-      newArrayBuffer(buffer) {
-        let array = new Uint8Array(buffer), handle = this.memory.newHeapBufferPointer(array), ptr = this.ffi.QTS_NewArrayBuffer(this.ctx.value, handle.value.pointer, array.length);
-        return this.memory.heapValueHandle(ptr);
-      }
-      newPromise(value) {
-        let deferredPromise = Scope.withScope((scope) => {
-          let mutablePointerArray = scope.manage(this.memory.newMutablePointerArray(2)), promisePtr = this.ffi.QTS_NewPromiseCapability(this.ctx.value, mutablePointerArray.value.ptr), promiseHandle = this.memory.heapValueHandle(promisePtr), [resolveHandle, rejectHandle] = Array.from(mutablePointerArray.value.typedArray).map((jsvaluePtr) => this.memory.heapValueHandle(jsvaluePtr));
-          return new QuickJSDeferredPromise({ context: this, promiseHandle, resolveHandle, rejectHandle });
-        });
-        return value && typeof value == "function" && (value = new Promise(value)), value && Promise.resolve(value).then(deferredPromise.resolve, (error) => error instanceof Lifetime ? deferredPromise.reject(error) : this.newError(error).consume(deferredPromise.reject)), deferredPromise;
-      }
-      newFunction(nameOrFn, maybeFn) {
-        let fn = typeof nameOrFn == "function" ? nameOrFn : maybeFn;
-        if (!fn) throw new TypeError("Expected a function");
-        return this.newFunctionWithOptions({ name: typeof nameOrFn == "string" ? nameOrFn : void 0, length: fn.length, isConstructor: false, fn });
-      }
-      newConstructorFunction(nameOrFn, maybeFn) {
-        let fn = typeof nameOrFn == "function" ? nameOrFn : maybeFn;
-        if (!fn) throw new TypeError("Expected a function");
-        return this.newFunctionWithOptions({ name: typeof nameOrFn == "string" ? nameOrFn : void 0, length: fn.length, isConstructor: true, fn });
-      }
-      newFunctionWithOptions(args) {
-        let { name, length, isConstructor, fn } = args, refId = this.runtime.hostRefs.put(fn);
-        try {
-          return this.memory.heapValueHandle(this.ffi.QTS_NewFunction(this.ctx.value, name ?? "", length, isConstructor, refId));
-        } catch (error) {
-          throw this.runtime.hostRefs.delete(refId), error;
+        static async withScopeAsync(block) {
+          let scope = new _Scope(), blockError;
+          try {
+            return await block(scope);
+          } catch (error) {
+            throw blockError = error, error;
+          } finally {
+            scopeFinally(scope, blockError);
+          }
         }
-      }
-      newError(error) {
-        let errorHandle = this.memory.heapValueHandle(this.ffi.QTS_NewError(this.ctx.value));
-        return error && typeof error == "object" ? (error.name !== void 0 && this.newString(error.name).consume((handle) => this.setProp(errorHandle, "name", handle)), error.message !== void 0 && this.newString(error.message).consume((handle) => this.setProp(errorHandle, "message", handle))) : typeof error == "string" ? this.newString(error).consume((handle) => this.setProp(errorHandle, "message", handle)) : error !== void 0 && this.newString(String(error)).consume((handle) => this.setProp(errorHandle, "message", handle)), errorHandle;
-      }
-      newHostRef(value) {
-        let id = this.runtime.hostRefs.put(value);
-        try {
-          let handle = this.memory.heapValueHandle(this.ffi.QTS_NewHostRef(this.ctx.value, id));
-          return new HostRef(this.runtime, handle, id);
-        } catch (error) {
-          throw this.runtime.hostRefs.delete(id), error;
+        get alive() {
+          return this._disposables.alive;
         }
-      }
-      toHostRef(handle) {
-        let id = this.ffi.QTS_GetHostRefId(handle.value);
-        if (id !== 0) return this.runtime.hostRefs.get(id), new HostRef(this.runtime, handle.dup(), id);
-      }
-      unwrapHostRef(handle) {
-        let id = this.ffi.QTS_GetHostRefId(handle.value);
-        if (id === 0) throw new QuickJSHostRefInvalid("handle is not a HostRef");
-        return this.runtime.hostRefs.get(id);
-      }
-      typeof(handle) {
-        return this.runtime.assertOwned(handle), this.memory.consumeHeapCharPointer(this.ffi.QTS_Typeof(this.ctx.value, handle.value));
-      }
-      getNumber(handle) {
-        return this.runtime.assertOwned(handle), this.ffi.QTS_GetFloat64(this.ctx.value, handle.value);
-      }
-      getString(handle) {
-        return this.runtime.assertOwned(handle), this.memory.consumeJSCharPointer(this.ffi.QTS_GetString(this.ctx.value, handle.value));
-      }
-      getSymbol(handle) {
-        this.runtime.assertOwned(handle);
-        let key = this.memory.consumeJSCharPointer(this.ffi.QTS_GetSymbolDescriptionOrKey(this.ctx.value, handle.value));
-        return this.ffi.QTS_IsGlobalSymbol(this.ctx.value, handle.value) ? Symbol.for(key) : Symbol(key);
-      }
-      getBigInt(handle) {
-        this.runtime.assertOwned(handle);
-        let asString = this.getString(handle);
-        return BigInt(asString);
-      }
-      getArrayBuffer(handle) {
-        this.runtime.assertOwned(handle);
-        let len = this.ffi.QTS_GetArrayBufferLength(this.ctx.value, handle.value), ptr = this.ffi.QTS_GetArrayBuffer(this.ctx.value, handle.value);
-        if (!ptr) throw new Error("Couldn't allocate memory to get ArrayBuffer");
-        return new Lifetime(this.module.HEAPU8.subarray(ptr, ptr + len), void 0, () => this.module._free(ptr));
-      }
-      getPromiseState(handle) {
-        this.runtime.assertOwned(handle);
-        let state = this.ffi.QTS_PromiseState(this.ctx.value, handle.value);
-        if (state < 0) return { type: "fulfilled", value: handle, notAPromise: true };
-        if (state === JSPromiseStateEnum.Pending) return { type: "pending", get error() {
-          return new QuickJSPromisePending("Cannot unwrap a pending promise");
-        } };
-        let ptr = this.ffi.QTS_PromiseResult(this.ctx.value, handle.value), result = this.memory.heapValueHandle(ptr);
-        if (state === JSPromiseStateEnum.Fulfilled) return { type: "fulfilled", value: result };
-        if (state === JSPromiseStateEnum.Rejected) return { type: "rejected", error: result };
-        throw result.dispose(), new Error(`Unknown JSPromiseStateEnum: ${state}`);
-      }
-      resolvePromise(promiseLikeHandle) {
-        this.runtime.assertOwned(promiseLikeHandle);
-        let vmResolveResult = Scope.withScope((scope) => {
-          let vmPromise = scope.manage(this.getProp(this.global, "Promise")), vmPromiseResolve = scope.manage(this.getProp(vmPromise, "resolve"));
-          return this.callFunction(vmPromiseResolve, vmPromise, promiseLikeHandle);
-        });
-        return vmResolveResult.error ? Promise.resolve(vmResolveResult) : new Promise((resolve) => {
-          Scope.withScope((scope) => {
-            let resolveHandle = scope.manage(this.newFunction("resolve", (value) => {
-              resolve(this.success(value && value.dup()));
-            })), rejectHandle = scope.manage(this.newFunction("reject", (error) => {
-              resolve(this.fail(error && error.dup()));
-            })), promiseHandle = scope.manage(vmResolveResult.value), promiseThenHandle = scope.manage(this.getProp(promiseHandle, "then"));
-            this.callFunction(promiseThenHandle, promiseHandle, resolveHandle, rejectHandle).unwrap().dispose();
-          });
-        });
-      }
-      isEqual(a, b, equalityType = IsEqualOp.IsStrictlyEqual) {
-        if (a === b) return true;
-        this.runtime.assertOwned(a), this.runtime.assertOwned(b);
-        let result = this.ffi.QTS_IsEqual(this.ctx.value, a.value, b.value, equalityType);
-        if (result === -1) throw new QuickJSNotImplemented("WASM variant does not expose equality");
-        return !!result;
-      }
-      eq(handle, other) {
-        return this.isEqual(handle, other, IsEqualOp.IsStrictlyEqual);
-      }
-      sameValue(handle, other) {
-        return this.isEqual(handle, other, IsEqualOp.IsSameValue);
-      }
-      sameValueZero(handle, other) {
-        return this.isEqual(handle, other, IsEqualOp.IsSameValueZero);
-      }
-      getProp(handle, key) {
-        this.runtime.assertOwned(handle);
-        let ptr;
-        return typeof key == "number" && key >= 0 ? ptr = this.ffi.QTS_GetPropNumber(this.ctx.value, handle.value, key) : ptr = this.borrowPropertyKey(key).consume((quickJSKey) => this.ffi.QTS_GetProp(this.ctx.value, handle.value, quickJSKey.value)), this.memory.heapValueHandle(ptr);
-      }
-      getLength(handle) {
-        if (this.runtime.assertOwned(handle), !(this.ffi.QTS_GetLength(this.ctx.value, this.uint32Out.value.ptr, handle.value) < 0)) return this.uint32Out.value.typedArray[0];
-      }
-      getOwnPropertyNames(handle, options = { strings: true, numbersAsStrings: true }) {
-        this.runtime.assertOwned(handle), handle.value;
-        let flags = getOwnPropertyNamesOptionsToFlags(options);
-        if (flags === 0) throw new QuickJSEmptyGetOwnPropertyNames("No options set, will return an empty array");
-        return Scope.withScope((scope) => {
-          let outPtr = scope.manage(this.memory.newMutablePointerArray(1)), errorPtr = this.ffi.QTS_GetOwnPropertyNames(this.ctx.value, outPtr.value.ptr, this.uint32Out.value.ptr, handle.value, flags);
-          if (errorPtr) return this.fail(this.memory.heapValueHandle(errorPtr));
-          let len = this.uint32Out.value.typedArray[0], ptr = outPtr.value.typedArray[0], pointerArray = new Uint32Array(this.module.HEAP8.buffer, ptr, len), handles = Array.from(pointerArray).map((ptr2) => this.memory.heapValueHandle(ptr2));
-          return this.ffi.QTS_FreeVoidPointer(this.ctx.value, ptr), this.success(createDisposableArray(handles));
-        });
-      }
-      getIterator(iterableHandle) {
-        let SymbolIterator = this._SymbolIterator ?? (this._SymbolIterator = this.memory.manage(this.getWellKnownSymbol("iterator")));
-        return Scope.withScope((scope) => {
-          let methodHandle = scope.manage(this.getProp(iterableHandle, SymbolIterator)), iteratorCallResult = this.callFunction(methodHandle, iterableHandle);
-          return iteratorCallResult.error ? iteratorCallResult : this.success(new QuickJSIterator(iteratorCallResult.value, this));
-        });
-      }
-      setProp(handle, key, value) {
-        this.runtime.assertOwned(handle), this.borrowPropertyKey(key).consume((quickJSKey) => this.ffi.QTS_SetProp(this.ctx.value, handle.value, quickJSKey.value, value.value));
-      }
-      defineProp(handle, key, descriptor) {
-        this.runtime.assertOwned(handle), Scope.withScope((scope) => {
-          let quickJSKey = scope.manage(this.borrowPropertyKey(key)), value = descriptor.value || this.undefined, configurable = !!descriptor.configurable, enumerable = !!descriptor.enumerable, hasValue = !!descriptor.value, get = descriptor.get ? scope.manage(this.newFunction(descriptor.get.name, descriptor.get)) : this.undefined, set = descriptor.set ? scope.manage(this.newFunction(descriptor.set.name, descriptor.set)) : this.undefined;
-          this.ffi.QTS_DefineProp(this.ctx.value, handle.value, quickJSKey.value, value.value, get.value, set.value, configurable, enumerable, hasValue);
-        });
-      }
-      callFunction(func, thisVal, ...restArgs) {
-        this.runtime.assertOwned(func);
-        let args, firstArg = restArgs[0];
-        firstArg === void 0 || Array.isArray(firstArg) ? args = firstArg ?? [] : args = restArgs;
-        let resultPtr = this.memory.toPointerArray(args).consume((argsArrayPtr) => this.ffi.QTS_Call(this.ctx.value, func.value, thisVal.value, args.length, argsArrayPtr.value)), errorPtr = this.ffi.QTS_ResolveException(this.ctx.value, resultPtr);
-        return errorPtr ? (this.ffi.QTS_FreeValuePointer(this.ctx.value, resultPtr), this.fail(this.memory.heapValueHandle(errorPtr))) : this.success(this.memory.heapValueHandle(resultPtr));
-      }
-      callMethod(thisHandle, key, args = []) {
-        return this.getProp(thisHandle, key).consume((func) => this.callFunction(func, thisHandle, args));
-      }
-      evalCode(code, filename = "eval.js", options) {
-        let detectModule = options === void 0 ? 1 : 0, flags = evalOptionsToFlags(options), resultPtr = this.memory.newHeapCharPointer(code).consume((charHandle) => this.ffi.QTS_Eval(this.ctx.value, charHandle.value.ptr, charHandle.value.strlen, filename, detectModule, flags)), errorPtr = this.ffi.QTS_ResolveException(this.ctx.value, resultPtr);
-        return errorPtr ? (this.ffi.QTS_FreeValuePointer(this.ctx.value, resultPtr), this.fail(this.memory.heapValueHandle(errorPtr))) : this.success(this.memory.heapValueHandle(resultPtr));
-      }
-      throw(error) {
-        return this.errorToHandle(error).consume((handle) => this.ffi.QTS_Throw(this.ctx.value, handle.value));
-      }
-      borrowPropertyKey(key) {
-        return typeof key == "number" ? this.newNumber(key) : typeof key == "string" ? this.newString(key) : new StaticLifetime(key.value, this.runtime);
-      }
-      getMemory(rt) {
-        if (rt === this.rt.value) return this.memory;
-        throw new Error("Private API. Cannot get memory from a different runtime");
-      }
-      dump(handle) {
-        this.runtime.assertOwned(handle);
-        let type = this.typeof(handle);
-        if (type === "string") return this.getString(handle);
-        if (type === "number") return this.getNumber(handle);
-        if (type === "bigint") return this.getBigInt(handle);
-        if (type === "undefined") return;
-        if (type === "symbol") return this.getSymbol(handle);
-        let asPromiseState = this.getPromiseState(handle);
-        if (asPromiseState.type === "fulfilled" && !asPromiseState.notAPromise) return handle.dispose(), { type: asPromiseState.type, value: asPromiseState.value.consume(this.dump) };
-        if (asPromiseState.type === "pending") return handle.dispose(), { type: asPromiseState.type };
-        if (asPromiseState.type === "rejected") return handle.dispose(), { type: asPromiseState.type, error: asPromiseState.error.consume(this.dump) };
-        let str = this.memory.consumeJSCharPointer(this.ffi.QTS_Dump(this.ctx.value, handle.value));
-        try {
-          return JSON.parse(str);
-        } catch {
-          return str;
+        dispose() {
+          let lifetimes = Array.from(this._disposables.value.values()).reverse();
+          for (let lifetime of lifetimes) lifetime.alive && lifetime.dispose();
+          this._disposables.dispose();
         }
-      }
-      unwrapResult(result) {
-        if (result.error) {
-          let context = "context" in result.error ? result.error.context : this, cause = result.error.consume((error) => this.dump(error));
-          if (cause && typeof cause == "object" && typeof cause.message == "string") {
-            let { message, name, stack, ...rest } = cause, exception = new QuickJSUnwrapError(cause, context);
-            typeof name == "string" && (exception.name = cause.name), exception.message = message;
-            let hostStack = exception.stack;
-            throw typeof stack == "string" && (exception.stack = `${name}: ${message}
-${cause.stack}Host: ${hostStack}`), Object.assign(exception, rest), exception;
-          }
-          throw new QuickJSUnwrapError(cause);
+      };
+      AbstractDisposableResult = class _AbstractDisposableResult extends UsingDisposable {
+        static success(value) {
+          return new DisposableSuccess(value);
         }
-        return result.value;
-      }
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
-        return this.alive ? `${this.constructor.name} { ctx: ${this.ctx.value} rt: ${this.rt.value} }` : `${this.constructor.name} { disposed }`;
-      }
-      getFunction(fn_id) {
-        let fn = this.runtime.hostRefs.get(fn_id);
-        if (typeof fn != "function") throw new Error(`Host reference ${fn_id} is not a function`);
-        return fn;
-      }
-      errorToHandle(error) {
-        return error instanceof Lifetime ? error : this.newError(error);
-      }
-      encodeBinaryJSON(handle) {
-        let ptr = this.ffi.QTS_bjson_encode(this.ctx.value, handle.value);
-        return this.memory.heapValueHandle(ptr);
-      }
-      decodeBinaryJSON(handle) {
-        let ptr = this.ffi.QTS_bjson_decode(this.ctx.value, handle.value);
-        return this.memory.heapValueHandle(ptr);
-      }
-      success(value) {
-        return DisposableResult.success(value);
-      }
-      fail(error) {
-        return DisposableResult.fail(error, (error2) => this.unwrapResult(error2));
-      }
-    };
-    QuickJSRuntime = class extends UsingDisposable {
-      constructor(args) {
-        super();
-        this.scope = new Scope();
-        this.contextMap = /* @__PURE__ */ new Map();
-        this.hostRefs = new HostRefMap();
-        this._debugMode = false;
-        this.cToHostCallbacks = { freeHostRef: (rt, host_ref_id) => {
-          if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
-          this.hostRefs.delete(host_ref_id);
-        }, shouldInterrupt: (rt) => {
-          if (rt !== this.rt.value) throw new Error("QuickJSContext instance received C -> JS interrupt with mismatched rt");
-          let fn = this.interruptHandler;
-          if (!fn) throw new Error("QuickJSContext had no interrupt handler");
-          return fn(this) ? 1 : 0;
-        }, loadModuleSource: maybeAsyncFn(this, function* (awaited, rt, ctx, moduleName) {
-          let moduleLoader = this.moduleLoader;
-          if (!moduleLoader) throw new Error("Runtime has no module loader");
-          if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
-          let context = this.contextMap.get(ctx) ?? this.newContext({ contextPointer: ctx });
-          try {
-            let result = yield* awaited(moduleLoader(moduleName, context));
-            if (typeof result == "object" && "error" in result && result.error) throw this.debugLog("cToHostLoadModule: loader returned error", result.error), result.error;
-            let moduleSource = typeof result == "string" ? result : "value" in result ? result.value : result;
-            return this.memory.newHeapCharPointer(moduleSource).value.ptr;
-          } catch (error) {
-            return this.debugLog("cToHostLoadModule: caught error", error), context.throw(error), 0;
-          }
-        }), normalizeModule: maybeAsyncFn(this, function* (awaited, rt, ctx, baseModuleName, moduleNameRequest) {
-          let moduleNormalizer = this.moduleNormalizer;
-          if (!moduleNormalizer) throw new Error("Runtime has no module normalizer");
-          if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
-          let context = this.contextMap.get(ctx) ?? this.newContext({ contextPointer: ctx });
-          try {
-            let result = yield* awaited(moduleNormalizer(baseModuleName, moduleNameRequest, context));
-            if (typeof result == "object" && "error" in result && result.error) throw this.debugLog("cToHostNormalizeModule: normalizer returned error", result.error), result.error;
-            let name = typeof result == "string" ? result : result.value;
-            return context.getMemory(this.rt.value).newHeapCharPointer(name).value.ptr;
-          } catch (error) {
-            return this.debugLog("normalizeModule: caught error", error), context.throw(error), 0;
-          }
-        }) };
-        args.ownedLifetimes?.forEach((lifetime) => this.scope.manage(lifetime)), this.module = args.module, this.memory = new ModuleMemory(this.module), this.ffi = args.ffi, this.rt = args.rt, this.callbacks = args.callbacks, this.scope.manage(this.rt), this.callbacks.setRuntimeCallbacks(this.rt.value, this.cToHostCallbacks), this.executePendingJobs = this.executePendingJobs.bind(this), QTS_DEBUG && this.setDebugMode(true);
-      }
-      get alive() {
-        return this.scope.alive;
-      }
-      dispose() {
-        return this.scope.dispose();
-      }
-      newContext(options = {}) {
-        let intrinsics = intrinsicsToFlags(options.intrinsics), ctx = new Lifetime(options.contextPointer || this.ffi.QTS_NewContext(this.rt.value, intrinsics), void 0, (ctx_ptr) => {
-          this.contextMap.delete(ctx_ptr), this.callbacks.deleteContext(ctx_ptr), this.ffi.QTS_FreeContext(ctx_ptr);
-        }), context = new QuickJSContext({ module: this.module, ctx, ffi: this.ffi, rt: this.rt, ownedLifetimes: options.ownedLifetimes, runtime: this, callbacks: this.callbacks });
-        return this.contextMap.set(ctx.value, context), context;
-      }
-      setModuleLoader(moduleLoader, moduleNormalizer) {
-        this.moduleLoader = moduleLoader, this.moduleNormalizer = moduleNormalizer, this.ffi.QTS_RuntimeEnableModuleLoader(this.rt.value, this.moduleNormalizer ? 1 : 0);
-      }
-      removeModuleLoader() {
-        this.moduleLoader = void 0, this.ffi.QTS_RuntimeDisableModuleLoader(this.rt.value);
-      }
-      hasPendingJob() {
-        return !!this.ffi.QTS_IsJobPending(this.rt.value);
-      }
-      setInterruptHandler(cb) {
-        let prevInterruptHandler = this.interruptHandler;
-        this.interruptHandler = cb, prevInterruptHandler || this.ffi.QTS_RuntimeEnableInterruptHandler(this.rt.value);
-      }
-      removeInterruptHandler() {
-        this.interruptHandler && (this.ffi.QTS_RuntimeDisableInterruptHandler(this.rt.value), this.interruptHandler = void 0);
-      }
-      executePendingJobs(maxJobsToExecute = -1) {
-        let ctxPtrOut = this.memory.newMutablePointerArray(1), valuePtr = this.ffi.QTS_ExecutePendingJob(this.rt.value, maxJobsToExecute ?? -1, ctxPtrOut.value.ptr), ctxPtr = ctxPtrOut.value.typedArray[0];
-        if (ctxPtrOut.dispose(), ctxPtr === 0) return this.ffi.QTS_FreeValuePointerRuntime(this.rt.value, valuePtr), DisposableResult.success(0);
-        let context = this.contextMap.get(ctxPtr) ?? this.newContext({ contextPointer: ctxPtr }), resultValue = context.getMemory(this.rt.value).heapValueHandle(valuePtr);
-        if (context.typeof(resultValue) === "number") {
-          let executedJobs = context.getNumber(resultValue);
-          return resultValue.dispose(), DisposableResult.success(executedJobs);
-        } else {
-          let error = Object.assign(resultValue, { context });
-          return DisposableResult.fail(error, (error2) => context.unwrapResult(error2));
+        static fail(error, onUnwrap) {
+          return new DisposableFail(error, onUnwrap);
         }
-      }
-      setMemoryLimit(limitBytes) {
-        if (limitBytes < 0 && limitBytes !== -1) throw new Error("Cannot set memory limit to negative number. To unset, pass -1");
-        this.ffi.QTS_RuntimeSetMemoryLimit(this.rt.value, limitBytes);
-      }
-      computeMemoryUsage() {
-        let serviceContextMemory = this.getSystemContext().getMemory(this.rt.value);
-        return serviceContextMemory.heapValueHandle(this.ffi.QTS_RuntimeComputeMemoryUsage(this.rt.value, serviceContextMemory.ctx.value));
-      }
-      dumpMemoryUsage() {
-        return this.memory.consumeHeapCharPointer(this.ffi.QTS_RuntimeDumpMemoryUsage(this.rt.value));
-      }
-      setMaxStackSize(stackSize) {
-        if (stackSize < 0) throw new Error("Cannot set memory limit to negative number. To unset, pass 0.");
-        this.ffi.QTS_RuntimeSetMaxStackSize(this.rt.value, stackSize);
-      }
-      assertOwned(handle) {
-        if (handle.owner && handle.owner.rt !== this.rt) throw new QuickJSWrongOwner(`Handle is not owned by this runtime: ${handle.owner.rt.value} != ${this.rt.value}`);
-      }
-      setDebugMode(enabled) {
-        this._debugMode = enabled, this.ffi.DEBUG && this.rt.alive && this.ffi.QTS_SetDebugLogEnabled(this.rt.value, enabled ? 1 : 0);
-      }
-      isDebugMode() {
-        return this._debugMode;
-      }
-      debugLog(...msg) {
-        this._debugMode && console.log("quickjs-emscripten:", ...msg);
-      }
-      [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
-        return this.alive ? `${this.constructor.name} { rt: ${this.rt.value} }` : `${this.constructor.name} { disposed }`;
-      }
-      getSystemContext() {
-        return this.context || (this.context = this.scope.manage(this.newContext())), this.context;
-      }
-    };
-    QuickJSEmscriptenModuleCallbacks = class {
-      constructor(args) {
-        this.freeHostRef = args.freeHostRef, this.callFunction = args.callFunction, this.shouldInterrupt = args.shouldInterrupt, this.loadModuleSource = args.loadModuleSource, this.normalizeModule = args.normalizeModule;
-      }
-    };
-    QuickJSModuleCallbacks = class {
-      constructor(module) {
-        this.contextCallbacks = /* @__PURE__ */ new Map();
-        this.runtimeCallbacks = /* @__PURE__ */ new Map();
-        this.suspendedCount = 0;
-        this.cToHostCallbacks = new QuickJSEmscriptenModuleCallbacks({ freeHostRef: (_asyncify, rt, host_ref_id) => {
-          let runtimeCallbacks = this.runtimeCallbacks.get(rt);
-          if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found when trying to free HostRef(id = ${host_ref_id})`);
-          runtimeCallbacks.freeHostRef(rt, host_ref_id);
-        }, callFunction: (asyncify, ctx, this_ptr, argc, argv, fn_id) => this.handleAsyncify(asyncify, () => {
-          try {
-            let vm = this.contextCallbacks.get(ctx);
-            if (!vm) throw new Error(`QuickJSContext(ctx = ${ctx}) not found for C function call "${fn_id}"`);
-            return vm.callFunction(ctx, this_ptr, argc, argv, fn_id);
-          } catch (error) {
-            return console.error("[C to host error: returning null]", error), 0;
-          }
-        }), shouldInterrupt: (asyncify, rt) => this.handleAsyncify(asyncify, () => {
-          try {
-            let vm = this.runtimeCallbacks.get(rt);
-            if (!vm) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C interrupt`);
-            return vm.shouldInterrupt(rt);
-          } catch (error) {
-            return console.error("[C to host interrupt: returning error]", error), 1;
-          }
-        }), loadModuleSource: (asyncify, rt, ctx, moduleName) => this.handleAsyncify(asyncify, () => {
-          try {
-            let runtimeCallbacks = this.runtimeCallbacks.get(rt);
-            if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C module loader`);
-            let loadModule = runtimeCallbacks.loadModuleSource;
-            if (!loadModule) throw new Error(`QuickJSRuntime(rt = ${rt}) does not support module loading`);
-            return loadModule(rt, ctx, moduleName);
-          } catch (error) {
-            return console.error("[C to host module loader error: returning null]", error), 0;
-          }
-        }), normalizeModule: (asyncify, rt, ctx, moduleBaseName, moduleName) => this.handleAsyncify(asyncify, () => {
-          try {
-            let runtimeCallbacks = this.runtimeCallbacks.get(rt);
-            if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C module loader`);
-            let normalizeModule = runtimeCallbacks.normalizeModule;
-            if (!normalizeModule) throw new Error(`QuickJSRuntime(rt = ${rt}) does not support module loading`);
-            return normalizeModule(rt, ctx, moduleBaseName, moduleName);
-          } catch (error) {
-            return console.error("[C to host module loader error: returning null]", error), 0;
-          }
-        }) });
-        this.module = module, this.module.callbacks = this.cToHostCallbacks;
-      }
-      setRuntimeCallbacks(rt, callbacks) {
-        this.runtimeCallbacks.set(rt, callbacks);
-      }
-      deleteRuntime(rt) {
-        this.runtimeCallbacks.delete(rt);
-      }
-      setContextCallbacks(ctx, callbacks) {
-        this.contextCallbacks.set(ctx, callbacks);
-      }
-      deleteContext(ctx) {
-        this.contextCallbacks.delete(ctx);
-      }
-      handleAsyncify(asyncify, fn) {
-        if (asyncify) return asyncify.handleSleep((done) => {
-          try {
-            let result = fn();
-            if (!(result instanceof Promise)) {
-              debugLog("asyncify.handleSleep: not suspending:", result), done(result);
-              return;
-            }
-            if (this.suspended) throw new QuickJSAsyncifyError(`Already suspended at: ${this.suspended.stack}
-Attempted to suspend at:`);
-            this.suspended = new QuickJSAsyncifySuspended(`(${this.suspendedCount++})`), debugLog("asyncify.handleSleep: suspending:", this.suspended), result.then((resolvedResult) => {
-              this.suspended = void 0, debugLog("asyncify.handleSleep: resolved:", resolvedResult), done(resolvedResult);
-            }, (error) => {
-              debugLog("asyncify.handleSleep: rejected:", error), console.error("QuickJS: cannot handle error in suspended function", error), this.suspended = void 0;
+        static is(result) {
+          return result instanceof _AbstractDisposableResult;
+        }
+      };
+      DisposableSuccess = class extends AbstractDisposableResult {
+        constructor(value) {
+          super();
+          this.value = value;
+        }
+        get alive() {
+          return isDisposable(this.value) ? this.value.alive : true;
+        }
+        dispose() {
+          isDisposable(this.value) && this.value.dispose();
+        }
+        unwrap() {
+          return this.value;
+        }
+        unwrapOr(_fallback) {
+          return this.value;
+        }
+      };
+      DisposableFail = class extends AbstractDisposableResult {
+        constructor(error, onUnwrap) {
+          super();
+          this.error = error;
+          this.onUnwrap = onUnwrap;
+        }
+        get alive() {
+          return isDisposable(this.error) ? this.error.alive : true;
+        }
+        dispose() {
+          isDisposable(this.error) && this.error.dispose();
+        }
+        unwrap() {
+          throw this.onUnwrap(this), this.error;
+        }
+        unwrapOr(fallback) {
+          return fallback;
+        }
+      };
+      DisposableResult = AbstractDisposableResult;
+      QuickJSDeferredPromise = class extends UsingDisposable {
+        constructor(args) {
+          super();
+          this.resolve = (value) => {
+            this.resolveHandle.alive && (this.context.unwrapResult(this.context.callFunction(this.resolveHandle, this.context.undefined, value || this.context.undefined)).dispose(), this.disposeResolvers(), this.onSettled());
+          };
+          this.reject = (value) => {
+            this.rejectHandle.alive && (this.context.unwrapResult(this.context.callFunction(this.rejectHandle, this.context.undefined, value || this.context.undefined)).dispose(), this.disposeResolvers(), this.onSettled());
+          };
+          this.dispose = () => {
+            this.handle.alive && this.handle.dispose(), this.disposeResolvers();
+          };
+          this.context = args.context, this.owner = args.context.runtime, this.handle = args.promiseHandle, this.settled = new Promise((resolve) => {
+            this.onSettled = resolve;
+          }), this.resolveHandle = args.resolveHandle, this.rejectHandle = args.rejectHandle;
+        }
+        get alive() {
+          return this.handle.alive || this.resolveHandle.alive || this.rejectHandle.alive;
+        }
+        disposeResolvers() {
+          this.resolveHandle.alive && this.resolveHandle.dispose(), this.rejectHandle.alive && this.rejectHandle.dispose();
+        }
+      };
+      ModuleMemory = class {
+        constructor(module) {
+          this.module = module;
+        }
+        toPointerArray(handleArray) {
+          let typedArray = new Int32Array(handleArray.map((handle) => handle.value)), numBytes = typedArray.length * typedArray.BYTES_PER_ELEMENT, ptr = this.module._malloc(numBytes);
+          return new Uint8Array(this.module.HEAPU8.buffer, ptr, numBytes).set(new Uint8Array(typedArray.buffer)), new Lifetime(ptr, void 0, (ptr2) => this.module._free(ptr2));
+        }
+        newTypedArray(kind, length) {
+          let zeros = new kind(new Array(length).fill(0)), numBytes = zeros.length * zeros.BYTES_PER_ELEMENT, ptr = this.module._malloc(numBytes), typedArray = new kind(this.module.HEAPU8.buffer, ptr, length);
+          return typedArray.set(zeros), new Lifetime({ typedArray, ptr }, void 0, (value) => this.module._free(value.ptr));
+        }
+        newMutablePointerArray(length) {
+          return this.newTypedArray(Int32Array, length);
+        }
+        newHeapCharPointer(string) {
+          let strlen = this.module.lengthBytesUTF8(string), dataBytes = strlen + 1, ptr = this.module._malloc(dataBytes);
+          return this.module.stringToUTF8(string, ptr, dataBytes), new Lifetime({ ptr, strlen }, void 0, (value) => this.module._free(value.ptr));
+        }
+        newHeapBufferPointer(buffer) {
+          let numBytes = buffer.byteLength, ptr = this.module._malloc(numBytes);
+          return this.module.HEAPU8.set(buffer, ptr), new Lifetime({ pointer: ptr, numBytes }, void 0, (value) => this.module._free(value.pointer));
+        }
+        consumeHeapCharPointer(ptr) {
+          let str = this.module.UTF8ToString(ptr);
+          return this.module._free(ptr), str;
+        }
+      };
+      DefaultIntrinsics = Object.freeze({ BaseObjects: true, Date: true, Eval: true, StringNormalize: true, RegExp: true, JSON: true, Proxy: true, MapSet: true, TypedArrays: true, Promise: true });
+      QuickJSIterator = class extends UsingDisposable {
+        constructor(handle, context) {
+          super();
+          this.handle = handle;
+          this.context = context;
+          this._isDone = false;
+          this.owner = context.runtime;
+        }
+        [Symbol.iterator]() {
+          return this;
+        }
+        next(value) {
+          if (!this.alive || this._isDone) return { done: true, value: void 0 };
+          let nextMethod = this._next ?? (this._next = this.context.getProp(this.handle, "next"));
+          return this.callIteratorMethod(nextMethod, value);
+        }
+        return(value) {
+          if (!this.alive) return { done: true, value: void 0 };
+          let returnMethod = this.context.getProp(this.handle, "return");
+          if (returnMethod === this.context.undefined && value === void 0) return this.dispose(), { done: true, value: void 0 };
+          let result = this.callIteratorMethod(returnMethod, value);
+          return returnMethod.dispose(), this.dispose(), result;
+        }
+        throw(e) {
+          if (!this.alive) return { done: true, value: void 0 };
+          let errorHandle = e instanceof Lifetime ? e : this.context.newError(e), throwMethod = this.context.getProp(this.handle, "throw"), result = this.callIteratorMethod(throwMethod, e);
+          return errorHandle.alive && errorHandle.dispose(), throwMethod.dispose(), this.dispose(), result;
+        }
+        get alive() {
+          return this.handle.alive;
+        }
+        dispose() {
+          this._isDone = true, this.handle.dispose(), this._next?.dispose();
+        }
+        callIteratorMethod(method, input) {
+          let callResult = input ? this.context.callFunction(method, this.handle, input) : this.context.callFunction(method, this.handle);
+          if (callResult.error) return this.dispose(), { value: callResult };
+          let done = this.context.getProp(callResult.value, "done").consume((v) => this.context.dump(v)), value = this.context.getProp(callResult.value, "value");
+          return callResult.value.dispose(), done && this.dispose(), { value: DisposableResult.success(value), done };
+        }
+      };
+      INT32_MIN = -2147483648;
+      INT32_MAX = 2147483647;
+      INVALID_HOST_REF_ID = 0;
+      HostRefMap = class {
+        constructor() {
+          this.nextId = INT32_MIN;
+          this.freelist = [];
+          this.groups = /* @__PURE__ */ new Map();
+        }
+        put(value) {
+          let id = this.allocateId(), groupId = getGroupId(id), group = this.groups.get(groupId);
+          return group || (group = /* @__PURE__ */ new Map(), this.groups.set(groupId, group)), group.set(id, value), id;
+        }
+        get(id) {
+          if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("no host reference id defined");
+          let groupId = getGroupId(id), group = this.groups.get(groupId);
+          if (!group) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
+          let value = group.get(id);
+          if (!value) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
+          return value;
+        }
+        delete(id) {
+          if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("no host reference id defined");
+          let groupId = getGroupId(id), group = this.groups.get(groupId);
+          if (!group) throw new QuickJSHostRefInvalid(`host reference id ${id} is not defined`);
+          group.delete(id), group.size === 0 && this.groups.delete(groupId), this.freelist.push(id);
+        }
+        allocateId() {
+          if (this.freelist.length > 0) return this.freelist.shift();
+          if (this.nextId === INVALID_HOST_REF_ID && this.nextId++, this.nextId > INT32_MAX) throw new QuickJSHostRefRangeExceeded(`HostRefMap: too many host refs created without disposing. Max simultaneous host refs: ${INT32_MAX - INT32_MIN}`);
+          return this.nextId++;
+        }
+      };
+      HostRef = class extends UsingDisposable {
+        constructor(runtime, handle, id) {
+          if (id === INVALID_HOST_REF_ID) throw new QuickJSHostRefInvalid("cannot create HostRef with undefined id");
+          super();
+          this.runtime = runtime;
+          this.handle = handle;
+          this.id = id;
+        }
+        get alive() {
+          return this.handle.alive;
+        }
+        dispose() {
+          this.handle.dispose();
+        }
+        get value() {
+          return this.runtime.hostRefs.get(this.id);
+        }
+      };
+      ContextMemory = class extends ModuleMemory {
+        constructor(args) {
+          super(args.module);
+          this.scope = new Scope();
+          this.copyJSValue = (ptr) => this.ffi.QTS_DupValuePointer(this.ctx.value, ptr);
+          this.freeJSValue = (ptr) => {
+            this.ffi.QTS_FreeValuePointer(this.ctx.value, ptr);
+          };
+          args.ownedLifetimes?.forEach((lifetime) => this.scope.manage(lifetime)), this.owner = args.owner, this.module = args.module, this.ffi = args.ffi, this.rt = args.rt, this.ctx = this.scope.manage(args.ctx);
+        }
+        get alive() {
+          return this.scope.alive;
+        }
+        dispose() {
+          return this.scope.dispose();
+        }
+        [Symbol.dispose]() {
+          return this.dispose();
+        }
+        manage(lifetime) {
+          return this.scope.manage(lifetime);
+        }
+        consumeJSCharPointer(ptr) {
+          let str = this.module.UTF8ToString(ptr);
+          return this.ffi.QTS_FreeCString(this.ctx.value, ptr), str;
+        }
+        heapValueHandle(ptr, extraDispose) {
+          let dispose = extraDispose ? (val) => {
+            extraDispose(), this.freeJSValue(val);
+          } : this.freeJSValue;
+          return new Lifetime(ptr, this.copyJSValue, dispose, this.owner);
+        }
+        staticHeapValueHandle(ptr) {
+          return this.manage(this.heapValueHandle(ptr)), new StaticLifetime(ptr, this.owner);
+        }
+      };
+      QuickJSContext = class extends UsingDisposable {
+        constructor(args) {
+          super();
+          this._undefined = void 0;
+          this._null = void 0;
+          this._false = void 0;
+          this._true = void 0;
+          this._global = void 0;
+          this._BigInt = void 0;
+          this._Symbol = void 0;
+          this._SymbolIterator = void 0;
+          this._SymbolAsyncIterator = void 0;
+          this.cToHostCallbacks = { callFunction: (ctx, this_ptr, argc, argv, fn_id) => {
+            if (ctx !== this.ctx.value) throw new Error("QuickJSContext instance received C -> JS call with mismatched ctx");
+            let fn = this.getFunction(fn_id);
+            return Scope.withScopeMaybeAsync(this, function* (awaited, scope) {
+              let thisHandle = scope.manage(new WeakLifetime(this_ptr, this.memory.copyJSValue, this.memory.freeJSValue, this.runtime)), argHandles = new Array(argc);
+              for (let i = 0; i < argc; i++) {
+                let ptr = this.ffi.QTS_ArgvGetJSValueConstPointer(argv, i);
+                argHandles[i] = scope.manage(new WeakLifetime(ptr, this.memory.copyJSValue, this.memory.freeJSValue, this.runtime));
+              }
+              try {
+                let result = yield* awaited(fn.apply(thisHandle, argHandles));
+                if (result) {
+                  if ("error" in result && result.error) throw this.runtime.debugLog("throw error", result.error), result.error;
+                  let handle = scope.manage(result instanceof Lifetime ? result : result.value);
+                  return this.ffi.QTS_DupValuePointer(this.ctx.value, handle.value);
+                }
+                return 0;
+              } catch (error) {
+                return this.errorToHandle(error).consume((errorHandle) => this.ffi.QTS_Throw(this.ctx.value, errorHandle.value));
+              }
             });
-          } catch (error) {
-            throw debugLog("asyncify.handleSleep: error:", error), this.suspended = void 0, error;
+          } };
+          this.runtime = args.runtime, this.module = args.module, this.ffi = args.ffi, this.rt = args.rt, this.ctx = args.ctx, this.memory = new ContextMemory({ ...args, owner: this.runtime }), args.callbacks.setContextCallbacks(this.ctx.value, this.cToHostCallbacks), this.dump = this.dump.bind(this), this.getString = this.getString.bind(this), this.getNumber = this.getNumber.bind(this), this.resolvePromise = this.resolvePromise.bind(this), this.uint32Out = this.memory.manage(this.memory.newTypedArray(Uint32Array, 1));
+        }
+        get alive() {
+          return this.memory.alive;
+        }
+        dispose() {
+          this.memory.dispose();
+        }
+        get undefined() {
+          if (this._undefined) return this._undefined;
+          let ptr = this.ffi.QTS_GetUndefined();
+          return this._undefined = new StaticLifetime(ptr);
+        }
+        get null() {
+          if (this._null) return this._null;
+          let ptr = this.ffi.QTS_GetNull();
+          return this._null = new StaticLifetime(ptr);
+        }
+        get true() {
+          if (this._true) return this._true;
+          let ptr = this.ffi.QTS_GetTrue();
+          return this._true = new StaticLifetime(ptr);
+        }
+        get false() {
+          if (this._false) return this._false;
+          let ptr = this.ffi.QTS_GetFalse();
+          return this._false = new StaticLifetime(ptr);
+        }
+        get global() {
+          if (this._global) return this._global;
+          let ptr = this.ffi.QTS_GetGlobalObject(this.ctx.value);
+          return this._global = this.memory.staticHeapValueHandle(ptr), this._global;
+        }
+        newNumber(num) {
+          return this.memory.heapValueHandle(this.ffi.QTS_NewFloat64(this.ctx.value, num));
+        }
+        newString(str) {
+          let ptr = this.memory.newHeapCharPointer(str).consume((charHandle) => this.ffi.QTS_NewString(this.ctx.value, charHandle.value.ptr));
+          return this.memory.heapValueHandle(ptr);
+        }
+        newUniqueSymbol(description) {
+          let key = (typeof description == "symbol" ? description.description : description) ?? "", ptr = this.memory.newHeapCharPointer(key).consume((charHandle) => this.ffi.QTS_NewSymbol(this.ctx.value, charHandle.value.ptr, 0));
+          return this.memory.heapValueHandle(ptr);
+        }
+        newSymbolFor(key) {
+          let description = (typeof key == "symbol" ? key.description : key) ?? "", ptr = this.memory.newHeapCharPointer(description).consume((charHandle) => this.ffi.QTS_NewSymbol(this.ctx.value, charHandle.value.ptr, 1));
+          return this.memory.heapValueHandle(ptr);
+        }
+        getWellKnownSymbol(name) {
+          return this._Symbol ?? (this._Symbol = this.memory.manage(this.getProp(this.global, "Symbol"))), this.getProp(this._Symbol, name);
+        }
+        newBigInt(num) {
+          if (!this._BigInt) {
+            let bigIntHandle2 = this.getProp(this.global, "BigInt");
+            this.memory.manage(bigIntHandle2), this._BigInt = new StaticLifetime(bigIntHandle2.value, this.runtime);
           }
-        });
-        let value = fn();
-        if (value instanceof Promise) throw new Error("Promise return value not supported in non-asyncify context.");
-        return value;
-      }
-    };
-    QuickJSWASMModule = class {
-      constructor(module, ffi) {
-        this.module = module, this.ffi = ffi, this.callbacks = new QuickJSModuleCallbacks(module);
-      }
-      newRuntime(options = {}) {
-        let rt = new Lifetime(this.ffi.QTS_NewRuntime(), void 0, (rt_ptr) => {
-          this.ffi.QTS_FreeRuntime(rt_ptr), this.callbacks.deleteRuntime(rt_ptr);
-        }), runtime = new QuickJSRuntime({ module: this.module, callbacks: this.callbacks, ffi: this.ffi, rt });
-        return applyBaseRuntimeOptions(runtime, options), options.moduleLoader && runtime.setModuleLoader(options.moduleLoader), runtime;
-      }
-      newContext(options = {}) {
-        let runtime = this.newRuntime(), context = runtime.newContext({ ...options, ownedLifetimes: concat(runtime, options.ownedLifetimes) });
-        return runtime.context = context, context;
-      }
-      evalCode(code, options = {}) {
-        return Scope.withScope((scope) => {
-          let vm = scope.manage(this.newContext());
-          applyModuleEvalRuntimeOptions(vm.runtime, options);
-          let result = vm.evalCode(code, "eval.js");
-          if (options.memoryLimitBytes !== void 0 && vm.runtime.setMemoryLimit(-1), result.error) throw vm.dump(scope.manage(result.error));
-          return vm.dump(scope.manage(result.value));
-        });
-      }
-      getWasmMemory() {
-        let memory = this.module.quickjsEmscriptenInit?.(() => {
-        })?.getWasmMemory?.();
-        if (!memory) throw new Error("Variant does not support getting WebAssembly.Memory");
-        return memory;
-      }
-      getFFI() {
-        return this.ffi;
-      }
-    };
-  }
-});
-
-// node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
-var module_ES6BEMUI_exports = {};
-__export(module_ES6BEMUI_exports, {
-  QuickJSModuleCallbacks: () => QuickJSModuleCallbacks,
-  QuickJSWASMModule: () => QuickJSWASMModule,
-  applyBaseRuntimeOptions: () => applyBaseRuntimeOptions,
-  applyModuleEvalRuntimeOptions: () => applyModuleEvalRuntimeOptions
-});
-var init_module_ES6BEMUI = __esm({
-  "node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
-    init_chunk_V2S4ZYJR();
-  }
-});
-
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
-var __defProp3, __defNormalProp, __publicField;
-var init_chunk_FGV2HSCH = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
-    __defProp3 = Object.defineProperty;
-    __defNormalProp = (obj, key, value) => key in obj ? __defProp3(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-    __publicField = (obj, key, value) => (__defNormalProp(obj, typeof key != "symbol" ? key + "" : key, value), value);
-  }
-});
-
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
-var ffi_exports = {};
-__export(ffi_exports, {
-  QuickJSFFI: () => QuickJSFFI
-});
-var QuickJSFFI;
-var init_ffi = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
-    QuickJSFFI = class {
-      constructor(module) {
-        this.module = module;
-        this.DEBUG = false;
-        this.QTS_Throw = this.module.cwrap("QTS_Throw", "number", ["number", "number"]);
-        this.QTS_NewError = this.module.cwrap("QTS_NewError", "number", ["number"]);
-        this.QTS_RuntimeSetMemoryLimit = this.module.cwrap("QTS_RuntimeSetMemoryLimit", null, ["number", "number"]);
-        this.QTS_RuntimeComputeMemoryUsage = this.module.cwrap("QTS_RuntimeComputeMemoryUsage", "number", ["number", "number"]);
-        this.QTS_RuntimeDumpMemoryUsage = this.module.cwrap("QTS_RuntimeDumpMemoryUsage", "number", ["number"]);
-        this.QTS_RecoverableLeakCheck = this.module.cwrap("QTS_RecoverableLeakCheck", "number", []);
-        this.QTS_BuildIsSanitizeLeak = this.module.cwrap("QTS_BuildIsSanitizeLeak", "number", []);
-        this.QTS_RuntimeSetMaxStackSize = this.module.cwrap("QTS_RuntimeSetMaxStackSize", null, ["number", "number"]);
-        this.QTS_GetUndefined = this.module.cwrap("QTS_GetUndefined", "number", []);
-        this.QTS_GetNull = this.module.cwrap("QTS_GetNull", "number", []);
-        this.QTS_GetFalse = this.module.cwrap("QTS_GetFalse", "number", []);
-        this.QTS_GetTrue = this.module.cwrap("QTS_GetTrue", "number", []);
-        this.QTS_NewHostRef = this.module.cwrap("QTS_NewHostRef", "number", ["number", "number"]);
-        this.QTS_GetHostRefId = this.module.cwrap("QTS_GetHostRefId", "number", ["number"]);
-        this.QTS_NewRuntime = this.module.cwrap("QTS_NewRuntime", "number", []);
-        this.QTS_FreeRuntime = this.module.cwrap("QTS_FreeRuntime", null, ["number"]);
-        this.QTS_NewContext = this.module.cwrap("QTS_NewContext", "number", ["number", "number"]);
-        this.QTS_FreeContext = this.module.cwrap("QTS_FreeContext", null, ["number"]);
-        this.QTS_FreeValuePointer = this.module.cwrap("QTS_FreeValuePointer", null, ["number", "number"]);
-        this.QTS_FreeValuePointerRuntime = this.module.cwrap("QTS_FreeValuePointerRuntime", null, ["number", "number"]);
-        this.QTS_FreeVoidPointer = this.module.cwrap("QTS_FreeVoidPointer", null, ["number", "number"]);
-        this.QTS_FreeCString = this.module.cwrap("QTS_FreeCString", null, ["number", "number"]);
-        this.QTS_DupValuePointer = this.module.cwrap("QTS_DupValuePointer", "number", ["number", "number"]);
-        this.QTS_NewObject = this.module.cwrap("QTS_NewObject", "number", ["number"]);
-        this.QTS_NewObjectProto = this.module.cwrap("QTS_NewObjectProto", "number", ["number", "number"]);
-        this.QTS_NewArray = this.module.cwrap("QTS_NewArray", "number", ["number"]);
-        this.QTS_NewArrayBuffer = this.module.cwrap("QTS_NewArrayBuffer", "number", ["number", "number", "number"]);
-        this.QTS_NewFloat64 = this.module.cwrap("QTS_NewFloat64", "number", ["number", "number"]);
-        this.QTS_GetFloat64 = this.module.cwrap("QTS_GetFloat64", "number", ["number", "number"]);
-        this.QTS_NewString = this.module.cwrap("QTS_NewString", "number", ["number", "number"]);
-        this.QTS_GetString = this.module.cwrap("QTS_GetString", "number", ["number", "number"]);
-        this.QTS_GetArrayBuffer = this.module.cwrap("QTS_GetArrayBuffer", "number", ["number", "number"]);
-        this.QTS_GetArrayBufferLength = this.module.cwrap("QTS_GetArrayBufferLength", "number", ["number", "number"]);
-        this.QTS_NewSymbol = this.module.cwrap("QTS_NewSymbol", "number", ["number", "number", "number"]);
-        this.QTS_GetSymbolDescriptionOrKey = this.module.cwrap("QTS_GetSymbolDescriptionOrKey", "number", ["number", "number"]);
-        this.QTS_IsGlobalSymbol = this.module.cwrap("QTS_IsGlobalSymbol", "number", ["number", "number"]);
-        this.QTS_IsJobPending = this.module.cwrap("QTS_IsJobPending", "number", ["number"]);
-        this.QTS_ExecutePendingJob = this.module.cwrap("QTS_ExecutePendingJob", "number", ["number", "number", "number"]);
-        this.QTS_GetProp = this.module.cwrap("QTS_GetProp", "number", ["number", "number", "number"]);
-        this.QTS_GetPropNumber = this.module.cwrap("QTS_GetPropNumber", "number", ["number", "number", "number"]);
-        this.QTS_SetProp = this.module.cwrap("QTS_SetProp", null, ["number", "number", "number", "number"]);
-        this.QTS_DefineProp = this.module.cwrap("QTS_DefineProp", null, ["number", "number", "number", "number", "number", "number", "boolean", "boolean", "boolean"]);
-        this.QTS_GetOwnPropertyNames = this.module.cwrap("QTS_GetOwnPropertyNames", "number", ["number", "number", "number", "number", "number"]);
-        this.QTS_Call = this.module.cwrap("QTS_Call", "number", ["number", "number", "number", "number", "number"]);
-        this.QTS_ResolveException = this.module.cwrap("QTS_ResolveException", "number", ["number", "number"]);
-        this.QTS_Dump = this.module.cwrap("QTS_Dump", "number", ["number", "number"]);
-        this.QTS_Eval = this.module.cwrap("QTS_Eval", "number", ["number", "number", "number", "string", "number", "number"]);
-        this.QTS_GetModuleNamespace = this.module.cwrap("QTS_GetModuleNamespace", "number", ["number", "number"]);
-        this.QTS_Typeof = this.module.cwrap("QTS_Typeof", "number", ["number", "number"]);
-        this.QTS_GetLength = this.module.cwrap("QTS_GetLength", "number", ["number", "number", "number"]);
-        this.QTS_IsEqual = this.module.cwrap("QTS_IsEqual", "number", ["number", "number", "number", "number"]);
-        this.QTS_GetGlobalObject = this.module.cwrap("QTS_GetGlobalObject", "number", ["number"]);
-        this.QTS_NewPromiseCapability = this.module.cwrap("QTS_NewPromiseCapability", "number", ["number", "number"]);
-        this.QTS_PromiseState = this.module.cwrap("QTS_PromiseState", "number", ["number", "number"]);
-        this.QTS_PromiseResult = this.module.cwrap("QTS_PromiseResult", "number", ["number", "number"]);
-        this.QTS_TestStringArg = this.module.cwrap("QTS_TestStringArg", null, ["string"]);
-        this.QTS_GetDebugLogEnabled = this.module.cwrap("QTS_GetDebugLogEnabled", "number", ["number"]);
-        this.QTS_SetDebugLogEnabled = this.module.cwrap("QTS_SetDebugLogEnabled", null, ["number", "number"]);
-        this.QTS_BuildIsDebug = this.module.cwrap("QTS_BuildIsDebug", "number", []);
-        this.QTS_BuildIsAsyncify = this.module.cwrap("QTS_BuildIsAsyncify", "number", []);
-        this.QTS_NewFunction = this.module.cwrap("QTS_NewFunction", "number", ["number", "string", "number", "boolean", "number"]);
-        this.QTS_ArgvGetJSValueConstPointer = this.module.cwrap("QTS_ArgvGetJSValueConstPointer", "number", ["number", "number"]);
-        this.QTS_RuntimeEnableInterruptHandler = this.module.cwrap("QTS_RuntimeEnableInterruptHandler", null, ["number"]);
-        this.QTS_RuntimeDisableInterruptHandler = this.module.cwrap("QTS_RuntimeDisableInterruptHandler", null, ["number"]);
-        this.QTS_RuntimeEnableModuleLoader = this.module.cwrap("QTS_RuntimeEnableModuleLoader", null, ["number", "number"]);
-        this.QTS_RuntimeDisableModuleLoader = this.module.cwrap("QTS_RuntimeDisableModuleLoader", null, ["number"]);
-        this.QTS_bjson_encode = this.module.cwrap("QTS_bjson_encode", "number", ["number", "number"]);
-        this.QTS_bjson_decode = this.module.cwrap("QTS_bjson_decode", "number", ["number", "number"]);
-      }
-    };
-  }
-});
-
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
-var emscripten_module_browser_XIKQQPVU_exports = {};
-__export(emscripten_module_browser_XIKQQPVU_exports, {
-  default: () => emscripten_module_browser_default
-});
-async function QuickJSRaw(moduleArg = {}) {
-  var moduleRtn, c = moduleArg, aa = !!globalThis.window, ba = !!globalThis.WorkerGlobalScope;
-  function n(b) {
-    b = { log: b || function() {
-    } };
-    for (let d of n.Pa) d(b);
-    return c.quickJSEmscriptenExtensions = b;
-  }
-  n.Pa = [], c.quickjsEmscriptenInit = n, n.Pa.push((b) => {
-    b.getWasmMemory = function() {
-      return q;
-    };
+          let bigIntHandle = this._BigInt, asString = String(num);
+          return this.newString(asString).consume((handle) => this.unwrapResult(this.callFunction(bigIntHandle, this.undefined, handle)));
+        }
+        newObject(prototype) {
+          prototype && this.runtime.assertOwned(prototype);
+          let ptr = prototype ? this.ffi.QTS_NewObjectProto(this.ctx.value, prototype.value) : this.ffi.QTS_NewObject(this.ctx.value);
+          return this.memory.heapValueHandle(ptr);
+        }
+        newArray() {
+          let ptr = this.ffi.QTS_NewArray(this.ctx.value);
+          return this.memory.heapValueHandle(ptr);
+        }
+        newArrayBuffer(buffer) {
+          let array = new Uint8Array(buffer), handle = this.memory.newHeapBufferPointer(array), ptr = this.ffi.QTS_NewArrayBuffer(this.ctx.value, handle.value.pointer, array.length);
+          return this.memory.heapValueHandle(ptr);
+        }
+        newPromise(value) {
+          let deferredPromise = Scope.withScope((scope) => {
+            let mutablePointerArray = scope.manage(this.memory.newMutablePointerArray(2)), promisePtr = this.ffi.QTS_NewPromiseCapability(this.ctx.value, mutablePointerArray.value.ptr), promiseHandle = this.memory.heapValueHandle(promisePtr), [resolveHandle, rejectHandle] = Array.from(mutablePointerArray.value.typedArray).map((jsvaluePtr) => this.memory.heapValueHandle(jsvaluePtr));
+            return new QuickJSDeferredPromise({ context: this, promiseHandle, resolveHandle, rejectHandle });
+          });
+          return value && typeof value == "function" && (value = new Promise(value)), value && Promise.resolve(value).then(deferredPromise.resolve, (error) => error instanceof Lifetime ? deferredPromise.reject(error) : this.newError(error).consume(deferredPromise.reject)), deferredPromise;
+        }
+        newFunction(nameOrFn, maybeFn) {
+          let fn = typeof nameOrFn == "function" ? nameOrFn : maybeFn;
+          if (!fn) throw new TypeError("Expected a function");
+          return this.newFunctionWithOptions({ name: typeof nameOrFn == "string" ? nameOrFn : void 0, length: fn.length, isConstructor: false, fn });
+        }
+        newConstructorFunction(nameOrFn, maybeFn) {
+          let fn = typeof nameOrFn == "function" ? nameOrFn : maybeFn;
+          if (!fn) throw new TypeError("Expected a function");
+          return this.newFunctionWithOptions({ name: typeof nameOrFn == "string" ? nameOrFn : void 0, length: fn.length, isConstructor: true, fn });
+        }
+        newFunctionWithOptions(args) {
+          let { name, length, isConstructor, fn } = args, refId = this.runtime.hostRefs.put(fn);
+          try {
+            return this.memory.heapValueHandle(this.ffi.QTS_NewFunction(this.ctx.value, name ?? "", length, isConstructor, refId));
+          } catch (error) {
+            throw this.runtime.hostRefs.delete(refId), error;
+          }
+        }
+        newError(error) {
+          let errorHandle = this.memory.heapValueHandle(this.ffi.QTS_NewError(this.ctx.value));
+          return error && typeof error == "object" ? (error.name !== void 0 && this.newString(error.name).consume((handle) => this.setProp(errorHandle, "name", handle)), error.message !== void 0 && this.newString(error.message).consume((handle) => this.setProp(errorHandle, "message", handle))) : typeof error == "string" ? this.newString(error).consume((handle) => this.setProp(errorHandle, "message", handle)) : error !== void 0 && this.newString(String(error)).consume((handle) => this.setProp(errorHandle, "message", handle)), errorHandle;
+        }
+        newHostRef(value) {
+          let id = this.runtime.hostRefs.put(value);
+          try {
+            let handle = this.memory.heapValueHandle(this.ffi.QTS_NewHostRef(this.ctx.value, id));
+            return new HostRef(this.runtime, handle, id);
+          } catch (error) {
+            throw this.runtime.hostRefs.delete(id), error;
+          }
+        }
+        toHostRef(handle) {
+          let id = this.ffi.QTS_GetHostRefId(handle.value);
+          if (id !== 0) return this.runtime.hostRefs.get(id), new HostRef(this.runtime, handle.dup(), id);
+        }
+        unwrapHostRef(handle) {
+          let id = this.ffi.QTS_GetHostRefId(handle.value);
+          if (id === 0) throw new QuickJSHostRefInvalid("handle is not a HostRef");
+          return this.runtime.hostRefs.get(id);
+        }
+        typeof(handle) {
+          return this.runtime.assertOwned(handle), this.memory.consumeHeapCharPointer(this.ffi.QTS_Typeof(this.ctx.value, handle.value));
+        }
+        getNumber(handle) {
+          return this.runtime.assertOwned(handle), this.ffi.QTS_GetFloat64(this.ctx.value, handle.value);
+        }
+        getString(handle) {
+          return this.runtime.assertOwned(handle), this.memory.consumeJSCharPointer(this.ffi.QTS_GetString(this.ctx.value, handle.value));
+        }
+        getSymbol(handle) {
+          this.runtime.assertOwned(handle);
+          let key = this.memory.consumeJSCharPointer(this.ffi.QTS_GetSymbolDescriptionOrKey(this.ctx.value, handle.value));
+          return this.ffi.QTS_IsGlobalSymbol(this.ctx.value, handle.value) ? Symbol.for(key) : Symbol(key);
+        }
+        getBigInt(handle) {
+          this.runtime.assertOwned(handle);
+          let asString = this.getString(handle);
+          return BigInt(asString);
+        }
+        getArrayBuffer(handle) {
+          this.runtime.assertOwned(handle);
+          let len = this.ffi.QTS_GetArrayBufferLength(this.ctx.value, handle.value), ptr = this.ffi.QTS_GetArrayBuffer(this.ctx.value, handle.value);
+          if (!ptr) throw new Error("Couldn't allocate memory to get ArrayBuffer");
+          return new Lifetime(this.module.HEAPU8.subarray(ptr, ptr + len), void 0, () => this.module._free(ptr));
+        }
+        getPromiseState(handle) {
+          this.runtime.assertOwned(handle);
+          let state = this.ffi.QTS_PromiseState(this.ctx.value, handle.value);
+          if (state < 0) return { type: "fulfilled", value: handle, notAPromise: true };
+          if (state === JSPromiseStateEnum.Pending) return { type: "pending", get error() {
+            return new QuickJSPromisePending("Cannot unwrap a pending promise");
+          } };
+          let ptr = this.ffi.QTS_PromiseResult(this.ctx.value, handle.value), result = this.memory.heapValueHandle(ptr);
+          if (state === JSPromiseStateEnum.Fulfilled) return { type: "fulfilled", value: result };
+          if (state === JSPromiseStateEnum.Rejected) return { type: "rejected", error: result };
+          throw result.dispose(), new Error(`Unknown JSPromiseStateEnum: ${state}`);
+        }
+        resolvePromise(promiseLikeHandle) {
+          this.runtime.assertOwned(promiseLikeHandle);
+          let vmResolveResult = Scope.withScope((scope) => {
+            let vmPromise = scope.manage(this.getProp(this.global, "Promise")), vmPromiseResolve = scope.manage(this.getProp(vmPromise, "resolve"));
+            return this.callFunction(vmPromiseResolve, vmPromise, promiseLikeHandle);
+          });
+          return vmResolveResult.error ? Promise.resolve(vmResolveResult) : new Promise((resolve) => {
+            Scope.withScope((scope) => {
+              let resolveHandle = scope.manage(this.newFunction("resolve", (value) => {
+                resolve(this.success(value && value.dup()));
+              })), rejectHandle = scope.manage(this.newFunction("reject", (error) => {
+                resolve(this.fail(error && error.dup()));
+              })), promiseHandle = scope.manage(vmResolveResult.value), promiseThenHandle = scope.manage(this.getProp(promiseHandle, "then"));
+              this.callFunction(promiseThenHandle, promiseHandle, resolveHandle, rejectHandle).unwrap().dispose();
+            });
+          });
+        }
+        isEqual(a, b, equalityType = IsEqualOp.IsStrictlyEqual) {
+          if (a === b) return true;
+          this.runtime.assertOwned(a), this.runtime.assertOwned(b);
+          let result = this.ffi.QTS_IsEqual(this.ctx.value, a.value, b.value, equalityType);
+          if (result === -1) throw new QuickJSNotImplemented("WASM variant does not expose equality");
+          return !!result;
+        }
+        eq(handle, other) {
+          return this.isEqual(handle, other, IsEqualOp.IsStrictlyEqual);
+        }
+        sameValue(handle, other) {
+          return this.isEqual(handle, other, IsEqualOp.IsSameValue);
+        }
+        sameValueZero(handle, other) {
+          return this.isEqual(handle, other, IsEqualOp.IsSameValueZero);
+        }
+        getProp(handle, key) {
+          this.runtime.assertOwned(handle);
+          let ptr;
+          return typeof key == "number" && key >= 0 ? ptr = this.ffi.QTS_GetPropNumber(this.ctx.value, handle.value, key) : ptr = this.borrowPropertyKey(key).consume((quickJSKey) => this.ffi.QTS_GetProp(this.ctx.value, handle.value, quickJSKey.value)), this.memory.heapValueHandle(ptr);
+        }
+        getLength(handle) {
+          if (this.runtime.assertOwned(handle), !(this.ffi.QTS_GetLength(this.ctx.value, this.uint32Out.value.ptr, handle.value) < 0)) return this.uint32Out.value.typedArray[0];
+        }
+        getOwnPropertyNames(handle, options = { strings: true, numbersAsStrings: true }) {
+          this.runtime.assertOwned(handle), handle.value;
+          let flags = getOwnPropertyNamesOptionsToFlags(options);
+          if (flags === 0) throw new QuickJSEmptyGetOwnPropertyNames("No options set, will return an empty array");
+          return Scope.withScope((scope) => {
+            let outPtr = scope.manage(this.memory.newMutablePointerArray(1)), errorPtr = this.ffi.QTS_GetOwnPropertyNames(this.ctx.value, outPtr.value.ptr, this.uint32Out.value.ptr, handle.value, flags);
+            if (errorPtr) return this.fail(this.memory.heapValueHandle(errorPtr));
+            let len = this.uint32Out.value.typedArray[0], ptr = outPtr.value.typedArray[0], pointerArray = new Uint32Array(this.module.HEAP8.buffer, ptr, len), handles = Array.from(pointerArray).map((ptr2) => this.memory.heapValueHandle(ptr2));
+            return this.ffi.QTS_FreeVoidPointer(this.ctx.value, ptr), this.success(createDisposableArray(handles));
+          });
+        }
+        getIterator(iterableHandle) {
+          let SymbolIterator = this._SymbolIterator ?? (this._SymbolIterator = this.memory.manage(this.getWellKnownSymbol("iterator")));
+          return Scope.withScope((scope) => {
+            let methodHandle = scope.manage(this.getProp(iterableHandle, SymbolIterator)), iteratorCallResult = this.callFunction(methodHandle, iterableHandle);
+            return iteratorCallResult.error ? iteratorCallResult : this.success(new QuickJSIterator(iteratorCallResult.value, this));
+          });
+        }
+        setProp(handle, key, value) {
+          this.runtime.assertOwned(handle), this.borrowPropertyKey(key).consume((quickJSKey) => this.ffi.QTS_SetProp(this.ctx.value, handle.value, quickJSKey.value, value.value));
+        }
+        defineProp(handle, key, descriptor) {
+          this.runtime.assertOwned(handle), Scope.withScope((scope) => {
+            let quickJSKey = scope.manage(this.borrowPropertyKey(key)), value = descriptor.value || this.undefined, configurable = !!descriptor.configurable, enumerable = !!descriptor.enumerable, hasValue = !!descriptor.value, get = descriptor.get ? scope.manage(this.newFunction(descriptor.get.name, descriptor.get)) : this.undefined, set = descriptor.set ? scope.manage(this.newFunction(descriptor.set.name, descriptor.set)) : this.undefined;
+            this.ffi.QTS_DefineProp(this.ctx.value, handle.value, quickJSKey.value, value.value, get.value, set.value, configurable, enumerable, hasValue);
+          });
+        }
+        callFunction(func, thisVal, ...restArgs) {
+          this.runtime.assertOwned(func);
+          let args, firstArg = restArgs[0];
+          firstArg === void 0 || Array.isArray(firstArg) ? args = firstArg ?? [] : args = restArgs;
+          let resultPtr = this.memory.toPointerArray(args).consume((argsArrayPtr) => this.ffi.QTS_Call(this.ctx.value, func.value, thisVal.value, args.length, argsArrayPtr.value)), errorPtr = this.ffi.QTS_ResolveException(this.ctx.value, resultPtr);
+          return errorPtr ? (this.ffi.QTS_FreeValuePointer(this.ctx.value, resultPtr), this.fail(this.memory.heapValueHandle(errorPtr))) : this.success(this.memory.heapValueHandle(resultPtr));
+        }
+        callMethod(thisHandle, key, args = []) {
+          return this.getProp(thisHandle, key).consume((func) => this.callFunction(func, thisHandle, args));
+        }
+        evalCode(code, filename = "eval.js", options) {
+          let detectModule = options === void 0 ? 1 : 0, flags = evalOptionsToFlags(options), resultPtr = this.memory.newHeapCharPointer(code).consume((charHandle) => this.ffi.QTS_Eval(this.ctx.value, charHandle.value.ptr, charHandle.value.strlen, filename, detectModule, flags)), errorPtr = this.ffi.QTS_ResolveException(this.ctx.value, resultPtr);
+          return errorPtr ? (this.ffi.QTS_FreeValuePointer(this.ctx.value, resultPtr), this.fail(this.memory.heapValueHandle(errorPtr))) : this.success(this.memory.heapValueHandle(resultPtr));
+        }
+        throw(error) {
+          return this.errorToHandle(error).consume((handle) => this.ffi.QTS_Throw(this.ctx.value, handle.value));
+        }
+        borrowPropertyKey(key) {
+          return typeof key == "number" ? this.newNumber(key) : typeof key == "string" ? this.newString(key) : new StaticLifetime(key.value, this.runtime);
+        }
+        getMemory(rt) {
+          if (rt === this.rt.value) return this.memory;
+          throw new Error("Private API. Cannot get memory from a different runtime");
+        }
+        dump(handle) {
+          this.runtime.assertOwned(handle);
+          let type = this.typeof(handle);
+          if (type === "string") return this.getString(handle);
+          if (type === "number") return this.getNumber(handle);
+          if (type === "bigint") return this.getBigInt(handle);
+          if (type === "undefined") return;
+          if (type === "symbol") return this.getSymbol(handle);
+          let asPromiseState = this.getPromiseState(handle);
+          if (asPromiseState.type === "fulfilled" && !asPromiseState.notAPromise) return handle.dispose(), { type: asPromiseState.type, value: asPromiseState.value.consume(this.dump) };
+          if (asPromiseState.type === "pending") return handle.dispose(), { type: asPromiseState.type };
+          if (asPromiseState.type === "rejected") return handle.dispose(), { type: asPromiseState.type, error: asPromiseState.error.consume(this.dump) };
+          let str = this.memory.consumeJSCharPointer(this.ffi.QTS_Dump(this.ctx.value, handle.value));
+          try {
+            return JSON.parse(str);
+          } catch {
+            return str;
+          }
+        }
+        unwrapResult(result) {
+          if (result.error) {
+            let context = "context" in result.error ? result.error.context : this, cause = result.error.consume((error) => this.dump(error));
+            if (cause && typeof cause == "object" && typeof cause.message == "string") {
+              let { message, name, stack, ...rest } = cause, exception = new QuickJSUnwrapError(cause, context);
+              typeof name == "string" && (exception.name = cause.name), exception.message = message;
+              let hostStack = exception.stack;
+              throw typeof stack == "string" && (exception.stack = `${name}: ${message}
+${cause.stack}Host: ${hostStack}`), Object.assign(exception, rest), exception;
+            }
+            throw new QuickJSUnwrapError(cause);
+          }
+          return result.value;
+        }
+        [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+          return this.alive ? `${this.constructor.name} { ctx: ${this.ctx.value} rt: ${this.rt.value} }` : `${this.constructor.name} { disposed }`;
+        }
+        getFunction(fn_id) {
+          let fn = this.runtime.hostRefs.get(fn_id);
+          if (typeof fn != "function") throw new Error(`Host reference ${fn_id} is not a function`);
+          return fn;
+        }
+        errorToHandle(error) {
+          return error instanceof Lifetime ? error : this.newError(error);
+        }
+        encodeBinaryJSON(handle) {
+          let ptr = this.ffi.QTS_bjson_encode(this.ctx.value, handle.value);
+          return this.memory.heapValueHandle(ptr);
+        }
+        decodeBinaryJSON(handle) {
+          let ptr = this.ffi.QTS_bjson_decode(this.ctx.value, handle.value);
+          return this.memory.heapValueHandle(ptr);
+        }
+        success(value) {
+          return DisposableResult.success(value);
+        }
+        fail(error) {
+          return DisposableResult.fail(error, (error2) => this.unwrapResult(error2));
+        }
+      };
+      QuickJSRuntime = class extends UsingDisposable {
+        constructor(args) {
+          super();
+          this.scope = new Scope();
+          this.contextMap = /* @__PURE__ */ new Map();
+          this.hostRefs = new HostRefMap();
+          this._debugMode = false;
+          this.cToHostCallbacks = { freeHostRef: (rt, host_ref_id) => {
+            if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
+            this.hostRefs.delete(host_ref_id);
+          }, shouldInterrupt: (rt) => {
+            if (rt !== this.rt.value) throw new Error("QuickJSContext instance received C -> JS interrupt with mismatched rt");
+            let fn = this.interruptHandler;
+            if (!fn) throw new Error("QuickJSContext had no interrupt handler");
+            return fn(this) ? 1 : 0;
+          }, loadModuleSource: maybeAsyncFn(this, function* (awaited, rt, ctx, moduleName) {
+            let moduleLoader = this.moduleLoader;
+            if (!moduleLoader) throw new Error("Runtime has no module loader");
+            if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
+            let context = this.contextMap.get(ctx) ?? this.newContext({ contextPointer: ctx });
+            try {
+              let result = yield* awaited(moduleLoader(moduleName, context));
+              if (typeof result == "object" && "error" in result && result.error) throw this.debugLog("cToHostLoadModule: loader returned error", result.error), result.error;
+              let moduleSource = typeof result == "string" ? result : "value" in result ? result.value : result;
+              return this.memory.newHeapCharPointer(moduleSource).value.ptr;
+            } catch (error) {
+              return this.debugLog("cToHostLoadModule: caught error", error), context.throw(error), 0;
+            }
+          }), normalizeModule: maybeAsyncFn(this, function* (awaited, rt, ctx, baseModuleName, moduleNameRequest) {
+            let moduleNormalizer = this.moduleNormalizer;
+            if (!moduleNormalizer) throw new Error("Runtime has no module normalizer");
+            if (rt !== this.rt.value) throw new Error("Runtime pointer mismatch");
+            let context = this.contextMap.get(ctx) ?? this.newContext({ contextPointer: ctx });
+            try {
+              let result = yield* awaited(moduleNormalizer(baseModuleName, moduleNameRequest, context));
+              if (typeof result == "object" && "error" in result && result.error) throw this.debugLog("cToHostNormalizeModule: normalizer returned error", result.error), result.error;
+              let name = typeof result == "string" ? result : result.value;
+              return context.getMemory(this.rt.value).newHeapCharPointer(name).value.ptr;
+            } catch (error) {
+              return this.debugLog("normalizeModule: caught error", error), context.throw(error), 0;
+            }
+          }) };
+          args.ownedLifetimes?.forEach((lifetime) => this.scope.manage(lifetime)), this.module = args.module, this.memory = new ModuleMemory(this.module), this.ffi = args.ffi, this.rt = args.rt, this.callbacks = args.callbacks, this.scope.manage(this.rt), this.callbacks.setRuntimeCallbacks(this.rt.value, this.cToHostCallbacks), this.executePendingJobs = this.executePendingJobs.bind(this), QTS_DEBUG && this.setDebugMode(true);
+        }
+        get alive() {
+          return this.scope.alive;
+        }
+        dispose() {
+          return this.scope.dispose();
+        }
+        newContext(options = {}) {
+          let intrinsics = intrinsicsToFlags(options.intrinsics), ctx = new Lifetime(options.contextPointer || this.ffi.QTS_NewContext(this.rt.value, intrinsics), void 0, (ctx_ptr) => {
+            this.contextMap.delete(ctx_ptr), this.callbacks.deleteContext(ctx_ptr), this.ffi.QTS_FreeContext(ctx_ptr);
+          }), context = new QuickJSContext({ module: this.module, ctx, ffi: this.ffi, rt: this.rt, ownedLifetimes: options.ownedLifetimes, runtime: this, callbacks: this.callbacks });
+          return this.contextMap.set(ctx.value, context), context;
+        }
+        setModuleLoader(moduleLoader, moduleNormalizer) {
+          this.moduleLoader = moduleLoader, this.moduleNormalizer = moduleNormalizer, this.ffi.QTS_RuntimeEnableModuleLoader(this.rt.value, this.moduleNormalizer ? 1 : 0);
+        }
+        removeModuleLoader() {
+          this.moduleLoader = void 0, this.ffi.QTS_RuntimeDisableModuleLoader(this.rt.value);
+        }
+        hasPendingJob() {
+          return !!this.ffi.QTS_IsJobPending(this.rt.value);
+        }
+        setInterruptHandler(cb) {
+          let prevInterruptHandler = this.interruptHandler;
+          this.interruptHandler = cb, prevInterruptHandler || this.ffi.QTS_RuntimeEnableInterruptHandler(this.rt.value);
+        }
+        removeInterruptHandler() {
+          this.interruptHandler && (this.ffi.QTS_RuntimeDisableInterruptHandler(this.rt.value), this.interruptHandler = void 0);
+        }
+        executePendingJobs(maxJobsToExecute = -1) {
+          let ctxPtrOut = this.memory.newMutablePointerArray(1), valuePtr = this.ffi.QTS_ExecutePendingJob(this.rt.value, maxJobsToExecute ?? -1, ctxPtrOut.value.ptr), ctxPtr = ctxPtrOut.value.typedArray[0];
+          if (ctxPtrOut.dispose(), ctxPtr === 0) return this.ffi.QTS_FreeValuePointerRuntime(this.rt.value, valuePtr), DisposableResult.success(0);
+          let context = this.contextMap.get(ctxPtr) ?? this.newContext({ contextPointer: ctxPtr }), resultValue = context.getMemory(this.rt.value).heapValueHandle(valuePtr);
+          if (context.typeof(resultValue) === "number") {
+            let executedJobs = context.getNumber(resultValue);
+            return resultValue.dispose(), DisposableResult.success(executedJobs);
+          } else {
+            let error = Object.assign(resultValue, { context });
+            return DisposableResult.fail(error, (error2) => context.unwrapResult(error2));
+          }
+        }
+        setMemoryLimit(limitBytes) {
+          if (limitBytes < 0 && limitBytes !== -1) throw new Error("Cannot set memory limit to negative number. To unset, pass -1");
+          this.ffi.QTS_RuntimeSetMemoryLimit(this.rt.value, limitBytes);
+        }
+        computeMemoryUsage() {
+          let serviceContextMemory = this.getSystemContext().getMemory(this.rt.value);
+          return serviceContextMemory.heapValueHandle(this.ffi.QTS_RuntimeComputeMemoryUsage(this.rt.value, serviceContextMemory.ctx.value));
+        }
+        dumpMemoryUsage() {
+          return this.memory.consumeHeapCharPointer(this.ffi.QTS_RuntimeDumpMemoryUsage(this.rt.value));
+        }
+        setMaxStackSize(stackSize) {
+          if (stackSize < 0) throw new Error("Cannot set memory limit to negative number. To unset, pass 0.");
+          this.ffi.QTS_RuntimeSetMaxStackSize(this.rt.value, stackSize);
+        }
+        assertOwned(handle) {
+          if (handle.owner && handle.owner.rt !== this.rt) throw new QuickJSWrongOwner(`Handle is not owned by this runtime: ${handle.owner.rt.value} != ${this.rt.value}`);
+        }
+        setDebugMode(enabled) {
+          this._debugMode = enabled, this.ffi.DEBUG && this.rt.alive && this.ffi.QTS_SetDebugLogEnabled(this.rt.value, enabled ? 1 : 0);
+        }
+        isDebugMode() {
+          return this._debugMode;
+        }
+        debugLog(...msg) {
+          this._debugMode && console.log("quickjs-emscripten:", ...msg);
+        }
+        [/* @__PURE__ */ Symbol.for("nodejs.util.inspect.custom")]() {
+          return this.alive ? `${this.constructor.name} { rt: ${this.rt.value} }` : `${this.constructor.name} { disposed }`;
+        }
+        getSystemContext() {
+          return this.context || (this.context = this.scope.manage(this.newContext())), this.context;
+        }
+      };
+      QuickJSEmscriptenModuleCallbacks = class {
+        constructor(args) {
+          this.freeHostRef = args.freeHostRef, this.callFunction = args.callFunction, this.shouldInterrupt = args.shouldInterrupt, this.loadModuleSource = args.loadModuleSource, this.normalizeModule = args.normalizeModule;
+        }
+      };
+      QuickJSModuleCallbacks = class {
+        constructor(module) {
+          this.contextCallbacks = /* @__PURE__ */ new Map();
+          this.runtimeCallbacks = /* @__PURE__ */ new Map();
+          this.suspendedCount = 0;
+          this.cToHostCallbacks = new QuickJSEmscriptenModuleCallbacks({ freeHostRef: (_asyncify, rt, host_ref_id) => {
+            let runtimeCallbacks = this.runtimeCallbacks.get(rt);
+            if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found when trying to free HostRef(id = ${host_ref_id})`);
+            runtimeCallbacks.freeHostRef(rt, host_ref_id);
+          }, callFunction: (asyncify, ctx, this_ptr, argc, argv, fn_id) => this.handleAsyncify(asyncify, () => {
+            try {
+              let vm = this.contextCallbacks.get(ctx);
+              if (!vm) throw new Error(`QuickJSContext(ctx = ${ctx}) not found for C function call "${fn_id}"`);
+              return vm.callFunction(ctx, this_ptr, argc, argv, fn_id);
+            } catch (error) {
+              return console.error("[C to host error: returning null]", error), 0;
+            }
+          }), shouldInterrupt: (asyncify, rt) => this.handleAsyncify(asyncify, () => {
+            try {
+              let vm = this.runtimeCallbacks.get(rt);
+              if (!vm) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C interrupt`);
+              return vm.shouldInterrupt(rt);
+            } catch (error) {
+              return console.error("[C to host interrupt: returning error]", error), 1;
+            }
+          }), loadModuleSource: (asyncify, rt, ctx, moduleName) => this.handleAsyncify(asyncify, () => {
+            try {
+              let runtimeCallbacks = this.runtimeCallbacks.get(rt);
+              if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C module loader`);
+              let loadModule = runtimeCallbacks.loadModuleSource;
+              if (!loadModule) throw new Error(`QuickJSRuntime(rt = ${rt}) does not support module loading`);
+              return loadModule(rt, ctx, moduleName);
+            } catch (error) {
+              return console.error("[C to host module loader error: returning null]", error), 0;
+            }
+          }), normalizeModule: (asyncify, rt, ctx, moduleBaseName, moduleName) => this.handleAsyncify(asyncify, () => {
+            try {
+              let runtimeCallbacks = this.runtimeCallbacks.get(rt);
+              if (!runtimeCallbacks) throw new Error(`QuickJSRuntime(rt = ${rt}) not found for C module loader`);
+              let normalizeModule = runtimeCallbacks.normalizeModule;
+              if (!normalizeModule) throw new Error(`QuickJSRuntime(rt = ${rt}) does not support module loading`);
+              return normalizeModule(rt, ctx, moduleBaseName, moduleName);
+            } catch (error) {
+              return console.error("[C to host module loader error: returning null]", error), 0;
+            }
+          }) });
+          this.module = module, this.module.callbacks = this.cToHostCallbacks;
+        }
+        setRuntimeCallbacks(rt, callbacks) {
+          this.runtimeCallbacks.set(rt, callbacks);
+        }
+        deleteRuntime(rt) {
+          this.runtimeCallbacks.delete(rt);
+        }
+        setContextCallbacks(ctx, callbacks) {
+          this.contextCallbacks.set(ctx, callbacks);
+        }
+        deleteContext(ctx) {
+          this.contextCallbacks.delete(ctx);
+        }
+        handleAsyncify(asyncify, fn) {
+          if (asyncify) return asyncify.handleSleep((done) => {
+            try {
+              let result = fn();
+              if (!(result instanceof Promise)) {
+                debugLog("asyncify.handleSleep: not suspending:", result), done(result);
+                return;
+              }
+              if (this.suspended) throw new QuickJSAsyncifyError(`Already suspended at: ${this.suspended.stack}
+Attempted to suspend at:`);
+              this.suspended = new QuickJSAsyncifySuspended(`(${this.suspendedCount++})`), debugLog("asyncify.handleSleep: suspending:", this.suspended), result.then((resolvedResult) => {
+                this.suspended = void 0, debugLog("asyncify.handleSleep: resolved:", resolvedResult), done(resolvedResult);
+              }, (error) => {
+                debugLog("asyncify.handleSleep: rejected:", error), console.error("QuickJS: cannot handle error in suspended function", error), this.suspended = void 0;
+              });
+            } catch (error) {
+              throw debugLog("asyncify.handleSleep: error:", error), this.suspended = void 0, error;
+            }
+          });
+          let value = fn();
+          if (value instanceof Promise) throw new Error("Promise return value not supported in non-asyncify context.");
+          return value;
+        }
+      };
+      QuickJSWASMModule = class {
+        constructor(module, ffi) {
+          this.module = module, this.ffi = ffi, this.callbacks = new QuickJSModuleCallbacks(module);
+        }
+        newRuntime(options = {}) {
+          let rt = new Lifetime(this.ffi.QTS_NewRuntime(), void 0, (rt_ptr) => {
+            this.ffi.QTS_FreeRuntime(rt_ptr), this.callbacks.deleteRuntime(rt_ptr);
+          }), runtime = new QuickJSRuntime({ module: this.module, callbacks: this.callbacks, ffi: this.ffi, rt });
+          return applyBaseRuntimeOptions(runtime, options), options.moduleLoader && runtime.setModuleLoader(options.moduleLoader), runtime;
+        }
+        newContext(options = {}) {
+          let runtime = this.newRuntime(), context = runtime.newContext({ ...options, ownedLifetimes: concat(runtime, options.ownedLifetimes) });
+          return runtime.context = context, context;
+        }
+        evalCode(code, options = {}) {
+          return Scope.withScope((scope) => {
+            let vm = scope.manage(this.newContext());
+            applyModuleEvalRuntimeOptions(vm.runtime, options);
+            let result = vm.evalCode(code, "eval.js");
+            if (options.memoryLimitBytes !== void 0 && vm.runtime.setMemoryLimit(-1), result.error) throw vm.dump(scope.manage(result.error));
+            return vm.dump(scope.manage(result.value));
+          });
+        }
+        getWasmMemory() {
+          let memory = this.module.quickjsEmscriptenInit?.(() => {
+          })?.getWasmMemory?.();
+          if (!memory) throw new Error("Variant does not support getting WebAssembly.Memory");
+          return memory;
+        }
+        getFFI() {
+          return this.ffi;
+        }
+      };
+    }
   });
-  var r = "./this.program", ca = import.meta.url;
-  if (aa || ba) try {
-    new URL(".", ca);
-  } catch {
-  }
-  var t = console.log.bind(console), u = console.error.bind(console), v = false, w;
-  function da(b) {
-    for (var d = 0, a = b.length, e = new Uint8Array(a), f; d < a; ++d) f = b.charCodeAt(d), e[d] = ~f >> 8 & f;
-    return e;
-  }
-  var y, z, A, B, C, D, E = false;
-  function F() {
-    var b = q.buffer;
-    c.HEAP8 = A = new Int8Array(b), new Int16Array(b), c.HEAPU8 = B = new Uint8Array(b), new Uint16Array(b), C = new Int32Array(b), D = new Uint32Array(b), new Float32Array(b), new Float64Array(b), new BigInt64Array(b), new BigUint64Array(b);
-  }
-  function G(b) {
-    throw c.onAbort?.(b), b = "Aborted(" + b + ")", u(b), v = true, b = new WebAssembly.RuntimeError(b + ". Build with -sASSERTIONS for more info."), z?.(b), b;
-  }
-  var H;
-  async function ea(b) {
-    return b;
-  }
-  async function fa(b) {
-    var d = H;
-    try {
-      var a = await ea(d);
-      return await WebAssembly.instantiate(a, b);
-    } catch (e) {
-      u(`failed to asynchronously prepare wasm: ${e}`), G(e);
+
+  // node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
+  var module_ES6BEMUI_exports = {};
+  __export(module_ES6BEMUI_exports, {
+    QuickJSModuleCallbacks: () => QuickJSModuleCallbacks,
+    QuickJSWASMModule: () => QuickJSWASMModule,
+    applyBaseRuntimeOptions: () => applyBaseRuntimeOptions,
+    applyModuleEvalRuntimeOptions: () => applyModuleEvalRuntimeOptions
+  });
+  var init_module_ES6BEMUI = __esm({
+    "node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
+      init_chunk_V2S4ZYJR();
     }
-  }
-  async function ha(b) {
-    return fa(b);
-  }
-  class I {
-    constructor(b) {
-      __publicField(this, "name", "ExitStatus");
-      this.message = `Program terminated with exit(${b})`, this.status = b;
+  });
+
+  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
+  var __defProp3, __defNormalProp, __publicField;
+  var init_chunk_FGV2HSCH = __esm({
+    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
+      __defProp3 = Object.defineProperty;
+      __defNormalProp = (obj, key, value) => key in obj ? __defProp3(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+      __publicField = (obj, key, value) => (__defNormalProp(obj, typeof key != "symbol" ? key + "" : key, value), value);
     }
-  }
-  for (var J = (b) => {
-    for (; 0 < b.length; ) b.shift()(c);
-  }, K = [], L = [], ia = () => {
-    var b = c.preRun.shift();
-    L.push(b);
-  }, M = true, q, N = new TextDecoder(), O = (b, d, a, e) => {
-    if (a = d + a, e) return a;
-    for (; b[d] && !(d >= a); ) ++d;
-    return d;
-  }, P = (b, d, a) => b ? N.decode(B.subarray(b, O(B, b, d, a))) : "", Q = 0, ja = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335], ka = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334], R = {}, la = (b) => {
-    if (!(b instanceof I || b == "unwind")) throw b;
-  }, ma = (b) => {
-    throw w = b, M || 0 < Q || (c.onExit?.(b), v = true), new I(b);
-  }, na = (b) => {
-    if (!v) try {
-      b();
-    } catch (d) {
-      la(d);
-    } finally {
-      if (!(M || 0 < Q)) try {
-        w = b = w, ma(b);
+  });
+
+  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
+  var ffi_exports = {};
+  __export(ffi_exports, {
+    QuickJSFFI: () => QuickJSFFI
+  });
+  var QuickJSFFI;
+  var init_ffi = __esm({
+    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
+      QuickJSFFI = class {
+        constructor(module) {
+          this.module = module;
+          this.DEBUG = false;
+          this.QTS_Throw = this.module.cwrap("QTS_Throw", "number", ["number", "number"]);
+          this.QTS_NewError = this.module.cwrap("QTS_NewError", "number", ["number"]);
+          this.QTS_RuntimeSetMemoryLimit = this.module.cwrap("QTS_RuntimeSetMemoryLimit", null, ["number", "number"]);
+          this.QTS_RuntimeComputeMemoryUsage = this.module.cwrap("QTS_RuntimeComputeMemoryUsage", "number", ["number", "number"]);
+          this.QTS_RuntimeDumpMemoryUsage = this.module.cwrap("QTS_RuntimeDumpMemoryUsage", "number", ["number"]);
+          this.QTS_RecoverableLeakCheck = this.module.cwrap("QTS_RecoverableLeakCheck", "number", []);
+          this.QTS_BuildIsSanitizeLeak = this.module.cwrap("QTS_BuildIsSanitizeLeak", "number", []);
+          this.QTS_RuntimeSetMaxStackSize = this.module.cwrap("QTS_RuntimeSetMaxStackSize", null, ["number", "number"]);
+          this.QTS_GetUndefined = this.module.cwrap("QTS_GetUndefined", "number", []);
+          this.QTS_GetNull = this.module.cwrap("QTS_GetNull", "number", []);
+          this.QTS_GetFalse = this.module.cwrap("QTS_GetFalse", "number", []);
+          this.QTS_GetTrue = this.module.cwrap("QTS_GetTrue", "number", []);
+          this.QTS_NewHostRef = this.module.cwrap("QTS_NewHostRef", "number", ["number", "number"]);
+          this.QTS_GetHostRefId = this.module.cwrap("QTS_GetHostRefId", "number", ["number"]);
+          this.QTS_NewRuntime = this.module.cwrap("QTS_NewRuntime", "number", []);
+          this.QTS_FreeRuntime = this.module.cwrap("QTS_FreeRuntime", null, ["number"]);
+          this.QTS_NewContext = this.module.cwrap("QTS_NewContext", "number", ["number", "number"]);
+          this.QTS_FreeContext = this.module.cwrap("QTS_FreeContext", null, ["number"]);
+          this.QTS_FreeValuePointer = this.module.cwrap("QTS_FreeValuePointer", null, ["number", "number"]);
+          this.QTS_FreeValuePointerRuntime = this.module.cwrap("QTS_FreeValuePointerRuntime", null, ["number", "number"]);
+          this.QTS_FreeVoidPointer = this.module.cwrap("QTS_FreeVoidPointer", null, ["number", "number"]);
+          this.QTS_FreeCString = this.module.cwrap("QTS_FreeCString", null, ["number", "number"]);
+          this.QTS_DupValuePointer = this.module.cwrap("QTS_DupValuePointer", "number", ["number", "number"]);
+          this.QTS_NewObject = this.module.cwrap("QTS_NewObject", "number", ["number"]);
+          this.QTS_NewObjectProto = this.module.cwrap("QTS_NewObjectProto", "number", ["number", "number"]);
+          this.QTS_NewArray = this.module.cwrap("QTS_NewArray", "number", ["number"]);
+          this.QTS_NewArrayBuffer = this.module.cwrap("QTS_NewArrayBuffer", "number", ["number", "number", "number"]);
+          this.QTS_NewFloat64 = this.module.cwrap("QTS_NewFloat64", "number", ["number", "number"]);
+          this.QTS_GetFloat64 = this.module.cwrap("QTS_GetFloat64", "number", ["number", "number"]);
+          this.QTS_NewString = this.module.cwrap("QTS_NewString", "number", ["number", "number"]);
+          this.QTS_GetString = this.module.cwrap("QTS_GetString", "number", ["number", "number"]);
+          this.QTS_GetArrayBuffer = this.module.cwrap("QTS_GetArrayBuffer", "number", ["number", "number"]);
+          this.QTS_GetArrayBufferLength = this.module.cwrap("QTS_GetArrayBufferLength", "number", ["number", "number"]);
+          this.QTS_NewSymbol = this.module.cwrap("QTS_NewSymbol", "number", ["number", "number", "number"]);
+          this.QTS_GetSymbolDescriptionOrKey = this.module.cwrap("QTS_GetSymbolDescriptionOrKey", "number", ["number", "number"]);
+          this.QTS_IsGlobalSymbol = this.module.cwrap("QTS_IsGlobalSymbol", "number", ["number", "number"]);
+          this.QTS_IsJobPending = this.module.cwrap("QTS_IsJobPending", "number", ["number"]);
+          this.QTS_ExecutePendingJob = this.module.cwrap("QTS_ExecutePendingJob", "number", ["number", "number", "number"]);
+          this.QTS_GetProp = this.module.cwrap("QTS_GetProp", "number", ["number", "number", "number"]);
+          this.QTS_GetPropNumber = this.module.cwrap("QTS_GetPropNumber", "number", ["number", "number", "number"]);
+          this.QTS_SetProp = this.module.cwrap("QTS_SetProp", null, ["number", "number", "number", "number"]);
+          this.QTS_DefineProp = this.module.cwrap("QTS_DefineProp", null, ["number", "number", "number", "number", "number", "number", "boolean", "boolean", "boolean"]);
+          this.QTS_GetOwnPropertyNames = this.module.cwrap("QTS_GetOwnPropertyNames", "number", ["number", "number", "number", "number", "number"]);
+          this.QTS_Call = this.module.cwrap("QTS_Call", "number", ["number", "number", "number", "number", "number"]);
+          this.QTS_ResolveException = this.module.cwrap("QTS_ResolveException", "number", ["number", "number"]);
+          this.QTS_Dump = this.module.cwrap("QTS_Dump", "number", ["number", "number"]);
+          this.QTS_Eval = this.module.cwrap("QTS_Eval", "number", ["number", "number", "number", "string", "number", "number"]);
+          this.QTS_GetModuleNamespace = this.module.cwrap("QTS_GetModuleNamespace", "number", ["number", "number"]);
+          this.QTS_Typeof = this.module.cwrap("QTS_Typeof", "number", ["number", "number"]);
+          this.QTS_GetLength = this.module.cwrap("QTS_GetLength", "number", ["number", "number", "number"]);
+          this.QTS_IsEqual = this.module.cwrap("QTS_IsEqual", "number", ["number", "number", "number", "number"]);
+          this.QTS_GetGlobalObject = this.module.cwrap("QTS_GetGlobalObject", "number", ["number"]);
+          this.QTS_NewPromiseCapability = this.module.cwrap("QTS_NewPromiseCapability", "number", ["number", "number"]);
+          this.QTS_PromiseState = this.module.cwrap("QTS_PromiseState", "number", ["number", "number"]);
+          this.QTS_PromiseResult = this.module.cwrap("QTS_PromiseResult", "number", ["number", "number"]);
+          this.QTS_TestStringArg = this.module.cwrap("QTS_TestStringArg", null, ["string"]);
+          this.QTS_GetDebugLogEnabled = this.module.cwrap("QTS_GetDebugLogEnabled", "number", ["number"]);
+          this.QTS_SetDebugLogEnabled = this.module.cwrap("QTS_SetDebugLogEnabled", null, ["number", "number"]);
+          this.QTS_BuildIsDebug = this.module.cwrap("QTS_BuildIsDebug", "number", []);
+          this.QTS_BuildIsAsyncify = this.module.cwrap("QTS_BuildIsAsyncify", "number", []);
+          this.QTS_NewFunction = this.module.cwrap("QTS_NewFunction", "number", ["number", "string", "number", "boolean", "number"]);
+          this.QTS_ArgvGetJSValueConstPointer = this.module.cwrap("QTS_ArgvGetJSValueConstPointer", "number", ["number", "number"]);
+          this.QTS_RuntimeEnableInterruptHandler = this.module.cwrap("QTS_RuntimeEnableInterruptHandler", null, ["number"]);
+          this.QTS_RuntimeDisableInterruptHandler = this.module.cwrap("QTS_RuntimeDisableInterruptHandler", null, ["number"]);
+          this.QTS_RuntimeEnableModuleLoader = this.module.cwrap("QTS_RuntimeEnableModuleLoader", null, ["number", "number"]);
+          this.QTS_RuntimeDisableModuleLoader = this.module.cwrap("QTS_RuntimeDisableModuleLoader", null, ["number"]);
+          this.QTS_bjson_encode = this.module.cwrap("QTS_bjson_encode", "number", ["number", "number"]);
+          this.QTS_bjson_decode = this.module.cwrap("QTS_bjson_decode", "number", ["number", "number"]);
+        }
+      };
+    }
+  });
+
+  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
+  var emscripten_module_browser_XIKQQPVU_exports = {};
+  __export(emscripten_module_browser_XIKQQPVU_exports, {
+    default: () => emscripten_module_browser_default
+  });
+  async function QuickJSRaw(moduleArg = {}) {
+    var moduleRtn, c = moduleArg, aa = !!globalThis.window, ba = !!globalThis.WorkerGlobalScope;
+    function n(b) {
+      b = { log: b || function() {
+      } };
+      for (let d of n.Pa) d(b);
+      return c.quickJSEmscriptenExtensions = b;
+    }
+    n.Pa = [], c.quickjsEmscriptenInit = n, n.Pa.push((b) => {
+      b.getWasmMemory = function() {
+        return q;
+      };
+    });
+    var r = "./this.program", ca = import_meta.url;
+    if (aa || ba) try {
+      new URL(".", ca);
+    } catch {
+    }
+    var t = console.log.bind(console), u = console.error.bind(console), v = false, w;
+    function da(b) {
+      for (var d = 0, a = b.length, e = new Uint8Array(a), f; d < a; ++d) f = b.charCodeAt(d), e[d] = ~f >> 8 & f;
+      return e;
+    }
+    var y, z, A, B, C, D, E = false;
+    function F() {
+      var b = q.buffer;
+      c.HEAP8 = A = new Int8Array(b), new Int16Array(b), c.HEAPU8 = B = new Uint8Array(b), new Uint16Array(b), C = new Int32Array(b), D = new Uint32Array(b), new Float32Array(b), new Float64Array(b), new BigInt64Array(b), new BigUint64Array(b);
+    }
+    function G(b) {
+      throw c.onAbort?.(b), b = "Aborted(" + b + ")", u(b), v = true, b = new WebAssembly.RuntimeError(b + ". Build with -sASSERTIONS for more info."), z?.(b), b;
+    }
+    var H;
+    async function ea(b) {
+      return b;
+    }
+    async function fa(b) {
+      var d = H;
+      try {
+        var a = await ea(d);
+        return await WebAssembly.instantiate(a, b);
+      } catch (e) {
+        u(`failed to asynchronously prepare wasm: ${e}`), G(e);
+      }
+    }
+    async function ha(b) {
+      return fa(b);
+    }
+    class I {
+      constructor(b) {
+        __publicField(this, "name", "ExitStatus");
+        this.message = `Program terminated with exit(${b})`, this.status = b;
+      }
+    }
+    for (var J = (b) => {
+      for (; 0 < b.length; ) b.shift()(c);
+    }, K = [], L = [], ia = () => {
+      var b = c.preRun.shift();
+      L.push(b);
+    }, M = true, q, N = new TextDecoder(), O = (b, d, a, e) => {
+      if (a = d + a, e) return a;
+      for (; b[d] && !(d >= a); ) ++d;
+      return d;
+    }, P = (b, d, a) => b ? N.decode(B.subarray(b, O(B, b, d, a))) : "", Q = 0, ja = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335], ka = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334], R = {}, la = (b) => {
+      if (!(b instanceof I || b == "unwind")) throw b;
+    }, ma = (b) => {
+      throw w = b, M || 0 < Q || (c.onExit?.(b), v = true), new I(b);
+    }, na = (b) => {
+      if (!v) try {
+        b();
       } catch (d) {
         la(d);
-      }
-    }
-  }, S = (b, d, a) => {
-    var e = B;
-    if (!(0 < a)) return 0;
-    var f = d;
-    a = d + a - 1;
-    for (var g = 0; g < b.length; ++g) {
-      var h = b.codePointAt(g);
-      if (127 >= h) {
-        if (d >= a) break;
-        e[d++] = h;
-      } else if (2047 >= h) {
-        if (d + 1 >= a) break;
-        e[d++] = 192 | h >> 6, e[d++] = 128 | h & 63;
-      } else if (65535 >= h) {
-        if (d + 2 >= a) break;
-        e[d++] = 224 | h >> 12, e[d++] = 128 | h >> 6 & 63, e[d++] = 128 | h & 63;
-      } else {
-        if (d + 3 >= a) break;
-        e[d++] = 240 | h >> 18, e[d++] = 128 | h >> 12 & 63, e[d++] = 128 | h >> 6 & 63, e[d++] = 128 | h & 63, g++;
-      }
-    }
-    return e[d] = 0, d - f;
-  }, T = {}, oa = () => {
-    if (!U) {
-      var b = { USER: "web_user", LOGNAME: "web_user", PATH: "/", PWD: "/", HOME: "/home/web_user", LANG: (globalThis.navigator?.language ?? "C").replace("-", "_") + ".UTF-8", _: r || "./this.program" }, d;
-      for (d in T) T[d] === void 0 ? delete b[d] : b[d] = T[d];
-      var a = [];
-      for (d in b) a.push(`${d}=${b[d]}`);
-      U = a;
-    }
-    return U;
-  }, U, V = (b) => {
-    for (var d = 0, a = 0; a < b.length; ++a) {
-      var e = b.charCodeAt(a);
-      127 >= e ? d++ : 2047 >= e ? d += 2 : 55296 <= e && 57343 >= e ? (d += 4, ++a) : d += 3;
-    }
-    return d;
-  }, pa = [null, [], []], sa = (b, d, a, e) => {
-    var f = { string: (k) => {
-      var l = 0;
-      if (k != null && k !== 0) {
-        l = V(k) + 1;
-        var p = W(l);
-        S(k, p, l), l = p;
-      }
-      return l;
-    }, array: (k) => {
-      var l = W(k.length);
-      return A.set(k, l), l;
-    } };
-    b = c["_" + b];
-    var g = [], h = 0;
-    if (e) for (var m = 0; m < e.length; m++) {
-      var x = f[a[m]];
-      x ? (h === 0 && (h = qa()), g[m] = x(e[m])) : g[m] = e[m];
-    }
-    return a = b(...g), a = (function(k) {
-      return h !== 0 && ra(h), d === "string" ? P(k) : d === "boolean" ? !!k : k;
-    })(a);
-  }, X = new Uint8Array(123), Y = 25; 0 <= Y; --Y) X[48 + Y] = 52 + Y, X[65 + Y] = Y, X[97 + Y] = 26 + Y;
-  if (X[43] = 62, X[47] = 63, c.wasmMemory ? q = c.wasmMemory : q = new WebAssembly.Memory({ initial: (c.INITIAL_MEMORY || 16777216) / 65536, maximum: 32768 }), F(), c.noExitRuntime && (M = c.noExitRuntime), c.print && (t = c.print), c.printErr && (u = c.printErr), c.thisProgram && (r = c.thisProgram), c.preInit) for (typeof c.preInit == "function" && (c.preInit = [c.preInit]); 0 < c.preInit.length; ) c.preInit.shift()();
-  c.cwrap = (b, d, a, e) => {
-    var f = !a || a.every((g) => g === "number" || g === "boolean");
-    return d !== "string" && f && !e ? c["_" + b] : (...g) => sa(b, d, a, g);
-  }, c.UTF8ToString = P, c.stringToUTF8 = (b, d, a) => S(b, d, a), c.lengthBytesUTF8 = V;
-  var ta, ra, W, qa, ua = { b: (b, d, a, e) => G(`Assertion failed: ${P(b)}, at: ` + [d ? P(d) : "unknown filename", a, e ? P(e) : "unknown function"]), q: () => G(""), l: () => {
-    M = false, Q = 0;
-  }, m: function(b, d) {
-    b = -9007199254740992 > b || 9007199254740992 < b ? NaN : Number(b), b = new Date(1e3 * b), C[d >> 2] = b.getSeconds(), C[d + 4 >> 2] = b.getMinutes(), C[d + 8 >> 2] = b.getHours(), C[d + 12 >> 2] = b.getDate(), C[d + 16 >> 2] = b.getMonth(), C[d + 20 >> 2] = b.getFullYear() - 1900, C[d + 24 >> 2] = b.getDay();
-    var a = b.getFullYear();
-    C[d + 28 >> 2] = (a % 4 !== 0 || a % 100 === 0 && a % 400 !== 0 ? ka : ja)[b.getMonth()] + b.getDate() - 1 | 0, C[d + 36 >> 2] = -(60 * b.getTimezoneOffset()), a = new Date(b.getFullYear(), 6, 1).getTimezoneOffset();
-    var e = new Date(b.getFullYear(), 0, 1).getTimezoneOffset();
-    C[d + 32 >> 2] = (a != e && b.getTimezoneOffset() == Math.min(e, a)) | 0;
-  }, j: (b, d) => {
-    if (R[b] && (clearTimeout(R[b].id), delete R[b]), !d) return 0;
-    var a = setTimeout(() => {
-      delete R[b], na(() => ta(b, performance.now()));
-    }, d);
-    return R[b] = { id: a, Qa: d }, 0;
-  }, n: (b, d, a, e) => {
-    var f = (/* @__PURE__ */ new Date()).getFullYear(), g = new Date(f, 0, 1).getTimezoneOffset();
-    f = new Date(f, 6, 1).getTimezoneOffset(), D[b >> 2] = 60 * Math.max(g, f), C[d >> 2] = +(g != f), d = (h) => {
-      var m = Math.abs(h);
-      return `UTC${0 <= h ? "-" : "+"}${String(Math.floor(m / 60)).padStart(2, "0")}${String(m % 60).padStart(2, "0")}`;
-    }, b = d(g), d = d(f), f < g ? (S(b, a, 17), S(d, e, 17)) : (S(b, e, 17), S(d, a, 17));
-  }, p: () => Date.now(), k: (b) => {
-    var d = B.length;
-    if (b >>>= 0, 2147483648 < b) return false;
-    for (var a = 1; 4 >= a; a *= 2) {
-      var e = d * (1 + 0.2 / a);
-      e = Math.min(e, b + 100663296);
-      a: {
-        e = (Math.min(2147483648, 65536 * Math.ceil(Math.max(b, e) / 65536)) - q.buffer.byteLength + 65535) / 65536 | 0;
-        try {
-          q.grow(e), F();
-          var f = 1;
-          break a;
-        } catch {
+      } finally {
+        if (!(M || 0 < Q)) try {
+          w = b = w, ma(b);
+        } catch (d) {
+          la(d);
         }
-        f = void 0;
       }
-      if (f) return true;
-    }
-    return false;
-  }, e: (b, d) => {
-    var a = 0, e = 0, f;
-    for (f of oa()) {
-      var g = d + a;
-      D[b + e >> 2] = g, a += S(f, g, 1 / 0) + 1, e += 4;
-    }
-    return 0;
-  }, f: (b, d) => {
-    var a = oa();
-    D[b >> 2] = a.length, b = 0;
-    for (var e of a) b += V(e) + 1;
-    return D[d >> 2] = b, 0;
-  }, d: () => 52, o: function() {
-    return 70;
-  }, c: (b, d, a, e) => {
-    for (var f = 0, g = 0; g < a; g++) {
-      var h = D[d >> 2], m = D[d + 4 >> 2];
-      d += 8;
-      for (var x = 0; x < m; x++) {
-        var k = b, l = B[h + x], p = pa[k];
-        l === 0 || l === 10 ? (k = k === 1 ? t : u, l = O(p, 0), l = N.decode(p.buffer ? p.subarray(0, l) : new Uint8Array(p.slice(0, l))), k(l), p.length = 0) : p.push(l);
+    }, S = (b, d, a) => {
+      var e = B;
+      if (!(0 < a)) return 0;
+      var f = d;
+      a = d + a - 1;
+      for (var g = 0; g < b.length; ++g) {
+        var h = b.codePointAt(g);
+        if (127 >= h) {
+          if (d >= a) break;
+          e[d++] = h;
+        } else if (2047 >= h) {
+          if (d + 1 >= a) break;
+          e[d++] = 192 | h >> 6, e[d++] = 128 | h & 63;
+        } else if (65535 >= h) {
+          if (d + 2 >= a) break;
+          e[d++] = 224 | h >> 12, e[d++] = 128 | h >> 6 & 63, e[d++] = 128 | h & 63;
+        } else {
+          if (d + 3 >= a) break;
+          e[d++] = 240 | h >> 18, e[d++] = 128 | h >> 12 & 63, e[d++] = 128 | h >> 6 & 63, e[d++] = 128 | h & 63, g++;
+        }
       }
-      f += m;
-    }
-    return D[e >> 2] = f, 0;
-  }, a: q, r: ma, s: function(b, d, a, e, f) {
-    return c.callbacks.callFunction(void 0, b, d, a, e, f);
-  }, i: function(b) {
-    return c.callbacks.shouldInterrupt(void 0, b);
-  }, h: function(b, d, a) {
-    return a = P(a), c.callbacks.loadModuleSource(void 0, b, d, a);
-  }, g: function(b, d, a, e) {
-    return a = P(a), e = P(e), c.callbacks.normalizeModule(void 0, b, d, a, e);
-  }, t: function(b, d) {
-    c.callbacks.freeHostRef(void 0, b, d);
-  } }, Z;
-  return Z = await (async function() {
-    function b(a) {
-      return a = Z = a.exports, c._malloc = a.v, c._QTS_Throw = a.w, c._QTS_NewError = a.x, c._QTS_RuntimeSetMemoryLimit = a.y, c._QTS_RuntimeComputeMemoryUsage = a.z, c._QTS_RuntimeDumpMemoryUsage = a.A, c._QTS_RecoverableLeakCheck = a.B, c._QTS_BuildIsSanitizeLeak = a.C, c._QTS_RuntimeSetMaxStackSize = a.D, c._QTS_GetUndefined = a.E, c._QTS_GetNull = a.F, c._QTS_GetFalse = a.G, c._QTS_GetTrue = a.H, c._QTS_NewHostRef = a.I, c._QTS_GetHostRefId = a.J, c._QTS_NewRuntime = a.K, c._QTS_FreeRuntime = a.L, c._free = a.M, c._QTS_NewContext = a.N, c._QTS_FreeContext = a.O, c._QTS_FreeValuePointer = a.P, c._QTS_FreeValuePointerRuntime = a.Q, c._QTS_FreeVoidPointer = a.R, c._QTS_FreeCString = a.S, c._QTS_DupValuePointer = a.T, c._QTS_NewObject = a.U, c._QTS_NewObjectProto = a.V, c._QTS_NewArray = a.W, c._QTS_NewArrayBuffer = a.X, c._QTS_NewFloat64 = a.Y, c._QTS_GetFloat64 = a.Z, c._QTS_NewString = a._, c._QTS_GetString = a.$, c._QTS_GetArrayBuffer = a.aa, c._QTS_GetArrayBufferLength = a.ba, c._QTS_NewSymbol = a.ca, c._QTS_GetSymbolDescriptionOrKey = a.da, c._QTS_IsGlobalSymbol = a.ea, c._QTS_IsJobPending = a.fa, c._QTS_ExecutePendingJob = a.ga, c._QTS_GetProp = a.ha, c._QTS_GetPropNumber = a.ia, c._QTS_SetProp = a.ja, c._QTS_DefineProp = a.ka, c._QTS_GetOwnPropertyNames = a.la, c._QTS_Call = a.ma, c._QTS_ResolveException = a.na, c._QTS_Dump = a.oa, c._QTS_Eval = a.pa, c._QTS_GetModuleNamespace = a.qa, c._QTS_Typeof = a.ra, c._QTS_GetLength = a.sa, c._QTS_IsEqual = a.ta, c._QTS_GetGlobalObject = a.ua, c._QTS_NewPromiseCapability = a.va, c._QTS_PromiseState = a.wa, c._QTS_PromiseResult = a.xa, c._QTS_TestStringArg = a.ya, c._QTS_GetDebugLogEnabled = a.za, c._QTS_SetDebugLogEnabled = a.Aa, c._QTS_BuildIsDebug = a.Ba, c._QTS_BuildIsAsyncify = a.Ca, c._QTS_NewFunction = a.Da, c._QTS_ArgvGetJSValueConstPointer = a.Ea, c._QTS_RuntimeEnableInterruptHandler = a.Fa, c._QTS_RuntimeDisableInterruptHandler = a.Ga, c._QTS_RuntimeEnableModuleLoader = a.Ha, c._QTS_RuntimeDisableModuleLoader = a.Ia, c._QTS_bjson_encode = a.Ja, c._QTS_bjson_decode = a.Ka, ta = a.La, ra = a.Ma, W = a.Na, qa = a.Oa, Z;
-    }
-    var d = { a: ua };
-    return c.instantiateWasm ? new Promise((a) => {
-      c.instantiateWasm(d, (e, f) => {
-        a(b(e, f));
-      });
-    }) : (H ?? (H = da(`\0asm\0\0\0\xBEi\`\x7F\x7F\0\`\x7F\x7F\x7F\x7F\`\x7F~\x7F\x7F~\`\x7F\x7F\x7F\`\x7F\x7F\`\x7F~\x7F\x7F\x7F~\`\x7F\x7F\x7F\0\`\x7F~~\`\x7F\x7F\x7F\x7F\x7F\`\x7F\0\`\x7F~\0\`\x7F~\x7F\`||\`\x7F\x7F~\`\x7F\x7F~\x7F\`\x7F~\x7F\x7F\x7F\x7F~\`\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F~\x7F~\`\x7F~\x7F\0\`\x7F\x7F\x7F\x7F\0\`\x7F~\x7F\x7F\`\x7F~~~\`\x7F\x7F\x7F~\`\x7F~~\x7F\x7F\x7F~\`\x7F\x7F~\x7F\x7F\`\x7F~~\x7F\`\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F~~\x7F\x7F~\`\x7F\x7F\x7F\x7F~\`|||\`\0\x7F\`\x7F~\x7F\x7F\x7F\`~\x7F\`\0\0\`\x7F~\`\x07\x7F~\x7F~~~\x7F\x7F\`\x7F~\x7F~\x7F\x7F\`\x7F~~\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F\0\`\x7F\x7F\x7F~\x7F\`\x7F~~~\x7F\x7F\`\x07\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`~~\`\x7F|\x7F\`\x7F~\x7F~~\`\x7F~\x7F~~\x7F\x7F\`~\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F~\`\x7F~\x7F\x7F\0\`\x7F\x7F|\`\x07\x7F~\x7F\x7F\x7F\x7F\x7F~\`~\x7F\0\`\x7F\x7F~\0\`\x7F~~\x7F~\`\x7F~\x7F~\x7F\`\x7F~\x7F~\0\`\x7F~~~\x7F\`	\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F\x7F~\`~\x7F\x7F\x7F\`\b\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x07\x7F\x7F\x7F\x7F\x7F\x7F\x7F\0\`\x7F~\x7F\x7F\x7F\x7F\`\x7F\x7F~~\`|\x7F\`\x7F~~\x7F\x7F\0\`\x7F~~\x7F\0\`|\x7F|\`||\x7F|\`\x7F\x7F~\x7F\0\`\x7F~~~~\x7F\x7F\`\x7F\x7F~~\x7F\`\x7F~~\x7F\x7F\x7F\`\x7F|\x7F\x7F\x7F\x7F\x7F\`\0|\`\x7F~\x7F~\x7F~\`\r\x7F\x7F\x7F\x7F\x7F\x7F\x7F~\x7F\x7F\x7F\x7F\x7F~\`\x7F\x7F~\x7F\x7F\x7F\`\x7F\x7F~~~~\x7F\`\x7F\x7F~\x7F~\`\x07\x7F~~~\x7F\x7F\x7F~\`\x7F|\`\x7F|\x7F\x7F\x7F~\`\b\x7F~~\x7F\x7F\x7F\x7F\x7F~\`\x7F~\x7F\x7F\x7F\x7F\0\`\b\x7F\x7F\x7F\x7F\x7F\x7F~\x7F~\`\x7F~\x7F\x7F\x7F\x7F\x7F\`
+      return e[d] = 0, d - f;
+    }, T = {}, oa = () => {
+      if (!U) {
+        var b = { USER: "web_user", LOGNAME: "web_user", PATH: "/", PWD: "/", HOME: "/home/web_user", LANG: (globalThis.navigator?.language ?? "C").replace("-", "_") + ".UTF-8", _: r || "./this.program" }, d;
+        for (d in T) T[d] === void 0 ? delete b[d] : b[d] = T[d];
+        var a = [];
+        for (d in b) a.push(`${d}=${b[d]}`);
+        U = a;
+      }
+      return U;
+    }, U, V = (b) => {
+      for (var d = 0, a = 0; a < b.length; ++a) {
+        var e = b.charCodeAt(a);
+        127 >= e ? d++ : 2047 >= e ? d += 2 : 55296 <= e && 57343 >= e ? (d += 4, ++a) : d += 3;
+      }
+      return d;
+    }, pa = [null, [], []], sa = (b, d, a, e) => {
+      var f = { string: (k) => {
+        var l = 0;
+        if (k != null && k !== 0) {
+          l = V(k) + 1;
+          var p = W(l);
+          S(k, p, l), l = p;
+        }
+        return l;
+      }, array: (k) => {
+        var l = W(k.length);
+        return A.set(k, l), l;
+      } };
+      b = c["_" + b];
+      var g = [], h = 0;
+      if (e) for (var m = 0; m < e.length; m++) {
+        var x = f[a[m]];
+        x ? (h === 0 && (h = qa()), g[m] = x(e[m])) : g[m] = e[m];
+      }
+      return a = b(...g), a = (function(k) {
+        return h !== 0 && ra(h), d === "string" ? P(k) : d === "boolean" ? !!k : k;
+      })(a);
+    }, X = new Uint8Array(123), Y = 25; 0 <= Y; --Y) X[48 + Y] = 52 + Y, X[65 + Y] = Y, X[97 + Y] = 26 + Y;
+    if (X[43] = 62, X[47] = 63, c.wasmMemory ? q = c.wasmMemory : q = new WebAssembly.Memory({ initial: (c.INITIAL_MEMORY || 16777216) / 65536, maximum: 32768 }), F(), c.noExitRuntime && (M = c.noExitRuntime), c.print && (t = c.print), c.printErr && (u = c.printErr), c.thisProgram && (r = c.thisProgram), c.preInit) for (typeof c.preInit == "function" && (c.preInit = [c.preInit]); 0 < c.preInit.length; ) c.preInit.shift()();
+    c.cwrap = (b, d, a, e) => {
+      var f = !a || a.every((g) => g === "number" || g === "boolean");
+      return d !== "string" && f && !e ? c["_" + b] : (...g) => sa(b, d, a, g);
+    }, c.UTF8ToString = P, c.stringToUTF8 = (b, d, a) => S(b, d, a), c.lengthBytesUTF8 = V;
+    var ta, ra, W, qa, ua = { b: (b, d, a, e) => G(`Assertion failed: ${P(b)}, at: ` + [d ? P(d) : "unknown filename", a, e ? P(e) : "unknown function"]), q: () => G(""), l: () => {
+      M = false, Q = 0;
+    }, m: function(b, d) {
+      b = -9007199254740992 > b || 9007199254740992 < b ? NaN : Number(b), b = new Date(1e3 * b), C[d >> 2] = b.getSeconds(), C[d + 4 >> 2] = b.getMinutes(), C[d + 8 >> 2] = b.getHours(), C[d + 12 >> 2] = b.getDate(), C[d + 16 >> 2] = b.getMonth(), C[d + 20 >> 2] = b.getFullYear() - 1900, C[d + 24 >> 2] = b.getDay();
+      var a = b.getFullYear();
+      C[d + 28 >> 2] = (a % 4 !== 0 || a % 100 === 0 && a % 400 !== 0 ? ka : ja)[b.getMonth()] + b.getDate() - 1 | 0, C[d + 36 >> 2] = -(60 * b.getTimezoneOffset()), a = new Date(b.getFullYear(), 6, 1).getTimezoneOffset();
+      var e = new Date(b.getFullYear(), 0, 1).getTimezoneOffset();
+      C[d + 32 >> 2] = (a != e && b.getTimezoneOffset() == Math.min(e, a)) | 0;
+    }, j: (b, d) => {
+      if (R[b] && (clearTimeout(R[b].id), delete R[b]), !d) return 0;
+      var a = setTimeout(() => {
+        delete R[b], na(() => ta(b, performance.now()));
+      }, d);
+      return R[b] = { id: a, Qa: d }, 0;
+    }, n: (b, d, a, e) => {
+      var f = (/* @__PURE__ */ new Date()).getFullYear(), g = new Date(f, 0, 1).getTimezoneOffset();
+      f = new Date(f, 6, 1).getTimezoneOffset(), D[b >> 2] = 60 * Math.max(g, f), C[d >> 2] = +(g != f), d = (h) => {
+        var m = Math.abs(h);
+        return `UTC${0 <= h ? "-" : "+"}${String(Math.floor(m / 60)).padStart(2, "0")}${String(m % 60).padStart(2, "0")}`;
+      }, b = d(g), d = d(f), f < g ? (S(b, a, 17), S(d, e, 17)) : (S(b, e, 17), S(d, a, 17));
+    }, p: () => Date.now(), k: (b) => {
+      var d = B.length;
+      if (b >>>= 0, 2147483648 < b) return false;
+      for (var a = 1; 4 >= a; a *= 2) {
+        var e = d * (1 + 0.2 / a);
+        e = Math.min(e, b + 100663296);
+        a: {
+          e = (Math.min(2147483648, 65536 * Math.ceil(Math.max(b, e) / 65536)) - q.buffer.byteLength + 65535) / 65536 | 0;
+          try {
+            q.grow(e), F();
+            var f = 1;
+            break a;
+          } catch {
+          }
+          f = void 0;
+        }
+        if (f) return true;
+      }
+      return false;
+    }, e: (b, d) => {
+      var a = 0, e = 0, f;
+      for (f of oa()) {
+        var g = d + a;
+        D[b + e >> 2] = g, a += S(f, g, 1 / 0) + 1, e += 4;
+      }
+      return 0;
+    }, f: (b, d) => {
+      var a = oa();
+      D[b >> 2] = a.length, b = 0;
+      for (var e of a) b += V(e) + 1;
+      return D[d >> 2] = b, 0;
+    }, d: () => 52, o: function() {
+      return 70;
+    }, c: (b, d, a, e) => {
+      for (var f = 0, g = 0; g < a; g++) {
+        var h = D[d >> 2], m = D[d + 4 >> 2];
+        d += 8;
+        for (var x = 0; x < m; x++) {
+          var k = b, l = B[h + x], p = pa[k];
+          l === 0 || l === 10 ? (k = k === 1 ? t : u, l = O(p, 0), l = N.decode(p.buffer ? p.subarray(0, l) : new Uint8Array(p.slice(0, l))), k(l), p.length = 0) : p.push(l);
+        }
+        f += m;
+      }
+      return D[e >> 2] = f, 0;
+    }, a: q, r: ma, s: function(b, d, a, e, f) {
+      return c.callbacks.callFunction(void 0, b, d, a, e, f);
+    }, i: function(b) {
+      return c.callbacks.shouldInterrupt(void 0, b);
+    }, h: function(b, d, a) {
+      return a = P(a), c.callbacks.loadModuleSource(void 0, b, d, a);
+    }, g: function(b, d, a, e) {
+      return a = P(a), e = P(e), c.callbacks.normalizeModule(void 0, b, d, a, e);
+    }, t: function(b, d) {
+      c.callbacks.freeHostRef(void 0, b, d);
+    } }, Z;
+    return Z = await (async function() {
+      function b(a) {
+        return a = Z = a.exports, c._malloc = a.v, c._QTS_Throw = a.w, c._QTS_NewError = a.x, c._QTS_RuntimeSetMemoryLimit = a.y, c._QTS_RuntimeComputeMemoryUsage = a.z, c._QTS_RuntimeDumpMemoryUsage = a.A, c._QTS_RecoverableLeakCheck = a.B, c._QTS_BuildIsSanitizeLeak = a.C, c._QTS_RuntimeSetMaxStackSize = a.D, c._QTS_GetUndefined = a.E, c._QTS_GetNull = a.F, c._QTS_GetFalse = a.G, c._QTS_GetTrue = a.H, c._QTS_NewHostRef = a.I, c._QTS_GetHostRefId = a.J, c._QTS_NewRuntime = a.K, c._QTS_FreeRuntime = a.L, c._free = a.M, c._QTS_NewContext = a.N, c._QTS_FreeContext = a.O, c._QTS_FreeValuePointer = a.P, c._QTS_FreeValuePointerRuntime = a.Q, c._QTS_FreeVoidPointer = a.R, c._QTS_FreeCString = a.S, c._QTS_DupValuePointer = a.T, c._QTS_NewObject = a.U, c._QTS_NewObjectProto = a.V, c._QTS_NewArray = a.W, c._QTS_NewArrayBuffer = a.X, c._QTS_NewFloat64 = a.Y, c._QTS_GetFloat64 = a.Z, c._QTS_NewString = a._, c._QTS_GetString = a.$, c._QTS_GetArrayBuffer = a.aa, c._QTS_GetArrayBufferLength = a.ba, c._QTS_NewSymbol = a.ca, c._QTS_GetSymbolDescriptionOrKey = a.da, c._QTS_IsGlobalSymbol = a.ea, c._QTS_IsJobPending = a.fa, c._QTS_ExecutePendingJob = a.ga, c._QTS_GetProp = a.ha, c._QTS_GetPropNumber = a.ia, c._QTS_SetProp = a.ja, c._QTS_DefineProp = a.ka, c._QTS_GetOwnPropertyNames = a.la, c._QTS_Call = a.ma, c._QTS_ResolveException = a.na, c._QTS_Dump = a.oa, c._QTS_Eval = a.pa, c._QTS_GetModuleNamespace = a.qa, c._QTS_Typeof = a.ra, c._QTS_GetLength = a.sa, c._QTS_IsEqual = a.ta, c._QTS_GetGlobalObject = a.ua, c._QTS_NewPromiseCapability = a.va, c._QTS_PromiseState = a.wa, c._QTS_PromiseResult = a.xa, c._QTS_TestStringArg = a.ya, c._QTS_GetDebugLogEnabled = a.za, c._QTS_SetDebugLogEnabled = a.Aa, c._QTS_BuildIsDebug = a.Ba, c._QTS_BuildIsAsyncify = a.Ca, c._QTS_NewFunction = a.Da, c._QTS_ArgvGetJSValueConstPointer = a.Ea, c._QTS_RuntimeEnableInterruptHandler = a.Fa, c._QTS_RuntimeDisableInterruptHandler = a.Ga, c._QTS_RuntimeEnableModuleLoader = a.Ha, c._QTS_RuntimeDisableModuleLoader = a.Ia, c._QTS_bjson_encode = a.Ja, c._QTS_bjson_decode = a.Ka, ta = a.La, ra = a.Ma, W = a.Na, qa = a.Oa, Z;
+      }
+      var d = { a: ua };
+      return c.instantiateWasm ? new Promise((a) => {
+        c.instantiateWasm(d, (e, f) => {
+          a(b(e, f));
+        });
+      }) : (H ?? (H = da(`\0asm\0\0\0\xBEi\`\x7F\x7F\0\`\x7F\x7F\x7F\x7F\`\x7F~\x7F\x7F~\`\x7F\x7F\x7F\`\x7F\x7F\`\x7F~\x7F\x7F\x7F~\`\x7F\x7F\x7F\0\`\x7F~~\`\x7F\x7F\x7F\x7F\x7F\`\x7F\0\`\x7F~\0\`\x7F~\x7F\`||\`\x7F\x7F~\`\x7F\x7F~\x7F\`\x7F~\x7F\x7F\x7F\x7F~\`\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F~\x7F~\`\x7F~\x7F\0\`\x7F\x7F\x7F\x7F\0\`\x7F~\x7F\x7F\`\x7F~~~\`\x7F\x7F\x7F~\`\x7F~~\x7F\x7F\x7F~\`\x7F\x7F~\x7F\x7F\`\x7F~~\x7F\`\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F~~\x7F\x7F~\`\x7F\x7F\x7F\x7F~\`|||\`\0\x7F\`\x7F~\x7F\x7F\x7F\`~\x7F\`\0\0\`\x7F~\`\x07\x7F~\x7F~~~\x7F\x7F\`\x7F~\x7F~\x7F\x7F\`\x7F~~\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F\0\`\x7F\x7F\x7F~\x7F\`\x7F~~~\x7F\x7F\`\x07\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`~~\`\x7F|\x7F\`\x7F~\x7F~~\`\x7F~\x7F~~\x7F\x7F\`~\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F~\`\x7F~\x7F\x7F\0\`\x7F\x7F|\`\x07\x7F~\x7F\x7F\x7F\x7F\x7F~\`~\x7F\0\`\x7F\x7F~\0\`\x7F~~\x7F~\`\x7F~\x7F~\x7F\`\x7F~\x7F~\0\`\x7F~~~\x7F\`	\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x7F\x7F\x7F\x7F\x7F\x7F~\`~\x7F\x7F\x7F\`\b\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\`\x07\x7F\x7F\x7F\x7F\x7F\x7F\x7F\0\`\x7F~\x7F\x7F\x7F\x7F\`\x7F\x7F~~\`|\x7F\`\x7F~~\x7F\x7F\0\`\x7F~~\x7F\0\`|\x7F|\`||\x7F|\`\x7F\x7F~\x7F\0\`\x7F~~~~\x7F\x7F\`\x7F\x7F~~\x7F\`\x7F~~\x7F\x7F\x7F\`\x7F|\x7F\x7F\x7F\x7F\x7F\`\0|\`\x7F~\x7F~\x7F~\`\r\x7F\x7F\x7F\x7F\x7F\x7F\x7F~\x7F\x7F\x7F\x7F\x7F~\`\x7F\x7F~\x7F\x7F\x7F\`\x7F\x7F~~~~\x7F\`\x7F\x7F~\x7F~\`\x07\x7F~~~\x7F\x7F\x7F~\`\x7F|\`\x7F|\x7F\x7F\x7F~\`\b\x7F~~\x7F\x7F\x7F\x7F\x7F~\`\x7F~\x7F\x7F\x7F\x7F\0\`\b\x7F\x7F\x7F\x7F\x7F\x7F~\x7F~\`\x7F~\x7F\x7F\x7F\x7F\x7F\`
 \x7F\x7F~\x7F\x7F~~~\x7F\x7F\x7F\`\x7F\x7F~~~~\`||\x7F\`\x7F\x7F\x7F\x7F\x7F|\`\x7F\x7F~~\x7F\x7F\`\x7F~~\0\`\x07\x7F~\x7F\x7F\x7F\x7F\x7F\0\`\x7F~~~~\`|\x7F\x7F\`\x7F\x7F~~~\`\b\x7F~~~~\x7F~~~\`~~\x7F\x7F\`\x07\x7F\x7F\x7F~~~\x7F\x7F\`\x7F\x7F|\0\`\x7F~|~\`\0~\`\x7F|\0\`	\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\x7F\0~ab\0ac\0\bad\0ae\0af\0ag\0\bah\0ai\0aj\0+ak\0al\0!am\x003an\0ao\0ap\0Jaq\0!ar\0	as\0at\0\0aa\x80\x80\x80\xAB
 \xA9
 
@@ -3642,1412 +3643,2108 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
 
 \x07\0\0	\v\0\0	\v\0\0\v\0\0\0\0\0A\xC1\xA3\v!\0\0\0\0\0\0\0\0\0\v\r\0\r\0\0\0	\0\0\0	\0\0\0\0A\xFB\xA3\v\f\0A\x87\xA4\v\0\0\0\0\0\0\0\0	\f\0\0\0\0\0\f\0\0\f\0A\xB5\xA4\v\0A\xC1\xA4\v\0\0\0\0\0\0\0	\0\0\0\0\0\0\0\0A\xEF\xA4\v\0A\xFB\xA4\v\0\0\0\0\0\0\0\0	\0\0\0\0\0\0\0\0\0\0\0\0\0A\xB2\xA5\v\0\0\0\0\0\0\0\0\0	\0A\xE3\xA5\v\0A\xEF\xA5\v\0\0\0\0\0\0\0\0	\0\0\0\0\0\0\0\0A\x9D\xA6\v\0A\xA9\xA6\v'\0\0\0\0\0\0\0\0	\0\0\0\0\0\0\0\0\x000123456789ABCDEF\0A\xD0\xA6\v\`\`Q\0A\xDC\xA6\v!\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\xDA5\0\0b\0A\x8C\xA7\v>\0\0\0\0A\x9C\xA7\v\xD2\0A\xB4\xA7\v\v\xD3\0\0\xD4\0\0P\\\0A\xCC\xA7\v\0A\xDC\xA7\v\b\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\0A\xA0\xA8\v	\x90S\0\0\0\0\0\0A\xB4\xA8\v\xD5\0A\xCC\xA8\v\xD3\0\0\xD6\0\0X\\\0\0\0A\xE4\xA8\v\0A\xF4\xA8\v\xFF\xFF\xFF\xFF
 \0A\xB8\xA9\v(T`)), b((await ha(d)).instance));
-  })(), (function() {
-    function b() {
-      if (c.calledRun = true, !v) {
-        if (E = true, Z.u(), y?.(c), c.onRuntimeInitialized?.(), c.postRun) for (typeof c.postRun == "function" && (c.postRun = [c.postRun]); c.postRun.length; ) {
-          var d = c.postRun.shift();
-          K.push(d);
+    })(), (function() {
+      function b() {
+        if (c.calledRun = true, !v) {
+          if (E = true, Z.u(), y?.(c), c.onRuntimeInitialized?.(), c.postRun) for (typeof c.postRun == "function" && (c.postRun = [c.postRun]); c.postRun.length; ) {
+            var d = c.postRun.shift();
+            K.push(d);
+          }
+          J(K);
         }
-        J(K);
       }
-    }
-    if (c.preRun) for (typeof c.preRun == "function" && (c.preRun = [c.preRun]); c.preRun.length; ) ia();
-    J(L), c.setStatus ? (c.setStatus("Running..."), setTimeout(() => {
-      setTimeout(() => c.setStatus(""), 1), b();
-    }, 1)) : b();
-  })(), E ? moduleRtn = c : moduleRtn = new Promise((b, d) => {
-    y = b, z = d;
-  }), moduleRtn;
-}
-var emscripten_module_browser_default;
-var init_emscripten_module_browser_XIKQQPVU = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
-    init_chunk_FGV2HSCH();
-    emscripten_module_browser_default = QuickJSRaw;
+      if (c.preRun) for (typeof c.preRun == "function" && (c.preRun = [c.preRun]); c.preRun.length; ) ia();
+      J(L), c.setStatus ? (c.setStatus("Running..."), setTimeout(() => {
+        setTimeout(() => c.setStatus(""), 1), b();
+      }, 1)) : b();
+    })(), E ? moduleRtn = c : moduleRtn = new Promise((b, d) => {
+      y = b, z = d;
+    }), moduleRtn;
   }
-});
-
-// packages/browser-use/src/quickjs-dom-guest.js
-var browserUseQuickJsDomGuestSource = '(() => {\n  const callbacks = new Map();\n  let callbackId = 0;\n  function host(message) {\n    const result = JSON.parse(globalThis.__browserUseHost(JSON.stringify(message)));\n    if (result && result.__error) throw new Error(result.__error);\n    return result;\n  }\n  function decode(result) {\n    if (!result) return undefined;\n    if ("handle" in result) return node(result.handle);\n    if ("list" in result) return result.list.map(decode);\n    return result.value;\n  }\n  const cache = new Map();\n  const rpc = (action, data = {}) => decode(host({ op: "remote", action, ...data }));\n  function style(id) {\n    return new Proxy({}, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "setProperty") return (name, value) => host({ op: "remote", action: "styleSet", id, property: name, value });\n        if (property === "removeProperty") return (name) => host({ op: "remote", action: "styleSet", id, property: name, value: "" });\n        return host({ op: "remote", action: "styleGet", id, property: String(property) }).value;\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "styleSet", id, property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function canvasContext(id, contextType) {\n    const call = (method, args = []) => host({ op: "canvas", id, contextType, action: "call", method, args });\n    return new Proxy({}, {\n      get(_target, property) {\n        if (["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"].includes(property)) {\n          return (...args) => call(property, args);\n        }\n        return undefined;\n      },\n      set(_target, property, value) {\n        host({ op: "canvas", id, contextType, action: "set", property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function node(id) {\n    id = String(id);\n    if (cache.has(id)) return cache.get(id);\n    const target = { __handle: id };\n    const proxy = new Proxy(target, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "__handle") return id;\n        if (property === "setActive") return Reflect.get(_target, property);\n        if (property === "toJSON") return () => ({ __handle: id });\n        if (property === "ownerDocument") return document;\n        if (id === "document" && property === "defaultView") return window;\n        if (id === "document" && property === "getSelection") return document.getSelection;\n        if (id === "document" && property === "addEventListener") return document.addEventListener;\n        if (id === "document" && property === "removeEventListener") return document.removeEventListener;\n        if (id === "document" && property === "createRange") return document.createRange;\n        if (id === "document" && property === "hasFocus") return document.hasFocus;\n        if (id === "document" && property === "head") return document.head;\n        if (property === "style") return style(id);\n        if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));\n        if (property === "addEventListener") return (type, callback) => {\n          const listenerId = String(++callbackId);\n          callbacks.set(listenerId, callback);\n          host({ op: "listen", id, type, listenerId });\n        };\n        if (property === "removeEventListener") return () => {};\n        if (property === "classList") return {\n          add: (...names) => {\n            const current = rpc("get", { id, property: "className" }) || "";\n            proxy.className = [...new Set(current.split(/\\\\s+/).filter(Boolean).concat(names))].join(" ");\n          },\n          remove: (...names) => {\n            const remove = new Set(names);\n            proxy.className = (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).filter((name) => name && !remove.has(name)).join(" ");\n          },\n          contains: (name) => (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).includes(name),\n          toggle: (name, force) => {\n            const present = proxy.classList.contains(name);\n            const next = force === undefined ? !present : Boolean(force);\n            if (next) proxy.classList.add(name); else proxy.classList.remove(name);\n            return next;\n          },\n        };\n        const methods = new Set(["appendChild", "blur", "contains", "focus", "getAttribute", "getBoundingClientRect",\n          "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",\n          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",\n          "setAttribute", "setSelectionRange", "addRange", "collapse", "collapseToEnd", "collapseToStart",\n          "extend", "getRangeAt", "removeAllRanges", "setBaseAndExtent", "selectNode", "selectNodeContents", "setEnd", "setEndAfter",\n          "setEndBefore", "setStart", "setStartAfter", "setStartBefore"]);\n        if (methods.has(property)) return (...args) => rpc("call", {\n          id, method: property, args: args.map((arg) => arg?.__handle ? { __handle: arg.__handle } : arg),\n        });\n        return rpc("get", { id, property: String(property) });\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol" || String(property).startsWith("cm") || property === "setActive") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "set", id, property: String(property), value: value?.__handle ? { __handle: value.__handle } : value });\n        return true;\n      },\n    });\n    cache.set(id, proxy);\n    return proxy;\n  }\n  const document = {\n    createElement: (tag) => rpc("createElement", { tag }),\n    createTextNode: (text) => rpc("createTextNode", { text }),\n    createDocumentFragment: () => rpc("createDocumentFragment"),\n    getElementById: (id) => rpc("getElementById", { id }),\n    querySelector: (selector) => node("root").querySelector(selector),\n    querySelectorAll: (selector) => node("root").querySelectorAll(selector),\n    documentElement: { style: {} },\n    body: node("root"),\n    head: node("root"),\n    createRange: () => rpc("createRange"),\n    getSelection: () => rpc("getSelection"),\n    hasFocus: () => true,\n    addEventListener() {},\n    removeEventListener() {},\n    get defaultView() { return window; },\n    get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },\n  };\n  const window = globalThis;\n  Object.assign(globalThis, {\n    document, window, self: window,\n    console: { log() {}, info() {}, warn() {}, error() {} },\n    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "", language: "en", maxTouchPoints: 0 },\n    HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Document: class { static [Symbol.hasInstance](value) { return value === document; } },\n    Window: class { static [Symbol.hasInstance](value) { return value === window; } },\n    Element: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },\n    ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },\n    performance: { now: () => Date.now() },\n    getComputedStyle(element) {\n      const read = (property) => host({ op: "remote", action: "computedStyleGet", id: element.__handle, property: String(property) }).value;\n      return new Proxy({}, {\n        get: (_target, property) => property === "getPropertyValue" ? (name) => read(name) : read(property),\n      });\n    },\n    requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },\n    cancelAnimationFrame() {},\n    queueMicrotask(callback) { callbacks.set("frame:" + (++callbackId), callback); },\n    setTimeout(callback, delay = 0) {\n      const id = ++callbackId;\n      const wait = Math.max(0, Number(delay) || 0);\n      callbacks.set("timer:" + id, { callback, interval: false, delay: wait, dueAt: Date.now() + wait });\n      return id;\n    },\n    clearTimeout(id) { callbacks.delete("timer:" + id); },\n    setInterval(callback, delay = 0) {\n      const id = ++callbackId;\n      const wait = Math.max(0, Number(delay) || 0);\n      callbacks.set("timer:" + id, { callback, interval: true, delay: wait, dueAt: Date.now() + wait });\n      return id;\n    },\n    clearInterval(id) { callbacks.delete("timer:" + id); },\n    addEventListener() {},\n    removeEventListener() {},\n    matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },\n  });\n  globalThis.__browserUseDispatchEvent = (json) => {\n    const envelope = JSON.parse(json);\n    const callback = callbacks.get(String(envelope.listenerId));\n    if (!callback) return JSON.stringify({});\n    let prevented = false;\n    let stopped = false;\n    const target = node(envelope.event.target);\n    const event = {\n      ...envelope.event,\n      target,\n      currentTarget: node(envelope.currentTarget || envelope.event.target),\n      composedPath() {\n        const path = [];\n        let current = target;\n        for (let depth = 0; current && depth < 20; depth += 1) {\n          path.push(current);\n          if (current.__handle === "root") break;\n          current = current.parentNode;\n        }\n        return path;\n      },\n      preventDefault() { prevented = true; },\n      stopPropagation() { stopped = true; },\n      stopImmediatePropagation() { stopped = true; },\n      get defaultPrevented() { return prevented; },\n    };\n    callback(event);\n    for (const [id, pending] of Array.from(callbacks)) {\n      if (id.startsWith("frame:")) {\n        callbacks.delete(id);\n        pending(Date.now());\n      }\n    }\n    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });\n  };\n  globalThis.__browserUseConfigureEnvironment = (json) => {\n    const environment = JSON.parse(json);\n    if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);\n    if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);\n    if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);\n    return JSON.stringify({ platform: navigator.platform });\n  };\n  globalThis.__browserUseFlush = () => {\n    let count = 0;\n    for (let round = 0; round < 10; round++) {\n      const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));\n      if (!pendingCallbacks.length) break;\n      for (const [id, pending] of pendingCallbacks) {\n        if (count++ >= 100) break;\n        if (!pending.interval) callbacks.delete(id);\n        (pending.callback || pending)(Date.now());\n      }\n    }\n    return JSON.stringify({ count });\n  };\n  globalThis.__browserUseTick = () => {\n    const now = Date.now();\n    const pendingCallbacks = Array.from(callbacks).filter(([id, pending]) =>\n      id.startsWith("frame:") || (id.startsWith("timer:") && pending.dueAt <= now));\n    let count = 0;\n    for (const [id, pending] of pendingCallbacks) {\n      if (!pending.interval) callbacks.delete(id);\n      else pending.dueAt = now + pending.delay;\n      (pending.callback || pending)(Date.now());\n      count += 1;\n    }\n    return JSON.stringify({ count });\n  };\n})();\n';
-
-// node_modules/quickjs-emscripten-core/dist/index.mjs
-init_dist();
-async function newQuickJSWASMModuleFromVariant(variantOrPromise) {
-  let variant2 = smartUnwrap(await variantOrPromise), [wasmModuleLoader, QuickJSFFI2, { QuickJSWASMModule: QuickJSWASMModule2 }] = await Promise.all([variant2.importModuleLoader().then(smartUnwrap), variant2.importFFI(), Promise.resolve().then(() => (init_module_ES6BEMUI(), module_ES6BEMUI_exports)).then(smartUnwrap)]), wasmModule2 = await wasmModuleLoader();
-  wasmModule2.type = "sync";
-  let ffi = new QuickJSFFI2(wasmModule2);
-  return new QuickJSWASMModule2(wasmModule2, ffi);
-}
-function smartUnwrap(val) {
-  return val && "default" in val && val.default ? val.default && "default" in val.default && val.default.default ? val.default.default : val.default : val;
-}
-
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
-var variant = { type: "sync", importFFI: () => Promise.resolve().then(() => (init_ffi(), ffi_exports)).then((mod) => mod.QuickJSFFI), importModuleLoader: () => Promise.resolve().then(() => (init_emscripten_module_browser_XIKQQPVU(), emscripten_module_browser_XIKQQPVU_exports)).then((mod) => mod.default) };
-var src_default = variant;
-
-// packages/quickjs-emscripten-sandbox/src/index.js
-var wasmModule = null;
-async function getModule() {
-  if (!wasmModule) {
-    wasmModule = await newQuickJSWASMModuleFromVariant(src_default);
-  }
-  return wasmModule;
-}
-function formatQuickJsError(value) {
-  if (value && typeof value === "object") {
-    const parts = [];
-    if (value.name) parts.push(String(value.name));
-    if (value.message) parts.push(String(value.message));
-    if (value.stack) parts.push(String(value.stack));
-    if (parts.length) return parts.join(": ");
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
+  var import_meta, emscripten_module_browser_default;
+  var init_emscripten_module_browser_XIKQQPVU = __esm({
+    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
+      init_chunk_FGV2HSCH();
+      import_meta = {};
+      emscripten_module_browser_default = QuickJSRaw;
     }
-  }
-  return String(value);
-}
-var Sandbox = class {
-  /**
-   * @param {object} [options]
-   * @param {Record<string, string|(() => string)>} [options.modules]
-   * @param {(moduleName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleLoader]
-   * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
-   * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
-   * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
-   */
-  constructor(options = {}) {
-    this.options = options;
-  }
-  /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
-  runtime = null;
-  /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
-  context = null;
-  /** @type {boolean} */
-  disposed = false;
-  async init() {
-    if (this.disposed) throw new Error("Sandbox has been disposed");
-    if (this.runtime) return;
-    if (this.options.memoryLimitBytes !== void 0) {
-      if (!Number.isSafeInteger(this.options.memoryLimitBytes) || this.options.memoryLimitBytes <= 0) throw new TypeError("memoryLimitBytes must be a positive safe integer");
-    }
-    if (this.options.maxStackBytes !== void 0) {
-      if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
-    }
-    const mod = await getModule();
-    this.runtime = mod.newRuntime();
-    if (this.options.memoryLimitBytes !== void 0) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
-    if (this.options.maxStackBytes !== void 0) this.runtime.setMaxStackSize(this.options.maxStackBytes);
-    this.installModuleLoader();
-    this.context = this.runtime.newContext();
-  }
-  installModuleLoader() {
-    if (!this.runtime) return;
-    const modules = this.options.modules || {};
-    const customLoader = this.options.moduleLoader;
-    const customNormalizer = this.options.moduleNormalizer;
-    if (!customLoader && Object.keys(modules).length === 0) return;
-    this.runtime.setModuleLoader(
-      (moduleName, context) => {
-        if (customLoader) return customLoader(moduleName, context);
-        const source = modules[moduleName];
-        if (source === void 0) throw new Error(`Module not allowed: ${moduleName}`);
-        return typeof source === "function" ? source(moduleName) : String(source);
-      },
-      customNormalizer || ((_baseModuleName, requestedName) => requestedName)
-    );
-  }
-  /**
-   * @param {string} code - JavaScript code to evaluate
-   * @returns {SandboxResult}
-   */
-  run(code) {
-    if (!this.context) {
-      throw new Error("Sandbox not initialized. Call init() first.");
-    }
-    if (this.disposed) {
-      throw new Error("Sandbox has been disposed");
-    }
-    const result = this.context.evalCode(code);
-    if (result.error) {
-      const err = this.context.dump(result.error);
-      result.error.dispose();
-      return { ok: false, error: formatQuickJsError(err) };
-    }
-    const value = this.context.dump(result.value);
-    result.value.dispose();
-    return { ok: true, value };
-  }
-  evalGlobal(code, filename = "sandbox-global.js") {
-    if (!this.context) {
-      throw new Error("Sandbox not initialized. Call init() first.");
-    }
-    const result = this.context.evalCode(code, filename);
-    if (result.error) {
-      const err = this.context.dump(result.error);
-      result.error.dispose();
-      throw new Error(formatQuickJsError(err));
-    }
-    result.value.dispose();
-  }
-  evalModule(code, filename = "sandbox-module.js") {
-    if (!this.context) {
-      throw new Error("Sandbox not initialized. Call init() first.");
-    }
-    const result = this.context.evalCode(code, filename, { type: "module" });
-    if (result.error) {
-      const err = this.context.dump(result.error);
-      result.error.dispose();
-      throw new Error(formatQuickJsError(err));
-    }
-    result.value.dispose();
-  }
-  async evalModuleAsync(code, filename = "sandbox-module.js") {
-    if (!this.context || !this.runtime) throw new Error("Sandbox not initialized. Call init() first.");
-    const result = this.context.evalCode(code, filename, { type: "module" });
-    if (result.error) {
-      const error = this.context.dump(result.error);
-      result.error.dispose();
-      throw new Error(formatQuickJsError(error));
-    }
-    const settledPromise = this.context.resolvePromise(result.value);
-    result.value.dispose();
-    while (this.runtime.hasPendingJob()) this.executePendingJobs();
-    const settled = await settledPromise;
-    if (settled.error) {
-      const error = this.context.dump(settled.error);
-      settled.error.dispose();
-      throw new Error(formatQuickJsError(error));
-    }
-    settled.value.dispose();
-  }
-  executePendingJobs(maxJobs = -1) {
-    if (!this.runtime || !this.context) throw new Error("Sandbox not initialized. Call init() first.");
-    const result = this.runtime.executePendingJobs(maxJobs);
-    if (result.error) {
-      const context = result.error.context || this.context;
-      const error = context.dump(result.error);
-      result.error.dispose();
-      throw new Error(formatQuickJsError(error));
-    }
-    return result.value;
-  }
-  callJsonFunction(name, payload, options = {}) {
-    if (!this.context) {
-      throw new Error("Sandbox not initialized. Call init() first.");
-    }
-    const argument = options.rawArgument === true ? payload : JSON.stringify(payload);
-    const call = `${name}(${JSON.stringify(argument)})`;
-    const result = this.context.evalCode(call);
-    if (result.error) {
-      const err = this.context.dump(result.error);
-      result.error.dispose();
-      throw new Error(formatQuickJsError(err));
-    }
-    const text = String(this.context.dump(result.value));
-    result.value.dispose();
-    if (text.startsWith("__MACCHIATO_ERROR__")) {
-      throw new Error(text.slice("__MACCHIATO_ERROR__".length));
-    }
-    return JSON.parse(text);
-  }
-  installJsonHostFunction(name, dispatch) {
-    if (!this.context) {
-      throw new Error("Sandbox not initialized. Call init() first.");
-    }
-    const hostFunction = this.context.newFunction(name, (messageHandle) => {
-      try {
-        const message = JSON.parse(this.context.getString(messageHandle));
-        return this.context.newString(JSON.stringify(dispatch(message)));
-      } catch (err) {
-        return this.context.newString(JSON.stringify({ __error: err.message }));
-      }
-    });
-    this.context.setProp(this.context.global, name, hostFunction);
-    hostFunction.dispose();
-  }
-  dispose() {
-    this.disposed = true;
-    this.context?.dispose();
-    this.runtime?.dispose();
-    this.context = null;
-    this.runtime = null;
-  }
-};
-async function createSandbox(options = {}) {
-  const sandbox = new Sandbox(options);
-  await sandbox.init();
-  return sandbox;
-}
-
-// packages/browser-use/src/index.js
-function pattern(value, label) {
-  if (value instanceof RegExp) return value;
-  if (typeof value !== "string" || value.length > 2e3) throw new Error(`${label} must be a bounded pattern`);
-  return new RegExp(value);
-}
-function attributeEntries(element) {
-  return Array.from(element.attributes || [], (entry) => [String(entry.name), String(entry.value)]);
-}
-function elementChildren(element) {
-  return Array.from(element.children || []).filter((child) => child?.nodeType === void 0 || child.nodeType === 1);
-}
-function boundedInteger(value, fallback, maximum, label) {
-  const number = value === void 0 ? fallback : Number(value);
-  if (!Number.isSafeInteger(number) || number < 0 || number > maximum) throw new Error(`${label} must be an integer from 0 to ${maximum}`);
-  return number;
-}
-var nextHostGeneration = 1;
-function ownsNativeInput(target) {
-  const name = String(target?.localName || target?.tagName || "").toLowerCase();
-  return ["input", "select", "textarea"].includes(name);
-}
-function compileDomShapePolicy(input = {}) {
-  const tags = new Set((input.tags || []).map((tag) => String(tag).toLowerCase()));
-  if (!tags.size) throw new Error("DOM shape policy requires tags");
-  const attributes = Object.fromEntries(Object.entries(input.attributes || {}).map(([name, value]) => [
-    name,
-    value === true ? true : pattern(value, `attribute ${name}`)
-  ]));
-  const classNames = (input.classNames || []).map((value) => pattern(value, "class name"));
-  const events = new Set((input.events || []).map((event) => String(event).toLowerCase()));
-  const maxElements = Math.max(1, boundedInteger(input.maxElements, 500, 1e4, "maxElements"));
-  const maxTagCounts = Object.fromEntries(Object.entries(input.maxTagCounts || {}).map(([tag, value]) => {
-    const name = String(tag).toLowerCase();
-    if (!tags.has(name)) throw new Error(`DOM shape count references undeclared tag: ${name}`);
-    return [name, boundedInteger(value, maxElements, maxElements, `maxTagCounts.${name}`)];
-  }));
-  return Object.freeze({
-    tags,
-    attributes: Object.freeze(attributes),
-    classNames: Object.freeze(classNames),
-    events,
-    maxElements,
-    maxTagCounts: Object.freeze(maxTagCounts),
-    maxDepth: Math.max(1, boundedInteger(input.maxDepth, 20, 100, "maxDepth")),
-    maxTextLength: boundedInteger(input.maxTextLength, 1e5, 1e6, "maxTextLength"),
-    maxOperations: Math.max(1, boundedInteger(input.maxOperations, 1e4, 1e5, "maxOperations"))
   });
-}
-function assertAttribute(policy, name, value) {
-  const rule = policy.attributes[name];
-  if (!rule) throw new Error(`DOM shape rejected attribute: ${name}`);
-  if (rule !== true && !rule.test(value)) throw new Error(`DOM shape rejected ${name}: ${value}`);
-  if (name === "class") {
-    for (const token of value.split(/\s+/).filter(Boolean)) {
-      if (!policy.classNames.some((allowed) => allowed.test(token))) {
-        throw new Error(`DOM shape rejected class: ${token}`);
-      }
+
+  // packages/style-use/src/index.js
+  var DEFAULT_LIMITS = {
+    maxStylesheetLength: 1e5,
+    maxPropertyLength: 128,
+    maxValueLength: 4096,
+    maxUrlLength: 2048,
+    maxImports: 32
+  };
+  var StyleUseLimits = class {
+    maxStylesheetLength;
+    maxPropertyLength;
+    maxValueLength;
+    maxUrlLength;
+    maxImports;
+    constructor(limits = {}) {
+      this.maxStylesheetLength = limits.maxStylesheetLength ?? DEFAULT_LIMITS.maxStylesheetLength;
+      this.maxPropertyLength = limits.maxPropertyLength ?? DEFAULT_LIMITS.maxPropertyLength;
+      this.maxValueLength = limits.maxValueLength ?? DEFAULT_LIMITS.maxValueLength;
+      this.maxUrlLength = limits.maxUrlLength ?? DEFAULT_LIMITS.maxUrlLength;
+      this.maxImports = limits.maxImports ?? DEFAULT_LIMITS.maxImports;
     }
+  };
+  function normalizeCssProperty(property) {
+    return String(property).replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`).trim().toLowerCase();
   }
-}
-function inspectDomShape(root, policyInput) {
-  const policy = policyInput?.tags instanceof Set ? policyInput : compileDomShapePolicy(policyInput);
-  const tags = {};
-  let elements = 0;
-  let textLength = 0;
-  function visit(element, depth) {
-    if (depth > policy.maxDepth) throw new Error(`DOM shape exceeds depth ${policy.maxDepth}`);
-    const tag = String(element.localName || element.tagName || "").toLowerCase();
-    if (!policy.tags.has(tag)) throw new Error(`DOM shape rejected element: ${tag}`);
-    elements += 1;
-    if (elements > policy.maxElements) throw new Error(`DOM shape exceeds ${policy.maxElements} elements`);
-    tags[tag] = (tags[tag] || 0) + 1;
-    if (policy.maxTagCounts[tag] !== void 0 && tags[tag] > policy.maxTagCounts[tag]) {
-      throw new Error(`DOM shape exceeds ${policy.maxTagCounts[tag]} ${tag} elements`);
-    }
-    for (const [name, value] of attributeEntries(element)) assertAttribute(policy, name, value);
-    for (const child of Array.from(element.childNodes || [])) {
-      if (child.nodeType === 3) textLength += String(child.textContent || "").length;
-    }
-    if (textLength > policy.maxTextLength) throw new Error(`DOM shape exceeds text limit ${policy.maxTextLength}`);
-    for (const child of elementChildren(element)) visit(child, depth + 1);
-  }
-  for (const child of elementChildren(root)) visit(child, 1);
-  return Object.freeze({ elements, textLength, tags: Object.freeze(tags) });
-}
-var BrowserDomHost = class {
-  constructor(root, policy, { onViolation = () => {
-  }, onEvent = () => {
-  } } = {}) {
-    if (!root?.querySelectorAll) throw new Error("BrowserDomHost requires a browser root");
-    this.root = root;
-    this.document = root.ownerDocument;
-    this.policy = compileDomShapePolicy(policy);
-    this.onViolation = onViolation;
-    this.onEvent = onEvent;
-    this.nodes = /* @__PURE__ */ new Map([["root", root]]);
-    this.ids = new WeakMap([[root, "root"]]);
-    this.nodes.set("document", this.document);
-    this.ids.set(this.document, "document");
-    this.ownedNodes = /* @__PURE__ */ new WeakSet();
-    this.scopedObjects = /* @__PURE__ */ new WeakSet();
-    this.generation = nextHostGeneration++;
-    this.nextId = 1;
-    this.observer = null;
-    this.listeners = /* @__PURE__ */ new Map();
-    this.operations = 0;
-    this.windowOperations = 0;
-    this.peakWindowOperations = 0;
-    this.destroyed = false;
-  }
-  assertAlive() {
-    if (this.destroyed) throw new Error("Browser DOM host has been destroyed");
-  }
-  allocateId() {
-    return `${this.generation}:${this.nextId++}`;
-  }
-  isWithinRoot(node) {
-    return node === this.root || Boolean(this.root?.contains?.(node));
-  }
-  isOwnedNode(node) {
-    if (!node || typeof node !== "object" || typeof node.nodeType !== "number") return false;
-    if (this.isWithinRoot(node) || this.ownedNodes.has(node)) return true;
-    if (node.nodeType === 2 && node.ownerElement) return this.isOwnedNode(node.ownerElement);
-    let current = node.parentNode;
-    for (let depth = 0; current && depth < this.policy.maxDepth + 1; depth += 1) {
-      if (this.isWithinRoot(current) || this.ownedNodes.has(current)) return true;
-      current = current.parentNode;
-    }
+  var TROUBLESOME_CONTENT_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
+  function patternMatches(pattern, value) {
+    if (pattern instanceof RegExp)
+      return pattern.test(value);
+    if (typeof pattern === "string")
+      return new RegExp(pattern).test(value);
+    if (typeof pattern === "function")
+      return pattern(value);
     return false;
   }
-  canExpose(value) {
-    if (value === this.document) return true;
-    if (typeof value?.nodeType === "number") return this.isOwnedNode(value);
-    return this.scopedObjects.has(value);
-  }
-  ownNode(node) {
-    this.ownedNodes.add(node);
-    return node;
-  }
-  ownScopedObject(value) {
-    if (value && (typeof value === "object" || typeof value === "function")) this.scopedObjects.add(value);
-    return value;
-  }
-  register(node) {
-    this.assertAlive();
-    if (!this.isWithinRoot(node)) throw new Error("DOM handle is outside the granted root");
-    let id = this.ids.get(node);
-    if (!id) {
-      id = this.allocateId();
-      this.ids.set(node, id);
-      this.nodes.set(id, node);
+  function configuredProperties(schema) {
+    const properties = {};
+    const definitions = schema.definitions || {};
+    const uses = schema.useStyles || schema["use-styles"] || [];
+    for (const name of uses) {
+      const entry = definitions[String(name)] || {};
+      Object.assign(properties, entry.properties ? entry.properties : entry);
     }
-    return id;
+    Object.assign(properties, schema.properties || {});
+    return properties;
   }
-  node(id) {
-    this.assertAlive();
-    const node = this.nodes.get(String(id));
-    if (!node) throw new Error("DOM handle is no longer available");
-    return node;
-  }
-  inspect() {
-    return inspectDomShape(this.root, this.policy);
-  }
-  inspectSurface() {
-    const shape = this.inspect();
-    const tagLimits = this.policy.maxTagCounts;
-    return Object.freeze({
-      ...shape,
-      limits: Object.freeze({
-        elements: this.policy.maxElements,
-        textLength: this.policy.maxTextLength,
-        depth: this.policy.maxDepth,
-        tags: tagLimits,
-        operations: this.policy.maxOperations
-      }),
-      remaining: Object.freeze({
-        elements: this.policy.maxElements - shape.elements,
-        textLength: this.policy.maxTextLength - shape.textLength,
-        tags: Object.freeze(Object.fromEntries(Object.entries(tagLimits).map(([tag, limit]) => [tag, limit - (shape.tags[tag] || 0)]))),
-        operations: this.policy.maxOperations - this.windowOperations
-      }),
-      operations: Object.freeze({
-        total: this.operations,
-        window: this.windowOperations,
-        peakWindow: this.peakWindowOperations
-      })
-    });
-  }
-  get surface() {
-    return this.inspectSurface();
-  }
-  renewOperationBudget() {
-    this.windowOperations = 0;
-  }
-  query(selector, all = false) {
-    if (typeof selector !== "string" || selector.length > 120 || /[,:+~[\]]/.test(selector)) {
-      throw new Error("Selector is outside the browser-use subset");
+  var StyleUseState = class {
+    schema;
+    limits;
+    properties;
+    constructor(schema = {}) {
+      this.schema = schema;
+      this.limits = new StyleUseLimits(schema.limits);
+      this.properties = configuredProperties(schema);
     }
-    const found = all ? Array.from(this.root.querySelectorAll(selector)) : [this.root.querySelector(selector)].filter(Boolean);
-    return { ids: found.map((node) => this.register(node)) };
-  }
-  read(id, property) {
-    const node = this.node(id);
-    if (!["textContent", "value", "checked", "className", "tagName", "childElementCount"].includes(property)) {
-      throw new Error(`DOM read is not allowed: ${property}`);
+  };
+  var StyleUse = class {
+    state;
+    get schema() {
+      return this.state.schema;
     }
-    return { value: node[property] };
-  }
-  write(id, property, value) {
-    const node = this.node(id);
-    if (!["textContent", "value", "checked"].includes(property)) throw new Error(`DOM write is not allowed: ${property}`);
-    node[property] = property === "checked" ? Boolean(value) : String(value);
-    this.inspect();
-    return {};
-  }
-  create(tag) {
-    const name = String(tag).toLowerCase();
-    if (!this.policy.tags.has(name)) throw new Error(`DOM shape rejected element: ${name}`);
-    const node = this.ownNode(this.document.createElement(name));
-    const id = this.allocateId();
-    this.ids.set(node, id);
-    this.nodes.set(id, node);
-    return { id };
-  }
-  mutate(message) {
-    const node = this.node(message.id);
-    if (message.action === "append") {
-      node.appendChild(this.node(message.child));
-    } else if (message.action === "insertBefore") {
-      node.insertBefore(this.node(message.child), message.before ? this.node(message.before) : null);
-    } else if (message.action === "remove") {
-      node.remove();
-    } else if (message.action === "replaceChildren") {
-      node.replaceChildren(...(message.children || []).map((id) => this.node(id)));
-    } else if (message.action === "attribute") {
-      assertAttribute(this.policy, String(message.name), String(message.value));
-      node.setAttribute(String(message.name), String(message.value));
-    } else if (message.action === "removeAttribute") {
-      node.removeAttribute(String(message.name));
-    } else {
-      throw new Error(`DOM mutation is not allowed: ${message.action}`);
+    /**
+     * @param {object} schema
+     */
+    constructor(schema = {}) {
+      this.state = new StyleUseState(schema);
+      this.assertUnambiguousDefinitions();
     }
-    if (this.root.contains(node) || node === this.root) this.inspect();
-    return {};
-  }
-  listen(id, type, listenerId) {
-    const node = this.node(id);
-    type = String(type).toLowerCase();
-    if (!this.policy.events.has(type)) throw new Error(`DOM event subscription is not allowed: ${type}`);
-    const key = `${id}:${type}:${listenerId}`;
-    if (this.listeners.has(key)) return {};
-    const listener = (event) => this.onEvent(String(listenerId), {
-      type: event.type,
-      key: event.key,
-      code: event.code,
-      keyCode: event.keyCode,
-      charCode: event.charCode,
-      which: event.which,
-      altKey: event.altKey,
-      ctrlKey: event.ctrlKey,
-      metaKey: event.metaKey,
-      shiftKey: event.shiftKey,
-      button: event.button,
-      buttons: event.buttons,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      inputType: event.inputType,
-      data: event.data,
-      isComposing: event.isComposing,
-      repeat: event.repeat,
-      target: this.register(event.target)
-    }, event);
-    node.addEventListener(type, listener);
-    this.listeners.set(key, { node, type, listener });
-    return {};
-  }
-  remote(message) {
-    const allowedProperties = /* @__PURE__ */ new Set([
-      "activeElement",
-      "assignedSlot",
-      "attributes",
-      "childNodes",
-      "children",
-      "className",
-      "clientHeight",
-      "clientWidth",
-      "contentEditable",
-      "dataset",
-      "dir",
-      "firstChild",
-      "firstElementChild",
-      "height",
-      "innerHTML",
-      "isConnected",
-      "lastChild",
-      "lastElementChild",
-      "localName",
-      "name",
-      "nextSibling",
-      "nodeName",
-      "nodeType",
-      "nodeValue",
-      "offsetHeight",
-      "offsetLeft",
-      "offsetParent",
-      "offsetTop",
-      "offsetWidth",
-      "ownerDocument",
-      "parentElement",
-      "parentNode",
-      "previousSibling",
-      "readOnly",
-      "scrollHeight",
-      "scrollLeft",
-      "scrollTop",
-      "scrollWidth",
-      "selectionEnd",
-      "selectionStart",
-      "spellcheck",
-      "style",
-      "tabIndex",
-      "textContent",
-      "type",
-      "value",
-      "width",
-      "rangeCount",
-      "anchorNode",
-      "anchorOffset",
-      "focusNode",
-      "focusOffset"
-    ]);
-    const allowedMethods = /* @__PURE__ */ new Set([
-      "appendChild",
-      "blur",
-      "contains",
-      "focus",
-      "getAttribute",
-      "getBoundingClientRect",
-      "getClientRects",
-      "hasAttribute",
-      "insertBefore",
-      "matches",
-      "querySelector",
-      "querySelectorAll",
-      "remove",
-      "removeAttribute",
-      "removeChild",
-      "replaceChild",
-      "replaceChildren",
-      "scrollIntoView",
-      "setAttribute",
-      "setSelectionRange",
-      "addRange",
-      "collapse",
-      "collapseToEnd",
-      "collapseToStart",
-      "extend",
-      "getRangeAt",
-      "removeAllRanges",
-      "setBaseAndExtent",
-      "selectNode",
-      "selectNodeContents",
-      "setEnd",
-      "setEndAfter",
-      "setEndBefore",
-      "setStart",
-      "setStartAfter",
-      "setStartBefore"
-    ]);
-    const encode = (value) => {
-      if (value == null || ["string", "number", "boolean"].includes(typeof value)) return { value };
-      const isNode = typeof value === "object" && typeof value.nodeType === "number";
-      const isVirtualBrowserObject = typeof value === "object" && (typeof value.setStart === "function" && typeof value.setEnd === "function" || typeof value.removeAllRanges === "function" && "rangeCount" in value);
-      if (isNode) {
-        if (!this.canExpose(value)) return { value: null };
-        return { handle: this.registerRemote(value) };
-      }
-      if (isVirtualBrowserObject) {
-        if (!this.canExpose(value)) return { value: null };
-        return { handle: this.registerRemote(value) };
-      }
-      if (typeof value.length === "number" && typeof value !== "function") {
-        return { list: Array.from(value, (item) => encode(item)) };
-      }
-      if (typeof value === "object") {
-        const plain = {};
-        for (const key of ["x", "y", "top", "right", "bottom", "left", "width", "height"]) {
-          if (typeof value[key] === "number") plain[key] = value[key];
+    assertUnambiguousDefinitions() {
+      const seen = /* @__PURE__ */ new Map();
+      for (const [name, definition] of Object.entries(this.schema.definitions || {})) {
+        const selector = definition.element || definition.selector;
+        if (!selector)
+          continue;
+        if (seen.has(selector)) {
+          throw new Error(`Ambiguous CSS style definitions for ${selector}: ${seen.get(selector)}, ${name}`);
         }
-        return { value: plain };
+        seen.set(selector, name);
       }
-      return { value: null };
-    };
-    const decode = (value) => value && typeof value === "object" && value.__handle ? this.remoteNode(value.__handle) : value;
-    if (message.action === "createElement") return encode(this.ownNode(this.document.createElement(String(message.tag))));
-    if (message.action === "createTextNode") return encode(this.ownNode(this.document.createTextNode(String(message.text))));
-    if (message.action === "createDocumentFragment") return encode(this.ownNode(this.document.createDocumentFragment()));
-    if (message.action === "createRange") return encode(this.ownScopedObject(this.document.createRange()));
-    if (message.action === "getSelection") return encode(this.ownScopedObject(this.document.getSelection()));
-    if (message.action === "getElementById") {
-      const found = this.root.id === message.id ? this.root : this.root.querySelector(`#${CSS.escape(String(message.id))}`);
-      return encode(found);
     }
-    const node = this.remoteNode(message.id);
-    if (node === this.document && !(message.action === "get" && message.property === "activeElement")) {
-      throw new Error("Document access is outside the granted browser surface");
+    normalizeProperty(property) {
+      return normalizeCssProperty(property);
     }
-    if (message.action === "get") {
-      if (!allowedProperties.has(message.property)) throw new Error(`DOM property is not readable: ${message.property}`);
-      if (message.property === "style") return { style: true, handle: String(message.id) };
-      if (message.property === "dataset") return { dataset: true, handle: String(message.id) };
-      return encode(node[message.property]);
+    limits() {
+      return this.state.limits;
     }
-    if (message.action === "set") {
-      if (!allowedProperties.has(message.property)) throw new Error(`DOM property is not writable: ${message.property}`);
-      node[message.property] = decode(message.value);
-      return {};
+    styleDefinition(name) {
+      const definitions = this.schema.definitions || {};
+      const entry = definitions[String(name)] || {};
+      return entry.properties ? entry.properties : entry;
     }
-    if (message.action === "styleGet") return { value: node.style[String(message.property)] || "" };
-    if (message.action === "computedStyleGet") {
-      const property = String(message.property);
-      if (!/^(?:[a-z-]{1,80}|[a-zA-Z]{1,80})$/.test(property)) throw new Error("Computed style property is outside the browser-use subset");
-      const computed = node.ownerDocument?.defaultView?.getComputedStyle(node);
-      return { value: computed?.getPropertyValue(property) || computed?.[property] || "" };
+    effectiveProperties() {
+      return this.state.properties;
     }
-    if (message.action === "styleSet") {
-      node.style[String(message.property)] = String(message.value);
-      return {};
+    validateContent(value, kind) {
+      const text = String(value);
+      const content = this.schema.content || {};
+      if (content.allowTroublesomeSpecialCharacters !== true && TROUBLESOME_CONTENT_RE.test(text)) {
+        throw new Error(`Troublesome special character in CSS ${kind}`);
+      }
+      if (content.rejectPattern && patternMatches(content.rejectPattern, text)) {
+        throw new Error(`Rejected CSS ${kind}`);
+      }
+      if (content.allowedPattern && !patternMatches(content.allowedPattern, text)) {
+        throw new Error(`CSS ${kind} not allowed`);
+      }
     }
-    if (message.action === "call") {
-      if (!allowedMethods.has(message.method)) throw new Error(`DOM method is not callable: ${message.method}`);
-      if (node === this.root && message.method === "remove") throw new Error("The granted browser root cannot be removed");
-      const args = (message.args || []).map(decode);
-      return encode(node[message.method](...args));
+    isAllowedByRule(rule, value, property) {
+      if (rule === true)
+        return true;
+      if (rule instanceof RegExp)
+        return rule.test(value);
+      if (typeof rule === "function")
+        return rule(value, property);
+      if (typeof rule === "string")
+        return rule === value;
+      if (Array.isArray(rule))
+        return rule.some((entry) => this.isAllowedByRule(entry, value, property));
+      if (rule && typeof rule === "object") {
+        if (rule.$ref || rule.ref) {
+          const refName = String(rule.$ref || rule.ref).replace(/^#\/(values|valueDefinitions)\//, "");
+          const ref = this.schema.values?.[refName] ?? this.schema.valueDefinitions?.[refName];
+          if (ref === void 0)
+            throw new Error(`Unknown CSS value rule reference: ${refName}`);
+          return this.isAllowedByRule(ref, value, property);
+        }
+        if (rule.enum) {
+          const normalized = String(value).replace(/\s+/g, " ");
+          return rule.enum.includes(value) || rule.enum.includes(normalized);
+        }
+        if (rule.pattern && !patternMatches(rule.pattern, value))
+          return false;
+        if (rule.anyOf)
+          return rule.anyOf.some((entry) => this.isAllowedByRule(entry, value, property));
+        if (rule.allOf)
+          return rule.allOf.every((entry) => this.isAllowedByRule(entry, value, property));
+        if (rule.not && this.isAllowedByRule(rule.not, value, property))
+          return false;
+        return Boolean(rule.pattern || rule.anyOf || rule.allOf || rule.not);
+      }
+      return false;
     }
-    throw new Error(`Unsupported remote DOM action: ${message.action}`);
+    extractUrls(value) {
+      const text = String(value);
+      const urls = [];
+      if (/url\s*\(/i.test(text)) {
+        const re = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*))\s*\)/gi;
+        for (const match of text.matchAll(re)) {
+          urls.push((match[1] ?? match[2] ?? match[3] ?? "").trim());
+        }
+      }
+      if (/(?:-webkit-)?image-set\s*\(/i.test(text)) {
+        const imageSet = /(?:-webkit-)?image-set\(([\s\S]*?)\)/gi;
+        for (const match of text.matchAll(imageSet)) {
+          for (const candidate of match[1].matchAll(/(?:^|,)\s*(?:"([^"]+)"|'([^']+)'|([^,\s]+))/g)) {
+            const url = (candidate[1] ?? candidate[2] ?? candidate[3] ?? "").trim();
+            if (url && !/^url\(/i.test(url))
+              urls.push(url);
+          }
+        }
+      }
+      return urls;
+    }
+    validateUrl(url, property = "url") {
+      const value = String(url).trim();
+      const maxUrlLength = this.limits().maxUrlLength;
+      if (maxUrlLength && value.length > maxUrlLength) {
+        throw new Error(`CSS URL exceeds maxUrlLength ${maxUrlLength}`);
+      }
+      this.validateContent(value, "URL");
+      if (!value)
+        throw new Error(`Empty CSS URL for ${property}`);
+      if (!this.rejectDangerousValue(value)) {
+        throw new Error(`Disallowed CSS URL for ${property}`);
+      }
+      const rules = this.schema.urls;
+      const rule = rules && typeof rules === "object" && !(rules instanceof RegExp) && !Array.isArray(rules) ? rules[property] ?? rules["*"] : rules;
+      if (rule === void 0 || rule === false) {
+        throw new Error(`CSS URLs are not allowed for ${property}`);
+      }
+      if (!this.isAllowedByRule(rule, value, property)) {
+        throw new Error(`CSS URL not allowed for ${property}: ${value}`);
+      }
+      return true;
+    }
+    extractImportUrls(css) {
+      const urls = [];
+      const re = /@import\s+(?:url\(\s*)?(?:"([^"]*)"|'([^']*)'|([^;\s)]+))/gi;
+      for (const match of String(css).matchAll(re)) {
+        urls.push((match[1] ?? match[2] ?? match[3] ?? "").trim());
+      }
+      return urls;
+    }
+    rejectDangerousValue(value) {
+      const normalized = String(value).replace(/\s+/g, "").toLowerCase();
+      return !normalized.includes("javascript:") && !normalized.includes("expression(") && !/(?:^|[;{])behavior:/.test(normalized);
+    }
+    /**
+     * Validate an inline style declaration.
+     * @param {string} property
+     * @param {string} value
+     * @returns {boolean}
+     */
+    validateInline(property, value) {
+      const prop = this.normalizeProperty(property);
+      const val = String(value).trim();
+      const { maxPropertyLength, maxValueLength } = this.limits();
+      if (maxPropertyLength && prop.length > maxPropertyLength) {
+        throw new Error(`CSS property exceeds maxPropertyLength ${maxPropertyLength}`);
+      }
+      if (maxValueLength && val.length > maxValueLength) {
+        throw new Error(`CSS value exceeds maxValueLength ${maxValueLength}`);
+      }
+      this.validateContent(prop, "property");
+      this.validateContent(val, "value");
+      if (!prop || !val)
+        throw new Error("Style property and value are required");
+      if (!this.rejectDangerousValue(val)) {
+        throw new Error(`Disallowed CSS value for ${prop}`);
+      }
+      for (const url of this.extractUrls(val)) {
+        this.validateUrl(url, prop);
+      }
+      const properties = this.effectiveProperties();
+      const rule = properties[prop];
+      if (rule === void 0) {
+        if (Object.keys(properties).length === 0)
+          return true;
+        throw new Error(`CSS property not allowed: ${prop}`);
+      }
+      if (!this.isAllowedByRule(rule, val, prop)) {
+        throw new Error(`CSS value not allowed for ${prop}: ${val}`);
+      }
+      return true;
+    }
+    /**
+     * Validate a CSS stylesheet text.
+     * @param {string} css
+     * @returns {boolean}
+     */
+    validateStylesheet(css) {
+      const text = String(css);
+      const { maxStylesheetLength, maxImports } = this.limits();
+      if (maxStylesheetLength && text.length > maxStylesheetLength) {
+        throw new Error(`Stylesheet exceeds maxStylesheetLength ${maxStylesheetLength}`);
+      }
+      this.validateContent(text, "stylesheet");
+      if (!this.rejectDangerousValue(text)) {
+        throw new Error("Disallowed CSS value in stylesheet");
+      }
+      const imports = this.extractImportUrls(text);
+      if (maxImports !== void 0 && imports.length > maxImports) {
+        throw new Error(`Stylesheet exceeds maxImports ${maxImports}`);
+      }
+      if (imports.length > 0) {
+        if (this.schema.imports !== true) {
+          throw new Error("CSS imports are not allowed");
+        }
+        for (const url of imports)
+          this.validateUrl(url, "import");
+      }
+      const declarationText = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@import[^;]+;/gi, "");
+      const selectorRule = this.schema.selectors;
+      if (selectorRule) {
+        for (const match of declarationText.matchAll(/([^{}@][^{]*)\{([^}]*)\}/g)) {
+          const selector = match[1].trim();
+          if (!this.isAllowedByRule(selectorRule, selector, "selector")) {
+            throw new Error(`CSS selector not allowed: ${selector}`);
+          }
+        }
+      }
+      for (const match of declarationText.matchAll(/([a-zA-Z-]+)\s*:\s*([^;}{]+)[;}]/g)) {
+        this.validateInline(match[1], match[2]);
+      }
+      return true;
+    }
+  };
+
+  // packages/html-use/src/index.js
+  var HtmlFragment = class {
+    tagName = "#fragment";
+    children = [];
+    parentNode = null;
+    appendChild(child) {
+      this.children.push(child);
+      child.parentNode = this;
+      return child;
+    }
+    removeChild(child) {
+      const index = this.children.indexOf(child);
+      if (index !== -1)
+        this.children.splice(index, 1);
+      child.parentNode = null;
+      return child;
+    }
+  };
+  var VOID_ELEMENTS = /* @__PURE__ */ new Set([
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr"
+  ]);
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
-  registerRemote(node) {
-    this.assertAlive();
-    if (!this.canExpose(node)) throw new Error("Remote browser object is outside the granted surface");
-    let id = this.ids.get(node);
-    if (!id) {
-      id = this.allocateId();
-      this.ids.set(node, id);
-      this.nodes.set(id, node);
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/"/g, "&quot;");
+  }
+  function decodeEntities(value) {
+    return String(value).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  }
+  function parseAttributes(source) {
+    const attrs = [];
+    const re = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    for (const match of source.matchAll(re)) {
+      attrs.push([match[1], decodeEntities(match[2] ?? match[3] ?? match[4] ?? "")]);
     }
-    return id;
+    return attrs;
   }
-  remoteNode(id) {
-    this.assertAlive();
-    const node = this.nodes.get(String(id));
-    if (!node) throw new Error("Remote DOM handle is unavailable");
-    return node;
+  function appendText(parent2, text, createTextNode) {
+    if (!text)
+      return;
+    const decoded = decodeEntities(text);
+    if (!decoded || decoded.trim() === "")
+      return;
+    parent2.appendChild(createTextNode ? createTextNode(decoded) : { tagName: "#text", textContent: decoded });
   }
-  start() {
-    this.assertAlive();
-    this.inspect();
-    if (typeof MutationObserver === "undefined") return;
-    this.observer = new MutationObserver(() => {
+  function parseHTML(html, { createElement, createTextNode, schema, styleUse, strict = false }) {
+    if (!createElement)
+      throw new Error("parseHTML requires createElement");
+    const root = new HtmlFragment();
+    const stack = [root];
+    const styles = styleUse || new StyleUse();
+    let skipTag = null;
+    let lastIndex = 0;
+    const tagRe = /<!--[\s\S]*?-->|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
+    for (const match of html.matchAll(tagRe)) {
+      if (!skipTag) {
+        appendText(stack[stack.length - 1], html.slice(lastIndex, match.index), createTextNode);
+      }
+      lastIndex = match.index + match[0].length;
+      if (match[0].startsWith("<!--"))
+        continue;
+      const rawTag = match[1];
+      const tagName = rawTag.toLowerCase();
+      const isClose = match[0].startsWith("</");
+      const isSelfClosing = /\/\s*>$/.test(match[0]) || VOID_ELEMENTS.has(tagName);
+      if (skipTag) {
+        if (isClose && tagName === skipTag)
+          skipTag = null;
+        continue;
+      }
+      if (isClose) {
+        while (stack.length > 1) {
+          const node2 = stack.pop();
+          if (node2.tagName === tagName)
+            break;
+        }
+        continue;
+      }
+      let node;
       try {
-        this.inspect();
-      } catch (error) {
-        const root = this.root;
-        this.destroy();
-        root.replaceChildren();
-        this.onViolation(error);
+        node = createElement(tagName);
+        for (const [name, value] of parseAttributes(match[2] || "")) {
+          if (name.toLowerCase() === "style") {
+            for (const decl of value.split(";")) {
+              const [property, ...rest] = decl.split(":");
+              if (property && rest.length)
+                styles.validateInline(property, rest.join(":"));
+            }
+          }
+          node.setAttribute?.(name, value);
+          if (!node.setAttribute)
+            node.attributes = { ...node.attributes || {}, [name]: value };
+        }
+        stack[stack.length - 1].appendChild(node);
+      } catch (err) {
+        if (err?.name === "DomUseGasError")
+          throw err;
+        if (strict)
+          throw err;
+        if (!isSelfClosing)
+          skipTag = tagName;
+        continue;
       }
-    });
-    this.observer.observe(this.root, { subtree: true, childList: true, attributes: true, characterData: true });
-  }
-  stop() {
-    this.observer?.disconnect();
-    this.observer = null;
-    for (const { node, type, listener } of this.listeners.values()) node.removeEventListener(type, listener);
-    this.listeners.clear();
-  }
-  destroy() {
-    if (this.destroyed) return;
-    this.stop();
-    this.destroyed = true;
-    this.nodes.clear();
-    this.ids = /* @__PURE__ */ new WeakMap();
-    this.ownedNodes = /* @__PURE__ */ new WeakSet();
-    this.scopedObjects = /* @__PURE__ */ new WeakSet();
-    this.root = null;
-    this.document = null;
-  }
-  dispatch(message) {
-    this.assertAlive();
-    this.operations += 1;
-    this.windowOperations += 1;
-    this.peakWindowOperations = Math.max(this.peakWindowOperations, this.windowOperations);
-    if (this.windowOperations > this.policy.maxOperations) throw new Error("browser-use operation gas exhausted");
-    switch (message.op) {
-      case "query":
-        return this.query(message.selector, Boolean(message.all));
-      case "read":
-        return this.read(message.id, message.property);
-      case "write":
-        return this.write(message.id, message.property, message.value);
-      case "inspect":
-        return this.inspect();
-      case "create":
-        return this.create(message.tag);
-      case "mutate":
-        return this.mutate(message);
-      case "listen":
-        return this.listen(message.id, message.type, message.listenerId);
-      case "remote":
-        return this.remote(message);
-      default:
-        throw new Error(`Unsupported browser DOM operation: ${message.op}`);
+      if (!isSelfClosing)
+        stack.push(node);
     }
+    appendText(stack[stack.length - 1], html.slice(lastIndex), createTextNode);
+    void schema;
+    return root;
   }
-};
+  function serializeHTML(node) {
+    if (!node)
+      return "";
+    const children = node.children || [];
+    if (node.tagName === "#text")
+      return escapeHtml(node.textContent || "");
+    if (node.tagName === "#fragment")
+      return children.map(serializeHTML).join("");
+    const tag = String(node.tagName || "").toLowerCase();
+    if (!tag)
+      return children.map(serializeHTML).join("");
+    const attrs = Object.entries(node.attributes || {}).filter(([, value]) => value !== false && value !== null && value !== void 0).map(([name, value]) => value === true || value === "" ? ` ${name}` : ` ${name}="${escapeAttr(value)}"`).join("");
+    const style = node.styleText ? ` style="${escapeAttr(node.styleText)}"` : "";
+    const open = `<${tag}${attrs}${style}>`;
+    if (VOID_ELEMENTS.has(tag))
+      return open;
+    const text = node.textContent && children.length === 0 ? escapeHtml(node.textContent) : "";
+    const body = text || children.map(serializeHTML).join("");
+    return `${open}${body}</${tag}>`;
+  }
 
-// packages/code-editor-use/src/policy.js
-var CODE_EDITOR_LINE_LIMITS = Object.freeze({
-  compact: 100,
-  standard: 1e3,
-  large: 5e3
-});
-var DEFAULT_CODE_EDITOR_LIMITS = Object.freeze({
-  maxLines: CODE_EDITOR_LINE_LIMITS.large,
-  maxCharacters: 1e6,
-  maxSurfaceOperations: 75e3,
-  surfaceRefillMs: 1e3
-});
-function boundedInteger2(value, fallback, maximum, label) {
-  const number = value === void 0 ? fallback : Number(value);
-  if (!Number.isSafeInteger(number) || number < 1 || number > maximum) {
-    throw new TypeError(`${label} must be an integer from 1 to ${maximum}`);
-  }
-  return number;
-}
-function normalizeCodeEditorLimits(input = {}) {
-  return Object.freeze({
-    maxLines: boundedInteger2(input.maxLines, DEFAULT_CODE_EDITOR_LIMITS.maxLines, 5e3, "maxLines"),
-    maxCharacters: boundedInteger2(input.maxCharacters, DEFAULT_CODE_EDITOR_LIMITS.maxCharacters, 1e6, "maxCharacters"),
-    maxSurfaceOperations: boundedInteger2(input.maxSurfaceOperations, DEFAULT_CODE_EDITOR_LIMITS.maxSurfaceOperations, 1e6, "maxSurfaceOperations"),
-    surfaceRefillMs: boundedInteger2(input.surfaceRefillMs, DEFAULT_CODE_EDITOR_LIMITS.surfaceRefillMs, 6e4, "surfaceRefillMs")
-  });
-}
-function createCodeEditorDomPolicy(input = {}) {
-  const limits = normalizeCodeEditorLimits(input);
-  const maxElements = Math.min(1e4, limits.maxLines * 2 + 600);
-  return Object.freeze({
-    tags: ["div", "span", "br", "img", "input", "button", "label", "ul", "li", "style"],
-    events: [
-      "beforeinput",
-      "blur",
-      "change",
-      "click",
-      "compositionend",
-      "compositionstart",
-      "compositionupdate",
-      "contextmenu",
-      "copy",
-      "cut",
-      "dragend",
-      "dragenter",
-      "dragleave",
-      "dragover",
-      "dragstart",
-      "drop",
-      "focus",
-      "input",
-      "keydown",
-      "keyup",
-      "mousedown",
-      "mousemove",
-      "mouseup",
-      "mousewheel",
-      "paste",
-      "scroll",
-      "touchcancel",
-      "touchend",
-      "touchmove",
-      "touchstart",
-      "wheel"
-    ],
-    attributes: {
-      class: `^[^<>"']{0,240}$`,
-      style: `^[^<>"']{0,2400}$`,
-      role: "^(?:textbox|presentation|status|button|listbox|option)$",
-      "aria-label": "^[^<>]{0,160}$",
-      "aria-live": "^(?:polite|assertive|off)$",
-      "aria-hidden": "^(?:true|false)$",
-      "aria-selected": "^(?:true|false)$",
-      "aria-expanded": "^(?:true|false)$",
-      "aria-haspopup": "^listbox$",
-      "aria-autocomplete": "^(?:list|none)$",
-      "aria-multiline": "^(?:true|false)$",
-      "aria-readonly": "^(?:true|false)$",
-      "aria-controls": "^[A-Za-z0-9_-]{0,120}$",
-      "aria-activedescendant": "^[A-Za-z0-9_-]{0,120}$",
-      contenteditable: "^(?:true|false)$",
-      tabindex: "^-?\\d+$",
-      spellcheck: "^(?:true|false)$",
-      writingsuggestions: "^(?:true|false)$",
-      autocorrect: "^(?:on|off)$",
-      autocapitalize: "^(?:on|off|none)$",
-      translate: "^(?:yes|no)$",
-      src: "^data:image/gif;base64,[A-Za-z0-9+/=]+$",
-      alt: "^[^<>]{0,80}$",
-      type: "^(?:text|checkbox|button)$",
-      name: "^[A-Za-z0-9_-]{0,80}$",
-      value: "^[^<>]{0,500}$",
-      id: "^[A-Za-z0-9_-]{1,120}$",
-      title: "^[^<>]{0,160}$",
-      placeholder: "^[^<>]{0,160}$",
-      "data-language": "^(?:javascript|html|css|json|markdown)$",
-      form: "^$",
-      "main-field": "^true$"
+  // packages/dom-use/lib/index.js
+  var URL_CAPABILITY_ATTRIBUTES = Object.freeze([
+    "action",
+    "archive",
+    "background",
+    "cite",
+    "codebase",
+    "data",
+    "formaction",
+    "href",
+    "icon",
+    "imagesrcset",
+    "longdesc",
+    "manifest",
+    "ping",
+    "poster",
+    "profile",
+    "src",
+    "srcset",
+    "usemap",
+    "xlink:href"
+  ]);
+  var URL_ATTRS = new Set(URL_CAPABILITY_ATTRIBUTES);
+  var SVG_URL_REFERENCE_ATTRIBUTES = Object.freeze([
+    "clip-path",
+    "cursor",
+    "fill",
+    "filter",
+    "marker",
+    "marker-end",
+    "marker-mid",
+    "marker-start",
+    "mask",
+    "stroke"
+  ]);
+  var SVG_URL_REFERENCE_ATTRS = new Set(SVG_URL_REFERENCE_ATTRIBUTES);
+  var DOM_NETWORK_CAPABILITIES = Object.freeze([
+    ["html", "img", "src", "load"],
+    ["html", "img", "srcset", "load"],
+    ["html", "source", "src", "load"],
+    ["html", "source", "srcset", "load"],
+    ["html", "audio", "src", "load"],
+    ["html", "video", "src", "load"],
+    ["html", "video", "poster", "load"],
+    ["html", "track", "src", "load"],
+    ["html", "script", "src", "load-execute"],
+    ["html", "iframe", "src", "embed"],
+    ["html", "embed", "src", "embed"],
+    ["html", "object", "data", "embed"],
+    ["html", "input", "src", "load"],
+    ["html", "link", "href", "hint-or-load"],
+    ["html", "link", "imagesrcset", "hint-or-load"],
+    ["html", "base", "href", "resolution"],
+    ["html", "a", "href", "navigate"],
+    ["html", "area", "href", "navigate"],
+    ["html", "a", "ping", "click-report"],
+    ["html", "form", "action", "submit"],
+    ["html", "button", "formaction", "submit"],
+    ["html", "input", "formaction", "submit"],
+    ["html", "meta", "content", "refresh"],
+    ["svg", "image", "href", "load"],
+    ["svg", "image", "xlink:href", "load"],
+    ["svg", "use", "href", "load"],
+    ["svg", "use", "xlink:href", "load"],
+    ["svg", "feimage", "href", "load"],
+    ["svg", "feimage", "xlink:href", "load"],
+    ["svg", "textpath", "href", "reference"],
+    ["svg", "mpath", "href", "reference"],
+    ["svg", "script", "href", "load-execute"],
+    ["svg", "script", "xlink:href", "load-execute"],
+    ["svg", "a", "href", "navigate"],
+    ["svg", "a", "xlink:href", "navigate"]
+  ].map(([namespace, tag, attribute, effect]) => Object.freeze({ namespace, tag, attribute, effect })));
+  var DEFAULT_LIMITS2 = {
+    maxTextLength: 1e4,
+    maxEventNameLength: 64,
+    maxAttributeNameLength: 128,
+    maxAttributeValueLength: 2048,
+    maxAttributes: 32,
+    maxNodes: 1e3
+  };
+  var DomUseLimits = class {
+    maxTextLength;
+    maxEventNameLength;
+    maxAttributeNameLength;
+    maxAttributeValueLength;
+    maxAttributes;
+    maxNodes;
+    constructor(limits = {}) {
+      this.maxTextLength = limits.maxTextLength ?? DEFAULT_LIMITS2.maxTextLength;
+      this.maxEventNameLength = limits.maxEventNameLength ?? DEFAULT_LIMITS2.maxEventNameLength;
+      this.maxAttributeNameLength = limits.maxAttributeNameLength ?? DEFAULT_LIMITS2.maxAttributeNameLength;
+      this.maxAttributeValueLength = limits.maxAttributeValueLength ?? DEFAULT_LIMITS2.maxAttributeValueLength;
+      this.maxAttributes = limits.maxAttributes ?? DEFAULT_LIMITS2.maxAttributes;
+      this.maxNodes = limits.maxNodes ?? DEFAULT_LIMITS2.maxNodes;
+    }
+  };
+  var DEFAULT_GAS = {
+    enabled: true,
+    tank: {
+      init: 1e5,
+      idle: 2e4,
+      event: 8e3
     },
-    classNames: ["^cm-[A-Za-z0-9_-]+$", "^tok-[A-Za-z0-9_-]+$", "^\u037C[A-Za-z0-9]+$"],
-    // CodeMirror normally virtualizes rows, but conservative guest geometry can
-    // transiently retain one div per allowed line during a large replacement.
-    maxElements,
-    maxTagCounts: {
-      div: limits.maxLines + 360,
-      span: Math.min(maxElements, limits.maxLines * 4 + 256),
-      input: 24,
-      button: 32,
-      ul: 8,
-      li: 120,
-      style: 12
-    },
-    maxDepth: 16,
-    maxTextLength: limits.maxCharacters,
-    maxOperations: limits.maxSurfaceOperations
-  });
-}
-var CODE_EDITOR_DOM_POLICY = createCodeEditorDomPolicy();
-
-// packages/code-editor-use/src/input-bridge.js
-var CodeMirrorInputBridge = class {
-  constructor(root, sandbox, { isStopped = () => false } = {}) {
-    this.root = root;
-    this.sandbox = sandbox;
-    this.isStopped = isStopped;
-    this.dragAnchor = null;
-    this.dragNativeAnchor = null;
-    this.pendingDragPoint = null;
-    this.dragFrame = 0;
-    this.suppressNextClick = false;
-    this.snapshot = null;
-    this.listeners = [];
+    refill: 1e3,
+    costs: {
+      createElement: 4,
+      createTextNode: 4,
+      appendChild: 2,
+      insertBefore: 3,
+      removeChild: 2,
+      replaceChildren: 4,
+      setTextContent: { base: 2, perChar: 1, charUnit: 64 },
+      setInnerHTML: { base: 8, perNode: 3, perChar: 1, charUnit: 128 },
+      setAttribute: { base: 3, perChar: 1, charUnit: 64 },
+      removeAttribute: 1,
+      setStyle: { base: 3, perChar: 1, charUnit: 64 },
+      addEventListener: 2,
+      eventTarget: 1,
+      eventPayload: { base: 2, perChar: 1, charUnit: 64 }
+    }
+  };
+  var TROUBLESOME_CONTENT_RE2 = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u202A-\u202E\u2066-\u2069\uFFFE\uFFFF]/u;
+  var EVENT_PAYLOAD_FIELDS = {
+    blur: ["value", "checked", "controls"],
+    change: ["value", "checked", "controls"],
+    click: ["value", "checked", "controls"],
+    dblclick: ["value", "checked", "controls"],
+    dragover: ["value", "checked", "controls", "dataTransfer"],
+    dragstart: ["value", "checked", "controls", "dataTransfer"],
+    drop: ["value", "checked", "controls", "dataTransfer"],
+    keydown: ["value", "checked", "controls", "key"]
+  };
+  function patternMatches2(pattern, value) {
+    if (pattern instanceof RegExp)
+      return pattern.test(value);
+    if (typeof pattern === "string")
+      return new RegExp(pattern).test(value);
+    if (typeof pattern === "function")
+      return pattern(value);
+    return false;
   }
-  listen(target, type, listener, options) {
-    target.addEventListener(type, listener, options);
-    this.listeners.push(() => target.removeEventListener(type, listener, options));
-  }
-  captureSnapshot() {
-    const content = this.root.querySelector(".cm-content");
-    const lines = content ? Array.from(content.querySelectorAll(":scope > .cm-line")) : [];
-    this.snapshot = {
-      content,
-      lines,
-      rectangles: lines.map((line) => line.getBoundingClientRect())
+  function mergeGasConfig(config = {}) {
+    if (config.refill !== void 0 && (typeof config.refill !== "number" || !Number.isFinite(config.refill) || config.refill < 0)) {
+      throw new TypeError("gas.refill must be a non-negative gas-per-second number");
+    }
+    return {
+      ...DEFAULT_GAS,
+      ...config,
+      tank: { ...DEFAULT_GAS.tank, ...config.tank || {} },
+      refill: config.refill ?? DEFAULT_GAS.refill,
+      costs: { ...DEFAULT_GAS.costs, ...config.costs || {} }
     };
-    return this.snapshot;
   }
-  locationFromPoint(x, y) {
-    const snapshot = this.snapshot || this.captureSnapshot();
-    const { content, lines, rectangles } = snapshot;
-    if (!content || !lines.length) return null;
-    let lineIndex = 0;
-    let nearestDistance = Infinity;
-    for (let index = 0; index < lines.length; index += 1) {
-      const rect = rectangles[index];
-      const distance = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        lineIndex = index;
-      }
+  function positiveNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+  }
+  function stringLength(...values) {
+    return values.reduce((sum, value) => sum + String(value ?? "").length, 0);
+  }
+  function treeSize(node) {
+    if (!node)
+      return 0;
+    return 1 + (node.children || []).reduce((sum, child) => sum + treeSize(child), 0);
+  }
+  function estimateHtmlNodeCount(html) {
+    const source = String(html);
+    let count = 0;
+    let lastIndex = 0;
+    const tagRe = /<!--[\s\S]*?-->|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
+    for (const match of source.matchAll(tagRe)) {
+      if (source.slice(lastIndex, match.index).trim())
+        count++;
+      lastIndex = match.index + match[0].length;
+      if (!match[0].startsWith("<!--") && !match[0].startsWith("</"))
+        count++;
     }
-    const line = lines[lineIndex];
-    const lineRect = rectangles[lineIndex];
-    let lineOffset;
-    let domNode = null;
-    let domOffset = 0;
-    if (x <= lineRect.left) lineOffset = 0;
-    else if (x >= lineRect.right) lineOffset = line.textContent.length;
-    else {
-      const sampleY = Math.max(lineRect.top + 1, Math.min(lineRect.bottom - 1, y));
-      const caret = document.caretPositionFromPoint?.(x, sampleY);
-      const fallback = caret ? null : document.caretRangeFromPoint?.(x, sampleY);
-      const node = caret?.offsetNode || fallback?.startContainer;
-      const offset = caret?.offset ?? fallback?.startOffset;
-      const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-      if (node && element && line.contains(element)) {
-        const range = document.createRange();
-        range.setStart(line, 0);
-        try {
-          range.setEnd(node, offset);
-          lineOffset = range.toString().length;
-          domNode = node;
-          domOffset = offset;
-        } catch {
-        }
-      }
-      if (lineOffset == null) lineOffset = x < (lineRect.left + lineRect.right) / 2 ? 0 : line.textContent.length;
+    if (source.slice(lastIndex).trim())
+      count++;
+    return count;
+  }
+  var DomUseGasState = class {
+    lifecycle;
+    capacity;
+    available;
+    lastRefill;
+    constructor(lifecycle, capacity, now = Date.now()) {
+      this.lifecycle = lifecycle;
+      this.capacity = capacity;
+      this.available = capacity;
+      this.lastRefill = now;
     }
-    lineOffset = Math.max(0, Math.min(line.textContent.length, lineOffset));
-    if (!domNode) {
-      const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
-      let remaining = lineOffset;
-      while (walker.nextNode()) {
-        const length = walker.currentNode.textContent.length;
-        if (remaining <= length) {
-          domNode = walker.currentNode;
-          domOffset = remaining;
-          break;
-        }
-        remaining -= length;
-      }
-      if (!domNode) {
-        domNode = line;
-        domOffset = line.childNodes.length;
-      }
+  };
+  var DomUseState = class {
+    schema;
+    styleUse;
+    gasPolicy;
+    limits;
+    constructor(schema = {}, styleUse) {
+      this.schema = schema;
+      this.styleUse = styleUse || new StyleUse();
+      this.gasPolicy = mergeGasConfig(schema.gas || {});
+      this.limits = new DomUseLimits(schema.limits);
     }
-    return { renderedLineIndex: lineIndex, lineOffset, text: line.textContent, domNode, domOffset };
-  }
-  flush() {
-    this.sandbox.callJsonFunction("__browserUseFlush", {});
-  }
-  syncSelectionVisibility(selection) {
-    this.root.classList.toggle("cm-native-selection", Boolean(selection && selection.to > selection.from));
-  }
-  reconcileSelection() {
-    if (this.isStopped()) return;
-    const selection = this.sandbox.callJsonFunction("__codeEditorGetSelection", {});
-    this.flush();
-    this.syncSelectionVisibility(selection);
-  }
-  selectAtPoint(point, anchor) {
-    const location = this.locationFromPoint(point.clientX, point.clientY);
-    if (!location) return null;
-    const headLocation = { renderedLineIndex: location.renderedLineIndex, lineOffset: location.lineOffset };
-    const selection = this.sandbox.callJsonFunction("__codeEditorSelect", { anchor, headLocation });
-    this.flush();
-    this.syncSelectionVisibility(selection);
-    this.root.querySelector(".cm-content")?.focus({ preventScroll: true });
-    return selection;
-  }
-  preview(point) {
-    if (!this.dragNativeAnchor) return;
-    const location = this.locationFromPoint(point.clientX, point.clientY);
-    if (!location) return;
-    document.getSelection()?.setBaseAndExtent(
-      this.dragNativeAnchor.domNode,
-      this.dragNativeAnchor.domOffset,
-      location.domNode,
-      location.domOffset
-    );
-  }
-  attach() {
-    this.listen(this.root, "mousedown", (event) => {
-      if (this.isStopped() || event.button !== 0 || !event.target.closest?.(".cm-content")) return;
-      this.captureSnapshot();
-      this.suppressNextClick = true;
-      const location = this.locationFromPoint(event.clientX, event.clientY);
-      if (!location) return;
-      if (event.detail >= 3) {
-        this.dragAnchor = null;
-        const selection = this.sandbox.callJsonFunction("__codeEditorSelectLine", {
-          renderedLineIndex: location.renderedLineIndex
-        });
-        this.flush();
-        this.syncSelectionVisibility(selection);
-      } else if (event.detail === 2) {
-        const word = /[\p{L}\p{N}_$]/u;
-        let probe = Math.min(location.text.length - 1, location.lineOffset);
-        if (probe >= 0 && !word.test(location.text[probe]) && probe > 0 && word.test(location.text[probe - 1])) probe -= 1;
-        let from = probe;
-        let to = probe + 1;
-        while (from > 0 && word.test(location.text[from - 1])) from -= 1;
-        while (to < location.text.length && word.test(location.text[to])) to += 1;
-        this.dragAnchor = null;
-        const selection = this.sandbox.callJsonFunction("__codeEditorSelect", {
-          anchorLocation: { renderedLineIndex: location.renderedLineIndex, lineOffset: from },
-          headLocation: { renderedLineIndex: location.renderedLineIndex, lineOffset: to }
-        });
-        this.flush();
-        this.syncSelectionVisibility(selection);
-      } else {
-        const existing = event.shiftKey ? this.sandbox.callJsonFunction("__codeEditorGetSelection", {}) : null;
-        const selected = this.selectAtPoint(event, existing?.anchor);
-        this.dragAnchor = existing?.anchor ?? selected?.anchor ?? null;
-        this.dragNativeAnchor = event.shiftKey ? null : { domNode: location.domNode, domOffset: location.domOffset };
-        if (!event.shiftKey) this.root.classList.add("cm-drag-preview");
+  };
+  var DomUseGasError = class extends Error {
+    constructor(message) {
+      super(message);
+      this.name = "DomUseGasError";
+    }
+  };
+  var GuestNode = class {
+    ownerDocument;
+    parentNode;
+    children;
+    constructor(owner) {
+      this.ownerDocument = owner;
+      this.parentNode = null;
+      this.children = [];
+    }
+    appendChild(child) {
+      this.ownerDocument.domUse.validateAppend(this, child);
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "appendChild");
+      if (child.parentNode)
+        child.parentNode.removeChild(child);
+      child.parentNode = this;
+      this.children.push(child);
+      return child;
+    }
+    insertBefore(newNode, referenceNode) {
+      if (referenceNode === null || referenceNode === void 0) {
+        return this.appendChild(newNode);
       }
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }, true);
-    this.listen(this.root, "click", (event) => {
-      if (!this.suppressNextClick) return;
-      this.suppressNextClick = false;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }, true);
-    this.listen(window, "mousemove", (event) => {
-      if (this.dragAnchor == null) return;
-      this.pendingDragPoint = { clientX: event.clientX, clientY: event.clientY };
-      if (!this.dragFrame) {
-        this.dragFrame = requestAnimationFrame(() => {
-          this.dragFrame = 0;
-          if (this.pendingDragPoint && this.dragAnchor != null) this.preview(this.pendingDragPoint);
-          this.pendingDragPoint = null;
-        });
-      }
-      event.preventDefault();
-    }, true);
-    this.listen(window, "mouseup", (event) => {
-      if (this.dragAnchor != null) {
-        this.preview(event);
-        this.selectAtPoint(event, this.dragAnchor);
-      }
-      this.dragAnchor = null;
-      this.dragNativeAnchor = null;
-      this.root.classList.remove("cm-drag-preview");
-      this.pendingDragPoint = null;
-      this.snapshot = null;
-    }, false);
-    this.listen(this.root, "beforeinput", (event) => {
-      if (this.isStopped()) return;
-      const target = event.target;
-      if (ownsNativeInput(target) || !(target?.isContentEditable || target?.contentEditable === "true")) return;
-      const result = this.sandbox.callJsonFunction("__codeEditorBeforeInput", { inputType: event.inputType, data: event.data });
-      this.flush();
-      this.syncSelectionVisibility(result);
-      this.snapshot = null;
-      if (result.handled) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-    }, true);
-    this.listen(this.root, "keydown", (event) => {
-      if (this.isStopped()) return;
-      const result = this.sandbox.callJsonFunction("__codeEditorCommand", {
-        key: event.key,
-        code: event.code,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        shiftKey: event.shiftKey,
-        mod: event.ctrlKey || event.metaKey
+      const index = this.children.indexOf(referenceNode);
+      if (index === -1)
+        throw new Error("Reference child not found");
+      this.ownerDocument.domUse.validateAppend(this, newNode);
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "insertBefore");
+      if (newNode.parentNode)
+        newNode.parentNode.removeChild(newNode);
+      newNode.parentNode = this;
+      this.children.splice(index, 0, newNode);
+      return newNode;
+    }
+    removeChild(child) {
+      const index = this.children.indexOf(child);
+      if (index === -1)
+        throw new Error("Child not found");
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "removeChild");
+      this.children.splice(index, 1);
+      child.parentNode = null;
+      return child;
+    }
+    replaceChildren(...children) {
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "replaceChildren", {
+        nodes: children.reduce((sum, child) => sum + treeSize(child), 0)
       });
-      this.flush();
-      this.syncSelectionVisibility(result);
-      this.snapshot = null;
-      if (result.handled) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
-    }, true);
-    return this;
-  }
-  destroy() {
-    for (const remove of this.listeners.splice(0)) remove();
-    if (this.dragFrame) cancelAnimationFrame(this.dragFrame);
-    this.root.classList.remove("cm-drag-preview");
-    this.root.classList.remove("cm-native-selection");
-  }
-};
-
-// packages/code-editor-use/src/controller.js
-async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange = () => {
-}, onLimit = () => {
-}, onReady = () => {
-}, onViolation = console.error }) {
-  if (!(root instanceof Element)) throw new TypeError("A DOM root is required");
-  if (typeof guestSource !== "string") throw new TypeError("QuickJS guest source is required");
-  const originalRootId = root.id;
-  if (!root.id) root.id = "editor";
-  let sandbox = await createSandbox({
-    memoryLimitBytes: limits.memoryLimitBytes ?? 128 * 1024 * 1024,
-    maxStackBytes: limits.maxStackBytes ?? 4 * 1024 * 1024
-  });
-  let stopped = false;
-  let inputBridge;
-  const editorLimits = normalizeCodeEditorLimits(limits);
-  const violate = (error) => {
-    if (stopped) return;
-    stopped = true;
-    onViolation(error);
+      for (const child of this.children)
+        child.parentNode = null;
+      this.children = [];
+      for (const child of children)
+        this.appendChild(child);
+    }
   };
-  const host = new BrowserDomHost(root, createCodeEditorDomPolicy(editorLimits), {
-    onViolation(error) {
-      stopped = true;
-      onViolation(error);
-    },
-    onEvent(listenerId, event, nativeEvent) {
-      if (!sandbox || stopped) return;
-      host.renewOperationBudget();
-      try {
-        const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
-        if (result.preventDefault) nativeEvent.preventDefault();
-        if (result.stopPropagation) nativeEvent.stopPropagation();
-        inputBridge?.reconcileSelection();
-      } catch (error) {
-        violate(error);
+  var GuestText = class extends GuestNode {
+    _textContent;
+    constructor(owner, text) {
+      super(owner);
+      this.tagName = "#text";
+      this._textContent = "";
+      this.textContent = text;
+    }
+    get textContent() {
+      return this._textContent;
+    }
+    set textContent(value) {
+      this.ownerDocument.domUse.validateText(value);
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "setTextContent", {
+        textLength: String(value).length
+      });
+      this._textContent = String(value);
+    }
+  };
+  var GuestElement = class extends GuestNode {
+    attributes;
+    events;
+    _style;
+    _textContent;
+    constructor(owner, tagName) {
+      super(owner);
+      this.tagName = String(tagName).toLowerCase();
+      this.attributes = {};
+      this.events = /* @__PURE__ */ new Set();
+      this._style = {};
+      this._textContent = "";
+    }
+    get textContent() {
+      if (this.children.length) {
+        return this.children.map((child) => child.textContent || "").join("");
+      }
+      return this._textContent;
+    }
+    set textContent(value) {
+      this.ownerDocument.domUse.validateText(value);
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "setTextContent", {
+        textLength: String(value).length
+      });
+      this._textContent = String(value);
+      for (const child of this.children)
+        child.parentNode = null;
+      this.children = [];
+    }
+    get id() {
+      return this.attributes.id || "";
+    }
+    set id(value) {
+      this.setAttribute("id", value);
+    }
+    get className() {
+      return this.attributes.class || "";
+    }
+    set className(value) {
+      this.setAttribute("class", value);
+    }
+    get style() {
+      return new Proxy(this._style, {
+        set: (target, property, value) => {
+          this.ownerDocument.domUse.spendGas(this.ownerDocument, "setStyle", {
+            textLength: stringLength(property, value)
+          });
+          this.ownerDocument.domUse.styleUse.validateInline(property, value);
+          target[String(property)] = String(value);
+          return true;
+        },
+        deleteProperty: (target, property) => {
+          delete target[String(property)];
+          return true;
+        }
+      });
+    }
+    get styleText() {
+      return Object.entries(this._style).map(([property, value]) => `${this.ownerDocument.domUse.styleUse.normalizeProperty(property)}: ${value}`).join("; ");
+    }
+    setAttribute(name, value) {
+      this.ownerDocument.domUse.assertAllowedAttr(this, name, value);
+      this.ownerDocument.domUse.assertAttributeBudget(this, name);
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "setAttribute", {
+        textLength: stringLength(name, value)
+      });
+      if (String(name).toLowerCase() === "style") {
+        for (const decl of String(value).split(";")) {
+          const [property, ...rest] = decl.split(":");
+          if (property && rest.length)
+            this.style[property.trim()] = rest.join(":").trim();
+        }
+        return;
+      }
+      this.attributes[name] = String(value);
+      if (this.tagName === "a" && String(name).toLowerCase() === "href" && this.ownerDocument.domUse.schema.links?.addTargetBlank === true && this.attributes.target === void 0) {
+        this.ownerDocument.domUse.validateAttributeValue("_blank");
+        this.ownerDocument.domUse.assertAttributeBudget(this, "target");
+        this.attributes.target = "_blank";
       }
     }
-  });
-  sandbox.installJsonHostFunction("__browserUseHost", (message) => host.dispatch(message));
-  sandbox.installJsonHostFunction("__browserUseNotify", (message) => {
-    if (message.type === "change") onChange(message.content);
-    if (message.type === "limit") onLimit(message);
-    if (message.type === "ready") onReady(message);
-    return {};
-  });
-  sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
-  sandbox.callJsonFunction("__browserUseConfigureEnvironment", {
-    platform: navigator.platform,
-    userAgent: navigator.userAgent,
-    vendor: navigator.vendor
-  });
-  sandbox.evalGlobal(guestSource, "code-editor-guest.js");
-  sandbox.callJsonFunction("__codeEditorConfigureLimits", {
-    maxLines: editorLimits.maxLines,
-    maxCharacters: editorLimits.maxCharacters
-  });
-  inputBridge = new CodeMirrorInputBridge(root, sandbox, { isStopped: () => stopped }).attach();
-  host.start();
-  const refillTimer = setInterval(() => host.renewOperationBudget(), editorLimits.surfaceRefillMs);
-  let destroyed = false;
-  return Object.freeze({
-    setContent(content, language = "plain", { readOnly = false } = {}) {
-      if (destroyed) throw new Error("Editor sandbox has been disposed");
-      host.renewOperationBudget();
-      try {
-        const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
-        sandbox.callJsonFunction("__browserUseFlush", {});
-        return result;
-      } catch (error) {
-        if (/operation gas exhausted/.test(error.message)) violate(error);
-        throw error;
-      }
-    },
-    inspect() {
-      if (destroyed) throw new Error("Editor sandbox has been disposed");
-      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), surface: host.inspectSurface() };
-    },
-    command(payload) {
-      if (destroyed) throw new Error("Editor sandbox has been disposed");
-      host.renewOperationBudget();
-      try {
-        const result = sandbox.callJsonFunction("__codeEditorCommand", payload);
-        sandbox.callJsonFunction("__browserUseFlush", {});
-        return result;
-      } catch (error) {
-        if (/operation gas exhausted/.test(error.message)) violate(error);
-        throw error;
-      }
-    },
-    focus() {
-      root.querySelector(".cm-content")?.focus();
-    },
-    destroy() {
-      if (destroyed) return;
-      destroyed = true;
-      clearInterval(refillTimer);
-      inputBridge?.destroy();
-      host.destroy();
-      root.replaceChildren();
-      if (!originalRootId) root.removeAttribute("id");
-      sandbox?.dispose();
-      sandbox = null;
+    getAttribute(name) {
+      return this.attributes[name] ?? null;
     }
-  });
-}
-
-// packages/canvas-use/src/index.js
-var METHODS = /* @__PURE__ */ new Set(["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"]);
-var PROPERTIES = /* @__PURE__ */ new Set(["fillStyle", "strokeStyle", "lineWidth"]);
-var COLOR = /^(?:#[0-9a-f]{3,8}|rgba?\([0-9., %]+\)|[a-z]{1,20})$/i;
-function finite(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || Math.abs(number) > 1e5) throw new Error("canvas-use rejected an unbounded number");
-  return number;
-}
-var CanvasUseHost = class {
-  constructor(domHost, { maxCommands = 5e4 } = {}) {
-    this.domHost = domHost;
-    this.maxCommands = Math.max(1, Math.min(Number(maxCommands), 1e5));
-    this.commands = 0;
-    this.windowCommands = 0;
-    this.contexts = /* @__PURE__ */ new Map();
+    removeAttribute(name) {
+      this.ownerDocument.domUse.spendGas(this.ownerDocument, "removeAttribute");
+      delete this.attributes[name];
+    }
+    addEventListener(event) {
+      this.ownerDocument.domUse.registerEventListener(this, event);
+    }
+    addClass(...classes) {
+      const next = new Set(this.className.split(/\s+/).filter(Boolean));
+      for (const className of classes)
+        if (className)
+          next.add(String(className));
+      this.className = Array.from(next).join(" ");
+    }
+    removeClass(...classes) {
+      const next = new Set(this.className.split(/\s+/).filter(Boolean));
+      for (const className of classes)
+        next.delete(String(className));
+      this.className = Array.from(next).join(" ");
+    }
+    toggleClass(className) {
+      const next = new Set(this.className.split(/\s+/).filter(Boolean));
+      const value = String(className);
+      if (next.has(value)) {
+        next.delete(value);
+        this.className = Array.from(next).join(" ");
+        return false;
+      }
+      next.add(value);
+      this.className = Array.from(next).join(" ");
+      return true;
+    }
+    hasClass(className) {
+      return this.className.split(/\s+/).filter(Boolean).includes(String(className));
+    }
+  };
+  var GuestDocument = class {
+    domUse;
+    createdNodes;
+    gas;
+    body;
+    constructor(domUse) {
+      this.domUse = domUse;
+      this.createdNodes = 0;
+      this.gas = domUse.createGasState("init");
+      this.body = new GuestElement(this, "body");
+    }
+    createElement(tagName) {
+      return this.domUse.createElement(tagName, this);
+    }
+    createTextNode(text) {
+      this.domUse.spendGas(this, "createTextNode");
+      this.domUse.trackNode(this);
+      return new GuestText(this, text);
+    }
+  };
+  var DomUse = class {
+    state;
+    get schema() {
+      return this.state.schema;
+    }
+    get styleUse() {
+      return this.state.styleUse;
+    }
+    get _gasPolicy() {
+      return this.state.gasPolicy;
+    }
+    /**
+     * @param {object} schema
+     * @param {StyleUse} [styleUse]
+     */
+    constructor(schema = {}, styleUse) {
+      this.state = new DomUseState(schema, styleUse);
+    }
+    createDocument() {
+      return createDomDocument(this);
+    }
+    createElement(tagName, ownerDocument = null) {
+      const tag = String(tagName).toLowerCase();
+      this.assertAllowedNode(tag);
+      const owner = ownerDocument || new GuestDocument(this);
+      this.spendGas(owner, "createElement");
+      this.trackNode(owner);
+      return new GuestElement(owner, tag);
+    }
+    limits() {
+      return this.state.limits;
+    }
+    gasPolicy() {
+      return this._gasPolicy;
+    }
+    createGasState(lifecycle = "init") {
+      const policy = this.gasPolicy();
+      const capacity = this.gasCapacity(lifecycle, policy);
+      return new DomUseGasState(lifecycle, capacity);
+    }
+    gasCapacity(lifecycle, policy = this.gasPolicy()) {
+      return positiveNumber(policy.tank?.[lifecycle], positiveNumber(policy.tank?.idle, 0));
+    }
+    setGasLifecycle(ownerDocument, lifecycle, now = Date.now()) {
+      if (!ownerDocument?.gas)
+        return;
+      this.refillGas(ownerDocument, now);
+      const policy = this.gasPolicy();
+      const capacity = this.gasCapacity(lifecycle, policy);
+      ownerDocument.gas.lifecycle = lifecycle;
+      ownerDocument.gas.capacity = capacity;
+      ownerDocument.gas.available = Math.min(ownerDocument.gas.available, capacity);
+    }
+    refillGas(ownerDocument, now = Date.now()) {
+      const policy = this.gasPolicy();
+      if (policy.enabled === false || !ownerDocument?.gas)
+        return;
+      const refillPerSecond = Number(policy.refill);
+      if (!Number.isFinite(refillPerSecond) || refillPerSecond <= 0)
+        return;
+      const interval = 100;
+      const elapsed = Math.max(0, now - ownerDocument.gas.lastRefill);
+      const intervals = Math.floor(elapsed / interval);
+      if (intervals <= 0)
+        return;
+      ownerDocument.gas.available = Math.min(ownerDocument.gas.capacity, ownerDocument.gas.available + intervals * refillPerSecond / 10);
+      ownerDocument.gas.lastRefill += intervals * interval;
+    }
+    gasAvailable(ownerDocument, now = Date.now()) {
+      this.refillGas(ownerDocument, now);
+      return ownerDocument?.gas?.available ?? Infinity;
+    }
+    gasCost(operation, metrics = {}) {
+      const cost = this.gasPolicy().costs?.[operation];
+      if (typeof cost === "number")
+        return cost;
+      if (!cost || typeof cost !== "object")
+        return 0;
+      const base = Number(cost.base || 0);
+      const perNode = Number(cost.perNode || 0) * Number(metrics.nodes || 0);
+      const charUnit = positiveNumber(cost.charUnit, 1);
+      const perChar = Number(cost.perChar || 0) * Math.ceil(Number(metrics.textLength || 0) / charUnit);
+      return Math.ceil(base + perNode + perChar);
+    }
+    spendGas(ownerDocument, operation, metrics = {}, now = Date.now()) {
+      const policy = this.gasPolicy();
+      if (policy.enabled === false || !ownerDocument?.gas)
+        return 0;
+      this.refillGas(ownerDocument, now);
+      const amount = this.gasCost(operation, metrics);
+      if (!amount)
+        return 0;
+      if (ownerDocument.gas.available < amount) {
+        throw new DomUseGasError(`DOM gas exhausted for ${operation}: need ${amount}, have ${ownerDocument.gas.available}`);
+      }
+      ownerDocument.gas.available -= amount;
+      return amount;
+    }
+    trackNode(ownerDocument) {
+      const maxNodes = this.limits().maxNodes;
+      if (maxNodes && ownerDocument.createdNodes + 1 > maxNodes) {
+        throw new Error(`DOM document exceeds maxNodes ${maxNodes}`);
+      }
+      ownerDocument.createdNodes += 1;
+    }
+    validateContent(value, kind) {
+      const text = String(value);
+      const content = this.schema.content || {};
+      if (content.allowTroublesomeSpecialCharacters !== true && TROUBLESOME_CONTENT_RE2.test(text)) {
+        throw new Error(`Troublesome special character in ${kind}`);
+      }
+      if (content.rejectPattern && patternMatches2(content.rejectPattern, text)) {
+        throw new Error(`Rejected content in ${kind}`);
+      }
+      if (content.allowedPattern && !patternMatches2(content.allowedPattern, text)) {
+        throw new Error(`Content not allowed in ${kind}`);
+      }
+    }
+    validateText(value) {
+      const text = String(value);
+      const maxTextLength = this.limits().maxTextLength;
+      if (maxTextLength && text.length > maxTextLength) {
+        throw new Error(`Text exceeds maxTextLength ${maxTextLength}`);
+      }
+      this.validateContent(text, "text");
+    }
+    validateAttributeName(name) {
+      const attr = String(name);
+      const maxAttributeNameLength = this.limits().maxAttributeNameLength;
+      if (maxAttributeNameLength && attr.length > maxAttributeNameLength) {
+        throw new Error(`Attribute name exceeds maxAttributeNameLength ${maxAttributeNameLength}`);
+      }
+      this.validateContent(attr, "attribute name");
+    }
+    validateEventName(event) {
+      const name = String(event);
+      const maxEventNameLength = this.limits().maxEventNameLength;
+      if (maxEventNameLength && name.length > maxEventNameLength) {
+        throw new Error(`Event name exceeds maxEventNameLength ${maxEventNameLength}`);
+      }
+      this.validateContent(name, "event name");
+    }
+    validateAttributeValue(value) {
+      const attrValue = String(value);
+      const maxAttributeValueLength = this.limits().maxAttributeValueLength;
+      if (maxAttributeValueLength && attrValue.length > maxAttributeValueLength) {
+        throw new Error(`Attribute value exceeds maxAttributeValueLength ${maxAttributeValueLength}`);
+      }
+      this.validateContent(attrValue, "attribute value");
+    }
+    /**
+     * Set a node's children by parsing an HTML string.
+     * Delegates parsing to html-use with dom-use's factory injected.
+     */
+    setInnerHTML(node, html) {
+      this.spendGas(node.ownerDocument, "setInnerHTML", {
+        textLength: String(html).length,
+        nodes: estimateHtmlNodeCount(html)
+      });
+      const fragment = parseHTML(html, {
+        createElement: (tag) => node.ownerDocument?.createElement(tag) || this.createElement(tag),
+        createTextNode: (text) => node.ownerDocument?.createTextNode(text) || { tagName: "#text", textContent: text },
+        schema: this.schema,
+        styleUse: this.styleUse
+      });
+      node.replaceChildren(...fragment.children);
+    }
+    /**
+     * Parse and sanitize an HTML string through this schema, returning safe HTML.
+     *
+     * When `container` is supplied, the input is treated as that container's
+     * children, so parent/child rules are enforced for the target region that
+     * will receive the resulting HTML.
+     *
+     * @param {string} html
+     * @param {object} [options]
+     * @param {string|object} [options.container] tag name or descriptor
+     * @param {string} [options.container.tagName]
+     * @param {object} [options.container.attributes]
+     * @param {boolean} [options.includeContainer=false]
+     * @param {boolean} [options.strict=false] reject instead of dropping invalid markup
+     * @returns {string}
+     */
+    sanitizeHTML(html, options = {}) {
+      const doc = this.createDocument();
+      const container = options.container;
+      if (container) {
+        const descriptor = typeof container === "string" ? { tagName: container } : container;
+        const node = doc.createElement(descriptor.tagName || "div");
+        for (const [name, value] of Object.entries(descriptor.attributes || {})) {
+          node.setAttribute(name, value);
+        }
+        if (options.strict === true) {
+          const fragment2 = parseHTML(html, {
+            createElement: (tag) => doc.createElement(tag),
+            createTextNode: (text) => doc.createTextNode(text),
+            schema: this.schema,
+            styleUse: this.styleUse,
+            strict: true
+          });
+          node.replaceChildren(...fragment2.children);
+        } else {
+          this.setInnerHTML(node, html);
+        }
+        return options.includeContainer ? this.getOuterHTML(node) : this.getInnerHTML(node);
+      }
+      const fragment = parseHTML(html, {
+        createElement: (tag) => doc.createElement(tag),
+        createTextNode: (text) => doc.createTextNode(text),
+        schema: this.schema,
+        styleUse: this.styleUse,
+        strict: options.strict === true
+      });
+      return serializeHTML(fragment);
+    }
+    /**
+     * Serialize a node's children to HTML.
+     * Delegates to html-use.
+     */
+    getInnerHTML(node) {
+      return (node.children || []).map((child) => serializeHTML(child)).join("");
+    }
+    /**
+     * Serialize a node and its children to HTML.
+     */
+    getOuterHTML(node) {
+      return serializeHTML({ ...node, outer: true });
+    }
+    allowedNode(tagName) {
+      const nodes = this.schema.nodes || {};
+      const tag = String(tagName).toLowerCase();
+      const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+      return !hasNodePolicy || Boolean(nodes[tag]) || this.definitionsForTag(tag).length > 0;
+    }
+    definition(name) {
+      return (this.schema.definitions || {})[String(name).replace(/^\$/, "")];
+    }
+    parseDefinitionSelector(definition) {
+      const selector = String(definition?.element || definition?.selector || definition?.tag || "").trim();
+      const match = selector.match(/^([a-zA-Z][\w:-]*)(?:((?:\.[a-zA-Z0-9_-]+)*))$/);
+      if (!match)
+        return { tag: selector.toLowerCase(), classes: [] };
+      return {
+        tag: match[1].toLowerCase(),
+        classes: (match[2] || "").split(".").filter(Boolean)
+      };
+    }
+    definitionsForTag(tagName) {
+      const tag = String(tagName).toLowerCase();
+      return Object.values(this.schema.definitions || {}).filter((definition) => this.parseDefinitionSelector(definition).tag === tag);
+    }
+    nodeClasses(node) {
+      return new Set(String(node?.attributes?.class || "").split(/\s+/).filter(Boolean));
+    }
+    definitionMatchesNode(definition, node) {
+      if (!node)
+        return false;
+      const selector = this.parseDefinitionSelector(definition);
+      if (selector.tag !== String(node.tagName).toLowerCase())
+        return false;
+      if (selector.classes.length === 0)
+        return true;
+      const classes = this.nodeClasses(node);
+      return selector.classes.every((className) => classes.has(className));
+    }
+    matchingDefinitionsForNode(node) {
+      return this.definitionsForTag(node?.tagName).filter((definition) => this.definitionMatchesNode(definition, node));
+    }
+    assertUnambiguousDefinitions(node, matches = this.matchingDefinitionsForNode(node)) {
+      if (matches.length > 1) {
+        const selectors = matches.map((definition) => definition.element || definition.selector || definition.tag).join(", ");
+        throw new Error(`Ambiguous DOM definitions for ${node.tagName}: ${selectors}`);
+      }
+    }
+    nodeRules(nodeOrTagName) {
+      const tag = String(nodeOrTagName?.tagName || nodeOrTagName).toLowerCase();
+      const matches = typeof nodeOrTagName === "object" ? this.matchingDefinitionsForNode(nodeOrTagName) : this.definitionsForTag(tag).filter((definition) => this.parseDefinitionSelector(definition).classes.length === 0);
+      if (typeof nodeOrTagName === "object")
+        this.assertUnambiguousDefinitions(nodeOrTagName, matches);
+      return [
+        this.schema.nodes?.[tag],
+        ...matches
+      ].filter(Boolean);
+    }
+    allowedAttr(tagNameOrNode, attr, value) {
+      this.validateAttributeName(attr);
+      this.validateAttributeValue(value);
+      const nodes = this.schema.nodes || {};
+      const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+      if (!hasNodePolicy)
+        return true;
+      const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
+      const name = String(attr).toLowerCase();
+      let ruleTarget = tagNameOrNode;
+      if (name === "class" && typeof tagNameOrNode === "object") {
+        const nextNode = {
+          ...tagNameOrNode,
+          attributes: { ...tagNameOrNode.attributes, class: String(value) }
+        };
+        this.assertUnambiguousDefinitions(nextNode);
+        ruleTarget = nextNode;
+      }
+      const allowed = [
+        ...this.schema.globalAttrs || [],
+        ...this.nodeRules(typeof ruleTarget === "object" ? ruleTarget : tag).flatMap((rule) => rule.attrs || [])
+      ].map((entry) => String(entry).toLowerCase());
+      if (allowed.includes("*"))
+        return true;
+      if (allowed.includes(name))
+        return true;
+      if (allowed.some((entry) => entry.endsWith("*") && name.startsWith(entry.slice(0, -1))))
+        return true;
+      void value;
+      return false;
+    }
+    urlRuleFor(tagNameOrNode, attr) {
+      const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
+      const name = String(attr).toLowerCase();
+      const nodeUrlRules = this.nodeRules(tagNameOrNode).map((rule) => rule.urls).filter((rule) => rule !== void 0);
+      const globalUrls = this.schema.urls || {};
+      for (const nodeUrls of nodeUrlRules) {
+        if (nodeUrls === true || nodeUrls === false)
+          return nodeUrls;
+        if (nodeUrls?.[name] !== void 0)
+          return nodeUrls[name];
+        if (nodeUrls?.["*"] !== void 0)
+          return nodeUrls["*"];
+      }
+      if (globalUrls === true || globalUrls === false)
+        return globalUrls;
+      if (globalUrls[`${tag}.${name}`] !== void 0)
+        return globalUrls[`${tag}.${name}`];
+      if (globalUrls[name] !== void 0)
+        return globalUrls[name];
+      if (globalUrls["*"] !== void 0)
+        return globalUrls["*"];
+      return void 0;
+    }
+    fragmentRuleFor(tagNameOrNode) {
+      const nodeUrlRules = this.nodeRules(tagNameOrNode).map((rule) => rule.urls).filter((rule) => rule !== void 0);
+      const globalUrls = this.schema.urls;
+      for (const nodeUrls of nodeUrlRules) {
+        if (nodeUrls === false)
+          return false;
+        if (nodeUrls?.fragments !== void 0)
+          return nodeUrls.fragments;
+      }
+      if (globalUrls === false)
+        return false;
+      if (globalUrls?.fragments !== void 0)
+        return globalUrls.fragments;
+      return true;
+    }
+    attrUrls(attr, value) {
+      const name = String(attr).toLowerCase();
+      const text = String(value).trim();
+      if (name === "srcset" || name === "imagesrcset") {
+        return text.split(",").map((part) => part.trim().split(/\s+/)[0]).filter(Boolean);
+      }
+      if (name === "ping" || name === "archive")
+        return text.split(/\s+/).filter(Boolean);
+      if (name === "content") {
+        const refresh = /(?:^|;)\s*url\s*=\s*(.+)$/i.exec(text);
+        return refresh ? [refresh[1].trim().replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, "$1$2")] : [];
+      }
+      if (SVG_URL_REFERENCE_ATTRS.has(name)) {
+        return /url\s*\(/i.test(text) ? this.styleUse.extractUrls(text) : [];
+      }
+      return [text];
+    }
+    validateAttrUrl(tagNameOrNode, attr, value) {
+      const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
+      const rule = this.urlRuleFor(tagNameOrNode, attr);
+      for (const url of this.attrUrls(attr, value)) {
+        if (!this.styleUse.rejectDangerousValue(url)) {
+          throw new Error(`Disallowed URL on ${tagName}.${attr}`);
+        }
+        if (url.startsWith("#")) {
+          const fragmentRule = this.fragmentRuleFor(tagNameOrNode);
+          const matcher = typeof fragmentRule === "string" ? new RegExp(fragmentRule) : fragmentRule;
+          if (matcher === false || matcher !== true && !this.styleUse.isAllowedByRule(matcher, url, `${tagName}.${attr} fragment`)) {
+            throw new Error(`Fragment URL not allowed on ${tagName}.${attr}: ${url}`);
+          }
+          continue;
+        }
+        if (rule === void 0 || rule === false) {
+          throw new Error(`URL attribute not allowed on ${tagName}: ${attr}`);
+        }
+        const urlRule = typeof rule === "string" ? new RegExp(rule) : rule;
+        if (urlRule !== true && !this.styleUse.isAllowedByRule(urlRule, url, `${tagName}.${attr}`)) {
+          throw new Error(`URL not allowed on ${tagName}.${attr}: ${url}`);
+        }
+      }
+    }
+    allowedChild(parentNodeOrTag, childNodeOrTag) {
+      const nodes = this.schema.nodes || {};
+      const parentTag = String(parentNodeOrTag?.tagName || parentNodeOrTag);
+      if (parentTag === "#fragment")
+        return true;
+      const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
+      if (!hasNodePolicy)
+        return true;
+      const parent2 = nodes[parentTag.toLowerCase()];
+      const child = String(childNodeOrTag?.tagName || childNodeOrTag).toLowerCase();
+      const allowed = this.nodeRules(parentNodeOrTag).flatMap((rule) => rule.children || []);
+      if (!parent2 && allowed.length === 0)
+        return false;
+      return allowed.some((entry) => this.childRuleMatches(entry, childNodeOrTag, child));
+    }
+    childRuleMatches(entry, childNodeOrTag, childTag = String(childNodeOrTag?.tagName || childNodeOrTag).toLowerCase()) {
+      if (entry === "*")
+        return true;
+      if (typeof entry === "string") {
+        const definition = this.definition(entry);
+        if (definition) {
+          const selector = this.parseDefinitionSelector(definition);
+          if (selector.tag !== childTag)
+            return false;
+          return typeof childNodeOrTag === "object" ? this.definitionMatchesNode(definition, childNodeOrTag) : true;
+        }
+        return entry.toLowerCase() === childTag;
+      }
+      if (!entry || typeof entry !== "object")
+        return false;
+      if (entry.ref)
+        return this.childRuleMatches(entry.ref, childTag);
+      const alternatives = entry.oneOf || entry.anyOf || entry.alternates || entry.alternation;
+      if (Array.isArray(alternatives)) {
+        return alternatives.some((alternative) => this.childRuleMatches(alternative, childNodeOrTag, childTag));
+      }
+      if (entry.tag || entry.element || entry.selector) {
+        const selector = this.parseDefinitionSelector(entry);
+        return selector.tag === childTag;
+      }
+      return false;
+    }
+    allowedEvent(tagName, event) {
+      this.validateEventName(event);
+      const nodes = this.schema.nodes || {};
+      if (Object.keys(nodes).length === 0)
+        return false;
+      const tag = String(tagName).toLowerCase();
+      const name = String(event).toLowerCase();
+      const allowed = [
+        ...this.schema.globalEvents || [],
+        ...this.nodeRules(tag).flatMap((rule) => rule.events || [])
+      ].map((entry) => String(entry).toLowerCase());
+      return allowed.includes("*") || allowed.includes(name);
+    }
+    assertAllowedEvent(tagName, event) {
+      if (!this.allowedEvent(tagName, event)) {
+        throw new Error(`Event not allowed on ${tagName}: ${event}`);
+      }
+    }
+    registerEventListener(node, event) {
+      const name = String(event).toLowerCase();
+      this.assertAllowedEvent(node.tagName, name);
+      this.spendGas(node.ownerDocument, "addEventListener");
+      node.events.add(name);
+    }
+    eventTarget(candidates, event) {
+      const name = String(event).toLowerCase();
+      this.validateEventName(name);
+      for (const node of candidates) {
+        if (!node?.events?.has(name))
+          continue;
+        this.assertAllowedEvent(node.tagName, name);
+        this.spendGas(node.ownerDocument, "eventTarget");
+        return node;
+      }
+      return null;
+    }
+    sanitizeEventPayload(event, payload = {}) {
+      const name = String(event).toLowerCase();
+      this.validateEventName(name);
+      const fields = new Set(EVENT_PAYLOAD_FIELDS[name] || ["value", "checked"]);
+      const clean = {};
+      if (fields.has("value"))
+        clean.value = this.sanitizeEventText(payload.value || "", "event value");
+      if (fields.has("checked"))
+        clean.checked = Boolean(payload.checked);
+      if (fields.has("key"))
+        clean.key = this.sanitizeEventText(payload.key || "", "event key");
+      if (fields.has("controls"))
+        clean.controls = this.sanitizeEventControls(payload.controls);
+      if (fields.has("dataTransfer"))
+        clean.dataTransfer = this.sanitizeDataTransfer(payload.dataTransfer);
+      return clean;
+    }
+    sanitizeEventText(value, kind) {
+      const text = String(value);
+      this.validateText(text);
+      this.validateContent(text, kind);
+      return text;
+    }
+    sanitizeEventControls(controls = []) {
+      if (!Array.isArray(controls))
+        return [];
+      return controls.map((control) => ({
+        nodeId: this.sanitizeEventText(control.nodeId || "", "event control node id"),
+        value: this.sanitizeEventText(control.value || "", "event control value"),
+        checked: Boolean(control.checked)
+      }));
+    }
+    sanitizeDataTransfer(dataTransfer = null) {
+      if (!dataTransfer || typeof dataTransfer !== "object")
+        return null;
+      const data = {};
+      for (const [type, value] of Object.entries(dataTransfer.data || {})) {
+        data[this.sanitizeEventText(type, "dataTransfer type")] = this.sanitizeEventText(value, "dataTransfer value");
+      }
+      return {
+        data,
+        effectAllowed: this.sanitizeEventText(dataTransfer.effectAllowed || "move", "dataTransfer effectAllowed")
+      };
+    }
+    assertAllowedNode(tagName) {
+      if (!this.allowedNode(tagName))
+        throw new Error(`Node not allowed: ${tagName}`);
+    }
+    assertAllowedAttr(tagNameOrNode, attr, value) {
+      const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
+      if (String(attr).toLowerCase() === "data-node-id") {
+        throw new Error(`Attribute reserved for the host bridge on ${tagName}: ${attr}`);
+      }
+      if (!this.allowedAttr(tagNameOrNode, attr, value)) {
+        throw new Error(`Attribute not allowed on ${tagName}: ${attr}`);
+      }
+      const name = String(attr).toLowerCase();
+      const tag = String(tagNameOrNode?.tagName || tagNameOrNode).toLowerCase();
+      if (URL_ATTRS.has(name) || SVG_URL_REFERENCE_ATTRS.has(name) || tag === "meta" && name === "content") {
+        this.validateAttrUrl(tagNameOrNode, attr, value);
+      }
+    }
+    assertAttributeBudget(node, attr) {
+      const maxAttributes = this.limits().maxAttributes;
+      const name = String(attr);
+      if (maxAttributes && !Object.prototype.hasOwnProperty.call(node.attributes, name) && Object.keys(node.attributes).length >= maxAttributes) {
+        throw new Error(`Element exceeds maxAttributes ${maxAttributes}`);
+      }
+    }
+    validateAppend(parent2, child) {
+      if (!this.allowedChild(parent2, child)) {
+        throw new Error(`Child ${child.tagName} not allowed in ${parent2.tagName}`);
+      }
+      const maxDepth = this.schema.maxDepth;
+      if (maxDepth && this.depth(parent2) + this.height(child) > maxDepth) {
+        throw new Error(`DOM tree exceeds maxDepth ${maxDepth}`);
+      }
+    }
+    depth(node) {
+      let depth = 1;
+      let current = node;
+      while (current.parentNode) {
+        depth++;
+        current = current.parentNode;
+      }
+      return depth;
+    }
+    height(node) {
+      if (!node.children?.length)
+        return 1;
+      return 1 + Math.max(...node.children.map((child) => this.height(child)));
+    }
+  };
+  function createDomDocument(domUse) {
+    return new GuestDocument(domUse);
   }
-  dispatch(message) {
-    const canvas = this.domHost.remoteNode(message.id);
-    if (canvas?.localName !== "canvas") throw new Error("canvas-use requires an owned canvas");
-    if (message.contextType !== "2d") throw new Error("canvas-use only grants a 2D context");
-    const context = this.contexts.get(message.id) || canvas.getContext("2d");
-    this.contexts.set(message.id, context);
-    this.commands += 1;
-    if (++this.windowCommands > this.maxCommands) throw new Error("canvas-use command budget exceeded");
-    if (message.action === "set") {
-      if (!PROPERTIES.has(message.property)) throw new Error(`canvas-use rejected property: ${message.property}`);
-      context[message.property] = message.property === "lineWidth" ? Math.max(0, finite(message.value)) : COLOR.test(String(message.value)) ? String(message.value) : (() => {
-        throw new Error("canvas-use rejected color");
-      })();
+
+  // packages/dom-use/lib/bridge.js
+  var DEFAULT_STORAGE_LIMIT = 1e4;
+  var LocalStorageBackend = class {
+    mode;
+    allowedKeys;
+    limit;
+    storage;
+    constructor(config = {}) {
+      this.mode = config.mode || "disabled";
+      this.allowedKeys = config.keys ? new Set(config.keys) : null;
+      this.limit = config.limit ?? DEFAULT_STORAGE_LIMIT;
+      this.storage = config.storage || null;
+    }
+    assertEnabled(key, value = "") {
+      if (this.mode !== "passthrough")
+        throw new Error("localStorage is not enabled");
+      if (this.allowedKeys && !this.allowedKeys.has(String(key))) {
+        throw new Error(`localStorage key not allowed: ${key}`);
+      }
+      if (String(value).length > this.limit) {
+        throw new Error(`localStorage value exceeds limit ${this.limit}`);
+      }
+    }
+    getItem(key) {
+      this.assertEnabled(key);
+      return this.backend().getItem(String(key));
+    }
+    setItem(key, value) {
+      this.assertEnabled(key, value);
+      this.backend().setItem(String(key), String(value));
+    }
+    removeItem(key) {
+      this.assertEnabled(key);
+      this.backend().removeItem(String(key));
+    }
+    backend() {
+      if (!this.storage)
+        this.storage = globalThis.localStorage;
+      return this.storage;
+    }
+  };
+  var DomUseHostCapability = class {
+    domUse;
+    document;
+    storage;
+    nodes;
+    nodeIds;
+    pendingPrune;
+    eventDepth;
+    appRootId;
+    nextId;
+    constructor(domSchema, styleUse, options = {}) {
+      this.domUse = new DomUse(domSchema, styleUse);
+      this.document = this.domUse.createDocument();
+      this.storage = options.storage || new LocalStorageBackend();
+      this.nodes = /* @__PURE__ */ new Map();
+      this.nodeIds = /* @__PURE__ */ new WeakMap();
+      this.pendingPrune = /* @__PURE__ */ new Set();
+      this.eventDepth = 0;
+      this.appRootId = null;
+      this.nextId = 1;
+    }
+    resetDom() {
+      this.nodes = /* @__PURE__ */ new Map();
+      this.nodeIds = /* @__PURE__ */ new WeakMap();
+      this.pendingPrune = /* @__PURE__ */ new Set();
+      this.eventDepth = 0;
+      this.appRootId = null;
+      this.nextId = 1;
+      this.document = this.domUse.createDocument();
       return {};
     }
-    if (message.action !== "call" || !METHODS.has(message.method)) throw new Error(`canvas-use rejected method: ${message.method}`);
-    context[message.method](...(message.args || []).map(finite));
-    return {};
-  }
-  renewCommandBudget() {
-    this.windowCommands = 0;
-  }
-  inspect() {
-    return Object.freeze({ commands: this.commands, canvases: this.contexts.size });
-  }
-};
-
-// packages/presentation-use/src/controller.js
-var PROTOCOL = "macchiato-presentation-use-v1";
-function mountPresentationUse({ root, runnerUrl, project, onStatus = () => {
-} }) {
-  if (!(root instanceof Element)) throw new TypeError("presentation-use root must be an Element");
-  if (!runnerUrl) throw new TypeError("presentation-use runnerUrl is required");
-  const channel = crypto.randomUUID();
-  const frame = document.createElement("iframe");
-  frame.className = "project-editor__presentation-frame";
-  frame.title = project.title || "Presentation";
-  frame.setAttribute("sandbox", "allow-scripts");
-  frame.setAttribute("referrerpolicy", "no-referrer");
-  frame.src = runnerUrl;
-  root.replaceChildren(frame);
-  const projectPayload = project.fileUrl ? fetch(project.fileUrl, { credentials: "omit", referrerPolicy: "no-referrer" }).then(async (response) => {
-    if (!response.ok) throw new Error(`Presentation entry response: ${response.status}`);
-    return { ...project, file: await response.text(), fileUrl: void 0 };
-  }) : Promise.resolve(project);
-  function receive(event) {
-    if (event.source !== frame.contentWindow || event.data?.protocol !== PROTOCOL || event.data.channel !== channel) return;
-    if (event.data.type === "ready") projectPayload.then((payload) => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "mount", project: payload }, "*")).catch((error) => onStatus({ type: "blocked", message: error.message }));
-    else {
-      if (event.data.runtime) frame.dataset.runtime = event.data.runtime;
-      onStatus(event.data);
+    finishInit() {
+      this.domUse.setGasLifecycle(this.document, "idle");
+      return {};
     }
-  }
-  window.addEventListener("message", receive);
-  frame.addEventListener("load", () => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "connect" }, "*"), { once: true });
-  return {
-    frame,
-    inspect: () => ({ runtime: frame.dataset.runtime || "loading", sandbox: frame.getAttribute("sandbox") }),
-    destroy() {
-      window.removeEventListener("message", receive);
-      frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "destroy" }, "*");
-      frame.remove();
+    register(node) {
+      const id = String(this.nextId++);
+      this.nodes.set(id, node);
+      this.nodeIds.set(node, id);
+      return id;
+    }
+    node(id) {
+      const node = this.nodes.get(String(id));
+      if (!node)
+        throw new Error(`DOM node not found: ${id}`);
+      return node;
+    }
+    createElement(tagName) {
+      const node = this.document.createElement(tagName);
+      return { id: this.register(node) };
+    }
+    createTextNode(text) {
+      const node = this.document.createTextNode(text);
+      return { id: this.register(node) };
+    }
+    appendChild(parentId, childId) {
+      this.node(parentId).appendChild(this.node(childId));
+      return {};
+    }
+    removeChild(parentId, childId) {
+      this.node(parentId).removeChild(this.node(childId));
+      return {};
+    }
+    insertBefore(parentId, childId, referenceId) {
+      this.node(parentId).insertBefore(this.node(childId), referenceId ? this.node(referenceId) : null);
+      return {};
+    }
+    setTextContent(id, value) {
+      const node = this.node(id);
+      const previousChildren = [...node.children || []];
+      node.textContent = value;
+      for (const child of previousChildren)
+        this.pruneTree(child);
+      return {};
+    }
+    setInnerHTML(id, html) {
+      const node = this.node(id);
+      const previousChildren = [...node.children || []];
+      if (html === "")
+        node.replaceChildren();
+      else
+        this.domUse.setInnerHTML(node, html);
+      for (const child of previousChildren)
+        this.pruneTree(child);
+      return {};
+    }
+    setAttribute(id, name, value) {
+      this.node(id).setAttribute(name, value);
+      return {};
+    }
+    removeAttribute(id, name) {
+      this.node(id).removeAttribute(name);
+      return {};
+    }
+    setStyle(id, property, value) {
+      this.node(id).style[property] = value;
+      return {};
+    }
+    addEventListener(id, event) {
+      const node = this.node(id);
+      node.addEventListener(event);
+      node.attributes["data-node-id"] = String(id);
+      return {};
+    }
+    setAppRoot(id) {
+      this.appRootId = String(id);
+      return {};
+    }
+    serializeApp() {
+      if (!this.appRootId)
+        return { html: "" };
+      return { html: this.domUse.getInnerHTML(this.node(this.appRootId)) };
+    }
+    nodeTag(id) {
+      return { tagName: this.node(id).tagName };
+    }
+    eventTarget(nodeIds, event) {
+      const candidates = (nodeIds || []).map((id) => this.nodes.get(String(id))).filter(Boolean);
+      const node = this.domUse.eventTarget(candidates, event);
+      if (!node)
+        return { id: null };
+      return { id: this.nodeIds.get(node) || null };
+    }
+    eventPayload(event, payload) {
+      const clean = this.domUse.sanitizeEventPayload(event, payload);
+      this.domUse.spendGas(this.document, "eventPayload", {
+        textLength: JSON.stringify(clean).length
+      });
+      return { payload: clean };
+    }
+    beginEvent() {
+      if (this.eventDepth === 0) {
+        this.domUse.setGasLifecycle(this.document, "event");
+        if (this.document?.gas)
+          this.document.gas.available = this.document.gas.capacity;
+      }
+      this.eventDepth += 1;
+      return {};
+    }
+    endEvent() {
+      this.eventDepth = Math.max(0, this.eventDepth - 1);
+      if (this.eventDepth === 0) {
+        this.flushPrunedNodes();
+        this.domUse.setGasLifecycle(this.document, "idle");
+        if (this.document?.gas)
+          this.document.gas.available = this.document.gas.capacity;
+      }
+      return {};
+    }
+    pruneChildren(node) {
+      for (const child of [...node.children || []])
+        this.pruneTree(child);
+    }
+    pruneTree(node) {
+      if (this.eventDepth > 0) {
+        this.pendingPrune.add(node);
+        return;
+      }
+      for (const child of [...node.children || []])
+        this.pruneTree(child);
+      const id = this.nodeIds.get(node);
+      if (id) {
+        this.nodes.delete(id);
+        this.nodeIds.delete(node);
+        if (node.ownerDocument?.createdNodes > 0)
+          node.ownerDocument.createdNodes -= 1;
+      }
+    }
+    flushPrunedNodes() {
+      const pending = Array.from(this.pendingPrune);
+      this.pendingPrune.clear();
+      for (const node of pending)
+        this.pruneTree(node);
+    }
+    storageGet(key) {
+      return { value: this.storage.getItem(key) };
+    }
+    storageSet(key, value) {
+      this.storage.setItem(key, value);
+      return {};
+    }
+    storageRemove(key) {
+      this.storage.removeItem(key);
+      return {};
+    }
+    dispatch(message) {
+      switch (message.op) {
+        case "resetDom":
+          return this.resetDom();
+        case "finishInit":
+          return this.finishInit();
+        case "createElement":
+          return this.createElement(message.tagName);
+        case "createTextNode":
+          return this.createTextNode(message.text);
+        case "appendChild":
+          return this.appendChild(message.parentId, message.childId);
+        case "removeChild":
+          return this.removeChild(message.parentId, message.childId);
+        case "insertBefore":
+          return this.insertBefore(message.parentId, message.childId, message.referenceId);
+        case "setTextContent":
+          return this.setTextContent(message.id, message.value);
+        case "setInnerHTML":
+          return this.setInnerHTML(message.id, message.html);
+        case "setAttribute":
+          return this.setAttribute(message.id, message.name, message.value);
+        case "removeAttribute":
+          return this.removeAttribute(message.id, message.name);
+        case "setStyle":
+          return this.setStyle(message.id, message.property, message.value);
+        case "addEventListener":
+          return this.addEventListener(message.id, message.event);
+        case "setAppRoot":
+          return this.setAppRoot(message.id);
+        case "serializeApp":
+          return this.serializeApp();
+        case "nodeTag":
+          return this.nodeTag(message.id);
+        case "eventTarget":
+          return this.eventTarget(message.nodeIds, message.event);
+        case "eventPayload":
+          return this.eventPayload(message.event, message.payload);
+        case "beginEvent":
+          return this.beginEvent();
+        case "endEvent":
+          return this.endEvent();
+        case "storageGet":
+          return this.storageGet(message.key);
+        case "storageSet":
+          return this.storageSet(message.key, message.value);
+        case "storageRemove":
+          return this.storageRemove(message.key);
+        default:
+          throw new Error(`Unsupported host operation: ${message.op}`);
+      }
     }
   };
-}
-
-// examples/resources-site/project-editor-runtime.js
-async function mountResourcesProjectEditor(options) {
-  const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
-  return mountQuickJsCodeEditor({ ...options, guestSource });
-}
-function mountResourcesPresentation(options) {
-  return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
-}
-function previewPolicy(tags) {
-  return {
-    tags,
-    events: ["click", "input", "change", "keydown", "keyup"],
-    attributes: {
-      id: "^[A-Za-z][A-Za-z0-9_-]{0,80}$",
-      class: "^[A-Za-z0-9 _-]{0,160}$",
-      href: "^https://",
-      target: "^_blank$",
-      title: "^[^<>]{0,200}$",
-      width: "^[0-9]{1,5}$",
-      height: "^[0-9]{1,5}$",
-      "aria-label": "^[^<>]{0,160}$",
-      role: "^(?:img|link|article)$",
-      "aria-labelledby": "^[A-Za-z][A-Za-z0-9_-]{0,80}$",
-      viewBox: "^[-0-9. ]+$",
-      x: "^[-0-9.]+$",
-      y: "^[-0-9.]+$",
-      x1: "^[-0-9.]+$",
-      y1: "^[-0-9.]+$",
-      x2: "^[-0-9.]+$",
-      y2: "^[-0-9.]+$",
-      cx: "^[-0-9.]+$",
-      cy: "^[-0-9.]+$",
-      r: "^[0-9.]+$",
-      rx: "^[0-9.]+$",
-      ry: "^[0-9.]+$",
-      d: "^[- A-Za-z0-9.,]+$",
-      points: "^[- 0-9.,]+$",
-      fill: "^(?:none|#[0-9A-Fa-f]{3,8}|url\\(#[A-Za-z0-9_-]+\\))$",
-      stroke: "^(?:none|#[0-9A-Fa-f]{3,8})$",
-      "stroke-width": "^[0-9.]+$",
-      offset: "^[0-9.%]+$",
-      "stop-color": "^#[0-9A-Fa-f]{3,8}$",
-      gradientUnits: "^userSpaceOnUse$",
-      xlink: "^[A-Za-z0-9_-]+$"
-    },
-    classNames: ["^[A-Za-z][A-Za-z0-9_-]*$"],
-    maxElements: 1e3,
-    maxDepth: 30,
-    maxTextLength: 2e5
-  };
-}
-async function mountResourcesProjectPreview({ root, scripts, violations = [], tags, onViolation = () => {
-} }) {
-  let sandbox;
-  const host = new BrowserDomHost(root, previewPolicy(tags), {
-    onViolation,
-    onEvent(listenerId, event, nativeEvent) {
-      const result = sandbox?.callJsonFunction("__browserUseDispatchEvent", { listenerId, event }) || {};
-      if (result.preventDefault) nativeEvent.preventDefault();
-      if (result.stopPropagation) nativeEvent.stopPropagation();
+  function controlState(root) {
+    return Array.from(root.querySelectorAll("input[data-node-id], textarea[data-node-id], select[data-node-id]"), (node) => ({
+      nodeId: node.getAttribute("data-node-id"),
+      value: node.value || "",
+      checked: Boolean(node.checked)
+    }));
+  }
+  function eventPathNodeIds(root, target) {
+    const nodeIds = [];
+    for (let node = target; node && node !== root; node = node.parentElement) {
+      if (node.hasAttribute("data-node-id"))
+        nodeIds.push(node.getAttribute("data-node-id"));
     }
-  });
-  const canvas = new CanvasUseHost(host);
-  host.start();
-  if (violations.length) {
-    root.dataset.previewViolations = String(violations.length);
-    violations.forEach(onViolation);
+    return nodeIds;
   }
-  if (!scripts.length) {
-    root.dataset.previewRuntime = "static";
-    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.destroy() };
+  function eventTargetFor(capability, root, target, type) {
+    const { id } = capability.dispatch({ op: "eventTarget", nodeIds: eventPathNodeIds(root, target), event: type });
+    return id;
   }
-  try {
-    sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
-    sandbox.installJsonHostFunction("__browserUseHost", (message) => message.op === "canvas" ? canvas.dispatch(message) : host.dispatch(message));
-    sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
-    scripts.forEach((script) => sandbox.evalGlobal(script.code, script.source));
-  } catch (error) {
-    host.destroy();
-    sandbox?.dispose?.();
-    throw error;
+  function eventPayload(capability, type, payload) {
+    return capability.dispatch({ op: "eventPayload", event: type, payload }).payload;
   }
-  root.dataset.previewRuntime = "quickjs";
-  let stopped = false;
-  const timer = setInterval(() => {
-    if (stopped) return;
+  function sourceValue(root, target, options = {}) {
+    if (options.sourceValue)
+      return options.sourceValue(target, root);
+    return target.value || "";
+  }
+  function dispatchGuestDomEvent(capability, sandbox, root, event, type, extraPayload = {}, options = {}) {
+    capability.dispatch({ op: "beginEvent" });
     try {
-      canvas.renewCommandBudget();
-      sandbox.callJsonFunction("__browserUseTick", {});
-      root.dataset.canvasCommands = String(canvas.inspect().commands);
-    } catch (error) {
-      stopped = true;
-      clearInterval(timer);
-      onViolation(error);
+      const nodeId = eventTargetFor(capability, root, event.target, type);
+      if (!nodeId)
+        return null;
+      const payload = sandbox.callJsonFunction("__macchiatoDispatch", {
+        nodeId,
+        type,
+        payload: eventPayload(capability, type, {
+          value: sourceValue(root, event.target, options),
+          checked: Boolean(event.target.checked),
+          controls: controlState(root),
+          ...extraPayload
+        })
+      });
+      if (options.render !== false)
+        root.innerHTML = payload.html;
+      return payload;
+    } finally {
+      capability.dispatch({ op: "endEvent" });
     }
-  }, 50);
-  return {
-    inspect: () => ({ runtime: "quickjs", violations: violations.length, canvas: canvas.inspect() }),
-    destroy() {
-      stopped = true;
-      clearInterval(timer);
-      host.destroy();
-      sandbox.dispose?.();
+  }
+
+  // node_modules/quickjs-emscripten-core/dist/index.mjs
+  init_dist();
+  async function newQuickJSWASMModuleFromVariant(variantOrPromise) {
+    let variant2 = smartUnwrap(await variantOrPromise), [wasmModuleLoader, QuickJSFFI2, { QuickJSWASMModule: QuickJSWASMModule2 }] = await Promise.all([variant2.importModuleLoader().then(smartUnwrap), variant2.importFFI(), Promise.resolve().then(() => (init_module_ES6BEMUI(), module_ES6BEMUI_exports)).then(smartUnwrap)]), wasmModule2 = await wasmModuleLoader();
+    wasmModule2.type = "sync";
+    let ffi = new QuickJSFFI2(wasmModule2);
+    return new QuickJSWASMModule2(wasmModule2, ffi);
+  }
+  function smartUnwrap(val) {
+    return val && "default" in val && val.default ? val.default && "default" in val.default && val.default.default ? val.default.default : val.default : val;
+  }
+
+  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
+  var variant = { type: "sync", importFFI: () => Promise.resolve().then(() => (init_ffi(), ffi_exports)).then((mod) => mod.QuickJSFFI), importModuleLoader: () => Promise.resolve().then(() => (init_emscripten_module_browser_XIKQQPVU(), emscripten_module_browser_XIKQQPVU_exports)).then((mod) => mod.default) };
+  var src_default = variant;
+
+  // packages/quickjs-emscripten-sandbox/src/index.js
+  var wasmModule = null;
+  async function getModule() {
+    if (!wasmModule) {
+      wasmModule = await newQuickJSWASMModuleFromVariant(src_default);
+    }
+    return wasmModule;
+  }
+  function formatQuickJsError(value) {
+    if (value && typeof value === "object") {
+      const parts = [];
+      if (value.name) parts.push(String(value.name));
+      if (value.message) parts.push(String(value.message));
+      if (value.stack) parts.push(String(value.stack));
+      if (parts.length) return parts.join(": ");
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+  var Sandbox = class {
+    /**
+     * @param {object} [options]
+     * @param {Record<string, string|(() => string)>} [options.modules]
+     * @param {(moduleName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleLoader]
+     * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
+     * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
+     * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
+     */
+    constructor(options = {}) {
+      this.options = options;
+    }
+    /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
+    runtime = null;
+    /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
+    context = null;
+    /** @type {boolean} */
+    disposed = false;
+    async init() {
+      if (this.disposed) throw new Error("Sandbox has been disposed");
+      if (this.runtime) return;
+      if (this.options.memoryLimitBytes !== void 0) {
+        if (!Number.isSafeInteger(this.options.memoryLimitBytes) || this.options.memoryLimitBytes <= 0) throw new TypeError("memoryLimitBytes must be a positive safe integer");
+      }
+      if (this.options.maxStackBytes !== void 0) {
+        if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
+      }
+      const mod = await getModule();
+      this.runtime = mod.newRuntime();
+      if (this.options.memoryLimitBytes !== void 0) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
+      if (this.options.maxStackBytes !== void 0) this.runtime.setMaxStackSize(this.options.maxStackBytes);
+      this.installModuleLoader();
+      this.context = this.runtime.newContext();
+    }
+    installModuleLoader() {
+      if (!this.runtime) return;
+      const modules = this.options.modules || {};
+      const customLoader = this.options.moduleLoader;
+      const customNormalizer = this.options.moduleNormalizer;
+      if (!customLoader && Object.keys(modules).length === 0) return;
+      this.runtime.setModuleLoader(
+        (moduleName, context) => {
+          if (customLoader) return customLoader(moduleName, context);
+          const source = modules[moduleName];
+          if (source === void 0) throw new Error(`Module not allowed: ${moduleName}`);
+          return typeof source === "function" ? source(moduleName) : String(source);
+        },
+        customNormalizer || ((_baseModuleName, requestedName) => requestedName)
+      );
+    }
+    /**
+     * @param {string} code - JavaScript code to evaluate
+     * @returns {SandboxResult}
+     */
+    run(code) {
+      if (!this.context) {
+        throw new Error("Sandbox not initialized. Call init() first.");
+      }
+      if (this.disposed) {
+        throw new Error("Sandbox has been disposed");
+      }
+      const result = this.context.evalCode(code);
+      if (result.error) {
+        const err = this.context.dump(result.error);
+        result.error.dispose();
+        return { ok: false, error: formatQuickJsError(err) };
+      }
+      const value = this.context.dump(result.value);
+      result.value.dispose();
+      return { ok: true, value };
+    }
+    evalGlobal(code, filename = "sandbox-global.js") {
+      if (!this.context) {
+        throw new Error("Sandbox not initialized. Call init() first.");
+      }
+      const result = this.context.evalCode(code, filename);
+      if (result.error) {
+        const err = this.context.dump(result.error);
+        result.error.dispose();
+        throw new Error(formatQuickJsError(err));
+      }
+      result.value.dispose();
+    }
+    evalModule(code, filename = "sandbox-module.js") {
+      if (!this.context) {
+        throw new Error("Sandbox not initialized. Call init() first.");
+      }
+      const result = this.context.evalCode(code, filename, { type: "module" });
+      if (result.error) {
+        const err = this.context.dump(result.error);
+        result.error.dispose();
+        throw new Error(formatQuickJsError(err));
+      }
+      result.value.dispose();
+    }
+    async evalModuleAsync(code, filename = "sandbox-module.js") {
+      if (!this.context || !this.runtime) throw new Error("Sandbox not initialized. Call init() first.");
+      const result = this.context.evalCode(code, filename, { type: "module" });
+      if (result.error) {
+        const error = this.context.dump(result.error);
+        result.error.dispose();
+        throw new Error(formatQuickJsError(error));
+      }
+      const settledPromise = this.context.resolvePromise(result.value);
+      result.value.dispose();
+      while (this.runtime.hasPendingJob()) this.executePendingJobs();
+      const settled = await settledPromise;
+      if (settled.error) {
+        const error = this.context.dump(settled.error);
+        settled.error.dispose();
+        throw new Error(formatQuickJsError(error));
+      }
+      settled.value.dispose();
+    }
+    executePendingJobs(maxJobs = -1) {
+      if (!this.runtime || !this.context) throw new Error("Sandbox not initialized. Call init() first.");
+      const result = this.runtime.executePendingJobs(maxJobs);
+      if (result.error) {
+        const context = result.error.context || this.context;
+        const error = context.dump(result.error);
+        result.error.dispose();
+        throw new Error(formatQuickJsError(error));
+      }
+      return result.value;
+    }
+    callJsonFunction(name, payload, options = {}) {
+      if (!this.context) {
+        throw new Error("Sandbox not initialized. Call init() first.");
+      }
+      const argument = options.rawArgument === true ? payload : JSON.stringify(payload);
+      const call = `${name}(${JSON.stringify(argument)})`;
+      const result = this.context.evalCode(call);
+      if (result.error) {
+        const err = this.context.dump(result.error);
+        result.error.dispose();
+        throw new Error(formatQuickJsError(err));
+      }
+      const text = String(this.context.dump(result.value));
+      result.value.dispose();
+      if (text.startsWith("__MACCHIATO_ERROR__")) {
+        throw new Error(text.slice("__MACCHIATO_ERROR__".length));
+      }
+      return JSON.parse(text);
+    }
+    installJsonHostFunction(name, dispatch) {
+      if (!this.context) {
+        throw new Error("Sandbox not initialized. Call init() first.");
+      }
+      const hostFunction = this.context.newFunction(name, (messageHandle) => {
+        try {
+          const message = JSON.parse(this.context.getString(messageHandle));
+          return this.context.newString(JSON.stringify(dispatch(message)));
+        } catch (err) {
+          return this.context.newString(JSON.stringify({ __error: err.message }));
+        }
+      });
+      this.context.setProp(this.context.global, name, hostFunction);
+      hostFunction.dispose();
+    }
+    dispose() {
+      this.disposed = true;
+      this.context?.dispose();
+      this.runtime?.dispose();
+      this.context = null;
+      this.runtime = null;
     }
   };
-}
-export {
-  mountResourcesPresentation,
-  mountResourcesProjectEditor,
-  mountResourcesProjectPreview
-};
+  async function createSandbox(options = {}) {
+    const sandbox = new Sandbox(options);
+    await sandbox.init();
+    return sandbox;
+  }
+
+  // packages/presentation-use/src/runtime.js
+  async function mountPresentationRuntime({ root, project, onStatus = () => {
+  } }) {
+    const sourceHtml = project.file || project.html || "";
+    const sourceCss = project.css ?? [...sourceHtml.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
+    const styleUse = new StyleUse(project.cssSchema || {});
+    styleUse.validateStylesheet(sourceCss);
+    const style = document.createElement("style");
+    style.textContent = sourceCss;
+    document.head.append(style);
+    const storedValues = new Map(Object.entries(project.storage || {}));
+    const isolatedStorage = {
+      getItem(key) {
+        return storedValues.get(String(key)) ?? null;
+      },
+      setItem(key, value) {
+        storedValues.set(String(key), String(value));
+        onStatus({ type: "storage", key: String(key), value: String(value) });
+      },
+      removeItem(key) {
+        storedValues.delete(String(key));
+        onStatus({ type: "storage", key: String(key), value: null });
+      }
+    };
+    const storage = new LocalStorageBackend({
+      mode: project.capabilities?.sessionStorage ? "passthrough" : "disabled",
+      keys: project.capabilities?.storageKeys || null,
+      limit: project.capabilities?.storageLimit || 1e5,
+      storage: isolatedStorage
+    });
+    const capability = new DomUseHostCapability(project.domSchema || {}, styleUse, { storage });
+    const sandbox = await createSandbox({
+      modules: project.modules || {},
+      memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
+      maxStackBytes: project.limits?.stackBytes || 1024 * 1024
+    });
+    const render = () => {
+      root.innerHTML = capability.serializeApp().html;
+    };
+    try {
+      sandbox.installJsonHostFunction("__macchiatoHost", (message) => capability.dispatch(message));
+      const guestRuntime = project.guestRuntime || (true ? '(() => {\n  function host(op, data = {}) {\n    const result = JSON.parse(globalThis.__macchiatoHost(JSON.stringify({ op, ...data })));\n    if (result && result.__error) throw new Error(result.__error);\n    return result;\n  }\n  const elementsById = /* @__PURE__ */ new Map();\n  const listenersByNode = /* @__PURE__ */ new Map();\n  function attrsFromSource(source) {\n    const attrs = [];\n    const re = /([^\\s"\'<>/=]+)(?:\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s"\'=<>`]+)))?/g;\n    let match;\n    while ((match = re.exec(source)) !== null) {\n      attrs.push([match[1], match[2] ?? match[3] ?? match[4] ?? ""]);\n    }\n    return attrs;\n  }\n  function textFromSource(source) {\n    return String(source).replace(/&(?:#(\\d+)|#x([0-9a-f]+)|amp|lt|gt|quot|apos|nbsp);/gi, (entity, decimal, hexadecimal) => {\n      if (decimal) return String.fromCodePoint(Number(decimal));\n      if (hexadecimal) return String.fromCodePoint(Number.parseInt(hexadecimal, 16));\n      return { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": \'"\', "&apos;": "\'", "&nbsp;": "\\xA0" }[entity.toLowerCase()] || entity;\n    });\n  }\n  class HostNode {\n    constructor(id) {\n      this.__hostNodeId = String(id);\n      this.parentNode = null;\n      this.children = [];\n    }\n    appendChild(child) {\n      host("appendChild", { parentId: this.__hostNodeId, childId: child.__hostNodeId });\n      if (child.parentNode) child.parentNode.removeChild(child);\n      child.parentNode = this;\n      this.children.push(child);\n      return child;\n    }\n    removeChild(child) {\n      host("removeChild", { parentId: this.__hostNodeId, childId: child.__hostNodeId });\n      const index = this.children.indexOf(child);\n      if (index !== -1) this.children.splice(index, 1);\n      child.parentNode = null;\n      return child;\n    }\n    insertBefore(newNode, referenceNode) {\n      host("insertBefore", {\n        parentId: this.__hostNodeId,\n        childId: newNode.__hostNodeId,\n        referenceId: referenceNode?.__hostNodeId || null\n      });\n      if (newNode.parentNode) newNode.parentNode.removeChild(newNode);\n      const index = referenceNode ? this.children.indexOf(referenceNode) : -1;\n      if (index === -1) this.children.push(newNode);\n      else this.children.splice(index, 0, newNode);\n      newNode.parentNode = this;\n      return newNode;\n    }\n    append(...nodes) {\n      for (const node of nodes) this.appendChild(node instanceof HostNode ? node : new HostText(String(node)));\n    }\n    replaceChildren(...nodes) {\n      for (const child of [...this.children]) this.removeChild(child);\n      this.append(...nodes);\n    }\n  }\n  class HostText extends HostNode {\n    constructor(text) {\n      super(host("createTextNode", { text }).id);\n      this.nodeType = 3;\n      this._textContent = String(text);\n    }\n    get textContent() {\n      return this._textContent;\n    }\n    set textContent(value) {\n      this._textContent = String(value);\n      host("setTextContent", { id: this.__hostNodeId, value: this._textContent });\n    }\n  }\n  class HostElement extends HostNode {\n    constructor(tagName) {\n      super(host("createElement", { tagName }).id);\n      this.nodeType = 1;\n      this.tagName = String(tagName).toLowerCase();\n      this.attributes = {};\n      this._textContent = "";\n      this._className = "";\n      this._value = "";\n      this.checked = false;\n      this._dataset = {};\n      this.dataset = typeof Proxy === "function" ? new Proxy(this._dataset, {\n        set: (_target, property, value) => {\n          this.setAttribute(`data-${String(property).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`, value);\n          return true;\n        }\n      }) : this._dataset;\n    }\n    get id() {\n      return this.attributes.id || "";\n    }\n    set id(value) {\n      this.setAttribute("id", value);\n    }\n    get className() {\n      return this._className;\n    }\n    set className(value) {\n      this._className = String(value);\n      this.setAttribute("class", this._className);\n    }\n    get classList() {\n      const values = () => this.className.split(/\\s+/).filter(Boolean);\n      const write = (items) => {\n        this.className = [...new Set(items)].join(" ");\n      };\n      return {\n        contains: (name) => values().includes(String(name)),\n        add: (...names) => write([...values(), ...names.map(String)]),\n        remove: (...names) => {\n          const removed = new Set(names.map(String));\n          write(values().filter((name) => !removed.has(name)));\n        },\n        toggle: (name, force) => {\n          const present = values().includes(String(name));\n          const enabled = force === void 0 ? !present : Boolean(force);\n          if (enabled && !present) write([...values(), String(name)]);\n          if (!enabled && present) write(values().filter((item) => item !== String(name)));\n          return enabled;\n        }\n      };\n    }\n    get hidden() {\n      return this.attributes.hidden !== void 0;\n    }\n    set hidden(value) {\n      if (value) this.setAttribute("hidden", "");\n      else this.removeAttribute("hidden");\n    }\n    get src() {\n      return this.getAttribute("src") || "";\n    }\n    set src(value) {\n      this.setAttribute("src", value);\n    }\n    get textContent() {\n      if (this.children.length) return this.children.map((child) => child.textContent || "").join("");\n      return this._textContent;\n    }\n    set textContent(value) {\n      this._textContent = String(value);\n      this.children = [];\n      host("setTextContent", { id: this.__hostNodeId, value: this._textContent });\n    }\n    get innerHTML() {\n      return "";\n    }\n    set innerHTML(value) {\n      this.children = [];\n      host("setInnerHTML", { id: this.__hostNodeId, html: String(value) });\n    }\n    get value() {\n      return this._value || this.attributes.value || "";\n    }\n    set value(value) {\n      this._value = String(value);\n      if (this.tagName === "input") this.setAttribute("value", this._value);\n      else if (this.tagName === "textarea") this.textContent = this._value;\n    }\n    get style() {\n      const style = {\n        setProperty: (property, value) => {\n          host("setStyle", { id: this.__hostNodeId, property: String(property), value: String(value) });\n        }\n      };\n      if (typeof Proxy !== "function") return style;\n      return new Proxy(style, {\n        set: (_target, property, value) => {\n          host("setStyle", { id: this.__hostNodeId, property: String(property), value: String(value) });\n          return true;\n        }\n      });\n    }\n    setAttribute(name, value) {\n      const key = String(name);\n      const text = String(value);\n      this.attributes[key] = text;\n      if (key === "id") elementsById.set(text, this);\n      if (key === "class") this._className = text;\n      if (key === "value") this._value = text;\n      if (key === "checked") this.checked = true;\n      if (key.slice(0, 5) === "data-") {\n        const datasetKey = key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());\n        this._dataset[datasetKey] = text;\n      }\n      host("setAttribute", { id: this.__hostNodeId, name: key, value: text });\n    }\n    getAttribute(name) {\n      return this.attributes[String(name)] ?? null;\n    }\n    removeAttribute(name) {\n      const key = String(name);\n      delete this.attributes[key];\n      host("removeAttribute", { id: this.__hostNodeId, name: key });\n    }\n    addEventListener(event, handler) {\n      const name = String(event);\n      const listeners = listenersByNode.get(this.__hostNodeId) || {};\n      if (!listeners[name]) listeners[name] = [];\n      listeners[name].push(handler);\n      listenersByNode.set(this.__hostNodeId, listeners);\n      host("addEventListener", { id: this.__hostNodeId, event: name });\n    }\n    removeEventListener(event, handler) {\n      const listeners = listenersByNode.get(this.__hostNodeId);\n      if (!listeners?.[event]) return;\n      listeners[event] = listeners[event].filter((entry) => entry !== handler);\n    }\n    matches(selector) {\n      const attribute = /^\\[([^=\\]]+)(?:=["\']?([^\\]"\']+)["\']?)?\\]$/.exec(selector);\n      if (attribute) return this.attributes[attribute[1]] !== void 0 && (attribute[2] === void 0 || this.attributes[attribute[1]] === attribute[2]);\n      if (selector.slice(0, 1) === ".") return this.className.split(/\\s+/).indexOf(selector.slice(1)) !== -1;\n      if (selector.slice(0, 1) === "#") return this.id === selector.slice(1);\n      return this.tagName === selector.toLowerCase();\n    }\n    querySelector(selector) {\n      return find(this, (node) => node instanceof HostElement && node.matches(selector));\n    }\n    querySelectorAll(selector) {\n      return findAll(this, (node) => node instanceof HostElement && node.matches(selector));\n    }\n    closest(selector) {\n      for (let node = this; node instanceof HostElement; node = node.parentNode) if (node.matches(selector)) return node;\n      return null;\n    }\n    focus() {\n    }\n  }\n  function find(node, predicate) {\n    for (const child of node.children || []) {\n      if (predicate(child)) return child;\n      const found = find(child, predicate);\n      if (found) return found;\n    }\n    return null;\n  }\n  function findAll(node, predicate, matches = []) {\n    for (const child of node.children || []) {\n      if (predicate(child)) matches.push(child);\n      findAll(child, predicate, matches);\n    }\n    return matches;\n  }\n  const document = {\n    body: null,\n    createElement(tagName) {\n      return new HostElement(tagName);\n    },\n    createTextNode(text) {\n      return new HostText(text);\n    },\n    getElementById(id) {\n      return elementsById.get(String(id)) || null;\n    },\n    querySelector(selector) {\n      return this.body?.querySelector(selector) || null;\n    },\n    querySelectorAll(selector) {\n      return this.body?.querySelectorAll(selector) || [];\n    },\n    addEventListener(event, handler) {\n      this.body?.addEventListener(event, handler);\n    },\n    removeEventListener(event, handler) {\n      this.body?.removeEventListener(event, handler);\n    },\n    hasFocus() {\n      return true;\n    },\n    visibilityState: "visible"\n  };\n  const localStorage = {\n    getItem(key) {\n      return host("storageGet", { key }).value;\n    },\n    setItem(key, value) {\n      host("storageSet", { key, value: String(value) });\n    },\n    removeItem(key) {\n      host("storageRemove", { key });\n    }\n  };\n  globalThis.document = document;\n  globalThis.localStorage = localStorage;\n  globalThis.sessionStorage = localStorage;\n  class HostSearchParams {\n    values;\n    constructor(search = "") {\n      this.values = /* @__PURE__ */ new Map();\n      for (const part of String(search).replace(/^\\?/, "").split("&")) {\n        if (!part) continue;\n        const [key, value = ""] = part.split("=");\n        this.values.set(decodeURIComponent(key), decodeURIComponent(value.replace(/\\+/g, " ")));\n      }\n    }\n    get(key) {\n      return this.values.get(String(key)) ?? null;\n    }\n  }\n  class HostURL {\n    href;\n    search;\n    searchParams;\n    constructor(input, base = "https://presentation.invalid/") {\n      const value = String(input);\n      this.href = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `${String(base).replace(/[^/]*$/, "")}${value.replace(/^\\//, "")}`;\n      const query = this.href.indexOf("?");\n      const fragment = this.href.indexOf("#", query);\n      this.search = query < 0 ? "" : this.href.slice(query, fragment < 0 ? void 0 : fragment);\n      this.searchParams = new HostSearchParams(this.search);\n    }\n  }\n  globalThis.URL = HostURL;\n  globalThis.location = Object.freeze({ href: globalThis.__macchiatoLocationHref || "https://presentation.invalid/" });\n  let nextTimerId = 1;\n  const timers = /* @__PURE__ */ new Map();\n  globalThis.setTimeout = (callback, delay = 0) => {\n    const id = nextTimerId++;\n    timers.set(id, { callback, delay: Math.max(0, Number(delay) || 0), due: Date.now() + Math.max(0, Number(delay) || 0), repeat: false });\n    return id;\n  };\n  globalThis.clearTimeout = (id) => timers.delete(Number(id));\n  globalThis.setInterval = (callback, delay = 0) => {\n    const id = nextTimerId++;\n    const milliseconds = Math.max(1, Number(delay) || 0);\n    timers.set(id, { callback, delay: milliseconds, due: Date.now() + milliseconds, repeat: true });\n    return id;\n  };\n  globalThis.clearInterval = globalThis.clearTimeout;\n  globalThis.addEventListener = (event, handler) => document.addEventListener(event, handler);\n  globalThis.removeEventListener = (event, handler) => document.removeEventListener(event, handler);\n  globalThis.__macchiatoTimers = (nowValue) => {\n    try {\n      const now = Number(nowValue) || Date.now();\n      let changed = false;\n      for (const [id, timer] of [...timers]) {\n        if (timer.due > now) continue;\n        if (timer.repeat) timer.due = now + timer.delay;\n        else timers.delete(id);\n        timer.callback();\n        changed = true;\n      }\n      return JSON.stringify(changed ? { changed: true } : { changed: false });\n    } catch (err) {\n      return `__MACCHIATO_ERROR__${err.message}`;\n    }\n  };\n  function parseInitialHtml(source) {\n    const scripts = [];\n    host("resetDom");\n    elementsById.clear();\n    listenersByNode.clear();\n    const body = document.createElement("body");\n    document.body = body;\n    const stack = [body];\n    const bodyMatch = /<body\\b[^>]*>([\\s\\S]*?)<\\/body>/i.exec(source);\n    const markup = bodyMatch ? bodyMatch[1] : source;\n    const tagRe = /<script\\b([^>]*)>([\\s\\S]*?)<\\/script>|<\\/?([a-zA-Z][\\w:-]*)([^>]*)>/g;\n    let match;\n    let cursor = 0;\n    while ((match = tagRe.exec(markup)) !== null) {\n      const preceding = markup.slice(cursor, match.index);\n      if (preceding) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(preceding)));\n      cursor = tagRe.lastIndex;\n      if (match[0].slice(0, 7) === "<script") {\n        scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });\n        continue;\n      }\n      const tagName = match[3]?.toLowerCase();\n      if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "link" || tagName === "title" || tagName === "style") {\n        continue;\n      }\n      if (match[0].slice(0, 2) === "</") {\n        while (stack.length > 1) {\n          const node2 = stack.pop();\n          if (node2.tagName === tagName) break;\n        }\n        continue;\n      }\n      const node = document.createElement(tagName);\n      for (const [name, value] of attrsFromSource(match[4] || "")) node.setAttribute(name, value);\n      stack[stack.length - 1].appendChild(node);\n      const selfClosing = /\\/\\s*>$/.test(match[0]);\n      if (!selfClosing && ["br", "input", "hr", "img", "meta", "link"].indexOf(tagName) === -1) stack.push(node);\n    }\n    const trailing = markup.slice(cursor);\n    if (trailing) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(trailing)));\n    const app = document.getElementById("app");\n    host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId });\n    return scripts;\n  }\n  function makeEvent(target, payload) {\n    target.value = payload.value || "";\n    target.checked = Boolean(payload.checked);\n    const transferData = { ...payload.dataTransfer?.data || {} };\n    const dataTransfer = {\n      getData(type) {\n        return transferData[String(type)] || "";\n      },\n      setData(type, value) {\n        transferData[String(type)] = String(value);\n      },\n      effectAllowed: payload.dataTransfer?.effectAllowed || "move"\n    };\n    return {\n      target,\n      key: payload.key || "",\n      preventDefault() {\n      },\n      stopPropagation() {\n      },\n      dataTransfer,\n      __macchiatoDataTransfer: { data: transferData, effectAllowed: dataTransfer.effectAllowed }\n    };\n  }\n  function applyControlState(controls) {\n    for (const control of controls || []) {\n      const node = find(document.body, (entry) => entry.__hostNodeId === String(control.nodeId));\n      if (!node) continue;\n      node.value = control.value || "";\n      node.checked = Boolean(control.checked);\n    }\n  }\n  globalThis.__macchiatoBoot = (source) => {\n    try {\n      return JSON.stringify(parseInitialHtml(source));\n    } catch (err) {\n      return JSON.stringify({ error: err.message });\n    }\n  };\n  globalThis.__macchiatoDispatch = (json) => {\n    try {\n      const event = JSON.parse(json);\n      const listeners = listenersByNode.get(String(event.nodeId))?.[event.type] || [];\n      const target = host("nodeTag", { id: event.nodeId }).tagName ? find(document.body, (node) => node.__hostNodeId === String(event.nodeId)) : null;\n      if (target) {\n        host("beginEvent");\n        try {\n          applyControlState(event.payload?.controls);\n          const guestEvent = makeEvent(target, event.payload || {});\n          for (const listener of listeners) listener(guestEvent);\n          guestEvent.__macchiatoDataTransfer.effectAllowed = guestEvent.dataTransfer.effectAllowed;\n          event.dataTransfer = guestEvent.__macchiatoDataTransfer;\n        } finally {\n          host("endEvent");\n        }\n      }\n      return JSON.stringify({ html: host("serializeApp").html, dataTransfer: event.dataTransfer || null });\n    } catch (err) {\n      return `__MACCHIATO_ERROR__${err.message}`;\n    }\n  };\n})();\n//# sourceMappingURL=guest-runtime.js.map\n' : "");
+      if (!guestRuntime) throw new Error("presentation-use guest runtime is missing");
+      sandbox.evalGlobal(`Object.assign(globalThis, ${JSON.stringify(project.globals || {})})`, "presentation-globals.js");
+      sandbox.evalGlobal(guestRuntime, "dom-use-guest-runtime.js");
+      const inline = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });
+      if (inline.error) throw new Error(inline.error);
+      for (const [index, script] of [...inline, ...project.scripts || []].entries()) {
+        const code = typeof script === "string" ? script : script.code;
+        if (code?.trim()) await sandbox.evalModuleAsync(code, script.source || `presentation-${index}.js`);
+      }
+      render();
+      capability.finishInit();
+    } catch (error) {
+      sandbox.dispose?.();
+      style.remove();
+      throw error;
+    }
+    const events = project.capabilities?.events || ["click", "input", "change", "keydown"];
+    const listeners = events.map((type) => {
+      const listener = (event) => {
+        try {
+          const result = dispatchGuestDomEvent(capability, sandbox, root, event, type, { key: event.key || "" });
+          if (result) render();
+        } catch (error) {
+          onStatus({ type: "blocked", message: error.message });
+        }
+      };
+      root.addEventListener(type, listener);
+      return [type, listener];
+    });
+    root.dataset.runtime = "quickjs-dom-use";
+    const timer = setInterval(() => {
+      try {
+        const result = sandbox.callJsonFunction("__macchiatoTimers", Date.now(), { rawArgument: true });
+        if (result?.changed) render();
+      } catch (error) {
+        clearInterval(timer);
+        onStatus({ type: "blocked", message: error.message });
+      }
+    }, project.capabilities?.timerResolution || 100);
+    onStatus({ type: "mounted", runtime: "quickjs-dom-use" });
+    return {
+      inspect: () => ({ runtime: "quickjs-dom-use", dom: capability.serializeApp() }),
+      destroy() {
+        for (const [type, listener] of listeners) root.removeEventListener(type, listener);
+        clearInterval(timer);
+        sandbox.dispose?.();
+        style.remove();
+        root.replaceChildren();
+        delete root.dataset.runtime;
+      }
+    };
+  }
+
+  // packages/presentation-use/src/runner.js
+  var PROTOCOL = "macchiato-presentation-use-v1";
+  var mount = document.querySelector("[data-presentation-root]");
+  var active = null;
+  var channel = null;
+  function send(type, detail = {}) {
+    parent.postMessage({ protocol: PROTOCOL, channel, type, ...detail }, "*");
+  }
+  async function start(project) {
+    active?.destroy();
+    active = await mountPresentationRuntime({ root: mount, project, onStatus: (status) => send(status.type, status) });
+    send("mounted", { runtime: "quickjs-dom-use" });
+  }
+  addEventListener("message", (event) => {
+    if (event.data?.protocol !== PROTOCOL) return;
+    channel = event.data.channel;
+    if (event.data.type === "connect") send("ready");
+    if (event.data.type === "destroy") active?.destroy();
+    if (event.data.type === "mount") start(event.data.project).catch((error) => {
+      mount.textContent = `Presentation blocked: ${error.message}`;
+      mount.dataset.runtime = "blocked";
+      send("blocked", { message: error.message });
+    });
+  });
+})();

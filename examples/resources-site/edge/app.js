@@ -628,6 +628,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         throw new Error(`Storage length mismatch for ${key}`);
       }
       const headers = publicResponseHeaders(key, upstream.headers);
+      if (requestedProject && pathname.endsWith("/embed")) {
+        headers.set("content-security-policy", headers.get("content-security-policy").replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
+      }
       if (key.startsWith("locales/") && key.endsWith(".html")) headers.set("content-language", locale);
       let body = request.method === "HEAD" ? null : upstream.body;
       const contentFormVersion = manifest.artifacts.get("-/resources-site/content-form.js")?.sha256.slice(0, 12) || "";

@@ -1,0 +1,75 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
+import test from "node:test";
+import { chromium } from "playwright";
+
+const root = new URL("../../../", import.meta.url);
+const assets = new Map([
+  ["/-/project-editor-runtime.js", new URL("examples/resources-site/generated/project-editor-runtime.js", root)],
+  ["/-/resources-site/presentation-runner.js", new URL("examples/resources-site/generated/presentation-runner.js", root)],
+  ["/-/resources-site/presentation-runner.html", new URL("packages/presentation-use/runner.html", root)],
+]);
+
+test("presentation-use keeps guest code in QuickJS and blocks ungranted URL sinks", async (context) => {
+  const server = createServer(async (request, response) => {
+    if (request.url === "/") {
+      response.setHeader("content-type", "text/html; charset=utf-8");
+      response.end(`<!doctype html><div id="preview"></div><output id="status"></output><script type="module">
+        import { mountResourcesPresentation } from "/-/project-editor-runtime.js";
+        const status = document.querySelector("#status");
+        mountResourcesPresentation({
+          root: document.querySelector("#preview"),
+          project: {
+            title: "URL boundary probe",
+            file: '<main id="app"><button id="image">Set image URL</button><button id="link">Set link URL</button><p id="state">ready</p><img id="picture" alt=""><a id="target">target</a></main><script>document.getElementById("image").addEventListener("click", () => { document.getElementById("picture").src = "https://tracker.example/private.png"; }); document.getElementById("link").addEventListener("click", () => { document.getElementById("target").setAttribute("href", "https://tracker.example/leak"); });<\\/script>',
+            domSchema: {
+              nodes: {
+                body: { attrs: [], children: ["main"] },
+                main: { attrs: ["id"], children: ["button", "p", "img", "a"] },
+                button: { attrs: ["id"], events: ["click"], children: ["#text"] },
+                p: { attrs: ["id"], children: ["#text"] },
+                img: { attrs: ["id", "alt", "src"], children: [] },
+                a: { attrs: ["id", "href"], children: ["#text"] },
+              },
+              urls: { "img.src": "^data:image/png;base64,", "a.href": "^#[-a-z]+$" },
+            },
+            cssSchema: { properties: {} },
+          },
+          onStatus(event) { status.textContent = event.type + (event.message ? ": " + event.message : ""); },
+        });
+      </script>`);
+      return;
+    }
+    const asset = assets.get(request.url.split("?")[0]);
+    if (!asset) { response.statusCode = 404; response.end("Not found"); return; }
+    response.setHeader("content-type", asset.pathname.endsWith(".html") ? "text/html; charset=utf-8" : "text/javascript; charset=utf-8");
+    response.end(await readFile(asset));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  context.after(() => new Promise((resolve) => server.close(resolve)));
+  const browser = await chromium.launch();
+  context.after(() => browser.close());
+  const page = await browser.newPage();
+  const browserErrors = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") browserErrors.push(message.text()); });
+  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  const frameElement = page.locator(".project-editor__presentation-frame");
+  await frameElement.waitFor({ timeout: 10_000 }).catch(() => assert.fail(`presentation frame did not mount: ${browserErrors.join(" | ")}`));
+  assert.equal(await frameElement.getAttribute("sandbox"), "allow-scripts");
+  const guest = page.frameLocator(".project-editor__presentation-frame");
+  await guest.locator("[data-runtime='quickjs-dom-use']").waitFor({ timeout: 15_000 }).catch(async () => {
+    assert.fail(`presentation runtime did not mount: ${await page.locator("#status").textContent()} | ${await guest.locator("body").innerText()} | ${browserErrors.join(" | ")}`);
+  });
+  assert.equal(await guest.locator("#state").textContent(), "ready");
+
+  await guest.locator("#image").click();
+  await page.locator("#status").getByText(/blocked: URL not allowed on img\.src/).waitFor();
+  assert.equal(await guest.locator("#picture").getAttribute("src"), null);
+  assert.equal(await guest.locator("#state").textContent(), "ready");
+
+  await guest.locator("#link").click();
+  await page.locator("#status").getByText(/blocked: URL not allowed on a\.href/).waitFor();
+  assert.equal(await guest.locator("#target").getAttribute("href"), null);
+});

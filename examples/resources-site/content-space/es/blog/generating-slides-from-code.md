@@ -10,7 +10,7 @@ Leer un código base y presentarlo son tareas distintas. Un árbol de directorio
 
 Estoy experimentando con un recorrido de código generado que trata las diapositivas como una lectura separada y versionada de un directorio fuente. Conserva una instantánea de los archivos, divide la lectura canónica en capítulos y coloca fragmentos seleccionados junto a una narrativa escrita a partir de un análisis más amplio. Los fragmentos preliminares introducen ideas; los canónicos abarcan cada línea relevante sin fingir que todas tienen la misma importancia.
 
-- Example: [Explorar el recorrido exportado de dom-use](/-/blog-examples/dom-use-tour/index.html)
+- Example: [Explorar el recorrido exportado de dom-use](/benatkin/dom-use-tour/embed)
 - Project: [benatkin / DOM use code tour](/benatkin/dom-use-tour)
 
 El ejemplo incrustado es una exportación, no la aplicación de autoría. No depende de un servidor y guarda las notas, el progreso de lectura y el historial de diapositivas en el almacenamiento de sesión. Así puede alojarse como página estática, descargarse o abrirse dentro de un contenedor de proyecto restringido.

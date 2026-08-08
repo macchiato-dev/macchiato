@@ -15,15 +15,15 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
   let offset = 3;
   const examples = [];
   const parseExample = (line, projectLine = "") => {
-    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+)\)$/.exec(line);
+    const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+|\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*\/embed)\)$/.exec(line);
     if (!match) throw new Error(`${filename}: invalid example`);
     const external = match[2].startsWith("https://");
     const url = new URL(match[2], "https://resources.invalid");
     if (external && (url.hostname !== "codesandbox.io" || !url.pathname.startsWith("/embed/"))) throw new Error(`${filename}: unsupported example host`);
-    if (!external && !url.pathname.startsWith("/-/blog-examples/")) throw new Error(`${filename}: unsupported local example`);
+    if (!external && !url.pathname.startsWith("/-/blog-examples/") && !/^\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*\/embed$/.test(url.pathname)) throw new Error(`${filename}: unsupported local example`);
     const projectMatch = /^- Project: \[([^\]]{1,200})\]\((\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*)\)$/.exec(projectLine);
     if (projectLine && !projectMatch) throw new Error(`${filename}: invalid example project`);
-    return Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external, project: projectMatch ? Object.freeze({ label: projectMatch[1], url: projectMatch[2] }) : null });
+    return Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external, sameOrigin: !external && !url.pathname.startsWith("/-/blog-examples/"), project: projectMatch ? Object.freeze({ label: projectMatch[1], url: projectMatch[2] }) : null });
   };
   while (lines[offset]?.startsWith("- Example: ")) {
     const projectLine = lines[offset + 1]?.startsWith("- Project: ") ? lines[offset + 1] : "";

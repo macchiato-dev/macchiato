@@ -228,18 +228,19 @@ test("Resources.co blog container examples render and surface schema errors in t
   assert.equal(await examplePanel.locator("a").first().getAttribute("href"), "/benatkin/dom-use-tour");
   assert.equal(await examplePanel.locator(".blog-example-slug").textContent(), "benatkin/dom-use-tour");
   const blogUrl = blogPage.url();
-  const embeddedTour = blogPage.frameLocator(".blog-example");
-  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "1 of 2");
-  await embeddedTour.locator("#next").click();
-  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "2 of 2");
-  await embeddedTour.locator("#previous").click();
+  const embeddedTour = blogPage.locator(".blog-example");
+  assert.equal(await embeddedTour.getAttribute("src"), "/benatkin/dom-use-tour/embed");
+  await embeddedTour.evaluate((frame) => { frame.dataset.identityProbe = "preserved"; });
   await examplePanel.locator(".blog-example-fullscreen").click();
   assert.equal(blogPage.url(), blogUrl);
   assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 1);
+  assert.equal(await embeddedTour.getAttribute("data-identity-probe"), "preserved");
+  assert.deepEqual(await embeddedTour.evaluate((frame) => {
+    const box = frame.getBoundingClientRect();
+    return [box.left, box.top, box.width, box.height];
+  }), [0, 0, 1280, 800]);
   assert.equal(await examplePanel.locator(".blog-example-fullscreen").getAttribute("aria-label"), "Close full screen");
   assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), false);
-  await embeddedTour.locator("#next").click();
-  assert.equal(await embeddedTour.locator("#chapter-slide-position").textContent(), "2 of 2");
   await blogPage.keyboard.press("Escape");
   assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 0);
   await blogPage.keyboard.press("Enter");

@@ -3,10 +3,15 @@ import { BrowserDomHost } from "@macchiato-dev/browser-use";
 import { browserUseQuickJsDomGuestSource } from "@macchiato-dev/browser-use/quickjs-dom-guest";
 import { CanvasUseHost } from "@macchiato-dev/canvas-use";
 import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
+import { mountPresentationUse } from "@macchiato-dev/presentation-use";
 
 export async function mountResourcesProjectEditor(options) {
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
   return mountQuickJsCodeEditor({ ...options, guestSource });
+}
+
+export function mountResourcesPresentation(options) {
+  return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
 }
 
 function previewPolicy(tags) {

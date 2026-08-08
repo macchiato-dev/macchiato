@@ -8,7 +8,7 @@ Reading a codebase and presenting a codebase are different jobs. A directory tre
 
 I have been experimenting with a generated code tour that treats slides as a separate, versioned reading of a source directory. It snapshots the files, divides canonical reading into chapters, and places selected excerpts beside a narrative written from a broader source analysis. Preview excerpts can introduce an idea, while canonical excerpts account for every relevant line without pretending every line is equally important.
 
-- Example: [Explore the exported dom-use code tour](/-/blog-examples/dom-use-tour/index.html)
+- Example: [Explore the exported dom-use code tour](/benatkin/dom-use-tour/embed)
 - Project: [benatkin / DOM use code tour](/benatkin/dom-use-tour)
 
 The embedded example is an export, not the authoring application. It has no server dependency and stores notes, reading progress, and slide history in session storage. That makes it useful as a portable artifact: it can be hosted as a static page, downloaded, or opened inside a constrained project container.

@@ -487,6 +487,7 @@ button:not(:disabled) { cursor: pointer; }
 .blog-example-fullscreen { padding: 0; border: none; color: #d2d7d6; background: transparent; font: inherit; font-weight: 600; }
 .blog-example-fullscreen:hover, .blog-example-fullscreen:focus-visible { color: #fff; text-decoration: underline; }
 body.blog-example-presenting { overflow: hidden; }
+body.blog-example-presenting .content-block:has(.blog-example-block--fullscreen) { animation: blockIn 0s linear both; transform: none; }
 .blog-example-block--fullscreen .blog-example { position: fixed; top: 0; left: 0; z-index: 1000; width: 100vw; height: 100vh; min-height: 0; border: none; }
 .blog-example-block--fullscreen .blog-example-panel { position: fixed; top: 0; left: 0; z-index: 1001; width: 100%; padding: 0; border: none; background: transparent; pointer-events: none; }
 .blog-example-block--fullscreen .blog-example-panel > :not(.blog-example-fullscreen) { display: none; }
@@ -909,6 +910,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__source { padding: 12px; overflow: hidden; }
 .project-editor__present-close { display: none; }
 body.project-presenting { overflow: hidden; }
+body.project-presenting .content-block:has(.project-editor__preview--presenting) { animation: blockIn 0s linear both; transform: none; }
 .project-editor__preview--presenting { position: fixed; top: 0; left: 0; z-index: 1000; display: block; width: 100vw; height: 100vh; overflow: hidden; color: var(--text); background: #151717; }
 .project-editor__preview--presenting > [data-project-preview] { width: 100%; height: 100%; overflow: auto; }
 .project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 5px; right: 5px; z-index: 1001; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
@@ -921,6 +923,7 @@ body.project-presenting { overflow: hidden; }
 .project-editor__asset-view button { padding: 6px 9px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--hover); font: inherit; cursor: pointer; }
 .project-editor__large-source { box-sizing: border-box; width: 100%; min-height: 0; flex: 1 1 auto; resize: none; border: 1px solid var(--track-border); border-radius: 3px; padding: 10px; color: #cbd3d1; background: #1d2020; font-family: monospace; font-size: 12px; line-height: 1.55; overflow: auto; }
 .project-editor__presentation-frame { display: block; width: 100%; height: 100%; border: none; background: #101212; }
+.project-editor__preview > [data-project-preview][data-preview-runtime="presentation-use"] { box-sizing: border-box; width: 100%; height: 100%; padding: 0; overflow: hidden; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] { box-sizing: border-box; display: grid; width: 100%; height: 100%; place-items: center; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] .project-editor__presentation-frame { aspect-ratio: 16 / 10; height: auto; max-height: 100%; }
 .project-editor__mount .cm-editor { background: #1d2020; }
@@ -979,10 +982,10 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .project-embed .project-create__layout { display: block; }
 .project-embed .project-editor { width: 100%; height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .project-embed .project-editor__source-toolbar, .project-embed .project-editor__source, .project-embed .project-editor__splitter, .project-embed .project-editor__status, .project-embed .project-editor__preview-toolbar > :not(.project-editor__view-controls), .project-embed .project-editor__view-controls > :not([data-project-present]) { display: none; }
-.project-embed .project-editor__toolbar { position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0; background: transparent; }
+.project-embed .project-editor__toolbar { display: none; }
 .project-embed .project-editor__preview-toolbar { display: block; }
 .project-embed .project-editor__workspace { display: block; height: 100%; }
-.project-embed .project-editor__preview { display: block; width: 100%; height: 100%; overflow: auto; }
+.project-embed .project-editor__preview { display: block; width: 100%; height: 100%; overflow: hidden; }
 .focused-view .account-dashboard.project-create, .focused-view .project-create .create-form { height: 100%; min-height: 0; }
 .focused-view .project-create__fields { gap: 9px; padding: 10px 12px; border: 1px solid var(--track-border); border-radius: 0; }
 .focused-view .project-create__fields .create-form__field { gap: 4px; }
@@ -1317,9 +1320,9 @@ function blockHtml(block, options = {}) {
 function blogExampleHtml(example, origin) {
   const sandbox = example.external
     ? "allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
-    : "allow-scripts";
-  const deferred = !example.external && !origin;
-  const src = deferred ? "about:blank" : example.external ? example.url : `${origin}${example.url}`;
+    : example.sameOrigin ? "allow-same-origin allow-scripts" : "allow-scripts";
+  const deferred = !example.external && !example.sameOrigin && !origin;
+  const src = deferred ? "about:blank" : example.external || example.sameOrigin ? example.url : `${origin}${example.url}`;
   const data = deferred ? ` data-example-path="${escapeHtml(example.url)}"` : "";
   const projectPath = example.project?.url.replace(/^\//, "") || "";
   const projectNamespace = projectPath.split("/")[0];

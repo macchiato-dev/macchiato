@@ -2,7 +2,7 @@ import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normaliz
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
-import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
+import { mountResourcesPresentation, mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -334,22 +334,35 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     root.querySelector("[data-preview-title]").textContent = title;
     const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
     if (containerName === "presentation") {
-      const frame = document.createElement("iframe");
-      frame.className = "project-editor__presentation-frame";
-      frame.title = title;
-      frame.setAttribute("sandbox", "allow-scripts");
-      frame.setAttribute("referrerpolicy", "no-referrer");
-      const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline' blob:; font-src data:">`;
+      const containerEntry = state.config?.containerEntry || entry;
+      const containerSource = state.files.find((file) => file.path === containerEntry)?.content || source;
       const artifactPath = String(state.config?.artifactPath || "");
-      const origin = root.querySelector("[data-blog-examples-origin]")?.dataset.blogExamplesOrigin || "";
-      if (artifactPath && /^\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+$/.test(artifactPath) && origin) {
-        frame.src = `${origin}${artifactPath}`;
-      } else {
-        frame.srcdoc = source.replace(/<head([^>]*)>/i, `<head$1>${policy}`);
-      }
-      preview.replaceChildren(frame);
-      preview.dataset.previewRuntime = "isolated-presentation";
-      if (!artifactPath && /<script\b/i.test(source)) setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
+      const artifactOrigin = root.querySelector("[data-blog-examples-origin]")?.dataset.blogExamplesOrigin || "";
+      const fileUrl = artifactOrigin && /^\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+$/.test(artifactPath) ? `${artifactOrigin}${artifactPath}` : "";
+      const stylesheetPaths = state.config?.stylesheets || ["style.css"];
+      const css = stylesheetPaths.map((path) => state.files.find((file) => file.path === path)?.content || "").join("\n");
+      const scriptPaths = state.config?.scripts || [...source.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((match) => match[1].replace(/^\.\//, ""));
+      const modules = Object.fromEntries(Object.entries(state.config?.modules || {}).map(([specifier, path]) => [specifier, state.files.find((file) => file.path === path)?.content || ""]));
+      const assets = Object.fromEntries(state.files.filter((file) => /^data:[^,]+,/.test(file.content)).map((file) => [file.path, file.content]));
+      const scripts = scriptPaths.map((path) => ({ source: path, code: state.files.find((file) => file.path === path)?.content || "" })).filter((script) => script.code);
+      previewController = mountResourcesPresentation({
+        root: preview,
+        project: {
+          title, fileUrl, file: fileUrl ? undefined : containerSource, html: source, css: state.config?.containerEntry ? undefined : css,
+          scripts: state.config?.containerEntry ? [] : scripts,
+          modules: state.config?.containerEntry ? {} : modules,
+          globals: { __PRESENTATION_USE_ASSETS__: assets },
+          domSchema: state.config?.domSchema || {},
+          cssSchema: state.config?.cssSchema || {},
+          capabilities: state.config?.capabilities || { events: ["click", "input", "change", "keydown"], sessionStorage: true },
+          limits: state.config?.limits || {},
+        },
+        onStatus(event) {
+          if (generation !== previewGeneration) return;
+          if (event.type === "blocked") setStatus(`Blocked: ${event.message}`, "error");
+        },
+      });
+      preview.dataset.previewRuntime = "presentation-use";
       return;
     }
     const parsed = new DOMParser().parseFromString(source, "text/html");
@@ -777,20 +790,23 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const presentButton = root.querySelector("[data-project-present]");
   const presentClose = root.querySelector("[data-project-present-close]");
   const previewSection = root.querySelector(".project-editor__preview");
-  const previewPosition = document.createComment("project preview position");
+  const projectContentBlock = root.closest(".content-block");
   function closePresentation() {
     delete root.dataset.presenting;
     document.body.classList.remove("project-presenting");
     previewSection.classList.remove("project-editor__preview--presenting");
-    previewPosition.replaceWith(previewSection);
+    projectContentBlock?.style.removeProperty("animation");
+    projectContentBlock?.style.removeProperty("backdrop-filter");
+    projectContentBlock?.style.removeProperty("transform");
     presentButton.setAttribute("aria-pressed", "false");
   }
   function openPresentation({ keyboard = false } = {}) {
     root.dataset.presenting = "true";
     document.body.classList.add("project-presenting");
-    previewSection.replaceWith(previewPosition);
     previewSection.classList.add("project-editor__preview--presenting");
-    document.body.append(previewSection);
+    projectContentBlock?.style.setProperty("animation", "none");
+    projectContentBlock?.style.setProperty("backdrop-filter", "none");
+    projectContentBlock?.style.setProperty("transform", "none");
     presentButton.setAttribute("aria-pressed", "true");
     if (keyboard) presentClose.focus();
     else presentClose.blur();
@@ -964,11 +980,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 for (const figure of document.querySelectorAll(".blog-example-block")) {
   const button = figure.querySelector(".blog-example-fullscreen");
   if (!button) continue;
-  const position = document.createComment("blog example position");
+  const blogContentBlock = figure.closest(".content-block");
   function closeBlogPresentation({ focus = true } = {}) {
     if (!figure.classList.contains("blog-example-block--fullscreen")) return;
     figure.classList.remove("blog-example-block--fullscreen");
-    position.replaceWith(figure);
+    blogContentBlock?.style.removeProperty("animation");
+    blogContentBlock?.style.removeProperty("backdrop-filter");
+    blogContentBlock?.style.removeProperty("transform");
     document.body.classList.remove("blog-example-presenting");
     button.textContent = "View full screen ↗";
     button.setAttribute("aria-label", "View full screen");
@@ -979,9 +997,10 @@ for (const figure of document.querySelectorAll(".blog-example-block")) {
       closeBlogPresentation({ focus: event.detail === 0 });
       return;
     }
-    figure.replaceWith(position);
     figure.classList.add("blog-example-block--fullscreen");
-    document.body.append(figure);
+    blogContentBlock?.style.setProperty("animation", "none");
+    blogContentBlock?.style.setProperty("backdrop-filter", "none");
+    blogContentBlock?.style.setProperty("transform", "none");
     document.body.classList.add("blog-example-presenting");
     button.textContent = "×";
     button.setAttribute("aria-label", "Close full screen");

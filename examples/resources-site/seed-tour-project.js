@@ -28,6 +28,8 @@ const files = textFiles.filter((path) => existsSync(join(sourceDir, path))).map(
   path,
   content: readFileSync(join(sourceDir, path), "utf8"),
 }));
+const offlinePresentation = join(sourceDir, "dist", "offline", "index.html");
+if (existsSync(offlinePresentation)) files.push({ path: "presentation.html", content: readFileSync(offlinePresentation, "utf8") });
 const illustrationDir = join(sourceDir, "assets", "illustrations");
 if (existsSync(illustrationDir)) {
   for (const name of readdirSync(illustrationDir).sort()) {
@@ -38,13 +40,39 @@ if (existsSync(illustrationDir)) {
   }
 }
 
+const html = files.find((file) => file.path === "index.html").content;
+const appSource = files.find((file) => file.path === "app.js").content;
+const css = files.find((file) => file.path === "style.css").content;
+const tags = [...new Set([...`${html}\n${appSource}`.matchAll(/<\/?([a-z][a-z0-9-]*)\b/gi)].map((match) => match[1].toLowerCase()))]
+  .filter((tag) => !["html", "head", "meta", "link", "script", "style", "title"].includes(tag));
+const attributes = ["id", "class", "hidden", "title", "role", "type", "value", "accept", "alt", "src", "method", "open", "maxlength", "placeholder", "viewBox", "x", "y", "x1", "y1", "x2", "y2", "width", "height", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "aria-*", "data-*"];
+const events = ["click", "input", "change", "keydown", "visibilitychange", "blur", "focus", "pagehide"];
+const domSchema = {
+  nodes: Object.fromEntries(["body", ...tags].map((tag) => [tag, { attrs: attributes, events, children: [...tags, "#text"] }])),
+  urls: { "img.src": "^(?:assets/illustrations/[a-z0-9-]+\\.(?:jpg|jpeg|png|gif|webp)|data:image/(?:jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+)$", fragments: true },
+  maxDepth: 40,
+  limits: { maxTextLength: 250_000, maxAttributeNameLength: 80, maxAttributeValueLength: 250_000, maxAttributes: 24, maxNodes: 1_500 },
+  gas: { enabled: true, tank: { init: 800_000, idle: 160_000, event: 100_000 }, refill: 20_000 },
+};
+const properties = Object.fromEntries([...css.matchAll(/([a-zA-Z-]+)\s*:\s*([^;}{]+)[;}]/g)].map((match) => [match[1].toLowerCase(), true]));
+properties["stroke-dashoffset"] = true;
+const cssSchema = { properties, imports: false, limits: { maxStylesheetLength: 100_000, maxPropertyLength: 128, maxValueLength: 8_192, maxUrlLength: 4_096, maxImports: 0 } };
+
 const snapshot = {
   files,
   config: {
     entry: "index.html",
+    containerEntry: "presentation.html",
     template: "slides",
     container: "presentation",
     artifactPath: "/-/blog-examples/dom-use-tour/index.html",
+    stylesheets: ["style.css"],
+    scripts: ["app.js"],
+    modules: { "./generated/tour-data.js": "generated/tour-data.js" },
+    domSchema,
+    cssSchema,
+    capabilities: { events, sessionStorage: true, storageLimit: 2_000_000 },
+    limits: { memoryBytes: 128 * 1024 * 1024, stackBytes: 2 * 1024 * 1024 },
     sandbox: { network: false, storage: "session" },
   },
 };
