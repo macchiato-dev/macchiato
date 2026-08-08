@@ -91,7 +91,13 @@ async function main() {
   }, true);
   app.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== "Escape") return;
-    dispatchDomEvent(capability, sandbox, event, "keydown", { key: event.key });
+    if (event.target.matches("textarea.edit") && event.key === "Enter" && !event.metaKey && !event.ctrlKey) return;
+    dispatchDomEvent(capability, sandbox, event, "keydown", {
+      key: event.key,
+      metaKey: event.metaKey,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+    });
   });
   app.addEventListener("dragstart", (event) => {
     dragDataTransfer = { data: {}, effectAllowed: "move" };

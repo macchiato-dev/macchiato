@@ -166,14 +166,19 @@
     display: none;
     flex: 1;
     padding: 14px 15px 14px 5px;
+    min-height: 58px;
     font-size: 24px;
+    font-family: inherit;
     font-weight: 300;
+    line-height: 1.35;
     border: 1px solid #4a4a5a;
     box-shadow: inset 0 -1px 5px rgba(0,0,0,0.3);
     outline: none;
     color: #e0e0e0;
     background: #1e1e24;
     margin: 0;
+    overflow: auto;
+    resize: vertical;
   }
   .todo-item.editing .edit {
     display: block;
@@ -300,6 +305,7 @@ class GuestElement extends GuestNode {
     this._style = {};
     this._listeners = {};
     this._textContent = '';
+    this._value = '';
   }
   get id() { return this.attributes.id || ''; }
   set id(v) { if (v) this.attributes.id = v; else delete this.attributes.id; }
@@ -310,6 +316,8 @@ class GuestElement extends GuestNode {
     this._textContent = String(v);
     this.children = [];
   }
+  get value() { return this._value; }
+  set value(v) { this._value = String(v); }
   get classList() {
     const self = this;
     return {
@@ -369,15 +377,19 @@ class HostRenderer {
     const real = this.realDoc.createElement(guest.tagName);
     this.map.set(guest, real);
     for (const [k, v] of Object.entries(guest.attributes)) real.setAttribute(k, v);
+    if (guest.tagName === 'input' || guest.tagName === 'textarea') real.value = guest.value;
     if (guest._classList.size) real.className = Array.from(guest._classList).join(' ');
     for (const [k, v] of Object.entries(guest._style)) real.style[k] = v;
     for (const [evt, handlers] of Object.entries(guest._listeners)) {
       handlers.forEach(h => real.addEventListener(evt, e => {
-        const ge = {
+          const ge = {
           target: { value: e.target.value, checked: e.target.checked, dataset: e.target.dataset },
           preventDefault: () => e.preventDefault(),
           stopPropagation: () => e.stopPropagation(),
           key: e.key,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
           dataTransfer: e.dataTransfer ? {
             getData: t => e.dataTransfer.getData(t),
             setData: (t, d) => e.dataTransfer.setData(t, d),
@@ -510,11 +522,12 @@ function buildApp() {
       label.addEventListener('dblclick', () => setState({ editingId: todo.id }));
       item.appendChild(label);
 
-      const edit = doc.createElement('input');
+      const edit = doc.createElement('textarea');
       edit.className = 'edit';
-      edit.setAttribute('value', todo.text);
+      edit.value = todo.text;
       edit.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
           const text = e.target.value.trim();
           if (text) {
             setState({

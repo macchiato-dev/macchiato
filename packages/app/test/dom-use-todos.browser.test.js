@@ -96,7 +96,7 @@ test("dom-use-todos works in a real browser", async (t) => {
   await page.keyboard.press("Enter");
 
   await assert.doesNotReject(async () => {
-    await page.getByText("Buy milk").waitFor();
+    await page.locator(".todo-item label", { hasText: "Buy milk" }).waitFor();
   });
   await page.locator(".destroy").click({ force: true });
   await assert.doesNotReject(async () => {
@@ -108,7 +108,7 @@ test("dom-use-todos works in a real browser", async (t) => {
   await page.getByPlaceholder("What needs to be done?").fill("Make coffee");
   await page.getByRole("button", { name: "Add" }).click();
   await assert.doesNotReject(async () => {
-    await page.getByText("Make coffee").waitFor();
+    await page.locator(".todo-item label", { hasText: "Make coffee" }).waitFor();
   });
   await page.locator(".destroy").click({ force: true });
   assert.equal(await page.locator(".todo-item").count(), 0);
@@ -117,8 +117,8 @@ test("dom-use-todos works in a real browser", async (t) => {
   await page.keyboard.press("Enter");
   await page.getByPlaceholder("What needs to be done?").fill("Second");
   await page.keyboard.press("Enter");
-  await page.getByText("First").waitFor();
-  await page.getByText("Second").waitFor();
+  await page.locator(".todo-item label", { hasText: "First" }).waitFor();
+  await page.locator(".todo-item label", { hasText: "Second" }).waitFor();
 
   await page.locator(".todo-item").nth(0).dragTo(page.locator(".todo-item").nth(1));
   assert.deepEqual(await page.locator(".todo-item label").allTextContents(), ["Second", "First"]);
@@ -130,7 +130,7 @@ test("dom-use-todos works in a real browser", async (t) => {
     await page.getByPlaceholder("What needs to be done?").fill(item);
     await page.keyboard.press("Enter");
   }
-  await page.getByText("Alpha").waitFor();
+  await page.locator(".todo-item label", { hasText: "Alpha" }).waitFor();
   await page.locator(".toggle").nth(0).check();
   await page.locator(".toggle").nth(1).check();
 
@@ -148,7 +148,19 @@ test("dom-use-todos works in a real browser", async (t) => {
   await page.getByPlaceholder("What needs to be done?").click();
   await page.keyboard.type("Buy milk");
   await page.keyboard.press("Enter");
-  await page.getByText("Buy milk").waitFor();
+  await page.locator(".todo-item label", { hasText: "Buy milk" }).waitFor();
+  await page.locator(".todo-item label", { hasText: "Buy milk" }).dblclick();
+  const edit = page.locator("textarea.edit");
+  await edit.waitFor();
+  assert.equal(await edit.inputValue(), "Buy milk");
+  await edit.press("End");
+  await edit.press("Enter");
+  await edit.type("and oat milk");
+  assert.equal(await edit.inputValue(), "Buy milk\nand oat milk");
+  assert.equal(await edit.isVisible(), true, "plain Enter keeps the multiline editor open");
+  await edit.press(process.platform === "darwin" ? "Meta+Enter" : "Control+Enter");
+  await page.locator(".todo-item label", { hasText: "Buy milk\nand oat milk" }).waitFor();
+  assert.equal(await page.locator(".todo-item label").textContent(), "Buy milk\nand oat milk");
   await page.locator(".toggle").check();
   await assert.doesNotReject(async () => {
     await page.locator(".todo-item.completed").waitFor();

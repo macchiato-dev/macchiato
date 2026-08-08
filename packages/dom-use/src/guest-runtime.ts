@@ -402,7 +402,7 @@ function parseInitialHtml(source) {
   let cursor = 0;
   while ((match = tagRe.exec(markup)) !== null) {
     const preceding = markup.slice(cursor, match.index);
-    if (preceding) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(preceding)));
+    if (preceding.trim()) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(preceding)));
     cursor = tagRe.lastIndex;
     if (match[0].slice(0, 7) === "<script") {
       scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });
@@ -426,7 +426,7 @@ function parseInitialHtml(source) {
     if (!selfClosing && ["br", "input", "hr", "img", "meta", "link"].indexOf(tagName) === -1) stack.push(node);
   }
   const trailing = markup.slice(cursor);
-  if (trailing) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(trailing)));
+  if (trailing.trim()) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(trailing)));
 
   const app = document.getElementById("app");
   host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId });
@@ -449,6 +449,9 @@ function makeEvent(target, payload) {
   return {
     target,
     key: payload.key || "",
+    metaKey: Boolean(payload.metaKey),
+    ctrlKey: Boolean(payload.ctrlKey),
+    shiftKey: Boolean(payload.shiftKey),
     preventDefault() {},
     stopPropagation() {},
     dataTransfer,

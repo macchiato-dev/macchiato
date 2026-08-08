@@ -248,6 +248,9 @@
         "font-size": {
           "$ref": "fontSize"
         },
+        "font-family": {
+          "$ref": "fontFamily"
+        },
         "font-style": {
           "enum": [
             "normal",
@@ -281,6 +284,13 @@
         "opacity": {
           "$ref": "number"
         },
+        "overflow": {
+          "enum": [
+            "hidden",
+            "visible",
+            "auto"
+          ]
+        },
         "outline": {
           "enum": [
             "none"
@@ -297,6 +307,12 @@
         },
         "position": {
           "$ref": "position"
+        },
+        "resize": {
+          "enum": [
+            "none",
+            "vertical"
+          ]
         },
         "right": {
           "$ref": "length"

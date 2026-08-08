@@ -120,7 +120,7 @@ const EVENT_PAYLOAD_FIELDS = {
   dragover: ["value", "checked", "controls", "dataTransfer"],
   dragstart: ["value", "checked", "controls", "dataTransfer"],
   drop: ["value", "checked", "controls", "dataTransfer"],
-  keydown: ["value", "checked", "controls", "key"],
+  keydown: ["value", "checked", "controls", "key", "modifiers"],
 };
 
 function patternMatches(pattern, value) {
@@ -944,6 +944,11 @@ export class DomUse {
     if (fields.has("value")) clean.value = this.sanitizeEventText(payload.value || "", "event value");
     if (fields.has("checked")) clean.checked = Boolean(payload.checked);
     if (fields.has("key")) clean.key = this.sanitizeEventText(payload.key || "", "event key");
+    if (fields.has("modifiers")) {
+      clean.metaKey = Boolean(payload.metaKey);
+      clean.ctrlKey = Boolean(payload.ctrlKey);
+      clean.shiftKey = Boolean(payload.shiftKey);
+    }
     if (fields.has("controls")) clean.controls = this.sanitizeEventControls(payload.controls);
     if (fields.has("dataTransfer")) clean.dataTransfer = this.sanitizeDataTransfer(payload.dataTransfer);
     return clean;

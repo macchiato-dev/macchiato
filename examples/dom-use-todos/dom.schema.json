@@ -35,7 +35,7 @@
     },
     "div": {
       "attrs": ["class", "id"],
-      "children": ["$core-interface", "$list", "$footer", "div", "header", "ul", "footer", "input", "button"]
+      "children": ["$core-interface", "$list", "$footer", "div", "header", "ul", "footer", "input", "textarea", "button"]
     },
     "header": {
       "attrs": ["class"],
@@ -50,6 +50,11 @@
       "events": ["keydown", "change", "blur"],
       "children": []
     },
+    "textarea": {
+      "attrs": ["class", "data-node-id"],
+      "events": ["keydown", "blur"],
+      "children": ["#text"]
+    },
     "button": {
       "attrs": ["class", "data-node-id"],
       "events": ["click"],
@@ -62,7 +67,7 @@
     "li": {
       "attrs": ["class", "data-id", "data-index", "data-node-id", "draggable"],
       "events": ["dragstart", "dragover", "drop"],
-      "children": ["span", "input", "label", "button", "a"]
+      "children": ["span", "input", "textarea", "label", "button", "a"]
     },
     "label": {
       "attrs": ["data-node-id"],
