@@ -624,11 +624,11 @@ and defaults to `benatkin` in the default local data directory:
 node examples/resources-site/seed-tour-project.js
 ```
 
-Use `--username <name>` or `--data-dir <directory>` for another account or
-database. Re-running the command updates and republishes the same project. Its
-small project snapshot names the presentation artifact; the configured
-`BLOG_EXAMPLES_ORIGIN` supplies the environment-specific host, so the exported
-HTML is not copied into SQLite.
+Use `--username <name>`, `--data-dir <directory>`, or `--source-dir <directory>`
+for another account, database, or tour checkout. Re-running the command updates
+and republishes the same project. The project ZIP contains the editable tour
+HTML, CSS, JavaScript, generated data, and illustrations. The configured
+`BLOG_EXAMPLES_ORIGIN` supplies the environment-specific published export.
 
 ### Future Deno module publication
 

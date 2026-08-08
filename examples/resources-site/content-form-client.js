@@ -187,7 +187,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   let currentSnapshot = state;
   let viewingHistorical = false;
-  let selected = state.files[0]?.path || "config";
+  let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
   let ready = false;
   let pending = false;
   let saveTimer = 0;
@@ -276,7 +276,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const selectedFile = state.files.find((file) => file.path === selected);
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
-    const largeFile = selectedFile && new TextEncoder().encode(selectedFile.content).byteLength > 1_000_000;
+    const largeFile = selectedFile && new TextEncoder().encode(selectedFile.content).byteLength > 500_000;
     editorMount.hidden = isProjectImage(selectedFile) || largeFile;
     if (isProjectImage(selectedFile)) {
       const image = document.createElement("img");
@@ -293,6 +293,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       view.className = "project-editor__asset-view";
       const size = new TextEncoder().encode(selectedFile.content).byteLength;
       view.innerHTML = `<strong>${selectedFile.path}</strong><span>${(size / 1_048_576).toFixed(2)} MB · too large for the constrained code editor</span>`;
+      const sourceView = document.createElement("textarea");
+      sourceView.className = "project-editor__large-source";
+      sourceView.value = selectedFile.content;
+      sourceView.readOnly = true;
+      sourceView.wrap = "off";
+      sourceView.setAttribute("aria-label", `${selectedFile.path} read-only source`);
       const download = document.createElement("button");
       download.type = "button";
       download.textContent = "Download file";
@@ -303,7 +309,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         link.click();
         URL.revokeObjectURL(link.href);
       });
-      view.append(download);
+      view.append(download, sourceView);
       editorMount.parentElement.append(view);
       renderPreview();
       delete root.dataset.editorLoading;
@@ -343,7 +349,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       }
       preview.replaceChildren(frame);
       preview.dataset.previewRuntime = "isolated-presentation";
-      if (/<script\b/i.test(source)) setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
+      if (!artifactPath && /<script\b/i.test(source)) setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
       return;
     }
     const parsed = new DOMParser().parseFromString(source, "text/html");

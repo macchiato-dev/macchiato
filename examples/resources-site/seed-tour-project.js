@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createContentStore } from "./models/content.js";
@@ -12,6 +13,7 @@ function option(name, fallback) {
 
 const username = option("--username", "benatkin");
 const dataDir = option("--data-dir", join(homedir(), ".macchiato", "default"));
+const sourceDir = option("--source-dir", "/root/dom-use-tour");
 const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
 const client = createNodeSqliteClient(db);
 const users = await client.execute({
@@ -20,14 +22,24 @@ const users = await client.execute({
 });
 if (!users.rows[0]) throw new Error(`Resources user not found: ${username}`);
 
+if (!existsSync(join(sourceDir, "index.html"))) throw new Error(`Tour source not found: ${sourceDir}`);
+const textFiles = ["index.html", "style.css", "app.js", "generated/tour-data.js", "README.md"];
+const files = textFiles.filter((path) => existsSync(join(sourceDir, path))).map((path) => ({
+  path,
+  content: readFileSync(join(sourceDir, path), "utf8"),
+}));
+const illustrationDir = join(sourceDir, "assets", "illustrations");
+if (existsSync(illustrationDir)) {
+  for (const name of readdirSync(illustrationDir).sort()) {
+    if (!/\.(?:jpe?g|png|gif|webp)$/i.test(name)) continue;
+    const extension = name.split(".").at(-1).toLowerCase();
+    const mime = extension === "jpg" || extension === "jpeg" ? "image/jpeg" : `image/${extension}`;
+    files.push({ path: `assets/illustrations/${name}`, content: `data:${mime};base64,${readFileSync(join(illustrationDir, name)).toString("base64")}` });
+  }
+}
+
 const snapshot = {
-  files: [{
-    path: "README.md",
-    content: "# DOM use code tour\n\nA generated, source-complete presentation of the `dom-use` package. The published presentation is loaded by the presentation container from the configured blog-examples origin.",
-  }, {
-    path: "index.html",
-    content: "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>DOM use code tour</title></head><body></body></html>",
-  }],
+  files,
   config: {
     entry: "index.html",
     template: "slides",

@@ -906,10 +906,13 @@ body.project-presenting { overflow: hidden; }
 .project-editor__mount, .project-editor__mount .cm-editor { height: 100%; min-height: 0; }
 .project-editor__mount[hidden] { display: none; }
 .project-editor__image-view { display: block; width: 100%; height: 100%; object-fit: contain; background: #101212; }
-.project-editor__asset-view { display: grid; height: 100%; align-content: center; justify-items: center; gap: 8px; padding: 24px; color: var(--muted); background: #101212; text-align: center; }
+.project-editor__asset-view { display: flex; height: 100%; min-height: 0; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; color: var(--muted); background: #101212; }
 .project-editor__asset-view strong { color: var(--text); }
 .project-editor__asset-view button { padding: 6px 9px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--hover); font: inherit; cursor: pointer; }
+.project-editor__large-source { box-sizing: border-box; width: 100%; min-height: 0; flex: 1 1 auto; resize: none; border: 1px solid var(--track-border); border-radius: 3px; padding: 10px; color: #cbd3d1; background: #1d2020; font-family: monospace; font-size: 12px; line-height: 1.55; overflow: auto; }
 .project-editor__presentation-frame { display: block; width: 100%; height: 100%; border: none; background: #101212; }
+.project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] { box-sizing: border-box; display: grid; width: 100%; height: 100%; place-items: center; }
+.project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] .project-editor__presentation-frame { aspect-ratio: 16 / 10; height: auto; max-height: 100%; }
 .project-editor__mount .cm-editor { background: #1d2020; }
 .project-editor__mount .cm-scroller { overflow: auto; }
 .project-editor__splitter { position: relative; cursor: col-resize; background: #242928; outline: none; }
@@ -964,7 +967,7 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .layout.embed-view > .main, .layout.embed-view .content-root, .layout.embed-view .content-block, .layout.embed-view .account-dashboard, .layout.embed-view .create-form, .layout.embed-view .project-create__layout { width: 100%; height: 100%; min-height: 0; max-width: none; margin: 0; padding: 0; overflow: hidden; }
 .layout.embed-view .content-block, .layout.embed-view .project-editor { border: none; border-radius: 0; box-shadow: none; }
 .project-embed .project-create__layout { display: block; }
-.project-embed .project-editor { width: 100%; height: 100%; min-height: 0; }
+.project-embed .project-editor { width: 100%; height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .project-embed .project-editor__source-toolbar, .project-embed .project-editor__source, .project-embed .project-editor__splitter, .project-embed .project-editor__status, .project-embed .project-editor__preview-toolbar > :not(.project-editor__view-controls), .project-embed .project-editor__view-controls > :not([data-project-present]) { display: none; }
 .project-embed .project-editor__toolbar { position: absolute; top: 8px; right: 8px; z-index: 5; padding: 0; background: transparent; }
 .project-embed .project-editor__preview-toolbar { display: block; }
