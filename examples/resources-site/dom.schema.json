@@ -223,11 +223,11 @@
     },
     "figure": {
       "attrs": ["class"],
-      "children": ["img", "figcaption"]
+      "children": ["img", "iframe", "figcaption"]
     },
     "figcaption": {
-      "attrs": [],
-      "children": ["#text"]
+      "attrs": ["class"],
+      "children": ["#text", "a", "span"]
     },
     "img": {
       "attrs": ["src", "alt", "loading"],
@@ -267,7 +267,7 @@
     }
   },
   "urls": {
-    "href": "^(?:/(?:[A-Za-z0-9._~-]+/)*[A-Za-z0-9._~-]*(?:\\?template=(?:article|hello|mark|ball))?|https://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/[^\\s<>\"]*)?)$",
+    "href": "^(?:/(?:[A-Za-z0-9._~-]+/)*[A-Za-z0-9._~-]*(?:\\?template=(?:article|hello|mark|ball))?|https://[A-Za-z0-9.-]+(?::[0-9]+)?(?:/[^\\s<>\"]*)?|http://blog-examples\\.localhost(?::[0-9]{1,5})?/-/blog-examples/[A-Za-z0-9._~?&=/%+-]+)$",
     "src": "^(?:about:blank|https://codesandbox\\.io/embed/[A-Za-z0-9._~?&=/%+-]+|https://(?:blog-examples|staging-blog-examples)\\.resources\\.co/-/blog-examples/[A-Za-z0-9._~?&=/%+-]+|http://blog-examples\\.localhost(?::[0-9]{1,5})?/-/blog-examples/[A-Za-z0-9._~?&=/%+-]+|/-/(?:blog-examples/[A-Za-z0-9._~?&=/%+-]+|blog-images/[a-z0-9-]+\\.png))$",
     "action": "^/language$"
   },

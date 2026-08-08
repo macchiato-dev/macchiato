@@ -334,7 +334,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       frame.setAttribute("sandbox", "allow-scripts");
       frame.setAttribute("referrerpolicy", "no-referrer");
       const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline' blob:; font-src data:">`;
-      frame.srcdoc = source.replace(/<head([^>]*)>/i, `<head$1>${policy}`);
+      const artifactPath = String(state.config?.artifactPath || "");
+      const origin = root.querySelector("[data-blog-examples-origin]")?.dataset.blogExamplesOrigin || "";
+      if (artifactPath && /^\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+$/.test(artifactPath) && origin) {
+        frame.src = `${origin}${artifactPath}`;
+      } else {
+        frame.srcdoc = source.replace(/<head([^>]*)>/i, `<head$1>${policy}`);
+      }
       preview.replaceChildren(frame);
       preview.dataset.previewRuntime = "isolated-presentation";
       if (/<script\b/i.test(source)) setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");

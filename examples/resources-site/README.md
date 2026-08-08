@@ -614,6 +614,22 @@ should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
 The SDK is pinned through `deno.json` and `deno.lock`; the edge script does not
 import executable code from a third-party CDN such as esm.sh.
 
+### Install the code-tour project
+
+The blog's exported `dom-use` tour can also be represented by an ordinary,
+public Resources project. The installer requires an existing Resources user
+and defaults to `benatkin` in the default local data directory:
+
+```bash
+node examples/resources-site/seed-tour-project.js
+```
+
+Use `--username <name>` or `--data-dir <directory>` for another account or
+database. Re-running the command updates and republishes the same project. Its
+small project snapshot names the presentation artifact; the configured
+`BLOG_EXAMPLES_ORIGIN` supplies the environment-specific host, so the exported
+HTML is not copied into SQLite.
+
 ### Future Deno module publication
 
 Projects will shortly need a space for JavaScript that Deno can import over

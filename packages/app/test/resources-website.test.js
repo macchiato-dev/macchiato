@@ -221,6 +221,14 @@ test("Resources.co blog container examples render and surface schema errors in t
     await page.close();
   }
 
+  const blogPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await blogPage.goto(`http://resources-edge.localhost:${port}/blog/generating-slides-from-code`);
+  const examplePanel = blogPage.locator(".blog-example-panel");
+  assert.equal(await examplePanel.locator("a").first().textContent(), "benatkin / DOM use code tour");
+  assert.equal(await examplePanel.locator("a").first().getAttribute("href"), "/benatkin/dom-use-tour");
+  assert.match(await examplePanel.locator("a").last().getAttribute("href"), /^http:\/\/blog-examples\.localhost:/);
+  await blogPage.close();
+
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");

@@ -473,11 +473,15 @@ button:not(:disabled) { cursor: pointer; }
   display: block;
   width: 100%;
   min-height: 500px;
-  margin-top: 22px;
+  margin: 0;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--track);
 }
+.blog-example-block { margin-top: 22px; }
+.blog-example-panel { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -1px; padding: 9px 12px; border: 1px solid var(--card-border); color: var(--muted); background: var(--card); font-size: 12px; }
+.blog-example-panel a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.blog-example-panel a:hover, .blog-example-panel a:focus-visible { color: var(--text); text-decoration: underline; }
 .content-block p a {
   color: var(--accent);
   text-decoration: underline;
@@ -1304,7 +1308,10 @@ function blogExampleHtml(example, origin) {
   const deferred = !example.external && !origin;
   const src = deferred ? "about:blank" : example.external ? example.url : `${origin}${example.url}`;
   const data = deferred ? ` data-example-path="${escapeHtml(example.url)}"` : "";
-  return `<iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe>`;
+  const identity = example.project
+    ? `<a href="${escapeHtml(example.project.url)}">${escapeHtml(example.project.label)}</a>`
+    : `<span>${escapeHtml(example.title)}</span>`;
+  return `<figure class="blog-example-block"><iframe class="blog-example" src="${escapeHtml(src)}"${data} title="${escapeHtml(example.title)}" loading="lazy" referrerpolicy="no-referrer" sandbox="${sandbox}"></iframe><figcaption class="blog-example-panel">${identity}<a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer">View full screen ↗</a></figcaption></figure>`;
 }
 
 function projectSummaryHtml(block) {

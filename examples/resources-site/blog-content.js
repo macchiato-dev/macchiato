@@ -14,18 +14,21 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
   if (!DATE.test(published || "") || Number.isNaN(Date.parse(`${published}T00:00:00Z`))) throw new Error(`${filename}: invalid publication date`);
   let offset = 3;
   const examples = [];
-  const parseExample = (line) => {
+  const parseExample = (line, projectLine = "") => {
     const match = /^- Example: \[([^\]]{1,200})\]\((https:\/\/[^\s)]+|\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+)\)$/.exec(line);
     if (!match) throw new Error(`${filename}: invalid example`);
     const external = match[2].startsWith("https://");
     const url = new URL(match[2], "https://resources.invalid");
     if (external && (url.hostname !== "codesandbox.io" || !url.pathname.startsWith("/embed/"))) throw new Error(`${filename}: unsupported example host`);
     if (!external && !url.pathname.startsWith("/-/blog-examples/")) throw new Error(`${filename}: unsupported local example`);
-    return Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external });
+    const projectMatch = /^- Project: \[([^\]]{1,200})\]\((\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*)\)$/.exec(projectLine);
+    if (projectLine && !projectMatch) throw new Error(`${filename}: invalid example project`);
+    return Object.freeze({ title: match[1], url: external ? url.href : `${url.pathname}${url.search}`, external, project: projectMatch ? Object.freeze({ label: projectMatch[1], url: projectMatch[2] }) : null });
   };
   while (lines[offset]?.startsWith("- Example: ")) {
-    examples.push(parseExample(lines[offset]));
-    offset += 1;
+    const projectLine = lines[offset + 1]?.startsWith("- Project: ") ? lines[offset + 1] : "";
+    examples.push(parseExample(lines[offset], projectLine));
+    offset += projectLine ? 2 : 1;
   }
   if (lines[offset] !== "" || lines[offset + 1] !== "## Body" || lines[offset + 2] !== "") throw new Error(`${filename}: expected a Body heading after metadata`);
   const parseBodyBlock = (value) => {
@@ -34,7 +37,7 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
       return Object.freeze({ type: "list", items: Object.freeze(blockLines.map((line) => line.slice(2))) });
     }
     const flat = blockLines.join(" ");
-    if (flat.startsWith("- Example: ")) return Object.freeze({ type: "example", example: parseExample(flat) });
+    if (blockLines[0]?.startsWith("- Example: ")) return Object.freeze({ type: "example", example: parseExample(blockLines[0], blockLines[1] || "") });
     const image = /^!\[([^\]]{1,300})\]\((\/-\/blog-images\/[a-z0-9]+(?:-[a-z0-9]+)*\.png) "([^"]{1,500})"\)$/.exec(flat);
     if (image) return Object.freeze({ type: "image", alt: image[1], src: image[2], caption: image[3] });
     return Object.freeze({ type: "paragraph", markdown: flat });
