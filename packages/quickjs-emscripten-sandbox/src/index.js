@@ -141,6 +141,38 @@ export class Sandbox {
     result.value.dispose();
   }
 
+  async evalModuleAsync(code, filename = "sandbox-module.js") {
+    if (!this.context || !this.runtime) throw new Error("Sandbox not initialized. Call init() first.");
+    const result = this.context.evalCode(code, filename, { type: "module" });
+    if (result.error) {
+      const error = this.context.dump(result.error);
+      result.error.dispose();
+      throw new Error(formatQuickJsError(error));
+    }
+    const settledPromise = this.context.resolvePromise(result.value);
+    result.value.dispose();
+    while (this.runtime.hasPendingJob()) this.executePendingJobs();
+    const settled = await settledPromise;
+    if (settled.error) {
+      const error = this.context.dump(settled.error);
+      settled.error.dispose();
+      throw new Error(formatQuickJsError(error));
+    }
+    settled.value.dispose();
+  }
+
+  executePendingJobs(maxJobs = -1) {
+    if (!this.runtime || !this.context) throw new Error("Sandbox not initialized. Call init() first.");
+    const result = this.runtime.executePendingJobs(maxJobs);
+    if (result.error) {
+      const context = result.error.context || this.context;
+      const error = context.dump(result.error);
+      result.error.dispose();
+      throw new Error(formatQuickJsError(error));
+    }
+    return result.value;
+  }
+
   callJsonFunction(name, payload, options = {}) {
     if (!this.context) {
       throw new Error("Sandbox not initialized. Call init() first.");

@@ -473,6 +473,12 @@ test("controls event listener registration and payloads by schema policy", () =>
   );
 });
 
+test("reserves bridge node identifiers even when data attributes are allowed", () => {
+  const domUse = new DomUse({ nodes: { button: { attrs: ["data-*"], children: [] } } });
+  const button = domUse.createDocument().createElement("button");
+  assert.throws(() => button.setAttribute("data-node-id", "spoofed"), /reserved for the host bridge/);
+});
+
 test("enforces configurable DOM gas budgets", () => {
   const domUse = articleDomUse({
     gas: {

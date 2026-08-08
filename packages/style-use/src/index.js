@@ -202,7 +202,7 @@ export class StyleUse {
         const normalized = String(value).replace(/\s+/g, "").toLowerCase();
         return !normalized.includes("javascript:")
             && !normalized.includes("expression(")
-            && !normalized.includes("behavior:");
+            && !/(?:^|[;{])behavior:/.test(normalized);
     }
     /**
      * Validate an inline style declaration.

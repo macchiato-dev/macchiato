@@ -158,7 +158,9 @@ export class DomUseHostCapability {
   addEventListener(id, event) {
     const node = this.node(id);
     node.addEventListener(event);
-    node.setAttribute("data-node-id", String(id));
+    // This marker is bridge-owned event-routing metadata. Writing the backing
+    // record directly keeps it out of guest attribute authority and budgets.
+    node.attributes["data-node-id"] = String(id);
     return {};
   }
 

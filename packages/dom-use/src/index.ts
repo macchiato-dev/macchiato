@@ -983,6 +983,9 @@ export class DomUse {
 
   assertAllowedAttr(tagNameOrNode, attr, value) {
     const tagName = String(tagNameOrNode?.tagName || tagNameOrNode);
+    if (String(attr).toLowerCase() === "data-node-id") {
+      throw new Error(`Attribute reserved for the host bridge on ${tagName}: ${attr}`);
+    }
     if (!this.allowedAttr(tagNameOrNode, attr, value)) {
       throw new Error(`Attribute not allowed on ${tagName}: ${attr}`);
     }

@@ -18,6 +18,14 @@ function attrsFromSource(source) {
   return attrs;
 }
 
+function textFromSource(source) {
+  return String(source).replace(/&(?:#(\d+)|#x([0-9a-f]+)|amp|lt|gt|quot|apos|nbsp);/gi, (entity, decimal, hexadecimal) => {
+    if (decimal) return String.fromCodePoint(Number(decimal));
+    if (hexadecimal) return String.fromCodePoint(Number.parseInt(hexadecimal, 16));
+    return { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'", "&nbsp;": "\u00a0" }[entity.toLowerCase()] || entity;
+  });
+}
+
 class HostNode {
   constructor(id) {
     this.__hostNodeId = String(id);
@@ -54,6 +62,15 @@ class HostNode {
     newNode.parentNode = this;
     return newNode;
   }
+
+  append(...nodes) {
+    for (const node of nodes) this.appendChild(node instanceof HostNode ? node : new HostText(String(node)));
+  }
+
+  replaceChildren(...nodes) {
+    for (const child of [...this.children]) this.removeChild(child);
+    this.append(...nodes);
+  }
 }
 
 class HostText extends HostNode {
@@ -83,7 +100,13 @@ class HostElement extends HostNode {
     this._className = "";
     this._value = "";
     this.checked = false;
-    this.dataset = {};
+    this._dataset = {};
+    this.dataset = typeof Proxy === "function" ? new Proxy(this._dataset, {
+      set: (_target, property, value) => {
+        this.setAttribute(`data-${String(property).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`, value);
+        return true;
+      },
+    }) : this._dataset;
   }
 
   get id() {
@@ -102,6 +125,28 @@ class HostElement extends HostNode {
     this._className = String(value);
     this.setAttribute("class", this._className);
   }
+
+  get classList() {
+    const values = () => this.className.split(/\s+/).filter(Boolean);
+    const write = (items) => { this.className = [...new Set(items)].join(" "); };
+    return {
+      contains: (name) => values().includes(String(name)),
+      add: (...names) => write([...values(), ...names.map(String)]),
+      remove: (...names) => { const removed = new Set(names.map(String)); write(values().filter((name) => !removed.has(name))); },
+      toggle: (name, force) => {
+        const present = values().includes(String(name));
+        const enabled = force === undefined ? !present : Boolean(force);
+        if (enabled && !present) write([...values(), String(name)]);
+        if (!enabled && present) write(values().filter((item) => item !== String(name)));
+        return enabled;
+      },
+    };
+  }
+
+  get hidden() { return this.attributes.hidden !== undefined; }
+  set hidden(value) { if (value) this.setAttribute("hidden", ""); else this.removeAttribute("hidden"); }
+  get src() { return this.getAttribute("src") || ""; }
+  set src(value) { this.setAttribute("src", value); }
 
   get textContent() {
     if (this.children.length) return this.children.map((child) => child.textContent || "").join("");
@@ -131,7 +176,6 @@ class HostElement extends HostNode {
     this._value = String(value);
     if (this.tagName === "input") this.setAttribute("value", this._value);
     else if (this.tagName === "textarea") this.textContent = this._value;
-    else if (this.tagName === "textarea") this.textContent = this._value;
   }
 
   get style() {
@@ -159,7 +203,7 @@ class HostElement extends HostNode {
     if (key === "checked") this.checked = true;
     if (key.slice(0, 5) === "data-") {
       const datasetKey = key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-      this.dataset[datasetKey] = text;
+      this._dataset[datasetKey] = text;
     }
     host("setAttribute", { id: this.__hostNodeId, name: key, value: text });
   }
@@ -190,6 +234,8 @@ class HostElement extends HostNode {
   }
 
   matches(selector) {
+    const attribute = /^\[([^=\]]+)(?:=["']?([^\]"']+)["']?)?\]$/.exec(selector);
+    if (attribute) return this.attributes[attribute[1]] !== undefined && (attribute[2] === undefined || this.attributes[attribute[1]] === attribute[2]);
     if (selector.slice(0, 1) === ".") return this.className.split(/\s+/).indexOf(selector.slice(1)) !== -1;
     if (selector.slice(0, 1) === "#") return this.id === selector.slice(1);
     return this.tagName === selector.toLowerCase();
@@ -197,6 +243,15 @@ class HostElement extends HostNode {
 
   querySelector(selector) {
     return find(this, (node) => node instanceof HostElement && node.matches(selector));
+  }
+
+  querySelectorAll(selector) {
+    return findAll(this, (node) => node instanceof HostElement && node.matches(selector));
+  }
+
+  closest(selector) {
+    for (let node = this; node instanceof HostElement; node = node.parentNode) if (node.matches(selector)) return node;
+    return null;
   }
 
   focus() {}
@@ -209,6 +264,14 @@ function find(node, predicate) {
     if (found) return found;
   }
   return null;
+}
+
+function findAll(node, predicate, matches = []) {
+  for (const child of node.children || []) {
+    if (predicate(child)) matches.push(child);
+    findAll(child, predicate, matches);
+  }
+  return matches;
 }
 
 const document = {
@@ -225,6 +288,17 @@ const document = {
   querySelector(selector) {
     return this.body?.querySelector(selector) || null;
   },
+  querySelectorAll(selector) {
+    return this.body?.querySelectorAll(selector) || [];
+  },
+  addEventListener(event, handler) {
+    this.body?.addEventListener(event, handler);
+  },
+  removeEventListener(event, handler) {
+    this.body?.removeEventListener(event, handler);
+  },
+  hasFocus() { return true; },
+  visibilityState: "visible",
 };
 
 const localStorage = {
@@ -241,6 +315,75 @@ const localStorage = {
 
 globalThis.document = document;
 globalThis.localStorage = localStorage;
+// Storage remains a host capability. Containers that grant session semantics
+// can bind the same synchronous guest facade to an isolated, session-scoped
+// backend without exposing the iframe or page's native origin storage.
+globalThis.sessionStorage = localStorage;
+
+class HostSearchParams {
+  values;
+  constructor(search = "") {
+    this.values = new Map();
+    for (const part of String(search).replace(/^\?/, "").split("&")) {
+      if (!part) continue;
+      const [key, value = ""] = part.split("=");
+      this.values.set(decodeURIComponent(key), decodeURIComponent(value.replace(/\+/g, " ")));
+    }
+  }
+  get(key) { return this.values.get(String(key)) ?? null; }
+}
+
+class HostURL {
+  href;
+  search;
+  searchParams;
+  constructor(input, base = "https://presentation.invalid/") {
+    const value = String(input);
+    this.href = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `${String(base).replace(/[^/]*$/, "")}${value.replace(/^\//, "")}`;
+    const query = this.href.indexOf("?");
+    const fragment = this.href.indexOf("#", query);
+    this.search = query < 0 ? "" : this.href.slice(query, fragment < 0 ? undefined : fragment);
+    this.searchParams = new HostSearchParams(this.search);
+  }
+}
+
+globalThis.URL = HostURL;
+globalThis.location = Object.freeze({ href: globalThis.__macchiatoLocationHref || "https://presentation.invalid/" });
+
+let nextTimerId = 1;
+const timers = new Map();
+globalThis.setTimeout = (callback, delay = 0) => {
+  const id = nextTimerId++;
+  timers.set(id, { callback, delay: Math.max(0, Number(delay) || 0), due: Date.now() + Math.max(0, Number(delay) || 0), repeat: false });
+  return id;
+};
+globalThis.clearTimeout = (id) => timers.delete(Number(id));
+globalThis.setInterval = (callback, delay = 0) => {
+  const id = nextTimerId++;
+  const milliseconds = Math.max(1, Number(delay) || 0);
+  timers.set(id, { callback, delay: milliseconds, due: Date.now() + milliseconds, repeat: true });
+  return id;
+};
+globalThis.clearInterval = globalThis.clearTimeout;
+globalThis.addEventListener = (event, handler) => document.addEventListener(event, handler);
+globalThis.removeEventListener = (event, handler) => document.removeEventListener(event, handler);
+
+globalThis.__macchiatoTimers = (nowValue) => {
+  try {
+    const now = Number(nowValue) || Date.now();
+    let changed = false;
+    for (const [id, timer] of [...timers]) {
+      if (timer.due > now) continue;
+      if (timer.repeat) timer.due = now + timer.delay;
+      else timers.delete(id);
+      timer.callback();
+      changed = true;
+    }
+    return JSON.stringify(changed ? { changed: true } : { changed: false });
+  } catch (err) {
+    return `__MACCHIATO_ERROR__${err.message}`;
+  }
+};
 
 function parseInitialHtml(source) {
   const scripts = [];
@@ -251,16 +394,22 @@ function parseInitialHtml(source) {
   const body = document.createElement("body");
   document.body = body;
   const stack = [body];
+  const bodyMatch = /<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(source);
+  const markup = bodyMatch ? bodyMatch[1] : source;
   const tagRe = /<script\b([^>]*)>([\s\S]*?)<\/script>|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
 
   let match;
-  while ((match = tagRe.exec(source)) !== null) {
+  let cursor = 0;
+  while ((match = tagRe.exec(markup)) !== null) {
+    const preceding = markup.slice(cursor, match.index);
+    if (preceding) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(preceding)));
+    cursor = tagRe.lastIndex;
     if (match[0].slice(0, 7) === "<script") {
       scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });
       continue;
     }
     const tagName = match[3]?.toLowerCase();
-    if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "title" || tagName === "style") {
+    if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "link" || tagName === "title" || tagName === "style") {
       continue;
     }
     if (match[0].slice(0, 2) === "</") {
@@ -273,8 +422,11 @@ function parseInitialHtml(source) {
     const node = document.createElement(tagName);
     for (const [name, value] of attrsFromSource(match[4] || "")) node.setAttribute(name, value);
     stack[stack.length - 1].appendChild(node);
-    if (["br", "input", "hr", "img", "meta", "link"].indexOf(tagName) === -1) stack.push(node);
+    const selfClosing = /\/\s*>$/.test(match[0]);
+    if (!selfClosing && ["br", "input", "hr", "img", "meta", "link"].indexOf(tagName) === -1) stack.push(node);
   }
+  const trailing = markup.slice(cursor);
+  if (trailing) stack[stack.length - 1].appendChild(document.createTextNode(textFromSource(trailing)));
 
   const app = document.getElementById("app");
   host("setAppRoot", { id: app?.__hostNodeId || body.__hostNodeId });

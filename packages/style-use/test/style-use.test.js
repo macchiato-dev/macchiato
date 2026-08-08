@@ -115,6 +115,8 @@ test("rejects unconfigured properties and dangerous CSS values", () => {
   assert.throws(() => styleUse.validateInline("position", "fixed"), /CSS property not allowed: position/);
   assert.throws(() => styleUse.validateInline("color", "expression(alert(1))"), /Disallowed CSS value/);
   assert.throws(() => styleUse.validateStylesheet("p { behavior: url(evil.htc); }"), /Disallowed CSS value/);
+  const scrolling = new StyleUse({ properties: { "overscroll-behavior": true } });
+  assert.equal(scrolling.validateStylesheet("main { overscroll-behavior: contain; }"), true);
 });
 
 test("denies CSS URL sinks and imports by default", () => {

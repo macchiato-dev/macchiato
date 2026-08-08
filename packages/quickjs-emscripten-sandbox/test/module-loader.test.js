@@ -51,6 +51,32 @@ test("rejects modules not provided by the host", async () => {
   }
 });
 
+test("awaits top-level module work and surfaces asynchronous failures", async () => {
+  const sandbox = await createSandbox();
+  try {
+    await sandbox.evalModuleAsync("await Promise.resolve(); globalThis.ready = 42;");
+    assert.equal(sandbox.run("globalThis.ready").value, 42);
+    await assert.rejects(
+      sandbox.evalModuleAsync('await Promise.resolve(); throw new Error("late module failure");'),
+      /late module failure/,
+    );
+  } finally {
+    sandbox.dispose();
+  }
+});
+
+test("executes queued promise jobs on demand", async () => {
+  const sandbox = await createSandbox();
+  try {
+    sandbox.evalGlobal("globalThis.answer = 0; Promise.resolve(42).then(value => { globalThis.answer = value; });");
+    assert.equal(sandbox.run("globalThis.answer").value, 0);
+    assert.ok(sandbox.executePendingJobs() >= 1);
+    assert.equal(sandbox.run("globalThis.answer").value, 42);
+  } finally {
+    sandbox.dispose();
+  }
+});
+
 test("node:http wrapper delegates server operations to the JSON host", async () => {
   const calls = [];
   const sandbox = await createSandbox({
