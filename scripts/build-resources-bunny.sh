@@ -9,15 +9,15 @@ storage_prefix="resources-co-$revision"
 rm -rf "$out_dir"
 mkdir -p "$out_dir/site/$storage_prefix"
 
-npm ci --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
-npm run build --prefix "$repo_root/examples/resources-site/blog-examples/vtv"
-npm ci --prefix "$repo_root/examples/resources-site/blog-examples/markdown-editor"
-npm run build --prefix "$repo_root/examples/resources-site/blog-examples/markdown-editor"
-node "$repo_root/examples/resources-site/export-static.js" --out "$out_dir/site/$storage_prefix"
+npm ci --prefix "$repo_root/packages/website/blog-examples/vtv"
+npm run build --prefix "$repo_root/packages/website/blog-examples/vtv"
+npm ci --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
+npm run build --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
+node "$repo_root/packages/website/export-static.js" --out "$out_dir/site/$storage_prefix"
 deno bundle \
-  --config "$repo_root/examples/resources-site/deno.json" \
+  --config "$repo_root/packages/website/deno.json" \
   --platform deno \
-  "$repo_root/examples/resources-site/bunny-server.js" \
+  "$repo_root/packages/website/bunny-server.js" \
   --output "$out_dir/resources-bunny.js"
 node "$repo_root/scripts/embed-resources-bunny-revision.js" "$out_dir/resources-bunny.js" "$revision"
 

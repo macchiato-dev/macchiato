@@ -10,7 +10,7 @@ import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 import { userMenuUseBrowserAssets } from "@macchiato-dev/user-menu-use/browser-assets";
 
 const directory = dirname(fileURLToPath(import.meta.url));
-const fontDirectory = join(directory, "..", "resources-website", "assets", "fonts");
+const fontDirectory = join(directory, "..", "..", "examples", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
 const codeTourExampleDirectory = join(directory, "blog-examples", "dom-use-tour", "dist");

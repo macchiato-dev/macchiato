@@ -3,7 +3,7 @@ import { dashboardHandler } from "@macchiato-dev/dashboard";
 import { join, resolve } from "node:path";
 import { domUseTodosHandler } from "../../../examples/dom-use-todos/handler.js";
 import { resourcesWebsiteHandler, resourcesWebsiteSite } from "../../../examples/resources-website/handler.js";
-import { blogExamplesPreviewConfig, blogExamplesPreviewHandler, resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
+import { blogExamplesPreviewConfig, blogExamplesPreviewHandler, resourcesEdgePreviewConfig, resourcesEdgePreviewHandler } from "../../../packages/website/preview-handler.js";
 import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
@@ -16,6 +16,7 @@ import { exportFocusedApp } from "../../../examples/focused-app/export-static.js
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
+const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
   {
@@ -155,27 +156,27 @@ export const BUILTIN_APPS = [
     description: "SQLite-backed Resources.co routes with friendly paths and transitions.",
     seededRoute: true,
     sourceFiles: [
-      "examples/resources-site/seed.js",
-      "examples/resources-site/runtime.js",
-      "examples/resources-site/theme.js",
-      "examples/resources-site/components/menu.js",
-      "examples/resources-site/components/user-menu.js",
-      "examples/resources-site/components/auth.js",
+      "packages/website/seed.js",
+      "packages/website/runtime.js",
+      "packages/website/theme.js",
+      "packages/website/components/menu.js",
+      "packages/website/components/user-menu.js",
+      "packages/website/components/auth.js",
       "packages/command-palette-use/src/index.js",
       "packages/command-palette-use/src/client.js",
       "packages/theme-use/src/client.js",
-      "examples/resources-site/dom.schema.json",
-      "examples/resources-site/css.schema.json",
+      "packages/website/dom.schema.json",
+      "packages/website/css.schema.json",
     ],
     schemas: [
-      { name: "dom", path: join(examplesRoot, "resources-site", "dom.schema.json") },
-      { name: "css", path: join(examplesRoot, "resources-site", "css.schema.json") },
+      { name: "dom", path: join(websiteRoot, "dom.schema.json") },
+      { name: "css", path: join(websiteRoot, "css.schema.json") },
     ],
     site: {
       storage: "sqlite routes",
       runtimeProfile: "local",
       subdomain: "resources-co",
-      routeSource: "examples/resources-site/seed.js",
+      routeSource: "packages/website/seed.js",
     },
   },
   {
@@ -185,22 +186,22 @@ export const BUILTIN_APPS = [
     description: "The Bunny edge profile running locally through an in-memory Storage adapter.",
     handler: resourcesEdgePreviewHandler,
     sourceFiles: [
-      "examples/resources-site/artifacts.js",
-      "examples/resources-site/i18n.js",
-      "examples/resources-site/catalog-content.js",
-      "examples/resources-site/content/en.md",
-      "examples/resources-site/content/es.md",
-      "examples/resources-site/content-space/README.md",
-      "examples/resources-site/runtime.js",
-      "examples/resources-site/theme.js",
-      "examples/resources-site/components/menu.js",
-      "examples/resources-site/components/user-menu.js",
-      "examples/resources-site/components/auth.js",
-      "examples/resources-site/preview-handler.js",
-      "examples/resources-site/adapters/memory-storage.js",
-      "examples/resources-site/edge/app.js",
-      "examples/resources-site/edge/i18n.js",
-      "examples/resources-site/edge/models.js",
+      "packages/website/artifacts.js",
+      "packages/website/i18n.js",
+      "packages/website/catalog-content.js",
+      "packages/website/content/en.md",
+      "packages/website/content/es.md",
+      "packages/website/content-space/README.md",
+      "packages/website/runtime.js",
+      "packages/website/theme.js",
+      "packages/website/components/menu.js",
+      "packages/website/components/user-menu.js",
+      "packages/website/components/auth.js",
+      "packages/website/preview-handler.js",
+      "packages/website/adapters/memory-storage.js",
+      "packages/website/edge/app.js",
+      "packages/website/edge/i18n.js",
+      "packages/website/edge/models.js",
       "packages/command-palette-use/src/index.js",
       "packages/command-palette-use/src/client.js",
       "packages/theme-use/src/client.js",
@@ -228,10 +229,10 @@ export const BUILTIN_APPS = [
     description: "A separate origin for tightly sandboxed Resources.co blog examples.",
     handler: blogExamplesPreviewHandler,
     sourceFiles: [
-      "examples/resources-site/blog-examples/vtv/dist/index.html",
-      "examples/resources-site/blog-examples/vtv/dist/app.js",
-      "examples/resources-site/blog-examples/vtv/dist/app.css",
-      "examples/resources-site/preview-handler.js",
+      "packages/website/blog-examples/vtv/dist/index.html",
+      "packages/website/blog-examples/vtv/dist/app.js",
+      "packages/website/blog-examples/vtv/dist/app.css",
+      "packages/website/preview-handler.js",
     ],
     adapter: blogExamplesPreviewConfig,
     site: { storage: "validated static artifacts", subdomain: blogExamplesPreviewConfig.subdomain },

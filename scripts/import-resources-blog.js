@@ -5,7 +5,7 @@ import { basename, resolve } from "node:path";
 const sourceArg = process.argv[2] || "https://resources.co/blog";
 const remote = /^https:\/\//.test(sourceArg);
 const source = remote ? new URL(sourceArg) : resolve(sourceArg);
-const out = resolve(process.argv[3] || "examples/resources-site/content-space/blog");
+const out = resolve(process.argv[3] || "packages/website/content-space/blog");
 
 async function load(name = "index.html") {
   if (!remote) return readFile(resolve(source, name), "utf8");

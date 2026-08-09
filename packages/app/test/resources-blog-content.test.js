@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadBlogPosts, renderBlogInline } from "../../../examples/resources-site/blog-content.js";
+import { loadBlogPosts, renderBlogInline } from "../../../packages/website/blog-content.js";
 
 const escapeHtml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

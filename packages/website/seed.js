@@ -414,7 +414,7 @@ function notFoundRoute(i18n) {
 }
 
 function css(theme = {}) {
-  const authored = readFileSync(join(__dirname, "..", "resources-website", "styles.css"), "utf8");
+  const authored = readFileSync(join(__dirname, "..", "..", "examples", "resources-website", "styles.css"), "utf8");
   const base = authored
     .replace(/html\[data-theme="dark"\]\s*\{[\s\S]*?\n\s*\}/, "")
     .replace(/html\[data-theme="light"\]\s*\{[\s\S]*?\n\s*\}/, "");

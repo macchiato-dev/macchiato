@@ -5,8 +5,8 @@ import {
   AccountConflictError,
   AccountSignupDisabledError,
   createAccountStore,
-} from "../../../examples/resources-site/models/accounts.js";
-import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
+} from "../../../packages/website/models/accounts.js";
+import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 function setup() {
   const db = new DatabaseSync(":memory:");

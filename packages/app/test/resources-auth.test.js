@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "../../../examples/resources-site/components/auth.js";
-import { resourcesDomSchema } from "../../../examples/resources-site/seed.js";
+import { composeResourcesAuthDomSchema, renderResourcesAuthBlock, RESOURCES_AUTH, resourcesAuthRoute } from "../../../packages/website/components/auth.js";
+import { resourcesDomSchema } from "../../../packages/website/seed.js";
 
 test("Resources auth declaration supports simulated and document-runtime provider adapters", () => {
   assert.equal(RESOURCES_AUTH.mode, "simulated-provider-adapter");

@@ -45,7 +45,7 @@ App installation, dependency mapping, and the minimal default are described in
 |---------|-------------|
 | `examples/dom-use-demo` | SQLite-backed page example. Imports an HTML fragment, stylesheet, DOM schema, and CSS schema into the app database and serves the result at `dom-use.localhost`. |
 | `examples/dom-use-todos` | QuickJS-backed todo app. Passes `examples/todo/index.html` into the guest runtime and applies `dom-use` validation to every guest DOM operation. |
-| `examples/resources-site` | SQLite-backed and static-exported Resources.co example site, including route rows, local fonts, and a Bunny edge-script export path. |
+| `packages/website` | Private `@macchiato-dev/website` workspace containing the Resources.co content, skin, publication build, and Bunny Edge deployment entrypoint. |
 | `examples/resources-website` | Multi-page Resources.co website example used for schema-bound page, style, navigation, prefetch, and transition work. |
 | `examples/todo` | Standalone prototype of a guest-side DOM simulation with host-side rendering. |
 | `examples/todo-matrix` | QuickJS/schema-constrained todo matrix app with local storage and grid interaction. |

@@ -323,8 +323,8 @@ validation before publication, and the Bunny isolate's own limits.
 ## Build the edge artifacts
 
 ```sh
-node examples/resources-site/export-static.js \
-  --out examples/resources-site/exported
+node packages/website/export-static.js \
+  --out packages/website/exported
 ```
 
 The export contains friendly-path HTML, local fonts, and `manifest.json`. The
@@ -437,14 +437,14 @@ node --test \
   packages/app/test/resources-site-export.test.js
 
 deno check \
-  --config examples/resources-site/deno.json \
-  examples/resources-site/bunny-server.js
+  --config packages/website/deno.json \
+  packages/website/bunny-server.js
 ```
 
 To inspect only the generated documents without emulating Bunny Storage:
 
 ```sh
-cd examples/resources-site/exported
+cd packages/website/exported
 python3 -m http.server 8080
 ```
 
@@ -491,8 +491,8 @@ assets may retain their long public lifetime.
    `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
    The build-created revision directory is part of every uploaded object key.
 2. Create a Bunny standalone Edge Script connected to this repository. Use
-   `examples/resources-site/bunny-server.js` as the entrypoint and
-   `examples/resources-site/deno.json` as its Deno configuration.
+   `packages/website/bunny-server.js` as the entrypoint and
+   `packages/website/deno.json` as its Deno configuration.
 3. Configure:
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
@@ -541,10 +541,10 @@ verifying the database before deployment by providing its full-access
 credentials in the environment and running:
 
 ```sh
-deno run --config examples/resources-site/deno.json \
+deno run --config packages/website/deno.json \
   --allow-env=BUNNY_DATABASE_URL,BUNNY_DATABASE_AUTH_TOKEN \
   --allow-net \
-  examples/resources-site/migrate-bunny-database.js
+  packages/website/migrate-bunny-database.js
 ```
 
 The command creates only `CREATE ... IF NOT EXISTS` schema objects and verifies
@@ -621,7 +621,7 @@ public Resources project. The installer requires an existing Resources user
 and defaults to `benatkin` in the default local data directory:
 
 ```bash
-node examples/resources-site/seed-tour-project.js
+node packages/website/seed-tour-project.js
 ```
 
 Use `--username <name>`, `--data-dir <directory>`, or `--source-dir <directory>`

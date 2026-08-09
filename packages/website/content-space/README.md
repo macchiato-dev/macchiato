@@ -49,5 +49,5 @@ Import the legacy static HTML directory with:
 
 ```sh
 node scripts/import-resources-blog.js /path/to/resources-co-website/blog \
-  examples/resources-site/content-space/blog
+  packages/website/content-space/blog
 ```

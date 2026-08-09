@@ -1,6 +1,6 @@
 import { join, resolve } from "node:path";
 import { addFileSite, listAppConfigRows, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
-import { seedResourcesSite } from "../../../examples/resources-site/seed.js";
+import { seedResourcesSite } from "../../../packages/website/seed.js";
 import { BUILTIN_APPS } from "./builtin-apps.js";
 import { packageBrowserHandler } from "./package-browser.js";
 

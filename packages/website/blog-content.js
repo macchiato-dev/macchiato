@@ -51,7 +51,7 @@ export function parseBlogPostMarkdown(markdown, filename = "blog post") {
   return Object.freeze({ title, slug, published, paragraphs: Object.freeze(paragraphs), examples: Object.freeze(examples), body: Object.freeze(orderedBody) });
 }
 
-export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resolve("examples/resources-site/content-space"), locale = "en") {
+export function loadBlogPosts(root = process.env.RESOURCES_CONTENT_ROOT || resolve("packages/website/content-space"), locale = "en") {
   const directory = locale === "en" ? join(resolve(root), "blog") : join(resolve(root), locale, "blog");
   let names;
   try {

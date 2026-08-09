@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compileAllowedUrlPattern, urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "../../../examples/resources-site/models/url-pattern.js";
+import { compileAllowedUrlPattern, urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "../../../packages/website/models/url-pattern.js";
 
 test("resource URL patterns support wildcard hosts and paths", () => {
   assert.equal(urlMatchesAllowedPatterns("https://en.wikipedia.org/wiki/Hypertext", ["*.wikipedia.org"]), true);

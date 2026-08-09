@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildResourcesSiteRoutesForRuntime } from "../../../examples/resources-site/seed.js";
-import { createResourcesTheme, RESOURCES_EXPERIMENTAL_THEME, resourcesThemeCss } from "../../../examples/resources-site/theme.js";
-import { RESOURCES_RUNTIME_PROFILES, resourcesRuntimeProfile } from "../../../examples/resources-site/runtime.js";
+import { buildResourcesSiteRoutesForRuntime } from "../../../packages/website/seed.js";
+import { createResourcesTheme, RESOURCES_EXPERIMENTAL_THEME, resourcesThemeCss } from "../../../packages/website/theme.js";
+import { RESOURCES_RUNTIME_PROFILES, resourcesRuntimeProfile } from "../../../packages/website/runtime.js";
 
 test("Resources.co theme model supports allowlisted palette overrides", () => {
   const theme = createResourcesTheme({ dark: { "--accent": "#ffb86b" }, light: { "--accent": "#8a3ffc" } });

@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createResourcesEdgeHandler } from "../../../examples/resources-site/edge/app.js";
+import { createResourcesEdgeHandler } from "../../../packages/website/edge/app.js";
 import {
   createEdgeConfig,
   normalizeExportManifest,
   pathToObjectKey,
   publicResponseHeaders,
   storageObjectUrl,
-} from "../../../examples/resources-site/edge/models.js";
-import { createAuthConfig } from "../../../examples/resources-site/auth/github.js";
-import { createGitlabAuthConfig } from "../../../examples/resources-site/auth/gitlab.js";
-import { seal } from "../../../examples/resources-site/auth/session.js";
+} from "../../../packages/website/edge/models.js";
+import { createAuthConfig } from "../../../packages/website/auth/github.js";
+import { createGitlabAuthConfig } from "../../../packages/website/auth/gitlab.js";
+import { seal } from "../../../packages/website/auth/session.js";
 
 const config = createEdgeConfig({
   BUNNY_STORAGE_ORIGIN: "https://storage.example.test/zone",

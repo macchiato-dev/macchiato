@@ -4944,7 +4944,7 @@ function mountPresentationUse({ root, runnerUrl, project, onStatus = () => {
   };
 }
 
-// examples/resources-site/project-editor-runtime.js
+// packages/website/project-editor-runtime.js
 async function mountResourcesProjectEditor(options) {
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
   return mountQuickJsCodeEditor({ ...options, guestSource });

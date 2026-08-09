@@ -3,9 +3,9 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { loadProjectContentSpace } from "../../../examples/resources-site/catalog-content.js";
-import { createTranslator, loadResourcesLocales, parseLocaleMarkdown } from "../../../examples/resources-site/i18n.js";
-import { localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "../../../examples/resources-site/edge/i18n.js";
+import { loadProjectContentSpace } from "../../../packages/website/catalog-content.js";
+import { createTranslator, loadResourcesLocales, parseLocaleMarkdown } from "../../../packages/website/i18n.js";
+import { localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "../../../packages/website/edge/i18n.js";
 
 test("Resources locale Markdown has matching English and Spanish message keys", () => {
   const locales = loadResourcesLocales();

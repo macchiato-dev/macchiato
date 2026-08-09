@@ -7,7 +7,7 @@ dist/
 build/
 target/
 /packages/dom-use/lib/
-examples/resources-site/exported/
+packages/website/exported/
 *.egg-info/
 
 # Environment
@@ -22,7 +22,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 deno.lock
-!examples/resources-site/deno.lock
+!packages/website/deno.lock
 
 # IDE
 .idea/

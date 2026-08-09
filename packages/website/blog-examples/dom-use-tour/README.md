@@ -8,7 +8,7 @@ Build the tour first, then copy its export into the Resources.co artifact set:
 
 ```sh
 cd /root/dom-use-tour && npm run export:offline
-cd /root/macchiato/examples/resources-site/blog-examples/dom-use-tour && npm run build
+cd /root/macchiato/packages/website/blog-examples/dom-use-tour && npm run build
 ```
 
 Set `DOM_USE_TOUR_EXPORT` when the tour repository lives elsewhere.

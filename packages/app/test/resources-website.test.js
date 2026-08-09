@@ -10,10 +10,10 @@ import { DomUse } from "@macchiato-dev/dom-use";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
-import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../examples/resources-site/seed.js";
-import { seal } from "../../../examples/resources-site/auth/session.js";
-import { createAccountStore } from "../../../examples/resources-site/models/accounts.js";
-import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
+import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../packages/website/seed.js";
+import { seal } from "../../../packages/website/auth/session.js";
+import { createAccountStore } from "../../../packages/website/models/accounts.js";
+import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");

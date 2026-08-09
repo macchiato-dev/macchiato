@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { createAccountStore } from "../../../examples/resources-site/models/accounts.js";
+import { createAccountStore } from "../../../packages/website/models/accounts.js";
 import {
   CONTENT_SCHEMA,
   ContentConflictError,
   ContentValidationError,
   createContentStore,
-} from "../../../examples/resources-site/models/content.js";
-import { createNodeSqliteClient } from "../../../examples/resources-site/adapters/node-sqlite-client.js";
+} from "../../../packages/website/models/content.js";
+import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 async function stores({ now = () => 200 } = {}) {
   const db = new DatabaseSync(":memory:");

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { exportResourcesSite } from "../../../examples/resources-site/export-static.js";
+import { exportResourcesSite } from "../../../packages/website/export-static.js";
 
 function tempDir() {
   return mkdtemp(join(tmpdir(), "macchiato-resources-export-"));

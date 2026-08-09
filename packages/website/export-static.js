@@ -13,7 +13,7 @@ function parseArgs(args) {
     if (args[i] === "--out") options.out = resolve(args[++i] || defaultOut);
     else if (args[i] === "--no-clean") options.clean = false;
     else if (args[i] === "--help" || args[i] === "-h") {
-      console.log("Usage: node examples/resources-site/export-static.js [--out <dir>] [--no-clean]");
+      console.log("Usage: node packages/website/export-static.js [--out <dir>] [--no-clean]");
       process.exit(0);
     } else throw new Error(`Unknown option: ${args[i]}`);
   }

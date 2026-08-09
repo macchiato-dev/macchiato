@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../examples/resources-site/auth/github.js";
-import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../examples/resources-site/auth/gitlab.js";
-import { accountErrorResponse } from "../../../examples/resources-site/auth/account-response.js";
-import { AccountConflictError, AccountSignupDisabledError } from "../../../examples/resources-site/models/accounts.js";
+import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../packages/website/auth/github.js";
+import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../packages/website/auth/gitlab.js";
+import { accountErrorResponse } from "../../../packages/website/auth/account-response.js";
+import { AccountConflictError, AccountSignupDisabledError } from "../../../packages/website/models/accounts.js";
 
 const config = createAuthConfig({
   PUBLIC_ORIGIN: "https://resources.example",

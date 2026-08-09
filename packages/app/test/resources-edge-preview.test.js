@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resourcesEdgePreviewHandler } from "../../../examples/resources-site/preview-handler.js";
+import { resourcesEdgePreviewHandler } from "../../../packages/website/preview-handler.js";
 
 test("local edge adapter serves the Bunny profile from memory", async () => {
   const app = { environment: {} };

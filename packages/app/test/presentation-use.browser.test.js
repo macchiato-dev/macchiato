@@ -6,8 +6,8 @@ import { chromium } from "playwright";
 
 const root = new URL("../../../", import.meta.url);
 const assets = new Map([
-  ["/-/project-editor-runtime.js", new URL("examples/resources-site/generated/project-editor-runtime.js", root)],
-  ["/-/resources-site/presentation-runner.js", new URL("examples/resources-site/generated/presentation-runner.js", root)],
+  ["/-/project-editor-runtime.js", new URL("packages/website/generated/project-editor-runtime.js", root)],
+  ["/-/resources-site/presentation-runner.js", new URL("packages/website/generated/presentation-runner.js", root)],
   ["/-/resources-site/presentation-runner.html", new URL("packages/presentation-use/runner.html", root)],
 ]);
 
