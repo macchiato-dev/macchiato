@@ -1,3 +1,5 @@
+import { storageRequest } from "./models.js";
+
 function textBytes(value) {
   return new TextEncoder().encode(String(value));
 }
@@ -45,5 +47,3 @@ export function createModuleOriginHandler({ config, moduleKey, expectedSha256, a
     });
   };
 }
-
-import { storageRequest } from "./models.js";

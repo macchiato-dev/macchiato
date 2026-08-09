@@ -6,7 +6,7 @@
   "scripts": {
     "build:editor": "node build-project-editor.js",
     "export": "node export-static.js",
-    "check": "deno check --config deno.json bunny-server.js"
+    "check": "deno check --config deno.json bunny-bootstrap.js bunny-application.js bunny-module-origin.js"
   },
   "dependencies": {
     "@macchiato-dev/hub": "0.0.0"

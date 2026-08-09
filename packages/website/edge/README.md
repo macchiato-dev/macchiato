@@ -1,8 +1,14 @@
 # Resources.co Bunny edge security model
 
-## Modules
+## Runtime tiers
 
-- `../bunny-server.js`: trusted composition root; no routing or policy logic.
+- `../bunny-bootstrap.js`: small synchronous composition root and HTTP server.
+- `bootstrap.js`: anonymous fast-home selection and delayed prewarming.
+- `deferred-loader.js`: authenticated fetch, size/digest verification, and
+  one-bundle data-URL import.
+- `../bunny-application.js`: self-contained deferred application entrypoint.
+- `../bunny-module-origin.js` and `module-origin.js`: separately deployed,
+  authenticated access to the pinned Storage object.
 - `models.js`: pure validation and policy models with no SDK dependency.
 - `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
   and logger.
@@ -18,13 +24,11 @@ This division makes the deployed request path reviewable without reading the
 large page renderer, and makes the renderer unable to grant itself new edge
 routes after publication.
 
-The composition root calls `serve()` synchronously. Remote database schema
-readiness is awaited inside the first request and shared by concurrent requests
-in that isolate. Do not put network I/O or other substantial work before
-`serve()`: Bunny's startup allowance is intentionally much smaller than the
-normal request execution allowance. Production deployments should run the
-documented database migration before publishing so this readiness check is
-normally idempotent verification rather than first-time schema creation.
+The bootstrap calls `serve()` synchronously. It performs no remote work before
+registration. Remote module loading and database readiness are shared promises
+inside the isolate. Production deployments should run the documented database
+migration before publishing so readiness is normally idempotent verification
+rather than first-time schema creation.
 
 ## Trust flow
 
@@ -34,6 +38,9 @@ repository route/view models
   -> dom-use + html-use strictly sanitize document-profile markup
   -> exporter writes immutable objects and manifest evidence
   -> operator uploads one export prefix to private Bunny Storage
+  -> build stores one content-addressed deferred application bundle
+  -> module-origin requires a shared bearer secret and verifies its digest
+  -> bootstrap independently verifies the fetched bytes before importing them
   -> edge validates manifest structure and security profile
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request
@@ -173,14 +180,14 @@ public project paths such as `macchiato/app/es.md`. The in-repo
   the same transport.
 - Decide whether future mutation APIs belong in a separate edge script/origin
   so the publication path retains its tiny read-only authority.
-- Add a separately published, versioned JavaScript module space for project
-  artifacts that Deno can import by HTTPS. Keep it outside the site-document
-  prefix, give immutable releases content-addressed or versioned URLs, publish
-  an explicit module manifest with media types and hashes, and serve it from a
-  dedicated origin with a narrow CORS policy. Treat the module publisher as an
-  executable-code authority distinct from the Resources site and its sandboxed
-  blog examples; projects should opt into exact module URLs rather than a
-  mutable latest alias.
+- Generate separate database-operation policies for read and mutation clients.
+  The generator should inventory the actual parameterized statements used by
+  Hub models, fail the build for an unclassified statement, and emit a compact
+  read policy plus a mutation policy. The wrappers must enforce those policies
+  around real client calls; a descriptive list that does not constrain SQL is
+  not sufficient. The bootstrap has no database authority. The deferred bundle
+  should inject a read-only client into rendering/search models and a full
+  client only into explicit mutation and migration models.
 - Reconsider a native browser client only when an interaction needs it. Keep its
   code and CSP capability separate from the current document-only profile.
 

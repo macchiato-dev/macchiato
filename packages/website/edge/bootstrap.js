@@ -43,11 +43,15 @@ export function createResourcesBootstrapHandler({
       const key = `fast/locales/${locale}/home-${signupState}.html`;
       const upstream = await fetchImpl(storageRequest(config, key));
       if (!upstream.ok) return deferredHandler.handle(request);
+      // Finish the only fast-path subrequest before arming prewarm. This keeps
+      // module download/import work from contending with Storage on a cold
+      // anonymous home request.
+      const body = request.method === "HEAD" ? null : await upstream.arrayBuffer();
       const headers = publicResponseHeaders(key, upstream.headers);
       headers.set("content-language", locale);
       headers.set("vary", "accept-language, cookie");
       headers.set("x-resources-edge-tier", "bootstrap");
-      const response = new Response(request.method === "HEAD" ? null : upstream.body, { status: 200, headers });
+      const response = new Response(body, { status: 200, headers });
       schedulePrewarm();
       return response;
     } catch (error) {

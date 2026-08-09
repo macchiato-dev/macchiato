@@ -84,6 +84,19 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   assert.match(imported, /^data:application\/javascript;base64,/);
 });
 
+test("deferred loader rejects changed bytes before module evaluation", async () => {
+  let imported = false;
+  const loader = createDeferredModuleLoader({
+    origin: "https://modules.example.test/resources-application.js",
+    token: "shared-secret",
+    expectedSha256: "0".repeat(64),
+    fetchImpl: async () => new Response("changed"),
+    async importModule() { imported = true; return {}; },
+  });
+  await assert.rejects(loader.load(), /digest mismatch/);
+  assert.equal(imported, false);
+});
+
 test("module origin requires the shared key and verifies storage bytes", async () => {
   const source = new TextEncoder().encode("export function createResourcesDeferredHandler() {}\n");
   const expectedSha256 = createHash("sha256").update(source).digest("hex");
