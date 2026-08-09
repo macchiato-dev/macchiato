@@ -28,6 +28,12 @@ inside the isolate. Production deployments should run the documented database
 migration before publishing so readiness is normally idempotent verification
 rather than first-time schema creation.
 
+The local `resources-edge` declarative app uses the same bootstrap contract and
+lazy-loads `../preview-application.js`. Tests assert that fast home rendering
+does not import it, deferred routes import it once, prewarming shares the same
+promise, and an import failure is retryable. Local development therefore
+exercises the architectural seam instead of calling `app.js` directly.
+
 ## Trust flow
 
 ```text

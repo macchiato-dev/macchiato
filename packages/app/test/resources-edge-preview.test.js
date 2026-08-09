@@ -1,6 +1,44 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resourcesEdgePreviewHandler } from "../../../packages/website/preview-handler.js";
+import { createResourcesEdgePreviewRouter, resourcesEdgePreviewHandler } from "../../../packages/website/preview-handler.js";
+
+test("local edge preview preserves the bootstrap and retryable deferred-load boundary", async () => {
+  let loads = 0;
+  let scheduled;
+  const module = {
+    createResourcesPreviewApplication() {
+      return async () => new Response("deferred-local", { headers: { "x-local-deferred": "true" } });
+    },
+  };
+  const router = createResourcesEdgePreviewRouter({
+    loadApplication: async () => { loads += 1; return module; },
+    schedule(callback, delay) { scheduled = { callback, delay }; },
+  });
+  const handler = router({}, null);
+  const home = await handler(new Request("http://resources-edge.localhost/"));
+  assert.equal(home.headers.get("x-resources-edge-tier"), "bootstrap");
+  assert.equal(loads, 0);
+  assert.ok(scheduled.delay > 0);
+  const deferred = await handler(new Request("http://resources-edge.localhost/projects"));
+  assert.equal(await deferred.text(), "deferred-local");
+  assert.equal(loads, 1);
+  await scheduled.callback();
+  assert.equal(loads, 1);
+
+  let attempts = 0;
+  const retryRouter = createResourcesEdgePreviewRouter({
+    loadApplication: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("simulated import failure");
+      return module;
+    },
+    schedule() {},
+  });
+  const retryHandler = retryRouter({}, null);
+  assert.equal((await retryHandler(new Request("http://resources-edge.localhost/projects"))).status, 503);
+  assert.equal(await (await retryHandler(new Request("http://resources-edge.localhost/projects"))).text(), "deferred-local");
+  assert.equal(attempts, 2);
+});
 
 test("local edge adapter serves the Bunny profile from memory", async () => {
   const app = { environment: {} };

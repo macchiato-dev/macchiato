@@ -572,9 +572,17 @@ The bootstrap stays database-free. On the first database-backed request, the
 dynamically loaded application checks `resource_schema_migrations`. If it is
 current, the request proceeds; otherwise one shared promise applies ordered,
 idempotent SQL migrations and all affected requests wait. A failure returns a
-non-cacheable `503`, clears the promise, and a later request retries. Prefer
-initializing and verifying the database before deployment by
-providing its full-access credentials in the environment and running:
+non-cacheable `503`, clears the promise, and a later request retries.
+
+The `resources-edge.localhost` adapter deliberately follows the same lifecycle.
+Its anonymous home passes through `edge/bootstrap.js`; other routes dynamically
+import `preview-application.js`, wait on the same migration runner, memoize the
+application within the process, and clear the promise after a failed import so a
+later request can retry. The local Storage transport remains in memory, but it
+must not bypass the loading or readiness boundary that production depends on.
+
+Prefer initializing and verifying the database before deployment by providing
+its full-access credentials in the environment and running:
 
 ```sh
 deno run --config packages/website/deno.json \
