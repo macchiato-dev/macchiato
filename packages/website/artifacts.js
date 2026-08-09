@@ -8,6 +8,7 @@ import { DEFAULT_RESOURCE_LOCALE, loadResourcesLocales, RESOURCE_LOCALES } from 
 import { commandPaletteUseBrowserAssets } from "@macchiato-dev/command-palette-use/browser-assets";
 import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 import { userMenuUseBrowserAssets } from "@macchiato-dev/user-menu-use/browser-assets";
+import { renderFastAnonymousHome } from "./edge/app.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const hubSourceDirectory = join(directory, "..", "hub", "src");
@@ -78,6 +79,18 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));
+    }
+  }
+  const contentFormVersion = version(files.get("/-/resources-site/content-form.js"));
+  for (const locale of RESOURCE_LOCALES) {
+    const home = new TextDecoder().decode(files.get(`/locales/${locale}/index.html`));
+    for (const signupsEnabled of [true, false]) {
+      const state = signupsEnabled ? "open" : "closed";
+      files.set(`/fast/locales/${locale}/home-${state}.html`, bytes(renderFastAnonymousHome(
+        home,
+        messages[locale],
+        { locale, signupsEnabled, contentFormVersion },
+      )));
     }
   }
   const artifacts = {};

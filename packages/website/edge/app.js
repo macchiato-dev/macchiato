@@ -359,6 +359,26 @@ function publicProjectsHtml(projects, messages) {
   return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
 }
 
+// The publication build uses this to produce an anonymous home document that
+// the small Bunny bootstrap can serve without initializing OAuth, libSQL, or
+// the full application bundle. Live project discovery remains a deferred route;
+// the fast document deliberately renders the valid empty state.
+export function renderFastAnonymousHome(html, messages, {
+  locale = "en",
+  signupsEnabled = true,
+  contentFormVersion = "",
+} = {}) {
+  if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error("Fast home public-project marker is missing");
+  const withProjects = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml([], messages));
+  const withSignupPolicy = applySignupPolicy(withProjects, "/", messages, signupsEnabled);
+  return renderSessionHtml(withSignupPolicy, null, messages, {
+    locale,
+    pathname: "/",
+    focused: false,
+    signupsEnabled,
+  }, contentFormVersion);
+}
+
 function namespaceProjectsHtml(namespace, messages) {
   return `<div class="account-dashboard namespace-view"><div class="account-dashboard__header"><div><span class="account-card__namespace">${message(messages, namespace.kind === "organization" ? "common.organization" : "common.user", namespace.kind)}</span><h1>${escapeHtml(namespace.name)}</h1><p class="account-dashboard__intro">@${escapeHtml(namespace.namespace)}</p></div></div><section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${publicProjectsHtml(namespace.projects, messages)}</section></div>`;
 }
