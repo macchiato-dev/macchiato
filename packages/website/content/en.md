@@ -221,6 +221,15 @@
 - **organizationCreate.slug**: Name
 - **organizationCreate.description**: Description (optional)
 - **organizationCreate.submit**: Create organization
+- **profile.intro**: Choose the public username used by your profile and personal projects.
+- **profile.username**: Username
+- **profile.usernameHelp**: Changing this also changes the URLs of projects in your personal namespace.
+- **profile.save**: Save username
+- **organization.members**: Members
+- **organization.noMembers**: No members yet.
+- **organization.invite**: Invite an existing user
+- **organization.role**: Role
+- **organization.sendInvite**: Send invitation
 - **content.error**: Check the form and try again.
 - **content.slugError**: Use lowercase letters, numbers, and single hyphens.
 

@@ -145,6 +145,15 @@ export async function readSession(request, config, now = Date.now) {
   return value?.v === 1 && value.exp >= now() ? value : null;
 }
 
+export async function refreshedSessionCookie(account, previous, config, now = Date.now) {
+  const issuedAt = now();
+  const value = await seal({
+    v: 1, sub: account.id, provider: previous.provider, login: account.login,
+    name: account.name, iat: issuedAt, exp: issuedAt + config.sessionSeconds * 1000,
+  }, config.sessionSecret);
+  return cookie(cookieNames(config).session, value, { maxAge: config.sessionSeconds, secure: config.secureCookies });
+}
+
 export function signOut(config) {
   return redirect(config.publicOrigin, cookie(cookieNames(config).session, "", { maxAge: 0, secure: config.secureCookies }));
 }

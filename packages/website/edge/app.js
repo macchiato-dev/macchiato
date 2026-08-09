@@ -5,10 +5,12 @@ import {
   storageRequest,
 } from "./models.js";
 import { localeCookie, localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "./i18n.js";
-import { finishGithubAuth, readSession, signOut, startGithubAuth } from "../auth/github.js";
+import { finishGithubAuth, readSession, refreshedSessionCookie, signOut, startGithubAuth } from "../auth/github.js";
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
 import { seal, unseal } from "../auth/session.js";
 import { ContentConflictError, ContentValidationError } from "@macchiato-dev/hub/content";
+import { AccountConflictError, AccountValidationError } from "@macchiato-dev/hub/accounts";
+import { OrganizationAccessError, OrganizationInputError } from "@macchiato-dev/hub/organizations";
 import { validateAllowedUrlPatterns } from "@macchiato-dev/hub/url-pattern";
 import { containerElementNames, describeContainerElement } from "@macchiato-dev/hub/container-elements";
 import {
@@ -25,8 +27,8 @@ import { userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
 const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
-const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new"]);
-const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new"]);
+const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new", "/profile"]);
+const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new", "/profile"]);
 const DISCOVERABLE_PROJECT_NAMESPACES = Object.freeze(["benatkin", "resources", "macchiato"]);
 
 async function fetchStorage(fetchImpl, request) {
@@ -85,10 +87,14 @@ function languageMenuHtml(locale, pathname, messages) {
     </form>`;
 }
 
-function notificationMenuHtml(messages) {
+function notificationMenuHtml(messages, notifications = [], csrf = "") {
+  const items = notifications.map((item) => `<article class="notification${item.read ? " is-read" : ""}">
+    <p><b>${escapeHtml(item.inviter)}</b> invited you to join <b>${escapeHtml(item.organizationName)}</b> as ${escapeHtml(item.role)}.</p>
+    <div class="notification__actions">${item.status === "pending" ? `<form method="post" action="/notifications/${encodeURIComponent(item.id)}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button name="intent" value="accept" type="submit">Accept</button><button name="intent" value="read" type="submit">Mark read</button><button name="intent" value="delete" type="submit">Delete</button></form>` : `<a href="/${encodeURIComponent(item.organizationSlug)}">View organization</a><form method="post" action="/notifications/${encodeURIComponent(item.id)}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}"><button name="intent" value="delete" type="submit">Delete</button></form>`}</div>
+  </article>`).join("");
   return `<details class="edge-user-menu edge-icon-menu">
     <summary class="edge-user-menu__trigger ub-icon" aria-label="${message(messages, "account.notifications", "Notifications")}">${resourcesBellIconHtml}</summary>
-    <div class="popover edge-user-menu__panel"><div class="menu__head">${message(messages, "account.notifications", "Notifications")}</div><div class="menu__empty">${message(messages, "account.noNotifications", "You're all caught up.")}</div></div>
+    <div class="popover edge-user-menu__panel notification-panel"><div class="menu__head">${message(messages, "account.notifications", "Notifications")}</div>${items || `<div class="menu__empty">${message(messages, "account.noNotifications", "You're all caught up.")}</div>`}</div>
   </details>`;
 }
 
@@ -102,7 +108,7 @@ function createMenuHtml(messages) {
   </details>`;
 }
 
-function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/", focused = false, signupsEnabled = false } = {}) {
+function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/", focused = false, signupsEnabled = false, notifications = [], notificationCsrf = "" } = {}) {
   const shellClass = `box userbar edge-status${focused ? " toolbar--cardless" : ""}`;
   if (!session) {
     return `<aside class="${shellClass}" data-screen-label="runtime-status">
@@ -117,7 +123,7 @@ function authStatusHtml(session, messages = {}, { locale = "en", pathname = "/",
   const initials = session.login.slice(0, 2).toUpperCase();
   return `<aside class="${shellClass}" data-screen-label="runtime-status">
     ${renderResourcesCommandPalette()}
-    ${notificationMenuHtml(messages)}
+    ${notificationMenuHtml(messages, notifications, notificationCsrf)}
     ${createMenuHtml(messages)}
     <details class="edge-user-menu">
       <summary class="edge-user-menu__trigger ub-acct" aria-label="${message(messages, "account.menu", "Account menu")}">
@@ -260,11 +266,11 @@ function dashboardHtml(content, messages) {
       </a>`).join("")}</div>`
     : `<div class="account-empty">${message(messages, "dashboard.noProjects", "No projects yet.")}</div>`;
   const organizations = content.organizations.length
-    ? `<div class="account-grid">${content.organizations.map((item) => `<article class="account-card">
+    ? `<div class="account-grid">${content.organizations.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.slug)}">
         <span class="account-card__namespace">${message(messages, "common.organization", "Organization")}</span>
         <h3>${escapeHtml(item.name)}</h3>
         <p>${escapeHtml(item.description || item.slug)}</p>
-      </article>`).join("")}</div>`
+      </a>`).join("")}</div>`
     : `<div class="account-empty">${message(messages, "dashboard.noOrganizations", "No organizations yet.")}</div>`;
   return `<div class="account-dashboard">
     <div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.heading", "Your projects")}</h1><p class="account-dashboard__intro">${message(messages, "dashboard.intro", "Projects and organizations owned by your account.")}</p></div>
@@ -383,6 +389,16 @@ function namespaceProjectsHtml(namespace, messages) {
   return `<div class="account-dashboard namespace-view"><div class="account-dashboard__header"><div><span class="account-card__namespace">${message(messages, namespace.kind === "organization" ? "common.organization" : "common.user", namespace.kind)}</span><h1>${escapeHtml(namespace.name)}</h1><p class="account-dashboard__intro">@${escapeHtml(namespace.namespace)}</p></div></div><section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${publicProjectsHtml(namespace.projects, messages)}</section></div>`;
 }
 
+function profileHtml(account, token, messages, url) {
+  return `<div class="account-dashboard"><div class="account-dashboard__header"><div><h1>${message(messages, "profile.heading", "Your profile")}</h1><p class="account-dashboard__intro">${message(messages, "profile.intro", "Choose the public username used by your profile and personal projects.")}</p></div></div>${formError(url, messages)}<form class="create-form" method="post" action="/profile"><input type="hidden" name="csrf" value="${escapeHtml(token)}"><div class="create-form__field"><label for="profile-username">${message(messages, "profile.username", "Username")}</label><input id="profile-username" name="username" minlength="4" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value="${escapeHtml(account.login)}" autocapitalize="none" autocomplete="username" spellcheck="false" required><p class="form-help">${message(messages, "profile.usernameHelp", "Changing this also changes the URLs of projects in your personal namespace.")}</p></div><div class="create-actions"><button class="account-action" type="submit">${message(messages, "profile.save", "Save username")}</button></div></form></div>`;
+}
+
+function managedOrganizationHtml(namespace, managed, token, messages, url) {
+  const hasAdmin = managed.members.some((member) => member.role === "admin");
+  const members = managed.members.length ? managed.members.map((member) => `<div class="organization-member"><div><b>${escapeHtml(member.name)}</b><span>@${escapeHtml(member.username)}</span></div><form method="post" action="/organizations/${encodeURIComponent(managed.slug)}/members/${encodeURIComponent(member.userId)}"><input type="hidden" name="csrf" value="${escapeHtml(token)}"><select name="role" aria-label="Role for ${escapeHtml(member.username)}"><option value="member"${selected(member.role, "member")}>Member</option><option value="admin"${selected(member.role, "admin")}>Admin</option></select><button type="submit">Change role</button></form></div>`).join("") : `<p>${message(messages, "organization.noMembers", "No members yet.")}</p>`;
+  return `<div class="account-dashboard namespace-view"><div class="account-dashboard__header"><div><span class="account-card__namespace">${message(messages, "common.organization", "Organization")}</span><h1>${escapeHtml(namespace.name)}</h1><p class="account-dashboard__intro">@${escapeHtml(namespace.namespace)}</p></div></div>${formError(url, messages)}<section class="account-section"><div class="account-section__header"><h2>${message(messages, "organization.members", "Members")}</h2></div><div class="organization-members">${members}</div></section><section class="account-section"><div class="account-section__header"><h2>${message(messages, "organization.invite", "Invite an existing user")}</h2></div><form class="create-form" method="post" action="/organizations/${encodeURIComponent(managed.slug)}/invitations"><input type="hidden" name="csrf" value="${escapeHtml(token)}"><div class="create-form__field"><label for="invite-username">${message(messages, "profile.username", "Username")}</label><input id="invite-username" name="username" minlength="4" maxlength="63" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required></div><div class="create-form__field"><label for="invite-role">${message(messages, "organization.role", "Role")}</label><select id="invite-role" name="role"><option value="member">Member</option><option value="admin"${hasAdmin ? " disabled" : ""}>Admin</option></select></div><div class="create-actions"><button class="account-action" type="submit">${message(messages, "organization.sendInvite", "Send invitation")}</button></div></form></section><section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${publicProjectsHtml(namespace.projects, messages)}</section></div>`;
+}
+
 function organizationFormHtml(token, messages, url) {
   return `<div class="account-dashboard">
     <h1>${message(messages, "organizationCreate.heading", "Create an organization")}</h1>
@@ -423,7 +439,7 @@ async function readProjectJson(request, session, action, authConfig, now) {
   return request.json();
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
@@ -488,6 +504,48 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       return finishGitlabAuth(request, gitlabAuthConfig, { fetchImpl, now, accountStore });
     }
     if (authConfig && request.method === "POST" && pathname === "/logout") return signOut(authConfig);
+    if (authConfig && request.method === "POST" && pathname === "/profile") {
+      const session = await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
+      try {
+        const form = await readCreateForm(request, session, "profile", authConfig, now);
+        const account = await accountStore.updateUsername(session.sub, form.get("username"));
+        if (!account) return new Response("Not found", { status: 404 });
+        return new Response(null, { status: 303, headers: { location: "/profile", "set-cookie": await refreshedSessionCookie(account, session, authConfig, now), "cache-control": "no-store" } });
+      } catch (error) {
+        if (!(error instanceof AccountValidationError) && !(error instanceof AccountConflictError)) throw error;
+        return new Response(null, { status: 303, headers: { location: `/profile?error=${encodeURIComponent(error.field || error.code)}`, "cache-control": "no-store" } });
+      }
+    }
+    const notificationAction = authConfig && request.method === "POST" && /^\/notifications\/([A-Za-z0-9-]+)$/.exec(pathname);
+    if (notificationAction) {
+      const session = await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
+      const form = await readCreateForm(request, session, "notifications", authConfig, now);
+      const id = notificationAction[1];
+      let location = "/";
+      if (form.get("intent") === "accept") location = `/${encodeURIComponent(await organizationStore.acceptInvitation(session.sub, id) || "")}`;
+      else if (form.get("intent") === "read") await organizationStore.markNotificationRead(session.sub, id);
+      else if (form.get("intent") === "delete") await organizationStore.deleteNotification(session.sub, id);
+      else return new Response("Invalid notification action", { status: 400 });
+      return new Response(null, { status: 303, headers: { location, "cache-control": "no-store" } });
+    }
+    const invitationAction = authConfig && request.method === "POST" && /^\/organizations\/([a-z0-9-]+)\/invitations$/.exec(pathname);
+    const memberAction = authConfig && request.method === "POST" && /^\/organizations\/([a-z0-9-]+)\/members\/([A-Za-z0-9-]+)$/.exec(pathname);
+    if (invitationAction || memberAction) {
+      const session = await readSession(request, authConfig, now);
+      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
+      const slug = (invitationAction || memberAction)[1];
+      try {
+        const form = await readCreateForm(request, session, `organization:${slug}`, authConfig, now);
+        if (invitationAction) await organizationStore.invite(slug, session.sub, { username: form.get("username"), role: form.get("role") });
+        else await organizationStore.changeRole(slug, session.sub, memberAction[2], form.get("role"));
+        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(slug)}`, "cache-control": "no-store" } });
+      } catch (error) {
+        if (!(error instanceof OrganizationInputError) && !(error instanceof OrganizationAccessError)) throw error;
+        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(slug)}?error=${encodeURIComponent(error.field || "access")}`, "cache-control": "no-store" } });
+      }
+    }
     const projectApi = /^\/api\/projects\/([A-Za-z0-9-]+)\/(snapshot|versions|restore)(?:\/(\d+))?$/.exec(pathname);
     if (projectApi) {
       const session = authConfig && await readSession(request, authConfig, now);
@@ -632,10 +690,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       if (PROTECTED_ACCOUNT_PATHS.has(pathname) && !session) {
         return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
       }
-      const accountShellPath = pathname === "/" && session ? "/dashboard" : pathname;
+      const accountShellPath = (pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname;
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
       const dynamicNamespace = !manifest.files.has(staticKey) && requestedNamespace && contentStore?.getNamespace
         ? await contentStore.getNamespace(requestedNamespace, session?.sub)
+        : null;
+      const managedOrganization = dynamicNamespace?.kind === "organization" && session && organizationStore
+        ? await organizationStore.getManagedOrganization(dynamicNamespace.namespace, session.sub)
         : null;
       const key = localizedObjectKey(locale, (dynamicProject || dynamicNamespace) ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
@@ -670,7 +731,10 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           html = requestedProject.embed ? embeddedProjectDocument(html) : focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
         } else if (dynamicNamespace) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
+          const token = managedOrganization ? await csrfToken(session, `organization:${managedOrganization.slug}`, authConfig, now) : "";
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => managedOrganization
+            ? managedOrganizationHtml(dynamicNamespace, managedOrganization, token, manifest.messages[locale], url)
+            : namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
           html = namespaceDocument(html, dynamicNamespace);
         } else if (pathname === "/try") {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
@@ -678,14 +742,16 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         } else if (session && ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
-          const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : "/organizations", authConfig, now);
+          const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : pathname === "/organizations/new" ? "/organizations" : pathname === "/profile" ? "profile" : "/", authConfig, now);
           const dynamic = pathname === "/"
             ? dashboardHtml(content, manifest.messages[locale])
             : pathname === "/projects"
               ? projectsHtml(content, manifest.messages[locale])
             : pathname === "/projects/new"
               ? projectFormHtml(session, content, token, manifest.messages[locale], url)
-              : organizationFormHtml(token, manifest.messages[locale], url);
+              : pathname === "/organizations/new"
+                ? organizationFormHtml(token, manifest.messages[locale], url)
+                : profileHtml(await accountStore.getAccount(session.sub), token, manifest.messages[locale], url);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
@@ -697,7 +763,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           html = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml(projects, manifest.messages[locale]));
         }
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try", signupsEnabled: authConfig.signupsEnabled }, contentFormVersion);
+        const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
+        const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try", signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, contentFormVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

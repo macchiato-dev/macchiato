@@ -959,6 +959,61 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(new URL(page.url()).pathname, "/projects");
 });
 
+test("Resources Edge manages usernames, invitations, notifications, and roles in Chromium", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const accounts = createAccountStore(createNodeSqliteClient(db));
+  const owner = await accounts.authenticateIdentity({ provider: "github", providerUserId: "org-owner", login: "owner-user", name: "Owner User", email: "owner@example.test", emailVerified: true });
+  const invited = await accounts.authenticateIdentity({ provider: "github", providerUserId: "org-invited", login: "invited-user", name: "Invited User", email: "invited@example.test", emailVerified: true });
+  db.close();
+  async function sessionFor(account) {
+    return seal({ v: 1, sub: account.id, provider: "github", login: account.login, name: account.name, iat: Date.now(), exp: Date.now() + 60_000 }, "local-preview-session-signing-key");
+  }
+
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const ownerPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await ownerPage.context().addCookies([{ name: "resources_session", value: await sessionFor(owner), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  await ownerPage.goto(`http://resources-edge.localhost:${port}/organizations/new`);
+  await ownerPage.getByLabel("Title", { exact: true }).fill("Browser Team");
+  await ownerPage.getByLabel("Description (optional)").fill("A browser-tested organization.");
+  await ownerPage.getByRole("button", { name: "Create organization" }).click();
+  await ownerPage.getByRole("link", { name: /Browser Team/ }).click();
+  await ownerPage.getByRole("heading", { name: "Invite an existing user" }).waitFor();
+  await ownerPage.getByLabel("Username").fill("invited-user");
+  await ownerPage.getByLabel("Role").selectOption("admin");
+  await ownerPage.getByRole("button", { name: "Send invitation" }).click();
+  await ownerPage.waitForTimeout(300);
+  await ownerPage.screenshot({ path: "/tmp/resources-organization-admin.png", fullPage: true });
+
+  const invitedPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await invitedPage.context().addCookies([{ name: "resources_session", value: await sessionFor(invited), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  await invitedPage.goto(`http://resources-edge.localhost:${port}/`);
+  await invitedPage.getByLabel("Notifications").click();
+  await invitedPage.getByText(/invited you to join Browser Team as admin/).waitFor();
+  await invitedPage.getByRole("button", { name: "Mark read" }).click();
+  await invitedPage.getByLabel("Notifications").click();
+  await invitedPage.getByRole("button", { name: "Accept" }).click();
+  await invitedPage.getByRole("heading", { name: "Browser Team" }).waitFor();
+  await invitedPage.waitForTimeout(300);
+  await invitedPage.screenshot({ path: "/tmp/resources-organization-mobile.png", fullPage: true });
+
+  await ownerPage.reload();
+  await ownerPage.getByLabel("Role for invited-user").selectOption("member");
+  await ownerPage.getByRole("button", { name: "Change role" }).click();
+  assert.equal(await ownerPage.getByLabel("Role for invited-user").inputValue(), "member");
+
+  await invitedPage.goto(`http://resources-edge.localhost:${port}/profile`);
+  await invitedPage.getByLabel("Username").fill("renamed-user");
+  await invitedPage.getByRole("button", { name: "Save username" }).click();
+  assert.equal(await invitedPage.getByLabel("Username").inputValue(), "renamed-user");
+});
+
 test("resources design raw file site renders through the server in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

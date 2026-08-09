@@ -221,6 +221,15 @@
 - **organizationCreate.slug**: Nombre
 - **organizationCreate.description**: Descripción (opcional)
 - **organizationCreate.submit**: Crear organización
+- **profile.intro**: Elige el nombre de usuario público de tu perfil y tus proyectos personales.
+- **profile.username**: Nombre de usuario
+- **profile.usernameHelp**: Al cambiarlo también cambian las URL de los proyectos de tu espacio personal.
+- **profile.save**: Guardar nombre de usuario
+- **organization.members**: Miembros
+- **organization.noMembers**: Todavía no hay miembros.
+- **organization.invite**: Invitar a un usuario existente
+- **organization.role**: Rol
+- **organization.sendInvite**: Enviar invitación
 - **content.error**: Revisa el formulario e inténtalo de nuevo.
 - **content.slugError**: Usa letras minúsculas, números y guiones simples.
 
