@@ -38,6 +38,13 @@ such as `hub.localhost:<port>`. The resulting apps remain ordinary declarative
 apps; authoring through Hub does not create a second routing or execution
 system.
 
+Running apps does not require running a complete platform installation. The app
+host can serve one tool or a small collection with only the capabilities those
+apps declare. Hub is a useful optional app for managing that host even when
+accounts, organizations, public discovery, publishing, and hosted services are
+absent. Those broader services can be added incrementally rather than becoming
+prerequisites for local app execution.
+
 Assigning localhost subdomains is part of that workflow. A project can declare
 its preferred app name, Hub can validate conflicts and install or update its
 declaration, and the app server can expose it at

@@ -15,6 +15,14 @@ packages, storage, publishing, APIs, hosting, and other clients. A server
 composition such as `@resources-co/app` may run Hub alongside several other
 declarative applications.
 
+Using an app host does not imply operating the whole platform. An installation
+may run one local tool, a few independently configured apps, or a static-focused
+composition without accounts, publishing, discovery, organizations, or hosted
+services. Hub is a key optional tool for inspecting, configuring, authoring, and
+navigating those apps. It becomes more central as an installation adopts the
+broader platform, but the app host and its declarative apps remain useful without
+it.
+
 Hub is the first-party interface for accounts, authoring, organizations,
 projects, discovery, and administration. Its models and APIs must not assume it
 is the only interface. Operators and third parties can build other applications
