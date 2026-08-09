@@ -90,6 +90,11 @@ tokens are discarded after lookup. GitHub requires a verified address from
 `/user/emails`; GitLab requires a confirmed address from `/api/v4/user/emails`.
 Provider names belong in connection settings, not the account menu.
 
+Provider profile refreshes do not overwrite the Resources.co username. Users
+can change that stable username through `/profile`; the account model validates
+the shared namespace policy and atomically updates personal project namespace
+slugs before refreshing the signed session.
+
 ## Account content
 
 Signed-in `/` is the account dashboard. `/projects` lists projects owned by the
@@ -110,6 +115,17 @@ values. The static export contains validated placeholder routes and layout;
 user-authored markup or browser script crosses that boundary. Private project
 lookups require the owning user ID; public projects can resolve without a
 session.
+
+Organization invitations target an existing username and create a pending
+invitation plus notification in one transaction. The bell menu supports read,
+delete, and accept actions. Acceptance creates a membership; owners and admins
+can change member/admin roles. A partial unique index permits at most one admin
+per organization, so the invariant survives races between edge isolates.
+
+`resource_schema_migrations` is the deployment-wide migration ledger. The
+database-dependent deferred bundle checks it once per isolate and shares the
+resulting migration promise across requests. The small anonymous-home bootstrap
+does not receive database authority merely to repeat that check.
 
 Project content is multi-file and configuration-aware. `resource_project_state`
 holds the current and last-checkpoint snapshots; `resource_project_versions`

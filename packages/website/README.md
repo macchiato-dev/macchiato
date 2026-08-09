@@ -231,8 +231,11 @@ deployed database. The equivalent local adapter may open two `node:sqlite`
 clients over the same database: a normal write connection and a read connection
 configured with `PRAGMA query_only = ON`. That pragma is useful defense in
 depth, while filesystem permissions and which connection is injected remain
-the stronger capability boundaries. Provider identities remain separate rows
-so account-linking policy can be added without changing OAuth callbacks.
+the stronger capability boundaries. Provider identities remain separate rows.
+OAuth refreshes provider display data without overwriting a username chosen on
+Resources.co. `/profile` validates username changes with the same lowercase,
+single-hyphen, four-character minimum and reserved-name policy as organization
+names. A change atomically moves personal project namespace URLs.
 
 The signed-in workspace from the July 22 reference is implemented in the edge
 profile. Signed-in `/` is the account dashboard, while `/projects` lists every
@@ -284,14 +287,13 @@ owned-project deletion both require a confirmation step; deleting a project
 also removes its draft, publication, and version history through database
 cascades.
 
-Planned organization work keeps the namespace page in the standard site
-layout. An owner will be able to open an organization from the dashboard and
-edit its title, URL name, description, and membership. Invitations will create
-explicit pending membership records and surface in the invited user’s bell
-menu; accepting or declining there will resolve the invitation. Authorization
-must be checked server-side for every organization edit, invitation, and
-membership change. The current release intentionally implements none of that
-workflow yet.
+Organization administration stays in the standard site layout. Owners and the
+single optional administrator can invite an existing username as a member or
+administrator. Invitations appear in the invited user’s bell menu and can be
+marked read, deleted, or accepted. Acceptance creates membership in one
+transaction. Managers can list members and change roles; partial unique indexes
+enforce at most one administrator even across concurrent requests. Ownership
+and administrative authority are checked server-side for every mutation.
 
 `@macchiato-dev/hub/project-history` implements the history format without a diff
 dependency. Each changed file is represented by one verified contiguous text
@@ -546,7 +548,9 @@ model uses ordinary SQLite SQL and parameter placeholders. It is currently a
 public-preview service, so staging should exercise migrations, concurrent
 identity upserts, replication behavior, backup/export, and rollback before
 production. Keep the Storage, provider, session, and database credentials as
-separate authorities.
+separate authorities. See [Bunny Database operations](../../docs/bunny-database-operations.md)
+for the difference between Bunny's internal durability snapshots and an
+operator-controlled backup.
 
 The 20–25 KB bootstrap registers its HTTP server without database or remote
 module work. An anonymous `GET /` with no query or session cookie reads a
@@ -564,9 +568,12 @@ the isolate and reset after failures. Uploading the new immutable revision
 before deploying its compiled bootstrap lets old and new isolates coexist
 without changing an environment variable or introducing planned downtime.
 
-The deferred application shares one idempotent account-and-project schema
-readiness promise; a failure returns a non-cacheable `503` and a later request
-retries. Prefer initializing and verifying the database before deployment by
+The bootstrap stays database-free. On the first database-backed request, the
+dynamically loaded application checks `resource_schema_migrations`. If it is
+current, the request proceeds; otherwise one shared promise applies ordered,
+idempotent SQL migrations and all affected requests wait. A failure returns a
+non-cacheable `503`, clears the promise, and a later request retries. Prefer
+initializing and verifying the database before deployment by
 providing its full-access credentials in the environment and running:
 
 ```sh
@@ -576,8 +583,8 @@ deno run --config packages/website/deno.json \
   packages/website/migrate-bunny-database.js
 ```
 
-The command creates only `CREATE ... IF NOT EXISTS` schema objects and verifies
-all expected tables through `sqlite_schema`. It never uses the read-only token;
+The command uses the same SQL migration ledger and verifies all expected tables
+through `sqlite_schema`. It never uses the read-only token;
 application reads can move to that separate client once the planned
 query/mutation capability split is implemented.
 
