@@ -39,6 +39,11 @@ foreign frame keeps its own origin so CodeSandbox works, but cannot navigate
 the top page, download files, open unprompted windows, or request device
 permissions. Iframe permissions are fixed by the renderer, not content.
 
+Unpublished work stays in the same repository under `drafts/blog/*.md`, with
+translations in `drafts/es/blog/*.md`. Publication never scans `drafts/`.
+Moving a file into the corresponding published tree is the explicit publishing
+operation; a date or other metadata field cannot accidentally publish a draft.
+
 Local examples use `/-/blog-examples/...` URLs. They are independently bundled
 static applications and receive the narrower `allow-scripts` sandbox plus a
 response CSP with no network, form, object, or base capability. The VTV

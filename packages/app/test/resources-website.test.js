@@ -221,33 +221,6 @@ test("Resources.co blog container examples render and surface schema errors in t
     await page.close();
   }
 
-  const blogPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await blogPage.goto(`http://resources-edge.localhost:${port}/blog/generating-slides-from-code`);
-  const examplePanel = blogPage.locator(".blog-example-panel");
-  assert.equal(await examplePanel.locator("a").first().textContent(), "DOM use code tour");
-  assert.equal(await examplePanel.locator("a").first().getAttribute("href"), "/benatkin/dom-use-tour");
-  assert.equal(await examplePanel.locator(".blog-example-slug").textContent(), "benatkin/dom-use-tour");
-  const blogUrl = blogPage.url();
-  const embeddedTour = blogPage.locator(".blog-example");
-  assert.equal(await embeddedTour.getAttribute("src"), "/benatkin/dom-use-tour/embed");
-  await embeddedTour.evaluate((frame) => { frame.dataset.identityProbe = "preserved"; });
-  await examplePanel.locator(".blog-example-fullscreen").click();
-  assert.equal(blogPage.url(), blogUrl);
-  assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 1);
-  assert.equal(await embeddedTour.getAttribute("data-identity-probe"), "preserved");
-  assert.deepEqual(await embeddedTour.evaluate((frame) => {
-    const box = frame.getBoundingClientRect();
-    return [box.left, box.top, box.width, box.height];
-  }), [0, 0, 1280, 800]);
-  assert.equal(await examplePanel.locator(".blog-example-fullscreen").getAttribute("aria-label"), "Close full screen");
-  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), false);
-  await blogPage.keyboard.press("Escape");
-  assert.equal(await blogPage.locator(".blog-example-block--fullscreen").count(), 0);
-  await blogPage.keyboard.press("Enter");
-  assert.equal(await examplePanel.locator(".blog-example-fullscreen").evaluate((button) => document.activeElement === button), false);
-  await blogPage.keyboard.press("Escape");
-  await blogPage.close();
-
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");

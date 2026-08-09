@@ -20,3 +20,12 @@ test("blog inline rendering supports emphasis without weakening escaping", () =>
   assert.equal(renderBlogInline("Use *dom-use* with <care>.", escapeHtml), "Use <em>dom-use</em> with &lt;care&gt;.");
   assert.equal(renderBlogInline("[Try Article](/try?template=article)", escapeHtml), '<a href="/try?template=article">Try Article</a>');
 });
+
+test("draft posts are excluded from published content", () => {
+  for (const locale of ["en", "es"]) {
+    assert.equal(
+      loadBlogPosts(undefined, locale).some(({ slug }) => slug === "generating-slides-from-code"),
+      false
+    );
+  }
+});
