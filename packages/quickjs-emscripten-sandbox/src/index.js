@@ -55,6 +55,7 @@ export class Sandbox {
    */
   constructor(options = {}) {
     this.options = options;
+    this.machineId = globalThis.crypto?.randomUUID?.() || `wasm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 
   /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
@@ -228,6 +229,7 @@ export class Sandbox {
   inspectMachine() {
     if (!this.module || this.disposed) throw new Error("Sandbox has been disposed");
     return Object.freeze({
+      machineId: this.machineId,
       moduleId: moduleId(this.module),
       wasmMachine: this.options.wasmMachine || "shared",
       role: String(this.options.role || "guest"),
@@ -248,6 +250,35 @@ export async function createSandbox(options = {}) {
   const sandbox = new Sandbox(options);
   await sandbox.init();
   return sandbox;
+}
+
+const roleRegistryKey = Symbol.for("@macchiato-dev/quickjs-emscripten-sandbox/roles");
+
+/**
+ * Reuse one explicitly shared sandbox for a host-realm application role.
+ * Dedicated component and project sandboxes should continue to use createSandbox().
+ */
+export async function getOrCreateRoleSandbox(role, options = {}) {
+  if (typeof role !== "string" || !/^[a-z][a-z0-9-]{1,63}$/.test(role)) throw new TypeError("Sandbox role is invalid");
+  const registry = globalThis[roleRegistryKey] ||= new Map();
+  if (!registry.has(role)) {
+    const promise = createSandbox({ ...options, role }).catch((error) => {
+      if (registry.get(role) === promise) registry.delete(role);
+      throw error;
+    });
+    registry.set(role, promise);
+  }
+  return registry.get(role);
+}
+
+export async function disposeRoleSandbox(role) {
+  const registry = globalThis[roleRegistryKey];
+  const promise = registry?.get(role);
+  if (!promise) return false;
+  registry.delete(role);
+  const sandbox = await promise;
+  sandbox.dispose();
+  return true;
 }
 
 /**

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSandbox, nodeHttpModuleSource, nodeSqliteModuleSource } from "../src/index.js";
+import { createSandbox, disposeRoleSandbox, getOrCreateRoleSandbox, nodeHttpModuleSource, nodeSqliteModuleSource } from "../src/index.js";
 
 test("sandbox accepts per-runtime memory and stack limits", async () => {
   const sandbox = await createSandbox({ memoryLimitBytes: 16 * 1024 * 1024, maxStackBytes: 512 * 1024 });
@@ -25,7 +25,9 @@ test("dedicated sandboxes use separate WebAssembly machines", async () => {
   const sharedB = await createSandbox({ role: "shared-b" });
   try {
     assert.notEqual(editor.inspectMachine().moduleId, project.inspectMachine().moduleId);
+    assert.notEqual(editor.inspectMachine().machineId, project.inspectMachine().machineId);
     assert.equal(sharedA.inspectMachine().moduleId, sharedB.inspectMachine().moduleId);
+    assert.notEqual(sharedA.inspectMachine().machineId, sharedB.inspectMachine().machineId);
     assert.equal(editor.inspectMachine().wasmMachine, "dedicated");
     assert.equal(editor.inspectMachine().role, "project-editor");
   } finally {
@@ -33,6 +35,18 @@ test("dedicated sandboxes use separate WebAssembly machines", async () => {
     project.dispose();
     sharedA.dispose();
     sharedB.dispose();
+  }
+});
+
+test("explicit application roles reuse one sandbox across components", async () => {
+  const first = await getOrCreateRoleSandbox("test-site-frontend", { wasmMachine: "dedicated" });
+  const second = await getOrCreateRoleSandbox("test-site-frontend", { wasmMachine: "dedicated" });
+  try {
+    assert.equal(first, second);
+    assert.equal(first.inspectMachine().machineId, second.inspectMachine().machineId);
+    assert.equal(first.inspectMachine().role, "test-site-frontend");
+  } finally {
+    await disposeRoleSandbox("test-site-frontend");
   }
 });
 
