@@ -28,6 +28,38 @@ modules. Its README has the complete commands.
 handlers, and plugin code are inert until an app declaration maps them to a
 subdomain.
 
+## Local platform authoring
+
+The platform application is expected to run normally on localhost, not only as
+a hosted service. A local installation can provide project creation, editing,
+preview, container selection, app configuration, and publication from a normal
+platform hostname such as `platform.localhost:<port>`. The resulting apps remain
+ordinary declarative apps; authoring through the platform does not create a
+second routing or execution system.
+
+Assigning localhost subdomains is part of that workflow. A project can declare
+its preferred app name, the platform can validate conflicts and install or
+update its declaration, and the app server can expose it at
+`<name>.localhost:<port>`. Explicit plugin mappings remain available for CLI,
+automation, imports, and deployments where the public hostname differs from the
+local one. Aliases are declarations too: an old site row or directory alone must
+never make a hostname executable.
+
+The platform may become the primary app discovery and authoring interface. In
+that direction, `apps.localhost` can become a small bootstrap, registry, or
+compatibility view and may be largely replaced in everyday use by the richer
+platform application. The underlying app catalog stays independent of either
+UI, so headless operation and CLI management continue to work. A fresh install
+may still use the small directory to reach or install the platform without
+requiring the full platform to be part of the immutable core preset.
+
+Declarative configuration can also select capability providers. For example, a
+Storage-shaped guest capability may use native browser `localStorage` during
+static or local-first operation, or an explicitly configured authenticated
+server provider when the platform supplies persistence. Guest code need not
+change, but provider, scope, quotas, conflict behavior, offline behavior, and
+privacy semantics must remain visible in the declaration.
+
 On a new database the server installs the `core` preset once. It currently
 contains only the app directory:
 
