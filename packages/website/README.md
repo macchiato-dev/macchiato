@@ -293,7 +293,7 @@ must be checked server-side for every organization edit, invitation, and
 membership change. The current release intentionally implements none of that
 workflow yet.
 
-`models/project-history.js` implements the history format without a diff
+`@macchiato-dev/hub/project-history` implements the history format without a diff
 dependency. Each changed file is represented by one verified contiguous text
 splice (or an add/delete), while configuration uses verified nested set/delete
 operations. Applying a patch checks its expected base and fails instead of

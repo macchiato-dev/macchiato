@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
-import { createAccountStore } from "../../../packages/website/models/accounts.js";
+import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import {
   CONTENT_SCHEMA,
   ContentConflictError,
   ContentValidationError,
   createContentStore,
-} from "../../../packages/website/models/content.js";
+} from "@macchiato-dev/hub/content";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 async function stores({ now = () => 200 } = {}) {

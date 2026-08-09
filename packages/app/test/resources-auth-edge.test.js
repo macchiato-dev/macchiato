@@ -3,7 +3,7 @@ import test from "node:test";
 import { createAuthConfig, finishGithubAuth, readSession, startGithubAuth } from "../../../packages/website/auth/github.js";
 import { createGitlabAuthConfig, finishGitlabAuth, startGitlabAuth } from "../../../packages/website/auth/gitlab.js";
 import { accountErrorResponse } from "../../../packages/website/auth/account-response.js";
-import { AccountConflictError, AccountSignupDisabledError } from "../../../packages/website/models/accounts.js";
+import { AccountConflictError, AccountSignupDisabledError } from "@macchiato-dev/hub/accounts";
 
 const config = createAuthConfig({
   PUBLIC_ORIGIN: "https://resources.example",

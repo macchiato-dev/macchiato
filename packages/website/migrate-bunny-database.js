@@ -1,8 +1,8 @@
 #!/usr/bin/env -S deno run --allow-env --allow-net
 import process from "node:process";
 import { createClient } from "@libsql/client/web";
-import { createAccountStore } from "./models/accounts.js";
-import { createContentStore } from "./models/content.js";
+import { createAccountStore } from "@macchiato-dev/hub/accounts";
+import { createContentStore } from "@macchiato-dev/hub/content";
 
 const url = process.env.BUNNY_DATABASE_URL;
 const authToken = process.env.BUNNY_DATABASE_AUTH_TOKEN;

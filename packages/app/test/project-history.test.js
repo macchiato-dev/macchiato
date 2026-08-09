@@ -6,7 +6,7 @@ import {
   emptyProjectSnapshot,
   normalizeProjectSnapshot,
   projectPatchIsEmpty,
-} from "../../../packages/website/models/project-history.js";
+} from "@macchiato-dev/hub/project-history";
 
 test("project patches round-trip multiple files and nested configuration", () => {
   const before = normalizeProjectSnapshot({

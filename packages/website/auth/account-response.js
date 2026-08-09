@@ -1,4 +1,4 @@
-import { AccountConflictError, AccountSignupDisabledError } from "../models/accounts.js";
+import { AccountConflictError, AccountSignupDisabledError } from "@macchiato-dev/hub/accounts";
 
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

@@ -3,6 +3,10 @@
   "imports": {
     "@bunny.net/edgescript-sdk": "npm:@bunny.net/edgescript-sdk@0.12.1",
     "@libsql/client/web": "npm:@libsql/client@0.17.4/web",
+    "@macchiato-dev/hub/accounts": "../hub/src/accounts.js",
+    "@macchiato-dev/hub/content": "../hub/src/content.js",
+    "@macchiato-dev/hub/container-elements": "../hub/src/container-elements.js",
+    "@macchiato-dev/hub/url-pattern": "../hub/src/url-pattern.js",
     "@macchiato-dev/command-palette-use": "../../packages/command-palette-use/src/index.js",
     "@macchiato-dev/theme-use": "../../packages/theme-use/src/index.js",
     "@macchiato-dev/user-menu-use": "../../packages/user-menu-use/src/index.js"

@@ -12,7 +12,7 @@ import { chromium } from "playwright";
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../packages/website/seed.js";
 import { seal } from "../../../packages/website/auth/session.js";
-import { createAccountStore } from "../../../packages/website/models/accounts.js";
+import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);

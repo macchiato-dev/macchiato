@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
-import { createContentStore } from "./models/content.js";
+import { createContentStore } from "@macchiato-dev/hub/content";
 
 function option(name, fallback) {
   const index = process.argv.indexOf(name);

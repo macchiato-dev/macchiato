@@ -10,6 +10,7 @@ import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 import { userMenuUseBrowserAssets } from "@macchiato-dev/user-menu-use/browser-assets";
 
 const directory = dirname(fileURLToPath(import.meta.url));
+const hubSourceDirectory = join(directory, "..", "hub", "src");
 const fontDirectory = join(directory, "..", "..", "examples", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
@@ -70,10 +71,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/presentation-runner.js", bytes(readFileSync(join(generatedDirectory, "presentation-runner.js"))));
   files.set("/-/resources-site/presentation-runner.html", bytes(readFileSync(join(directory, "../../packages/presentation-use/runner.html"))));
   files.set("/-/resources-site/project-editor-guest.js", editorGuest);
-  files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(directory, "models", "project-history.js"))));
-  files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(directory, "models", "url-pattern.js"))));
-  files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(directory, "models", "container-elements.js"))));
-  files.set("/-/resources-site/project-archive.js", bytes(readFileSync(join(directory, "models", "project-archive.js"))));
+  files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(hubSourceDirectory, "project-history.js"))));
+  files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js"))));
+  files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(hubSourceDirectory, "container-elements.js"))));
+  files.set("/-/resources-site/project-archive.js", bytes(readFileSync(join(hubSourceDirectory, "project-archive.js"))));
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));

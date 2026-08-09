@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "../../../packages/website/models/project-archive.js";
+import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "@macchiato-dev/hub/project-archive";
 
 test("project archives round-trip text, binary images, and configuration", async () => {
   const snapshot = {

@@ -7,9 +7,9 @@
 - `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
   and logger.
 - `../auth/`: signed cookie, PKCE, GitHub/GitLab exchange, and identity validation.
-- `../models/accounts.js`: provider-neutral SQLite identity model behind a
+- `@macchiato-dev/hub/accounts`: provider-neutral SQLite identity model behind a
   libSQL-compatible client boundary.
-- `../models/content.js`: account-owned organization and project model behind
+- `@macchiato-dev/hub/content`: account-owned organization and project model behind
   the same SQLite/libSQL boundary.
 - `../seed.js`: route/view model and authored UI.
 - `../export-static.js`: trusted publisher that runs strict `use-*` validation.

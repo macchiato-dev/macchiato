@@ -5,7 +5,7 @@ import {
   AccountConflictError,
   AccountSignupDisabledError,
   createAccountStore,
-} from "../../../packages/website/models/accounts.js";
+} from "@macchiato-dev/hub/accounts";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 function setup() {

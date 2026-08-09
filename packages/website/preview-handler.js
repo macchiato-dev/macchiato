@@ -6,8 +6,8 @@ import { createMemoryStorageAdapter } from "./adapters/memory-storage.js";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
-import { createAccountStore } from "./models/accounts.js";
-import { createContentStore } from "./models/content.js";
+import { createAccountStore } from "@macchiato-dev/hub/accounts";
+import { createContentStore } from "@macchiato-dev/hub/content";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
