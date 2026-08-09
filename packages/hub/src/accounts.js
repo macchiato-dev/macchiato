@@ -1,3 +1,5 @@
+import { namespaceName } from "./names.js";
+
 export const ACCOUNT_SCHEMA = Object.freeze([
   `CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -26,12 +28,14 @@ export const ACCOUNT_SCHEMA = Object.freeze([
     ON user_identities(user_id)`,
   `CREATE INDEX IF NOT EXISTS user_emails_user_id
     ON user_emails(user_id)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique
+    ON users(username COLLATE NOCASE)`,
 ]);
 
 export class AccountConflictError extends Error {
   constructor(code, providers = []) {
-    super(code === "email_taken"
-      ? "An account already uses this email address"
+    super(code === "email_taken" ? "An account already uses this email address"
+      : code === "username_taken" ? "That username is already in use"
       : "This provider identity is already linked to another account");
     this.name = "AccountConflictError";
     this.code = code;
@@ -44,6 +48,14 @@ export class AccountSignupDisabledError extends Error {
     super("Sign up is not currently enabled");
     this.name = "AccountSignupDisabledError";
     this.code = "signup_disabled";
+  }
+}
+
+export class AccountValidationError extends Error {
+  constructor(field, message) {
+    super(message);
+    this.name = "AccountValidationError";
+    this.field = field;
   }
 }
 
@@ -94,8 +106,47 @@ export function createAccountStore(client, {
     return result.rows.map((row) => String(row.provider));
   }
 
+  async function getAccount(userId) {
+    await initialize();
+    return accountFromRow(firstRow(await client.execute({
+      sql: "SELECT id, display_name, username FROM users WHERE id = ?",
+      args: [String(userId)],
+    })));
+  }
+
   return Object.freeze({
     initialize,
+    getAccount,
+    async updateUsername(userId, value) {
+      await initialize();
+      let username;
+      try {
+        username = namespaceName(value, { field: "username" });
+      } catch (error) {
+        throw new AccountValidationError("username", error.message);
+      }
+      const timestamp = now();
+      try {
+        const occupied = await client.execute({
+          sql: "SELECT 1 FROM resource_organizations WHERE slug = ? COLLATE NOCASE LIMIT 1",
+          args: [username],
+        });
+        if (occupied.rows[0]) throw new AccountConflictError("username_taken");
+        const changed = await client.batch([{
+          sql: "UPDATE users SET username = ?, updated_at = ? WHERE id = ?",
+          args: [username, timestamp, String(userId)],
+        }, {
+          sql: `UPDATE resource_projects SET namespace_slug = ?, updated_at = ?
+                WHERE namespace_kind = 'user' AND namespace_id = ?`,
+          args: [username, timestamp, String(userId)],
+        }]);
+        if (!changed[0]?.rowsAffected) return null;
+      } catch (error) {
+        if (/unique constraint/i.test(String(error?.message || error))) throw new AccountConflictError("username_taken");
+        throw error;
+      }
+      return getAccount(userId);
+    },
     async authenticateIdentity(identity, { linkToUserId = null, allowCreate = true } = {}) {
       await initialize();
       if (!providers.has(identity.provider)) throw new Error("Unsupported identity provider");
@@ -118,9 +169,9 @@ export function createAccountStore(client, {
         }
         await client.batch([
           {
-            sql: `UPDATE users SET display_name = ?, username = ?, updated_at = ?
+            sql: `UPDATE users SET display_name = ?, updated_at = ?
                   WHERE id = ?`,
-            args: [identity.name, identity.login, timestamp, existingIdentity.id],
+            args: [identity.name, timestamp, existingIdentity.id],
           },
           {
             sql: `UPDATE user_identities SET provider_username = ?, updated_at = ?
@@ -131,7 +182,7 @@ export function createAccountStore(client, {
         return accountFromRow({
           ...existingIdentity,
           display_name: identity.name,
-          username: identity.login,
+          username: existingIdentity.username,
         });
       }
 

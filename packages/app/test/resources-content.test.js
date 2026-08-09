@@ -85,7 +85,7 @@ test("content store validates inputs, ownership, and namespace uniqueness", asyn
   );
   await assert.rejects(
     content.createOrganization(account.id, { slug: "abc", name: "Valid title", description: "" }),
-    /at least 4 characters/,
+    /between 4 and 63 characters/,
   );
   await content.createOrganization(account.id, { slug: "team", name: "Team", description: "" });
   await assert.rejects(

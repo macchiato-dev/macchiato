@@ -52,13 +52,13 @@ test("account model creates a provider-neutral user for a verified identity", as
   assert.equal(db.prepare("SELECT user_id FROM user_identities").get().user_id, "user-1");
 });
 
-test("existing provider identities log in even when provider profile details change", async (t) => {
+test("existing provider identities retain their chosen username when provider details change", async (t) => {
   const { db, store } = setup();
   t.after(() => db.close());
   await store.authenticateIdentity(gitlab);
   const account = await store.authenticateIdentity({ ...gitlab, login: "latte-renamed", name: "Latte Renamed" });
 
-  assert.deepEqual(account, { id: "user-1", login: "latte-renamed", name: "Latte Renamed" });
+  assert.deepEqual(account, { id: "user-1", login: "latte-dev", name: "Latte Renamed" });
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM users").get().count, 1);
 });
 

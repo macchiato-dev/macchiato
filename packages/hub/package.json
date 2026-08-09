@@ -4,6 +4,9 @@
   "type": "module",
   "exports": {
     "./accounts": "./src/accounts.js",
+    "./names": "./src/names.js",
+    "./organizations": "./src/organizations.js",
+    "./migrations": "./src/migrations.js",
     "./content": "./src/content.js",
     "./container-elements": "./src/container-elements.js",
     "./project-archive": "./src/project-archive.js",

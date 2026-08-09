@@ -5,6 +5,8 @@ import {
   normalizeProjectSnapshot,
   projectPatchIsEmpty,
 } from "./project-history.js";
+import { namespaceName } from "./names.js";
+import { ORGANIZATION_SCHEMA } from "./organizations.js";
 
 export const CONTENT_SCHEMA = Object.freeze([
   `CREATE TABLE IF NOT EXISTS resource_organizations (
@@ -85,7 +87,6 @@ export const CONTENT_SCHEMA = Object.freeze([
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const TEMPLATES = new Set(["article", "slides", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "html", "svg", "canvas"]);
-const RESERVED_ORGANIZATION_NAMES = new Set(["admin", "administrator", "api", "root", "security", "support", "system", "www"]);
 
 export class ContentConflictError extends Error {
   constructor(kind) {
@@ -188,7 +189,7 @@ export function createContentStore(client, {
 } = {}) {
   if (!client?.execute || !client?.batch) throw new Error("Content store requires a libSQL-compatible client");
   let initialized;
-  const initialize = () => (initialized ||= client.batch(CONTENT_SCHEMA.map((sql) => ({ sql, args: [] }))));
+  const initialize = () => (initialized ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] }))));
 
   return Object.freeze({
     initialize,
@@ -342,9 +343,13 @@ export function createContentStore(client, {
       const [organizations, projects] = await Promise.all([
         client.execute({
           sql: `SELECT id, slug, name, description, created_at
-                FROM resource_organizations WHERE owner_user_id = ?
+                FROM resource_organizations o
+                WHERE o.owner_user_id = ? OR EXISTS (
+                  SELECT 1 FROM resource_organization_members m
+                  WHERE m.organization_id = o.id AND m.user_id = ?
+                )
                 ORDER BY updated_at DESC, name COLLATE NOCASE`,
-          args: [String(userId)],
+          args: [String(userId), String(userId)],
         }),
         client.execute({
           sql: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
@@ -362,12 +367,11 @@ export function createContentStore(client, {
 
     async createOrganization(userId, input) {
       await initialize();
-      const organizationSlug = slug(input.slug);
-      if (organizationSlug.length < 4) {
-        throw new ContentValidationError("organization_name", "organization name must be at least 4 characters");
-      }
-      if (RESERVED_ORGANIZATION_NAMES.has(organizationSlug)) {
-        throw new ContentValidationError("organization_name", "That organization name is reserved");
+      let organizationSlug;
+      try {
+        organizationSlug = namespaceName(input.slug, { field: "organization name" });
+      } catch (error) {
+        throw new ContentValidationError("organization_name", error.message);
       }
       const value = {
         id: randomId(),
@@ -377,6 +381,11 @@ export function createContentStore(client, {
       };
       const timestamp = now();
       try {
+        const occupied = await client.execute({
+          sql: "SELECT 1 FROM users WHERE username = ? COLLATE NOCASE LIMIT 1",
+          args: [organizationSlug],
+        });
+        if (occupied.rows[0]) throw new ContentConflictError("organization");
         await client.execute({
           sql: `INSERT INTO resource_organizations
                   (id, owner_user_id, slug, name, description, created_at, updated_at)
