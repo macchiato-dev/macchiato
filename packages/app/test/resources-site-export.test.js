@@ -28,6 +28,8 @@ test("exports resources site as static files", async (t) => {
   const contentForm = await readFile(join(out, "-", "resources-site", "content-form.js"), "utf8");
   const editorRuntime = await readFile(join(out, "-", "resources-site", "project-editor-runtime.js"), "utf8");
   const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
+  const fastHome = await readFile(join(out, "fast", "locales", "en", "home-open.html"), "utf8");
+  const fastClosedHome = await readFile(join(out, "fast", "locales", "en", "home-closed.html"), "utf8");
 
   assert.equal(result.routes, manifest.routes.length);
   assert.equal(manifest.routes.includes("/macchiato/http-use"), true);
@@ -45,6 +47,10 @@ test("exports resources site as static files", async (t) => {
   assert.equal(manifest.files.includes("/-/blog-examples/vtv/app.css"), true);
   assert.equal(manifest.files.includes("/-/user-menu-use/client.js"), true);
   assert.equal(manifest.files.includes("/-/resources-site/content-form.js"), true);
+  assert.equal(manifest.files.includes("/fast/locales/en/home-open.html"), true);
+  assert.doesNotMatch(fastHome, /__RESOURCES_PUBLIC_PROJECTS__/);
+  assert.match(fastHome, /href="\/signup"/);
+  assert.doesNotMatch(fastClosedHome, /href="\/signup"/);
   assert.match(contentForm, /project-editor-runtime\.js\?v=[a-f0-9]{12}/);
   assert.match(editorRuntime, /project-editor-guest\.js\?v=[a-f0-9]{12}/);
   assert.match(home, /<title>Resources\.co<\/title>/);
