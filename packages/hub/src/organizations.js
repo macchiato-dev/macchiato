@@ -133,6 +133,14 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
         args: [org.id, target.id],
       });
       if (existing.rows[0]) throw new OrganizationInputError("username", "That user is already a member");
+      const invitationRole = role(requestedRole);
+      if (invitationRole === "admin") {
+        const admin = await client.execute({
+          sql: "SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND role = 'admin' LIMIT 1",
+          args: [org.id],
+        });
+        if (admin.rows[0]) throw new OrganizationInputError("role", "This organization already has or is inviting an admin");
+      }
       const timestamp = now();
       const invitationId = randomId();
       const notificationId = randomId();
@@ -141,7 +149,7 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
           sql: `INSERT INTO resource_organization_invitations
                   (id, organization_id, inviter_user_id, invitee_user_id, role, status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
-          args: [invitationId, org.id, String(actorUserId), target.id, role(requestedRole), timestamp, timestamp],
+          args: [invitationId, org.id, String(actorUserId), target.id, invitationRole, timestamp, timestamp],
         }, {
           sql: `INSERT INTO resource_notifications (id, user_id, kind, invitation_id, read_at, created_at)
                 VALUES (?, ?, 'organization_invitation', ?, NULL, ?)`,
@@ -175,8 +183,17 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
     },
     async deleteNotification(userId, notificationId) {
       await initialize();
-      const result = await client.execute({ sql: "DELETE FROM resource_notifications WHERE id = ? AND user_id = ?", args: [String(notificationId), String(userId)] });
-      return Boolean(result.rowsAffected);
+      const results = await client.batch([{
+        sql: `DELETE FROM resource_organization_invitations
+              WHERE status = 'pending' AND id = (
+                SELECT invitation_id FROM resource_notifications WHERE id = ? AND user_id = ?
+              )`,
+        args: [String(notificationId), String(userId)],
+      }, {
+        sql: "DELETE FROM resource_notifications WHERE id = ? AND user_id = ?",
+        args: [String(notificationId), String(userId)],
+      }]);
+      return Boolean(results[0]?.rowsAffected || results[1]?.rowsAffected);
     },
     async acceptInvitation(userId, notificationId) {
       await initialize();

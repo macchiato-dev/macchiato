@@ -65,6 +65,15 @@ test("organization invitations become notifications and accepted memberships", a
   assert.equal((await state.organizations.listNotifications(state.member.id)).length, 0);
 });
 
+test("deleting a pending invitation notification permits a new invitation", async (t) => {
+  const state = await setup();
+  t.after(() => state.db.close());
+  const first = await state.organizations.invite(state.org.slug, state.owner.id, { username: state.member.login, role: "member" });
+  assert.equal(await state.organizations.deleteNotification(state.member.id, first.notificationId), true);
+  const second = await state.organizations.invite(state.org.slug, state.owner.id, { username: state.member.login, role: "admin" });
+  assert.notEqual(second.id, first.id);
+});
+
 test("an organization permits at most one admin", async (t) => {
   const state = await setup();
   t.after(() => state.db.close());
