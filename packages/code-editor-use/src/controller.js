@@ -10,6 +10,8 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   let sandbox = await createSandbox({
     memoryLimitBytes: limits.memoryLimitBytes ?? 128 * 1024 * 1024,
     maxStackBytes: limits.maxStackBytes ?? 4 * 1024 * 1024,
+    wasmMachine: limits.wasmMachine ?? "dedicated",
+    role: limits.role ?? "code-editor",
   });
   let stopped = false;
   let inputBridge;
@@ -69,7 +71,7 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
     },
     inspect() {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), surface: host.inspectSurface() };
+      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), machine: sandbox.inspectMachine(), surface: host.inspectSurface() };
     },
     command(payload) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");

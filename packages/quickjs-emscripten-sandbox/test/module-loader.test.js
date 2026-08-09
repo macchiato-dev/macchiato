@@ -15,6 +15,25 @@ test("sandbox accepts per-runtime memory and stack limits", async () => {
 test("sandbox rejects invalid runtime limits", async () => {
   await assert.rejects(createSandbox({ memoryLimitBytes: 0 }), /positive safe integer/);
   await assert.rejects(createSandbox({ maxStackBytes: -1 }), /positive safe integer/);
+  await assert.rejects(createSandbox({ wasmMachine: "sometimes" }), /shared or dedicated/);
+});
+
+test("dedicated sandboxes use separate WebAssembly machines", async () => {
+  const editor = await createSandbox({ wasmMachine: "dedicated", role: "project-editor" });
+  const project = await createSandbox({ wasmMachine: "dedicated", role: "project" });
+  const sharedA = await createSandbox({ role: "shared-a" });
+  const sharedB = await createSandbox({ role: "shared-b" });
+  try {
+    assert.notEqual(editor.inspectMachine().moduleId, project.inspectMachine().moduleId);
+    assert.equal(sharedA.inspectMachine().moduleId, sharedB.inspectMachine().moduleId);
+    assert.equal(editor.inspectMachine().wasmMachine, "dedicated");
+    assert.equal(editor.inspectMachine().role, "project-editor");
+  } finally {
+    editor.dispose();
+    project.dispose();
+    sharedA.dispose();
+    sharedB.dispose();
+  }
 });
 
 test("loads explicit guest modules", async () => {

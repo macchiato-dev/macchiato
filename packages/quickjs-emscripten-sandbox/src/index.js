@@ -10,12 +10,20 @@ import singlefileVariant from "@jitl/quickjs-singlefile-browser-release-sync";
 
 /** @type {import("quickjs-emscripten-core").QuickJSWASMModule | null} */
 let wasmModule = null;
+const moduleIds = new WeakMap();
+let nextModuleId = 0;
 
-async function getModule() {
+async function getModule(isolation = "shared") {
+  if (isolation === "dedicated") return newQuickJSWASMModuleFromVariant(singlefileVariant);
   if (!wasmModule) {
     wasmModule = await newQuickJSWASMModuleFromVariant(singlefileVariant);
   }
   return wasmModule;
+}
+
+function moduleId(module) {
+  if (!moduleIds.has(module)) moduleIds.set(module, ++nextModuleId);
+  return moduleIds.get(module);
 }
 
 function formatQuickJsError(value) {
@@ -42,6 +50,8 @@ export class Sandbox {
    * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
    * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
    * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
+   * @param {"shared"|"dedicated"} [options.wasmMachine] Reuse the shared machine or instantiate a separately collectible Wasm machine.
+   * @param {string} [options.role] Inspectable role assigned by the composing application.
    */
   constructor(options = {}) {
     this.options = options;
@@ -51,6 +61,8 @@ export class Sandbox {
   runtime = null;
   /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
   context = null;
+  /** @type {import("quickjs-emscripten-core").QuickJSWASMModule | null} */
+  module = null;
   /** @type {boolean} */
   disposed = false;
 
@@ -64,7 +76,11 @@ export class Sandbox {
     if (this.options.maxStackBytes !== undefined) {
       if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
     }
-    const mod = await getModule();
+    if (this.options.wasmMachine !== undefined && !["shared", "dedicated"].includes(this.options.wasmMachine)) {
+      throw new TypeError("wasmMachine must be shared or dedicated");
+    }
+    const mod = await getModule(this.options.wasmMachine);
+    this.module = mod;
     this.runtime = mod.newRuntime();
     if (this.options.memoryLimitBytes !== undefined) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
     if (this.options.maxStackBytes !== undefined) this.runtime.setMaxStackSize(this.options.maxStackBytes);
@@ -209,12 +225,22 @@ export class Sandbox {
     hostFunction.dispose();
   }
 
+  inspectMachine() {
+    if (!this.module || this.disposed) throw new Error("Sandbox has been disposed");
+    return Object.freeze({
+      moduleId: moduleId(this.module),
+      wasmMachine: this.options.wasmMachine || "shared",
+      role: String(this.options.role || "guest"),
+    });
+  }
+
   dispose() {
     this.disposed = true;
     this.context?.dispose();
     this.runtime?.dispose();
     this.context = null;
     this.runtime = null;
+    this.module = null;
   }
 }
 

@@ -7,7 +7,11 @@ import { mountPresentationUse } from "@macchiato-dev/presentation-use";
 
 export async function mountResourcesProjectEditor(options) {
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
-  return mountQuickJsCodeEditor({ ...options, guestSource });
+  return mountQuickJsCodeEditor({
+    ...options,
+    guestSource,
+    limits: { ...options.limits, wasmMachine: "dedicated", role: "resources-project-editor" },
+  });
 }
 
 export function mountResourcesPresentation(options) {
@@ -49,12 +53,13 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
     root.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
   }
-  if (!scripts.length) {
-    root.dataset.previewRuntime = "static";
-    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.destroy() };
-  }
   try {
-    sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
+    sandbox = await createSandbox({
+      memoryLimitBytes: 32 * 1024 * 1024,
+      maxStackBytes: 512 * 1024,
+      wasmMachine: "dedicated",
+      role: "resources-project",
+    });
     sandbox.installJsonHostFunction("__browserUseHost", (message) => message.op === "canvas" ? canvas.dispatch(message) : host.dispatch(message));
     sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
     scripts.forEach((script) => sandbox.evalGlobal(script.code, script.source));
@@ -63,7 +68,7 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
     sandbox?.dispose?.();
     throw error;
   }
-  root.dataset.previewRuntime = "quickjs";
+  root.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   let stopped = false;
   const timer = setInterval(() => {
     if (stopped) return;
@@ -78,7 +83,7 @@ export async function mountResourcesProjectPreview({ root, scripts, violations =
     }
   }, 50);
   return {
-    inspect: () => ({ runtime: "quickjs", violations: violations.length, canvas: canvas.inspect() }),
+    inspect: () => ({ runtime: scripts.length ? "quickjs" : "quickjs-static", machine: sandbox.inspectMachine(), violations: violations.length, canvas: canvas.inspect() }),
     destroy() { stopped = true; clearInterval(timer); host.destroy(); sandbox.dispose?.(); },
   };
 }

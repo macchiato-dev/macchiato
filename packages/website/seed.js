@@ -1598,8 +1598,14 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 
   async function userbarSandbox() {
     if (!userbarSandboxPromise) {
-      userbarSandboxPromise = import("@macchiato-dev/quickjs-emscripten-sandbox").then(({ createSandbox }) => createSandbox()).then((sandbox) => {
+      userbarSandboxPromise = import("@macchiato-dev/quickjs-emscripten-sandbox").then(({ createSandbox }) => createSandbox({
+        wasmMachine: "dedicated",
+        role: "resources-frontend",
+        memoryLimitBytes: 16 * 1024 * 1024,
+        maxStackBytes: 512 * 1024,
+      })).then((sandbox) => {
         sandbox.evalGlobal(userbarSandboxSource, "resources-userbar-state.js");
+        document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
         return sandbox;
       }).catch((error) => {
         console.warn("Userbar sandbox unavailable", error);
