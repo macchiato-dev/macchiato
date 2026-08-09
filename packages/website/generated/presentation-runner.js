@@ -14,10 +14,10 @@
       __defProp(target, name, { get: all[name], enumerable: true });
   };
 
-  // node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
+  // node_modules/.deno/@jitl+quickjs-ffi-types@0.32.0/node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
   var EvalFlags, IntrinsicsFlags, JSPromiseStateEnum, GetOwnPropertyNamesFlags, IsEqualOp;
   var init_dist = __esm({
-    "node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
+    "node_modules/.deno/@jitl+quickjs-ffi-types@0.32.0/node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
       EvalFlags = { JS_EVAL_TYPE_GLOBAL: 0, JS_EVAL_TYPE_MODULE: 1, JS_EVAL_TYPE_DIRECT: 2, JS_EVAL_TYPE_INDIRECT: 3, JS_EVAL_TYPE_MASK: 3, JS_EVAL_FLAG_STRICT: 8, JS_EVAL_FLAG_STRIP: 16, JS_EVAL_FLAG_COMPILE_ONLY: 32, JS_EVAL_FLAG_BACKTRACE_BARRIER: 64 };
       IntrinsicsFlags = { BaseObjects: 1, Date: 2, Eval: 4, StringNormalize: 8, RegExp: 16, RegExpCompiler: 32, JSON: 64, Proxy: 128, MapSet: 256, TypedArrays: 512, Promise: 1024, BigInt: 2048, BigFloat: 4096, BigDecimal: 8192, OperatorOverloading: 16384, BignumExt: 32768 };
       JSPromiseStateEnum = { Pending: 0, Fulfilled: 1, Rejected: 2 };
@@ -26,7 +26,7 @@
     }
   });
 
-  // node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
+  // node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
   function debugLog(...args) {
     QTS_DEBUG && console.log("quickjs-emscripten:", ...args);
   }
@@ -113,7 +113,7 @@
   }
   var __defProp2, __export2, QTS_DEBUG, errors_exports, QuickJSUnwrapError, QuickJSWrongOwner, QuickJSUseAfterFree, QuickJSNotImplemented, QuickJSAsyncifyError, QuickJSAsyncifySuspended, QuickJSMemoryLeakDetected, QuickJSEmscriptenModuleError, QuickJSUnknownIntrinsic, QuickJSPromisePending, QuickJSEmptyGetOwnPropertyNames, QuickJSHostRefRangeExceeded, QuickJSHostRefInvalid, AwaitYield, UsingDisposable, SymbolDispose, prototypeAsAny, Lifetime, StaticLifetime, WeakLifetime, Scope, AbstractDisposableResult, DisposableSuccess, DisposableFail, DisposableResult, QuickJSDeferredPromise, ModuleMemory, DefaultIntrinsics, QuickJSIterator, INT32_MIN, INT32_MAX, INVALID_HOST_REF_ID, HostRefMap, HostRef, ContextMemory, QuickJSContext, QuickJSRuntime, QuickJSEmscriptenModuleCallbacks, QuickJSModuleCallbacks, QuickJSWASMModule;
   var init_chunk_V2S4ZYJR = __esm({
-    "node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
+    "node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
       init_dist();
       init_dist();
       __defProp2 = Object.defineProperty;
@@ -1143,7 +1143,7 @@ Attempted to suspend at:`);
     }
   });
 
-  // node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
+  // node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
   var module_ES6BEMUI_exports = {};
   __export(module_ES6BEMUI_exports, {
     QuickJSModuleCallbacks: () => QuickJSModuleCallbacks,
@@ -1152,29 +1152,29 @@ Attempted to suspend at:`);
     applyModuleEvalRuntimeOptions: () => applyModuleEvalRuntimeOptions
   });
   var init_module_ES6BEMUI = __esm({
-    "node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
+    "node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
       init_chunk_V2S4ZYJR();
     }
   });
 
-  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
+  // node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
   var __defProp3, __defNormalProp, __publicField;
   var init_chunk_FGV2HSCH = __esm({
-    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
+    "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
       __defProp3 = Object.defineProperty;
       __defNormalProp = (obj, key, value) => key in obj ? __defProp3(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
       __publicField = (obj, key, value) => (__defNormalProp(obj, typeof key != "symbol" ? key + "" : key, value), value);
     }
   });
 
-  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
+  // node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
   var ffi_exports = {};
   __export(ffi_exports, {
     QuickJSFFI: () => QuickJSFFI
   });
   var QuickJSFFI;
   var init_ffi = __esm({
-    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
+    "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
       QuickJSFFI = class {
         constructor(module) {
           this.module = module;
@@ -1252,7 +1252,7 @@ Attempted to suspend at:`);
     }
   });
 
-  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
+  // node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
   var emscripten_module_browser_XIKQQPVU_exports = {};
   __export(emscripten_module_browser_XIKQQPVU_exports, {
     default: () => emscripten_module_browser_default
@@ -3663,7 +3663,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
   }
   var import_meta, emscripten_module_browser_default;
   var init_emscripten_module_browser_XIKQQPVU = __esm({
-    "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
+    "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
       init_chunk_FGV2HSCH();
       import_meta = {};
       emscripten_module_browser_default = QuickJSRaw;
@@ -5426,7 +5426,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     }
   }
 
-  // node_modules/quickjs-emscripten-core/dist/index.mjs
+  // node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/index.mjs
   init_dist();
   async function newQuickJSWASMModuleFromVariant(variantOrPromise) {
     let variant2 = smartUnwrap(await variantOrPromise), [wasmModuleLoader, QuickJSFFI2, { QuickJSWASMModule: QuickJSWASMModule2 }] = await Promise.all([variant2.importModuleLoader().then(smartUnwrap), variant2.importFFI(), Promise.resolve().then(() => (init_module_ES6BEMUI(), module_ES6BEMUI_exports)).then(smartUnwrap)]), wasmModule2 = await wasmModuleLoader();
@@ -5438,17 +5438,24 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     return val && "default" in val && val.default ? val.default && "default" in val.default && val.default.default ? val.default.default : val.default : val;
   }
 
-  // node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
+  // node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
   var variant = { type: "sync", importFFI: () => Promise.resolve().then(() => (init_ffi(), ffi_exports)).then((mod) => mod.QuickJSFFI), importModuleLoader: () => Promise.resolve().then(() => (init_emscripten_module_browser_XIKQQPVU(), emscripten_module_browser_XIKQQPVU_exports)).then((mod) => mod.default) };
   var src_default = variant;
 
   // packages/quickjs-emscripten-sandbox/src/index.js
   var wasmModule = null;
-  async function getModule() {
+  var moduleIds = /* @__PURE__ */ new WeakMap();
+  var nextModuleId = 0;
+  async function getModule(isolation = "shared") {
+    if (isolation === "dedicated") return newQuickJSWASMModuleFromVariant(src_default);
     if (!wasmModule) {
       wasmModule = await newQuickJSWASMModuleFromVariant(src_default);
     }
     return wasmModule;
+  }
+  function moduleId(module) {
+    if (!moduleIds.has(module)) moduleIds.set(module, ++nextModuleId);
+    return moduleIds.get(module);
   }
   function formatQuickJsError(value) {
     if (value && typeof value === "object") {
@@ -5473,14 +5480,19 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
      * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
      * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
      * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
+     * @param {"shared"|"dedicated"} [options.wasmMachine] Reuse the shared machine or instantiate a separately collectible Wasm machine.
+     * @param {string} [options.role] Inspectable role assigned by the composing application.
      */
     constructor(options = {}) {
       this.options = options;
+      this.machineId = globalThis.crypto?.randomUUID?.() || `wasm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     }
     /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
     runtime = null;
     /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
     context = null;
+    /** @type {import("quickjs-emscripten-core").QuickJSWASMModule | null} */
+    module = null;
     /** @type {boolean} */
     disposed = false;
     async init() {
@@ -5492,7 +5504,11 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       if (this.options.maxStackBytes !== void 0) {
         if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
       }
-      const mod = await getModule();
+      if (this.options.wasmMachine !== void 0 && !["shared", "dedicated"].includes(this.options.wasmMachine)) {
+        throw new TypeError("wasmMachine must be shared or dedicated");
+      }
+      const mod = await getModule(this.options.wasmMachine);
+      this.module = mod;
       this.runtime = mod.newRuntime();
       if (this.options.memoryLimitBytes !== void 0) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
       if (this.options.maxStackBytes !== void 0) this.runtime.setMaxStackSize(this.options.maxStackBytes);
@@ -5624,12 +5640,22 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.context.setProp(this.context.global, name, hostFunction);
       hostFunction.dispose();
     }
+    inspectMachine() {
+      if (!this.module || this.disposed) throw new Error("Sandbox has been disposed");
+      return Object.freeze({
+        machineId: this.machineId,
+        moduleId: moduleId(this.module),
+        wasmMachine: this.options.wasmMachine || "shared",
+        role: String(this.options.role || "guest")
+      });
+    }
     dispose() {
       this.disposed = true;
       this.context?.dispose();
       this.runtime?.dispose();
       this.context = null;
       this.runtime = null;
+      this.module = null;
     }
   };
   async function createSandbox(options = {}) {

@@ -13,10 +13,10 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
+// node_modules/.deno/@jitl+quickjs-ffi-types@0.32.0/node_modules/@jitl/quickjs-ffi-types/dist/index.mjs
 var EvalFlags, IntrinsicsFlags, JSPromiseStateEnum, GetOwnPropertyNamesFlags, IsEqualOp;
 var init_dist = __esm({
-  "node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
+  "node_modules/.deno/@jitl+quickjs-ffi-types@0.32.0/node_modules/@jitl/quickjs-ffi-types/dist/index.mjs"() {
     EvalFlags = { JS_EVAL_TYPE_GLOBAL: 0, JS_EVAL_TYPE_MODULE: 1, JS_EVAL_TYPE_DIRECT: 2, JS_EVAL_TYPE_INDIRECT: 3, JS_EVAL_TYPE_MASK: 3, JS_EVAL_FLAG_STRICT: 8, JS_EVAL_FLAG_STRIP: 16, JS_EVAL_FLAG_COMPILE_ONLY: 32, JS_EVAL_FLAG_BACKTRACE_BARRIER: 64 };
     IntrinsicsFlags = { BaseObjects: 1, Date: 2, Eval: 4, StringNormalize: 8, RegExp: 16, RegExpCompiler: 32, JSON: 64, Proxy: 128, MapSet: 256, TypedArrays: 512, Promise: 1024, BigInt: 2048, BigFloat: 4096, BigDecimal: 8192, OperatorOverloading: 16384, BignumExt: 32768 };
     JSPromiseStateEnum = { Pending: 0, Fulfilled: 1, Rejected: 2 };
@@ -25,7 +25,7 @@ var init_dist = __esm({
   }
 });
 
-// node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
+// node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs
 function debugLog(...args) {
   QTS_DEBUG && console.log("quickjs-emscripten:", ...args);
 }
@@ -112,7 +112,7 @@ function applyModuleEvalRuntimeOptions(runtime, options) {
 }
 var __defProp2, __export2, QTS_DEBUG, errors_exports, QuickJSUnwrapError, QuickJSWrongOwner, QuickJSUseAfterFree, QuickJSNotImplemented, QuickJSAsyncifyError, QuickJSAsyncifySuspended, QuickJSMemoryLeakDetected, QuickJSEmscriptenModuleError, QuickJSUnknownIntrinsic, QuickJSPromisePending, QuickJSEmptyGetOwnPropertyNames, QuickJSHostRefRangeExceeded, QuickJSHostRefInvalid, AwaitYield, UsingDisposable, SymbolDispose, prototypeAsAny, Lifetime, StaticLifetime, WeakLifetime, Scope, AbstractDisposableResult, DisposableSuccess, DisposableFail, DisposableResult, QuickJSDeferredPromise, ModuleMemory, DefaultIntrinsics, QuickJSIterator, INT32_MIN, INT32_MAX, INVALID_HOST_REF_ID, HostRefMap, HostRef, ContextMemory, QuickJSContext, QuickJSRuntime, QuickJSEmscriptenModuleCallbacks, QuickJSModuleCallbacks, QuickJSWASMModule;
 var init_chunk_V2S4ZYJR = __esm({
-  "node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
+  "node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/chunk-V2S4ZYJR.mjs"() {
     init_dist();
     init_dist();
     __defProp2 = Object.defineProperty;
@@ -1142,7 +1142,7 @@ Attempted to suspend at:`);
   }
 });
 
-// node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
+// node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs
 var module_ES6BEMUI_exports = {};
 __export(module_ES6BEMUI_exports, {
   QuickJSModuleCallbacks: () => QuickJSModuleCallbacks,
@@ -1151,29 +1151,29 @@ __export(module_ES6BEMUI_exports, {
   applyModuleEvalRuntimeOptions: () => applyModuleEvalRuntimeOptions
 });
 var init_module_ES6BEMUI = __esm({
-  "node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
+  "node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/module-ES6BEMUI.mjs"() {
     init_chunk_V2S4ZYJR();
   }
 });
 
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
+// node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs
 var __defProp3, __defNormalProp, __publicField;
 var init_chunk_FGV2HSCH = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
+  "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/chunk-FGV2HSCH.mjs"() {
     __defProp3 = Object.defineProperty;
     __defNormalProp = (obj, key, value) => key in obj ? __defProp3(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
     __publicField = (obj, key, value) => (__defNormalProp(obj, typeof key != "symbol" ? key + "" : key, value), value);
   }
 });
 
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
+// node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs
 var ffi_exports = {};
 __export(ffi_exports, {
   QuickJSFFI: () => QuickJSFFI
 });
 var QuickJSFFI;
 var init_ffi = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
+  "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/ffi.mjs"() {
     QuickJSFFI = class {
       constructor(module) {
         this.module = module;
@@ -1251,7 +1251,7 @@ var init_ffi = __esm({
   }
 });
 
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
+// node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs
 var emscripten_module_browser_XIKQQPVU_exports = {};
 __export(emscripten_module_browser_XIKQQPVU_exports, {
   default: () => emscripten_module_browser_default
@@ -3662,7 +3662,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
 }
 var emscripten_module_browser_default;
 var init_emscripten_module_browser_XIKQQPVU = __esm({
-  "node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
+  "node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/emscripten-module.browser-XIKQQPVU.mjs"() {
     init_chunk_FGV2HSCH();
     emscripten_module_browser_default = QuickJSRaw;
   }
@@ -3671,7 +3671,7 @@ var init_emscripten_module_browser_XIKQQPVU = __esm({
 // packages/browser-use/src/quickjs-dom-guest.js
 var browserUseQuickJsDomGuestSource = '(() => {\n  const callbacks = new Map();\n  let callbackId = 0;\n  function host(message) {\n    const result = JSON.parse(globalThis.__browserUseHost(JSON.stringify(message)));\n    if (result && result.__error) throw new Error(result.__error);\n    return result;\n  }\n  function decode(result) {\n    if (!result) return undefined;\n    if ("handle" in result) return node(result.handle);\n    if ("list" in result) return result.list.map(decode);\n    return result.value;\n  }\n  const cache = new Map();\n  const rpc = (action, data = {}) => decode(host({ op: "remote", action, ...data }));\n  function style(id) {\n    return new Proxy({}, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "setProperty") return (name, value) => host({ op: "remote", action: "styleSet", id, property: name, value });\n        if (property === "removeProperty") return (name) => host({ op: "remote", action: "styleSet", id, property: name, value: "" });\n        return host({ op: "remote", action: "styleGet", id, property: String(property) }).value;\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "styleSet", id, property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function canvasContext(id, contextType) {\n    const call = (method, args = []) => host({ op: "canvas", id, contextType, action: "call", method, args });\n    return new Proxy({}, {\n      get(_target, property) {\n        if (["setTransform", "clearRect", "fillRect", "beginPath", "arc", "fill", "moveTo", "lineTo", "stroke"].includes(property)) {\n          return (...args) => call(property, args);\n        }\n        return undefined;\n      },\n      set(_target, property, value) {\n        host({ op: "canvas", id, contextType, action: "set", property: String(property), value });\n        return true;\n      },\n    });\n  }\n  function node(id) {\n    id = String(id);\n    if (cache.has(id)) return cache.get(id);\n    const target = { __handle: id };\n    const proxy = new Proxy(target, {\n      get(_target, property) {\n        if (Reflect.has(_target, property)) return Reflect.get(_target, property);\n        if (typeof property === "symbol") return undefined;\n        if (property === "__handle") return id;\n        if (property === "setActive") return Reflect.get(_target, property);\n        if (property === "toJSON") return () => ({ __handle: id });\n        if (property === "ownerDocument") return document;\n        if (id === "document" && property === "defaultView") return window;\n        if (id === "document" && property === "getSelection") return document.getSelection;\n        if (id === "document" && property === "addEventListener") return document.addEventListener;\n        if (id === "document" && property === "removeEventListener") return document.removeEventListener;\n        if (id === "document" && property === "createRange") return document.createRange;\n        if (id === "document" && property === "hasFocus") return document.hasFocus;\n        if (id === "document" && property === "head") return document.head;\n        if (property === "style") return style(id);\n        if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));\n        if (property === "addEventListener") return (type, callback) => {\n          const listenerId = String(++callbackId);\n          callbacks.set(listenerId, callback);\n          host({ op: "listen", id, type, listenerId });\n        };\n        if (property === "removeEventListener") return () => {};\n        if (property === "classList") return {\n          add: (...names) => {\n            const current = rpc("get", { id, property: "className" }) || "";\n            proxy.className = [...new Set(current.split(/\\\\s+/).filter(Boolean).concat(names))].join(" ");\n          },\n          remove: (...names) => {\n            const remove = new Set(names);\n            proxy.className = (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).filter((name) => name && !remove.has(name)).join(" ");\n          },\n          contains: (name) => (rpc("get", { id, property: "className" }) || "").split(/\\\\s+/).includes(name),\n          toggle: (name, force) => {\n            const present = proxy.classList.contains(name);\n            const next = force === undefined ? !present : Boolean(force);\n            if (next) proxy.classList.add(name); else proxy.classList.remove(name);\n            return next;\n          },\n        };\n        const methods = new Set(["appendChild", "blur", "contains", "focus", "getAttribute", "getBoundingClientRect",\n          "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",\n          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",\n          "setAttribute", "setSelectionRange", "addRange", "collapse", "collapseToEnd", "collapseToStart",\n          "extend", "getRangeAt", "removeAllRanges", "setBaseAndExtent", "selectNode", "selectNodeContents", "setEnd", "setEndAfter",\n          "setEndBefore", "setStart", "setStartAfter", "setStartBefore"]);\n        if (methods.has(property)) return (...args) => rpc("call", {\n          id, method: property, args: args.map((arg) => arg?.__handle ? { __handle: arg.__handle } : arg),\n        });\n        return rpc("get", { id, property: String(property) });\n      },\n      set(_target, property, value) {\n        if (typeof property === "symbol" || String(property).startsWith("cm") || property === "setActive") {\n          Reflect.set(_target, property, value);\n          return true;\n        }\n        host({ op: "remote", action: "set", id, property: String(property), value: value?.__handle ? { __handle: value.__handle } : value });\n        return true;\n      },\n    });\n    cache.set(id, proxy);\n    return proxy;\n  }\n  const document = {\n    createElement: (tag) => rpc("createElement", { tag }),\n    createTextNode: (text) => rpc("createTextNode", { text }),\n    createDocumentFragment: () => rpc("createDocumentFragment"),\n    getElementById: (id) => rpc("getElementById", { id }),\n    querySelector: (selector) => node("root").querySelector(selector),\n    querySelectorAll: (selector) => node("root").querySelectorAll(selector),\n    documentElement: { style: {} },\n    body: node("root"),\n    head: node("root"),\n    createRange: () => rpc("createRange"),\n    getSelection: () => rpc("getSelection"),\n    hasFocus: () => true,\n    addEventListener() {},\n    removeEventListener() {},\n    get defaultView() { return window; },\n    get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },\n  };\n  const window = globalThis;\n  Object.assign(globalThis, {\n    document, window, self: window,\n    console: { log() {}, info() {}, warn() {}, error() {} },\n    navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "", language: "en", maxTouchPoints: 0 },\n    HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Document: class { static [Symbol.hasInstance](value) { return value === document; } },\n    Window: class { static [Symbol.hasInstance](value) { return value === window; } },\n    Element: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },\n    MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },\n    ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },\n    performance: { now: () => Date.now() },\n    getComputedStyle(element) {\n      const read = (property) => host({ op: "remote", action: "computedStyleGet", id: element.__handle, property: String(property) }).value;\n      return new Proxy({}, {\n        get: (_target, property) => property === "getPropertyValue" ? (name) => read(name) : read(property),\n      });\n    },\n    requestAnimationFrame(callback) { callbacks.set("frame:" + (++callbackId), callback); return callbackId; },\n    cancelAnimationFrame() {},\n    queueMicrotask(callback) { callbacks.set("frame:" + (++callbackId), callback); },\n    setTimeout(callback, delay = 0) {\n      const id = ++callbackId;\n      const wait = Math.max(0, Number(delay) || 0);\n      callbacks.set("timer:" + id, { callback, interval: false, delay: wait, dueAt: Date.now() + wait });\n      return id;\n    },\n    clearTimeout(id) { callbacks.delete("timer:" + id); },\n    setInterval(callback, delay = 0) {\n      const id = ++callbackId;\n      const wait = Math.max(0, Number(delay) || 0);\n      callbacks.set("timer:" + id, { callback, interval: true, delay: wait, dueAt: Date.now() + wait });\n      return id;\n    },\n    clearInterval(id) { callbacks.delete("timer:" + id); },\n    addEventListener() {},\n    removeEventListener() {},\n    matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },\n  });\n  globalThis.__browserUseDispatchEvent = (json) => {\n    const envelope = JSON.parse(json);\n    const callback = callbacks.get(String(envelope.listenerId));\n    if (!callback) return JSON.stringify({});\n    let prevented = false;\n    let stopped = false;\n    const target = node(envelope.event.target);\n    const event = {\n      ...envelope.event,\n      target,\n      currentTarget: node(envelope.currentTarget || envelope.event.target),\n      composedPath() {\n        const path = [];\n        let current = target;\n        for (let depth = 0; current && depth < 20; depth += 1) {\n          path.push(current);\n          if (current.__handle === "root") break;\n          current = current.parentNode;\n        }\n        return path;\n      },\n      preventDefault() { prevented = true; },\n      stopPropagation() { stopped = true; },\n      stopImmediatePropagation() { stopped = true; },\n      get defaultPrevented() { return prevented; },\n    };\n    callback(event);\n    for (const [id, pending] of Array.from(callbacks)) {\n      if (id.startsWith("frame:")) {\n        callbacks.delete(id);\n        pending(Date.now());\n      }\n    }\n    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });\n  };\n  globalThis.__browserUseConfigureEnvironment = (json) => {\n    const environment = JSON.parse(json);\n    if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);\n    if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);\n    if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);\n    return JSON.stringify({ platform: navigator.platform });\n  };\n  globalThis.__browserUseFlush = () => {\n    let count = 0;\n    for (let round = 0; round < 10; round++) {\n      const pendingCallbacks = Array.from(callbacks).filter(([id]) => id.startsWith("frame:") || id.startsWith("timer:"));\n      if (!pendingCallbacks.length) break;\n      for (const [id, pending] of pendingCallbacks) {\n        if (count++ >= 100) break;\n        if (!pending.interval) callbacks.delete(id);\n        (pending.callback || pending)(Date.now());\n      }\n    }\n    return JSON.stringify({ count });\n  };\n  globalThis.__browserUseTick = () => {\n    const now = Date.now();\n    const pendingCallbacks = Array.from(callbacks).filter(([id, pending]) =>\n      id.startsWith("frame:") || (id.startsWith("timer:") && pending.dueAt <= now));\n    let count = 0;\n    for (const [id, pending] of pendingCallbacks) {\n      if (!pending.interval) callbacks.delete(id);\n      else pending.dueAt = now + pending.delay;\n      (pending.callback || pending)(Date.now());\n      count += 1;\n    }\n    return JSON.stringify({ count });\n  };\n})();\n';
 
-// node_modules/quickjs-emscripten-core/dist/index.mjs
+// node_modules/.deno/quickjs-emscripten-core@0.32.0/node_modules/quickjs-emscripten-core/dist/index.mjs
 init_dist();
 async function newQuickJSWASMModuleFromVariant(variantOrPromise) {
   let variant2 = smartUnwrap(await variantOrPromise), [wasmModuleLoader, QuickJSFFI2, { QuickJSWASMModule: QuickJSWASMModule2 }] = await Promise.all([variant2.importModuleLoader().then(smartUnwrap), variant2.importFFI(), Promise.resolve().then(() => (init_module_ES6BEMUI(), module_ES6BEMUI_exports)).then(smartUnwrap)]), wasmModule2 = await wasmModuleLoader();
@@ -3683,17 +3683,24 @@ function smartUnwrap(val) {
   return val && "default" in val && val.default ? val.default && "default" in val.default && val.default.default ? val.default.default : val.default : val;
 }
 
-// node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
+// node_modules/.deno/@jitl+quickjs-singlefile-browser-release-sync@0.32.0/node_modules/@jitl/quickjs-singlefile-browser-release-sync/dist/index.mjs
 var variant = { type: "sync", importFFI: () => Promise.resolve().then(() => (init_ffi(), ffi_exports)).then((mod) => mod.QuickJSFFI), importModuleLoader: () => Promise.resolve().then(() => (init_emscripten_module_browser_XIKQQPVU(), emscripten_module_browser_XIKQQPVU_exports)).then((mod) => mod.default) };
 var src_default = variant;
 
 // packages/quickjs-emscripten-sandbox/src/index.js
 var wasmModule = null;
-async function getModule() {
+var moduleIds = /* @__PURE__ */ new WeakMap();
+var nextModuleId = 0;
+async function getModule(isolation = "shared") {
+  if (isolation === "dedicated") return newQuickJSWASMModuleFromVariant(src_default);
   if (!wasmModule) {
     wasmModule = await newQuickJSWASMModuleFromVariant(src_default);
   }
   return wasmModule;
+}
+function moduleId(module) {
+  if (!moduleIds.has(module)) moduleIds.set(module, ++nextModuleId);
+  return moduleIds.get(module);
 }
 function formatQuickJsError(value) {
   if (value && typeof value === "object") {
@@ -3718,14 +3725,19 @@ var Sandbox = class {
    * @param {(baseModuleName: string, requestedName: string, context: import("quickjs-emscripten-core").QuickJSContext) => string|Error|object} [options.moduleNormalizer]
    * @param {number} [options.memoryLimitBytes] Maximum QuickJS heap size for this runtime.
    * @param {number} [options.maxStackBytes] Maximum QuickJS stack size for this runtime.
+   * @param {"shared"|"dedicated"} [options.wasmMachine] Reuse the shared machine or instantiate a separately collectible Wasm machine.
+   * @param {string} [options.role] Inspectable role assigned by the composing application.
    */
   constructor(options = {}) {
     this.options = options;
+    this.machineId = globalThis.crypto?.randomUUID?.() || `wasm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
   /** @type {import("quickjs-emscripten-core").QuickJSRuntime | null} */
   runtime = null;
   /** @type {import("quickjs-emscripten-core").QuickJSContext | null} */
   context = null;
+  /** @type {import("quickjs-emscripten-core").QuickJSWASMModule | null} */
+  module = null;
   /** @type {boolean} */
   disposed = false;
   async init() {
@@ -3737,7 +3749,11 @@ var Sandbox = class {
     if (this.options.maxStackBytes !== void 0) {
       if (!Number.isSafeInteger(this.options.maxStackBytes) || this.options.maxStackBytes <= 0) throw new TypeError("maxStackBytes must be a positive safe integer");
     }
-    const mod = await getModule();
+    if (this.options.wasmMachine !== void 0 && !["shared", "dedicated"].includes(this.options.wasmMachine)) {
+      throw new TypeError("wasmMachine must be shared or dedicated");
+    }
+    const mod = await getModule(this.options.wasmMachine);
+    this.module = mod;
     this.runtime = mod.newRuntime();
     if (this.options.memoryLimitBytes !== void 0) this.runtime.setMemoryLimit(this.options.memoryLimitBytes);
     if (this.options.maxStackBytes !== void 0) this.runtime.setMaxStackSize(this.options.maxStackBytes);
@@ -3869,18 +3885,41 @@ var Sandbox = class {
     this.context.setProp(this.context.global, name, hostFunction);
     hostFunction.dispose();
   }
+  inspectMachine() {
+    if (!this.module || this.disposed) throw new Error("Sandbox has been disposed");
+    return Object.freeze({
+      machineId: this.machineId,
+      moduleId: moduleId(this.module),
+      wasmMachine: this.options.wasmMachine || "shared",
+      role: String(this.options.role || "guest")
+    });
+  }
   dispose() {
     this.disposed = true;
     this.context?.dispose();
     this.runtime?.dispose();
     this.context = null;
     this.runtime = null;
+    this.module = null;
   }
 };
 async function createSandbox(options = {}) {
   const sandbox = new Sandbox(options);
   await sandbox.init();
   return sandbox;
+}
+var roleRegistryKey = /* @__PURE__ */ Symbol.for("@macchiato-dev/quickjs-emscripten-sandbox/roles");
+async function getOrCreateRoleSandbox(role, options = {}) {
+  if (typeof role !== "string" || !/^[a-z][a-z0-9-]{1,63}$/.test(role)) throw new TypeError("Sandbox role is invalid");
+  const registry = globalThis[roleRegistryKey] ||= /* @__PURE__ */ new Map();
+  if (!registry.has(role)) {
+    const promise = createSandbox({ ...options, role }).catch((error) => {
+      if (registry.get(role) === promise) registry.delete(role);
+      throw error;
+    });
+    registry.set(role, promise);
+  }
+  return registry.get(role);
 }
 
 // packages/browser-use/src/index.js
@@ -4761,7 +4800,9 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
   if (!root.id) root.id = "editor";
   let sandbox = await createSandbox({
     memoryLimitBytes: limits.memoryLimitBytes ?? 128 * 1024 * 1024,
-    maxStackBytes: limits.maxStackBytes ?? 4 * 1024 * 1024
+    maxStackBytes: limits.maxStackBytes ?? 4 * 1024 * 1024,
+    wasmMachine: limits.wasmMachine ?? "dedicated",
+    role: limits.role ?? "code-editor"
   });
   let stopped = false;
   let inputBridge;
@@ -4826,7 +4867,7 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
     },
     inspect() {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
-      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), surface: host.inspectSurface() };
+      return { ...sandbox.callJsonFunction("__codeEditorInspect", {}), machine: sandbox.inspectMachine(), surface: host.inspectSurface() };
     },
     command(payload) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
@@ -4839,6 +4880,11 @@ async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, onChange
         if (/operation gas exhausted/.test(error.message)) violate(error);
         throw error;
       }
+    },
+    callGuest(name, payload) {
+      if (destroyed) throw new Error("Editor sandbox has been disposed");
+      if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
+      return sandbox.callJsonFunction(name, payload);
     },
     focus() {
       root.querySelector(".cm-content")?.focus();
@@ -4946,8 +4992,42 @@ function mountPresentationUse({ root, runnerUrl, project, onStatus = () => {
 
 // packages/website/project-editor-runtime.js
 async function mountResourcesProjectEditor(options) {
+  const frontend = await getOrCreateRoleSandbox("resources-frontend", {
+    wasmMachine: "dedicated",
+    memoryLimitBytes: 16 * 1024 * 1024,
+    maxStackBytes: 512 * 1024
+  });
+  frontend.evalGlobal("globalThis.__resourcesProjectWorkspaceLoaded = true", "resources-project-workspace.js");
+  document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
+  document.documentElement.dataset.resourcesFrontendMachineId = frontend.inspectMachine().machineId;
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
-  return mountQuickJsCodeEditor({ ...options, guestSource });
+  const controller = await mountQuickJsCodeEditor({
+    ...options,
+    guestSource,
+    limits: { ...options.limits, wasmMachine: "dedicated", role: "resources-project-editor" }
+  });
+  return Object.freeze({
+    ...controller,
+    history: Object.freeze({
+      initialize(value) {
+        return controller.callGuest("__resourcesProjectHistoryInitialize", value);
+      },
+      setCurrent(snapshot) {
+        return controller.callGuest("__resourcesProjectHistorySetCurrent", { snapshot });
+      },
+      checkpoint(snapshot, options2 = {}) {
+        return controller.callGuest("__resourcesProjectHistoryCheckpoint", {
+          snapshot,
+          now: options2.now || Date.now(),
+          destructive: options2.destructive === true,
+          checkpointIntervalMs: options2.checkpointIntervalMs
+        });
+      },
+      inspect() {
+        return controller.callGuest("__resourcesProjectHistoryInspect", {});
+      }
+    })
+  });
 }
 function mountResourcesPresentation(options) {
   return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
@@ -5012,12 +5092,13 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
     root.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
   }
-  if (!scripts.length) {
-    root.dataset.previewRuntime = "static";
-    return { inspect: () => ({ runtime: "static", violations: violations.length, canvas: canvas.inspect() }), destroy: () => host.destroy() };
-  }
   try {
-    sandbox = await createSandbox({ memoryLimitBytes: 32 * 1024 * 1024, maxStackBytes: 512 * 1024 });
+    sandbox = await createSandbox({
+      memoryLimitBytes: 32 * 1024 * 1024,
+      maxStackBytes: 512 * 1024,
+      wasmMachine: "dedicated",
+      role: "resources-project"
+    });
     sandbox.installJsonHostFunction("__browserUseHost", (message) => message.op === "canvas" ? canvas.dispatch(message) : host.dispatch(message));
     sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
     scripts.forEach((script) => sandbox.evalGlobal(script.code, script.source));
@@ -5026,7 +5107,7 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
     sandbox?.dispose?.();
     throw error;
   }
-  root.dataset.previewRuntime = "quickjs";
+  root.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   let stopped = false;
   const timer = setInterval(() => {
     if (stopped) return;
@@ -5041,7 +5122,7 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
     }
   }, 50);
   return {
-    inspect: () => ({ runtime: "quickjs", violations: violations.length, canvas: canvas.inspect() }),
+    inspect: () => ({ runtime: scripts.length ? "quickjs" : "quickjs-static", machine: sandbox.inspectMachine(), violations: violations.length, canvas: canvas.inspect() }),
     destroy() {
       stopped = true;
       clearInterval(timer);

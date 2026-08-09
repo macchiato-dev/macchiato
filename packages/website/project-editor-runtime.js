@@ -2,15 +2,39 @@ import { mountQuickJsCodeEditor } from "@macchiato-dev/code-editor-use/controlle
 import { BrowserDomHost } from "@macchiato-dev/browser-use";
 import { browserUseQuickJsDomGuestSource } from "@macchiato-dev/browser-use/quickjs-dom-guest";
 import { CanvasUseHost } from "@macchiato-dev/canvas-use";
-import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
+import { createSandbox, getOrCreateRoleSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 import { mountPresentationUse } from "@macchiato-dev/presentation-use";
 
 export async function mountResourcesProjectEditor(options) {
+  const frontend = await getOrCreateRoleSandbox("resources-frontend", {
+    wasmMachine: "dedicated",
+    memoryLimitBytes: 16 * 1024 * 1024,
+    maxStackBytes: 512 * 1024,
+  });
+  frontend.evalGlobal("globalThis.__resourcesProjectWorkspaceLoaded = true", "resources-project-workspace.js");
+  document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
+  document.documentElement.dataset.resourcesFrontendMachineId = frontend.inspectMachine().machineId;
   const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
-  return mountQuickJsCodeEditor({
+  const controller = await mountQuickJsCodeEditor({
     ...options,
     guestSource,
     limits: { ...options.limits, wasmMachine: "dedicated", role: "resources-project-editor" },
+  });
+  return Object.freeze({
+    ...controller,
+    history: Object.freeze({
+      initialize(value) { return controller.callGuest("__resourcesProjectHistoryInitialize", value); },
+      setCurrent(snapshot) { return controller.callGuest("__resourcesProjectHistorySetCurrent", { snapshot }); },
+      checkpoint(snapshot, options = {}) {
+        return controller.callGuest("__resourcesProjectHistoryCheckpoint", {
+          snapshot,
+          now: options.now || Date.now(),
+          destructive: options.destructive === true,
+          checkpointIntervalMs: options.checkpointIntervalMs,
+        });
+      },
+      inspect() { return controller.callGuest("__resourcesProjectHistoryInspect", {}); },
+    }),
   });
 }
 

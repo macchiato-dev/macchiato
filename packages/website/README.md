@@ -281,6 +281,11 @@ remain pinned per viewer until explicitly read; reading and resolving are
 separate states. Projects inherit a user or organization container whose
 identity, membership, and row policy scope database capabilities. See
 [`docs/project-activity-log.md`](../../docs/project-activity-log.md).
+The focused project page runs the site frontend, project editor, and project in
+three independently disposable WebAssembly machine roles with disjoint DOM
+authority. Container transitions rotate the two workspace machines without
+resetting the site machine. See
+[`docs/project-page-machines.md`](../../docs/project-page-machines.md).
 New-project state is explicitly `clean`, `dirty`, or a session-saved draft, so
 merely opening the editor does not create disposable state. Draft discard and
 owned-project deletion both require a confirmation step; deleting a project

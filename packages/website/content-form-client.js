@@ -192,10 +192,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let pending = false;
   let saveTimer = 0;
   let pendingDestructive = false;
+  let templateOnlyPending = false;
   let changeGeneration = 0;
   let saving = false;
   let localHistory = null;
   let editorController = null;
+  let editorGeneration = 0;
   let previewController = null;
   let previewTimer = 0;
   let previewGeneration = 0;
@@ -326,6 +328,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderStatusState();
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
+    delete preview.dataset.projectMachineId;
+    delete preview.dataset.canvasCommands;
     previewController?.destroy();
     previewController = null;
     const entry = state.config?.entry || "index.html";
@@ -452,11 +456,62 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           onViolation(error) { if (generation === previewGeneration) setStatus(`Blocked: ${error.message}`, "error"); },
         });
         if (generation !== previewGeneration) controller.destroy();
-        else previewController = controller;
+        else {
+          previewController = controller;
+          const machine = controller.inspect?.().machine;
+          if (machine) preview.dataset.projectMachineId = machine.machineId;
+        }
       } catch (error) {
         setStatus(`Blocked: ${error.message}`, true);
       }
     }, 120);
+  }
+
+  function disposeProjectMachine() {
+    previewGeneration += 1;
+    clearTimeout(previewTimer);
+    previewController?.destroy();
+    previewController = null;
+    delete preview.dataset.previewRuntime;
+    delete preview.dataset.previewViolations;
+    delete preview.dataset.projectMachineId;
+    delete preview.dataset.canvasCommands;
+  }
+
+  async function mountEditorMachine(reason = "project-open") {
+    const generation = ++editorGeneration;
+    ready = false;
+    editorController?.destroy();
+    editorController = null;
+    delete root.dataset.editorMachineId;
+    root.dataset.editorMachineState = "starting";
+    root.dataset.editorMachineReason = reason;
+    try {
+      const controller = await mountResourcesProjectEditor({
+        root: editorMount,
+        onChange: receiveEditorChange,
+        onViolation(error) { setStatus(`Editor stopped: ${error.message}`, true); },
+      });
+      if (generation !== editorGeneration) {
+        controller.destroy();
+        return;
+      }
+      editorController = controller;
+      root.dataset.editorMachineId = controller.inspect().machine.machineId;
+      root.dataset.editorMachineState = "ready";
+      if (localHistory) localHistory = editorController.history.initialize(localHistory);
+      ready = true;
+      sendContent();
+    } catch (error) {
+      if (generation !== editorGeneration) return;
+      root.dataset.editorMachineState = "failed";
+      setStatus(`Editor failed to start: ${error.message}`, true);
+    }
+  }
+
+  function rotateContainerMachines(reason = "container-change") {
+    disposeProjectMachine();
+    mountEditorMachine(reason);
   }
 
   function renderTabs() {
@@ -546,6 +601,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     pendingDestructive ||= destructive || branchedFromHistory;
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
+      if (editorController) localHistory = editorController.history.setCurrent(state);
       if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
     }
     clearTimeout(saveTimer);
@@ -555,15 +611,23 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function checkpointDraft({ destructive = false } = {}) {
     const now = Date.now();
-    if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
-    const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
-    if (projectPatchIsEmpty(patch)) return;
-    localHistory.patches.push(patch);
-    localHistory.snapshots.push(state);
-    localHistory.versionTimes.push(now);
-    localHistory.checkpoint = state;
-    localHistory.lastVersionAt = now;
-    localHistory.snapshot = state;
+    if (editorController) {
+      localHistory = editorController.history.checkpoint(state, {
+        now,
+        destructive,
+        checkpointIntervalMs: CHECKPOINT_MS,
+      });
+    } else {
+      if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
+      const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
+      if (projectPatchIsEmpty(patch)) return;
+      localHistory.patches.push(patch);
+      localHistory.snapshots.push(state);
+      localHistory.versionTimes.push(now);
+      localHistory.checkpoint = state;
+      localHistory.lastVersionAt = now;
+      localHistory.snapshot = state;
+    }
     versionCount.textContent = String(localHistory.patches.length);
     if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
   }
@@ -571,9 +635,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   async function save() {
     if (!pending || saving) return;
     if (draft || memoryOnly) {
-      checkpointDraft({ destructive: pendingDestructive || selected === "config" });
+      if (!templateOnlyPending) checkpointDraft({ destructive: pendingDestructive || selected === "config" });
       pending = false;
       pendingDestructive = false;
+      templateOnlyPending = false;
       delete root.dataset.draftDirty;
       root.dataset.draftState = "saved";
       setStatus(memoryOnly ? "" : "Draft saved in this session");
@@ -581,7 +646,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     const savingGeneration = changeGeneration;
     const savingSnapshot = state;
-    const savingDestructive = pendingDestructive;
+    const savingDestructive = pendingDestructive && !templateOnlyPending;
     saving = true;
     setStatus("Saving…");
     try {
@@ -596,6 +661,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (changeGeneration === savingGeneration) {
         pending = false;
         pendingDestructive = false;
+        templateOnlyPending = false;
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
         setStatus("Saved");
@@ -703,7 +769,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (readOnly || selected === "config" || content === selectedContent()) return;
     try {
       clearNotice();
-      updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config });
+      if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;
       renderPreview();
     } catch {}
   }
@@ -918,11 +984,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       return;
     }
     clearNotice();
+    templateOnlyPending = false;
+    const previousContainer = state.config?.container;
     updateSnapshot({ files: state.files, config: { ...state.config, container: container.value, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
-    sendContent();
+    if (previousContainer !== container.value) rotateContainerMachines();
+    else sendContent();
   }
 
   function applyTemplateSnapshot(next, { notice = true, previousSnapshot = state } = {}) {
+    const previousContainer = state.config?.container;
     if (container) container.value = next.config.container || "page";
     if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
     if (template) template.value = next.config.template || "blank";
@@ -930,8 +1000,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderContainerElements(container.value);
     selected = next.files[0].path;
     updateSnapshot(next, { destructive: true });
+    templateOnlyPending = true;
     renderTabs();
-    sendContent();
+    if (previousContainer !== next.config.container) rotateContainerMachines("template-container-change");
+    else sendContent();
     if (notice) showTemplateNotice(previousSnapshot);
   }
 
@@ -939,7 +1011,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const next = STARTING_POINTS[template.value];
     if (!next) return;
     if (pending) {
-      if (draft || memoryOnly) checkpointDraft({ destructive: true });
+      if (templateOnlyPending) {
+        clearTimeout(saveTimer);
+        pending = false;
+        pendingDestructive = false;
+      } else if (draft || memoryOnly) checkpointDraft({ destructive: true });
       else await save();
     }
     const previousSnapshot = state;
@@ -979,16 +1055,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   renderTabs();
-  mountResourcesProjectEditor({
-    root: editorMount,
-    onChange: receiveEditorChange,
-    onViolation(error) { setStatus(`Editor stopped: ${error.message}`, true); },
-  }).then((controller) => {
-    editorController = controller;
-    ready = true;
-    sendContent();
-  }).catch((error) => setStatus(`Editor failed to start: ${error.message}`, true));
-  addEventListener("pagehide", () => { editorController?.destroy(); previewController?.destroy(); }, { once: true });
+  mountEditorMachine();
+  addEventListener("pagehide", () => {
+    editorGeneration += 1;
+    editorController?.destroy();
+    disposeProjectMachine();
+  }, { once: true });
 }
 
 for (const figure of document.querySelectorAll(".blog-example-block")) {
