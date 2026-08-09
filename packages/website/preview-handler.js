@@ -8,6 +8,8 @@ import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
+import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
+import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 
 export const resourcesEdgePreviewConfig = Object.freeze({
   subdomain: "resources-edge",
@@ -60,10 +62,13 @@ function handlerFor(environment = {}, db = null) {
   const client = db ? createNodeSqliteClient(db) : null;
   const accountStore = client ? createAccountStore(client) : null;
   const contentStore = client ? createContentStore(client) : null;
-  cachedHandler = createResourcesEdgeHandler({
-    config, authConfig, gitlabAuthConfig, accountStore, contentStore, fetchImpl,
+  const organizationStore = client ? createOrganizationStore(client) : null;
+  const ready = client ? createMigrationRunner(client).ready() : Promise.resolve();
+  const handler = createResourcesEdgeHandler({
+    config, authConfig, gitlabAuthConfig, accountStore, contentStore, organizationStore, fetchImpl,
     blogExamplesOrigin: previewEnv.BLOG_EXAMPLES_ORIGIN || "http://blog-examples.localhost:3030",
   });
+  cachedHandler = async (request) => { await ready; return handler(request); };
   return cachedHandler;
 }
 

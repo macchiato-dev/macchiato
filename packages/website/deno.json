@@ -5,6 +5,8 @@
     "@libsql/client/web": "npm:@libsql/client@0.17.4/web",
     "@macchiato-dev/hub/accounts": "../hub/src/accounts.js",
     "@macchiato-dev/hub/content": "../hub/src/content.js",
+    "@macchiato-dev/hub/migrations": "../hub/src/migrations.js",
+    "@macchiato-dev/hub/organizations": "../hub/src/organizations.js",
     "@macchiato-dev/hub/container-elements": "../hub/src/container-elements.js",
     "@macchiato-dev/hub/url-pattern": "../hub/src/url-pattern.js",
     "@macchiato-dev/command-palette-use": "../../packages/command-palette-use/src/index.js",

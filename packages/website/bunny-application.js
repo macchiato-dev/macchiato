@@ -1,6 +1,8 @@
 import { createClient } from "@libsql/client/web";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
+import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
+import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createResourcesEdgeHandler } from "./edge/app.js";
@@ -20,12 +22,15 @@ export function createResourcesDeferredHandler(env, { fetchImpl = fetch } = {}) 
   });
   const accountStore = createAccountStore(databaseClient);
   const contentStore = createContentStore(databaseClient);
+  const organizationStore = createOrganizationStore(databaseClient);
+  const migrations = createMigrationRunner(databaseClient);
   const handler = createResourcesEdgeHandler({
     config,
     authConfig,
     gitlabAuthConfig,
     accountStore,
     contentStore,
+    organizationStore,
     blogExamplesOrigin: env.BLOG_EXAMPLES_ORIGIN,
     fetchImpl,
   });
@@ -33,8 +38,8 @@ export function createResourcesDeferredHandler(env, { fetchImpl = fetch } = {}) 
   let databaseReadyPromise;
   function databaseReady() {
     if (!databaseReadyPromise) {
-      databaseReadyPromise = accountStore.initialize()
-        .then(() => contentStore.initialize())
+      databaseReadyPromise = migrations.ready()
+        .then(() => Promise.all([accountStore.initialize(), contentStore.initialize(), organizationStore.initialize()]))
         .catch((error) => {
           databaseReadyPromise = null;
           throw error;

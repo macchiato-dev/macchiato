@@ -3,6 +3,7 @@ import process from "node:process";
 import { createClient } from "@libsql/client/web";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
+import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
 
 const url = process.env.BUNNY_DATABASE_URL;
 const authToken = process.env.BUNNY_DATABASE_AUTH_TOKEN;
@@ -14,12 +15,14 @@ const client = createClient({ url, authToken });
 const accounts = createAccountStore(client);
 const content = createContentStore(client);
 
-await accounts.initialize();
-await content.initialize();
+const migrationStatus = await createMigrationRunner(client).ready();
+await Promise.all([accounts.initialize(), content.initialize()]);
 
 const expected = [
   "resource_organizations", "resource_project_state", "resource_project_versions",
-  "resource_projects", "user_emails", "user_identities", "users",
+  "resource_projects", "resource_schema_migrations", "resource_notifications",
+  "resource_organization_members", "resource_organization_invitations",
+  "user_emails", "user_identities", "users",
 ];
 const result = await client.execute({
   sql: `SELECT name FROM sqlite_schema
@@ -31,5 +34,5 @@ const found = result.rows.map((row) => String(row.name));
 const missing = expected.filter((name) => !found.includes(name));
 if (missing.length) throw new Error(`Database migration verification failed; missing: ${missing.join(", ")}`);
 
-console.log(`Resources database ready: ${found.join(", ")}`);
+console.log(`Resources database ready at migration ${migrationStatus.latestVersion}: ${found.join(", ")}`);
 client.close();
