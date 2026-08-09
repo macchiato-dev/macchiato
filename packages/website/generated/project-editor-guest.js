@@ -1,5 +1,5 @@
 (() => {
-  // node_modules/@marijn/find-cluster-break/src/index.js
+  // node_modules/.deno/@marijn+find-cluster-break@1.0.3/node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -73,7 +73,7 @@
     return code2 < 65536 ? 1 : 2;
   }
 
-  // node_modules/@codemirror/state/dist/index.js
+  // node_modules/.deno/@codemirror+state@6.7.1/node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -271,16 +271,16 @@
     }
     sliceString(from, to = this.length, lineSep = "\n") {
       [from, to] = clip(this, from, to);
-      let result = "";
+      let result2 = "";
       for (let pos = 0, i2 = 0; pos <= to && i2 < this.text.length; i2++) {
         let line = this.text[i2], end = pos + line.length;
         if (pos > from && i2)
-          result += lineSep;
+          result2 += lineSep;
         if (from < end && to > pos)
-          result += line.slice(Math.max(0, from - pos), to - pos);
+          result2 += line.slice(Math.max(0, from - pos), to - pos);
         pos = end + 1;
       }
-      return result;
+      return result2;
     }
     flatten(target) {
       for (let line of this.text)
@@ -357,16 +357,16 @@
     }
     sliceString(from, to = this.length, lineSep = "\n") {
       [from, to] = clip(this, from, to);
-      let result = "";
+      let result2 = "";
       for (let i2 = 0, pos = 0; i2 < this.children.length && pos <= to; i2++) {
         let child = this.children[i2], end = pos + child.length;
         if (pos > from && i2)
-          result += lineSep;
+          result2 += lineSep;
         if (from < end && to > pos)
-          result += child.sliceString(from - pos, to - pos, lineSep);
+          result2 += child.sliceString(from - pos, to - pos, lineSep);
         pos = end + 1;
       }
-      return result;
+      return result2;
     }
     flatten(target) {
       for (let child of this.children)
@@ -675,21 +675,21 @@
     The length of the document before the change.
     */
     get length() {
-      let result = 0;
+      let result2 = 0;
       for (let i2 = 0; i2 < this.sections.length; i2 += 2)
-        result += this.sections[i2];
-      return result;
+        result2 += this.sections[i2];
+      return result2;
     }
     /**
     The length of the document after the change.
     */
     get newLength() {
-      let result = 0;
+      let result2 = 0;
       for (let i2 = 0; i2 < this.sections.length; i2 += 2) {
         let ins = this.sections[i2 + 1];
-        result += ins < 0 ? this.sections[i2] : ins;
+        result2 += ins < 0 ? this.sections[i2] : ins;
       }
-      return result;
+      return result2;
     }
     /**
     False when there are actual changes in this set.
@@ -799,12 +799,12 @@
     @internal
     */
     toString() {
-      let result = "";
+      let result2 = "";
       for (let i2 = 0; i2 < this.sections.length; ) {
         let len = this.sections[i2++], ins = this.sections[i2++];
-        result += (result ? " " : "") + len + (ins >= 0 ? ":" + ins : "");
+        result2 += (result2 ? " " : "") + len + (ins >= 0 ? ":" + ins : "");
       }
-      return result;
+      return result2;
     }
     /**
     Serialize this change desc to a JSON-representable value.
@@ -1891,16 +1891,16 @@
     }
   };
   function flatten(extension, compartments, newCompartments) {
-    let result = [[], [], [], [], []];
+    let result2 = [[], [], [], [], []];
     let seen = /* @__PURE__ */ new Map();
     function inner(ext, prec2) {
       let known = seen.get(ext);
       if (known != null) {
         if (known <= prec2)
           return;
-        let found = result[known].indexOf(ext);
+        let found = result2[known].indexOf(ext);
         if (found > -1)
-          result[known].splice(found, 1);
+          result2[known].splice(found, 1);
         if (ext instanceof CompartmentInstance)
           newCompartments.delete(ext.compartment);
       }
@@ -1917,11 +1917,11 @@
       } else if (ext instanceof PrecExtension) {
         inner(ext.inner, ext.prec);
       } else if (ext instanceof StateField) {
-        result[prec2].push(ext);
+        result2[prec2].push(ext);
         if (ext.provides)
           inner(ext.provides, prec2);
       } else if (ext instanceof FacetProvider) {
-        result[prec2].push(ext);
+        result2[prec2].push(ext);
         if (ext.facet.extensions)
           inner(ext.facet.extensions, Prec_.default);
       } else {
@@ -1934,7 +1934,7 @@
       }
     }
     inner(extension, Prec_.default);
-    return result.reduce((a, b) => a.concat(b));
+    return result2.reduce((a, b) => a.concat(b));
   }
   function ensureAddr(state2, addr) {
     if (addr & 1)
@@ -2044,13 +2044,13 @@
     static mapEffects(effects, mapping) {
       if (!effects.length)
         return effects;
-      let result = [];
+      let result2 = [];
       for (let effect of effects) {
         let mapped = effect.map(mapping);
         if (mapped)
-          result.push(mapped);
+          result2.push(mapped);
       }
-      return result;
+      return result2;
     }
   };
   StateEffect.reconfigure = /* @__PURE__ */ StateEffect.define();
@@ -2148,7 +2148,7 @@
   Transaction.addToHistory = /* @__PURE__ */ Annotation.define();
   Transaction.remote = /* @__PURE__ */ Annotation.define();
   function joinRanges(a, b) {
-    let result = [];
+    let result2 = [];
     for (let iA = 0, iB = 0; ; ) {
       let from, to;
       if (iA < a.length && (iB == b.length || b[iB] >= a[iA])) {
@@ -2158,11 +2158,11 @@
         from = b[iB++];
         to = b[iB++];
       } else
-        return result;
-      if (!result.length || result[result.length - 1] < from)
-        result.push(from, to);
-      else if (result[result.length - 1] < to)
-        result[result.length - 1] = to;
+        return result2;
+      if (!result2.length || result2[result2.length - 1] < from)
+        result2.push(from, to);
+      else if (result2[result2.length - 1] < to)
+        result2[result2.length - 1] = to;
     }
   }
   function mergeTransaction(a, b, sequential) {
@@ -2212,23 +2212,23 @@
   }
   function filterTransaction(tr) {
     let state2 = tr.startState;
-    let result = true;
+    let result2 = true;
     for (let filter of state2.facet(changeFilter)) {
       let value = filter(tr);
       if (value === false) {
-        result = false;
+        result2 = false;
         break;
       }
       if (Array.isArray(value))
-        result = result === true ? value : joinRanges(result, value);
+        result2 = result2 === true ? value : joinRanges(result2, value);
     }
-    if (result !== true) {
+    if (result2 !== true) {
       let changes, back;
-      if (result === false) {
+      if (result2 === false) {
         back = tr.changes.invertedDesc;
         changes = ChangeSet.empty(state2.doc.length);
       } else {
-        let filtered = tr.changes.filter(result);
+        let filtered = tr.changes.filter(result2);
         changes = filtered.changes;
         back = filtered.filtered.mapDesc(filtered.changes).invertedDesc;
       }
@@ -2396,14 +2396,14 @@
       let changes = this.changes(result1.changes), ranges = [result1.range];
       let effects = asArray(result1.effects);
       for (let i2 = 1; i2 < sel.ranges.length; i2++) {
-        let result = f(sel.ranges[i2]);
-        let newChanges = this.changes(result.changes), newMapped = newChanges.map(changes);
+        let result2 = f(sel.ranges[i2]);
+        let newChanges = this.changes(result2.changes), newMapped = newChanges.map(changes);
         for (let j = 0; j < i2; j++)
           ranges[j] = ranges[j].map(newMapped);
         let mapBy = changes.mapDesc(newChanges, true);
-        ranges.push(result.range.map(mapBy));
+        ranges.push(result2.range.map(mapBy));
         changes = changes.compose(newMapped);
-        effects = StateEffect.mapEffects(effects, newMapped).concat(StateEffect.mapEffects(asArray(result.effects), mapBy));
+        effects = StateEffect.mapEffects(effects, newMapped).concat(StateEffect.mapEffects(asArray(result2.effects), mapBy));
       }
       return {
         changes,
@@ -2452,7 +2452,7 @@
     not use `doc` or `selection`) to fields.
     */
     toJSON(fields) {
-      let result = {
+      let result2 = {
         doc: this.sliceDoc(),
         selection: this.selection.toJSON()
       };
@@ -2460,9 +2460,9 @@
         for (let prop in fields) {
           let value = fields[prop];
           if (value instanceof StateField && this.config.address[value.id] != null)
-            result[prop] = value.spec.toJSON(this.field(fields[prop]), this);
+            result2[prop] = value.spec.toJSON(this.field(fields[prop]), this);
         }
-      return result;
+      return result2;
     }
     /**
     Deserialize a state from its JSON representation. When custom
@@ -2566,9 +2566,9 @@
     languageDataAt(name2, pos, side = -1) {
       let values2 = [];
       for (let provider of this.facet(languageData)) {
-        for (let result of provider(this, pos, side)) {
-          if (Object.prototype.hasOwnProperty.call(result, name2))
-            values2.push(result[name2]);
+        for (let result2 of provider(this, pos, side)) {
+          if (Object.prototype.hasOwnProperty.call(result2, name2))
+            values2.push(result2[name2]);
         }
       }
       return values2;
@@ -2631,22 +2631,22 @@
   EditorState.transactionExtender = transactionExtender;
   Compartment.reconfigure = /* @__PURE__ */ StateEffect.define();
   function combineConfig(configs, defaults3, combine = {}) {
-    let result = {};
+    let result2 = {};
     for (let config2 of configs)
       for (let key of Object.keys(config2)) {
-        let value = config2[key], current = result[key];
+        let value = config2[key], current = result2[key];
         if (current === void 0)
-          result[key] = value;
+          result2[key] = value;
         else if (current === value || value === void 0) ;
         else if (Object.hasOwnProperty.call(combine, key))
-          result[key] = combine[key](current, value);
+          result2[key] = combine[key](current, value);
         else
           throw new Error("Config merge conflict for field " + key);
       }
     for (let key in defaults3)
-      if (result[key] === void 0)
-        result[key] = defaults3[key];
-    return result;
+      if (result2[key] === void 0)
+        result2[key] = defaults3[key];
+    return result2;
   }
   var RangeValue = class {
     /**
@@ -2973,12 +2973,12 @@
     static join(sets) {
       if (!sets.length)
         return _RangeSet.empty;
-      let result = sets[sets.length - 1];
+      let result2 = sets[sets.length - 1];
       for (let i2 = sets.length - 2; i2 >= 0; i2--) {
         for (let layer2 = sets[i2]; layer2 != _RangeSet.empty; layer2 = layer2.nextLayer)
-          result = new _RangeSet(layer2.chunkPos, layer2.chunk, result, Math.max(layer2.maxPoint, result.maxPoint));
+          result2 = new _RangeSet(layer2.chunkPos, layer2.chunk, result2, Math.max(layer2.maxPoint, result2.maxPoint));
       }
-      return result;
+      return result2;
     }
   };
   RangeSet.empty = /* @__PURE__ */ new RangeSet([], [], null, -1);
@@ -3086,9 +3086,9 @@
         this.finishChunk(false);
       if (this.chunks.length == 0)
         return next;
-      let result = RangeSet.create(this.chunkPos, this.chunks, this.nextLayer ? this.nextLayer.finishInner(next) : next, this.setMaxPoint);
+      let result2 = RangeSet.create(this.chunkPos, this.chunks, this.nextLayer ? this.nextLayer.finishInner(next) : next, this.setMaxPoint);
       this.from = null;
-      return result;
+      return result2;
     }
   };
   function findSharedChunks(a, b, textDiff) {
@@ -3447,7 +3447,7 @@
     return strict === true ? -1 : string2.length;
   }
 
-  // node_modules/style-mod/src/style-mod.js
+  // node_modules/.deno/style-mod@4.1.3/node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3578,7 +3578,7 @@
     }
   };
 
-  // node_modules/w3c-keyname/index.js
+  // node_modules/.deno/w3c-keyname@2.2.8/node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -3684,7 +3684,7 @@
     return name2;
   }
 
-  // node_modules/crelt/index.js
+  // node_modules/.deno/crelt@1.0.7/node_modules/crelt/index.js
   function crelt() {
     var elt2 = arguments[0];
     if (typeof elt2 == "string") elt2 = document.createElement(elt2);
@@ -3713,7 +3713,7 @@
     }
   }
 
-  // node_modules/@codemirror/view/dist/index.js
+  // node_modules/.deno/@codemirror+view@6.43.8/node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -4320,6 +4320,22 @@
       this.focusOffset = focusOffset;
     }
   };
+  function getScrollStack(target) {
+    let stack = [];
+    for (let cur2 = target; cur2; cur2 = cur2.nodeType == 11 ? cur2.host : cur2.parentNode) {
+      if (cur2.nodeType == 1)
+        stack.push({ node: cur2, left: cur2.scrollLeft, top: cur2.scrollTop });
+    }
+    return stack;
+  }
+  function restoreScrollStack(stack, vert = true) {
+    for (let { node, left, top: top2 } of stack) {
+      if (vert && node.scrollTop != top2)
+        node.scrollTop = top2;
+      if (node.scrollLeft != left)
+        node.scrollLeft = left;
+    }
+  }
   var preventScrollSupported = null;
   if (browser.safari && browser.safari_version >= 26)
     preventScrollSupported = false;
@@ -4328,12 +4344,7 @@
       return dom.setActive();
     if (preventScrollSupported)
       return dom.focus(preventScrollSupported);
-    let stack = [];
-    for (let cur2 = dom; cur2; cur2 = cur2.parentNode) {
-      stack.push(cur2, cur2.scrollTop, cur2.scrollLeft);
-      if (cur2 == cur2.ownerDocument)
-        break;
-    }
+    let stack = getScrollStack(dom);
     dom.focus(preventScrollSupported == null ? {
       get preventScroll() {
         preventScrollSupported = { preventScroll: true };
@@ -4342,13 +4353,7 @@
     } : void 0);
     if (!preventScrollSupported) {
       preventScrollSupported = false;
-      for (let i2 = 0; i2 < stack.length; ) {
-        let elt2 = stack[i2++], top2 = stack[i2++], left = stack[i2++];
-        if (elt2.scrollTop != top2)
-          elt2.scrollTop = top2;
-        if (elt2.scrollLeft != left)
-          elt2.scrollLeft = left;
-      }
+      restoreScrollStack(stack);
     }
   }
   var scratchRange;
@@ -4462,10 +4467,10 @@
   var LTR = Direction.LTR;
   var RTL = Direction.RTL;
   function dec(str) {
-    let result = [];
+    let result2 = [];
     for (let i2 = 0; i2 < str.length; i2++)
-      result.push(1 << +str[i2]);
-    return result;
+      result2.push(1 << +str[i2]);
+    return result2;
   }
   var LowTypes = /* @__PURE__ */ dec("88888888888888888888888888888888888666888888787833333333337888888000000000000000000000000008888880000000000000000000000000088888888888888888888888888888888888887866668888088888663380888308888800000000000000000000000800000000000000000000000000000008");
   var ArabicTypes = /* @__PURE__ */ dec("4444448826627288999999999992222222222222222222222222222222222222222222222229999999999999999999994444444444644222822222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222999999949999999229989999223333333333");
@@ -4979,13 +4984,13 @@
     if (!isolates.length)
       return isolates;
     let sets = isolates.map((i2) => i2 instanceof Function ? i2(view) : i2);
-    let result = [];
+    let result2 = [];
     RangeSet.spans(sets, line.from, line.to, {
       point() {
       },
       span(fromDoc, toDoc, active, open) {
         let from = fromDoc - line.from, to = toDoc - line.from;
-        let level = result;
+        let level = result2;
         for (let i2 = active.length - 1; i2 >= 0; i2--, open--) {
           let direction = active[i2].spec.bidiIsolate, update;
           if (direction == null)
@@ -5001,7 +5006,7 @@
         }
       }
     });
-    return result;
+    return result2;
   }
   var scrollMargins = /* @__PURE__ */ Facet.define();
   function getScrollMargins(view) {
@@ -5054,7 +5059,7 @@
     static extendWithRanges(diff, ranges) {
       if (ranges.length == 0)
         return diff;
-      let result = [];
+      let result2 = [];
       for (let dI = 0, rI = 0, off = 0; ; ) {
         let nextD = dI < diff.length ? diff[dI].fromB : 1e9;
         let nextR = rI < ranges.length ? ranges[rI] : 1e9;
@@ -5079,9 +5084,9 @@
             break;
           }
         }
-        result.push(new _ChangedRange(fromA, toA, fromB, toB));
+        result2.push(new _ChangedRange(fromA, toA, fromB, toB));
       }
-      return result;
+      return result2;
     }
   };
   var ViewUpdate = class _ViewUpdate {
@@ -5357,9 +5362,9 @@
             i2 = 0;
           } else {
             let end = pos + next.length;
-            let result = f(next, pos);
-            if (result !== void 0)
-              return result;
+            let result2 = f(next, pos);
+            if (result2 !== void 0)
+              return result2;
             pos = end + next.breakAfter;
           }
         }
@@ -6717,7 +6722,7 @@
       return scan(tile, offset);
     }
     measureVisibleLineHeights(viewport) {
-      let result = [], { from, to } = viewport;
+      let result2 = [], { from, to } = viewport;
       let contentWidth = this.view.contentDOM.clientWidth;
       let isWider = contentWidth > Math.max(this.view.scrollDOM.clientWidth, this.minWidth) + 1;
       let widest = -1, ltr = this.view.textDirection == Direction.LTR;
@@ -6735,8 +6740,8 @@
               scan(child, pos, childRect);
           } else if (pos >= from) {
             if (spaceAbove > 0)
-              result.push(-spaceAbove);
-            result.push(height + spaceAbove);
+              result2.push(-spaceAbove);
+            result2.push(height + spaceAbove);
             spaceAbove = 0;
             if (isWider) {
               let last = child.dom.lastChild;
@@ -6759,7 +6764,7 @@
         }
       };
       scan(this.tile, 0, null);
-      return result;
+      return result2;
     }
     textDirectionAt(pos) {
       let { tile } = this.tile.resolveBlock(pos, 1);
@@ -6884,10 +6889,13 @@
       };
       let { offsetWidth, offsetHeight } = this.view.scrollDOM;
       scrollRectIntoView(this.view.scrollDOM, targetRect, range.head < range.anchor ? -1 : 1, target.x, target.y, Math.max(Math.min(target.xMargin, offsetWidth), -offsetWidth), Math.max(Math.min(target.yMargin, offsetHeight), -offsetHeight), this.view.textDirection == Direction.LTR);
-      if (window.visualViewport && window.innerHeight - window.visualViewport.height > 1 && (rect.top > window.pageYOffset + window.visualViewport.offsetTop + window.visualViewport.height || rect.bottom < window.pageYOffset + window.visualViewport.offsetTop)) {
+      if (window.visualViewport && window.innerHeight - window.visualViewport.height > 1 && (rect.top > window.visualViewport.offsetTop + window.visualViewport.height || rect.bottom < window.visualViewport.offsetTop)) {
         let line = this.view.docView.lineAt(range.head, 1);
-        if (line)
+        if (line) {
+          let stack = getScrollStack(line.dom);
           line.dom.scrollIntoView({ block: "nearest" });
+          restoreScrollStack(stack, false);
+        }
       }
     }
     lineHasWidget(pos) {
@@ -7300,23 +7308,22 @@
       search: while (lo < hi) {
         let dist2 = hi - lo, mid = lo + hi >> 1;
         adjust: if (seen.has(mid)) {
-          let scan = lo + Math.floor(Math.random() * dist2);
-          for (let i2 = 0; i2 < dist2; i2++) {
+          for (let i2 = 1; i2 < dist2; i2++) {
+            let scan = mid + i2;
+            if (scan >= hi)
+              scan -= dist2;
             if (!seen.has(scan)) {
               mid = scan;
               break adjust;
             }
-            scan++;
-            if (scan == hi)
-              scan = lo;
           }
           break search;
         }
         seen.add(mid);
-        let rects = getRects(mid);
+        let rects = getRects(mid), side = 0;
         if (rects)
           for (let i2 = 0; i2 < rects.length; i2++) {
-            let rect = rects[i2], side = 0;
+            let rect = rects[i2];
             if (rect.width == 0 && rects.length > 1)
               continue;
             if (rect.bottom < this.y) {
@@ -7338,11 +7345,11 @@
               if (off)
                 side = off < 0 == (this.baseDir == Direction.LTR) ? -1 : 1;
             }
-            if (side == -1 && (!bidi || this.baseDirAt(positions[mid], 1)))
-              hi = mid;
-            else if (side == 1 && (!bidi || this.baseDirAt(positions[mid + 1], -1)))
-              lo = mid + 1;
           }
+        if (side == -1 && (!bidi || this.baseDirAt(positions[mid], 1)))
+          hi = mid;
+        else if (side == 1 && (!bidi || this.baseDirAt(positions[mid + 1], -1)))
+          lo = mid + 1;
       }
       if (!closestRect) {
         if (!below && !above)
@@ -7783,16 +7790,16 @@
     return { from, toA, toB };
   }
   function selectionPoints(view) {
-    let result = [];
+    let result2 = [];
     if (view.root.activeElement != view.contentDOM)
-      return result;
+      return result2;
     let { anchorNode, anchorOffset, focusNode, focusOffset } = view.observer.selectionRange;
     if (anchorNode) {
-      result.push(new DOMPoint(anchorNode, anchorOffset));
+      result2.push(new DOMPoint(anchorNode, anchorOffset));
       if (focusNode != anchorNode || focusOffset != anchorOffset)
-        result.push(new DOMPoint(focusNode, focusOffset));
+        result2.push(new DOMPoint(focusNode, focusOffset));
     }
-    return result;
+    return result2;
   }
   function selectionFromPoints(points, base2) {
     if (points.length == 0)
@@ -7964,9 +7971,9 @@
     };
   }
   function computeHandlers(plugins) {
-    let result = /* @__PURE__ */ Object.create(null);
+    let result2 = /* @__PURE__ */ Object.create(null);
     function record(type) {
-      return result[type] || (result[type] = { observers: [], handlers: [] });
+      return result2[type] || (result2[type] = { observers: [], handlers: [] });
     }
     for (let plugin of plugins) {
       let spec = plugin.spec, handlers2 = spec && spec.plugin.domEventHandlers, observers2 = spec && spec.plugin.domEventObservers;
@@ -7987,7 +7994,7 @@
       record(type).handlers.push(handlers[type]);
     for (let type in observers)
       record(type).observers.push(observers[type]);
-    return result;
+    return result2;
   }
   var PendingKeys = [
     { key: "Backspace", keyCode: 8, inputType: "deleteContentBackward" },
@@ -8739,11 +8746,11 @@
       return _HeightMap.of(nodes);
     }
     // Again, these are base cases, and are overridden for branch and gap nodes.
-    decomposeLeft(_to, result) {
-      result.push(this);
+    decomposeLeft(_to, result2) {
+      result2.push(this);
     }
-    decomposeRight(_from, result) {
-      result.push(this);
+    decomposeRight(_from, result2) {
+      result2.push(this);
     }
     applyChanges(decorations2, oldDoc, oracle, changes) {
       let me = this, doc2 = oracle.doc;
@@ -8986,11 +8993,11 @@
       }
       return HeightMap.of(nodes);
     }
-    decomposeLeft(to, result) {
-      result.push(new _HeightMapGap(to - 1), null);
+    decomposeLeft(to, result2) {
+      result2.push(new _HeightMapGap(to - 1), null);
     }
-    decomposeRight(from, result) {
-      result.push(null, new _HeightMapGap(this.length - from - 1));
+    decomposeRight(from, result2) {
+      result2.push(null, new _HeightMapGap(this.length - from - 1));
     }
     updateHeight(oracle, offset = 0, force = false, measured) {
       let end = offset + this.length;
@@ -9018,10 +9025,10 @@
         }
         if (pos <= end)
           nodes.push(null, new _HeightMapGap(end - pos).updateHeight(oracle, pos));
-        let result = HeightMap.of(nodes);
-        if (singleHeight < 0 || Math.abs(result.height - this.height) >= Epsilon || Math.abs(singleHeight - this.heightMetrics(oracle, offset).perLine) >= Epsilon)
+        let result2 = HeightMap.of(nodes);
+        if (singleHeight < 0 || Math.abs(result2.height - this.height) >= Epsilon || Math.abs(singleHeight - this.heightMetrics(oracle, offset).perLine) >= Epsilon)
           heightChangeFlag = true;
-        return replace(this, result);
+        return replace(this, result2);
       } else if (force || this.outdated) {
         this.setHeight(oracle.heightForGap(offset, offset + this.length));
         this.outdated = false;
@@ -9081,43 +9088,43 @@
         return this.balanced(this.left.replace(from, to, nodes), this.right);
       if (from > this.left.length)
         return this.balanced(this.left, this.right.replace(from - rightStart, to - rightStart, nodes));
-      let result = [];
+      let result2 = [];
       if (from > 0)
-        this.decomposeLeft(from, result);
-      let left = result.length;
+        this.decomposeLeft(from, result2);
+      let left = result2.length;
       for (let node of nodes)
-        result.push(node);
+        result2.push(node);
       if (from > 0)
-        mergeGaps(result, left - 1);
+        mergeGaps(result2, left - 1);
       if (to < this.length) {
-        let right = result.length;
-        this.decomposeRight(to, result);
-        mergeGaps(result, right);
+        let right = result2.length;
+        this.decomposeRight(to, result2);
+        mergeGaps(result2, right);
       }
-      return HeightMap.of(result);
+      return HeightMap.of(result2);
     }
-    decomposeLeft(to, result) {
+    decomposeLeft(to, result2) {
       let left = this.left.length;
       if (to <= left)
-        return this.left.decomposeLeft(to, result);
-      result.push(this.left);
+        return this.left.decomposeLeft(to, result2);
+      result2.push(this.left);
       if (this.break) {
         left++;
         if (to >= left)
-          result.push(null);
+          result2.push(null);
       }
       if (to > left)
-        this.right.decomposeLeft(to - left, result);
+        this.right.decomposeLeft(to - left, result2);
     }
-    decomposeRight(from, result) {
+    decomposeRight(from, result2) {
       let left = this.left.length, right = left + this.break;
       if (from >= right)
-        return this.right.decomposeRight(from - right, result);
+        return this.right.decomposeRight(from - right, result2);
       if (from < left)
-        this.left.decomposeRight(from, result);
+        this.left.decomposeRight(from, result2);
       if (this.break && from < right)
-        result.push(null);
-      result.push(this.right);
+        result2.push(null);
+      result2.push(this.right);
     }
     balanced(left, right) {
       if (left.size > 2 * right.size || right.size > 2 * left.size)
@@ -9490,13 +9497,13 @@
       let measureContent = refresh || this.mustMeasureContent || this.contentDOMHeight != domRect.height;
       this.contentDOMHeight = domRect.height;
       this.mustMeasureContent = false;
-      let result = 0, bias = 0;
+      let result2 = 0, bias = 0;
       if (domRect.width && domRect.height) {
         let { scaleX, scaleY } = getScale(dom, domRect);
         if (scaleX > 5e-3 && Math.abs(this.scaleX - scaleX) > 5e-3 || scaleY > 5e-3 && Math.abs(this.scaleY - scaleY) > 5e-3) {
           this.scaleX = scaleX;
           this.scaleY = scaleY;
-          result |= 16;
+          result2 |= 16;
           refresh = measureContent = true;
         }
       }
@@ -9505,13 +9512,13 @@
       if (this.paddingTop != paddingTop || this.paddingBottom != paddingBottom) {
         this.paddingTop = paddingTop;
         this.paddingBottom = paddingBottom;
-        result |= 16 | 2;
+        result2 |= 16 | 2;
       }
       if (this.editorWidth != view.scrollDOM.clientWidth) {
         if (oracle.lineWrapping)
           measureContent = true;
         this.editorWidth = view.scrollDOM.clientWidth;
-        result |= 16;
+        result2 |= 16;
       }
       let scrollParent = scrollableParents(this.view.contentDOM, false).y;
       if (scrollParent != this.scrollParent) {
@@ -9540,7 +9547,7 @@
       if (this.contentDOMWidth != contentWidth || this.editorHeight != view.scrollDOM.clientHeight) {
         this.contentDOMWidth = domRect.width;
         this.editorHeight = view.scrollDOM.clientHeight;
-        result |= 16;
+        result2 |= 16;
       }
       if (measureContent) {
         let lineHeights = view.docView.measureVisibleLineHeights(this.viewport);
@@ -9551,7 +9558,7 @@
           refresh = lineHeight > 0 && oracle.refresh(whiteSpace, lineHeight, charWidth, textHeight, Math.max(5, contentWidth / charWidth), lineHeights);
           if (refresh) {
             view.docView.minWidth = 0;
-            result |= 16;
+            result2 |= 16;
           }
         }
         if (dTop > 0 && dBottom > 0)
@@ -9564,25 +9571,25 @@
           this.heightMap = (refresh ? HeightMap.empty().applyChanges(this.stateDeco, Text.empty, this.heightOracle, [new ChangedRange(0, 0, 0, view.state.doc.length)]) : this.heightMap).updateHeight(oracle, 0, refresh, new MeasuredHeights(vp.from, heights));
         }
         if (heightChangeFlag)
-          result |= 2;
+          result2 |= 2;
       }
       let viewportChange = !this.viewportIsAppropriate(this.viewport, bias) || this.scrollTarget && (this.scrollTarget.range.head < this.viewport.from || this.scrollTarget.range.head > this.viewport.to);
       if (viewportChange) {
-        if (result & 2)
-          result |= this.updateScaler();
+        if (result2 & 2)
+          result2 |= this.updateScaler();
         this.viewport = this.getViewport(bias, this.scrollTarget);
-        result |= this.updateForViewport();
+        result2 |= this.updateForViewport();
       }
-      if (result & 2 || viewportChange)
+      if (result2 & 2 || viewportChange)
         this.updateViewportLines();
       if (this.lineGaps.length || this.viewport.to - this.viewport.from > 2e3 << 1)
         this.updateLineGaps(this.ensureLineGaps(refresh ? [] : this.lineGaps, view));
-      result |= this.computeVisibleRanges();
+      result2 |= this.computeVisibleRanges();
       if (this.mustEnforceCursorAssoc) {
         this.mustEnforceCursorAssoc = false;
         view.docView.enforceCursorAssoc();
       }
-      return result;
+      return result2;
     }
     get visibleTop() {
       return this.scaler.fromDOM(this.pixelViewport.top);
@@ -11781,10 +11788,10 @@
     */
     static theme(spec, options) {
       let prefix = StyleModule.newName();
-      let result = [theme.of(prefix), styleModule.of(buildTheme(`.${prefix}`, spec))];
+      let result2 = [theme.of(prefix), styleModule.of(buildTheme(`.${prefix}`, spec))];
       if (options && options.dark)
-        result.push(darkTheme.of(true));
-      return result;
+        result2.push(darkTheme.of(true));
+      return result2;
     }
     /**
     Create an extension that adds styles to the base theme. Like
@@ -11858,13 +11865,13 @@
     static update(cache2, changes) {
       if (changes.empty && !cache2.some((c) => c.fresh))
         return cache2;
-      let result = [], lastDir = cache2.length ? cache2[cache2.length - 1].dir : Direction.LTR;
+      let result2 = [], lastDir = cache2.length ? cache2[cache2.length - 1].dir : Direction.LTR;
       for (let i2 = Math.max(0, cache2.length - 10); i2 < cache2.length; i2++) {
         let entry = cache2[i2];
         if (entry.dir == lastDir && !changes.touchesRange(entry.from, entry.to))
-          result.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
+          result2.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
       }
-      return result;
+      return result2;
     }
   };
   function attrsFromFacet(view, facet, base2) {
@@ -11878,9 +11885,9 @@
   var currentPlatform = browser.mac ? "mac" : browser.windows ? "win" : browser.linux ? "linux" : "key";
   function normalizeKeyName(name2, platform) {
     const parts = name2.split(/-(?!$)/);
-    let result = parts[parts.length - 1];
-    if (result == "Space")
-      result = " ";
+    let result2 = parts[parts.length - 1];
+    if (result2 == "Space")
+      result2 = " ";
     let alt, ctrl, shift2, meta2;
     for (let i2 = 0; i2 < parts.length - 1; ++i2) {
       const mod = parts[i2];
@@ -11901,14 +11908,14 @@
         throw new Error("Unrecognized modifier name: " + mod);
     }
     if (alt)
-      result = "Alt-" + result;
+      result2 = "Alt-" + result2;
     if (ctrl)
-      result = "Ctrl-" + result;
+      result2 = "Ctrl-" + result2;
     if (meta2)
-      result = "Meta-" + result;
+      result2 = "Meta-" + result2;
     if (shift2)
-      result = "Shift-" + result;
-    return result;
+      result2 = "Shift-" + result2;
+    return result2;
   }
   function modifiers(name2, event, shift2) {
     if (event.altKey)
@@ -12377,7 +12384,7 @@
     },
     class: "cm-selectionLayer"
   });
-  var selectionBg = browser.gecko && browser.gecko_version >= 153 ? "#ffffff01" : "transparent";
+  var selectionBg = browser.gecko && browser.gecko_version == 153 ? "#ffffff01" : "transparent";
   var hideNativeSelection = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ EditorView.theme({
     ".cm-line": {
       "& ::selection, &::selection": { backgroundColor: `${selectionBg} !important` },
@@ -12496,16 +12503,16 @@
     let visible = view.visibleRanges;
     if (visible.length == 1 && visible[0].from == view.viewport.from && visible[0].to == view.viewport.to)
       return visible;
-    let result = [];
+    let result2 = [];
     for (let { from, to } of visible) {
       from = Math.max(view.state.doc.lineAt(from).from, from - maxLength);
       to = Math.min(view.state.doc.lineAt(to).to, to + maxLength);
-      if (result.length && result[result.length - 1].to >= from)
-        result[result.length - 1].to = to;
+      if (result2.length && result2[result2.length - 1].to >= from)
+        result2[result2.length - 1].to = to;
       else
-        result.push({ from, to });
+        result2.push({ from, to });
     }
-    return result;
+    return result2;
   }
   var MatchDecorator = class {
     /**
@@ -13412,10 +13419,10 @@
       };
       if (open && "then" in open) {
         let pending = this.pending = { pos };
-        open.then((result) => {
+        open.then((result2) => {
           if (this.pending == pending) {
             this.pending = null;
-            done(result);
+            done(result2);
           }
         }, (e) => logException(view.state, e, "hover tooltip"));
       } else {
@@ -13758,7 +13765,7 @@
   });
   var openDialogEffect = /* @__PURE__ */ StateEffect.define();
   var closeDialogEffect = /* @__PURE__ */ StateEffect.define();
-  function createDialog(view, config2, result) {
+  function createDialog(view, config2, result2) {
     let content2 = config2.content ? config2.content(view, () => done(null)) : null;
     if (!content2) {
       content2 = crelt("form");
@@ -13804,7 +13811,7 @@
     function done(form) {
       if (panel.contains(panel.ownerDocument.activeElement))
         view.focus();
-      result(form);
+      result2(form);
     }
     return {
       dom: panel,
@@ -13872,12 +13879,12 @@
     combine: (values2) => values2.some((x) => x)
   });
   function gutters(config2) {
-    let result = [
+    let result2 = [
       gutterView
     ];
     if (config2 && config2.fixed === false)
-      result.push(unfixGutters.of(true));
-    return result;
+      result2.push(unfixGutters.of(true));
+    return result2;
   }
   var gutterView = /* @__PURE__ */ ViewPlugin.fromClass(class {
     constructor(view) {
@@ -14211,12 +14218,12 @@
     combine(values2) {
       return combineConfig(values2, { formatNumber: String, domEventHandlers: {} }, {
         domEventHandlers(a, b) {
-          let result = Object.assign({}, a);
+          let result2 = Object.assign({}, a);
           for (let event in b) {
-            let exists = result[event], add2 = b[event];
-            result[event] = exists ? (view, line, event2) => exists(view, line, event2) || add2(view, line, event2) : add2;
+            let exists = result2[event], add2 = b[event];
+            result2[event] = exists ? (view, line, event2) => exists(view, line, event2) || add2(view, line, event2) : add2;
           }
-          return result;
+          return result2;
         }
       });
     }
@@ -14249,9 +14256,9 @@
     },
     widgetMarker: (view, widget, block) => {
       for (let m of view.state.facet(lineNumberWidgetMarker)) {
-        let result = m(view, widget, block);
-        if (result)
-          return result;
+        let result2 = m(view, widget, block);
+        if (result2)
+          return result2;
       }
       return null;
     },
@@ -14300,7 +14307,7 @@
     return activeLineGutterHighlighter;
   }
 
-  // node_modules/@lezer/common/dist/index.js
+  // node_modules/.deno/@lezer+common@1.5.2/node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range2 = class {
@@ -14336,8 +14343,8 @@
       if (typeof match != "function")
         match = NodeType.match(match);
       return (type) => {
-        let result = match(type);
-        return result === void 0 ? null : [this, result];
+        let result2 = match(type);
+        return result2 === void 0 ? null : [this, result2];
       };
     }
   };
@@ -14656,11 +14663,11 @@
     constructor.
     */
     get propValues() {
-      let result = [];
+      let result2 = [];
       if (this.props)
         for (let id2 in this.props)
-          result.push([+id2, this.props[id2]]);
-      return result;
+          result2.push([+id2, this.props[id2]]);
+      return result2;
     }
     /**
     Balance the direct children of this tree, producing a copy of
@@ -14725,30 +14732,30 @@
     @internal
     */
     toString() {
-      let result = [];
+      let result2 = [];
       for (let index = 0; index < this.buffer.length; ) {
-        result.push(this.childString(index));
+        result2.push(this.childString(index));
         index = this.buffer[index + 3];
       }
-      return result.join(",");
+      return result2.join(",");
     }
     /**
     @internal
     */
     childString(index) {
       let id2 = this.buffer[index], endIndex = this.buffer[index + 3];
-      let type = this.set.types[id2], result = type.name;
-      if (/\W/.test(result) && !type.isError)
-        result = JSON.stringify(result);
+      let type = this.set.types[id2], result2 = type.name;
+      if (/\W/.test(result2) && !type.isError)
+        result2 = JSON.stringify(result2);
       index += 4;
       if (endIndex == index)
-        return result;
+        return result2;
       let children = [];
       while (index < endIndex) {
         children.push(this.childString(index));
         index = this.buffer[index + 3];
       }
-      return result + "(" + children.join(",") + ")";
+      return result2 + "(" + children.join(",") + ")";
     }
     /**
     @internal
@@ -14998,22 +15005,22 @@
     }
   };
   function getChildren(node, type, before, after) {
-    let cur2 = node.cursor(), result = [];
+    let cur2 = node.cursor(), result2 = [];
     if (!cur2.firstChild())
-      return result;
+      return result2;
     if (before != null)
       for (let found = false; !found; ) {
         found = cur2.type.is(before);
         if (!cur2.nextSibling())
-          return result;
+          return result2;
       }
     for (; ; ) {
       if (after != null && cur2.type.is(after))
-        return result;
+        return result2;
       if (cur2.type.is(type))
-        result.push(cur2.node);
+        result2.push(cur2.node);
       if (!cur2.nextSibling())
-        return after == null ? result : [];
+        return after == null ? result2 : [];
     }
   }
   function matchNodeContext(node, context, i2 = context.length - 1) {
@@ -15460,14 +15467,14 @@
     get node() {
       if (!this.buffer)
         return this._tree;
-      let cache2 = this.bufferNode, result = null, depth = 0;
+      let cache2 = this.bufferNode, result2 = null, depth = 0;
       if (cache2 && cache2.context == this.buffer) {
         scan: for (let index = this.index, d = this.stack.length; d >= 0; ) {
           for (let c = cache2; c; c = c._parent)
             if (c.index == index) {
               if (index == this.index)
                 return c;
-              result = c;
+              result2 = c;
               depth = d + 1;
               break scan;
             }
@@ -15475,8 +15482,8 @@
         }
       }
       for (let i2 = depth; i2 < this.stack.length; i2++)
-        result = new BufferNode(this.buffer, result, this.stack[i2]);
-      return this.bufferNode = new BufferNode(this.buffer, result, this.index);
+        result2 = new BufferNode(this.buffer, result2, this.stack[i2]);
+      return this.bufferNode = new BufferNode(this.buffer, result2, this.index);
     }
     /**
     Get the [tree](#common.Tree) that represents the current node, if
@@ -15676,13 +15683,13 @@
     function findBufferSize(maxSize, inRepeat) {
       let fork = cursor2.fork();
       let size = 0, start = 0, skip = 0, minStart = fork.end - maxBufferLength;
-      let result = { size: 0, start: 0, skip: 0 };
+      let result2 = { size: 0, start: 0, skip: 0 };
       scan: for (let minPos = fork.pos - maxSize; fork.pos > minPos; ) {
         let nodeSize2 = fork.size;
         if (fork.id == inRepeat && nodeSize2 >= 0) {
-          result.size = size;
-          result.start = start;
-          result.skip = skip;
+          result2.size = size;
+          result2.start = start;
+          result2.skip = skip;
           skip += 4;
           size += 4;
           fork.next();
@@ -15710,11 +15717,11 @@
         skip += localSkipped;
       }
       if (inRepeat < 0 || size == maxSize) {
-        result.size = size;
-        result.start = start;
-        result.skip = skip;
+        result2.size = size;
+        result2.start = start;
+        result2.skip = skip;
       }
-      return result.size > 4 ? result : void 0;
+      return result2.size > 4 ? result2 : void 0;
     }
     function copyToBuffer(bufferStart, buffer2, index) {
       let { id: id2, start, end, size } = cursor2;
@@ -15882,11 +15889,11 @@
     true.
     */
     static addTree(tree, fragments = [], partial = false) {
-      let result = [new _TreeFragment(0, tree.length, tree, 0, false, partial)];
+      let result2 = [new _TreeFragment(0, tree.length, tree, 0, false, partial)];
       for (let f of fragments)
         if (f.to > tree.length)
-          result.push(f);
-      return result;
+          result2.push(f);
+      return result2;
     }
     /**
     Apply a set of edits to an array of fragments, removing or
@@ -15896,7 +15903,7 @@
     static applyChanges(fragments, changes, minGap = 128) {
       if (!changes.length)
         return fragments;
-      let result = [];
+      let result2 = [];
       let fI = 1, nextF = fragments.length ? fragments[0] : null;
       for (let cI = 0, pos = 0, off = 0; ; cI++) {
         let nextC = cI < changes.length ? changes[cI] : null;
@@ -15909,7 +15916,7 @@
               cut = fFrom >= fTo ? null : new _TreeFragment(fFrom, fTo, cut.tree, cut.offset + off, cI > 0, !!nextC);
             }
             if (cut)
-              result.push(cut);
+              result2.push(cut);
             if (nextF.to > nextPos)
               break;
             nextF = fI < fragments.length ? fragments[fI++] : null;
@@ -15919,7 +15926,7 @@
         pos = nextC.toA;
         off = nextC.toA - nextC.toB;
       }
-      return result;
+      return result2;
     }
   };
   var Parser = class {
@@ -16025,10 +16032,10 @@
             inner2.parse.stopAt(this.stoppedAt);
       }
       if (this.innerDone == this.inner.length) {
-        let result = this.baseTree;
+        let result2 = this.baseTree;
         if (this.stoppedAt != null)
-          result = new Tree(result.type, result.children, result.positions, result.length, result.propValues.concat([[stoppedInner, this.stoppedAt]]));
-        return result;
+          result2 = new Tree(result2.type, result2.children, result2.positions, result2.length, result2.propValues.concat([[stoppedInner, this.stoppedAt]]));
+        return result2;
       }
       let inner = this.inner[this.innerDone], done = inner.parse.advance();
       if (done) {
@@ -16247,7 +16254,7 @@
     }
     findMounts(pos, parser6) {
       var _a2;
-      let result = [];
+      let result2 = [];
       if (this.inner) {
         this.inner.cursor.moveTo(pos, 1);
         for (let pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
@@ -16258,7 +16265,7 @@
               if (frag.from >= pos2.to)
                 break;
               if (frag.tree == this.curFrag.tree)
-                result.push({
+                result2.push({
                   frag,
                   pos: pos2.from - frag.offset,
                   mount
@@ -16267,7 +16274,7 @@
           }
         }
       }
-      return result;
+      return result2;
     }
   };
   function punchRanges(outer, ranges) {
@@ -16297,14 +16304,14 @@
   }
   function findCoverChanges(a, b, from, to) {
     let iA = 0, iB = 0, inA = false, inB = false, pos = -1e9;
-    let result = [];
+    let result2 = [];
     for (; ; ) {
       let nextA = iA == a.length ? 1e9 : inA ? a[iA].to : a[iA].from;
       let nextB = iB == b.length ? 1e9 : inB ? b[iB].to : b[iB].from;
       if (inA != inB) {
         let start = Math.max(pos, from), end = Math.min(nextA, nextB, to);
         if (start < end)
-          result.push(new Range2(start, end));
+          result2.push(new Range2(start, end));
       }
       pos = Math.min(nextA, nextB);
       if (pos == 1e9)
@@ -16326,10 +16333,10 @@
         }
       }
     }
-    return result;
+    return result2;
   }
   function enterFragments(mounts, ranges) {
-    let result = [];
+    let result2 = [];
     for (let { pos, mount, frag } of mounts) {
       let startPos = pos + (mount.overlay ? mount.overlay[0].from : 0), endPos = startPos + mount.tree.length;
       let from = Math.max(frag.from, startPos), to = Math.min(frag.to, endPos);
@@ -16339,19 +16346,19 @@
         for (let i2 = 0, pos2 = from; ; i2++) {
           let last = i2 == changes.length, end = last ? to : changes[i2].from;
           if (end > pos2)
-            result.push(new TreeFragment(pos2, end, mount.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end || frag.openEnd));
+            result2.push(new TreeFragment(pos2, end, mount.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end || frag.openEnd));
           if (last)
             break;
           pos2 = changes[i2].to;
         }
       } else {
-        result.push(new TreeFragment(from, to, mount.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
+        result2.push(new TreeFragment(from, to, mount.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
       }
     }
-    return result;
+    return result2;
   }
 
-  // node_modules/@lezer/highlight/dist/index.js
+  // node_modules/.deno/@lezer+highlight@1.2.3/node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -16557,13 +16564,13 @@
     };
   }
   function highlightTags(highlighters, tags3) {
-    let result = null;
+    let result2 = null;
     for (let highlighter of highlighters) {
       let value = highlighter.style(tags3);
       if (value)
-        result = result ? result + " " + value : value;
+        result2 = result2 ? result2 + " " + value : value;
     }
-    return result;
+    return result2;
   }
   function highlightTree(tree, highlighter, putStyle, from = 0, to = tree.length) {
     let builder = new HighlightBuilder(from, Array.isArray(highlighter) ? highlighter : [highlighter], putStyle);
@@ -17075,7 +17082,7 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // node_modules/@codemirror/language/dist/index.js
+  // node_modules/.deno/@codemirror+language@6.12.4/node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -17136,10 +17143,10 @@
         return [{ from: 0, to: state2.doc.length }];
       if (!lang || !lang.allowsNesting)
         return [];
-      let result = [];
+      let result2 = [];
       let explore = (tree, from) => {
         if (tree.prop(languageDataProp) == this.data) {
-          result.push({ from, to: from + tree.length });
+          result2.push({ from, to: from + tree.length });
           return;
         }
         let mount = tree.prop(NodeProp.mounted);
@@ -17147,14 +17154,14 @@
           if (mount.tree.prop(languageDataProp) == this.data) {
             if (mount.overlay)
               for (let r of mount.overlay)
-                result.push({ from: r.from + from, to: r.to + from });
+                result2.push({ from: r.from + from, to: r.to + from });
             else
-              result.push({ from, to: from + tree.length });
+              result2.push({ from, to: from + tree.length });
             return;
           } else if (mount.overlay) {
-            let size = result.length;
+            let size = result2.length;
             explore(mount.tree, mount.overlay[0].from + from);
-            if (result.length > size)
+            if (result2.length > size)
               return;
           }
         }
@@ -17165,7 +17172,7 @@
         }
       };
       explore(syntaxTree(state2), 0);
-      return result;
+      return result2;
     }
     /**
     Indicates whether this language allows nested languages. The
@@ -17698,25 +17705,25 @@
     return unit.charCodeAt(0) == 9 ? state2.tabSize * unit.length : unit.length;
   }
   function indentString(state2, cols) {
-    let result = "", ts = state2.tabSize, ch = state2.facet(indentUnit)[0];
+    let result2 = "", ts = state2.tabSize, ch = state2.facet(indentUnit)[0];
     if (ch == "	") {
       while (cols >= ts) {
-        result += "	";
+        result2 += "	";
         cols -= ts;
       }
       ch = " ";
     }
     for (let i2 = 0; i2 < cols; i2++)
-      result += ch;
-    return result;
+      result2 += ch;
+    return result2;
   }
   function getIndentation(context, pos) {
     if (context instanceof EditorState)
       context = new IndentContext(context);
     for (let service of context.state.facet(indentService)) {
-      let result = service(context, pos);
-      if (result !== void 0)
-        return result;
+      let result2 = service(context, pos);
+      if (result2 !== void 0)
+        return result2;
     }
     let tree = syntaxTree(context.state);
     return tree.length >= pos ? syntaxIndentation(context, tree, pos) : null;
@@ -17766,11 +17773,11 @@
     */
     column(pos, bias = 1) {
       let { text, from } = this.lineAt(pos, bias);
-      let result = this.countColumn(text, pos - from);
+      let result2 = this.countColumn(text, pos - from);
       let override = this.options.overrideIndentation ? this.options.overrideIndentation(from) : -1;
       if (override > -1)
-        result += override - this.countColumn(text, text.search(/\S|$/));
-      return result;
+        result2 += override - this.countColumn(text, text.search(/\S|$/));
+      return result2;
     }
     /**
     Find the column position (taking tabs into account) of the given
@@ -18009,9 +18016,9 @@
   }
   function foldable(state2, lineStart, lineEnd2) {
     for (let service of state2.facet(foldService)) {
-      let result = service(state2, lineStart, lineEnd2);
-      if (result)
-        return result;
+      let result2 = service(state2, lineStart, lineEnd2);
+      if (result2)
+        return result2;
     }
     return syntaxFolding(state2, lineStart, lineEnd2);
   }
@@ -18182,10 +18189,10 @@
     }
   });
   function codeFolding(config2) {
-    let result = [foldState, baseTheme$12];
+    let result2 = [foldState, baseTheme$12];
     if (config2)
-      result.push(foldConfig.of(config2));
-    return result;
+      result2.push(foldConfig.of(config2));
+    return result2;
   }
   function widgetToDOM(view, prepared) {
     let { state: state2 } = view, conf = state2.facet(foldConfig);
@@ -18719,7 +18726,7 @@
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // node_modules/@codemirror/commands/dist/index.js
+  // node_modules/.deno/@codemirror+commands@6.10.4/node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state: state2 } = target, line = state2.doc.lineAt(state2.selection.main.from), config2 = getConfig(target.state, line.from);
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -18993,9 +19000,9 @@
     static fromTransaction(tr, selection2) {
       let effects = none2;
       for (let invert of tr.startState.facet(invertedEffects)) {
-        let result = invert(tr);
-        if (result.length)
-          effects = effects.concat(result);
+        let result2 = invert(tr);
+        if (result2.length)
+          effects = effects.concat(result2);
       }
       if (!effects.length && tr.changes.empty)
         return null;
@@ -19056,9 +19063,9 @@
     while (length) {
       let event = mapEvent(branch[length - 1], mapping, selections);
       if (event.changes && !event.changes.empty || event.effects.length) {
-        let result = branch.slice(0, length);
-        result[length - 1] = event;
-        return result;
+        let result2 = branch.slice(0, length);
+        result2[length - 1] = event;
+        return result2;
       } else {
         mapping = event.mapped;
         length--;
@@ -19813,7 +19820,7 @@
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // node_modules/@codemirror/search/dist/index.js
+  // node_modules/.deno/@codemirror+search@6.7.1/node_modules/@codemirror/search/dist/index.js
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
   var SearchCursor = class {
     /**
@@ -20090,13 +20097,13 @@
   var gotoLine = (view) => {
     let { state: state2 } = view;
     let line = String(state2.doc.lineAt(view.state.selection.main.head).number);
-    let { close, result } = showDialog(view, {
+    let { close, result: result2 } = showDialog(view, {
       label: state2.phrase("Go to line"),
       input: { type: "text", name: "line", value: line },
       focus: true,
       submitLabel: state2.phrase("go")
     });
-    result.then((form) => {
+    result2.then((form) => {
       let match = form && /^([+-])?(\d+)?(:\d+)?(%)?$/.exec(form.elements["line"].value);
       if (!match) {
         view.dispatch({ effects: close });
@@ -20445,16 +20452,16 @@
     prevMatch(state2, curFrom, curTo) {
       return this.prevMatchInRange(state2, 0, curFrom) || this.prevMatchInRange(state2, curTo, state2.doc.length);
     }
-    getReplacement(result) {
+    getReplacement(result2) {
       return this.spec.unquote(this.spec.replace).replace(/\$([$&]|\d+)/g, (m, i2) => {
         if (i2 == "&")
-          return result.match[0];
+          return result2.match[0];
         if (i2 == "$")
           return "$";
         for (let l = i2.length; l > 0; l--) {
           let n = +i2.slice(0, l);
-          if (n > 0 && n < result.match.length)
-            return result.match[n] + i2.slice(l);
+          if (n > 0 && n < result2.match.length)
+            return result2.match[n] + i2.slice(l);
         }
         return m;
       });
@@ -20895,7 +20902,7 @@
     baseTheme3
   ];
 
-  // node_modules/@codemirror/autocomplete/dist/index.js
+  // node_modules/.deno/@codemirror+autocomplete@6.20.3/node_modules/@codemirror/autocomplete/dist/index.js
   var CompletionContext = class {
     /**
     Create a new completion context. (Mostly useful for testing
@@ -21151,17 +21158,17 @@
       return chars.length == 2 ? null : this.result((any[0] ? -700 : 0) + -200 + -1100, any, word);
     }
     result(score2, positions, word) {
-      let result = [], i2 = 0;
+      let result2 = [], i2 = 0;
       for (let pos of positions) {
         let to = pos + (this.astral ? codePointSize2(codePointAt2(word, pos)) : 1);
-        if (i2 && result[i2 - 1] == pos)
-          result[i2 - 1] = to;
+        if (i2 && result2[i2 - 1] == pos)
+          result2[i2 - 1] = to;
         else {
-          result[i2++] = pos;
-          result[i2++] = to;
+          result2[i2++] = pos;
+          result2[i2++] = to;
         }
       }
-      return this.ret(score2 - word.length, result);
+      return this.ret(score2 - word.length, result2);
     }
   };
   var StrictMatcher = class {
@@ -21619,17 +21626,17 @@
           option.score += sectionOrder[typeof section == "string" ? section : section.name];
       }
     }
-    let result = [], prev = null;
+    let result2 = [], prev = null;
     let compare2 = conf.compareCompletions;
     for (let opt of options.sort((a, b) => b.score - a.score || compare2(a.completion, b.completion))) {
       let cur2 = opt.completion;
       if (!prev || prev.label != cur2.label || prev.detail != cur2.detail || prev.type != null && cur2.type != null && prev.type != cur2.type || prev.apply != cur2.apply || prev.boost != cur2.boost)
-        result.push(opt);
+        result2.push(opt);
       else if (score(opt.completion) > score(prev))
-        result[result.length - 1] = opt;
+        result2[result2.length - 1] = opt;
       prev = opt.completion;
     }
-    return result;
+    return result2;
   }
   var CompletionDialog = class _CompletionDialog {
     constructor(options, attrs, tooltip, timestamp, selected, disabled) {
@@ -21741,14 +21748,14 @@
   };
   var noAttrs2 = {};
   function makeAttrs(id2, selected) {
-    let result = {
+    let result2 = {
       "aria-autocomplete": "list",
       "aria-haspopup": "listbox",
       "aria-controls": id2
     };
     if (selected > -1)
-      result["aria-activedescendant"] = id2 + "-" + selected;
-    return result;
+      result2["aria-activedescendant"] = id2 + "-" + selected;
+    return result2;
   }
   var none3 = [];
   function getUpdateType(tr, conf) {
@@ -21815,10 +21822,10 @@
     }
   };
   var ActiveResult = class _ActiveResult extends ActiveSource {
-    constructor(source, explicit, limit, result, from, to) {
+    constructor(source, explicit, limit, result2, from, to) {
       super(source, 3, explicit);
       this.limit = limit;
-      this.result = result;
+      this.result = result2;
       this.from = from;
       this.to = to;
     }
@@ -21829,35 +21836,35 @@
       var _a2;
       if (!(type & 3))
         return this.map(tr.changes);
-      let result = this.result;
-      if (result.map && !tr.changes.empty)
-        result = result.map(result, tr.changes);
+      let result2 = this.result;
+      if (result2.map && !tr.changes.empty)
+        result2 = result2.map(result2, tr.changes);
       let from = tr.changes.mapPos(this.from), to = tr.changes.mapPos(this.to, 1);
       let pos = cur(tr.state);
-      if (pos > to || !result || type & 2 && (cur(tr.startState) == this.from || pos < this.limit))
+      if (pos > to || !result2 || type & 2 && (cur(tr.startState) == this.from || pos < this.limit))
         return new ActiveSource(
           this.source,
           type & 4 ? 1 : 0
           /* State.Inactive */
         );
       let limit = tr.changes.mapPos(this.limit);
-      if (checkValid(result.validFor, tr.state, from, to))
-        return new _ActiveResult(this.source, this.explicit, limit, result, from, to);
-      if (result.update && (result = result.update(result, from, to, new CompletionContext(tr.state, pos, false))))
-        return new _ActiveResult(this.source, this.explicit, limit, result, result.from, (_a2 = result.to) !== null && _a2 !== void 0 ? _a2 : cur(tr.state));
+      if (checkValid(result2.validFor, tr.state, from, to))
+        return new _ActiveResult(this.source, this.explicit, limit, result2, from, to);
+      if (result2.update && (result2 = result2.update(result2, from, to, new CompletionContext(tr.state, pos, false))))
+        return new _ActiveResult(this.source, this.explicit, limit, result2, result2.from, (_a2 = result2.to) !== null && _a2 !== void 0 ? _a2 : cur(tr.state));
       return new ActiveSource(this.source, 1, this.explicit);
     }
     map(mapping) {
       if (mapping.empty)
         return this;
-      let result = this.result.map ? this.result.map(this.result, mapping) : this.result;
-      if (!result)
+      let result2 = this.result.map ? this.result.map(this.result, mapping) : this.result;
+      if (!result2)
         return new ActiveSource(
           this.source,
           0
           /* State.Inactive */
         );
-      return new _ActiveResult(this.source, this.explicit, mapping.mapPos(this.limit), result, mapping.mapPos(this.from), mapping.mapPos(this.to, 1));
+      return new _ActiveResult(this.source, this.explicit, mapping.mapPos(this.limit), result2, mapping.mapPos(this.from), mapping.mapPos(this.to, 1));
     }
     touches(tr) {
       return tr.changes.touchesRange(this.from, this.to);
@@ -21888,16 +21895,16 @@
   });
   function applyCompletion(view, option) {
     const apply = option.completion.apply || option.completion.label;
-    let result = view.state.field(completionState).active.find((a) => a.source == option.source);
-    if (!(result instanceof ActiveResult))
+    let result2 = view.state.field(completionState).active.find((a) => a.source == option.source);
+    if (!(result2 instanceof ActiveResult))
       return false;
     if (typeof apply == "string")
       view.dispatch({
-        ...insertCompletionText(view.state, apply, result.from, result.to),
+        ...insertCompletionText(view.state, apply, result2.from, result2.to),
         annotations: pickedCompletion.of(option.completion)
       });
     else
-      apply(view, option.completion, result.from, result.to);
+      apply(view, option.completion, result2.from, result2.to);
     return true;
   }
   var createTooltip = /* @__PURE__ */ completionTooltip(completionState, applyCompletion);
@@ -22020,9 +22027,9 @@
       let context = new CompletionContext(state2, pos, active.explicit, this.view);
       let pending = new RunningQuery(active, context);
       this.running.push(pending);
-      Promise.resolve(active.source(context)).then((result) => {
+      Promise.resolve(active.source(context)).then((result2) => {
         if (!pending.context.aborted) {
-          pending.done = result || null;
+          pending.done = result2 || null;
           this.scheduleAccept();
         }
       }, (err) => {
@@ -22109,8 +22116,8 @@
       if (!field || !field.open || field.open.disabled || field.open.selected < 0 || event.key.length > 1 || event.ctrlKey && !(windows && event.altKey) || event.metaKey)
         return false;
       let option = field.open.options[field.open.selected];
-      let result = field.active.find((a) => a.source == option.source);
-      let commitChars = option.completion.commitCharacters || result.result.commitCharacters;
+      let result2 = field.active.find((a) => a.source == option.source);
+      let commitChars = option.completion.commitCharacters || result2.result.commitCharacters;
       if (commitChars && commitChars.indexOf(event.key) > -1)
         applyCompletion(view, option);
       return false;
@@ -22712,7 +22719,7 @@
   ];
   var completionKeymapExt = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ keymap.computeN([completionConfig], (state2) => state2.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
-  // node_modules/@codemirror/lint/dist/index.js
+  // node_modules/.deno/@codemirror+lint@6.9.7/node_modules/@codemirror/lint/dist/index.js
   var SelectedDiagnostic = class {
     constructor(from, to, diagnostic) {
       this.from = from;
@@ -22824,9 +22831,9 @@
   }
   function hideTooltip(tr, tooltip) {
     let from = tooltip.pos, to = tooltip.end || from;
-    let result = tr.state.facet(lintConfig).hideOn(tr, from, to);
-    if (result != null)
-      return result;
+    let result2 = tr.state.facet(lintConfig).hideOn(tr, from, to);
+    if (result2 != null)
+      return result2;
     let line = tr.startState.doc.lineAt(tooltip.pos);
     return !!(tr.effects.some((e) => e.is(setDiagnosticsEffect)) || tr.changes.touchesRange(line.from, Math.max(line.to, to)));
   }
@@ -23321,7 +23328,7 @@
     baseTheme5
   ];
 
-  // node_modules/codemirror/dist/index.js
+  // node_modules/.deno/codemirror@6.0.2/node_modules/codemirror/dist/index.js
   var basicSetup = /* @__PURE__ */ (() => [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -23351,7 +23358,7 @@
     ])
   ])();
 
-  // node_modules/@lezer/lr/dist/index.js
+  // node_modules/.deno/@lezer+lr@1.4.10/node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -23635,8 +23642,8 @@
           }
         nextStates = best;
       }
-      let result = [];
-      for (let i2 = 0; i2 < nextStates.length && result.length < 4; i2 += 2) {
+      let result2 = [];
+      for (let i2 = 0; i2 < nextStates.length && result2.length < 4; i2 += 2) {
         let s = nextStates[i2 + 1];
         if (s == this.state)
           continue;
@@ -23646,9 +23653,9 @@
         stack.shiftContext(nextStates[i2], this.pos);
         stack.reducePos = this.pos;
         stack.score -= 200;
-        result.push(stack);
+        result2.push(stack);
       }
-      return result;
+      return result2;
     }
     // Force a reduce, if possible. Return false if that can't
     // be done.
@@ -24009,17 +24016,17 @@
     units, since the library does not track lookbehind.
     */
     peek(offset) {
-      let idx = this.chunkOff + offset, pos, result;
+      let idx = this.chunkOff + offset, pos, result2;
       if (idx >= 0 && idx < this.chunk.length) {
         pos = this.pos + offset;
-        result = this.chunk.charCodeAt(idx);
+        result2 = this.chunk.charCodeAt(idx);
       } else {
         let resolved = this.resolveOffset(offset, 1);
         if (resolved == null)
           return -1;
         pos = resolved;
         if (pos >= this.chunk2Pos && pos < this.chunk2Pos + this.chunk2.length) {
-          result = this.chunk2.charCodeAt(pos - this.chunk2Pos);
+          result2 = this.chunk2.charCodeAt(pos - this.chunk2Pos);
         } else {
           let i2 = this.rangeIndex, range = this.range;
           while (range.to <= pos)
@@ -24027,12 +24034,12 @@
           this.chunk2 = this.input.chunk(this.chunk2Pos = pos);
           if (pos + this.chunk2.length > range.to)
             this.chunk2 = this.chunk2.slice(0, range.to - pos);
-          result = this.chunk2.charCodeAt(0);
+          result2 = this.chunk2.charCodeAt(0);
         }
       }
       if (pos >= this.token.lookAhead)
         this.token.lookAhead = pos + 1;
-      return result;
+      return result2;
     }
     /**
     Accept a token. By default, the end of the token is set to the
@@ -24145,14 +24152,14 @@
         return this.chunk2.slice(from - this.chunk2Pos, to - this.chunk2Pos);
       if (from >= this.range.from && to <= this.range.to)
         return this.input.read(from, to);
-      let result = "";
+      let result2 = "";
       for (let r of this.ranges) {
         if (r.from >= to)
           break;
         if (r.to > from)
-          result += this.input.read(Math.max(r.from, from), Math.min(r.to, to));
+          result2 += this.input.read(Math.max(r.from, from), Math.min(r.to, to));
       }
-      return result;
+      return result2;
     }
   };
   var TokenGroup = class {
@@ -24435,12 +24442,12 @@
         let { parser: parser6 } = stack.p;
         for (let i2 = 0; i2 < parser6.specialized.length; i2++)
           if (parser6.specialized[i2] == token.value) {
-            let result = parser6.specializers[i2](this.stream.read(token.start, token.end), stack);
-            if (result >= 0 && stack.p.parser.dialect.allows(result >> 1)) {
-              if ((result & 1) == 0)
-                token.value = result >> 1;
+            let result2 = parser6.specializers[i2](this.stream.read(token.start, token.end), stack);
+            if (result2 >= 0 && stack.p.parser.dialect.allows(result2 >> 1)) {
+              if ((result2 & 1) == 0)
+                token.value = result2 >> 1;
               else
-                token.extended = result >> 1;
+                token.extended = result2 >> 1;
               break;
             }
           }
@@ -24942,28 +24949,28 @@
         4
         /* ParseState.DefaultReduce */
       );
-      let result = deflt ? action(deflt) : void 0;
+      let result2 = deflt ? action(deflt) : void 0;
       for (let i2 = this.stateSlot(
         state2,
         1
         /* ParseState.Actions */
-      ); result == null; i2 += 3) {
+      ); result2 == null; i2 += 3) {
         if (this.data[i2] == 65535) {
           if (this.data[i2 + 1] == 1)
             i2 = pair(this.data, i2 + 2);
           else
             break;
         }
-        result = action(pair(this.data, i2 + 1));
+        result2 = action(pair(this.data, i2 + 1));
       }
-      return result;
+      return result2;
     }
     /**
     Get the states that can follow this one through shift actions or
     goto jumps. @internal
     */
     nextStates(state2) {
-      let result = [];
+      let result2 = [];
       for (let i2 = this.stateSlot(
         state2,
         1
@@ -24977,11 +24984,11 @@
         }
         if ((this.data[i2 + 2] & 65536 >> 16) == 0) {
           let value = this.data[i2 + 1];
-          if (!result.some((v, i3) => i3 & 1 && v == value))
-            result.push(this.data[i2], value);
+          if (!result2.some((v, i3) => i3 & 1 && v == value))
+            result2.push(this.data[i2], value);
         }
       }
-      return result;
+      return result2;
     }
     /**
     Configure the parser. Returns a new parser instance that has the
@@ -25113,7 +25120,7 @@
     return spec.get;
   }
 
-  // node_modules/@lezer/javascript/dist/index.js
+  // node_modules/.deno/@lezer+javascript@1.5.4/node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -25325,7 +25332,7 @@
     tokenPrec: 15201
   });
 
-  // node_modules/@codemirror/lang-javascript/dist/index.js
+  // node_modules/.deno/@codemirror+lang-javascript@6.2.5/node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -25637,13 +25644,13 @@
     return true;
   });
 
-  // node_modules/@lezer/css/dist/index.js
-  var descendantOp = 145;
+  // node_modules/.deno/@lezer+css@1.3.6/node_modules/@lezer/css/dist/index.js
+  var descendantOp = 148;
   var Unit = 1;
-  var identifier = 146;
-  var callee = 147;
+  var identifier = 149;
+  var callee = 150;
   var VariableName = 2;
-  var queryIdentifier = 148;
+  var queryIdentifier = 151;
   var queryVariableName = 3;
   var QueryCallee = 4;
   var space2 = [
@@ -25784,35 +25791,35 @@
     "[ ]": tags.squareBracket,
     "{ }": tags.brace
   });
-  var spec_callee = { __proto__: null, lang: 44, "nth-child": 44, "nth-last-child": 44, "nth-of-type": 44, "nth-last-of-type": 44, dir: 44, "host-context": 44, if: 90, url: 152, "url-prefix": 152, domain: 152, regexp: 152 };
-  var spec_queryIdentifier = { __proto__: null, or: 104, and: 104, not: 112, only: 112, layer: 206 };
-  var spec_QueryCallee = { __proto__: null, selector: 118, style: 124, layer: 202 };
-  var spec_AtKeyword = { __proto__: null, "@import": 198, "@media": 210, "@charset": 214, "@namespace": 218, "@keyframes": 224, "@supports": 236, "@scope": 240, "@font-feature-values": 246 };
-  var spec_identifier2 = { __proto__: null, to: 243 };
+  var spec_callee = { __proto__: null, lang: 44, "nth-child": 44, "nth-last-child": 44, "nth-of-type": 44, "nth-last-of-type": 44, dir: 44, "host-context": 44, if: 90, url: 158, "url-prefix": 158, domain: 158, regexp: 158 };
+  var spec_queryIdentifier = { __proto__: null, or: 104, and: 104, not: 112, only: 112, layer: 212 };
+  var spec_QueryCallee = { __proto__: null, selector: 118, style: 124, layer: 208 };
+  var spec_AtKeyword = { __proto__: null, "@import": 204, "@media": 216, "@charset": 220, "@namespace": 224, "@keyframes": 230, "@supports": 242, "@scope": 246, "@font-feature-values": 252 };
+  var spec_identifier2 = { __proto__: null, to: 249 };
   var parser2 = LRParser.deserialize({
     version: 14,
-    states: "MlQYQdOOO#}QdOOP$UO`OOO%OQaO'#CfOOQP'#Ce'#CeO%VQdO'#CgO%[Q`O'#CgO%aQaO'#FnO&XQdO'#CkO&xQaO'#CcO'SQdO'#CnO'_QdO'#EOO'dQdO'#EQO'oQdO'#EXO'oQdO'#E[OOQP'#Fn'#FnO)RQhO'#E}OOQS'#Fm'#FmOOQS'#FQ'#FQQYQdOOO)YQdO'#EbO*iQhO'#EhO)YQdO'#EjO*pQdO'#ElO*{QdO'#EoO)}QhO'#EuO+TQdO'#EwO+`QdO'#EzO+eQaO'#CfO+lQ`O'#E_O+qQ`O'#F{O+|QdO'#F{QOQ`OOP,WO&jO'#CaPOOO)CA])CA]OOQP'#Ci'#CiOOQP,59R,59RO%VQdO,59ROOQP'#Cm'#CmOOQP,59V,59VO&XQdO,59VO,cQdO,59YO'_QdO,5:jO'dQdO,5:lO'oQdO,5:sO'oQdO,5:uO'oQdO,5:vO'oQdO'#FXO,nQ`O,58}O,vQdO'#E^OOQS,58},58}OOQP'#Cq'#CqOOQO'#D|'#D|OOQP,59Y,59YO,}Q`O,59YO-SQ`O,59YOOQP'#EP'#EPOOQP,5:j,5:jO-XQpO'#ERO-dQdO'#ESO-iQ`O'#ESO-nQpO,5:lO.XQaO,5:sO.oQaO,5:vOOQW'#D^'#D^O/nQhO'#DgO0RQhO,5;iO)}QhO'#DeO0`Q`O'#DnO0eQhO'#DxOOQW'#Ft'#FtOOQS,5;i,5;iO0jQ`O'#DhO0oQ`O'#DkOOQS-E9O-E9OOOQ['#Cv'#CvO0tQdO'#CwO1[QdO'#C}O1rQdO'#DQO2YQ!pO'#DSO4fQ!jO,5:|OOQO'#DX'#DXO-SQ`O'#DWO4vQ!nO'#FqO6|Q`O'#DYO7RQ`O'#DyOOQ['#Fq'#FqO7WQhO'#GOO7fQ`O,5;SO7kQ!bO,5;UOOQS'#En'#EnO7sQ`O,5;WO7xQdO,5;WOOQO'#Eq'#EqO8QQ`O,5;ZO8VQhO,5;aO'oQdO'#DjOOQS,5;c,5;cO0jQ`O,5;cO8_QdO,5;cOOQS'#F`'#F`O8gQdO'#E|O7fQ`O,5;fO8oQdO,5:yO9PQdO'#FZO9^Q`O,5<gO9^Q`O,5<gPOOO'#FP'#FPP9iO&jO,58{POOO,58{,58{OOQP1G.m1G.mOOQP1G.q1G.qOOQP1G.t1G.tO,}Q`O1G.tO-SQ`O1G.tOOQP1G0U1G0UO9tQpO1G0WO9|QaO1G0_O:dQaO1G0aO:zQaO1G0bO;bQaO,5;sOOQO-E9V-E9VOOQS1G.i1G.iO;lQ`O,5:xO;qQdO'#D}O;xQdO'#CuOOQO'#EU'#EUOOQO,5:n,5:nO-dQdO,5:nOOQP1G0W1G0WO)YQdO1G0WO<PQ!jO'#D^O<_Q!bO,59yO<gQhO,5:ROOQO'#Fu'#FuO<bQ!bO,59}O<oQhO'#FaO)}QhO,59{O)}QhO'#FaO=gQhO1G1TOOQS1G1T1G1TO=qQhO,5:PO>lQhO'#DoOOQW,5:Y,5:YOOQW,5:d,5:dOOQW,5:S,5:SO>vQhO,5:VO?bQ!fO'#FrOOQS'#Fr'#FrOOQS'#FS'#FSO@rQdO,59cOOQ[,59c,59cOAYQdO,59iOOQ[,59i,59iOApQdO,59lOOQ[,59l,59lOOQ[,59n,59nO)YQdO,59pOBWQhO'#EdOOQW'#Ed'#EdOBuQ`O1G0hO4oQhO1G0hOOQ[,59r,59rO)}QhO'#D[OOQ[,59t,59tOBzQ#tO,5:eOCVQhO'#F]OCdQ`O,5<jOOQS1G0n1G0nOOQS1G0p1G0pOOQS1G0r1G0rOCoQ`O1G0rOCtQdO'#ErOOQS1G0u1G0uOOQS1G0{1G0{ODPQaO,5:UO7fQ`O1G0}OOQS1G0}1G0}O0jQ`O1G0}OOQS-E9^-E9^OOQS1G1Q1G1QODWQ!fO1G0eODnQ`O'#EaOOQO1G0e1G0eOOQO,5;u,5;uODsQdO,5;uOOQO-E9X-E9XOEQQ`O1G2RPOOO-E8}-E8}POOO1G.g1G.gOOQP7+$`7+$`OOQP7+%r7+%rO)YQdO7+%rOOQS1G0d1G0dOE]QaO'#FzOEgQ`O,5:iOElQ!fO'#FROFjQdO'#FpOFtQ`O,59aOOQO1G0Y1G0YOFyQ!bO7+%rO)YQdO1G/eOGUQhO1G/iOOQW1G/m1G/mOOQW1G/g1G/gOGgQhO,5;{OOQW-E9_-E9_OOQS7+&o7+&oOH_QhO'#D^OHmQhO'#FxOHxQ`O'#FxOH}Q`O,5:ZOISQ!bO'#D`O>vQhO'#DmOI_QhO'#DqOIgQhO'#DsOIlQhO'#FwOOQO'#Fw'#FwOItQ!bO'#DwOOQO'#Fy'#FyOOQO'#Fv'#FvOIyQ`O1G/qOOQS-E9Q-E9QOOQ[1G.}1G.}OOQ[1G/T1G/TOOQ[1G/W1G/WOOQ[1G/[1G/[OJOQdO,5;OOOQS7+&S7+&SOJTQ`O7+&SOJYQhO'#D]OJbQ`O,59vO)}QhO,59vOOQ[1G0P1G0POJjQ`O1G0POJoQhO,5;wOOQO-E9Z-E9ZOOQS7+&^7+&^OJ}QbO'#DSOOQO'#Et'#EtOK]Q`O'#EsOOQO'#Es'#EsOKhQ`O'#F^OKpQdO,5;^OOQS,5;^,5;^OOQ[1G/p1G/pOOQS7+&i7+&iO7fQ`O7+&iOK{Q!fO'#FYO)YQdO'#FYOMSQdO7+&POOQO7+&P7+&POOQO,5:{,5:{OOQO1G1a1G1aOMgQ!bO<<I^OMrQdO'#FWOM|Q`O,5<fOOQP1G0T1G0TOOQS-E9P-E9PONUQdO'#FVON`Q`O,5<[OOQ]1G.{1G.{OOQP<<I^<<I^ONhQ`O<<I^ONmQdO7+%POOQO'#D`'#D`ONtQ!bO7+%TON|QhO'#FUO! ZQ`O,5<dO)YQdO,5<dOOQW1G/u1G/uO)YQdO,5:bO! cQ`O,5:XO>vQhO'#DrOOQO,5:],5:]O! hQhO,5:_OGUQhO,5:cOOQW7+%]7+%]OOQO'#Ef'#EfO! pQ`O1G0jOOQS<<In<<InO)YQdO,59wO!!dQhO1G/bOOQ[1G/b1G/bO!!kQ`O1G/bOOQW-E9R-E9ROOQ[7+%k7+%kOOQO,5;_,5;_OCwQdO'#F_OKhQ`O,5;xOOQS,5;x,5;xOOQS-E9[-E9[OOQS1G0x1G0xOOQS<<JT<<JTO!!sQ!fO,5;tOOQS-E9W-E9WOOQO<<Ik<<IkOOQPAN>xAN>xO!#zQ`OAN>xO!$PQaO,5;rOOQO-E9U-E9UO!$ZQdO,5;qOOQO-E9T-E9TOOQW<<Hk<<HkOOQW<<Ho<<HoO!$eQhO<<HoO!$vQhO,5;pO!%RQ`O,5;pOOQO-E9S-E9SO!%WQdO1G2OO!%bQdO1G/|O!%iQhO1G/sO!%qQ`O,5:^O>vQhO'#DuOOQO1G/y1G/yO!%vQ!bO1G/}OJOQdO'#F[O!&OQ`O7+&UOOQW7+&U7+&UO!&WQ!bO1G/cOOQ[7+$|7+$|O!&cQhO7+$|P!&jQ`O'#FTOOQO,5;y,5;yOOQO-E9]-E9]OOQS1G1d1G1dOOQPG24dG24dO!&oQ`OAN>ZO)YQdO1G1[O!&tQ`O7+'jOOQO1G/x1G/xO!&|Q`O,5:aO!$eQhO7+%iOOQO,5;v,5;vOOQO-E9Y-E9YOOQW<<Ip<<IpOOQ[<<Hh<<HhPOQW,5;o,5;oOOQWG23uG23uO!'RQdO7+&vOOQO1G/{1G/{OOQO<<IT<<IT",
-    stateData: "!'f~O$[OS$]QQ~OWVO^_O`WOcYOdYOl`OmZOp[O!|]O#P^O#VdO#]eO#_fO#agO#dhO#jiO#ljO#okO$WRO$cTO~OQmOWVO^_O`WOcYOdYOl`OmZOp[O!|]O#P^O#VdO#]eO#_fO#agO#dhO#jiO#ljO#okO$WlO$cTO~O$U$oP~P!jO$]qO~O`YXcYXdYXmYXpYXsYX!dYX!|YX#PYX$VYX$c[X~OgYX~P$ZO$WsO~O$cuO~O$cuO`$bXc$bXd$bXm$bXp$bXs$bX!d$bX!|$bX#P$bX$V$bXg$bX~O$WvO~O`xOcyOdyOmzOp{O!||O#P!OO$V}O~Os!RO!d!PO~P&^Of!XO$W!TO$X!UO~O$W!YO~OW!^O$W![O$c!]O~OWVO^_O`WOcYOdYOmZOp[O!|]O#P^O$WRO$cTO~OS!fOc!gOd!gOh!cOs!RO!Y!eO!]!jO!`!kO$Y!bO~On!iO~P(dOQ!uOh!nOp!oOs!pOu!xOw!xO}!vO!n!wO$W!mO$X!sO$g!qO~OS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO$Y!bO~Os$rP~P)}Ow!}O!n!wO$W!|O~Ow#PO$W#PO~Oh#SOs!RO#m#UO~O$W#WO~Oc#SX~P$ZOc#ZO~On#[O$U$oXr$oX~O$U$oXr$oX~P!jO$^#_O$_#_O$`#aO~Of#fO$W!TO$X!UO~Os!RO!d!PO~Or$oP~P!jOh#pO~Oh#qO~Oo!uX!y!uX$c!wX~O$W#rO~O$c#tO~Oo#uO!y#vO~O`xOcyOdyOmzOp{O~Os!{a!d!{a!|!{a#P!{a$V!{ag!{a~P-vOs#Oa!d#Oa!|#Oa#P#Oa$V#Oag#Oa~P-vOS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO~OR#zOu#zOw#zO$Y#wO$g!qO~P/VOn$QO!U#}O!d$OO~P(dOh$SO~O$Y$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo$_O~P)YO`$YOc$YOl$YOm$YOn$YOr$aO~P)YOP$bOSvXcvXdvXhvXnvXyvX!YvX!]vX!`vX#XvX#ZvX$YvX!WvXQvX`vXgvXlvXmvXpvXsvXuvXwvX}vX!nvX$WvX$XvX$gvXovXrvX!dvX$UvX$qvX!zvX~Oy$cO#X$dO#Z$eOn$rP~P)}Oh#qOS$eXc$eXd$eXn$eXy$eX!Y$eX!]$eX!`$eX#X$eX#Z$eX$Y$eXQ$eX`$eXg$eXl$eXm$eXp$eXs$eXu$eXw$eX}$eX!n$eX$W$eX$X$eX$g$eXo$eXr$eX!d$eX$U$eX$q$eX!z$eX~Oh$iO~Oh$kO~O!U#}O!d$lOs$rXn$rX~Os!RO~On$oOy$cO~On$pO~Ow$qO!n!wO~Os$rO~Os!RO!U#}O~Os!RO#m$xO~O$W#WOs#pX~O$q$|On#Ra$U#Rar#Ra~P)YOn#}X$U#}Xr#}X~P!jOn#[O$U$oar$oa~O$^#_O$_#_O$`%TO~Oo%VO!y%WO~Os!{i!d!{i!|!{i#P!{i$V!{ig!{i~P-vOs!}i!d!}i!|!}i#P!}i$V!}ig!}i~P-vOs#Oi!d#Oi!|#Oi#P#Oi$V#Oig#Oi~P-vOs#{a!d#{a~P&^Or%XO~Og$nP~P'oOg$dP~P)YOc!SXg!QX!U!QX!W!SX~Oc%aO!W%bO~Og%cO!U#}O~O!U#}OS$TXc$TXd$TXh$TXn$TXs$TX!Y$TX!]$TX!`$TX!d$TX$Y$TX~On%gO!d$OO~P(dO!U#}OS!Xac!Xad!Xah!Xan!Xas!Xa!Y!Xa!]!Xa!`!Xa!d!Xa$Y!Xag!Xa~O$Y%hOg$lP~P/VOR#zOS!fOh%mOu#zOw#zO!Y%nO$Y%lO$g!qO~Oy$cOQ$fX`$fXc$fXg$fXh$fXl$fXm$fXn$fXp$fXs$fXu$fXw$fX}$fX!n$fX$W$fX$X$fX$g$fXo$fXr$fX~O`$YOc$YOg%wOl$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo%xO~P)YO`$YOc$YOl$YOm$YOn$YOr%yO~P)YOh%{OS#WXc#WXd#WXn#WX!Y#WX!]#WX!`#WX$Y#WX~On%|O~Og&ROw&SO!o&SO~Os$PX!d$PXn$PX~P)}O!d$lOs$ran$ra~On&VO~Or&^O$W&XO$g&WO~Og&_O~P&^Oy$cO!d&cO$q$|On#Ri$U#Rir#Ri~P)YO$p&fO~On#}a$U#}ar#}a~P!jOn#[O$U$oir$oi~O!d&iOg$nX~P&^Og&kO~Oy$cOQ#uXg#uXh#uXp#uXs#uXu#uXw#uX}#uX!d#uX!n#uX$W#uX$X#uX$g#uX~O!d&mOg$dX~P)YOg&oO~Oo&pOy$cO!z&qO~OR#zOu#zOw#zO$Y&sO$g!qO~O!U#}OS$Tac$Tad$Tah$Tan$Tas$Ta!Y$Ta!]$Ta!`$Ta!d$Ta$Y$Ta~Oc!SXg!QX!U!QX!d!QX~O!U#}O!d&uOg$lX~Oc&wO~Og&xO~Oc&yOg!jX!W!SX~OS!fOh&{O~O!U&}O~O!U&}Og$kX~O!W'OO~Og'PO~O$W'QO~On'SO~Oc'TO!U#}O~Og'VOn'UO~Og'YO~O!U#}Os$Pa!d$Pan$Pa~OP$bOsvX!dvXgvX~O$g&WOs#gX!d#gX~Os!RO!d'[O~Or'`O$W&XO$g&WO~Oy$cOQ#|Xh#|Xn#|Xp#|Xs#|Xu#|Xw#|X}#|X!d#|X!n#|X$U#|X$W#|X$X#|X$g#|X$q#|Xr#|X~O!d&cO$q$|On#Rq$U#Rqr#Rq~P)YOo'eOy$cO!z'fO~Og#zX!d#zX~P'oO!d&iOg$na~Og#yX!d#yX~P)YO!d&mOg$da~Oo'eO~Og'kO~P)YOg'lO!W'mO~O$Y%hOg#xX!d#xX~P/VO!d&uOg$la~Og'sO~OS!fOh'uO~O`'xOg'zO~OS#wac#wad#wah#wa!Y#wa!]#wa!`#wa$Y#wa~Og'|O~P! xOg'|On'}O~Oy$cOQ#|ah#|an#|ap#|as#|au#|aw#|a}#|a!d#|a!n#|a$U#|a$W#|a$X#|a$g#|a$q#|ar#|a~Oo(SO~Og#za!d#za~P&^Og#ya!d#ya~P)YOR#zOu#zOw#zO$Y&sO$g&WO~O!U#}Og#xa!d#xa~Oc(UO~O!d&uOg$li~P)YOg!ji~P)YOg!ai!U!hi~Og(WO~O!W(YOg!ki~O`'xOg(]O~Oy$cOg!Pin!Pi~Og(^O~P! xOn(_O~Og(`O~O!d&uOg$lq~Og(bO~Og#xq!d#xq~P)YO$[!o$]$g`$gy#P~",
-    goto: "7[$sPPPPP$tP$wP%Q%d%Q%v&YP%QP&`%QPP&fPPP&l&v&vPPPPP&vPP&vP'fP&vP&v(i&vP)X)[)b)b)t)bP)bP)bP)b)bP*a)bP*m*s+cP*m+f*m+i+`+o+o)b+uPP,k,q%Q,w%Q,},}-T-XPP%QP%Q%QP-_.Z.h.o$wP.xP.{P$wP$wP$wP/R$wP/U/X/[/c$wP$wPP$wP/h$wP/k/q0Q0l0z1Q1[1b1h1n1t2O2U2[2b2h2nPPPPPPPPPPP2t2}P3s3v4zP5S5|6c6o6u6o6x6{PP7RRrQ_aOPco!R#[%Pq_OP]^co|}!O!P!R#S#[#p%P&iqSOP]^co|}!O!P!R#S#[#p%P&iqUOP]^co|}!O!P!R#S#[#p%P&iQtTR#buQwWR#cxQ!VYR#dyQ#d!XS$h!t!uR%U#f!Z!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(a!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(ab#z!c$W%b%m&{'O'm'u(YU&Z$r&]'[R'Z&Y!Z!tdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(aR$j!vQ&P$iR'W&Qq!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uQ#x!cQ%j$SW%r$W%m&{'uQ&t%bQ'o&uQ'w'OQ(T'mR(c(YQ#VjQ$V!jQ$v#UR&a$xX%q$W%m&{'up!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uW%p$W%m&{'uQ&|%nR'v&}R$T!fR&|%nX%o$W%m&{'uX%s$W%m&{'u!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w&y'T'i'q'r(U(aQ!}gR$q#OQ!WYR#eyQ#d!WR%U#eQ!ZZR#gzQ!_[R#h{T!^[{Q#s!]R%_#tQ!SXQ!i`Q#TjQ#n!QQ$Q!dQ$n!zQ$t#RQ$w#VQ$z#YQ%g$PQ&`$vQ'^&[Q'a&aR(R']SnP!RQ#^oQ%O#[R&g%PZmPo!R#[%PQ$}#ZQ&e${R'd&dR$g!rQ'R%{R(Z'xR#OgR#QhR$s#QS&[$r&]R(P'[V&Y$r&]'[R#YkQ#`qR%S#`QcOSoP!RU!lco%PR%P#[Q%]#q[&l%]&r'i'q'r(aQ&r%aQ'i&mQ'q&wQ'r&yR(a(UQ$[!nQ$^!oQ$`!pV%v$[$^$`Q&Q$iR'X&QQ&v%iS'p&v(VR(V'qQ&n%]R'j&nQ&j%YR'h&jQ!QXR#m!QQ&d${R'c&dQ#]nS%Q#]%RR%R#^Q'y'RR(['yQ$m!yR&U$mQ&]$rR'_&]Q']&[R(Q']Q#XkR$y#XQ$P!dR%f$P_bOPco!R#[%P^XOPco!R#[%PQ!`]Q!a^Q#i|Q#j}Q#k!OQ#l!PQ$u#SQ%Y#pR'g&iR%^#qQ!rdQ!{f[$X!n!o!p$[$^$`Q${#Zh%[#q%]%a&m&r&w&y'i'q'r(U(aQ%`#vQ%z$cS&b${&dQ&h%WQ'b&cR'{'T]$Z!n!o!p$[$^$`Q!d`U!ye!r$gQ#RiQ#y!cS#|!d$PQ$R!eQ%d#}Q%e$OQ%i$SS&O$i&QQ&T$lR'n&uQ#{!cW%r$W%m&{'uQ&t%bQ'w'OQ(T'mR(c(YQ%u$WQ&z%mQ't&{R(X'uX%t$W%m&{'uR%k$SR%Z#pQpPR#o!RQ!zeQ$f!rR%}$g",
-    nodeNames: "\u26A0 Unit VariableName VariableName QueryCallee Comment StyleSheet RuleSet UniversalSelector TagSelector TagName NamespacedTagSelector NamespaceName TagName NestingSelector ClassSelector . ClassName PseudoClassSelector : :: PseudoClassName PseudoClassName ) ( ArgList ValueName ParenthesizedValue AtKeyword # ; ] [ BracketedValue } { BracedValue ColorLiteral NumberLiteral StringLiteral BinaryExpression BinOp CallExpression Callee IfExpression if ArgList IfBranch KeywordQuery FeatureQuery FeatureName BinaryQuery LogicOp ComparisonQuery CompareOp UnaryQuery UnaryQueryOp ParenthesizedQuery SelectorQuery selector ParenthesizedSelector StyleQuery style ParenthesedQuery CallQuery ArgList , UnaryQuery ParenthesedQuery BinaryQuery ParenthesedQuery ParenthesedQuery StyleFeature StyleRange PseudoQuery CallLiteral CallTag ParenthesizedContent PseudoClassName ArgList IdSelector IdName AttributeSelector AttributeName NamespacedAttribute NamespaceName AttributeName MatchOp MatchFlag ChildSelector ChildOp DescendantSelector SiblingSelector SiblingOp Block Declaration PropertyName Important ImportStatement import Layer layer LayerName layer MediaStatement media CharsetStatement charset NamespaceStatement namespace NamespaceName KeyframesStatement keyframes KeyframeName KeyframeList KeyframeSelector KeyframeRangeName SupportsStatement supports ScopeStatement scope to FontFeatureStatement font-feature-values FontName AtRule Styles",
-    maxTerm: 172,
+    states: "MrQYQdOOO#}QdOOP$UO`OOO%OQaO'#CfOOQP'#Ce'#CeO%VQdO'#CgO%[Q`O'#CgO%aQaO'#FqO&XQdO'#CkO&xQaO'#CcO'SQdO'#CnO'_QdO'#ERO'dQdO'#ETO'oQdO'#E[O'oQdO'#E_OOQP'#Fq'#FqO)RQhO'#FQOOQS'#Fp'#FpOOQS'#FT'#FTQYQdOOO)YQdO'#EeO*iQhO'#EkO)YQdO'#EmO*pQdO'#EoO*{QdO'#ErO)}QhO'#ExO+TQdO'#EzO+`QdO'#E}O+eQaO'#CfO+lQ`O'#EbO+qQ`O'#F}O+|QdO'#F}QOQ`OOP,WO&jO'#CaPOOO)CA`)CA`OOQP'#Ci'#CiOOQP,59R,59RO%VQdO,59ROOQP'#Cm'#CmOOQP,59V,59VO&XQdO,59VO,cQdO,59YO'_QdO,5:mO'dQdO,5:oO'oQdO,5:vO'oQdO,5:xO'oQdO,5:yO'oQdO'#F[O,nQ`O,58}O,vQdO'#EaOOQS,58},58}OOQP'#Cq'#CqOOQO'#EP'#EPOOQP,59Y,59YO,}Q`O,59YO-SQ`O,59YOOQP'#ES'#ESOOQP,5:m,5:mO-XQpO'#EUO-dQdO'#EVO-iQ`O'#EVO-nQpO,5:oO.XQaO,5:vO.oQaO,5:yOOQW'#D^'#D^O/nQhO'#DgO0RQhO,5;lO)}QhO'#DeO0`Q`O'#DnO0eQhO'#D{OOQW'#Fw'#FwOOQS,5;l,5;lO0jQ`O'#DhO0oQ`O'#DkOOQS-E9R-E9ROOQ['#Cv'#CvO0tQdO'#CwO1[QdO'#C}O1rQdO'#DQO2YQ!pO'#DSO4fQ!jO,5;POOQO'#DX'#DXO-SQ`O'#DWO4vQ!nO'#FtO6|Q`O'#DYO7RQ`O'#D|OOQ['#Ft'#FtO7WQhO'#GQO7fQ`O,5;VO7kQ!bO,5;XOOQS'#Eq'#EqO7sQ`O,5;ZO7xQdO,5;ZOOQO'#Et'#EtO8QQ`O,5;^O8VQhO,5;dO'oQdO'#DjOOQS,5;f,5;fO0jQ`O,5;fO8_QdO,5;fOOQS'#Fc'#FcO8gQdO'#FPO7fQ`O,5;iO8oQdO,5:|O9PQdO'#F^O9^Q`O,5<iO9^Q`O,5<iPOOO'#FS'#FSP9iO&jO,58{POOO,58{,58{OOQP1G.m1G.mOOQP1G.q1G.qOOQP1G.t1G.tO,}Q`O1G.tO-SQ`O1G.tOOQP1G0X1G0XO9tQpO1G0ZO9|QaO1G0bO:dQaO1G0dO:zQaO1G0eO;bQaO,5;vOOQO-E9Y-E9YOOQS1G.i1G.iO;lQ`O,5:{O;qQdO'#EQO;xQdO'#CuOOQO'#EX'#EXOOQO,5:q,5:qO-dQdO,5:qOOQP1G0Z1G0ZO)YQdO1G0ZO<PQ!jO'#D^O<_Q!bO,59yO<gQhO,5:ROOQO'#Fx'#FxO<bQ!bO,59}O<oQhO'#FdO)}QhO,59{O)}QhO'#FdO=gQhO1G1WOOQS1G1W1G1WO=qQhO,5:PO>lQhO'#DoOOQW,5:Y,5:YOOQW,5:g,5:gOOQW,5:S,5:SO>vQhO,5:VO?bQ!fO'#FuOOQS'#Fu'#FuOOQS'#FV'#FVO@rQdO,59cOOQ[,59c,59cOAYQdO,59iOOQ[,59i,59iOApQdO,59lOOQ[,59l,59lOOQ[,59n,59nO)YQdO,59pOBWQhO'#EgOOQW'#Eg'#EgOBuQ`O1G0kO4oQhO1G0kOOQ[,59r,59rO)}QhO'#D[OOQ[,59t,59tOBzQ#tO,5:hOCVQhO'#F`OCdQ`O,5<lOOQS1G0q1G0qOOQS1G0s1G0sOOQS1G0u1G0uOCoQ`O1G0uOCtQdO'#EuOOQS1G0x1G0xOOQS1G1O1G1OODPQaO,5:UO7fQ`O1G1QOOQS1G1Q1G1QO0jQ`O1G1QOOQS-E9a-E9aOOQS1G1T1G1TODWQ!fO1G0hODnQ`O'#EdOOQO1G0h1G0hOOQO,5;x,5;xODsQdO,5;xOOQO-E9[-E9[OEQQ`O1G2TPOOO-E9Q-E9QPOOO1G.g1G.gOOQP7+$`7+$`OOQP7+%u7+%uO)YQdO7+%uOOQS1G0g1G0gOE]QaO'#F|OEgQ`O,5:lOElQ!fO'#FUOFjQdO'#FsOFtQ`O,59aOOQO1G0]1G0]OFyQ!bO7+%uO)YQdO1G/eOGUQhO1G/iOOQW1G/m1G/mOOQW1G/g1G/gOGgQhO,5<OOOQW-E9b-E9bOOQS7+&r7+&rOH_QhO'#D^OHmQhO'#F{OHxQ`O'#F{OH}Q`O,5:ZOISQ!bO'#D`O>vQhO'#DmOI_QhO'#DsOIgQhO'#DuOIlQ!jO'#FzOOQO'#Fz'#FzOIwQ`O'#DxOJPQ!bO'#DzOOQO'#Fy'#FyOJUQ`O1G/qOOQS-E9T-E9TOOQ[1G.}1G.}OOQ[1G/T1G/TOOQ[1G/W1G/WOOQ[1G/[1G/[OJZQdO,5;ROOQS7+&V7+&VOJ`Q`O7+&VOJeQhO'#D]OJmQ`O,59vO)}QhO,59vOOQ[1G0S1G0SOJuQ`O1G0SOJzQhO,5;zOOQO-E9^-E9^OOQS7+&a7+&aOKYQbO'#DSOOQO'#Ew'#EwOKhQ`O'#EvOOQO'#Ev'#EvOKsQ`O'#FaOK{QdO,5;aOOQS,5;a,5;aOOQ[1G/p1G/pOOQS7+&l7+&lO7fQ`O7+&lOLWQ!fO'#F]O)YQdO'#F]OM_QdO7+&SOOQO7+&S7+&SOOQO,5;O,5;OOOQO1G1d1G1dOMrQ!bO<<IaOM}QdO'#FZONXQ`O,5<hOOQP1G0W1G0WOOQS-E9S-E9SONaQdO'#FYONkQ`O,5<_OOQ]1G.{1G.{OOQP<<Ia<<IaONsQ`O<<IaONxQdO7+%POOQO'#D`'#D`O! PQ!bO7+%TO! XQhO'#FXO! fQ`O,5<gO)YQdO,5<gOOQW1G/u1G/uO! nQ`O,5:XO>vQhO'#DtOOQO,5:_,5:_O! sQhO,5:aO! {QhO,5:fO)YQdO,5:dOOQW7+%]7+%]OOQO'#Ei'#EiO!!SQ`O1G0mOOQS<<Iq<<IqO)YQdO,59wO!!vQhO1G/bOOQ[1G/b1G/bO!!}Q`O1G/bOOQW-E9U-E9UOOQ[7+%n7+%nOOQO,5;b,5;bOCwQdO'#FbOKsQ`O,5;{OOQS,5;{,5;{OOQS-E9_-E9_OOQS1G0{1G0{OOQS<<JW<<JWO!#VQ!fO,5;wOOQS-E9Z-E9ZOOQO<<In<<InOOQPAN>{AN>{O!$^Q`OAN>{O!$cQaO,5;uOOQO-E9X-E9XO!$mQdO,5;tOOQO-E9W-E9WOOQW<<Hk<<HkOOQW<<Ho<<HoO!$wQhO<<HoO!%YQhO'#D^O!%hQhO,5;sO!%sQ`O,5;sOOQO-E9V-E9VO!%xQdO1G2RO!&SQhO1G/sO!&[Q`O,5:`O>vQhO'#DwOOQO1G/{1G/{O!&aQ!bO1G0QO!&iQdO1G0OOJZQdO'#F_O!&pQ`O7+&XOOQW7+&X7+&XO!&xQ!bO1G/cOOQ[7+$|7+$|O!'TQhO7+$|P!'[Q`O'#FWOOQO,5;|,5;|OOQO-E9`-E9`OOQS1G1g1G1gOOQPG24gG24gO!'aQ`OAN>ZO)YQdO1G1_O!'fQ`O7+'mOOQO1G/z1G/zO!'nQ`O,5:cO!'sQhO7+%lOOQO,5;y,5;yOOQO-E9]-E9]OOQW<<Is<<IsOOQ[<<Hh<<HhPOQW,5;r,5;rOOQWG23uG23uO!'zQdO7+&yOOQO1G/}1G/}OOQO<<IW<<IW",
+    stateData: "!(_~O$_OS$`QQ~OWVO^_O`WOcYOdYOl`OmZOp[O#P]O#S^O#YdO#`eO#bfO#dgO#ghO#miO#ojO#rkO$ZRO$fTO~OQmOWVO^_O`WOcYOdYOl`OmZOp[O#P]O#S^O#YdO#`eO#bfO#dgO#ghO#miO#ojO#rkO$ZlO$fTO~O$X$qP~P!jO$`qO~O`YXcYXdYXmYXpYXsYX!eYX#PYX#SYX$YYX$f[X~OgYX~P$ZO$ZsO~O$fuO~O$fuO`$eXc$eXd$eXm$eXp$eXs$eX!e$eX#P$eX#S$eX$Y$eXg$eX~O$ZvO~O`xOcyOdyOmzOp{O#P|O#S!OO$Y}O~Os!RO!e!PO~P&^Of!XO$Z!TO$[!UO~O$Z!YO~OW!^O$Z![O$f!]O~OWVO^_O`WOcYOdYOmZOp[O#P]O#S^O$ZRO$fTO~OS!fOc!gOd!gOh!cOs!RO!Y!eO!]!jO!`!kO$]!bO~On!iO~P(dOQ!uOh!nOp!oOs!pOu!xOw!xO}!vO!q!wO$Z!mO$[!sO$j!qO~OS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO$]!bO~Os$tP~P)}Ow!}O!q!wO$Z!|O~Ow#PO$Z#PO~Oh#SOs!RO#p#UO~O$Z#WO~Oc#VX~P$ZOc#ZO~On#[O$X$qXr$qX~O$X$qXr$qX~P!jO$a#_O$b#_O$c#aO~Of#fO$Z!TO$[!UO~Os!RO!e!PO~Or$qP~P!jOh#pO~Oh#qO~Oo!xX!|!xX$f!zX~O$Z#rO~O$f#tO~Oo#uO!|#vO~O`xOcyOdyOmzOp{O~Os#Oa!e#Oa#P#Oa#S#Oa$Y#Oag#Oa~P-vOs#Ra!e#Ra#P#Ra#S#Ra$Y#Rag#Ra~P-vOS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO~OR#zOu#zOw#zO$]#wO$j!qO~P/VOn$QO!U#}O!e$OO~P(dOh$SO~O$]$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo$_O~P)YO`$YOc$YOl$YOm$YOn$YOr$aO~P)YOP$bOSvXcvXdvXhvXnvXyvX!YvX!]vX!`vX#[vX#^vX$]vX!WvXQvX`vXgvXlvXmvXpvXsvXuvXwvX}vX!qvX$ZvX$[vX$jvXovXrvX!evX$XvX$svX!}vX~Oy$cO#[$dO#^$eOn$tP~P)}Oh#qOS$hXc$hXd$hXn$hXy$hX!Y$hX!]$hX!`$hX#[$hX#^$hX$]$hXQ$hX`$hXg$hXl$hXm$hXp$hXs$hXu$hXw$hX}$hX!q$hX$Z$hX$[$hX$j$hXo$hXr$hX!e$hX$X$hX$s$hX!}$hX~Oh$iO~Oh$kO~O!U#}O!e$lOs$tXn$tX~Os!RO~On$oOy$cO~On$pO~Ow$qO!q!wO~Os$rO~Os!RO!U#}O~Os!RO#p$xO~O$Z#WOs#sX~O$s$|On#Ua$X#Uar#Ua~P)YOn$QX$X$QXr$QX~P!jOn#[O$X$qar$qa~O$a#_O$b#_O$c%TO~Oo%VO!|%WO~Os#Oi!e#Oi#P#Oi#S#Oi$Y#Oig#Oi~P-vOs#Qi!e#Qi#P#Qi#S#Qi$Y#Qig#Qi~P-vOs#Ri!e#Ri#P#Ri#S#Ri$Y#Rig#Ri~P-vOs$Oa!e$Oa~P&^Or%XO~Og$pP~P'oOg$gP~P)YOc!SXg!QX!U!QX!W!SX~Oc%aO!W%bO~Og%cO!U#}O~O!U#}OS$WXc$WXd$WXh$WXn$WXs$WX!Y$WX!]$WX!`$WX!e$WX$]$WX~On%gO!e$OO~P(dO!U#}OS!Xac!Xad!Xah!Xan!Xas!Xa!Y!Xa!]!Xa!`!Xa!e!Xa$]!Xag!Xa~O$]%hOg$oP~P/VOR#zOS!fOh%mOu#zOw#zO!Y%nO$]%lO$j!qO~Oy$cOQ$iX`$iXc$iXg$iXh$iXl$iXm$iXn$iXp$iXs$iXu$iXw$iX}$iX!q$iX$Z$iX$[$iX$j$iXo$iXr$iX~O`$YOc$YOg%wOl$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo%xO~P)YO`$YOc$YOl$YOm$YOn$YOr%yO~P)YOh%{OS#ZXc#ZXd#ZXn#ZX!Y#ZX!]#ZX!`#ZX$]#ZX~On%|O~Og&ROw&SO!r&SO~Os$SX!e$SXn$SX~P)}O!e$lOs$tan$ta~On&VO~Or&^O$Z&XO$j&WO~Og&_O~P&^Oy$cO!e&cO$s$|On#Ui$X#Uir#Ui~P)YO$r&fO~On$Qa$X$Qar$Qa~P!jOn#[O$X$qir$qi~O!e&iOg$pX~P&^Og&kO~Oy$cOQ#xXg#xXh#xXp#xXs#xXu#xXw#xX}#xX!e#xX!q#xX$Z#xX$[#xX$j#xX~O!e&mOg$gX~P)YOg&oO~Oo&pOy$cO!}&qO~OR#zOu#zOw#zO$]&sO$j!qO~O!U#}OS$Wac$Wad$Wah$Wan$Was$Wa!Y$Wa!]$Wa!`$Wa!e$Wa$]$Wa~Oc!dXg!QX!U!QX!e!QX~O!U#}O!e&uOg$oX~Oc&wO~Og&xO~Oc!mXg!mX!W!SX~OS!fOh&zO~O!U&|O~O!U&|O!W&}Og$nX~Oc'OOg!lX~O!W&}O~Og'PO~O$Z'QO~On'SO~Oc'TO!U#}O~Og'VOn'UO~Og'YO~O!U#}Os$Sa!e$San$Sa~OP$bOsvX!evXgvX~O$j&WOs#jX!e#jX~Os!RO!e'[O~Or'`O$Z&XO$j&WO~Oy$cOQ$PXh$PXn$PXp$PXs$PXu$PXw$PX}$PX!e$PX!q$PX$X$PX$Z$PX$[$PX$j$PX$s$PXr$PX~O!e&cO$s$|On#Uq$X#Uqr#Uq~P)YOo'eOy$cO!}'fO~Og#}X!e#}X~P'oO!e&iOg$pa~Og#|X!e#|X~P)YO!e&mOg$ga~Oo'eO~Og'kO~P)YOg'lO!W'mO~O$]'nOg#{X!e#{X~P/VO!e&uOg$oa~Og'sO~OS!fOh'uO~OS!fO~PGUO`'yOg'{O~OS#zac#zad#zah#za!Y#za!]#za!`#za$]#za~Og'}O~P!![Og'}On(OO~Oy$cOQ$Pah$Pan$Pap$Pas$Pau$Paw$Pa}$Pa!e$Pa!q$Pa$X$Pa$Z$Pa$[$Pa$j$Pa$s$Par$Pa~Oo(TO~Og#}a!e#}a~P&^Og#|a!e#|a~P)YOR#zOu#zOw#zO$]&sO$j&WO~Oc!fXg!QX!U!QX!e!QX~O!U#}Og#{a!e#{a~Oc(VO~O!e&uOg$oi~P)YOg!ai!U!ji~Og(XO~O!W(ZOg!ni~Og!li~P)YO`'yOg(^O~Oy$cOg!Pin!Pi~Og(_O~P!![On(`O~Og(aO~O!e&uOg$oq~Og(cO~OS!fO~P!$wOg#{q!e#{q~P)YO$_!r$`$j`$jy#S~",
+    goto: "7g$uPPPPP$vP$yP%S%f%S%x&[P%SP&b%SPP&hPPP&n&x&xPPPPP&xPP&xP'hP&xP&x(k&xP)Z)^)d)d)v)dP)dP)dP)d)dP*])dP*i*o+e+hP+k*i+n*i+q+w+z,Q+z)d,WPP,|-S%S-Y%S-`-`-f-jPP%SP%S%SP-p.l.y/Q$yP/ZP/^P$yP$yP$yP/d$yP/g/j/m/t$yP$yPP$yP/y$yP/|0S0c0}1]1c1m1s1y2P2V2a2g2m2s2y3PPPPPPPPPPPP3V3`P4U4X5]P5e6_6t+z7Q7T7WPP7^RrQ_aOPco!R#[%Pq_OP]^co|}!O!P!R#S#[#p%P&iqSOP]^co|}!O!P!R#S#[#p%P&iqUOP]^co|}!O!P!R#S#[#p%P&iQtTR#buQwWR#cxQ!VYR#dyQ#d!XS$h!t!uR%U#f!Z!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(b!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bb#z!c$W%b%m&z&}'m'u(ZU&Z$r&]'[R'Z&Y!Z!tdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bR$j!vQ&P$iR'W&Qq!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uQ#x!cW%s$W%m&z'uQ&t%bQ'w&}Q(U'mR(d(ZQ#VjQ$V!jQ$v#UR&a$xX%q$W%m&z'up!h`ei!c!d!e!r#}$O$P$S$g$i$l&Q&uW%p$W%m&z'uQ&{%nQ'v&|Q'w&}R(d(ZR$T!fR%j$SR'p&uR&{%nX%o$W%m&z'uR'v&|X%t$W%m&z'uX%r$W%m&z'u!Y!xdf!n!o!p#Z#q#v$[$^$`$c${%W%]%a&c&d&m&r&w'O'T'i'r'x(V(bQ!}gR$q#OQ!WYR#eyQ#d!WR%U#eQ!ZZR#gzQ!_[R#h{T!^[{Q#s!]R%_#tQ!SXQ!i`Q#TjQ#n!QQ$Q!dQ$n!zQ$t#RQ$w#VQ$z#YQ%g$PQ&`$vQ'^&[Q'a&aR(S']SnP!RQ#^oQ%O#[R&g%PZmPo!R#[%PQ$}#ZQ&e${R'd&dR$g!rQ'R%{R(['yR#OgR#QhR$s#QS&[$r&]R(Q'[V&Y$r&]'[R#YkQ#`qR%S#`QcOSoP!RU!lco%PR%P#[Q%]#q[&l%]&r'i'r'x(bQ&r%aQ'i&mQ'r&wQ'x'OR(b(VQ$[!nQ$^!oQ$`!pV%v$[$^$`Q&Q$iR'X&QQ&v%iS'q&v(WR(W'rQ&n%]R'j&nQ&j%YR'h&jQ!QXR#m!QQ&d${R'c&dQ#]nS%Q#]%RR%R#^Q'z'RR(]'zQ$m!yR&U$mQ&]$rR'_&]Q']&[R(R']Q#XkR$y#XQ$P!dR%f$P_bOPco!R#[%P^XOPco!R#[%PQ!`]Q!a^Q#i|Q#j}Q#k!OQ#l!PQ$u#SQ%Y#pR'g&iR%^#qQ!rdQ!{f[$X!n!o!p$[$^$`Q${#Zh%[#q%]%a&m&r&w'O'i'r'x(V(bQ%`#vQ%z$cS&b${&dQ&h%WQ'b&cR'|'T]$Z!n!o!p$[$^$`Q!d`U!ye!r$gQ#RiQ#y!cS#|!d$PQ$R!eQ%d#}Q%e$OQ%i$SS&O$i&QQ&T$lR'o&uQ#{!cW%s$W%m&z'uQ&t%bQ'w&}Q(U'mR(d(ZQ%u$WQ&y%mQ't&zR(Y'uR%k$SR%Z#pQpPR#o!RQ!zeQ$f!rR%}$g",
+    nodeNames: "\u26A0 Unit VariableName VariableName QueryCallee Comment StyleSheet RuleSet UniversalSelector TagSelector TagName NamespacedTagSelector NamespaceName TagName NestingSelector ClassSelector . ClassName PseudoClassSelector : :: PseudoClassName PseudoClassName ) ( ArgList ValueName ParenthesizedValue AtKeyword # ; ] [ BracketedValue } { BracedValue ColorLiteral NumberLiteral StringLiteral BinaryExpression BinOp CallExpression Callee IfExpression if ArgList IfBranch KeywordQuery FeatureQuery FeatureName BinaryQuery LogicOp ComparisonQuery CompareOp UnaryQuery UnaryQueryOp ParenthesizedQuery SelectorQuery selector ParenthesizedSelector StyleQuery style ParenthesedQuery CallQuery ArgList PropertyName , PropertyName UnaryQuery ParenthesedQuery BinaryQuery ParenthesedQuery ParenthesedQuery StyleFeature PropertyName StyleRange PseudoQuery CallLiteral CallTag ParenthesizedContent PseudoClassName ArgList IdSelector IdName AttributeSelector AttributeName NamespacedAttribute NamespaceName AttributeName MatchOp MatchFlag ChildSelector ChildOp DescendantSelector SiblingSelector SiblingOp Block Declaration PropertyName Important ImportStatement import Layer layer LayerName layer MediaStatement media CharsetStatement charset NamespaceStatement namespace NamespaceName KeyframesStatement keyframes KeyframeName KeyframeList KeyframeSelector KeyframeRangeName SupportsStatement supports ScopeStatement scope to FontFeatureStatement font-feature-values FontName AtRule Styles",
+    maxTerm: 174,
     nodeProps: [
       ["isolate", -2, 5, 39, ""],
       ["openedBy", 23, "(", 31, "[", 34, "{"],
       ["closedBy", 24, ")", 32, "]", 35, "}"]
     ],
     propSources: [cssHighlighting],
-    skippedNodes: [0, 5, 127],
+    skippedNodes: [0, 5, 130],
     repeatNodeCount: 17,
-    tokenData: "K`~R!bOX%ZX^&R^p%Zpq&Rqr)ers)vst+jtu2Xuv%Zvw3Rwx3dxy5Ryz5dz{5i{|6S|}:u}!O;W!O!P;u!P!Q<^!Q![=V![!]>Q!]!^>|!^!_?_!_!`@Z!`!a@n!a!b%Z!b!cAo!c!k%Z!k!lC|!l!u%Z!u!vC|!v!}%Z!}#OD_#O#P%Z#P#QDp#Q#R2X#R#]%Z#]#^ER#^#g%Z#g#hC|#h#o%Z#o#pIf#p#qIw#q#rJ`#r#sJq#s#y%Z#y#z&R#z$f%Z$f$g&R$g#BY%Z#BY#BZ&R#BZ$IS%Z$IS$I_&R$I_$I|%Z$I|$JO&R$JO$JT%Z$JT$JU&R$JU$KV%Z$KV$KW&R$KW&FU%Z&FU&FV&R&FV;'S%Z;'S;=`KY<%lO%Z`%^SOy%jz;'S%j;'S;=`%{<%lO%j`%oS!o`Oy%jz;'S%j;'S;=`%{<%lO%j`&OP;=`<%l%j~&Wh$[~OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%j~'yh$[~!o`OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%jj)jS$qYOy%jz;'S%j;'S;=`%{<%lO%j~)yWOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d<%lO)v~*hOw~~*kRO;'S)v;'S;=`*t;=`O)v~*wXOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d;=`<%l)v<%lO)v~+gP;=`<%l)vj+oYmYOy%jz!Q%j!Q![,_![!c%j!c!i,_!i#T%j#T#Z,_#Z;'S%j;'S;=`%{<%lO%jj,dY!o`Oy%jz!Q%j!Q![-S![!c%j!c!i-S!i#T%j#T#Z-S#Z;'S%j;'S;=`%{<%lO%jj-XY!o`Oy%jz!Q%j!Q![-w![!c%j!c!i-w!i#T%j#T#Z-w#Z;'S%j;'S;=`%{<%lO%jj.OYuY!o`Oy%jz!Q%j!Q![.n![!c%j!c!i.n!i#T%j#T#Z.n#Z;'S%j;'S;=`%{<%lO%jj.uYuY!o`Oy%jz!Q%j!Q![/e![!c%j!c!i/e!i#T%j#T#Z/e#Z;'S%j;'S;=`%{<%lO%jj/jY!o`Oy%jz!Q%j!Q![0Y![!c%j!c!i0Y!i#T%j#T#Z0Y#Z;'S%j;'S;=`%{<%lO%jj0aYuY!o`Oy%jz!Q%j!Q![1P![!c%j!c!i1P!i#T%j#T#Z1P#Z;'S%j;'S;=`%{<%lO%jj1UY!o`Oy%jz!Q%j!Q![1t![!c%j!c!i1t!i#T%j#T#Z1t#Z;'S%j;'S;=`%{<%lO%jj1{SuY!o`Oy%jz;'S%j;'S;=`%{<%lO%jd2[UOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jd2uS!yS!o`Oy%jz;'S%j;'S;=`%{<%lO%jb3WS^QOy%jz;'S%j;'S;=`%{<%lO%j~3gWOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{<%lO3d~4SRO;'S3d;'S;=`4];=`O3d~4`XOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{;=`<%l3d<%lO3d~5OP;=`<%l3dj5WShYOy%jz;'S%j;'S;=`%{<%lO%j~5iOg~n5pUWQyWOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jj6ZWyW#PQOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj6xU!o`Oy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%jj7cY!o`$gYOy%jz!Q%j!Q![7[![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj8WY!o`Oy%jz{%j{|8v|}%j}!O8v!O!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj8{U!o`Oy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj9fU!o`$gYOy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj:P[!o`$gYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj:zS!dYOy%jz;'S%j;'S;=`%{<%lO%jj;]WyWOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj;zU`YOy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%j~<cTyWOy%jz{<r{;'S%j;'S;=`%{<%lO%j~<yS!o`$]~Oy%jz;'S%j;'S;=`%{<%lO%jj=[[$gYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj>VUcYOy%jz![%j![!]>i!];'S%j;'S;=`%{<%lO%jj>pSdY!o`Oy%jz;'S%j;'S;=`%{<%lO%jj?RSnYOy%jz;'S%j;'S;=`%{<%lO%jh?dU!WWOy%jz!_%j!_!`?v!`;'S%j;'S;=`%{<%lO%jh?}S!WW!o`Oy%jz;'S%j;'S;=`%{<%lO%jl@bS!WW!ySOy%jz;'S%j;'S;=`%{<%lO%jj@uV!|Q!WWOy%jz!_%j!_!`?v!`!aA[!a;'S%j;'S;=`%{<%lO%jbAcS!|Q!o`Oy%jz;'S%j;'S;=`%{<%lO%jjArYOy%jz}%j}!OBb!O!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjBgW!o`Oy%jz!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjCW[lY!o`Oy%jz}%j}!OCP!O!Q%j!Q![CP![!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jhDRS!zWOy%jz;'S%j;'S;=`%{<%lO%jjDdSpYOy%jz;'S%j;'S;=`%{<%lO%jnDuSo^Oy%jz;'S%j;'S;=`%{<%lO%jjEWU!zWOy%jz#a%j#a#bEj#b;'S%j;'S;=`%{<%lO%jbEoU!o`Oy%jz#d%j#d#eFR#e;'S%j;'S;=`%{<%lO%jbFWU!o`Oy%jz#c%j#c#dFj#d;'S%j;'S;=`%{<%lO%jbFoU!o`Oy%jz#f%j#f#gGR#g;'S%j;'S;=`%{<%lO%jbGWU!o`Oy%jz#h%j#h#iGj#i;'S%j;'S;=`%{<%lO%jbGoU!o`Oy%jz#T%j#T#UHR#U;'S%j;'S;=`%{<%lO%jbHWU!o`Oy%jz#b%j#b#cHj#c;'S%j;'S;=`%{<%lO%jbHoU!o`Oy%jz#h%j#h#iIR#i;'S%j;'S;=`%{<%lO%jbIYS$pQ!o`Oy%jz;'S%j;'S;=`%{<%lO%jjIkSsYOy%jz;'S%j;'S;=`%{<%lO%jfI|U$cUOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jjJeSrYOy%jz;'S%j;'S;=`%{<%lO%jfJvU#PQOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%j`K]P;=`<%l%Z",
-    tokenizers: [descendant, unitToken, identifiers, queryIdentifiers, 1, 2, 3, 4, new LocalTokenGroup("m~RRYZ[z{a~~g~aO$_~~dP!P!Qg~lO$`~~", 28, 152)],
-    topRules: { "StyleSheet": [0, 6], "Styles": [1, 126] },
-    dynamicPrecedences: { "94": 1 },
-    specialized: [{ term: 147, get: (value) => spec_callee[value] || -1 }, { term: 148, get: (value) => spec_queryIdentifier[value] || -1 }, { term: 4, get: (value) => spec_QueryCallee[value] || -1 }, { term: 28, get: (value) => spec_AtKeyword[value] || -1 }, { term: 146, get: (value) => spec_identifier2[value] || -1 }],
-    tokenPrec: 2405
+    tokenData: "K`~R!bOX%ZX^&R^p%Zpq&Rqr)ers)vst+jtu2Xuv%Zvw3Rwx3dxy5Ryz5dz{5i{|6S|}:u}!O;W!O!P;u!P!Q<^!Q![=V![!]>Q!]!^>|!^!_?_!_!`@Z!`!a@n!a!b%Z!b!cAo!c!k%Z!k!lC|!l!u%Z!u!vC|!v!}%Z!}#OD_#O#P%Z#P#QDp#Q#R2X#R#]%Z#]#^ER#^#g%Z#g#hC|#h#o%Z#o#pIf#p#qIw#q#rJ`#r#sJq#s#y%Z#y#z&R#z$f%Z$f$g&R$g#BY%Z#BY#BZ&R#BZ$IS%Z$IS$I_&R$I_$I|%Z$I|$JO&R$JO$JT%Z$JT$JU&R$JU$KV%Z$KV$KW&R$KW&FU%Z&FU&FV&R&FV;'S%Z;'S;=`KY<%lO%Z`%^SOy%jz;'S%j;'S;=`%{<%lO%j`%oS!r`Oy%jz;'S%j;'S;=`%{<%lO%j`&OP;=`<%l%j~&Wh$_~OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%j~'yh$_~!r`OX%jX^'r^p%jpq'rqy%jz#y%j#y#z'r#z$f%j$f$g'r$g#BY%j#BY#BZ'r#BZ$IS%j$IS$I_'r$I_$I|%j$I|$JO'r$JO$JT%j$JT$JU'r$JU$KV%j$KV$KW'r$KW&FU%j&FU&FV'r&FV;'S%j;'S;=`%{<%lO%jj)jS$sYOy%jz;'S%j;'S;=`%{<%lO%j~)yWOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d<%lO)v~*hOw~~*kRO;'S)v;'S;=`*t;=`O)v~*wXOY)vZr)vrs*cs#O)v#O#P*h#P;'S)v;'S;=`+d;=`<%l)v<%lO)v~+gP;=`<%l)vj+oYmYOy%jz!Q%j!Q![,_![!c%j!c!i,_!i#T%j#T#Z,_#Z;'S%j;'S;=`%{<%lO%jj,dY!r`Oy%jz!Q%j!Q![-S![!c%j!c!i-S!i#T%j#T#Z-S#Z;'S%j;'S;=`%{<%lO%jj-XY!r`Oy%jz!Q%j!Q![-w![!c%j!c!i-w!i#T%j#T#Z-w#Z;'S%j;'S;=`%{<%lO%jj.OYuY!r`Oy%jz!Q%j!Q![.n![!c%j!c!i.n!i#T%j#T#Z.n#Z;'S%j;'S;=`%{<%lO%jj.uYuY!r`Oy%jz!Q%j!Q![/e![!c%j!c!i/e!i#T%j#T#Z/e#Z;'S%j;'S;=`%{<%lO%jj/jY!r`Oy%jz!Q%j!Q![0Y![!c%j!c!i0Y!i#T%j#T#Z0Y#Z;'S%j;'S;=`%{<%lO%jj0aYuY!r`Oy%jz!Q%j!Q![1P![!c%j!c!i1P!i#T%j#T#Z1P#Z;'S%j;'S;=`%{<%lO%jj1UY!r`Oy%jz!Q%j!Q![1t![!c%j!c!i1t!i#T%j#T#Z1t#Z;'S%j;'S;=`%{<%lO%jj1{SuY!r`Oy%jz;'S%j;'S;=`%{<%lO%jd2[UOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jd2uS!|S!r`Oy%jz;'S%j;'S;=`%{<%lO%jb3WS^QOy%jz;'S%j;'S;=`%{<%lO%j~3gWOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{<%lO3d~4SRO;'S3d;'S;=`4];=`O3d~4`XOY3dZw3dwx*cx#O3d#O#P4P#P;'S3d;'S;=`4{;=`<%l3d<%lO3d~5OP;=`<%l3dj5WShYOy%jz;'S%j;'S;=`%{<%lO%j~5iOg~n5pUWQyWOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jj6ZWyW#SQOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj6xU!r`Oy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%jj7cY!r`$jYOy%jz!Q%j!Q![7[![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj8WY!r`Oy%jz{%j{|8v|}%j}!O8v!O!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj8{U!r`Oy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj9fU!r`$jYOy%jz!Q%j!Q![9_![;'S%j;'S;=`%{<%lO%jj:P[!r`$jYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj:zS!eYOy%jz;'S%j;'S;=`%{<%lO%jj;]WyWOy%jz!O%j!O!P6s!P!Q%j!Q![9x![;'S%j;'S;=`%{<%lO%jj;zU`YOy%jz!Q%j!Q![7[![;'S%j;'S;=`%{<%lO%j~<cTyWOy%jz{<r{;'S%j;'S;=`%{<%lO%j~<yS!r`$`~Oy%jz;'S%j;'S;=`%{<%lO%jj=[[$jYOy%jz!O%j!O!P7[!P!Q%j!Q![9x![!g%j!g!h8R!h#X%j#X#Y8R#Y;'S%j;'S;=`%{<%lO%jj>VUcYOy%jz![%j![!]>i!];'S%j;'S;=`%{<%lO%jj>pSdY!r`Oy%jz;'S%j;'S;=`%{<%lO%jj?RSnYOy%jz;'S%j;'S;=`%{<%lO%jh?dU!WWOy%jz!_%j!_!`?v!`;'S%j;'S;=`%{<%lO%jh?}S!WW!r`Oy%jz;'S%j;'S;=`%{<%lO%jl@bS!WW!|SOy%jz;'S%j;'S;=`%{<%lO%jj@uV#PQ!WWOy%jz!_%j!_!`?v!`!aA[!a;'S%j;'S;=`%{<%lO%jbAcS#PQ!r`Oy%jz;'S%j;'S;=`%{<%lO%jjArYOy%jz}%j}!OBb!O!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjBgW!r`Oy%jz!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jjCW[lY!r`Oy%jz}%j}!OCP!O!Q%j!Q![CP![!c%j!c!}CP!}#T%j#T#oCP#o;'S%j;'S;=`%{<%lO%jhDRS!}WOy%jz;'S%j;'S;=`%{<%lO%jjDdSpYOy%jz;'S%j;'S;=`%{<%lO%jnDuSo^Oy%jz;'S%j;'S;=`%{<%lO%jjEWU!}WOy%jz#a%j#a#bEj#b;'S%j;'S;=`%{<%lO%jbEoU!r`Oy%jz#d%j#d#eFR#e;'S%j;'S;=`%{<%lO%jbFWU!r`Oy%jz#c%j#c#dFj#d;'S%j;'S;=`%{<%lO%jbFoU!r`Oy%jz#f%j#f#gGR#g;'S%j;'S;=`%{<%lO%jbGWU!r`Oy%jz#h%j#h#iGj#i;'S%j;'S;=`%{<%lO%jbGoU!r`Oy%jz#T%j#T#UHR#U;'S%j;'S;=`%{<%lO%jbHWU!r`Oy%jz#b%j#b#cHj#c;'S%j;'S;=`%{<%lO%jbHoU!r`Oy%jz#h%j#h#iIR#i;'S%j;'S;=`%{<%lO%jbIYS$rQ!r`Oy%jz;'S%j;'S;=`%{<%lO%jjIkSsYOy%jz;'S%j;'S;=`%{<%lO%jfI|U$fUOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%jjJeSrYOy%jz;'S%j;'S;=`%{<%lO%jfJvU#SQOy%jz!_%j!_!`2n!`;'S%j;'S;=`%{<%lO%j`K]P;=`<%l%Z",
+    tokenizers: [descendant, unitToken, identifiers, queryIdentifiers, 1, 2, 3, 4, new LocalTokenGroup("m~RRYZ[z{a~~g~aO$b~~dP!P!Qg~lO$c~~", 28, 155)],
+    topRules: { "StyleSheet": [0, 6], "Styles": [1, 129] },
+    dynamicPrecedences: { "97": 1 },
+    specialized: [{ term: 150, get: (value) => spec_callee[value] || -1 }, { term: 151, get: (value) => spec_queryIdentifier[value] || -1 }, { term: 4, get: (value) => spec_QueryCallee[value] || -1 }, { term: 28, get: (value) => spec_AtKeyword[value] || -1 }, { term: 149, get: (value) => spec_identifier2[value] || -1 }],
+    tokenPrec: 2444
   });
 
-  // node_modules/@codemirror/lang-css/dist/index.js
+  // node_modules/.deno/@codemirror+lang-css@6.3.1/node_modules/@codemirror/lang-css/dist/index.js
   var _properties = null;
   function properties() {
     if (!_properties && typeof document == "object" && document.body) {
@@ -26590,30 +26597,30 @@
       let known = VariablesByNode.get(node);
       if (known)
         return known;
-      let result = [], seen = /* @__PURE__ */ new Set(), cursor2 = node.cursor(IterMode.IncludeAnonymous);
+      let result2 = [], seen = /* @__PURE__ */ new Set(), cursor2 = node.cursor(IterMode.IncludeAnonymous);
       if (cursor2.firstChild())
         do {
           for (let option of variableNames(doc2, cursor2.node, isVariable))
             if (!seen.has(option.label)) {
               seen.add(option.label);
-              result.push(option);
+              result2.push(option);
             }
         } while (cursor2.nextSibling());
-      VariablesByNode.set(node, result);
-      return result;
+      VariablesByNode.set(node, result2);
+      return result2;
     } else {
-      let result = [], seen = /* @__PURE__ */ new Set();
+      let result2 = [], seen = /* @__PURE__ */ new Set();
       node.cursor().iterate((node2) => {
         var _a2;
         if (isVariable(node2) && node2.matchContext(declSelector) && ((_a2 = node2.node.nextSibling) === null || _a2 === void 0 ? void 0 : _a2.name) == ":") {
           let name2 = doc2.sliceString(node2.from, node2.to);
           if (!seen.has(name2)) {
             seen.add(name2);
-            result.push({ label: name2, type: "variable" });
+            result2.push({ label: name2, type: "variable" });
           }
         }
       });
-      return result;
+      return result2;
     }
   }
   var defineCSSCompletionSource = (isVariable) => (context) => {
@@ -26673,7 +26680,7 @@
     return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
   }
 
-  // node_modules/@lezer/html/dist/index.js
+  // node_modules/.deno/@lezer+html@1.3.13/node_modules/@lezer/html/dist/index.js
   var scriptText = 55;
   var StartCloseScriptTag = 1;
   var styleText = 56;
@@ -27017,7 +27024,7 @@
     });
   }
 
-  // node_modules/@codemirror/lang-html/dist/index.js
+  // node_modules/.deno/@codemirror+lang-html@6.4.12/node_modules/@codemirror/lang-html/dist/index.js
   var Targets = ["_blank", "_self", "_top", "_parent"];
   var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
   var Methods = ["get", "post", "put", "delete"];
@@ -27706,24 +27713,35 @@
     ]);
   }
   var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
+  function isClosed(doc2, elt2, name2) {
+    var _a2;
+    for (; ; ) {
+      if (((_a2 = elt2.lastChild) === null || _a2 === void 0 ? void 0 : _a2.name) != "CloseTag")
+        return false;
+      let next = elt2.parent;
+      if (!next || elementName2(doc2, next) != name2)
+        return true;
+      elt2 = next;
+    }
+  }
   var autoCloseTags2 = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, text, insertTransaction) => {
     if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
       return false;
     let base2 = insertTransaction(), { state: state2 } = base2;
     let closeTags = state2.changeByRange((range) => {
-      var _a2, _b, _c;
+      var _a2;
       let didType = state2.doc.sliceString(range.from - 1, range.to) == text;
       let { head } = range, after = syntaxTree(state2).resolveInner(head, -1), name2;
       if (didType && text == ">" && after.name == "EndTag") {
         let tag = after.parent;
-        if (((_b = (_a2 = tag.parent) === null || _a2 === void 0 ? void 0 : _a2.lastChild) === null || _b === void 0 ? void 0 : _b.name) != "CloseTag" && (name2 = elementName2(state2.doc, tag.parent, head)) && !selfClosers2.has(name2)) {
+        if ((name2 = elementName2(state2.doc, tag.parent, head)) && !selfClosers2.has(name2) && !isClosed(state2.doc, tag.parent, name2)) {
           let to2 = head + (state2.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
           let insert2 = `</${name2}>`;
           return { range, changes: { from: head, to: to2, insert: insert2 } };
         }
       } else if (didType && text == "/" && after.name == "IncompleteCloseTag") {
         let tag = after.parent;
-        if (after.from == head - 2 && ((_c = tag.lastChild) === null || _c === void 0 ? void 0 : _c.name) != "CloseTag" && (name2 = elementName2(state2.doc, tag, head)) && !selfClosers2.has(name2)) {
+        if (after.from == head - 2 && ((_a2 = tag.lastChild) === null || _a2 === void 0 ? void 0 : _a2.name) != "CloseTag" && (name2 = elementName2(state2.doc, tag, head)) && !selfClosers2.has(name2)) {
           let to2 = head + (state2.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
           let insert2 = `${name2}>`;
           return {
@@ -27746,7 +27764,7 @@
     return true;
   });
 
-  // node_modules/@lezer/json/dist/index.js
+  // node_modules/.deno/@lezer+json@1.0.3/node_modules/@lezer/json/dist/index.js
   var jsonHighlighting = styleTags({
     String: tags.string,
     Number: tags.number,
@@ -27778,7 +27796,7 @@
     tokenPrec: 0
   });
 
-  // node_modules/@codemirror/lang-json/dist/index.js
+  // node_modules/.deno/@codemirror+lang-json@6.0.2/node_modules/@codemirror/lang-json/dist/index.js
   var jsonLanguage = /* @__PURE__ */ LRLanguage.define({
     name: "json",
     parser: /* @__PURE__ */ parser4.configure({
@@ -27801,7 +27819,7 @@
     return new LanguageSupport(jsonLanguage);
   }
 
-  // node_modules/@lezer/markdown/dist/index.js
+  // node_modules/.deno/@lezer+markdown@1.7.2/node_modules/@lezer/markdown/dist/index.js
   var CompositeBlock = class _CompositeBlock {
     static create(type, value, from, parentHash, end) {
       let hash2 = parentHash + (parentHash << 8) + type + (value << 4) | 0;
@@ -27985,10 +28003,10 @@
     scrub() {
       if (!this.baseIndent)
         return this.text;
-      let result = "";
+      let result2 = "";
       for (let i2 = 0; i2 < this.basePos; i2++)
-        result += " ";
-      return result + this.text.slice(this.basePos);
+        result2 += " ";
+      return result2 + this.text.slice(this.basePos);
     }
   };
   function skipForList(bl, cx, line) {
@@ -28479,9 +28497,9 @@
       start: for (; ; ) {
         for (let type of this.parser.blockParsers)
           if (type) {
-            let result = type(this, line);
-            if (result != false) {
-              if (result == true)
+            let result2 = type(this, line);
+            if (result2 != false) {
+              if (result2 == true)
                 return null;
               line.forward();
               continue start;
@@ -28884,9 +28902,9 @@
         let next = cx.char(pos);
         for (let token of this.inlineParsers)
           if (token) {
-            let result = token(cx, next, pos);
-            if (result >= 0) {
-              pos = result;
+            let result2 = token(cx, next, pos);
+            if (result2 >= 0) {
+              pos = result2;
               continue outer;
             }
           }
@@ -29369,13 +29387,13 @@
         else
           this.parts[i2] = element;
       }
-      let result = [];
+      let result2 = [];
       for (let i2 = from; i2 < this.parts.length; i2++) {
         let part = this.parts[i2];
         if (part instanceof Element2)
-          result.push(part);
+          result2.push(part);
       }
-      return result;
+      return result2;
     }
     /**
     Find an opening delimiter of the given type. Returns `null` if
@@ -29748,11 +29766,11 @@
   var emailRE = /[\w.+-]+@[\w-]+(\.[\w.-]+)+/gy;
   var xmppResourceRE = /\/[a-zA-Z\d@.]+/gy;
   function count(str, from, to, ch) {
-    let result = 0;
+    let result2 = 0;
     for (let i2 = from; i2 < to; i2++)
       if (str[i2] == ch)
-        result++;
-    return result;
+        result2++;
+    return result2;
   }
   function autolinkURLEnd(text, from) {
     urlRE.lastIndex = from;
@@ -29865,7 +29883,7 @@
     }]
   };
 
-  // node_modules/@codemirror/lang-markdown/dist/index.js
+  // node_modules/.deno/@codemirror+lang-markdown@6.5.2/node_modules/@codemirror/lang-markdown/dist/index.js
   var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
   var headingProp = /* @__PURE__ */ new NodeProp();
   var commonmark = /* @__PURE__ */ parser5.configure({
@@ -29952,15 +29970,15 @@
       this.item = item;
     }
     blank(maxWidth, trailing = true) {
-      let result = this.spaceBefore + (this.node.name == "Blockquote" ? ">" : "");
+      let result2 = this.spaceBefore + (this.node.name == "Blockquote" ? ">" : "");
       if (maxWidth != null) {
-        while (result.length < maxWidth)
-          result += " ";
-        return result;
+        while (result2.length < maxWidth)
+          result2 += " ";
+        return result2;
       } else {
-        for (let i2 = this.to - this.from - result.length - this.spaceAfter.length; i2 > 0; i2--)
-          result += " ";
-        return result + (trailing ? this.spaceAfter : "");
+        for (let i2 = this.to - this.from - result2.length - this.spaceAfter.length; i2 > 0; i2--)
+          result2 += " ";
+        return result2 + (trailing ? this.spaceAfter : "");
       }
     }
     marker(doc2, add2) {
@@ -30056,6 +30074,8 @@
         return dont = { range };
       let emptyLine = pos >= inner.to - inner.spaceAfter.length && !/\S/.test(line.text.slice(inner.to));
       if (inner.item && emptyLine) {
+        if (inner.item.from < line.from && !/^[\s>]*$/.test(line.text.slice(0, inner.to)))
+          return dont = { range };
         let first = inner.node.firstChild, second = inner.node.getChild("ListItem", "ListItem");
         if (first.to >= pos || second && second.to < pos || line.from > 0 && !/[^\s>]/.test(doc2.lineAt(line.from - 1).text) || config2.nonTightLists === false) {
           let next = context.length > 1 ? context[context.length - 2] : null;
@@ -30243,8 +30263,8 @@
   function htmlTagCompletions() {
     if (_tagCompletions)
       return _tagCompletions;
-    let result = htmlCompletionSource(new CompletionContext(EditorState.create({ extensions: htmlNoMatch }), 0, true));
-    return _tagCompletions = result ? result.options : [];
+    let result2 = htmlCompletionSource(new CompletionContext(EditorState.create({ extensions: htmlNoMatch }), 0, true));
+    return _tagCompletions = result2 ? result2.options : [];
   }
   var nonPlainText = /code|horizontalrule|html|link|comment|processing|escape|entity|image|mark|url/i;
   var pasteURLAsLink = /* @__PURE__ */ EditorView.domEventHandlers({
@@ -30284,7 +30304,7 @@
     }
   });
 
-  // node_modules/@codemirror/theme-one-dark/dist/index.js
+  // node_modules/.deno/@codemirror+theme-one-dark@6.1.3/node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -30802,4 +30822,158 @@
     characters: state.doc.length,
     lines: state.doc.lines
   }));
+
+  // packages/hub/src/project-history.js
+  var PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
+  var MAX_FILES = 64;
+  var MAX_FILE_BYTES = 70 * 1024 * 1024;
+  var MAX_CONFIG_BYTES = 64e3;
+  var MAX_SNAPSHOT_BYTES = 70 * 1024 * 1024;
+  function own(object, key) {
+    return Object.prototype.hasOwnProperty.call(object, key);
+  }
+  function jsonValue(value, label) {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (Array.isArray(value)) return value.map((item) => jsonValue(item, label));
+    if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+      return Object.fromEntries(Object.keys(value).sort().map((key) => [key, jsonValue(value[key], label)]));
+    }
+    throw new Error(`${label} must contain only JSON values`);
+  }
+  function same(left, right) {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+  function fileMap(snapshot) {
+    return new Map(snapshot.files.map((file) => [file.path, file.content]));
+  }
+  function normalizeProjectSnapshot(value = {}) {
+    const sourceFiles = Array.isArray(value.files) ? value.files : [];
+    if (sourceFiles.length > MAX_FILES) throw new Error(`Project snapshot exceeds ${MAX_FILES} files`);
+    const seen = /* @__PURE__ */ new Set();
+    const files = sourceFiles.map((file) => {
+      const path = String(file?.path || "");
+      const content2 = String(file?.content ?? "");
+      if (!PATH.test(path) || path.includes("//")) throw new Error(`Invalid project file path: ${path}`);
+      if (seen.has(path)) throw new Error(`Duplicate project file path: ${path}`);
+      if (new TextEncoder().encode(content2).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
+      seen.add(path);
+      return Object.freeze({ path, content: content2 });
+    }).sort((left, right) => left.path.localeCompare(right.path));
+    const config2 = jsonValue(value.config ?? {}, "Project configuration");
+    if (!config2 || Array.isArray(config2) || typeof config2 !== "object") throw new Error("Project configuration must be an object");
+    if (new TextEncoder().encode(JSON.stringify(config2)).byteLength > MAX_CONFIG_BYTES) throw new Error("Project configuration is too large");
+    if (new TextEncoder().encode(JSON.stringify({ files, config: config2 })).byteLength > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
+    return Object.freeze({ files: Object.freeze(files), config: Object.freeze(config2) });
+  }
+  function textSplice(before, after) {
+    let start = 0;
+    const common = Math.min(before.length, after.length);
+    while (start < common && before.charCodeAt(start) === after.charCodeAt(start)) start++;
+    let beforeEnd = before.length;
+    let afterEnd = after.length;
+    while (beforeEnd > start && afterEnd > start && before.charCodeAt(beforeEnd - 1) === after.charCodeAt(afterEnd - 1)) {
+      beforeEnd--;
+      afterEnd--;
+    }
+    return Object.freeze({ start, remove: before.slice(start, beforeEnd), insert: after.slice(start, afterEnd) });
+  }
+  function configDiff(before, after, path, operations) {
+    if (same(before, after)) return;
+    const beforeObject = before && typeof before === "object" && !Array.isArray(before);
+    const afterObject = after && typeof after === "object" && !Array.isArray(after);
+    if (!beforeObject || !afterObject) {
+      operations.push(Object.freeze({ op: "set", path: Object.freeze(path), before, value: after }));
+      return;
+    }
+    const keys2 = [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].sort();
+    for (const key of keys2) {
+      if (!own(after, key)) operations.push(Object.freeze({ op: "delete", path: Object.freeze([...path, key]), before: before[key] }));
+      else if (!own(before, key)) operations.push(Object.freeze({ op: "set", path: Object.freeze([...path, key]), absent: true, value: after[key] }));
+      else configDiff(before[key], after[key], [...path, key], operations);
+    }
+  }
+  function diffProjectSnapshots(beforeValue, afterValue) {
+    const before = normalizeProjectSnapshot(beforeValue);
+    const after = normalizeProjectSnapshot(afterValue);
+    const beforeFiles = fileMap(before);
+    const afterFiles = fileMap(after);
+    const files = [];
+    for (const path of [.../* @__PURE__ */ new Set([...beforeFiles.keys(), ...afterFiles.keys()])].sort()) {
+      if (!afterFiles.has(path)) files.push(Object.freeze({ op: "delete", path, before: beforeFiles.get(path) }));
+      else if (!beforeFiles.has(path)) files.push(Object.freeze({ op: "add", path, content: afterFiles.get(path) }));
+      else if (beforeFiles.get(path) !== afterFiles.get(path)) files.push(Object.freeze({ op: "splice", path, ...textSplice(beforeFiles.get(path), afterFiles.get(path)) }));
+    }
+    const config2 = [];
+    configDiff(before.config, after.config, [], config2);
+    return Object.freeze({ version: 1, files: Object.freeze(files), config: Object.freeze(config2) });
+  }
+  function projectPatchIsEmpty(patch) {
+    return patch?.version === 1 && patch.files?.length === 0 && patch.config?.length === 0;
+  }
+
+  // packages/website/project-editor-guest.js
+  if (!globalThis.TextEncoder) {
+    globalThis.TextEncoder = class TextEncoder {
+      encode(value) {
+        let byteLength = 0;
+        for (const character of String(value)) {
+          const point = character.codePointAt(0);
+          byteLength += point <= 127 ? 1 : point <= 2047 ? 2 : point <= 65535 ? 3 : 4;
+        }
+        return { byteLength };
+      }
+    };
+  }
+  if (!globalThis.structuredClone) globalThis.structuredClone = (value) => JSON.parse(JSON.stringify(value));
+  var history2 = null;
+  function normalizeHistory(value) {
+    if (!value || typeof value !== "object") throw new TypeError("Project editor history is required");
+    const snapshot = normalizeProjectSnapshot(value.snapshot);
+    const snapshots = Array.isArray(value.snapshots) && value.snapshots.length ? value.snapshots.map(normalizeProjectSnapshot) : [snapshot];
+    const patches = Array.isArray(value.patches) ? value.patches : [];
+    const versionTimes = Array.isArray(value.versionTimes) ? value.versionTimes.map(Number) : [];
+    if (patches.length !== snapshots.length || patches.length !== versionTimes.length) {
+      throw new Error("Project editor history arrays must have equal lengths");
+    }
+    return {
+      snapshot,
+      checkpoint: normalizeProjectSnapshot(value.checkpoint || snapshots.at(-1)),
+      snapshots,
+      patches,
+      versionTimes,
+      createdAt: Number(value.createdAt || versionTimes[0] || Date.now()),
+      lastVersionAt: Number(value.lastVersionAt || versionTimes.at(-1) || Date.now())
+    };
+  }
+  function result() {
+    return JSON.stringify(history2);
+  }
+  globalThis.__resourcesProjectHistoryInitialize = (json2) => {
+    history2 = normalizeHistory(JSON.parse(json2));
+    return result();
+  };
+  globalThis.__resourcesProjectHistorySetCurrent = (json2) => {
+    if (!history2) throw new Error("Project editor history is not initialized");
+    history2.snapshot = normalizeProjectSnapshot(JSON.parse(json2).snapshot);
+    return result();
+  };
+  globalThis.__resourcesProjectHistoryCheckpoint = (json2) => {
+    if (!history2) throw new Error("Project editor history is not initialized");
+    const request = JSON.parse(json2);
+    const snapshot = normalizeProjectSnapshot(request.snapshot);
+    const now = Number(request.now || Date.now());
+    const interval = Number(request.checkpointIntervalMs);
+    history2.snapshot = snapshot;
+    if (request.destructive !== true && now - history2.lastVersionAt < interval) return result();
+    const patch = diffProjectSnapshots(history2.snapshots.at(-1), snapshot);
+    if (projectPatchIsEmpty(patch)) return result();
+    history2.patches.push(patch);
+    history2.snapshots.push(snapshot);
+    history2.versionTimes.push(now);
+    history2.checkpoint = snapshot;
+    history2.lastVersionAt = now;
+    return result();
+  };
+  globalThis.__resourcesProjectHistoryInspect = () => result();
 })();

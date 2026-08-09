@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
 const guest = await build({
-  entryPoints: [join(directory, "../../packages/code-editor-use/src/guest.js")],
+  entryPoints: [join(directory, "project-editor-guest.js")],
   bundle: true,
   format: "iife",
   platform: "neutral",

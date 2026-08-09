@@ -85,6 +85,11 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
         throw error;
       }
     },
+    callGuest(name, payload) {
+      if (destroyed) throw new Error("Editor sandbox has been disposed");
+      if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
+      return sandbox.callJsonFunction(name, payload);
+    },
     focus() { root.querySelector(".cm-content")?.focus(); },
     destroy() {
       if (destroyed) return;
