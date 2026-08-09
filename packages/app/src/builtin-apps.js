@@ -280,6 +280,7 @@ export const BUILTIN_APPS = [
   {
     name: "DOM Use Todos",
     subdomain: "dom-use-todos",
+    aliases: ["todo"],
     kind: "sandboxed app",
     description: "QuickJS guest DOM todo app with schema-bound rendering.",
     handler: domUseTodosHandler,

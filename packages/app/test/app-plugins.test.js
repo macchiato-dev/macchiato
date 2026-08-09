@@ -46,3 +46,15 @@ test("plugins persist inspectable CLI contracts without executable functions", (
   assert.deepEqual(app.commands, { export: { description: "Export the app as a static directory." } });
   assert.equal(JSON.stringify(app.options).includes("exportFocusedApp"), false);
 });
+
+test("the todo source hostname resolves through the declarative DOM Use Todos app", () => {
+  const db = new DatabaseSync(":memory:");
+  initSqliteStore(db);
+  installAppPlugins(db, ["dom-use-todos"]);
+
+  const canonical = getDeclarativeApp(db, "dom-use-todos");
+  const alias = getDeclarativeApp(db, "todo");
+  assert.equal(alias.subdomain, canonical.subdomain);
+  assert.equal(alias.handlerName, canonical.handlerName);
+  assert.deepEqual(alias.aliases, ["todo"]);
+});
