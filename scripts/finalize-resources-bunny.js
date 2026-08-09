@@ -28,7 +28,7 @@ const objectPath = join(out, "site", storagePrefix, "-", "edge", `resources-appl
 await mkdir(dirname(objectPath), { recursive: true });
 await copyFile(applicationPath, objectPath);
 
-for (const filename of ["resources-bunny.js", "resources-bunny-module-origin.js"]) {
+for (const filename of ["resources-bunny.js"]) {
   const path = join(out, filename);
   let source = await readFile(path, "utf8");
   source = replaceRequired(source, revisionMarker, revision, filename);

@@ -439,8 +439,7 @@ node --test \
 deno check \
   --config packages/website/deno.json \
   packages/website/bunny-bootstrap.js \
-  packages/website/bunny-application.js \
-  packages/website/bunny-module-origin.js
+  packages/website/bunny-application.js
 ```
 
 To inspect only the generated documents without emulating Bunny Storage:
@@ -462,13 +461,12 @@ For a reproducible local build:
 ./scripts/build-resources-bunny.sh
 ```
 
-This produces two copy-and-paste Edge Scripts, one deferred application bundle,
+This produces one copy-and-paste Edge Script, one deferred application bundle,
 and the validated Storage objects:
 
 ```text
 dist/resources-bunny/
   resources-bunny.js                 small public bootstrap
-  resources-bunny-module-origin.js   authenticated code origin
   resources-application.js           inspectable copy of deferred bundle
   site/resources-co-<sha>/
     manifest.json
@@ -476,10 +474,10 @@ dist/resources-bunny/
     ...published site objects
 ```
 
-The bootstrap and module-origin scripts embed the seven-character Git revision,
-the deferred object's content-addressed name, and its SHA-256. These are build
-facts, not mutable environment variables. The module is one self-contained
-bundle: it does not remotely import a tree of files.
+The bootstrap embeds the seven-character Git revision, the deferred object's
+content-addressed name, and its SHA-256. These are build facts, not mutable
+environment variables. The module is one self-contained bundle: it does not
+remotely import a tree of files.
 
 ### Update an existing staging deployment manually
 
@@ -488,14 +486,9 @@ bundle: it does not remotely import a tree of files.
    root. This creates the revisioned directory already embedded in the
    function. Upload its `manifest.json` last, then keep older revisioned
    directories until the new function is deployed and verified.
-3. Replace the main staging Edge Script contents with
-   `dist/resources-bunny/resources-bunny.js`, then save and deploy it. Replace
-   the separate module-origin Edge Script with
-   `dist/resources-bunny/resources-bunny-module-origin.js`.
-4. Give both scripts the same `EDGE_MODULE_API_KEY` secret. Set
-   `EDGE_MODULE_ORIGIN` on the main script to the module-origin URL ending in
-   `/resources-application.js`.
-5. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
+3. Replace the staging Edge Script contents with
+   `dist/resources-bunny/resources-bunny.js`, then save and deploy it.
+4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
    and both locale choices before testing OAuth.
 
 For cacheable anonymous HTML, configure Bunny's cookie vary list with
@@ -509,20 +502,15 @@ assets may retain their long public lifetime.
 1. Build the deployment and upload the *contents* of
    `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
    The build-created revision directory is part of every uploaded object key.
-2. Create two Bunny standalone Edge Scripts. The build entrypoints are
-   `packages/website/bunny-bootstrap.js` and
-   `packages/website/bunny-module-origin.js`; deployment normally pastes their
-   corresponding bundles from `dist/resources-bunny/`.
+2. Create one Bunny standalone Edge Script. Its build entrypoint is
+   `packages/website/bunny-bootstrap.js`; deployment normally pastes
+   `dist/resources-bunny/resources-bunny.js`.
 3. Configure the main Resources.co script with:
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
      if required by the selected endpoint.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
-   - `EDGE_MODULE_ORIGIN`: exact HTTPS module-origin URL ending in
-     `/resources-application.js`.
-   - `EDGE_MODULE_API_KEY`: a high-entropy environment **secret** shared only
-     with the module-origin script.
    - `DEFERRED_PREWARM_DELAY_MS`: optional delay after an anonymous fast home
      response; defaults to 75 ms, is capped at five seconds, and `0` disables
      prewarming.
@@ -542,21 +530,9 @@ assets may retain their long public lifetime.
      planned query/mutation capability split; it is not used by the current
      adapter yet.
 
-4. Configure the module-origin script with only:
-
-   - `BUNNY_STORAGE_ORIGIN`;
-   - `STORAGE_API_KEY`;
-   - the same `EDGE_MODULE_API_KEY` secret.
-
-   The object key and digest are compiled into the script. Do not expose the
-   Storage key to the main script through the module URL, query parameters, or
-   logs. The origin rejects every path except `/resources-application.js`,
-   checks the bearer secret in constant time, reads the pinned object, verifies
-   SHA-256, and returns a private immutable JavaScript response.
-
-5. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
+4. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
    non-GET request before publishing.
-6. Start with `PUBLIC_ORIGIN=https://staging.resources.co` (or the chosen
+5. Start with `PUBLIC_ORIGIN=https://staging.resources.co` (or the chosen
    staging hostname). Register these exact callback URLs:
 
    - `${PUBLIC_ORIGIN}/auth/github/callback`
@@ -581,12 +557,12 @@ Browse and signed-in home remain deferred because they require the database.
 
 After the fast Storage request finishes, the bootstrap schedules deferred
 prewarming. A complex route loads immediately instead. It fetches the single
-bundle with the shared bearer secret, rejects redirects and oversized content,
-verifies the build-pinned SHA-256, and imports the verified bytes through a Deno
-data URL. The promise is shared within the isolate and reset after failures.
-This creates a second cold start for the first complex request, but keeps both
-the bootstrap and deferred module independently small enough to initialize
-quickly.
+bundle directly from private Storage using the existing `STORAGE_API_KEY`,
+rejects redirects and oversized content, verifies the build-pinned SHA-256, and
+imports the verified bytes through a Deno data URL. The promise is shared within
+the isolate and reset after failures. Uploading the new immutable revision
+before deploying its compiled bootstrap lets old and new isolates coexist
+without changing an environment variable or introducing planned downtime.
 
 The deferred application shares one idempotent account-and-project schema
 readiness promise; a failure returns a non-cacheable `503` and a later request

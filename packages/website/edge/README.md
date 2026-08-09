@@ -4,11 +4,9 @@
 
 - `../bunny-bootstrap.js`: small synchronous composition root and HTTP server.
 - `bootstrap.js`: anonymous fast-home selection and delayed prewarming.
-- `deferred-loader.js`: authenticated fetch, size/digest verification, and
+- `deferred-loader.js`: private-Storage fetch, size/digest verification, and
   one-bundle data-URL import.
 - `../bunny-application.js`: self-contained deferred application entrypoint.
-- `../bunny-module-origin.js` and `module-origin.js`: separately deployed,
-  authenticated access to the pinned Storage object.
 - `models.js`: pure validation and policy models with no SDK dependency.
 - `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
   and logger.
@@ -39,8 +37,8 @@ repository route/view models
   -> exporter writes immutable objects and manifest evidence
   -> operator uploads one export prefix to private Bunny Storage
   -> build stores one content-addressed deferred application bundle
-  -> module-origin requires a shared bearer secret and verifies its digest
-  -> bootstrap independently verifies the fetched bytes before importing them
+  -> bootstrap fetches that pinned object with its Storage read credential
+  -> bootstrap verifies the fetched bytes before importing them
   -> edge validates manifest structure and security profile
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request

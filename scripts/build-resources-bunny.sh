@@ -24,13 +24,7 @@ deno bundle \
   --platform deno \
   "$repo_root/packages/website/bunny-bootstrap.js" \
   --output "$out_dir/resources-bunny.js"
-deno bundle \
-  --config "$repo_root/packages/website/deno.json" \
-  --platform deno \
-  "$repo_root/packages/website/bunny-module-origin.js" \
-  --output "$out_dir/resources-bunny-module-origin.js"
 node "$repo_root/scripts/finalize-resources-bunny.js" "$out_dir" "$storage_prefix" "$revision"
 
 echo "Bunny bootstrap: $out_dir/resources-bunny.js"
-echo "Bunny module origin: $out_dir/resources-bunny-module-origin.js"
 echo "Storage export: $out_dir/site/$storage_prefix"

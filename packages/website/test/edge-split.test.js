@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import { createResourcesBootstrapHandler } from "../edge/bootstrap.js";
 import { createDeferredModuleLoader } from "../edge/deferred-loader.js";
-import { createModuleOriginHandler } from "../edge/module-origin.js";
+import { storageRequest } from "../edge/models.js";
 
 const config = Object.freeze({
   storageOrigin: "https://storage.example.test/zone",
@@ -66,12 +66,12 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   let fetched = 0;
   let imported = "";
   const loader = createDeferredModuleLoader({
-    origin: "https://modules.example.test/resources-application.js",
-    token: "shared-secret",
+    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
     expectedSha256,
     fetchImpl: async (request) => {
       fetched += 1;
-      assert.equal(request.headers.get("authorization"), "Bearer shared-secret");
+      assert.equal(request.headers.get("accesskey"), "storage-secret");
+      assert.equal(request.url, "https://storage.example.test/zone/resources-co-1234567/-/edge/resources-application.abc123.js");
       return new Response(source, { headers: { "content-length": String(source.byteLength) } });
     },
     async importModule(specifier) {
@@ -87,8 +87,7 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
 test("deferred loader rejects changed bytes before module evaluation", async () => {
   let imported = false;
   const loader = createDeferredModuleLoader({
-    origin: "https://modules.example.test/resources-application.js",
-    token: "shared-secret",
+    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
     expectedSha256: "0".repeat(64),
     fetchImpl: async () => new Response("changed"),
     async importModule() { imported = true; return {}; },
@@ -97,27 +96,17 @@ test("deferred loader rejects changed bytes before module evaluation", async () 
   assert.equal(imported, false);
 });
 
-test("module origin requires the shared key and verifies storage bytes", async () => {
-  const source = new TextEncoder().encode("export function createResourcesDeferredHandler() {}\n");
-  const expectedSha256 = createHash("sha256").update(source).digest("hex");
-  let storageFetches = 0;
-  const handler = createModuleOriginHandler({
-    config,
-    moduleKey: "-/edge/resources-application.abc123.js",
-    expectedSha256,
-    apiKey: "shared-secret",
-    fetchImpl: async (request) => {
-      storageFetches += 1;
-      assert.equal(request.headers.get("accesskey"), "storage-secret");
-      return new Response(source);
-    },
+test("deferred loader does not expose a rejected data URL", async () => {
+  const source = new TextEncoder().encode("secret source that must not enter logs");
+  const loader = createDeferredModuleLoader({
+    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
+    expectedSha256: createHash("sha256").update(source).digest("hex"),
+    fetchImpl: async () => new Response(source),
+    async importModule(specifier) { throw new Error(`Syntax error at ${specifier}`); },
   });
-  assert.equal((await handler(new Request("https://modules.example.test/resources-application.js"))).status, 401);
-  assert.equal(storageFetches, 0);
-  const response = await handler(new Request("https://modules.example.test/resources-application.js", {
-    headers: { authorization: "Bearer shared-secret" },
-  }));
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("cache-control"), "private, max-age=31536000, immutable");
-  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), source);
+  await assert.rejects(loader.load(), (error) => {
+    assert.equal(error.message, "Deferred module evaluation failed");
+    assert.doesNotMatch(error.stack, /secret source|data:application/);
+    return true;
+  });
 });
