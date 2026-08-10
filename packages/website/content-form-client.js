@@ -349,7 +349,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       image.src = selectedFile.content;
       image.alt = selectedFile.path;
       editorMount.parentElement.append(image);
-      renderPreview();
       delete root.dataset.editorLoading;
       return;
     }
@@ -376,12 +375,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       });
       view.append(download, sourceView);
       editorMount.parentElement.append(view);
-      renderPreview();
       delete root.dataset.editorLoading;
       return;
     }
     editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config" });
-    renderPreview();
     delete root.dataset.editorLoading;
   }
 
@@ -593,6 +590,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (localHistory) localHistory = editorController.history.initialize(localHistory);
       ready = true;
       sendContent();
+      if (!previewController) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -968,6 +966,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       renderContainerElements(container?.value);
       renderTabs();
       sendContent();
+      renderPreview();
       if (["presentation", "single-file-web-app"].includes(imported.config.container) && /<script\b/i.test(imported.files.find((item) => item.path === imported.config.entry)?.content || "")) {
         setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
       } else setStatus("ZIP imported");
@@ -1109,7 +1108,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const previousContainer = state.config?.container;
     updateSnapshot({ files: state.files, config: { ...state.config, container: container.value, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
     if (previousContainer !== container.value) rotateContainerMachines();
-    else sendContent();
+    else { sendContent(); renderPreview(); }
   }
 
   function applyTemplateSnapshot(next, { notice = true, previousSnapshot = state } = {}) {
@@ -1124,7 +1123,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     templateOnlyPending = true;
     renderTabs();
     if (previousContainer !== next.config.container) rotateContainerMachines("template-container-change");
-    else sendContent();
+    else { sendContent(); renderPreview(); }
     if (notice) showTemplateNotice(previousSnapshot);
   }
 
