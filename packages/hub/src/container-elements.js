@@ -16,6 +16,14 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
     a: rule(["p", "li", "header", "footer"], ["href", "title", "target"]), img: rule(["main", "section", "a"], ["src", "alt", "width", "height"]),
     ul: rule(["main", "section"], ["class"]), li: rule(["ul"], ["class"]),
   }),
+  "single-file-web-app": Object.freeze({
+    html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset", "name", "content"]), title: rule(["head"]), style: rule(["head", "body"]),
+    body: rule(["html"], ["class"]), main: rule(["body"], ["class", "id"]), section: rule(["body", "main", "section"], ["class", "id"]),
+    div: rule(["body", "main", "section", "div"], ["class", "id", "role", "tabindex", "aria-label", "aria-live", "data-*"]),
+    span: rule(["body", "main", "section", "div", "button", "p"], ["class", "id"]), h1: rule(["body", "main", "section"], ["class", "id"]),
+    p: rule(["body", "main", "section", "div"], ["class", "id"]), button: rule(["body", "main", "section", "div"], ["class", "id", "type"]),
+    svg: rule(["body", "main", "section", "div"], ["class", "viewBox", "role", "aria-labelledby"]), script: rule(["body"], ["src"]),
+  }),
   canvas: Object.freeze({ html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset"]), title: rule(["head"]), body: rule(["html"], ["class"]), canvas: rule(["body"], ["width", "height", "aria-label"]), script: rule(["body"], ["src"]) }),
   svg: Object.freeze({ svg: rule(["document", "body"], ["viewBox", "role", "aria-labelledby"]), title: rule(["svg"], ["id"]), defs: rule(["svg"]), linearGradient: rule(["defs"], ["id", "x1", "y1", "x2", "y2", "gradientUnits"]), stop: rule(["linearGradient"], ["offset", "stop-color"]), g: rule(["svg", "g"], ["fill", "stroke", "transform"]), path: rule(["svg", "g"], ["d", "fill", "stroke", "stroke-width"]), rect: rule(["svg", "g"], ["x", "y", "width", "height", "rx", "ry", "fill"]), circle: rule(["svg", "g"], ["cx", "cy", "r", "fill"]), line: rule(["svg", "g"], ["x1", "y1", "x2", "y2", "stroke", "stroke-width"]), text: rule(["svg", "g"], ["x", "y", "fill"]) }),
 });

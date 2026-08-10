@@ -404,14 +404,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
     const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
-    if (containerName === "presentation") {
+    if (containerName === "presentation" || containerName === "single-file-web-app") {
       const containerEntry = state.config?.containerEntry || entry;
       const containerSource = state.files.find((file) => file.path === containerEntry)?.content || source;
       const artifactPath = String(state.config?.artifactPath || "");
       const artifactOrigin = root.querySelector("[data-blog-examples-origin]")?.dataset.blogExamplesOrigin || "";
       const fileUrl = artifactOrigin && /^\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+$/.test(artifactPath) ? `${artifactOrigin}${artifactPath}` : "";
-      const stylesheetPaths = state.config?.stylesheets || ["style.css"];
-      const css = stylesheetPaths.map((path) => state.files.find((file) => file.path === path)?.content || "").join("\n");
+      const stylesheetPaths = state.config?.stylesheets || [];
+      // An absent stylesheet list means the single-file runtime owns its
+      // inline <style> blocks. Passing an empty string would suppress that
+      // extraction and leave the display surface unstyled.
+      const css = state.config?.stylesheets
+        ? stylesheetPaths.map((path) => state.files.find((file) => file.path === path)?.content || "").join("\n")
+        : undefined;
       const scriptPaths = state.config?.scripts || [...source.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((match) => match[1].replace(/^\.\//, ""));
       const modules = Object.fromEntries(Object.entries(state.config?.modules || {}).map(([specifier, path]) => [specifier, state.files.find((file) => file.path === path)?.content || ""]));
       const assets = Object.fromEntries(state.files.filter((file) => /^data:[^,]+,/.test(file.content)).map((file) => [file.path, file.content]));
@@ -937,7 +942,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       renderContainerElements(container?.value);
       renderTabs();
       sendContent();
-      if (imported.config.container === "presentation" && /<script\b/i.test(imported.files.find((item) => item.path === imported.config.entry)?.content || "")) {
+      if (["presentation", "single-file-web-app"].includes(imported.config.container) && /<script\b/i.test(imported.files.find((item) => item.path === imported.config.entry)?.content || "")) {
         setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
       } else setStatus("ZIP imported");
     } catch (error) { setStatus(error.message, "error"); }
@@ -1024,13 +1029,17 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   syncResponsiveWorkspace();
   narrowWorkspace.addEventListener?.("change", syncResponsiveWorkspace);
-  const form = root.closest("form");
+  // Read-only public projects use the same Details fields without wrapping
+  // them in a form. Keep their container description synchronized with the
+  // asynchronously loaded project snapshot too.
+  const form = root.closest("form") || document.querySelector("[data-project-fields]");
   const template = form?.querySelector("[data-project-template]");
   const container = form?.querySelector("[data-project-container]");
   const containerOutline = form?.querySelector("[data-container-outline]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
   if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
   if (container && !container.querySelector('option[value="presentation"]')) container.add(new Option("Presentation", "presentation", false, false));
+  if (container && !container.querySelector('option[value="single-file-web-app"]')) container.add(new Option("Single-file HTML/CSS/JS", "single-file-web-app", false, false));
   function renderContainerElements(name) {
     if (!containerOutline) return;
     containerOutline.replaceChildren(...containerElementNames(name).map((element) => {
@@ -1049,7 +1058,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     textarea.style.height = `${textarea.scrollHeight + 2}px`;
   }
   if (template && state.config?.template) template.value = state.config.template;
-  if (container && state.config?.container) container.value = state.config.container;
+  if (container && state.config?.container) {
+    container.value = state.config.container;
+    renderContainerElements(container.value);
+  }
   if (linkPatterns) linkPatterns.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
   growTextarea(linkPatterns);
   renderContainerElements(container?.value);

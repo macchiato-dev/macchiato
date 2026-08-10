@@ -9,6 +9,7 @@
     "./migrations": "./src/migrations.js",
     "./content": "./src/content.js",
     "./container-elements": "./src/container-elements.js",
+    "./container-profiles": "./src/container-profiles.js",
     "./project-archive": "./src/project-archive.js",
     "./project-history": "./src/project-history.js",
     "./url-pattern": "./src/url-pattern.js"

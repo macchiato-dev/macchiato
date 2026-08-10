@@ -4,12 +4,19 @@ import { StyleUse } from "@macchiato-dev/style-use";
 
 export async function mountPresentationRuntime({ root, project, onStatus = () => {} }) {
   const sourceHtml = project.file || project.html || "";
-  const sourceCss = project.css ?? [...sourceHtml.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
+  const inlineCss = [...sourceHtml.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
+  const sourceCss = project.css ?? (project.capabilities?.documentSurface
+    ? inlineCss.replace(/(^|})\s*body(?=\s*[{,:.#\[])/gim, "$1\n[data-presentation-root]")
+    : inlineCss);
   const styleUse = new StyleUse(project.cssSchema || {});
   styleUse.validateStylesheet(sourceCss);
   const style = document.createElement("style");
   style.textContent = sourceCss;
   document.head.append(style);
+  if (project.capabilities?.scroll === "vertical") {
+    root.style.overflowX = "hidden";
+    root.style.overflowY = "auto";
+  }
   const storedValues = new Map(Object.entries(project.storage || {}));
   const isolatedStorage = {
     getItem(key) { return storedValues.get(String(key)) ?? null; },
@@ -124,6 +131,8 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
       clearInterval(timer);
       sandbox.dispose?.();
       style.remove();
+      root.style.overflowX = "";
+      root.style.overflowY = "";
       root.replaceChildren();
       delete root.dataset.runtime;
     },

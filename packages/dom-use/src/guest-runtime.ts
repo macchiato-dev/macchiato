@@ -406,7 +406,7 @@ function parseInitialHtml(source) {
   const stack = [body];
   const bodyMatch = /<body\b[^>]*>([\s\S]*?)<\/body>/i.exec(source);
   const markup = bodyMatch ? bodyMatch[1] : source;
-  const tagRe = /<script\b([^>]*)>([\s\S]*?)<\/script>|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
+  const tagRe = /<script\b([^>]*)>([\s\S]*?)<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<\/?([a-zA-Z][\w:-]*)([^>]*)>/g;
 
   let match;
   let cursor = 0;
@@ -418,6 +418,7 @@ function parseInitialHtml(source) {
       scripts.push({ attrs: attrsFromSource(match[1] || ""), code: match[2] || "" });
       continue;
     }
+    if (match[0].slice(0, 6) === "<style") continue;
     const tagName = match[3]?.toLowerCase();
     if (!tagName || tagName === "html" || tagName === "head" || tagName === "body" || tagName === "meta" || tagName === "link" || tagName === "title" || tagName === "style") {
       continue;

@@ -65,8 +65,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   const editorGuest = bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js")));
   const editorRuntime = bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"), "utf8")
     .replace("/-/resources-site/project-editor-guest.js", `/-/resources-site/project-editor-guest.js?v=${version(editorGuest)}`));
+  const containerElements = bytes(readFileSync(join(hubSourceDirectory, "container-elements.js")));
   const contentForm = bytes(readFileSync(join(directory, "content-form-client.js"), "utf8")
-    .replace("/-/resources-site/project-editor-runtime.js", `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`));
+    .replace("/-/resources-site/project-editor-runtime.js", `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`)
+    .replace("/-/resources-site/container-elements.js", `/-/resources-site/container-elements.js?v=${version(containerElements)}`));
   files.set("/-/resources-site/content-form.js", contentForm);
   files.set("/-/resources-site/project-editor-runtime.js", editorRuntime);
   files.set("/-/resources-site/presentation-runner.js", bytes(readFileSync(join(generatedDirectory, "presentation-runner.js"))));
@@ -74,7 +76,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-editor-guest.js", editorGuest);
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(hubSourceDirectory, "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js"))));
-  files.set("/-/resources-site/container-elements.js", bytes(readFileSync(join(hubSourceDirectory, "container-elements.js"))));
+  files.set("/-/resources-site/container-elements.js", containerElements);
   files.set("/-/resources-site/project-archive.js", bytes(readFileSync(join(hubSourceDirectory, "project-archive.js"))));
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
