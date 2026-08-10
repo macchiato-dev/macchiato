@@ -326,6 +326,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const generation = ++previewGeneration;
     activeError = "";
     renderStatusState();
+    try {
+      editorController?.projectStatus.begin(generation);
+    } catch (error) {
+      setStatus(`Editor status bridge failed: ${error.message}`, "error");
+    }
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
     delete preview.dataset.projectMachineId;
@@ -363,13 +368,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         },
         onStatus(event) {
           if (generation !== previewGeneration) return;
+          const routed = routeProjectStatus(generation, event);
+          if (routed && !routed.accepted) return;
           if (event.type === "mounted" && parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "ready" }, "*");
           if (event.type === "escape") {
             if (root.dataset.presenting === "true") closePresentation();
             if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
           }
           if (event.type === "blocked") {
-            setStatus(`Blocked: ${event.message}`, "error");
+            setStatus(`Blocked: ${routed?.blocking?.message || event.message}`, "error");
             if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "status", status: "blocked", message: event.message }, "*");
           }
         },
@@ -453,7 +460,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       try {
         const controller = await mountResourcesProjectPreview({
           root: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
-          onViolation(error) { if (generation === previewGeneration) setStatus(`Blocked: ${error.message}`, "error"); },
+          onViolation(error) {
+            if (generation !== previewGeneration) return;
+            const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
+            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error");
+          },
         });
         if (generation !== previewGeneration) controller.destroy();
         else {
@@ -462,9 +473,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           if (machine) preview.dataset.projectMachineId = machine.machineId;
         }
       } catch (error) {
-        setStatus(`Blocked: ${error.message}`, true);
+        const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
+        if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, true);
       }
     }, 120);
+  }
+
+  function routeProjectStatus(generation, event) {
+    try {
+      return editorController?.projectStatus.report(generation, event) || null;
+    } catch (error) {
+      setStatus(`Editor status bridge failed: ${error.message}`, "error");
+      return null;
+    }
   }
 
   function disposeProjectMachine() {

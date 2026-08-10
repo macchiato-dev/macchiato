@@ -80,3 +80,36 @@ globalThis.__resourcesProjectHistoryCheckpoint = (json) => {
 };
 
 globalThis.__resourcesProjectHistoryInspect = () => result();
+
+let projectStatus = { generation: 0, sequence: 0, blocking: null, events: [] };
+
+function projectStatusResult(extra = {}) {
+  return JSON.stringify({ ...projectStatus, ...extra });
+}
+
+globalThis.__resourcesProjectStatusBegin = (json) => {
+  const generation = Number(JSON.parse(json).generation);
+  if (!Number.isSafeInteger(generation) || generation < 1) throw new TypeError("Project status generation is invalid");
+  projectStatus = { generation, sequence: 0, blocking: null, events: [] };
+  return projectStatusResult({ accepted: true });
+};
+
+globalThis.__resourcesProjectStatusReport = (json) => {
+  const request = JSON.parse(json);
+  const generation = Number(request.generation);
+  if (generation !== projectStatus.generation) return projectStatusResult({ accepted: false, stale: true });
+  const type = String(request.event?.type || "");
+  if (!["blocked", "escape", "mounted", "storage"].includes(type)) throw new TypeError(`Unsupported project status: ${type}`);
+  const event = {
+    type,
+    sequence: ++projectStatus.sequence,
+    message: String(request.event?.message || "").slice(0, 2_000),
+  };
+  if (type === "blocked" && !event.message) event.message = "Project operation was blocked";
+  projectStatus.events.push(event);
+  if (projectStatus.events.length > 50) projectStatus.events.shift();
+  if (type === "blocked") projectStatus.blocking = event;
+  return projectStatusResult({ accepted: true, event });
+};
+
+globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();

@@ -35,6 +35,11 @@ export async function mountResourcesProjectEditor(options) {
       },
       inspect() { return controller.callGuest("__resourcesProjectHistoryInspect", {}); },
     }),
+    projectStatus: Object.freeze({
+      begin(generation) { return controller.callGuest("__resourcesProjectStatusBegin", { generation }); },
+      report(generation, event) { return controller.callGuest("__resourcesProjectStatusReport", { generation, event }); },
+      inspect() { return controller.callGuest("__resourcesProjectStatusInspect", {}); },
+    }),
   });
 }
 

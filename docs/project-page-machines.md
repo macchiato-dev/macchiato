@@ -65,6 +65,21 @@ delegate its own editor authority. The host creates a new capability for the
 project root. Messages between roles cross explicit JSON or event protocols;
 one guest cannot obtain another guest's node handles.
 
+Project status follows the same boundary. The project machine reports a typed
+event such as `blocked`, `mounted`, or `storage` through its container
+transport. The host passes that event into the editor machine, which owns the
+current preview generation, the ordered status log, and the active blocking
+error. Only then does the host render the editor's status rail. A late event
+from a disposed project generation is rejected instead of overwriting the
+current project's state. This keeps error interpretation with the workspace
+that can explain and preserve the user's input; it does not give either guest
+the other guest's DOM or JavaScript objects.
+
+The browser host is still the enforcement point and may originate a blocked
+event when a guest instruction never reaches the project surface. Development
+containers can attach more guest diagnostics, but production correctness does
+not depend on cooperation from untrusted code.
+
 DOM quotas, event budgets, gas, memory, and network rules are accounted per
 role. A project exhausting its operation budget must not stop the editor, and
 an editor surface violation must not silently grant the project more DOM.
