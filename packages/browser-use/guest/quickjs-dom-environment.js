@@ -126,6 +126,7 @@
     body: node("root"),
     head: node("root"),
     createRange: () => rpc("createRange"),
+    createEvent: (type) => ({ type: String(type || "Event") }),
     getSelection: () => rpc("getSelection"),
     hasFocus: () => true,
     addEventListener() {},
@@ -136,6 +137,7 @@
   const window = globalThis;
   Object.assign(globalThis, {
     document, window, self: window,
+    innerWidth: 1024, innerHeight: 768, devicePixelRatio: 1,
     console: { log() {}, info() {}, warn() {}, error() {} },
     navigator: { userAgent: "Macchiato QuickJS", platform: "Linux", vendor: "", language: "en", maxTouchPoints: 0 },
     HTMLElement: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },
@@ -145,6 +147,13 @@
     Node: class { static [Symbol.hasInstance](value) { return Boolean(value?.__handle); } },
     MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },
     ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },
+    IntersectionObserver: class {
+      constructor(callback) { this.callback = callback; }
+      observe(target) { this.callback([{ target, isIntersecting: true, intersectionRatio: 1 }]); }
+      unobserve() {}
+      disconnect() {}
+      takeRecords() { return []; }
+    },
     performance: { now: () => Date.now() },
     getComputedStyle(element) {
       const read = (property) => host({ op: "remote", action: "computedStyleGet", id: element.__handle, property: String(property) }).value;
@@ -213,7 +222,10 @@
     if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);
     if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);
     if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);
-    return JSON.stringify({ platform: navigator.platform });
+    if (Number.isFinite(environment.innerWidth) && environment.innerWidth > 0) innerWidth = environment.innerWidth;
+    if (Number.isFinite(environment.innerHeight) && environment.innerHeight > 0) innerHeight = environment.innerHeight;
+    if (Number.isFinite(environment.devicePixelRatio) && environment.devicePixelRatio > 0) devicePixelRatio = environment.devicePixelRatio;
+    return JSON.stringify({ platform: navigator.platform, innerWidth, innerHeight, devicePixelRatio });
   };
   globalThis.__browserUseFlush = () => {
     let count = 0;

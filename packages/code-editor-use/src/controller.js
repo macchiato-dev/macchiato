@@ -46,6 +46,9 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   sandbox.evalGlobal(browserUseQuickJsDomGuestSource, "browser-use-dom-guest.js");
   sandbox.callJsonFunction("__browserUseConfigureEnvironment", {
     platform: navigator.platform, userAgent: navigator.userAgent, vendor: navigator.vendor,
+    innerWidth: root.clientWidth || window.innerWidth,
+    innerHeight: root.clientHeight || window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio || 1,
   });
   sandbox.evalGlobal(guestSource, "code-editor-guest.js");
   sandbox.callJsonFunction("__codeEditorConfigureLimits", {

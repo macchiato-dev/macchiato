@@ -187,6 +187,11 @@ test("generated QuickJS environment matches its directly runnable source", async
   vm.runInNewContext(source, context, { filename: "quickjs-dom-environment.js" });
   assert.equal(typeof context.__browserUseDispatchEvent, "function");
   assert.equal(typeof context.__browserUseConfigureEnvironment, "function");
+  assert.equal(typeof context.IntersectionObserver, "function");
+  assert.deepEqual(
+    JSON.parse(context.__browserUseConfigureEnvironment(JSON.stringify({ innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 }))),
+    { platform: "Linux", innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 },
+  );
 });
 
 test("QuickJS guest timers honor their requested delay", () => {

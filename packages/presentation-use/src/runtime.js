@@ -49,7 +49,8 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   const style = document.createElement("style");
   style.textContent = sourceCss;
   document.head.append(style);
-  if (project.capabilities?.scroll === "vertical") {
+  if (project.capabilities?.documentSurface) document.documentElement.dataset.documentSurface = "";
+  else if (project.capabilities?.scroll === "vertical") {
     root.style.overflowX = "hidden";
     root.style.overflowY = "auto";
   }
@@ -169,6 +170,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
       style.remove();
       root.style.overflowX = "";
       root.style.overflowY = "";
+      delete document.documentElement.dataset.documentSurface;
       root.replaceChildren();
       delete root.dataset.runtime;
     },

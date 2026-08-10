@@ -5775,7 +5775,8 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     const style = document.createElement("style");
     style.textContent = sourceCss;
     document.head.append(style);
-    if (project.capabilities?.scroll === "vertical") {
+    if (project.capabilities?.documentSurface) document.documentElement.dataset.documentSurface = "";
+    else if (project.capabilities?.scroll === "vertical") {
       root.style.overflowX = "hidden";
       root.style.overflowY = "auto";
     }
@@ -5901,6 +5902,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
         style.remove();
         root.style.overflowX = "";
         root.style.overflowY = "";
+        delete document.documentElement.dataset.documentSurface;
         root.replaceChildren();
         delete root.dataset.runtime;
       }
