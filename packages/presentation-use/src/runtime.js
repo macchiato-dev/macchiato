@@ -28,9 +28,37 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
     maxStackBytes: project.limits?.stackBytes || 1024 * 1024,
   });
+  let pointerTransaction = false;
+  let renderPending = false;
+  let pointerRelease = null;
   const render = () => {
     root.innerHTML = capability.serializeApp().html;
     root.dataset.hostNodeCount = String(capability.document.createdNodes);
+  };
+  const requestRender = () => {
+    if (pointerTransaction) {
+      renderPending = true;
+      return;
+    }
+    render();
+  };
+  const beginPointerTransaction = () => {
+    if (pointerRelease !== null) clearTimeout(pointerRelease);
+    pointerRelease = null;
+    pointerTransaction = true;
+  };
+  const endPointerTransaction = () => {
+    if (pointerRelease !== null) clearTimeout(pointerRelease);
+    // A click is synthesized after pointerup. Keep its target alive through
+    // that browser transaction, then project the latest virtual DOM.
+    pointerRelease = setTimeout(() => {
+      pointerRelease = null;
+      pointerTransaction = false;
+      if (renderPending) {
+        renderPending = false;
+        render();
+      }
+    }, 0);
   };
   try {
     sandbox.installJsonHostFunction("__macchiatoHost", (message) => capability.dispatch(message));
@@ -55,10 +83,12 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   const listeners = events.map((type) => {
     const listener = (event) => {
       try {
+        const revision = capability.revision;
         const result = dispatchGuestDomEvent(capability, sandbox, root, event, type, { key: event.key || "" }, {
           fallbackNodeIds: [capability.documentRootId, capability.appRootId],
+          render: false,
         });
-        if (result) render();
+        if (result && capability.revision !== revision) requestRender();
         if (type === "keydown" && event.key === "Escape") onStatus({ type: "escape" });
       } catch (error) {
         onStatus({ type: "blocked", message: error.message });
@@ -68,10 +98,14 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     return [type, listener];
   });
   root.dataset.runtime = "quickjs-dom-use";
+  root.addEventListener("pointerdown", beginPointerTransaction, true);
+  root.addEventListener("pointerup", endPointerTransaction, true);
+  root.addEventListener("pointercancel", endPointerTransaction, true);
   const timer = setInterval(() => {
     try {
+      const revision = capability.revision;
       const result = sandbox.callJsonFunction("__macchiatoTimers", Date.now(), { rawArgument: true });
-      if (result?.changed) render();
+      if (result?.changed && capability.revision !== revision) requestRender();
     } catch (error) {
       clearInterval(timer);
       onStatus({ type: "blocked", message: error.message });
@@ -82,6 +116,10 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     inspect: () => ({ runtime: "quickjs-dom-use", dom: capability.serializeApp() }),
     destroy() {
       for (const [type, listener] of listeners) root.removeEventListener(type, listener);
+      root.removeEventListener("pointerdown", beginPointerTransaction, true);
+      root.removeEventListener("pointerup", endPointerTransaction, true);
+      root.removeEventListener("pointercancel", endPointerTransaction, true);
+      if (pointerRelease !== null) clearTimeout(pointerRelease);
       clearInterval(timer);
       sandbox.dispose?.();
       style.remove();

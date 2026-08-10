@@ -5143,6 +5143,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     appRootId;
     documentRootId;
     nextId;
+    revision;
     constructor(domSchema, styleUse, options = {}) {
       this.domUse = new DomUse(domSchema, styleUse);
       this.document = this.domUse.createDocument();
@@ -5154,6 +5155,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.appRootId = null;
       this.documentRootId = null;
       this.nextId = 1;
+      this.revision = 0;
     }
     resetDom() {
       this.nodes = /* @__PURE__ */ new Map();
@@ -5163,6 +5165,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.appRootId = null;
       this.documentRootId = null;
       this.nextId = 1;
+      this.revision = 0;
       this.document = this.domUse.createDocument();
       return {};
     }
@@ -5174,6 +5177,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       const id = String(this.nextId++);
       this.nodes.set(id, node);
       this.nodeIds.set(node, id);
+      this.revision += 1;
       return id;
     }
     node(id) {
@@ -5192,14 +5196,17 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     }
     appendChild(parentId, childId) {
       this.node(parentId).appendChild(this.node(childId));
+      this.revision += 1;
       return {};
     }
     removeChild(parentId, childId) {
       this.node(parentId).removeChild(this.node(childId));
+      this.revision += 1;
       return {};
     }
     insertBefore(parentId, childId, referenceId) {
       this.node(parentId).insertBefore(this.node(childId), referenceId ? this.node(referenceId) : null);
+      this.revision += 1;
       return {};
     }
     setTextContent(id, value) {
@@ -5208,6 +5215,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       node.textContent = value;
       for (const child of previousChildren)
         this.pruneTree(child);
+      this.revision += 1;
       return {};
     }
     setInnerHTML(id, html) {
@@ -5219,18 +5227,22 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
         this.domUse.setInnerHTML(node, html);
       for (const child of previousChildren)
         this.pruneTree(child);
+      this.revision += 1;
       return {};
     }
     setAttribute(id, name, value) {
       this.node(id).setAttribute(name, value);
+      this.revision += 1;
       return {};
     }
     removeAttribute(id, name) {
       this.node(id).removeAttribute(name);
+      this.revision += 1;
       return {};
     }
     setStyle(id, property, value) {
       this.node(id).style[property] = value;
+      this.revision += 1;
       return {};
     }
     addEventListener(id, event) {
@@ -5700,9 +5712,35 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
       maxStackBytes: project.limits?.stackBytes || 1024 * 1024
     });
+    let pointerTransaction = false;
+    let renderPending = false;
+    let pointerRelease = null;
     const render = () => {
       root.innerHTML = capability.serializeApp().html;
       root.dataset.hostNodeCount = String(capability.document.createdNodes);
+    };
+    const requestRender = () => {
+      if (pointerTransaction) {
+        renderPending = true;
+        return;
+      }
+      render();
+    };
+    const beginPointerTransaction = () => {
+      if (pointerRelease !== null) clearTimeout(pointerRelease);
+      pointerRelease = null;
+      pointerTransaction = true;
+    };
+    const endPointerTransaction = () => {
+      if (pointerRelease !== null) clearTimeout(pointerRelease);
+      pointerRelease = setTimeout(() => {
+        pointerRelease = null;
+        pointerTransaction = false;
+        if (renderPending) {
+          renderPending = false;
+          render();
+        }
+      }, 0);
     };
     try {
       sandbox.installJsonHostFunction("__macchiatoHost", (message) => capability.dispatch(message));
@@ -5727,10 +5765,12 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     const listeners = events.map((type) => {
       const listener = (event) => {
         try {
+          const revision = capability.revision;
           const result = dispatchGuestDomEvent(capability, sandbox, root, event, type, { key: event.key || "" }, {
-            fallbackNodeIds: [capability.documentRootId, capability.appRootId]
+            fallbackNodeIds: [capability.documentRootId, capability.appRootId],
+            render: false
           });
-          if (result) render();
+          if (result && capability.revision !== revision) requestRender();
           if (type === "keydown" && event.key === "Escape") onStatus({ type: "escape" });
         } catch (error) {
           onStatus({ type: "blocked", message: error.message });
@@ -5740,10 +5780,14 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       return [type, listener];
     });
     root.dataset.runtime = "quickjs-dom-use";
+    root.addEventListener("pointerdown", beginPointerTransaction, true);
+    root.addEventListener("pointerup", endPointerTransaction, true);
+    root.addEventListener("pointercancel", endPointerTransaction, true);
     const timer = setInterval(() => {
       try {
+        const revision = capability.revision;
         const result = sandbox.callJsonFunction("__macchiatoTimers", Date.now(), { rawArgument: true });
-        if (result?.changed) render();
+        if (result?.changed && capability.revision !== revision) requestRender();
       } catch (error) {
         clearInterval(timer);
         onStatus({ type: "blocked", message: error.message });
@@ -5754,6 +5798,10 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       inspect: () => ({ runtime: "quickjs-dom-use", dom: capability.serializeApp() }),
       destroy() {
         for (const [type, listener] of listeners) root.removeEventListener(type, listener);
+        root.removeEventListener("pointerdown", beginPointerTransaction, true);
+        root.removeEventListener("pointerup", endPointerTransaction, true);
+        root.removeEventListener("pointercancel", endPointerTransaction, true);
+        if (pointerRelease !== null) clearTimeout(pointerRelease);
         clearInterval(timer);
         sandbox.dispose?.();
         style.remove();

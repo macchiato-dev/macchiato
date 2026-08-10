@@ -57,6 +57,7 @@ export class DomUseHostCapability {
   appRootId: string | null;
   documentRootId: string | null;
   nextId: number;
+  revision: number;
 
   constructor(domSchema, styleUse, options: any = {}) {
     this.domUse = new DomUse(domSchema, styleUse);
@@ -69,6 +70,7 @@ export class DomUseHostCapability {
     this.appRootId = null;
     this.documentRootId = null;
     this.nextId = 1;
+    this.revision = 0;
   }
 
   resetDom() {
@@ -79,6 +81,7 @@ export class DomUseHostCapability {
     this.appRootId = null;
     this.documentRootId = null;
     this.nextId = 1;
+    this.revision = 0;
     this.document = this.domUse.createDocument();
     return {};
   }
@@ -92,6 +95,7 @@ export class DomUseHostCapability {
     const id = String(this.nextId++);
     this.nodes.set(id, node);
     this.nodeIds.set(node, id);
+    this.revision += 1;
     return id;
   }
 
@@ -113,16 +117,19 @@ export class DomUseHostCapability {
 
   appendChild(parentId, childId) {
     this.node(parentId).appendChild(this.node(childId));
+    this.revision += 1;
     return {};
   }
 
   removeChild(parentId, childId) {
     this.node(parentId).removeChild(this.node(childId));
+    this.revision += 1;
     return {};
   }
 
   insertBefore(parentId, childId, referenceId) {
     this.node(parentId).insertBefore(this.node(childId), referenceId ? this.node(referenceId) : null);
+    this.revision += 1;
     return {};
   }
 
@@ -131,6 +138,7 @@ export class DomUseHostCapability {
     const previousChildren = [...(node.children || [])];
     node.textContent = value;
     for (const child of previousChildren) this.pruneTree(child);
+    this.revision += 1;
     return {};
   }
 
@@ -140,21 +148,25 @@ export class DomUseHostCapability {
     if (html === "") node.replaceChildren();
     else this.domUse.setInnerHTML(node, html);
     for (const child of previousChildren) this.pruneTree(child);
+    this.revision += 1;
     return {};
   }
 
   setAttribute(id, name, value) {
     this.node(id).setAttribute(name, value);
+    this.revision += 1;
     return {};
   }
 
   removeAttribute(id, name) {
     this.node(id).removeAttribute(name);
+    this.revision += 1;
     return {};
   }
 
   setStyle(id, property, value) {
     this.node(id).style[property] = value;
+    this.revision += 1;
     return {};
   }
 

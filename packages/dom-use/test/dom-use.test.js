@@ -652,6 +652,29 @@ test("host bridge releases quota for host-parsed replacement subtrees", () => {
   assert.equal(capability.document.createdNodes, 3);
 });
 
+test("host bridge revisions distinguish DOM mutations from read-only work", () => {
+  const capability = new DomUseHostCapability({
+    nodes: {
+      main: { attrs: ["id"], children: ["#text"] },
+    },
+  });
+
+  const initial = capability.revision;
+  const { id } = capability.createElement("main");
+  assert.ok(capability.revision > initial);
+  const created = capability.revision;
+
+  capability.node(id);
+  capability.serializeApp();
+  assert.equal(capability.revision, created);
+
+  capability.setAttribute(id, "id", "surface");
+  assert.ok(capability.revision > created);
+  const attributed = capability.revision;
+  capability.setTextContent(id, "changed");
+  assert.ok(capability.revision > attributed);
+});
+
 test("localStorage bridge removes allowed keys", () => {
   const memory = new Map();
   const storage = new LocalStorageBackend({
