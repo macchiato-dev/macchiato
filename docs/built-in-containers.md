@@ -44,6 +44,11 @@ a composition of two containers:
 - `single-file-web-surface` displays the result through `dom-use` and checks
   inline CSS with `style-use`.
 
+The runtime executes the inline JavaScript text as supplied and the surface
+installs the validated inline CSS text without rewriting selectors or
+declarations. Viewport sizing, scrolling, and DOM reconciliation belong to the
+host display shell and do not alter the project's source.
+
 The initial configuration permits no external resources. A future explicit
 CDN capability may allow at most two fonts, three scripts, and three
 stylesheets. Scripts would be fetched by the host and executed in QuickJS,

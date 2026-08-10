@@ -5732,11 +5732,44 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
   }
 
   // ../presentation-use/src/runtime.js
+  function compatibleNode(current, next) {
+    return current?.nodeType === next?.nodeType && (current.nodeType !== Node.ELEMENT_NODE || current.localName === next.localName && current.namespaceURI === next.namespaceURI);
+  }
+  function reconcileNode(current, next) {
+    if (current.nodeType === Node.TEXT_NODE) {
+      if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue;
+      return;
+    }
+    for (const attribute of [...current.attributes]) {
+      if (!next.hasAttribute(attribute.name)) current.removeAttribute(attribute.name);
+    }
+    for (const attribute of [...next.attributes]) {
+      if (current.getAttribute(attribute.name) !== attribute.value) current.setAttribute(attribute.name, attribute.value);
+    }
+    reconcileChildren(current, next);
+  }
+  function reconcileChildren(currentParent, nextParent) {
+    let index = 0;
+    while (index < nextParent.childNodes.length) {
+      const next = nextParent.childNodes[index];
+      const current = currentParent.childNodes[index];
+      if (!current) currentParent.append(next.cloneNode(true));
+      else if (!compatibleNode(current, next)) current.replaceWith(next.cloneNode(true));
+      else reconcileNode(current, next);
+      index += 1;
+    }
+    while (currentParent.childNodes.length > nextParent.childNodes.length) currentParent.lastChild.remove();
+  }
+  function reconcileRenderedDom(root, html) {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    reconcileChildren(root, template.content);
+  }
   async function mountPresentationRuntime({ root, project, onStatus = () => {
   } }) {
     const sourceHtml = project.file || project.html || "";
     const inlineCss = [...sourceHtml.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map((match) => match[1]).join("\n");
-    const sourceCss = project.css ?? (project.capabilities?.documentSurface ? inlineCss.replace(/(^|})\s*body(?=\s*[{,:.#\[])/gim, "$1\n[data-presentation-root]") : inlineCss);
+    const sourceCss = project.css ?? inlineCss;
     const styleUse = new StyleUse(project.cssSchema || {});
     styleUse.validateStylesheet(sourceCss);
     const style = document.createElement("style");
@@ -5776,7 +5809,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     let renderPending = false;
     let pointerRelease = null;
     const render = () => {
-      root.innerHTML = capability.serializeApp().html;
+      reconcileRenderedDom(root, capability.serializeApp().html);
       root.dataset.hostNodeCount = String(capability.document.createdNodes);
       root.dataset.hostLiveNodeCount = String(capability.liveNodeCount());
     };
