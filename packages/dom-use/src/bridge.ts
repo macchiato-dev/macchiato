@@ -53,6 +53,7 @@ export class DomUseHostCapability {
   nodes: Map<string, any>;
   nodeIds: WeakMap<object, string>;
   pendingPrune: Set<any>;
+  quotaReleased: WeakSet<object>;
   eventDepth: number;
   appRootId: string | null;
   documentRootId: string | null;
@@ -66,6 +67,7 @@ export class DomUseHostCapability {
     this.nodes = new Map();
     this.nodeIds = new WeakMap();
     this.pendingPrune = new Set();
+    this.quotaReleased = new WeakSet();
     this.eventDepth = 0;
     this.appRootId = null;
     this.documentRootId = null;
@@ -77,6 +79,7 @@ export class DomUseHostCapability {
     this.nodes = new Map();
     this.nodeIds = new WeakMap();
     this.pendingPrune = new Set();
+    this.quotaReleased = new WeakSet();
     this.eventDepth = 0;
     this.appRootId = null;
     this.documentRootId = null;
@@ -145,8 +148,14 @@ export class DomUseHostCapability {
   setInnerHTML(id, html) {
     const node = this.node(id);
     const previousChildren = [...(node.children || [])];
-    if (html === "") node.replaceChildren();
-    else this.domUse.setInnerHTML(node, html);
+    for (const child of previousChildren) this.releaseTreeQuota(child);
+    try {
+      if (html === "") node.replaceChildren();
+      else this.domUse.setInnerHTML(node, html);
+    } catch (error) {
+      for (const child of previousChildren) this.restoreTreeQuota(child);
+      throw error;
+    }
     for (const child of previousChildren) this.pruneTree(child);
     this.revision += 1;
     return {};
@@ -190,6 +199,12 @@ export class DomUseHostCapability {
     return { html: this.domUse.getInnerHTML(this.node(this.appRootId)) };
   }
 
+  liveNodeCount() {
+    if (!this.appRootId) return 0;
+    const count = (node) => 1 + [...(node.children || [])].reduce((total, child) => total + count(child), 0);
+    return count(this.node(this.appRootId));
+  }
+
   nodeTag(id) {
     return { tagName: this.node(id).tagName };
   }
@@ -222,6 +237,7 @@ export class DomUseHostCapability {
     this.eventDepth = Math.max(0, this.eventDepth - 1);
     if (this.eventDepth === 0) {
       this.flushPrunedNodes();
+      this.reconcileNodeCount();
       this.domUse.setGasLifecycle(this.document, "idle");
       if (this.document?.gas) this.document.gas.available = this.document.gas.capacity;
     }
@@ -243,7 +259,36 @@ export class DomUseHostCapability {
       this.nodes.delete(id);
       this.nodeIds.delete(node);
     }
+    if (this.quotaReleased.has(node)) this.quotaReleased.delete(node);
+    else if (node.ownerDocument?.createdNodes > 0) node.ownerDocument.createdNodes -= 1;
+  }
+
+  releaseTreeQuota(node) {
+    for (const child of [...(node.children || [])]) this.releaseTreeQuota(child);
+    if (this.quotaReleased.has(node)) return;
+    this.quotaReleased.add(node);
     if (node.ownerDocument?.createdNodes > 0) node.ownerDocument.createdNodes -= 1;
+  }
+
+  restoreTreeQuota(node) {
+    for (const child of [...(node.children || [])]) this.restoreTreeQuota(child);
+    if (!this.quotaReleased.has(node)) return;
+    this.quotaReleased.delete(node);
+    if (node.ownerDocument) node.ownerDocument.createdNodes += 1;
+  }
+
+  reconcileNodeCount() {
+    const retained = new Set(this.nodes.values());
+    const visit = (node) => {
+      if (retained.has(node)) {
+        for (const child of [...(node.children || [])]) visit(child);
+        return;
+      }
+      retained.add(node);
+      for (const child of [...(node.children || [])]) visit(child);
+    };
+    for (const node of [...retained]) for (const child of [...(node.children || [])]) visit(child);
+    this.document.createdNodes = retained.size;
   }
 
   flushPrunedNodes() {

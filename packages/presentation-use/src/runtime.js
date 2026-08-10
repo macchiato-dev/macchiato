@@ -34,6 +34,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   const render = () => {
     root.innerHTML = capability.serializeApp().html;
     root.dataset.hostNodeCount = String(capability.document.createdNodes);
+    root.dataset.hostLiveNodeCount = String(capability.liveNodeCount());
   };
   const requestRender = () => {
     if (pointerTransaction) {

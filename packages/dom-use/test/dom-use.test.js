@@ -652,6 +652,43 @@ test("host bridge releases quota for host-parsed replacement subtrees", () => {
   assert.equal(capability.document.createdNodes, 3);
 });
 
+test("host bridge credits a replaced subtree before parsing its successor", () => {
+  const capability = new DomUseHostCapability({
+    nodes: {
+      main: { attrs: [], children: ["p"] },
+      p: { attrs: [], children: ["#text"] },
+    },
+    limits: { maxNodes: 6 },
+  });
+  const { id } = capability.createElement("main");
+  capability.setAppRoot(id);
+
+  capability.setInnerHTML(id, "<p>one</p><p>two</p>");
+  assert.equal(capability.document.createdNodes, 5);
+  capability.setInnerHTML(id, "<p>three</p><p>four</p>");
+  assert.equal(capability.serializeApp().html, "<p>three</p><p>four</p>");
+  assert.equal(capability.document.createdNodes, 5);
+});
+
+test("host bridge reconciles parsed replacement nodes after an event", () => {
+  const capability = new DomUseHostCapability({
+    nodes: {
+      main: { attrs: [], children: ["p"] },
+      p: { attrs: [], children: ["#text"] },
+    },
+    limits: { maxNodes: 8 },
+  });
+  const { id } = capability.createElement("main");
+  capability.setAppRoot(id);
+
+  for (let index = 0; index < 20; index += 1) {
+    capability.beginEvent();
+    capability.setInnerHTML(id, `<p>${index}</p><p>stable</p>`);
+    capability.endEvent();
+    assert.equal(capability.document.createdNodes, 5);
+  }
+});
+
 test("host bridge revisions distinguish DOM mutations from read-only work", () => {
   const capability = new DomUseHostCapability({
     nodes: {

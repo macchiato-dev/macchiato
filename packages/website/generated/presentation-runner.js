@@ -5139,6 +5139,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     nodes;
     nodeIds;
     pendingPrune;
+    quotaReleased;
     eventDepth;
     appRootId;
     documentRootId;
@@ -5151,6 +5152,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.nodes = /* @__PURE__ */ new Map();
       this.nodeIds = /* @__PURE__ */ new WeakMap();
       this.pendingPrune = /* @__PURE__ */ new Set();
+      this.quotaReleased = /* @__PURE__ */ new WeakSet();
       this.eventDepth = 0;
       this.appRootId = null;
       this.documentRootId = null;
@@ -5161,6 +5163,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.nodes = /* @__PURE__ */ new Map();
       this.nodeIds = /* @__PURE__ */ new WeakMap();
       this.pendingPrune = /* @__PURE__ */ new Set();
+      this.quotaReleased = /* @__PURE__ */ new WeakSet();
       this.eventDepth = 0;
       this.appRootId = null;
       this.documentRootId = null;
@@ -5221,10 +5224,18 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     setInnerHTML(id, html) {
       const node = this.node(id);
       const previousChildren = [...node.children || []];
-      if (html === "")
-        node.replaceChildren();
-      else
-        this.domUse.setInnerHTML(node, html);
+      for (const child of previousChildren)
+        this.releaseTreeQuota(child);
+      try {
+        if (html === "")
+          node.replaceChildren();
+        else
+          this.domUse.setInnerHTML(node, html);
+      } catch (error) {
+        for (const child of previousChildren)
+          this.restoreTreeQuota(child);
+        throw error;
+      }
       for (const child of previousChildren)
         this.pruneTree(child);
       this.revision += 1;
@@ -5261,6 +5272,12 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
         return { html: "" };
       return { html: this.domUse.getInnerHTML(this.node(this.appRootId)) };
     }
+    liveNodeCount() {
+      if (!this.appRootId)
+        return 0;
+      const count = (node) => 1 + [...node.children || []].reduce((total, child) => total + count(child), 0);
+      return count(this.node(this.appRootId));
+    }
     nodeTag(id) {
       return { tagName: this.node(id).tagName };
     }
@@ -5291,6 +5308,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       this.eventDepth = Math.max(0, this.eventDepth - 1);
       if (this.eventDepth === 0) {
         this.flushPrunedNodes();
+        this.reconcileNodeCount();
         this.domUse.setGasLifecycle(this.document, "idle");
         if (this.document?.gas)
           this.document.gas.available = this.document.gas.capacity;
@@ -5313,8 +5331,45 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
         this.nodes.delete(id);
         this.nodeIds.delete(node);
       }
+      if (this.quotaReleased.has(node))
+        this.quotaReleased.delete(node);
+      else if (node.ownerDocument?.createdNodes > 0)
+        node.ownerDocument.createdNodes -= 1;
+    }
+    releaseTreeQuota(node) {
+      for (const child of [...node.children || []])
+        this.releaseTreeQuota(child);
+      if (this.quotaReleased.has(node))
+        return;
+      this.quotaReleased.add(node);
       if (node.ownerDocument?.createdNodes > 0)
         node.ownerDocument.createdNodes -= 1;
+    }
+    restoreTreeQuota(node) {
+      for (const child of [...node.children || []])
+        this.restoreTreeQuota(child);
+      if (!this.quotaReleased.has(node))
+        return;
+      this.quotaReleased.delete(node);
+      if (node.ownerDocument)
+        node.ownerDocument.createdNodes += 1;
+    }
+    reconcileNodeCount() {
+      const retained = new Set(this.nodes.values());
+      const visit = (node) => {
+        if (retained.has(node)) {
+          for (const child of [...node.children || []])
+            visit(child);
+          return;
+        }
+        retained.add(node);
+        for (const child of [...node.children || []])
+          visit(child);
+      };
+      for (const node of [...retained])
+        for (const child of [...node.children || []])
+          visit(child);
+      this.document.createdNodes = retained.size;
     }
     flushPrunedNodes() {
       const pending = Array.from(this.pendingPrune);
@@ -5718,6 +5773,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     const render = () => {
       root.innerHTML = capability.serializeApp().html;
       root.dataset.hostNodeCount = String(capability.document.createdNodes);
+      root.dataset.hostLiveNodeCount = String(capability.liveNodeCount());
     };
     const requestRender = () => {
       if (pointerTransaction) {
