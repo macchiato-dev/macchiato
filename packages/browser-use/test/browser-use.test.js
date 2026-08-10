@@ -188,6 +188,13 @@ test("generated QuickJS environment matches its directly runnable source", async
   assert.equal(typeof context.__browserUseDispatchEvent, "function");
   assert.equal(typeof context.__browserUseConfigureEnvironment, "function");
   assert.equal(typeof context.IntersectionObserver, "function");
+  assert.equal(typeof context.scrollBy, "function");
+  assert.equal(typeof context.scrollTo, "function");
+  assert.doesNotThrow(() => context.scrollBy(0, 100));
+  vm.runInNewContext("globalThis.intersections = 0; const observer = new IntersectionObserver(() => { intersections += 1; }); observer.observe(document.body);", context);
+  assert.equal(context.intersections, 0);
+  context.__browserUseFlush();
+  assert.equal(context.intersections, 1);
   assert.deepEqual(
     JSON.parse(context.__browserUseConfigureEnvironment(JSON.stringify({ innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 }))),
     { platform: "Linux", innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 },

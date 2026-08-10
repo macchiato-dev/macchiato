@@ -966,6 +966,9 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__tip button { width: 22px; height: 22px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font: inherit; cursor: pointer; }
 .project-editor__tip button:hover, .project-editor__tip button:focus-visible { color: #fff; background: #303a70; }
 .project-editor__error { min-width: 0; overflow: hidden; }
+.project-editor__status-action { position: relative; top: 1px; margin: -2px 0 -2px 3px; padding: 1px 4px 2px; border: 1px solid #ffd0d2; border-radius: 4px; color: inherit; background: transparent; font: inherit; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; }
+.project-editor__status-action:hover { background: rgba(255, 255, 255, 0.1); }
+.project-editor__status-action:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
 .project-editor__save { flex: 0 0 auto; }
 .project-editor__history { position: absolute; top: 48px; left: 10px; z-index: 10; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

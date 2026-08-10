@@ -15,11 +15,25 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   });
   let stopped = false;
   let inputBridge;
+  let selectionReconcileQueued = false;
   const editorLimits = normalizeCodeEditorLimits(limits);
   const violate = (error) => {
     if (stopped) return;
     stopped = true;
     onViolation(error);
+  };
+  const reconcileSelectionSoon = () => {
+    if (selectionReconcileQueued) return;
+    selectionReconcileQueued = true;
+    queueMicrotask(() => {
+      selectionReconcileQueued = false;
+      if (!sandbox || stopped) return;
+      try {
+        inputBridge?.reconcileSelection();
+      } catch (error) {
+        violate(error);
+      }
+    });
   };
   const host = new BrowserDomHost(root, createCodeEditorDomPolicy(editorLimits), {
     onViolation(error) { stopped = true; onViolation(error); },
@@ -30,7 +44,10 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
         const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
         if (result.preventDefault) nativeEvent.preventDefault();
         if (result.stopPropagation) nativeEvent.stopPropagation();
-        inputBridge?.reconcileSelection();
+        // CodeMirror may emit a browser event while it is still applying an
+        // update. Re-entering its guest API here would violate its update
+        // invariant, so reconcile after the current host/guest turn unwinds.
+        reconcileSelectionSoon();
       } catch (error) {
         violate(error);
       }

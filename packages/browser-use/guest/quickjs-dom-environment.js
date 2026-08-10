@@ -148,10 +148,25 @@
     MutationObserver: class { observe() {} disconnect() {} takeRecords() { return []; } },
     ResizeObserver: class { observe() {} unobserve() {} disconnect() {} },
     IntersectionObserver: class {
-      constructor(callback) { this.callback = callback; }
-      observe(target) { this.callback([{ target, isIntersecting: true, intersectionRatio: 1 }]); }
-      unobserve() {}
-      disconnect() {}
+      constructor(callback) { this.callback = callback; this.pending = new Map(); }
+      observe(target) {
+        if (this.pending.has(target)) return;
+        const id = "frame:" + (++callbackId);
+        this.pending.set(target, id);
+        callbacks.set(id, () => {
+          this.pending.delete(target);
+          this.callback([{ target, isIntersecting: true, intersectionRatio: 1 }]);
+        });
+      }
+      unobserve(target) {
+        const id = this.pending.get(target);
+        if (id) callbacks.delete(id);
+        this.pending.delete(target);
+      }
+      disconnect() {
+        for (const id of this.pending.values()) callbacks.delete(id);
+        this.pending.clear();
+      }
       takeRecords() { return []; }
     },
     performance: { now: () => Date.now() },
@@ -178,6 +193,12 @@
       return id;
     },
     clearInterval(id) { callbacks.delete("timer:" + id); },
+    // The guest owns only its granted root. CodeMirror still reaches the
+    // window-level scrolling branch after it has scrolled its own viewport,
+    // so expose the browser primitive without granting control of the host
+    // page around that root.
+    scrollBy() {},
+    scrollTo() {},
     addEventListener() {},
     removeEventListener() {},
     matchMedia() { return { matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }; },

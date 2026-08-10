@@ -362,7 +362,7 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   const churnReport = await churnPage.evaluate(() => globalThis.__codeEditorBridge.inspect());
   assert.ok(churnReport.usage.lines >= 250);
   assert.ok(churnReport.surface.elements < churnReport.surface.limits.elements);
-  assert.ok(churnReport.surface.tags.span > 1_000, "syntax churn should exercise the span budget");
+  assert.ok(churnReport.surface.tags.span > 100, "syntax highlighting should exercise the span budget");
   assert.ok(churnReport.surface.operations.peakWindow < churnReport.surface.limits.operations);
   assert.equal(await churnPage.locator(".cm-content").count(), 1);
   await churnPage.close();

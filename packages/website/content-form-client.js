@@ -264,6 +264,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewTimer = 0;
   let previewGeneration = 0;
   let activeError = "";
+  let activeErrorAction = null;
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
   const tipMessages = JSON.parse(root.dataset.tips || "{}");
@@ -578,7 +579,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const controller = await mountResourcesProjectEditor({
         root: editorMount,
         onChange: receiveEditorChange,
-        onViolation(error) { setStatus(`Editor stopped: ${error.message}`, true); },
+        onViolation(error) {
+          setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor });
+        },
       });
       if (generation !== editorGeneration) {
         controller.destroy();
@@ -634,7 +637,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     tipControls.hidden = Boolean(activeError || activeNotice);
     statusNotice.hidden = !activeNotice || Boolean(activeError);
     statusError.hidden = !activeError;
-    statusError.textContent = activeError;
+    statusError.replaceChildren();
+    if (activeError) statusError.append(document.createTextNode(activeError));
+    if (activeErrorAction) {
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "project-editor__status-action";
+      action.textContent = activeErrorAction.label;
+      action.addEventListener("click", activeErrorAction.run);
+      statusError.append(document.createTextNode(" "), action);
+    }
     if (!activeError && !activeNotice) renderTip();
   }
 
@@ -658,14 +670,24 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderStatusState();
   }
 
-  function setStatus(text, severity = "normal") {
+  function setStatus(text, severity = "normal", action = null) {
     const nextState = severity === true ? "error" : severity;
-    if (nextState === "error") activeError = text;
+    if (nextState === "error") {
+      activeError = text;
+      activeErrorAction = action;
+    }
     else {
       persistenceState = nextState;
       statusSave.textContent = text;
     }
     renderStatusState();
+  }
+
+  function resetStoppedEditor() {
+    activeError = "";
+    activeErrorAction = null;
+    renderStatusState();
+    mountEditorMachine("manual-reset");
   }
 
   root.querySelector("[data-project-tip-prev]").addEventListener("click", () => { tipIndex -= 1; renderTip(); });
