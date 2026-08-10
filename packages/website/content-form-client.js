@@ -4,6 +4,37 @@ import { containerElementNames, describeContainerElement } from "/-/resources-si
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
 import { mountResourcesPresentation, mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 
+function enterProjectLoadingView(href) {
+  const content = document.getElementById("content");
+  const layout = document.querySelector("main.layout");
+  if (!content) return;
+  layout?.classList.add("focused-view");
+  if (layout) layout.dataset.view = "focused";
+  content.dataset.loading = "true";
+  content.setAttribute("aria-busy", "true");
+  const loading = document.createElement("section");
+  loading.className = "project-route-loading";
+  loading.setAttribute("aria-label", "Loading project");
+  const spinner = document.createElement("span");
+  spinner.className = "project-route-loading__spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  const label = document.createElement("p");
+  label.textContent = "Loading project…";
+  loading.append(spinner, label);
+  content.replaceChildren(loading);
+  // Leave the focused shell on screen long enough for the browser to paint it
+  // before a native navigation makes the old document unavailable.
+  setTimeout(() => location.assign(href), 80);
+}
+
+document.addEventListener("click", (event) => {
+  if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = event.target.closest("a[data-project-link][href]");
+  if (!link || link.target || new URL(link.href, location.href).origin !== location.origin) return;
+  event.preventDefault();
+  enterProjectLoadingView(link.href);
+});
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function slugify(value) {
@@ -179,7 +210,38 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const readOnly = root.dataset.readOnly === "true";
   root.dataset.draftState = "clean";
   let restoredDraft = false;
+  const snapshotUrl = root.querySelector("[data-project-snapshot-url]")?.dataset.projectSnapshotUrl;
+  let workspacePayload = null;
+  if (snapshotUrl) {
+    try {
+      const response = await fetch(snapshotUrl, { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error(`Project workspace response: ${response.status}`);
+      workspacePayload = await response.json();
+      snapshotField.value = JSON.stringify(workspacePayload.snapshot);
+      versionCount.textContent = String(workspacePayload.versionCount || 1);
+      const draftFlash = root.closest(".project-create__layout")?.querySelector("[data-draft-flash]");
+      if (draftFlash && workspacePayload.hasUnpublishedChanges) draftFlash.hidden = false;
+      else draftFlash?.remove();
+    } catch (error) {
+      root.dataset.editorMachineState = "failed";
+      status.dataset.state = "error";
+      statusError.hidden = false;
+      statusError.textContent = `Project failed to load: ${error.message}`;
+      tipControls.hidden = true;
+      continue;
+    }
+  }
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  if (workspacePayload) {
+    const fields = root.closest(".project-create__layout")?.querySelector("[data-project-fields]");
+    const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
+    const templateField = fields?.querySelector("[data-project-template]");
+    const containerField = fields?.querySelector("[data-project-container]");
+    const patternsField = fields?.querySelector("#project-link-patterns");
+    if (templateField) templateField.value = state.config?.template || "article";
+    if (containerField) containerField.value = containerName || "page";
+    if (patternsField) patternsField.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+  }
   const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
   if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
     state = normalizeProjectSnapshot(STARTING_POINTS[requestedTemplate]);

@@ -201,7 +201,7 @@ function containerElementTags(container) {
   return containerElementNames(container).map((element) => `<span class="element-tag" tabindex="0" title="${escapeHtml(describeContainerElement(container, element))}" data-element-tag="${escapeHtml(element)}">${escapeHtml(element)}</span>`).join("");
 }
 
-function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored", readOnly = false, embedHref = "", blogExamplesOrigin = "" }) {
+function projectEditorHtml({ snapshot, snapshotUrl = "", versionCount = 1, projectId = "", csrf = "", messages, persistence = "stored", readOnly = false, embedHref = "", blogExamplesOrigin = "" }) {
   const tips = {
     article: messages?.["projectEditor.tipArticle"] || "Try adding an <iframe> to see the Article container block an element outside its schema.",
     page: messages?.["projectEditor.tipPage"] || "Try adding a <video> to see the Page container block an element outside its schema.",
@@ -212,8 +212,8 @@ function projectEditorHtml({ snapshot, versionCount = 1, projectId = "", csrf = 
   };
   const initialSaveState = readOnly ? message(messages, "projectEditor.readOnly", "Read only") : "";
   const initialStatusState = "normal";
-  return `<section class="project-editor" data-project-editor data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
-    <span hidden data-blog-examples-origin="${escapeHtml(blogExamplesOrigin)}"></span>
+  return `<section class="project-editor" data-project-editor data-editor-machine-state="starting" data-project-id="${escapeHtml(projectId)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-tips="${escapeHtml(JSON.stringify(tips))}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
+    <span hidden data-blog-examples-origin="${escapeHtml(blogExamplesOrigin)}"></span><span hidden data-project-snapshot-url="${escapeHtml(snapshotUrl)}"></span>
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__file-picker" data-project-file-picker><button type="button" data-project-file-trigger aria-haspopup="menu" aria-expanded="false"><span data-project-file-current></span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button><div class="project-editor__file-menu" data-project-file-menu role="menu" hidden><label><span>${message(messages, "projectEditor.filterFiles", "Filter files")}</span><input type="search" data-project-file-filter autocomplete="off" placeholder="${message(messages, "projectEditor.filterFiles", "Filter files")}"></label><div data-project-file-options></div><p data-project-file-empty hidden>${message(messages, "projectEditor.noMatchingFiles", "No matching files")}</p></div></div><div class="project-editor__archive-actions"><button type="button" data-project-import>Import ZIP</button><button type="button" data-project-export>Export ZIP</button><input type="file" data-project-archive-file accept="application/zip,.zip" hidden></div><button class="project-editor__versions" type="button" data-project-versions aria-haspopup="dialog" aria-expanded="false"><span data-current-version>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count">${versionCount}</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button></div>
       <div class="project-editor__preview-toolbar"><span data-preview-title>Preview</span><div class="project-editor__view-controls"><button type="button" data-project-view="editor">Editor</button><button type="button" data-project-view="split" aria-pressed="true">Split</button><button type="button" data-project-view="preview">Preview</button><button type="button" data-project-view="details">Details</button>${embedHref ? `<a href="${escapeHtml(embedHref)}" target="_blank" rel="noopener">Embed view</a>` : ""}<button type="button" data-project-present>View full screen</button></div></div>
@@ -233,6 +233,15 @@ function projectRoute(pathname) {
   try {
     const match = /^\/([^/]+)\/([^/]+)(?:\/(embed))?$/.exec(decodeURIComponent(pathname));
     return match ? { namespace: match[1], slug: match[2], embed: match[3] === "embed" } : null;
+  } catch {
+    return null;
+  }
+}
+
+function projectWorkspaceRoute(pathname) {
+  try {
+    const match = /^\/-\/projects\/([^/]+)\/([^/]+)\/workspace$/.exec(decodeURIComponent(pathname));
+    return match ? { namespace: match[1], slug: match[2] } : null;
   } catch {
     return null;
   }
@@ -258,7 +267,7 @@ async function validCsrf(value, session, action, authConfig, now) {
 
 function dashboardHtml(content, messages) {
   const projects = content.projects.length
-    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
+    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" data-project-link href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
         <h3>${escapeHtml(item.name)}</h3>
         <span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span>
         <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
@@ -283,7 +292,7 @@ function dashboardHtml(content, messages) {
 
 function projectsHtml(content, messages) {
   const projects = content.projects.length
-    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
+    ? `<div class="account-grid">${content.projects.map((item) => `<a class="account-card" data-project-link href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}">
         <h3>${escapeHtml(item.name)}</h3>
         <span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span>
         <p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p>
@@ -319,17 +328,17 @@ function projectFieldsHtml({ session, content, project = null, snapshot, message
     ${editable ? `<div class="create-form__field"><label for="project-namespace">${message(messages, "projectCreate.namespace", "Namespace")}</label><select id="project-namespace" name="namespace">${namespaceOptions}</select></div>
     <fieldset><legend>${message(messages, "projectCreate.visibility", "Visibility")}</legend><div class="create-form__options"><label><input type="radio" name="visibility" value="public"${checked(project?.visibility || "public", "public")}> ${message(messages, "dashboard.public", "Public")}</label><label><input type="radio" name="visibility" value="private"${checked(project?.visibility, "private")}> ${message(messages, "dashboard.private", "Private")}</label></div></fieldset>` : ""}
     ${draft ? `<div class="draft-flash" data-draft-flash data-new-draft-flash hidden><span>${message(messages, "projectCreate.restoredDraft", "This unsaved project is stored as a session draft.")}</span><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
-    ${editable && hasUnpublishedChanges ? `<div class="draft-flash" data-draft-flash><span>${message(messages, "projectView.unsavedDraft", "This draft has unsaved changes.")}</span><button class="draft-flash__revert" type="submit" name="intent" value="revert" formnovalidate>${message(messages, "projectView.revertPublished", "Revert to published version")}</button><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
+    ${editable ? `<div class="draft-flash" data-draft-flash${hasUnpublishedChanges ? "" : " hidden"}><span>${message(messages, "projectView.unsavedDraft", "This draft has unsaved changes.")}</span><button class="draft-flash__revert" type="submit" name="intent" value="revert" formnovalidate>${message(messages, "projectView.revertPublished", "Revert to published version")}</button><button class="draft-flash__dismiss" type="button" data-dismiss-draft-flash aria-label="${message(messages, "common.dismiss", "Dismiss")}">×</button></div>` : ""}
     ${editable ? `<div class="create-actions"><button class="account-action" type="submit">${submitLabel}</button></div>` : ""}
     ${editable ? `<div class="destructive-actions"${draft ? " data-draft-actions hidden" : ""}><button class="destructive-link" type="button" ${draft ? "data-open-draft-delete" : "data-open-project-delete"}>${draft ? message(messages, "projectCreate.discardDraft", "Discard draft") : message(messages, "projectView.delete", "Delete project")}</button><div class="destructive-confirm" data-destructive-confirm role="alertdialog" aria-label="${draft ? message(messages, "projectCreate.discardDraft", "Discard draft") : message(messages, "projectView.delete", "Delete project")}" hidden><strong>${draft ? message(messages, "projectCreate.discardWarning", "Discard this project draft? This cannot be undone.") : message(messages, "projectView.deleteWarning", "Delete this project and its version history? This cannot be undone.")}</strong><div><button type="button" data-cancel-delete>${message(messages, "common.cancel", "Cancel")}</button>${draft ? `<button type="button" data-confirm-draft-delete>${message(messages, "projectCreate.discardDraft", "Discard draft")}</button>` : `<button type="submit" name="intent" value="delete" formnovalidate>${message(messages, "projectView.delete", "Delete project")}</button>`}</div></div></div>` : ""}
   </div>`;
 }
 
-function projectViewHtml(project, messages, workspace, csrf, owner, session, content, url, { embed = false, blogExamplesOrigin = "" } = {}) {
+function projectViewHtml(project, messages, workspace, csrf, owner, session, content, url, { embed = false, blogExamplesOrigin = "", snapshotUrl = "" } = {}) {
   const form = owner ? `<form class="create-form" method="post" action="/projects/${encodeURIComponent(project.id)}"><input type="hidden" name="csrf" value="${escapeHtml(csrf)}">` : `<div class="create-form" aria-label="Project details">`;
   const close = owner ? "</form>" : "</div>";
   return `<div class="account-dashboard project-create project-view project-workspace${embed ? " project-embed" : ""}">${form}${formError(url, messages)}<div class="project-create__layout">
-    ${projectEditorHtml({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory", embedHref: embed ? "" : `/${encodeURIComponent(project.namespace)}/${encodeURIComponent(project.slug)}/embed`, blogExamplesOrigin })}
+    ${projectEditorHtml({ snapshot: workspace.snapshot, snapshotUrl, versionCount: workspace.versionCount, projectId: project.id, csrf, messages, persistence: owner ? "stored" : "memory", embedHref: embed ? "" : `/${encodeURIComponent(project.namespace)}/${encodeURIComponent(project.slug)}/embed`, blogExamplesOrigin })}
     ${embed ? "" : projectFieldsHtml({ session, content, project, snapshot: workspace.snapshot, messages, editable: owner, submitLabel: message(messages, "projectView.save", "Save project"), hasUnpublishedChanges: workspace.hasUnpublishedChanges })}
   </div>${close}</div>`;
 }
@@ -362,7 +371,7 @@ function tryProjectHtml(messages) {
 
 function publicProjectsHtml(projects, messages) {
   if (!projects.length) return `<div class="account-empty">${message(messages, "publicProjects.empty", "No public projects have been published yet.")}</div>`;
-  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
+  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" data-project-link href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
 }
 
 // The publication build uses this to produce an anonymous home document that
@@ -672,18 +681,31 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const manifest = await loadManifest();
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
+      const requestedWorkspace = projectWorkspaceRoute(pathname);
+      if (requestedWorkspace) {
+        if (!contentStore) return new Response("Project workspace unavailable", { status: 503 });
+        const project = await contentStore.getProject(requestedWorkspace.namespace, requestedWorkspace.slug, session?.sub);
+        if (!project) return new Response("Not found", { status: 404 });
+        const owner = Boolean(session && project.ownerUserId === session.sub);
+        const workspace = owner
+          ? await contentStore.getProjectWorkspace(requestedWorkspace.namespace, requestedWorkspace.slug, session.sub)
+          : project.visibility === "public" ? await contentStore.getPublicProjectWorkspace(requestedWorkspace.namespace, requestedWorkspace.slug) : null;
+        if (!workspace) return new Response("Not found", { status: 404 });
+        return Response.json({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, hasUnpublishedChanges: Boolean(workspace.hasUnpublishedChanges) }, {
+          headers: { "cache-control": owner ? "private, no-store" : "public, max-age=30", "content-language": locale },
+        });
+      }
       const requestedProject = projectRoute(pathname);
       const requestedNamespace = !requestedProject ? namespaceRoute(pathname) : null;
       const dynamicProject = requestedProject && contentStore?.getProject
         ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
         : null;
-      const projectWorkspace = dynamicProject && session && contentStore?.getProjectWorkspace
-        ? await contentStore.getProjectWorkspace(requestedProject.namespace, requestedProject.slug, session.sub)
-        : null;
-      const publicProjectWorkspace = dynamicProject && !projectWorkspace && dynamicProject.visibility === "public" && contentStore?.getPublicProjectWorkspace
-        ? await contentStore.getPublicProjectWorkspace(requestedProject.namespace, requestedProject.slug)
-        : null;
-      const visibleWorkspace = projectWorkspace || publicProjectWorkspace;
+      const projectOwner = Boolean(dynamicProject && session && dynamicProject.ownerUserId === session.sub);
+      const visibleWorkspace = dynamicProject ? {
+        snapshot: { files: [], config: { entry: "", template: dynamicProject.template, container: "page", containerOptions: { allowedLinkPatterns: [] }, sandbox: { network: false, storage: "session" } } },
+        versionCount: 0,
+        hasUnpublishedChanges: false,
+      } : null;
       if (pathname === "/dashboard") {
         return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
       }
@@ -725,9 +747,10 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         let html = await upstream.text();
         if (dynamicProject) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          const token = projectWorkspace ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
-          const content = projectWorkspace ? await contentStore.listForUser(session.sub) : { organizations: [], projects: [] };
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, token, Boolean(projectWorkspace), session, content, url, { embed: requestedProject.embed, blogExamplesOrigin }));
+          const token = projectOwner ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
+          const content = projectOwner ? await contentStore.listForUser(session.sub) : { organizations: [], projects: [] };
+          const snapshotUrl = `/-/projects/${encodeURIComponent(dynamicProject.namespace)}/${encodeURIComponent(dynamicProject.slug)}/workspace`;
+          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, token, projectOwner, session, content, url, { embed: requestedProject.embed, blogExamplesOrigin, snapshotUrl }));
           html = requestedProject.embed ? embeddedProjectDocument(html) : focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
         } else if (dynamicNamespace) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);

@@ -916,7 +916,17 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.goto(`http://resources-edge.localhost:${port}/projects`, { waitUntil: "networkidle" });
-  await page.getByRole("link", { name: /Digital Clock/ }).click();
+  await page.route(`http://resources-edge.localhost:${port}/tiny-tools/digital-clock`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    await route.continue();
+  }, { times: 1 });
+  const openProject = page.getByRole("link", { name: /Digital Clock/ }).click({ noWaitAfter: true });
+  await assert.doesNotReject(page.getByLabel("Loading project").waitFor());
+  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
+  await page.waitForFunction(() => location.pathname === "/tiny-tools/digital-clock");
+  assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
+  await openProject;
+  await assert.doesNotReject(page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor());
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   await page.getByLabel("Description (optional)").fill("Updated project details.");
   await page.getByRole("button", { name: "Save project" }).click();
@@ -929,7 +939,6 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await storedTemplate.selectOption("mark");
   await assert.doesNotReject(newEditor.locator("[data-project-file-current]", { hasText: "image.svg" }).waitFor());
   await assert.doesNotReject(page.locator("[data-project-notice]").getByRole("button", { name: "Undo" }).waitFor());
-  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   assert.ok(Number(await page.locator("[data-project-versions] .project-editor__version-count").textContent()) > storedVersionCount);
   await page.locator("[data-project-notice]").getByRole("button", { name: "Undo" }).click();

@@ -953,6 +953,9 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #2d3c98; }
 .project-editor__view-controls [data-project-view="details"] { display: none; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
+.project-editor[data-editor-machine-state="starting"]::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 24; background: rgba(13, 16, 16, .78); }
+.project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
+.project-editor[data-editor-machine-state="starting"]::after { position: absolute; z-index: 25; top: calc(50% - 13px); left: calc(50% - 13px); }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
 .project-editor__status[data-state="error"] { border-color: #d45b62; color: #ffd0d2; background: #421f23; }
@@ -1034,6 +1037,11 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .layout:has(.project-workspace) > .main { max-width: none; }
 .layout:has(.project-workspace) .content-root, .layout:has(.project-workspace) .content-block { width: 100%; }
 .project-workspace .project-editor { min-height: calc(100vh - 190px); margin-top: 0; }
+.project-editor__preview .deck, .project-editor__preview .slide { height: 100%; }
+
+.project-route-loading { display: grid; width: 100%; min-height: calc(100vh - 96px); align-content: center; justify-content: center; justify-items: center; gap: 14px; color: var(--muted); background: #151717; }
+.project-route-loading p { margin: 0; font-size: 12px; }
+.focused-view .project-route-loading { min-height: calc(100vh - 48px); }
 
 .content-root[data-loading="true"] {
   width: 100%;
@@ -1066,6 +1074,10 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 }
 @keyframes skeletonPulse {
   50% { opacity: .38; }
+}
+@keyframes projectSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { animation: projectSpin 1.8s linear infinite; }
 }
 
 @media (max-width: 760px) {
@@ -1777,6 +1789,29 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     }));
   }
 
+  function showProjectLoading(url) {
+    const content = document.getElementById("content");
+    const layout = document.querySelector("main.layout");
+    if (!content) return;
+    if (layout) {
+      layout.dataset.view = "focused";
+      layout.classList.add("focused-view");
+    }
+    content.dataset.loading = "true";
+    content.setAttribute("aria-busy", "true");
+    const loading = document.createElement("section");
+    loading.className = "project-route-loading";
+    loading.setAttribute("aria-label", "Loading project");
+    const spinner = document.createElement("span");
+    spinner.className = "project-route-loading__spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    const label = document.createElement("p");
+    label.textContent = "Loading project…";
+    loading.append(spinner, label);
+    content.replaceChildren(loading);
+    document.title = decodeURIComponent(url.pathname.split("/").filter(Boolean).at(-1) || "Project") + " · Resources.co";
+  }
+
   function clearSkeleton() {
     const content = document.getElementById("content");
     if (!content) return;
@@ -1786,7 +1821,8 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 
   function preparePrefetching(rootNode = document) {
     if (window.__resourcesDisablePrefetch) return;
-    const links = Array.from(rootNode.querySelectorAll("a[href]")).filter(sameSiteRoute);
+    const links = Array.from(rootNode.querySelectorAll("a[href]"))
+      .filter((link) => sameSiteRoute(link) && !link.hasAttribute("data-project-link"));
     links.forEach((link) => {
       link.addEventListener("pointerenter", () => prefetchRoute(link), { once: true });
       link.addEventListener("focus", () => prefetchRoute(link), { once: true });
@@ -1853,14 +1889,18 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     if (next.origin !== location.origin || next.hash || link.target) return;
     event.preventDefault();
     setMenuOpen(false);
-    navigate(next, "push");
+    navigate(next, "push", { project: link.hasAttribute("data-project-link") });
   });
 
   addEventListener("popstate", () => navigate(new URL(location.href), "replace"));
 
-  async function navigate(url, historyMode) {
+  async function navigate(url, historyMode, { project = false } = {}) {
     const cached = routeCache.has(url.pathname);
-    if (!cached) showSkeleton();
+    const enteredProjectEarly = project && historyMode === "push";
+    if (enteredProjectEarly) {
+      history.pushState(null, "", url.pathname);
+      showProjectLoading(url);
+    } else if (!cached) showSkeleton();
     let nextDoc;
     try {
       nextDoc = await fetchRoute(url);
@@ -1896,7 +1936,7 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     applyTheme(root.getAttribute("data-theme") || "dark");
     preparePrefetching(currentContent);
     prepareLocalExamples(currentContent);
-    if (historyMode === "push") history.pushState(null, "", url.pathname);
+    if (historyMode === "push" && !enteredProjectEarly) history.pushState(null, "", url.pathname);
     scrollTo({ top: 0, behavior: "auto" });
   }
 })();`;
