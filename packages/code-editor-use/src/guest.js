@@ -86,6 +86,11 @@ function renderLineNumbers() {
   }
   while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
   const first = view.state.doc.lineAt(view.viewport.from).number;
+  // This is a guest-assisted virtual gutter rather than CodeMirror's native
+  // gutter plugin. Keep its first rendered number aligned with the document
+  // block that starts the current virtual viewport.
+  lineNumberGutter.style.paddingTop = `${Math.max(0, view.lineBlockAt(view.viewport.from).top)}px`;
+  lineNumberGutter.style.height = `${Math.max(view.contentHeight, view.scrollDOM.clientHeight)}px`;
   // The virtual DOM cannot provide CodeMirror's normal synchronous geometry.
   // Keep this guest-assisted gutter viewport bounded even if its conservative
   // viewport estimate temporarily spans the entire document.

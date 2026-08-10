@@ -30523,6 +30523,8 @@
     }
     while (lineNumberGutter2.firstChild) lineNumberGutter2.firstChild.remove();
     const first = view.state.doc.lineAt(view.viewport.from).number;
+    lineNumberGutter2.style.paddingTop = `${Math.max(0, view.lineBlockAt(view.viewport.from).top)}px`;
+    lineNumberGutter2.style.height = `${Math.max(view.contentHeight, view.scrollDOM.clientHeight)}px`;
     const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
     for (let number2 = first; number2 <= last; number2 += 1) {
       const item = document.createElement("div");
