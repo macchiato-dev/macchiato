@@ -19,6 +19,13 @@ container may be broad enough for dialogs, source readers, notes, responsive
 layouts, and presentation overlays while still denying undeclared network
 sinks. Session storage, timers, downloads, and visibility are separate grants.
 
+Prefer bounded HTML for reading surfaces: classify monospace blocks by their
+longest line, cap their width to a small set of predictable `ch`-based sizes,
+and wrap only the blocks that exceed their cap. This avoids shipping a text
+layout engine or measuring every code token. A future container may grant a
+separately loaded measured-layout capability for an unusually intricate block;
+that cost should not be part of the default presentation runtime.
+
 For low-request startup, a project may bind one of its ordinary files as its
 `containerEntry`; the controller passes that file as `project.file`. It may contain a complete HTML payload
 with its styles, executable code, data, and data-URL assets embedded. The
