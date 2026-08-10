@@ -802,6 +802,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       versionButton.setAttribute("aria-expanded", "false");
       renderTabs();
       sendContent();
+      renderPreview();
       showCurrentVersion();
       setStatus("Current version");
     });
@@ -823,6 +824,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
         sendContent();
+        renderPreview();
         setStatus(`Viewing version ${sequence}`);
         showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
       });
@@ -847,6 +849,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       versionButton.setAttribute("aria-expanded", "false");
       renderTabs();
       sendContent();
+      renderPreview();
       showCurrentVersion();
       setStatus("Current version");
     });
@@ -867,6 +870,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         versionButton.setAttribute("aria-expanded", "false");
         renderTabs();
         sendContent();
+        renderPreview();
         showSelectedVersion(button.textContent, version.createdAt);
         setStatus(`Viewing ${button.textContent}`);
       });

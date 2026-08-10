@@ -655,7 +655,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
   const template = page.getByLabel("Template");
   const container = page.getByLabel("Container");
-  assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "Hello, HTML", "Digital clock", "Logo mark", "Bar chart", "Bouncing ball", "Starfield", "Blank project", "Presentation"]);
+  assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "Hello, HTML", "Single-file document", "Digital clock", "Logo mark", "Bar chart", "Bouncing ball", "Starfield", "Blank project", "Presentation"]);
   assert.equal(await template.inputValue(), "article");
   assert.equal(await container.inputValue(), "article");
   const elementTags = page.locator("[data-container-outline] [data-element-tag]");
@@ -897,6 +897,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
+  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
   const versionsButton = page.locator("[data-project-versions]");
   assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^Current Version1/);
   await versionsButton.click();
@@ -906,9 +907,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   await assert.doesNotReject(page.locator("[data-project-versions] .project-editor__version-count", { hasText: "1" }).waitFor());
   await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent.endsWith("ago"));
+  await page.waitForFunction(() => !document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
   await page.locator("[data-project-version-list]").getByRole("button", { name: "Current Version" }).click();
+  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
   assert.equal(await page.locator("[data-project-versions] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
