@@ -933,8 +933,9 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__open-tab > button { height: 100%; border: none; color: inherit; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
 .project-editor__open-tab > [role="tab"] { min-width: 0; max-width: 150px; padding: 5px 9px; overflow: hidden; }
 .project-editor__open-tab:has([aria-selected="true"]) { color: #fff; background: #25358b; box-shadow: inset 0 1px rgba(187,198,255,.28); }
-.project-editor__open-tab > button.project-editor__tab-close { position: absolute; top: 2px; right: 2px; width: 27px; padding: 0 4px 1px 10px; font-size: 15px; background: linear-gradient(90deg, rgba(17,26,86,0), #111a56 42%); opacity: 0; }
-.project-editor__open-tab:has([aria-selected="true"]) > button.project-editor__tab-close { background: linear-gradient(90deg, rgba(37,53,139,0), #25358b 42%); }
+.project-editor__open-tab > button.project-editor__tab-close { position: absolute; top: 4px; right: 4px; display: grid; width: 20px; height: 20px; place-items: center; padding: 0 0 1px; border-radius: 3px; font-size: 15px; line-height: 1; background: transparent; opacity: 0; }
+.project-editor__open-tab > button.project-editor__tab-close:hover, .project-editor__open-tab > button.project-editor__tab-close:focus-visible { color: #fff; background: #4053b0; outline: none; }
+.project-editor__open-tab:hover:has([aria-selected="true"]) > [role="tab"], .project-editor__open-tab:focus-within:has([aria-selected="true"]) > [role="tab"] { mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 24px), transparent 100%); }
 .project-editor__open-tab:hover .project-editor__tab-close, .project-editor__open-tab:focus-within .project-editor__tab-close { opacity: 1; }
 .project-editor__file-picker { position: relative; display: block; flex: 0 0 45px; min-width: 45px; max-width: 45px; }
 .project-editor__file-picker > button { display: flex; width: 100%; min-height: 30px; align-items: center; justify-content: center; gap: 8px; padding: 5px; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 11px; font-weight: 700; }
