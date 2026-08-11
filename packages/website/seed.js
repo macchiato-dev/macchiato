@@ -1026,6 +1026,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[data-instant-tooltip] { position: relative; display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; }
 .project-editor__view-controls button[data-instant-tooltip] svg { width: 16px; height: 16px; }
+.project-editor__view-controls > button[data-instant-tooltip]:hover { color: #fff; background: #3043a4; }
 .project-view-segments { display: flex; height: 30px; gap: 0; padding: 0; border: 1px solid #33428f; border-radius: 5px; background: #111a56; box-shadow: none; }
 .project-editor__view-controls .project-view-segments button { border: none; border-radius: 0; color: #cbd4ff; background: transparent; box-shadow: none; }
 .project-editor__view-controls .project-view-segments button:first-child { border-radius: 4px 0 0 4px; }

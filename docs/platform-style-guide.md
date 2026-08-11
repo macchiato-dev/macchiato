@@ -29,7 +29,9 @@ beveled segmented control, like paragraph-alignment controls. Raised buttons
 use a light top/left and dark bottom/right edge; the selected mode reverses the
 depth and appears inset. Do not hide these three choices in a dropdown.
 Every icon button has an accessible name and an instant custom tooltip; native
-delayed `title` tooltips are not the primary explanation.
+delayed `title` tooltips are not the primary explanation. Standalone toolbar
+icons, including Full Screen and Details, use the same compact hover background
+as the segmented view controls; the hit area does not change size on hover.
 
 ## Split actions and menus
 
