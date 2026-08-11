@@ -36,6 +36,74 @@ document.addEventListener("click", (event) => {
   enterProjectLoadingView(link.href);
 });
 
+for (const split of document.querySelectorAll("[data-save-split]")) {
+  const trigger = split.querySelector("[data-save-menu-trigger]");
+  const menu = split.querySelector("[data-save-menu]");
+  trigger.addEventListener("click", () => {
+    const opening = menu.hidden;
+    menu.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!split.contains(event.target)) { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("a[href]");
+  if (!link || link.classList.contains("project-close")) return;
+  const target = new URL(link.href, location.href);
+  if (target.origin === location.origin && /^\/[^/]+\/[^/]+$/.test(target.pathname)) {
+    let stack = [];
+    try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
+    const current = location.pathname + location.search;
+    if (stack.at(-1) !== current) stack.push(current);
+    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
+  }
+});
+for (const close of document.querySelectorAll(".project-close")) {
+  let stack = [];
+  try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
+  close.href = stack.at(-1) || "/projects";
+  close.addEventListener("click", () => {
+    stack.pop();
+    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
+  });
+}
+
+for (const overflow of document.querySelectorAll("[data-project-overflow]")) {
+  const trigger = overflow.querySelector("[data-project-overflow-trigger]");
+  const menu = overflow.querySelector("[data-project-overflow-menu]");
+  trigger.addEventListener("click", () => {
+    const opening = menu.hidden;
+    menu.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!overflow.contains(event.target)) { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); }
+  });
+}
+
+for (const fields of document.querySelectorAll("[data-project-fields]")) {
+  const modal = fields.querySelector("[data-version-title-modal]");
+  if (!modal) continue;
+  const input = modal.querySelector("[data-version-title-input]");
+  const hidden = fields.querySelector("[data-version-title]");
+  const close = () => { modal.hidden = true; input.value = ""; };
+  fields.querySelector("[data-open-version-title]")?.addEventListener("click", () => {
+    fields.querySelector("[data-save-menu]").hidden = true;
+    modal.hidden = false;
+    input.focus();
+  });
+  modal.querySelector("[data-version-title-cancel]").addEventListener("click", close);
+  modal.querySelector("[data-version-title-save]").addEventListener("click", () => {
+    hidden.value = input.value.trim();
+    modal.hidden = true;
+    fields.closest("form")?.requestSubmit(fields.querySelector("[data-project-submit]"));
+  });
+  modal.addEventListener("pointerdown", (event) => { if (event.target === modal) close(); });
+}
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function slugify(value) {
@@ -139,10 +207,16 @@ document.addEventListener("focusout", (event) => {
   if (error) validateSlug(slug, error);
 });
 document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
+for (const button of document.querySelectorAll("button[data-instant-tooltip]")) {
+  const tooltip = document.createElement("span");
+  tooltip.className = "instant-tooltip";
+  tooltip.textContent = button.dataset.instantTooltip;
+  button.append(tooltip);
+}
 document.addEventListener("click", (event) => {
   event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
   const open = event.target.closest?.("[data-open-draft-delete], [data-open-project-delete]");
-  if (open) open.closest(".destructive-actions")?.querySelector("[data-destructive-confirm]")?.removeAttribute("hidden");
+  if (open) open.closest("[data-project-fields]")?.querySelector("[data-destructive-confirm]")?.removeAttribute("hidden");
   const cancel = event.target.closest?.("[data-cancel-delete]");
   if (cancel) cancel.closest("[data-destructive-confirm]")?.setAttribute("hidden", "");
   if (event.target.closest?.("[data-confirm-draft-delete]")) {
@@ -166,6 +240,7 @@ function rebuildDraft(patches, sequence = patches.length) {
 function relativeVersionTime(timestamp, now = Date.now()) {
   const deltaSeconds = Math.round((Number(timestamp) - now) / 1000);
   const absolute = Math.abs(deltaSeconds);
+  if (absolute < 45) return "Just now";
   const [value, unit] = absolute < 60
     ? [deltaSeconds, "second"]
     : absolute < 3600
@@ -176,11 +251,26 @@ function relativeVersionTime(timestamp, now = Date.now()) {
   return new Intl.RelativeTimeFormat(document.documentElement.lang || "en", { numeric: "always" }).format(value, unit);
 }
 
-function versionChoice(label, timestamp, { current = false, sequence = 0 } = {}) {
+function versionChoice(label, timestamp, { current = false, sequence = 0, title = "", latest = false } = {}) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "project-editor__version";
-  button.textContent = label;
+  if (title) {
+    const name = document.createElement("span");
+    name.className = "project-editor__version-title";
+    name.textContent = title;
+    button.append(name);
+  }
+  const time = document.createElement("span");
+  time.textContent = label;
+  time.dataset.versionTime = String(Number(timestamp));
+  button.append(time);
+  if (latest) {
+    const badge = document.createElement("span");
+    badge.className = "project-editor__latest";
+    badge.textContent = "LATEST";
+    button.append(badge);
+  }
   button.title = new Date(Number(timestamp)).toLocaleString();
   if (sequence) button.dataset.versionSequence = String(sequence);
   if (current) {
@@ -199,7 +289,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const statusNotice = root.querySelector("[data-project-notice]");
   const tipControls = root.querySelector("[data-project-tip-controls]");
   const tipText = root.querySelector("[data-project-tip]");
-  const versionButton = root.querySelector("[data-project-versions]");
+  const versionButton = root.closest(".project-create__layout")?.querySelector("[data-project-versions-proxy]") || root.querySelector("[data-project-versions]");
   const versionCount = versionButton.querySelector(".project-editor__version-count");
   const currentVersion = versionButton.querySelector("[data-current-version]");
   const historyPanel = root.querySelector("[data-project-history]");
@@ -257,6 +347,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let pendingDestructive = false;
   let templateOnlyPending = false;
   let changeGeneration = 0;
+  let unsavedChangeCount = 0;
+  let latestSavedAt = 0;
   let saving = false;
   let localHistory = null;
   let editorController = null;
@@ -283,12 +375,27 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function showCurrentVersion() {
-    currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
-    currentVersion.removeAttribute("title");
+    currentVersion.textContent = latestSavedAt ? relativeVersionTime(latestSavedAt) : (root.dataset.currentVersionLabel || "Current Version");
+    if (latestSavedAt) {
+      currentVersion.dataset.versionTime = String(latestSavedAt);
+      currentVersion.title = new Date(latestSavedAt).toLocaleString();
+    } else {
+      currentVersion.removeAttribute("data-version-time");
+      currentVersion.removeAttribute("title");
+    }
+  }
+
+  function refreshSubmitLabel() {
+    const button = root.closest("form")?.querySelector("[data-project-submit]");
+    if (!button || draft) return;
+    button.textContent = unsavedChangeCount
+      ? `${unsavedChangeCount} unsaved ${unsavedChangeCount === 1 ? "change" : "changes"}`
+      : button.dataset.defaultLabel;
   }
 
   function showSelectedVersion(label, timestamp) {
     currentVersion.textContent = label;
+    currentVersion.dataset.versionTime = String(Number(timestamp));
     currentVersion.title = new Date(Number(timestamp)).toLocaleString();
   }
 
@@ -727,6 +834,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     pending = true;
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
+    unsavedChangeCount += 1;
+    refreshSubmitLabel();
     if (draft) root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
     changeGeneration += 1;
     pendingDestructive ||= destructive || branchedFromHistory;
@@ -859,7 +968,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
     const { versions } = await response.json();
     versionList.replaceChildren();
-    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
+    const latest = versions.find((version) => version.latest);
+    latestSavedAt = Number(latest?.savedAt || latest?.createdAt || 0);
+    if (latest) showSelectedVersion(relativeVersionTime(latest.savedAt || latest.createdAt), latest.savedAt || latest.createdAt);
+    const current = versionChoice(latest ? relativeVersionTime(latest.savedAt || latest.createdAt) : (root.dataset.currentVersionLabel || "Current Version"), latest?.savedAt || Date.now(), { current: true });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
@@ -876,7 +988,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     });
     versionList.append(current);
     for (const version of versions) {
-      const button = versionChoice(relativeVersionTime(version.createdAt), version.createdAt, { sequence: version.sequence });
+      const timestamp = version.savedAt || version.createdAt;
+      const button = versionChoice(relativeVersionTime(timestamp), timestamp, { sequence: version.sequence, title: version.title, latest: version.latest });
       button.addEventListener("click", async () => {
         clearNotice();
         await save();
@@ -892,7 +1005,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         renderTabs();
         sendContent();
         renderPreview();
-        showSelectedVersion(button.textContent, version.createdAt);
+        showSelectedVersion(relativeVersionTime(timestamp), timestamp);
         setStatus(`Viewing ${button.textContent}`);
       });
       versionList.append(button);
@@ -1044,7 +1157,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function setSplit(clientX) {
     const rect = workspace.getBoundingClientRect();
     const percent = Math.max(20, Math.min(80, ((clientX - rect.left) / rect.width) * 100));
-    workspace.style.setProperty("--source-width", `${percent}%`);
+    root.style.setProperty("--source-width", `${percent}%`);
     splitter.setAttribute("aria-valuenow", String(Math.round(percent)));
   }
   splitter.addEventListener("pointerdown", (event) => { splitter.setPointerCapture(event.pointerId); setSplit(event.clientX); });
@@ -1053,7 +1166,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
     const next = Math.max(20, Math.min(80, Number(splitter.getAttribute("aria-valuenow")) + (event.key === "ArrowRight" ? 5 : -5)));
-    workspace.style.setProperty("--source-width", `${next}%`);
+    root.style.setProperty("--source-width", `${next}%`);
     splitter.setAttribute("aria-valuenow", String(next));
   });
   for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
@@ -1170,6 +1283,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     growTextarea(textarea);
   }
   linkPatterns?.addEventListener("input", updateContainer);
+  for (const field of form?.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select") || []) {
+    if (field.matches("[data-project-template], [data-project-container], #project-link-patterns, [data-version-title-input]")) continue;
+    field.addEventListener("input", () => { unsavedChangeCount += 1; refreshSubmitLabel(); }, { once: true });
+    field.addEventListener("change", () => { if (!unsavedChangeCount) { unsavedChangeCount = 1; refreshSubmitLabel(); } });
+  }
   versionButton.addEventListener("click", () => {
     if (!historyPanel.hidden) {
       historyPanel.hidden = true;
@@ -1178,11 +1296,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
-    const rootRect = root.getBoundingClientRect();
     const buttonRect = versionButton.getBoundingClientRect();
     const panelWidth = historyPanel.getBoundingClientRect().width;
-    historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.left - rootRect.left, rootRect.width - panelWidth - 8))}px`;
-    historyPanel.style.top = `${buttonRect.bottom - rootRect.top + 6}px`;
+    historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.right - panelWidth, innerWidth - panelWidth - 8))}px`;
+    historyPanel.style.top = `${buttonRect.bottom + 6}px`;
     if (readOnly) {
       versionList.replaceChildren(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
     } else {
@@ -1197,6 +1314,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   });
   addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
+  setInterval(() => {
+    for (const label of root.closest(".project-create__layout")?.querySelectorAll("[data-version-time]") || []) {
+      label.textContent = relativeVersionTime(label.dataset.versionTime);
+    }
+  }, 30_000);
+  if (!readOnly && !draft && !memoryOnly) renderStoredVersions();
   renderTabs();
   mountEditorMachine();
   addEventListener("pagehide", () => {
