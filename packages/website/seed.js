@@ -933,9 +933,9 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__tab-scroll { flex: 0 0 24px; height: 30px; padding: 0; border: 1px solid #33428f; border-radius: 4px; color: #cbd4ff; background: #111a56; font: inherit; font-size: 18px; cursor: pointer; }
 .project-editor__tab-scroll[hidden] { display: none; }
 .project-editor__tab-scroll:disabled { color: #6571a8; cursor: default; }
-.project-editor__open-tab { position: relative; display: flex; flex: 0 1 auto; max-width: 160px; height: 30px; align-items: center; border: 1px solid #33428f; border-radius: 5px; color: #aeb8e9; background: #111a56; }
+.project-editor__open-tab { position: relative; display: flex; flex: 0 0 auto; max-width: 160px; height: 30px; align-items: center; border: 1px solid #33428f; border-radius: 5px; color: #aeb8e9; background: #111a56; }
 .project-editor__open-tab > button { height: 100%; border: none; color: inherit; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
-.project-editor__open-tab > [role="tab"] { min-width: 0; max-width: 150px; padding: 5px 9px; overflow: hidden; }
+.project-editor__open-tab > [role="tab"] { min-width: 0; max-width: 150px; padding: 5px 9px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .project-editor__open-tab:has([aria-selected="true"]) { color: #fff; background: #4053b0; box-shadow: none; }
 .project-editor__open-tab > button.project-editor__tab-close { position: absolute; top: 4px; right: 4px; display: grid; width: 20px; height: 20px; place-items: center; padding: 0 0 1px; border-radius: 3px; font-size: 15px; line-height: 1; background: transparent; opacity: 0; }
 .project-editor__open-tab > button.project-editor__tab-close:hover, .project-editor__open-tab > button.project-editor__tab-close:focus-visible { color: #fff; background: #4053b0; outline: none; }
@@ -1035,8 +1035,8 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls .project-view-segments button:hover { color: #fff; background: #3043a4; }
 .project-editor__view-controls .project-view-segments button[aria-pressed="true"] { color: #fff; background: #5267c7; box-shadow: none; transform: none; }
 .project-editor__view-controls .project-view-segments button + button[aria-pressed="true"] { box-shadow: inset 1px 0 #4053b0; }
-.instant-tooltip { position: absolute; top: calc(100% + 6px); left: 50%; z-index: 40; width: auto; min-width: 72px; max-width: 190px; padding: 6px 9px; border: 1px solid #4053b0; border-radius: 5px; color: #eef2ff; background: #111a56; box-shadow: 0 4px 12px rgba(0,0,0,.35); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; transform: translateX(-50%); opacity: 0; pointer-events: none; }
-.project-editor__view-controls button[data-instant-tooltip]:hover .instant-tooltip, .project-editor__view-controls button[data-instant-tooltip]:focus-visible .instant-tooltip { opacity: 1; }
+.instant-tooltip { position: fixed; top: 0; left: 0; z-index: 80; width: auto; min-width: 72px; max-width: calc(100vw - 16px); padding: 6px 9px; overflow: hidden; border: 1px solid #4053b0; border-radius: 5px; color: #eef2ff; background: #111a56; box-shadow: 0 4px 12px rgba(0,0,0,.35); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; opacity: 0; pointer-events: none; }
+.instant-tooltip[data-visible] { opacity: 1; }
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #4053b0; }
 .project-editor__view-controls button.project-details-toggle { display: grid; }
 .project-editor__view-controls .project-details-toggle { order: 2; }

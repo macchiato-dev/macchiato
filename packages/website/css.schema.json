@@ -683,6 +683,11 @@
             "nowrap"
           ]
         },
+        "text-overflow": {
+          "enum": [
+            "ellipsis"
+          ]
+        },
         "transition": {
           "$ref": "transition"
         },

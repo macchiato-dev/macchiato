@@ -209,11 +209,39 @@ document.addEventListener("focusout", (event) => {
   if (error) validateSlug(slug, error);
 });
 document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
+function attachInstantTooltip(button, label = button.dataset.instantTooltip) {
+  if (!label || button.dataset.instantTooltipAttached === "true") return;
+  button.dataset.instantTooltip = label;
+  button.dataset.instantTooltipAttached = "true";
+  let tooltip = null;
+  const show = () => {
+    if (!tooltip) {
+      tooltip = document.createElement("span");
+      tooltip.className = "instant-tooltip";
+      tooltip.textContent = label;
+      document.body.append(tooltip);
+    }
+    requestAnimationFrame(() => {
+      if (!tooltip) return;
+      tooltip.dataset.visible = "";
+      const anchor = button.getBoundingClientRect();
+      const width = tooltip.offsetWidth;
+      const left = Math.max(8, Math.min(innerWidth - width - 8, anchor.left + anchor.width / 2 - width / 2));
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${anchor.bottom + 4}px`;
+    });
+  };
+  const hide = () => {
+    tooltip?.remove();
+    tooltip = null;
+  };
+  button.addEventListener("pointerenter", show);
+  button.addEventListener("pointerleave", hide);
+  button.addEventListener("focus", show);
+  button.addEventListener("blur", hide);
+}
 for (const button of document.querySelectorAll("button[data-instant-tooltip]")) {
-  const tooltip = document.createElement("span");
-  tooltip.className = "instant-tooltip";
-  tooltip.textContent = button.dataset.instantTooltip;
-  button.append(tooltip);
+  attachInstantTooltip(button);
 }
 document.addEventListener("click", (event) => {
   event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
@@ -781,14 +809,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       select.dataset.openTab = path;
       select.setAttribute("role", "tab");
       select.setAttribute("aria-selected", String(path === selected));
-      select.textContent = path === "config" ? root.dataset.configLabel || "Configuration" : path;
+      const tabLabel = path === "config" ? root.dataset.configLabel || "Configuration" : path.split("/").at(-1);
+      select.textContent = tabLabel;
+      attachInstantTooltip(select, path === "config" ? tabLabel : path);
       tab.append(select);
       if (openTabs.length > 1 && path === selected) {
         const close = document.createElement("button");
         close.type = "button";
         close.className = "project-editor__tab-close";
         close.dataset.closeTab = path;
-        close.setAttribute("aria-label", `Close ${select.textContent}`);
+        close.setAttribute("aria-label", `Close ${tabLabel}`);
         close.textContent = "×";
         tab.append(close);
       }

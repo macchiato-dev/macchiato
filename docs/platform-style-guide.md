@@ -32,6 +32,9 @@ Every icon button has an accessible name and an instant custom tooltip; native
 delayed `title` tooltips are not the primary explanation. Standalone toolbar
 icons, including Full Screen and Details, use the same compact hover background
 as the segmented view controls; the hit area does not change size on hover.
+Tooltips stay on one line and are clamped to the viewport. Near an edge they
+grow inward rather than crossing the window boundary. File tabs show only the
+basename; their tooltip carries the complete project-relative path.
 
 ## Split actions and menus
 

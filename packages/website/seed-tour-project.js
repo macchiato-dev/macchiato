@@ -68,6 +68,7 @@ const snapshot = {
     artifactPath: "/-/blog-examples/dom-use-tour/index.html",
     stylesheets: ["style.css"],
     scripts: ["app.js"],
+    editorTabs: ["index.html", "style.css", "app.js"],
     modules: { "./generated/tour-data.js": "generated/tour-data.js" },
     domSchema,
     cssSchema,
