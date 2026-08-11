@@ -445,7 +445,7 @@ node --test \
 
 deno check \
   --config packages/website/deno.json \
-  packages/website/bunny-bootstrap.js \
+  packages/website/bunny-server.js \
   packages/website/bunny-application.js
 ```
 
@@ -472,29 +472,21 @@ The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for
 another environment, such as staging.
 
-This produces one copy-and-paste Edge Script, one deferred application bundle,
-and the validated Storage objects:
+This produces one minified, copy-and-paste Edge Script and the validated
+Storage objects:
 
 ```text
 dist/resources-bunny/
-  resources-bunny.js                 small public bootstrap
-  resources-application.js           inspectable copy of deferred bundle
+  resources-bunny.js                 complete Edge application
   site/resources-co-<sha>/
     manifest.json
-    -/edge/resources-application.<digest>.js
     ...published site objects
 ```
 
-The bootstrap embeds the seven-character Git revision and the deferred object's
-content-addressed name. These are build facts, not mutable environment
-variables. The module is one self-contained, trusted bundle: it does not
-remotely import a tree of files.
-
-After authenticating the Storage request, the bootstrap trusts the configured
-deployment artifact and imports its bytes through a base64 `data:` module URL. The
-specifier exists only inside the isolate and the loader removes module URLs
-from reported errors so fetched source cannot spill into logs. Deferred
-compilation happens after the initial Edge Script has registered its handler.
+The bundle embeds the seven-character Git revision used by the Storage prefix.
+It contains the complete server application, is minified to reduce parse and
+startup work, and performs no runtime code loading. Database migration and
+store initialization remain lazy and shared across requests.
 
 ### Update an existing staging deployment manually
 
@@ -520,7 +512,7 @@ assets may retain their long public lifetime.
    `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
    The build-created revision directory is part of every uploaded object key.
 2. Create one Bunny standalone Edge Script. Its build entrypoint is
-   `packages/website/bunny-bootstrap.js`; deployment normally pastes
+   `packages/website/bunny-server.js`; deployment normally pastes
    `dist/resources-bunny/resources-bunny.js`.
 3. Configure the main Resources.co script with:
 
@@ -528,9 +520,6 @@ assets may retain their long public lifetime.
      if required by the selected endpoint.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
-   - `DEFERRED_PREWARM_DELAY_MS`: optional delay after an anonymous fast home
-     response; defaults to 75 ms, is capped at five seconds, and `0` disables
-     prewarming.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
    - `BLOG_EXAMPLES_ORIGIN`: the separate origin used by sandboxed examples.
    - `GITHUB_CLIENT_ID`: GitHub OAuth or GitHub App client ID.
@@ -567,24 +556,16 @@ separate authorities. See [Bunny Database operations](../../docs/bunny-database-
 for the difference between Bunny's internal durability snapshots and an
 operator-controlled backup.
 
-The 20–25 KB bootstrap registers its HTTP server without database or remote
-module work. An anonymous `GET /` with no query or session cookie reads a
+The single minified bundle registers its HTTP server without network or
+database work. An anonymous `GET /` with no query or session cookie reads a
 pre-rendered localized home document directly from the revisioned Storage
 prefix and identifies itself with `X-Resources-Edge-Tier: bootstrap`. The fast
 document intentionally uses the valid empty state for live project discovery;
-Browse and signed-in home remain deferred because they require the database.
+Browse and signed-in home use the bundled application because they require the
+database.
 
-After the fast Storage request finishes, the bootstrap schedules deferred
-prewarming. A complex route loads immediately instead. It fetches the single
-bundle directly from private Storage using the existing `STORAGE_API_KEY`,
-rejects redirects and oversized content, and imports the trusted bytes through
-a Deno data URL. The promise is shared within
-the isolate and reset after failures. Uploading the new immutable revision
-before deploying its compiled bootstrap lets old and new isolates coexist
-without changing an environment variable or introducing planned downtime.
-
-The bootstrap stays database-free. On the first database-backed request, the
-dynamically loaded application checks `resource_schema_migrations`. If it is
+On the first database-backed request, the application checks
+`resource_schema_migrations`. If it is
 current, the request proceeds; otherwise one shared promise applies ordered,
 idempotent SQL migrations and all affected requests wait. A failure returns a
 non-cacheable `503`, clears the promise, and a later request retries.

@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client/web";
+import { createClient } from "@libsql/client/http";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
 import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
@@ -8,10 +8,10 @@ import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createResourcesEdgeHandler } from "./edge/app.js";
 import { createEdgeConfig } from "./edge/models.js";
 
-// This entrypoint is bundled into one import-free module stored beside the
-// published site. It does not register a server: the small bootstrap owns the
-// request socket and calls this factory only when a deferred route is needed.
-export function createResourcesDeferredHandler(env, { fetchImpl = fetch } = {}) {
+// The server delays calling this factory until a database-backed route needs
+// it. Keeping construction synchronous and side-effect free lets the static
+// anonymous-home handler register before any database client is initialized.
+export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {}) {
   const storagePrefix = "resources-co-__MACCHIATO_GIT_REVISION__";
   const config = createEdgeConfig({ ...env, BUNNY_BUCKET_PREFIX: storagePrefix });
   const authConfig = createAuthConfig(env);
@@ -48,7 +48,7 @@ export function createResourcesDeferredHandler(env, { fetchImpl = fetch } = {}) 
     return databaseReadyPromise;
   }
 
-  return async function deferredResourcesRequest(request) {
+  return async function resourcesApplicationRequest(request) {
     try {
       await databaseReady();
       return await handler(request);

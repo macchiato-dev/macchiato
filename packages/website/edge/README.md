@@ -2,11 +2,9 @@
 
 ## Runtime tiers
 
-- `../bunny-bootstrap.js`: small synchronous composition root and HTTP server.
-- `bootstrap.js`: anonymous fast-home selection and delayed prewarming.
-- `deferred-loader.js`: private-Storage fetch, size/digest verification, and
-  one-bundle data-URL import.
-- `../bunny-application.js`: self-contained deferred application entrypoint.
+- `../bunny-server.js`: minified monolithic composition root and HTTP server.
+- `bootstrap.js`: anonymous fast-home selection before database readiness.
+- `../bunny-application.js`: application factory with lazy database readiness.
 - `models.js`: pure validation and policy models with no SDK dependency.
 - `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
   and logger.
@@ -22,9 +20,9 @@ This division makes the deployed request path reviewable without reading the
 large page renderer, and makes the renderer unable to grant itself new edge
 routes after publication.
 
-The bootstrap calls `serve()` synchronously. It performs no remote work before
-registration. Remote module loading and database readiness are shared promises
-inside the isolate. Production deployments should run the documented database
+The server calls `serve()` synchronously and performs no remote work before
+registration. Database readiness is a shared promise inside the isolate.
+Production deployments should run the documented database
 migration before publishing so readiness is normally idempotent verification
 rather than first-time schema creation.
 
@@ -42,9 +40,7 @@ repository route/view models
   -> dom-use + html-use strictly sanitize document-profile markup
   -> exporter writes immutable objects and manifest evidence
   -> operator uploads one export prefix to private Bunny Storage
-  -> build stores one content-addressed deferred application bundle
-  -> bootstrap fetches that pinned object with its Storage read credential
-  -> bootstrap verifies the fetched bytes before importing them
+  -> build emits one minified Edge Script with no runtime code loading
   -> edge validates manifest structure and security profile
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request

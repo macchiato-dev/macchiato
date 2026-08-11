@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createResourcesBootstrapHandler } from "../edge/bootstrap.js";
-import { createDeferredModuleLoader } from "../edge/deferred-loader.js";
-import { storageRequest } from "../edge/models.js";
 
 const config = Object.freeze({
   storageOrigin: "https://storage.example.test/zone",
@@ -70,40 +68,4 @@ test("sessions and complex routes load the deferred handler", async () => {
     headers: { cookie: "__Host-resources_session=signed" },
   }))).text(), "application");
   assert.equal(handled, 2);
-});
-
-test("deferred loader authenticates, imports, and memoizes one trusted bundle", async () => {
-  const source = new TextEncoder().encode("export const marker = true;");
-  let fetched = 0;
-  let imported = "";
-  const loader = createDeferredModuleLoader({
-    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
-    fetchImpl: async (request) => {
-      fetched += 1;
-      assert.equal(request.headers.get("accesskey"), "storage-secret");
-      assert.equal(request.url, "https://storage.example.test/zone/resources-co-1234567/-/edge/resources-application.abc123.js");
-      return new Response(source, { headers: { "content-length": String(source.byteLength) } });
-    },
-    async importModule(specifier) {
-      imported = specifier;
-      return { createResourcesDeferredHandler() {} };
-    },
-  });
-  assert.equal(await loader.load(), await loader.load());
-  assert.equal(fetched, 1);
-  assert.match(imported, /^data:application\/javascript;base64,/);
-});
-
-test("deferred loader reports evaluation errors without exposing its module URL", async () => {
-  const source = new TextEncoder().encode("secret source that must not enter logs");
-  const loader = createDeferredModuleLoader({
-    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
-    fetchImpl: async () => new Response(source),
-    async importModule(specifier) { throw new Error(`Syntax error at ${specifier}`); },
-  });
-  await assert.rejects(loader.load(), (error) => {
-    assert.match(error.message, /^Deferred module evaluation failed: Error: Syntax error at <deferred-module>$/);
-    assert.doesNotMatch(error.stack, /secret source|blob:|data:application/);
-    return true;
-  });
 });

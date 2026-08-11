@@ -3,6 +3,7 @@
   "imports": {
     "@bunny.net/edgescript-sdk": "npm:@bunny.net/edgescript-sdk@0.12.1",
     "@libsql/client/web": "npm:@libsql/client@0.17.4/web",
+    "@libsql/client/http": "npm:@libsql/client@0.17.4/http",
     "@macchiato-dev/hub/accounts": "../hub/src/accounts.js",
     "@macchiato-dev/hub/content": "../hub/src/content.js",
     "@macchiato-dev/hub/migrations": "../hub/src/migrations.js",
