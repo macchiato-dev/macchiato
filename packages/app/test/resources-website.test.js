@@ -1062,15 +1062,41 @@ test("Resources project save controls publish titled latest versions", async (t)
   const detailsButton = page.getByRole("button", { name: "Details" });
   assert.equal(await detailsButton.getAttribute("aria-pressed"), "true");
   assert.equal(await page.locator(".project-create__fields").isVisible(), true);
+  assert.equal(await page.getByText("Embed view", { exact: true }).count(), 0);
+  const closeWithDetails = await page.locator(".project-close").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const icon = element.querySelector("svg").getBoundingClientRect();
+    return { width: rect.width, height: rect.height, center: rect.top + rect.height / 2, iconCenter: icon.top + icon.height / 2 };
+  });
   await detailsButton.click();
   assert.equal(await detailsButton.getAttribute("aria-pressed"), "false");
   assert.equal(await page.locator(".project-create__fields").isHidden(), true);
+  const closeWithoutDetails = await page.locator(".project-close").evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const icon = element.querySelector("svg").getBoundingClientRect();
+    return { width: rect.width, height: rect.height, center: rect.top + rect.height / 2, iconCenter: icon.top + icon.height / 2 };
+  });
+  assert.deepEqual(closeWithoutDetails, closeWithDetails);
   await detailsButton.click();
   const projectActionCenters = await page.locator(".project-fields__toolbar-actions").evaluate((actions) => [...actions.children].map((element) => {
     const rect = element.getBoundingClientRect();
     return (rect.top + rect.bottom) / 2;
   }));
   assert.ok(Math.abs(projectActionCenters[0] - projectActionCenters[1]) < 1, "project menu and close control should share a centerline");
+  const saveSplitGeometry = await page.locator("[data-save-split]").evaluate((split) => {
+    const primary = split.querySelector(".save-split__primary");
+    const arrow = split.querySelector(".save-split__arrow");
+    const primaryRect = primary.getBoundingClientRect();
+    const arrowRect = arrow.getBoundingClientRect();
+    return {
+      gap: arrowRect.left - primaryRect.right,
+      primaryTopRight: getComputedStyle(primary).borderTopRightRadius,
+      arrowTopLeft: getComputedStyle(arrow).borderTopLeftRadius,
+    };
+  });
+  assert.equal(saveSplitGeometry.gap, 0);
+  assert.equal(saveSplitGeometry.primaryTopRight, "0px");
+  assert.equal(saveSplitGeometry.arrowTopLeft, "0px");
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
   await page.locator("[data-tab-path='index.html']").dragTo(page.locator("[data-tab-path='style.css']"));
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["style.css", "index.html"]);

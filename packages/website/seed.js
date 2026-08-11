@@ -884,6 +884,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-overflow { position: relative; }
 .project-overflow > button, .project-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
 .project-close { width: 28px; height: 28px; padding: 0; font-size: 20px; font-weight: 400; line-height: 1; }
+.project-close svg { display: block; width: 18px; height: 18px; }
 .project-overflow > button:hover, .project-close:hover { color: #fff; background: #2d3c98; }
 .project-overflow__menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 35; min-width: 140px; padding: 5px; border: 1px solid var(--track-border); border-radius: 6px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-overflow__menu[hidden] { display: none; }
@@ -905,10 +906,11 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .destructive-confirm[hidden] { display: none; }
 .destructive-confirm div { display: flex; gap: 7px; }
 .destructive-confirm button { border: 1px solid #7e4247; border-radius: 6px; padding: 5px 7px; color: inherit; background: #54272c; font: inherit; cursor: pointer; }
-.save-split { position: relative; display: inline-flex; }
+.save-split { position: relative; display: inline-flex; align-items: stretch; }
 .save-split .account-action { margin: 0; }
-.save-split__primary { border-radius: 6px; }
-.save-split__arrow { min-width: 32px; margin: 0 0 0 1px; padding: 6px 8px; border-radius: 6px; }
+.save-split__primary { border-radius: 6px 0 0 6px; }
+.save-split__arrow { min-width: 32px; margin: 0 0 0 -1px; padding: 6px 8px; border-radius: 0 6px 6px 0; box-shadow: inset 1px 0 #18266f; }
+.save-split__primary:hover, .save-split__arrow:hover { opacity: .9; }
 .save-split__arrow svg { width: 12px; height: 12px; }
 .save-split__menu { position: absolute; right: 0; bottom: calc(100% + 5px); z-index: 30; min-width: 165px; padding: 5px; border: 1px solid var(--track-border); border-radius: 7px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .save-split__menu[hidden], .version-title-modal[hidden] { display: none; }
@@ -1038,7 +1040,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls button.project-details-toggle { display: grid; }
 .project-editor__view-controls .project-details-toggle { order: 2; }
 .project-editor__view-controls [data-project-present] { order: -1; }
-.project-editor__view-controls .project-close { order: 3; width: 30px; height: 30px; }
+.project-editor__view-controls .project-close { order: 3; display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font-size: 20px; line-height: 1; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor[data-editor-machine-state="starting"]::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 24; background: rgba(13, 16, 16, .78); }
 .project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
@@ -1112,6 +1114,8 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .focused-view .create-form__options { gap: 10px; margin-top: 3px; font-size: 12px; }
 .focused-view .create-actions { gap: 6px; }
 .focused-view .account-action { min-height: 34px; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
+.focused-view .save-split__primary { border-radius: 6px 0 0 6px; }
+.focused-view .save-split__arrow { border-radius: 0 6px 6px 0; }
 .focused-view .project-view__identity { padding: 16px; }
 .focused-view .project-view__meta { margin: 0; padding: 0 16px 16px; }
 .focused-view .project-view__meta span { border-radius: 3px; background: transparent; }
