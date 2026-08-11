@@ -42,6 +42,19 @@ test("anonymous home stays on the bootstrap tier and schedules deferred prewarmi
   assert.equal(prewarmed, 1);
 });
 
+test("anonymous home defers default prewarming beyond Bunny's startup window", async () => {
+  let scheduled;
+  const handler = createResourcesBootstrapHandler({
+    config,
+    env: {},
+    fetchImpl: async () => new Response("home"),
+    deferredHandler: { async handle() {}, async prewarm() {} },
+    schedule(callback, delay) { scheduled = { callback, delay }; },
+  });
+  await handler(new Request("https://resources.co/"));
+  assert.equal(scheduled.delay, 750);
+});
+
 test("sessions and complex routes load the deferred handler", async () => {
   let handled = 0;
   const handler = createResourcesBootstrapHandler({
