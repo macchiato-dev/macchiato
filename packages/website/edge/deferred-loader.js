@@ -1,17 +1,18 @@
 const MAX_DEFERRED_BUNDLE_BYTES = 2 * 1024 * 1024;
 
-function base64(bytes) {
-  let result = "";
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    result += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return btoa(result);
-}
-
 async function sha256(bytes) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function evaluationError(error) {
+  const name = typeof error?.name === "string" ? error.name : "Error";
+  const message = typeof error?.message === "string" ? error.message : String(error);
+  const safe = `${name}: ${message}`
+    .replace(/(?:blob|data):[^\s)]+/gi, "<deferred-module>")
+    .replace(/\s+/g, " ")
+    .slice(0, 320);
+  return new Error(`Deferred module evaluation failed: ${safe}`);
 }
 
 export function createDeferredModuleLoader({
@@ -39,12 +40,15 @@ export function createDeferredModuleLoader({
     if (!bytes.length || bytes.length > maxBytes) throw new Error("Deferred module has an invalid size");
     if (await sha256(bytes) !== expectedSha256) throw new Error("Deferred module digest mismatch");
     let loaded;
+    const moduleUrl = URL.createObjectURL(new Blob([bytes], { type: "application/javascript" }));
     try {
-      loaded = await importModule(`data:application/javascript;base64,${base64(bytes)}`);
-    } catch {
-      // Import stacks may contain the complete data URL. Do not let bundle source
-      // escape into platform logs through an exception message or stack.
-      throw new Error("Deferred module evaluation failed");
+      loaded = await importModule(moduleUrl);
+    } catch (error) {
+      // Keep the useful exception category and message, but never log a module
+      // URL: alternate runtimes may represent fetched source in the specifier.
+      throw evaluationError(error);
+    } finally {
+      URL.revokeObjectURL(moduleUrl);
     }
     if (typeof loaded.createResourcesDeferredHandler !== "function") {
       throw new Error("Deferred module does not export createResourcesDeferredHandler");

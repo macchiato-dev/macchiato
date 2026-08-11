@@ -81,7 +81,7 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   });
   assert.equal(await loader.load(), await loader.load());
   assert.equal(fetched, 1);
-  assert.match(imported, /^data:application\/javascript;base64,/);
+  assert.match(imported, /^blob:/);
 });
 
 test("deferred loader rejects changed bytes before module evaluation", async () => {
@@ -96,7 +96,7 @@ test("deferred loader rejects changed bytes before module evaluation", async () 
   assert.equal(imported, false);
 });
 
-test("deferred loader does not expose a rejected data URL", async () => {
+test("deferred loader reports evaluation errors without exposing its module URL", async () => {
   const source = new TextEncoder().encode("secret source that must not enter logs");
   const loader = createDeferredModuleLoader({
     request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
@@ -105,8 +105,8 @@ test("deferred loader does not expose a rejected data URL", async () => {
     async importModule(specifier) { throw new Error(`Syntax error at ${specifier}`); },
   });
   await assert.rejects(loader.load(), (error) => {
-    assert.equal(error.message, "Deferred module evaluation failed");
-    assert.doesNotMatch(error.stack, /secret source|data:application/);
+    assert.match(error.message, /^Deferred module evaluation failed: Error: Syntax error at <deferred-module>$/);
+    assert.doesNotMatch(error.stack, /secret source|blob:|data:application/);
     return true;
   });
 });

@@ -490,6 +490,12 @@ content-addressed name, and its SHA-256. These are build facts, not mutable
 environment variables. The module is one self-contained bundle: it does not
 remotely import a tree of files.
 
+After authenticating the Storage request and checking the SHA-256, the
+bootstrap evaluates the fetched bytes through a short, temporary `blob:` module
+URL. It revokes that URL immediately after evaluation. This avoids expanding
+the bundle into a large base64 `data:` specifier and keeps deferred compilation
+out of the Edge Script's initial module evaluation.
+
 ### Update an existing staging deployment manually
 
 1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
