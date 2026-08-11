@@ -1,3 +1,5 @@
+import { rm, writeFile } from "node:fs/promises";
+
 const MAX_DEFERRED_BUNDLE_BYTES = 2 * 1024 * 1024;
 
 async function sha256(bytes) {
@@ -9,7 +11,7 @@ function evaluationError(error) {
   const name = typeof error?.name === "string" ? error.name : "Error";
   const message = typeof error?.message === "string" ? error.message : String(error);
   const safe = `${name}: ${message}`
-    .replace(/(?:blob|data):[^\s)]+/gi, "<deferred-module>")
+    .replace(/(?:blob|data|file):[^\s)]+/gi, "<deferred-module>")
     .replace(/\s+/g, " ")
     .slice(0, 320);
   return new Error(`Deferred module evaluation failed: ${safe}`);
@@ -40,15 +42,17 @@ export function createDeferredModuleLoader({
     if (!bytes.length || bytes.length > maxBytes) throw new Error("Deferred module has an invalid size");
     if (await sha256(bytes) !== expectedSha256) throw new Error("Deferred module digest mismatch");
     let loaded;
-    const moduleUrl = URL.createObjectURL(new Blob([bytes], { type: "application/javascript" }));
+    const modulePath = `/tmp/resources-application-${expectedSha256.slice(0, 16)}.mjs`;
+    const moduleUrl = `file://${modulePath}`;
     try {
+      await writeFile(modulePath, bytes);
       loaded = await importModule(moduleUrl);
     } catch (error) {
       // Keep the useful exception category and message, but never log a module
       // URL: alternate runtimes may represent fetched source in the specifier.
       throw evaluationError(error);
     } finally {
-      URL.revokeObjectURL(moduleUrl);
+      await rm(modulePath, { force: true }).catch(() => {});
     }
     if (typeof loaded.createResourcesDeferredHandler !== "function") {
       throw new Error("Deferred module does not export createResourcesDeferredHandler");

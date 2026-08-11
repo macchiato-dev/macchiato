@@ -94,7 +94,7 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   });
   assert.equal(await loader.load(), await loader.load());
   assert.equal(fetched, 1);
-  assert.match(imported, /^blob:/);
+  assert.match(imported, /^file:\/\/\/tmp\/resources-application-[a-f0-9]{16}\.mjs$/);
 });
 
 test("deferred loader rejects changed bytes before module evaluation", async () => {
@@ -119,7 +119,7 @@ test("deferred loader reports evaluation errors without exposing its module URL"
   });
   await assert.rejects(loader.load(), (error) => {
     assert.match(error.message, /^Deferred module evaluation failed: Error: Syntax error at <deferred-module>$/);
-    assert.doesNotMatch(error.stack, /secret source|blob:|data:application/);
+    assert.doesNotMatch(error.stack, /secret source|file:\/\/\/tmp|blob:|data:application/);
     return true;
   });
 });

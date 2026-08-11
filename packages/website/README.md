@@ -491,10 +491,11 @@ environment variables. The module is one self-contained bundle: it does not
 remotely import a tree of files.
 
 After authenticating the Storage request and checking the SHA-256, the
-bootstrap evaluates the fetched bytes through a short, temporary `blob:` module
-URL. It revokes that URL immediately after evaluation. This avoids expanding
-the bundle into a large base64 `data:` specifier and keeps deferred compilation
-out of the Edge Script's initial module evaluation.
+bootstrap writes the fetched bytes to a content-addressed temporary module in
+Bunny's in-memory `/tmp` filesystem, imports it, and removes it immediately
+after evaluation. This uses Bunny's documented `node:fs/promises` support,
+avoids expanding the bundle into a large base64 `data:` specifier, and keeps
+deferred compilation out of the Edge Script's initial module evaluation.
 
 ### Update an existing staging deployment manually
 
