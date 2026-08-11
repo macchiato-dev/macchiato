@@ -150,6 +150,7 @@ test("content store versions multi-file project state periodically and around de
   let workspace = await content.getProjectWorkspace("latte", "history", account.id);
   assert.equal(workspace.versionCount, 1);
   assert.equal((await content.listProjectVersions(created.id, account.id)).length, 1);
+  assert.equal((await content.listProjectVersions(created.id, account.id))[0].latest, true);
 
   clock += 60_000;
   await content.saveProjectSnapshot(account.id, created.id, {
@@ -164,6 +165,11 @@ test("content store versions multi-file project state periodically and around de
     config: workspace.snapshot.config,
   });
   assert.equal((await content.listProjectVersions(created.id, account.id)).length, 2);
+
+  await content.publishProject(account.id, created.id, { title: "First review" });
+  const publishedVersions = await content.listProjectVersions(created.id, account.id);
+  assert.equal(publishedVersions[0].latest, true);
+  assert.equal(publishedVersions[0].title, "First review");
 
   clock += 10_000;
   const destructive = await content.saveProjectSnapshot(account.id, created.id, {

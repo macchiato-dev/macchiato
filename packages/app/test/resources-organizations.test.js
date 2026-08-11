@@ -33,9 +33,9 @@ test("migration ledger is transparent and idempotent", async (t) => {
   const state = await setup();
   t.after(() => state.db.close());
   assert.equal((await state.migrations.status()).current, true);
-  assert.deepEqual(state.db.prepare("SELECT version FROM resource_schema_migrations ORDER BY version").all().map((row) => row.version), [1, 2]);
+  assert.deepEqual(state.db.prepare("SELECT version FROM resource_schema_migrations ORDER BY version").all().map((row) => row.version), [1, 2, 3]);
   await state.migrations.ready();
-  assert.equal(state.db.prepare("SELECT COUNT(*) AS count FROM resource_schema_migrations").get().count, 2);
+  assert.equal(state.db.prepare("SELECT COUNT(*) AS count FROM resource_schema_migrations").get().count, 3);
 });
 
 test("users can rename their stable personal namespace", async (t) => {

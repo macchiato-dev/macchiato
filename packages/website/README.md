@@ -310,6 +310,11 @@ version is a patch from an empty snapshot. Ordinary editing checkpoints at
 most once every five minutes; configuration changes, file deletion, and
 restoration checkpoint the destructive boundary immediately. Restoring an old
 version creates a new version, so the state being left remains recoverable.
+Explicit Save marks the newest checkpoint as the published `LATEST` version.
+It may attach a short human title through the Save split-button menu; labels
+live separately from patch data so future tags can extend the model cleanly.
+The Save button counts working changes since the last explicit publication,
+while background checkpoints continue without pretending to publish them.
 The browser first views historical snapshots without writing; returning to
 Current Version is also read-only. Editing a historical snapshot is the action
 that creates a branch boundary. Project configuration invokes a reusable

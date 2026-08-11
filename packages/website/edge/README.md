@@ -135,6 +135,9 @@ holds ordered, verified patches. Five-minute periodic checkpoints bound normal
 typing history, while destructive changes and restores create immediate
 boundaries. Version reconstruction starts at the empty snapshot and rejects a
 patch whose expected file text or configuration value does not match.
+`resource_project_version_labels` records optional titles and the last explicit
+Save time without changing immutable patch rows. The latest saved label is the
+published `LATEST` marker; autosaves remain drafts and do not move it.
 Selecting history in the editor is a read-only view until it is actually
 edited. Container configuration names a registered container (`article`,
 `page`, `canvas`, or `svg`) rather than embedding its DOM schema.

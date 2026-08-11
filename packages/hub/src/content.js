@@ -63,6 +63,14 @@ export const CONTENT_SCHEMA = Object.freeze([
   ) STRICT`,
   `CREATE INDEX IF NOT EXISTS resource_project_versions_created
     ON resource_project_versions(project_id, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS resource_project_version_labels (
+    project_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    saved_at INTEGER NOT NULL,
+    PRIMARY KEY (project_id, sequence),
+    FOREIGN KEY (project_id, sequence) REFERENCES resource_project_versions(project_id, sequence) ON DELETE CASCADE
+  ) STRICT`,
   `CREATE TABLE IF NOT EXISTS resource_project_publications (
     project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
     snapshot_json TEXT NOT NULL,
@@ -83,6 +91,9 @@ export const CONTENT_SCHEMA = Object.freeze([
     FROM resource_projects`,
   `INSERT OR IGNORE INTO resource_project_publications (project_id, snapshot_json, published_at)
     SELECT project_id, snapshot_json, updated_at FROM resource_project_state`,
+  `INSERT OR IGNORE INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+    SELECT p.project_id, s.last_version_sequence, '', p.published_at
+    FROM resource_project_publications p JOIN resource_project_state s ON s.project_id = p.project_id`,
 ]);
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -308,8 +319,13 @@ export function createContentStore(client, {
     async listProjectVersions(projectId, userId) {
       await initialize();
       const found = await client.execute({
-        sql: `SELECT v.sequence, v.reason, v.created_at
+        sql: `SELECT v.sequence, v.reason, v.created_at, COALESCE(l.title, '') AS title,
+                     l.saved_at,
+                     CASE WHEN l.sequence = (SELECT x.sequence FROM resource_project_version_labels x
+                       WHERE x.project_id = v.project_id ORDER BY x.saved_at DESC, x.sequence DESC LIMIT 1)
+                       THEN 1 ELSE 0 END AS latest
               FROM resource_project_versions v
+              LEFT JOIN resource_project_version_labels l ON l.project_id = v.project_id AND l.sequence = v.sequence
               JOIN resource_projects p ON p.id = v.project_id
               WHERE v.project_id = ? AND p.owner_user_id = ?
               ORDER BY v.sequence DESC`,
@@ -317,6 +333,7 @@ export function createContentStore(client, {
       });
       return Object.freeze(found.rows.map((row) => Object.freeze({
         sequence: Number(row.sequence), reason: String(row.reason), createdAt: Number(row.created_at),
+        title: String(row.title || ""), savedAt: row.saved_at == null ? null : Number(row.saved_at), latest: Boolean(row.latest),
       })));
     },
 
@@ -463,6 +480,10 @@ export function createContentStore(client, {
                 VALUES (?, 1, 'initial', ?, ?)`,
           args: [value.id, JSON.stringify(initialPatch), timestamp],
         }, {
+          sql: `INSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+                VALUES (?, 1, '', ?)`,
+          args: [value.id, timestamp],
+        }, {
           sql: `INSERT INTO resource_project_publications (project_id, snapshot_json, published_at)
                 VALUES (?, ?, ?)`,
           args: [value.id, snapshotJson(initialSnapshot), timestamp],
@@ -537,7 +558,24 @@ export function createContentStore(client, {
       const checkpoint = parsedSnapshot(row.checkpoint_snapshot_json);
       const next = validatedSnapshot(snapshotValue);
       const change = diffProjectSnapshots(current, next);
-      if (projectPatchIsEmpty(change)) return Object.freeze({ changed: false, versionCount: Number(row.last_version_sequence), snapshot: current });
+      if (projectPatchIsEmpty(change)) {
+        if (reason !== "manual") return Object.freeze({ changed: false, versionCount: Number(row.last_version_sequence), snapshot: current });
+        const pendingCheckpoint = diffProjectSnapshots(checkpoint, current);
+        if (projectPatchIsEmpty(pendingCheckpoint)) return Object.freeze({ changed: false, versionCount: Number(row.last_version_sequence), snapshot: current });
+        const sequence = Number(row.last_version_sequence) + 1;
+        const timestamp = now();
+        await client.batch([{
+          sql: `INSERT INTO resource_project_versions (project_id, sequence, reason, patch_json, created_at)
+                VALUES (?, ?, 'manual', ?, ?)`,
+          args: [String(projectId), sequence, JSON.stringify(pendingCheckpoint), timestamp],
+        }, {
+          sql: `UPDATE resource_project_state
+                SET checkpoint_snapshot_json = snapshot_json, last_version_sequence = ?, last_version_at = ?, updated_at = ?
+                WHERE project_id = ?`,
+          args: [sequence, timestamp, timestamp, String(projectId)],
+        }]);
+        return Object.freeze({ changed: true, versionCount: sequence, snapshot: current });
+      }
       const timestamp = now();
       const isDestructive = destructive || destructivePatch(change) || reason === "restore";
       let sequence = Number(row.last_version_sequence);
@@ -596,10 +634,11 @@ export function createContentStore(client, {
       return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
     },
 
-    async publishProject(userId, projectId) {
+    async publishProject(userId, projectId, { title = "" } = {}) {
       await initialize();
       const timestamp = now();
-      const result = await client.execute({
+      const versionTitle = text(title, "version title", { max: 80 });
+      const result = await client.batch([{
         sql: `UPDATE resource_project_publications
               SET snapshot_json = (SELECT s.snapshot_json FROM resource_project_state s
                                    JOIN resource_projects p ON p.id = s.project_id
@@ -608,8 +647,15 @@ export function createContentStore(client, {
               WHERE project_id = ?
                 AND EXISTS (SELECT 1 FROM resource_projects p WHERE p.id = ? AND p.owner_user_id = ?)`,
         args: [String(projectId), String(userId), timestamp, String(projectId), String(projectId), String(userId)],
-      });
-      return Number(result.rowsAffected) > 0;
+      }, {
+        sql: `INSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+              SELECT s.project_id, s.last_version_sequence, ?, ? FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?
+              ON CONFLICT(project_id, sequence) DO UPDATE SET title = excluded.title, saved_at = excluded.saved_at`,
+        args: [versionTitle, timestamp, String(projectId), String(userId)],
+      }]);
+      return Number(result[0].rowsAffected) > 0;
     },
 
     async deleteProject(userId, projectId) {
