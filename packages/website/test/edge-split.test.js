@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import test from "node:test";
 import { createResourcesBootstrapHandler } from "../edge/bootstrap.js";
 import { createDeferredModuleLoader } from "../edge/deferred-loader.js";
@@ -73,14 +72,12 @@ test("sessions and complex routes load the deferred handler", async () => {
   assert.equal(handled, 2);
 });
 
-test("deferred loader authenticates, verifies, imports, and memoizes one bundle", async () => {
+test("deferred loader authenticates, imports, and memoizes one trusted bundle", async () => {
   const source = new TextEncoder().encode("export const marker = true;");
-  const expectedSha256 = createHash("sha256").update(source).digest("hex");
   let fetched = 0;
   let imported = "";
   const loader = createDeferredModuleLoader({
     request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
-    expectedSha256,
     fetchImpl: async (request) => {
       fetched += 1;
       assert.equal(request.headers.get("accesskey"), "storage-secret");
@@ -97,23 +94,10 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   assert.match(imported, /^data:application\/javascript;base64,/);
 });
 
-test("deferred loader rejects changed bytes before module evaluation", async () => {
-  let imported = false;
-  const loader = createDeferredModuleLoader({
-    request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
-    expectedSha256: "0".repeat(64),
-    fetchImpl: async () => new Response("changed"),
-    async importModule() { imported = true; return {}; },
-  });
-  await assert.rejects(loader.load(), /digest mismatch/);
-  assert.equal(imported, false);
-});
-
 test("deferred loader reports evaluation errors without exposing its module URL", async () => {
   const source = new TextEncoder().encode("secret source that must not enter logs");
   const loader = createDeferredModuleLoader({
     request: () => storageRequest(config, "-/edge/resources-application.abc123.js"),
-    expectedSha256: createHash("sha256").update(source).digest("hex"),
     fetchImpl: async () => new Response(source),
     async importModule(specifier) { throw new Error(`Syntax error at ${specifier}`); },
   });

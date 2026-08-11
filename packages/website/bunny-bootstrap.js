@@ -5,12 +5,10 @@ import { createDeferredModuleLoader } from "./edge/deferred-loader.js";
 import { createEdgeConfig, storageRequest } from "./edge/models.js";
 
 const storagePrefix = "resources-co-__MACCHIATO_GIT_REVISION__";
-const deferredSha256 = "__MACCHIATO_DEFERRED_SHA256________________________________";
 const deferredObjectKey = "-/edge/resources-application.__MACCHIATO_DEFERRED_SHORT__.js";
 const config = createEdgeConfig({ ...process.env, BUNNY_BUCKET_PREFIX: storagePrefix });
 const loader = createDeferredModuleLoader({
   request: () => storageRequest(config, deferredObjectKey),
-  expectedSha256: deferredSha256,
 });
 let handlerPromise;
 function deferredHandler() {

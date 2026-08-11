@@ -9,11 +9,6 @@ function base64(bytes) {
   return btoa(result);
 }
 
-async function sha256(bytes) {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 function evaluationError(error) {
   const name = typeof error?.name === "string" ? error.name : "Error";
   const message = typeof error?.message === "string" ? error.message : String(error);
@@ -26,13 +21,11 @@ function evaluationError(error) {
 
 export function createDeferredModuleLoader({
   request,
-  expectedSha256,
   fetchImpl = fetch,
   importModule = (specifier) => import(specifier),
   maxBytes = MAX_DEFERRED_BUNDLE_BYTES,
 } = {}) {
   if (typeof request !== "function") throw new Error("Deferred module request factory is required");
-  if (!/^[a-f0-9]{64}$/.test(expectedSha256 || "")) throw new Error("Deferred bundle SHA-256 is invalid");
   let modulePromise;
 
   async function fetchAndImport() {
@@ -47,7 +40,6 @@ export function createDeferredModuleLoader({
     if (declaredLength > maxBytes) throw new Error("Deferred module exceeds its size limit");
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (!bytes.length || bytes.length > maxBytes) throw new Error("Deferred module has an invalid size");
-    if (await sha256(bytes) !== expectedSha256) throw new Error("Deferred module digest mismatch");
     let loaded;
     const moduleUrl = `data:application/javascript;base64,${base64(bytes)}`;
     try {

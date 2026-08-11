@@ -485,13 +485,13 @@ dist/resources-bunny/
     ...published site objects
 ```
 
-The bootstrap embeds the seven-character Git revision, the deferred object's
-content-addressed name, and its SHA-256. These are build facts, not mutable
-environment variables. The module is one self-contained bundle: it does not
+The bootstrap embeds the seven-character Git revision and the deferred object's
+content-addressed name. These are build facts, not mutable environment
+variables. The module is one self-contained, trusted bundle: it does not
 remotely import a tree of files.
 
-After authenticating the Storage request and checking the SHA-256, the
-bootstrap imports the fetched bytes through a base64 `data:` module URL. The
+After authenticating the Storage request, the bootstrap trusts the configured
+deployment artifact and imports its bytes through a base64 `data:` module URL. The
 specifier exists only inside the isolate and the loader removes module URLs
 from reported errors so fetched source cannot spill into logs. Deferred
 compilation happens after the initial Edge Script has registered its handler.
@@ -577,8 +577,8 @@ Browse and signed-in home remain deferred because they require the database.
 After the fast Storage request finishes, the bootstrap schedules deferred
 prewarming. A complex route loads immediately instead. It fetches the single
 bundle directly from private Storage using the existing `STORAGE_API_KEY`,
-rejects redirects and oversized content, verifies the build-pinned SHA-256, and
-imports the verified bytes through a Deno data URL. The promise is shared within
+rejects redirects and oversized content, and imports the trusted bytes through
+a Deno data URL. The promise is shared within
 the isolate and reset after failures. Uploading the new immutable revision
 before deploying its compiled bootstrap lets old and new isolates coexist
 without changing an environment variable or introducing planned downtime.
