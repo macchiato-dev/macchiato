@@ -77,11 +77,11 @@ export async function mountQuickJsCodeEditor({ root, guestSource, limits = {}, o
   const refillTimer = setInterval(() => host.renewOperationBudget(), editorLimits.surfaceRefillMs);
   let destroyed = false;
   return Object.freeze({
-    setContent(content, language = "plain", { readOnly = false } = {}) {
+    setContent(content, language = "plain", { readOnly = false, resetHistoryOnEdit = false } = {}) {
       if (destroyed) throw new Error("Editor sandbox has been disposed");
       host.renewOperationBudget();
       try {
-        const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly });
+        const result = sandbox.callJsonFunction("__codeEditorSetContent", { content, language, readOnly, resetHistoryOnEdit });
         sandbox.callJsonFunction("__browserUseFlush", {});
         return result;
       } catch (error) {

@@ -12,12 +12,16 @@ import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 
 const parent = document.getElementById("editor");
+const editorSetup = new Compartment();
 const language = new Compartment();
 const editability = new Compartment();
 const nativeSelectionTheme = EditorView.theme({
   ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" },
 });
 let applyingHostContent = false;
+let resetHistoryOnNextEdit = false;
+let currentLanguage = "javascript";
+let currentReadOnly = false;
 let documentLimits = { maxLines: 5_000, maxCharacters: 1_000_000 };
 function documentUsage(doc) {
   return {
@@ -44,15 +48,14 @@ function languageExtension(name) {
   if (name === "markdown") return markdown();
   return [];
 }
-const state = EditorState.create({
-  doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
-  extensions: [
-    basicSetup,
+function editorExtensions() {
+  return [
+    editorSetup.of(basicSetup),
     lineNumbers(),
-    language.of(javascript()),
+    language.of(languageExtension(currentLanguage)),
     editability.of([
-      EditorState.readOnly.of(false),
-      EditorView.contentAttributes.of({ "aria-readonly": "false" }),
+      EditorState.readOnly.of(currentReadOnly),
+      EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
     ]),
     oneDark,
     nativeSelectionTheme,
@@ -68,7 +71,11 @@ const state = EditorState.create({
         }));
       }
     }),
-  ],
+  ];
+}
+const state = EditorState.create({
+  doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
+  extensions: editorExtensions(),
 });
 
 globalThis.__codeEditorView = new EditorView({ state, parent });
@@ -211,6 +218,8 @@ globalThis.__codeEditorSetContent = (json) => {
     throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
   const view = globalThis.__codeEditorView;
+  currentLanguage = request.language;
+  currentReadOnly = request.readOnly === true;
   applyingHostContent = true;
   try {
     view.dispatch({
@@ -227,6 +236,7 @@ globalThis.__codeEditorSetContent = (json) => {
   } finally {
     applyingHostContent = false;
   }
+  if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
   renderLineNumbers();
   return JSON.stringify(documentUsage(view.state.doc));
 };
@@ -352,6 +362,14 @@ globalThis.__codeEditorCommand = (json) => {
 globalThis.__codeEditorBeforeInput = (json) => {
   const event = JSON.parse(json);
   const view = globalThis.__codeEditorView;
+  if (resetHistoryOnNextEdit) {
+    resetHistoryOnNextEdit = false;
+    view.setState(EditorState.create({
+      doc: view.state.doc,
+      selection: view.state.selection,
+      extensions: editorExtensions(),
+    }));
+  }
   const selection = view.state.selection.main;
   if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection.from, to: selection.to });
   let from = selection.from;
