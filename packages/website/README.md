@@ -491,11 +491,10 @@ environment variables. The module is one self-contained bundle: it does not
 remotely import a tree of files.
 
 After authenticating the Storage request and checking the SHA-256, the
-bootstrap writes the fetched bytes to a content-addressed temporary module in
-Bunny's in-memory `/tmp` filesystem, imports it, and removes it immediately
-after evaluation. This uses Bunny's documented `node:fs/promises` support,
-avoids expanding the bundle into a large base64 `data:` specifier, and keeps
-deferred compilation out of the Edge Script's initial module evaluation.
+bootstrap imports the fetched bytes through a base64 `data:` module URL. The
+specifier exists only inside the isolate and the loader removes module URLs
+from reported errors so fetched source cannot spill into logs. Deferred
+compilation happens after the initial Edge Script has registered its handler.
 
 ### Update an existing staging deployment manually
 
@@ -530,8 +529,8 @@ assets may retain their long public lifetime.
    - `MANIFEST_TTL_MS`: optional manifest cache time, clamped to 1–300 seconds.
    - `STORAGE_API_KEY`: an environment **secret**, not a normal variable.
    - `DEFERRED_PREWARM_DELAY_MS`: optional delay after an anonymous fast home
-     response; defaults to 750 ms so compilation begins after Bunny's 500 ms
-     startup window, is capped at five seconds, and `0` disables prewarming.
+     response; defaults to 75 ms, is capped at five seconds, and `0` disables
+     prewarming.
    - `PUBLIC_ORIGIN`: canonical HTTPS site origin, with no path.
    - `BLOG_EXAMPLES_ORIGIN`: the separate origin used by sandboxed examples.
    - `GITHUB_CLIENT_ID`: GitHub OAuth or GitHub App client ID.

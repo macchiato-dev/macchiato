@@ -1,6 +1,13 @@
-import { rm, writeFile } from "node:fs/promises";
-
 const MAX_DEFERRED_BUNDLE_BYTES = 2 * 1024 * 1024;
+
+function base64(bytes) {
+  let result = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    result += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(result);
+}
 
 async function sha256(bytes) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
@@ -42,17 +49,13 @@ export function createDeferredModuleLoader({
     if (!bytes.length || bytes.length > maxBytes) throw new Error("Deferred module has an invalid size");
     if (await sha256(bytes) !== expectedSha256) throw new Error("Deferred module digest mismatch");
     let loaded;
-    const modulePath = `/tmp/resources-application-${expectedSha256.slice(0, 16)}.mjs`;
-    const moduleUrl = `file://${modulePath}`;
+    const moduleUrl = `data:application/javascript;base64,${base64(bytes)}`;
     try {
-      await writeFile(modulePath, bytes);
       loaded = await importModule(moduleUrl);
     } catch (error) {
       // Keep the useful exception category and message, but never log a module
       // URL: alternate runtimes may represent fetched source in the specifier.
       throw evaluationError(error);
-    } finally {
-      await rm(modulePath, { force: true }).catch(() => {});
     }
     if (typeof loaded.createResourcesDeferredHandler !== "function") {
       throw new Error("Deferred module does not export createResourcesDeferredHandler");

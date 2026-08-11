@@ -17,8 +17,8 @@ export function createResourcesBootstrapHandler({
   schedule = setTimeout,
 } = {}) {
   let prewarmScheduled = false;
-  const requestedDelay = Number(env.DEFERRED_PREWARM_DELAY_MS ?? 750);
-  const prewarmDelayMs = Number.isFinite(requestedDelay) ? Math.max(0, Math.min(5_000, requestedDelay)) : 750;
+  const requestedDelay = Number(env.DEFERRED_PREWARM_DELAY_MS ?? 75);
+  const prewarmDelayMs = Number.isFinite(requestedDelay) ? Math.max(0, Math.min(5_000, requestedDelay)) : 75;
 
   function schedulePrewarm() {
     if (prewarmScheduled || prewarmDelayMs === 0) return;

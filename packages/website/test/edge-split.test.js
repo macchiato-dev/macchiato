@@ -42,7 +42,7 @@ test("anonymous home stays on the bootstrap tier and schedules deferred prewarmi
   assert.equal(prewarmed, 1);
 });
 
-test("anonymous home defers default prewarming beyond Bunny's startup window", async () => {
+test("anonymous home schedules a short default prewarm after responding", async () => {
   let scheduled;
   const handler = createResourcesBootstrapHandler({
     config,
@@ -52,7 +52,7 @@ test("anonymous home defers default prewarming beyond Bunny's startup window", a
     schedule(callback, delay) { scheduled = { callback, delay }; },
   });
   await handler(new Request("https://resources.co/"));
-  assert.equal(scheduled.delay, 750);
+  assert.equal(scheduled.delay, 75);
 });
 
 test("sessions and complex routes load the deferred handler", async () => {
@@ -94,7 +94,7 @@ test("deferred loader authenticates, verifies, imports, and memoizes one bundle"
   });
   assert.equal(await loader.load(), await loader.load());
   assert.equal(fetched, 1);
-  assert.match(imported, /^file:\/\/\/tmp\/resources-application-[a-f0-9]{16}\.mjs$/);
+  assert.match(imported, /^data:application\/javascript;base64,/);
 });
 
 test("deferred loader rejects changed bytes before module evaluation", async () => {
@@ -119,7 +119,7 @@ test("deferred loader reports evaluation errors without exposing its module URL"
   });
   await assert.rejects(loader.load(), (error) => {
     assert.match(error.message, /^Deferred module evaluation failed: Error: Syntax error at <deferred-module>$/);
-    assert.doesNotMatch(error.stack, /secret source|file:\/\/\/tmp|blob:|data:application/);
+    assert.doesNotMatch(error.stack, /secret source|blob:|data:application/);
     return true;
   });
 });
