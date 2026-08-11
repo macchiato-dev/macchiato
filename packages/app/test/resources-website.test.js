@@ -195,6 +195,7 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.locator(".project-view__identity").count(), 0);
     assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
+    assert.equal(await page.locator("[data-project-status]").isHidden(), true);
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
     if (template === "clock") {
       await page.locator("[data-preview-runtime='quickjs']").waitFor();
@@ -252,6 +253,11 @@ test("Resources.co blog container examples render and surface schema errors in t
   assert.equal(await page.locator("[data-project-preview]").getByText("Blocked subtree").count(), 0);
   assert.match(await editor.innerText(), /<iframe>.*Blocked subtree.*<\/iframe>/s);
   assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "error");
+  assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
+  await page.getByRole("button", { name: "Editor", exact: true }).click();
+  assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__source");
+  await page.getByRole("button", { name: "Split view", exact: true }).click();
+  assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
   assert.match(await page.locator("[data-project-error]").textContent(), /^Blocked:.*iframe.*omitted/i);
   assert.equal(await page.locator("[data-project-save]").textContent(), "");
@@ -546,7 +552,7 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   await page.getByRole("menuitemradio", { name: "script.js" }).click();
   assert.equal(await page.locator("[data-project-file-current]").textContent(), "script.js");
   await fileTrigger.click();
-  await page.locator(".project-editor__status").click();
+  await page.locator(".project-editor__preview-toolbar").click();
   assert.equal(await page.locator("[data-project-file-menu]").isHidden(), true);
   await page.getByRole("button", { name: "Output View" }).click();
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
@@ -771,6 +777,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(templateNotice.getByRole("button", { name: "Undo" }).waitFor());
   assert.match(await templateNotice.textContent(), /Template replaced the project/);
   assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "warning");
+  assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__source");
   await templateNotice.getByRole("button", { name: "Undo" }).click();
   assert.equal(await template.inputValue(), "article");
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());

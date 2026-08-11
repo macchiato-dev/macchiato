@@ -289,8 +289,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const statusSave = root.querySelector("[data-project-save]");
   const statusError = root.querySelector("[data-project-error]");
   const statusNotice = root.querySelector("[data-project-notice]");
-  const tipControls = root.querySelector("[data-project-tip-controls]");
-  const tipText = root.querySelector("[data-project-tip]");
   const versionButton = root.closest(".project-create__layout")?.querySelector("[data-project-versions-proxy]") || root.querySelector("[data-project-versions]");
   const versionCount = versionButton.querySelector(".project-editor__version-count");
   const currentVersion = versionButton.querySelector("[data-current-version]");
@@ -323,9 +321,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } catch (error) {
       root.dataset.editorMachineState = "failed";
       status.dataset.state = "error";
+      status.hidden = false;
       statusError.hidden = false;
       statusError.textContent = `Project failed to load: ${error.message}`;
-      tipControls.hidden = true;
       continue;
     }
   }
@@ -369,22 +367,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewGeneration = 0;
   let activeError = "";
   let activeErrorAction = null;
+  let activeStatusSurface = "output";
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
-  const tipMessages = JSON.parse(root.dataset.tips || "{}");
-  let tipIndex = 0;
-
-  function tips() {
-    const container = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
-    return [tipMessages[container] || tipMessages.page, tipMessages.change, tipMessages.navigate].filter(Boolean);
-  }
-
-  function renderTip() {
-    const available = tips();
-    tipIndex = ((tipIndex % available.length) + available.length) % available.length;
-    tipText.textContent = available[tipIndex] || "";
-  }
-
   function showCurrentVersion() {
     currentVersion.textContent = latestSavedAt ? relativeVersionTime(latestSavedAt) : (root.dataset.currentVersionLabel || "Current Version");
     if (latestSavedAt) {
@@ -508,7 +493,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     try {
       editorController?.projectStatus.begin(generation);
     } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error");
+      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
     }
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
@@ -560,7 +545,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
             if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
           }
           if (event.type === "blocked") {
-            setStatus(`Blocked: ${routed?.blocking?.message || event.message}`, "error");
+            setStatus(`Blocked: ${routed?.blocking?.message || event.message}`, "error", null, "output");
             if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "status", status: "blocked", message: event.message }, "*");
           }
         },
@@ -669,7 +654,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           onViolation(error) {
             if (generation !== previewGeneration) return;
             const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
-            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error");
+            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
           },
         });
         if (generation !== previewGeneration) controller.destroy();
@@ -680,7 +665,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         }
       } catch (error) {
         const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
-        if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, true);
+        if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, true, null, "output");
       }
     }, 120);
   }
@@ -689,7 +674,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     try {
       return editorController?.projectStatus.report(generation, event) || null;
     } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error");
+      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
       return null;
     }
   }
@@ -718,7 +703,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         root: editorMount,
         onChange: receiveEditorChange,
         onViolation(error) {
-          setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor });
+          setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
         },
       });
       if (generation !== editorGeneration) {
@@ -735,7 +720,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
-      setStatus(`Editor failed to start: ${error.message}`, true);
+      setStatus(`Editor failed to start: ${error.message}`, true, null, "editor");
     }
   }
 
@@ -816,9 +801,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderStatusState() {
     status.dataset.state = activeError ? "error" : activeNotice ? "warning" : persistenceState;
-    tipControls.hidden = Boolean(activeError || activeNotice);
+    const persistenceWarning = !activeError && !activeNotice && persistenceState === "warning";
+    const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
+    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor"
+      ? editorMount.closest(".project-editor__source")
+      : preview.closest(".project-editor__preview");
+    if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
+    status.hidden = !(activeError || activeNotice || persistenceWarning);
     statusNotice.hidden = !activeNotice || Boolean(activeError);
     statusError.hidden = !activeError;
+    statusSave.hidden = !persistenceWarning;
     statusError.replaceChildren();
     if (activeError) statusError.append(document.createTextNode(activeError));
     if (activeErrorAction) {
@@ -829,7 +821,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       action.addEventListener("click", activeErrorAction.run);
       statusError.append(document.createTextNode(" "), action);
     }
-    if (!activeError && !activeNotice) renderTip();
   }
 
   function clearNotice() {
@@ -840,6 +831,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function showTemplateNotice(previousSnapshot) {
     activeNotice = true;
+    activeStatusSurface = "editor";
     statusNotice.replaceChildren(document.createTextNode(`${root.dataset.templateReplacedLabel || "Template replaced the project."} `));
     const undo = document.createElement("button");
     undo.type = "button";
@@ -852,11 +844,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderStatusState();
   }
 
-  function setStatus(text, severity = "normal", action = null) {
+  function setStatus(text, severity = "normal", action = null, surface = "editor") {
     const nextState = severity === true ? "error" : severity;
     if (nextState === "error") {
       activeError = text;
       activeErrorAction = action;
+      activeStatusSurface = surface;
     }
     else {
       persistenceState = nextState;
@@ -871,10 +864,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     renderStatusState();
     mountEditorMachine("manual-reset");
   }
-
-  root.querySelector("[data-project-tip-prev]").addEventListener("click", () => { tipIndex -= 1; renderTip(); });
-  root.querySelector("[data-project-tip-next]").addEventListener("click", () => { tipIndex += 1; renderTip(); });
-  renderTip();
 
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);
@@ -1366,6 +1355,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === button ? "true" : "false");
       if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
     }
+    renderStatusState();
     if (button.dataset.projectView === "editor") editorController?.focus();
   });
   const narrowWorkspace = matchMedia("(max-width: 760px)");
@@ -1386,6 +1376,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     workspace.dataset.view = view;
     for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
+    renderStatusState();
   }
   syncResponsiveWorkspace();
   narrowWorkspace.addEventListener?.("change", syncResponsiveWorkspace);
