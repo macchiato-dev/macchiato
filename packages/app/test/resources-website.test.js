@@ -546,7 +546,7 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   await page.getByRole("menuitemradio", { name: "script.js" }).click();
   assert.equal(await page.locator("[data-project-file-current]").textContent(), "script.js");
   await fileTrigger.click();
-  await page.mouse.click(380, 300);
+  await page.locator(".project-editor__status").click();
   assert.equal(await page.locator("[data-project-file-menu]").isHidden(), true);
   await page.getByRole("button", { name: "Output View" }).click();
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
@@ -1043,6 +1043,27 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByLabel("Title", { exact: true }).fill("Save controls");
   await page.getByRole("button", { name: "Create project" }).click();
   await page.locator("[data-project-submit]").waitFor();
+  assert.equal(await page.locator(".project-close").getAttribute("href"), "/", "an exhausted project close stack should return home");
+  const projectToolbar = await page.locator(".project-editor__toolbar").boundingBox();
+  for (const label of ["Notifications", "Create", "Account menu"]) {
+    const control = page.locator(`.userbar [aria-label="${label}"]`).first();
+    const box = await control.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, projectToolbar.y + 8);
+    await page.waitForTimeout(60);
+    assert.equal(await page.locator(".userbar .ub-pop[data-open='true']").count(), 0, `${label} should not hover from the project bar`);
+  }
+  const detailsButton = page.getByRole("button", { name: "Details" });
+  assert.equal(await detailsButton.getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator(".project-create__fields").isVisible(), true);
+  await detailsButton.click();
+  assert.equal(await detailsButton.getAttribute("aria-pressed"), "false");
+  assert.equal(await page.locator(".project-create__fields").isHidden(), true);
+  await detailsButton.click();
+  const projectActionCenters = await page.locator(".project-fields__toolbar-actions").evaluate((actions) => [...actions.children].map((element) => {
+    const rect = element.getBoundingClientRect();
+    return (rect.top + rect.bottom) / 2;
+  }));
+  assert.ok(Math.abs(projectActionCenters[0] - projectActionCenters[1]) < 1, "project menu and close control should share a centerline");
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
   await page.locator("[data-tab-path='index.html']").dragTo(page.locator("[data-tab-path='style.css']"));
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["style.css", "index.html"]);
@@ -1070,6 +1091,9 @@ test("Resources project save controls publish titled latest versions", async (t)
   });
   assert.deepEqual(outputOnlyLayout.output, outputOnlyLayout.toolbar);
   assert.equal(outputOnlyLayout.divider, "none");
+  await page.getByRole("button", { name: "Editor" }).click();
+  assert.equal(await page.locator(".project-editor__toolbar-split").evaluate((element) => getComputedStyle(element).display), "none");
+  assert.equal(await page.getByRole("button", { name: "Full screen" }).isHidden(), true);
   await page.getByRole("button", { name: "Split view" }).click();
   const editor = page.locator(".cm-content");
   await editor.click();

@@ -64,7 +64,9 @@ document.addEventListener("click", (event) => {
 for (const close of document.querySelectorAll(".project-close")) {
   let stack = [];
   try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
-  close.href = stack.at(-1) || "/projects";
+  if (!Array.isArray(stack)) stack = [];
+  const previous = stack.at(-1);
+  close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
   close.addEventListener("click", () => {
     stack.pop();
     sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
@@ -299,6 +301,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   const readOnly = root.dataset.readOnly === "true";
+  const initialProjectLayout = root.closest(".project-create__layout");
+  const initialDetailsButton = root.querySelector('[data-project-view="details"]');
+  const initiallyNarrow = globalThis.matchMedia?.("(max-width: 760px)").matches === true;
+  if (initialProjectLayout) initialProjectLayout.dataset.detailsVisible = String(!initiallyNarrow);
+  initialDetailsButton?.setAttribute("aria-pressed", String(!initiallyNarrow));
   root.dataset.draftState = "clean";
   let restoredDraft = false;
   const snapshotUrl = root.querySelector("[data-project-snapshot-url]")?.dataset.projectSnapshotUrl;
@@ -1315,6 +1322,14 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     previewController?.focus?.();
   });
   const splitter = root.querySelector(".project-editor__splitter");
+  const projectLayout = root.closest(".project-create__layout");
+  const projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
+  const projectCloseHome = projectClose?.parentElement;
+  const projectViewControls = root.querySelector(".project-editor__view-controls");
+  function placeProjectClose(detailsVisible) {
+    if (!projectClose) return;
+    (detailsVisible ? projectCloseHome : projectViewControls).append(projectClose);
+  }
   function setSplit(clientX) {
     const rect = workspace.getBoundingClientRect();
     const percent = Math.max(20, Math.min(80, ((clientX - rect.left) / rect.width) * 100));
@@ -1331,23 +1346,46 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     splitter.setAttribute("aria-valuenow", String(next));
   });
   for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
-    const projectLayout = root.closest(".project-create__layout");
-    if (button.dataset.projectView === "details") projectLayout.dataset.mobileView = "details";
-    else {
+    const detailsButton = root.querySelector('[data-project-view="details"]');
+    if (button.dataset.projectView === "details") {
+      if (narrowWorkspace.matches) {
+        const showing = projectLayout.dataset.mobileView === "details";
+        if (showing) delete projectLayout.dataset.mobileView;
+        else projectLayout.dataset.mobileView = "details";
+        detailsButton.setAttribute("aria-pressed", String(!showing));
+        placeProjectClose(!showing);
+      } else {
+        const showing = projectLayout.dataset.detailsVisible !== "false";
+        projectLayout.dataset.detailsVisible = String(!showing);
+        detailsButton.setAttribute("aria-pressed", String(!showing));
+        placeProjectClose(!showing);
+      }
+    } else {
       delete projectLayout.dataset.mobileView;
       workspace.dataset.view = button.dataset.projectView;
+      for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === button ? "true" : "false");
+      if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
     }
-    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === button ? "true" : "false");
     if (button.dataset.projectView === "editor") editorController?.focus();
   });
   const narrowWorkspace = matchMedia("(max-width: 760px)");
   function syncResponsiveWorkspace() {
-    const projectLayout = root.closest(".project-create__layout");
     const view = narrowWorkspace.matches ? "preview" : "split";
     const selectedButton = root.querySelector(`[data-project-view="${view}"]`);
-    if (!narrowWorkspace.matches) delete projectLayout.dataset.mobileView;
+    const detailsButton = root.querySelector('[data-project-view="details"]');
+    if (narrowWorkspace.matches) {
+      projectLayout.dataset.detailsVisible = "false";
+      delete projectLayout.dataset.mobileView;
+      detailsButton.setAttribute("aria-pressed", "false");
+      placeProjectClose(false);
+    } else {
+      delete projectLayout.dataset.mobileView;
+      projectLayout.dataset.detailsVisible = "true";
+      detailsButton.setAttribute("aria-pressed", "true");
+      placeProjectClose(true);
+    }
     workspace.dataset.view = view;
-    for (const item of root.querySelectorAll("[data-project-view]")) item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
+    for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
   }
   syncResponsiveWorkspace();
   narrowWorkspace.addEventListener?.("change", syncResponsiveWorkspace);

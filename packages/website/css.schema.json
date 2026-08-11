@@ -678,6 +678,11 @@
         "mask-image": {
           "pattern": "^linear-gradient\\(to right, #000 0%, #000 calc\\(100% - 24px\\), transparent 100%\\)$"
         },
+        "white-space": {
+          "enum": [
+            "nowrap"
+          ]
+        },
         "transition": {
           "$ref": "transition"
         },
@@ -727,7 +732,7 @@
     "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
   },
   "limits": {
-    "maxStylesheetLength": 80000,
+    "maxStylesheetLength": 90000,
     "maxPropertyLength": 64,
     "maxValueLength": 900,
     "maxUrlLength": 100,
