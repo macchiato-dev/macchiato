@@ -884,7 +884,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-overflow { position: relative; }
 .project-overflow > button, .project-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
 .project-close { width: 28px; height: 28px; padding: 0; font-size: 20px; font-weight: 400; line-height: 1; }
-.project-close svg { display: block; width: 18px; height: 18px; }
+.project-close svg { position: relative; top: 2px; display: block; width: 18px; height: 18px; }
 .project-overflow > button:hover, .project-close:hover { color: #fff; background: #2d3c98; }
 .project-overflow__menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 35; min-width: 140px; padding: 5px; border: 1px solid var(--track-border); border-radius: 6px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-overflow__menu[hidden] { display: none; }
