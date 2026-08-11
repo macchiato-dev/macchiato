@@ -971,6 +971,8 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__versions svg { width: 12px; height: 12px; }
 .project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
 .project-editor__workspace { display: grid; grid-template-columns: minmax(0, var(--source-width, 50%)) 2px minmax(0, 1fr); min-height: 0; overflow: hidden; background: #151717; }
+.focused-view .project-editor__workspace { position: relative; }
+.focused-view .project-editor__workspace::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; z-index: 20; height: 2px; background: #454b4a; box-shadow: inset 0 -1px #202524; pointer-events: none; }
 .project-editor__workspace[data-view="editor"] { grid-template-columns: 1fr; }
 .project-editor__workspace[data-view="editor"] .project-editor__preview, .project-editor__workspace[data-view="editor"] .project-editor__splitter { display: none; }
 .project-editor__workspace[data-view="preview"] { grid-template-columns: 1fr; }
@@ -1073,7 +1075,8 @@ body:has(.focused-view) { padding: 0; }
 .layout.focused-view > .userbar .edge-user-menu::after { display: none; pointer-events: none; }
 .layout.focused-view > .nav { display: none; }
 .layout.focused-view > .footer { display: none; }
-.layout.focused-view > .main { height: 100%; max-width: none; min-height: 0; padding: 0; overflow: hidden; }
+.layout.focused-view > .main { position: relative; height: 100%; max-width: none; min-height: 0; padding: 0; overflow: hidden; }
+.layout.focused-view > .main::before { content: ""; position: absolute; top: 0; right: 0; left: 0; z-index: 50; height: 2px; background: #0f174f; box-shadow: 0 1px #2d3d91; pointer-events: none; }
 .layout.focused-view > .main > .crumb { display: none; }
 .layout.focused-view .content-root, .layout.focused-view .content-block { width: 100%; height: 100%; min-height: 0; }
 .layout.focused-view .content-block { padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; }
