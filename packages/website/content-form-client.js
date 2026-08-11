@@ -767,10 +767,26 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
     tabs.replaceChildren();
-    function addChoice({ path, label, config = false }) {
+    const availableChoices = document.createElement("div");
+    availableChoices.className = "project-editor__file-choices";
+    availableChoices.dataset.projectFileAvailable = "";
+    availableChoices.setAttribute("role", "group");
+    const openSection = document.createElement("section");
+    openSection.className = "project-editor__open-files";
+    openSection.dataset.projectOpenFiles = "";
+    const openHeading = document.createElement("p");
+    openHeading.textContent = menu.dataset.openFilesLabel || "Open files";
+    const openChoices = document.createElement("div");
+    openChoices.className = "project-editor__open-file-choices";
+    openChoices.setAttribute("role", "group");
+    openChoices.setAttribute("aria-label", openHeading.textContent);
+    openSection.append(openHeading, openChoices);
+    menu.append(availableChoices, openSection);
+    function addChoice({ path, label, config = false, open = false }) {
       const tabPath = config ? "config" : path;
       const row = document.createElement("div");
       row.className = "project-editor__file-option-row";
+      row.dataset.projectFileChoice = open ? "open" : "available";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "project-editor__tab";
@@ -784,7 +800,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       option.setAttribute("aria-checked", button.getAttribute("aria-selected"));
       option.removeAttribute("aria-selected");
       row.append(option);
-      if (openTabs.includes(tabPath) && openTabs.length > 1) {
+      if (open && openTabs.length > 1) {
         const close = document.createElement("button");
         close.type = "button";
         close.className = "project-editor__file-option-close";
@@ -793,12 +809,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         close.textContent = "×";
         row.append(close);
       }
-      menu.append(row);
+      (open ? openChoices : availableChoices).append(row);
     }
     for (const file of state.files) {
-      addChoice({ path: file.path, label: file.path });
+      if (!openTabs.includes(file.path)) addChoice({ path: file.path, label: file.path });
     }
-    addChoice({ label: root.dataset.configLabel || "Configuration", config: true });
+    if (!openTabs.includes("config")) addChoice({ label: root.dataset.configLabel || "Configuration", config: true });
+    for (const path of openTabs) {
+      const file = state.files.find((candidate) => candidate.path === path);
+      addChoice({ path: file?.path, label: path === "config" ? root.dataset.configLabel || "Configuration" : file?.path || path, config: path === "config", open: true });
+    }
     for (const path of openTabs) {
       const tab = document.createElement("div");
       tab.className = "project-editor__open-tab";
@@ -1194,6 +1214,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       row.hidden = Boolean(query && !option.textContent.toLocaleLowerCase().includes(query));
       if (!row.hidden) visible += 1;
     }
+    for (const group of fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")) {
+      group.hidden = !group.querySelector(".project-editor__file-option-row:not([hidden])");
+    }
     fileEmpty.hidden = visible !== 0;
   }
   function closeFileMenu({ focus = false } = {}) {
@@ -1214,7 +1237,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   fileFilter.addEventListener("input", filterProjectFiles);
   fileMenu.addEventListener("click", (event) => {
     const close = event.target.closest("[data-close-menu-tab]");
-    if (close) { closeOpenTab(close.dataset.closeMenuTab); return; }
+    if (close) {
+      closeOpenTab(close.dataset.closeMenuTab);
+      filterProjectFiles();
+      return;
+    }
     selectProjectFile(event);
     closeFileMenu({ focus: true });
   });

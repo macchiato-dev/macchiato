@@ -1098,6 +1098,19 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(saveSplitGeometry.primaryTopRight, "0px");
   assert.equal(saveSplitGeometry.arrowTopLeft, "0px");
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
+  const crowdedTabGeometry = await page.locator("[data-project-editor]").evaluate((root) => {
+    const tabs = root.querySelector("[data-project-tabs]");
+    const sample = tabs.querySelector(".project-editor__open-tab");
+    const extras = Array.from({ length: 12 }, () => sample.cloneNode(true));
+    tabs.append(...extras);
+    const source = root.querySelector(".project-editor__source-toolbar").getBoundingClientRect();
+    const split = root.querySelector(".project-editor__toolbar-split").getBoundingClientRect();
+    const result = { overflowed: tabs.scrollWidth > tabs.clientWidth, sourceRight: source.right, splitLeft: split.left };
+    extras.forEach((extra) => extra.remove());
+    return result;
+  });
+  assert.equal(crowdedTabGeometry.overflowed, true);
+  assert.ok(crowdedTabGeometry.sourceRight <= crowdedTabGeometry.splitLeft + 1, "crowded tabs should remain inside the editor toolbar cell");
   await page.locator("[data-tab-path='index.html']").dragTo(page.locator("[data-tab-path='style.css']"));
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["style.css", "index.html"]);
   await page.locator("[data-tab-path='index.html']").dragTo(page.locator("[data-tab-path='style.css']"));
@@ -1108,6 +1121,15 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByRole("button", { name: "Close style.css" }).click();
   assert.equal(await page.getByRole("tab", { name: "style.css" }).count(), 0);
   await page.getByRole("button", { name: "Browse other files" }).click();
+  assert.deepEqual(await page.locator("[data-project-file-available] [role='menuitemradio']").allTextContents(), ["style.css", "Configuration"]);
+  assert.deepEqual(await page.locator("[data-project-open-files] [role='menuitemradio']").allTextContents(), ["index.html"]);
+  assert.equal(await page.locator("[data-project-open-files] > p").textContent(), "Open files");
+  assert.equal(await page.locator(".project-editor__file-choices").evaluate((element) => getComputedStyle(element).overflow), "auto");
+  assert.equal(await page.locator(".project-editor__open-file-choices").evaluate((element) => getComputedStyle(element).overflow), "auto");
+  await page.locator("[data-project-file-filter]").fill("index");
+  assert.equal(await page.locator("[data-project-file-available]").isHidden(), true);
+  assert.equal(await page.locator("[data-project-open-files]").isVisible(), true);
+  await page.locator("[data-project-file-filter]").fill("");
   await page.getByRole("menuitemradio", { name: "Configuration" }).click();
   assert.equal(await page.getByRole("tab", { name: "Configuration" }).count(), 1);
   await page.getByRole("tab", { name: "index.html" }).click();

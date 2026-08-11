@@ -928,7 +928,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__toolbar-split { margin: 2px 0; background: #4053b0; box-shadow: inset 1px 0 #0f174f; }
 .project-editor__source-toolbar, .project-editor__preview-toolbar { height: 48px; min-height: 48px; padding: 7px; }
 .project-editor__source-toolbar { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
-.project-editor__tabs { display: flex; flex: 1 1 auto; min-width: 0; align-self: stretch; align-items: center; gap: 2px; overflow: auto; }
+.project-editor__tabs { display: flex; width: 0; flex: 1 1 auto; min-width: 0; align-self: stretch; align-items: center; gap: 2px; overflow: auto; }
 .project-editor__tabs::-webkit-scrollbar { display: none; }
 .project-editor__tab-scroll { flex: 0 0 24px; height: 30px; padding: 0; border: 1px solid #33428f; border-radius: 4px; color: #cbd4ff; background: #111a56; font: inherit; font-size: 18px; cursor: pointer; }
 .project-editor__tab-scroll[hidden] { display: none; }
@@ -954,6 +954,12 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__file-menu input { width: 100%; padding: 7px 8px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--input-bg); font: inherit; font-size: 11px; outline: none; }
 .project-editor__file-menu input:focus { border-color: #7688eb; }
 .project-editor__file-menu [data-project-file-empty] { margin: 5px; color: var(--muted); font-size: 11px; }
+.project-editor__file-choices { max-height: min(280px, 42vh); overflow: auto; }
+.project-editor__file-choices:empty { display: none; }
+.project-editor__open-files { margin-top: 4px; padding: 4px 0 0; border-top: 1px solid var(--track-border); }
+.project-editor__open-files[hidden] { display: none; }
+.project-editor__open-files > p { margin: 2px 8px 4px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.project-editor__open-file-choices { max-height: 180px; overflow: auto; }
 .project-editor__file-option { display: block; width: 100%; padding: 8px 9px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; text-align: left; }
 .project-editor__file-option-row { display: flex; align-items: center; }
 .project-editor__file-option-row[hidden] { display: none; }

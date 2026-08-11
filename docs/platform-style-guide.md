@@ -36,6 +36,11 @@ Tooltips stay on one line and are clamped to the viewport. Near an edge they
 grow inward rather than crossing the window boundary. File tabs show only the
 basename; their tooltip carries the complete project-relative path.
 
+The project file picker separates unopened results from an `Open files` group
+at the bottom. One filter searches both groups. Each group scrolls independently;
+the open group exposes about five rows before it scrolls, and an open file is
+never duplicated in the unopened results.
+
 ## Split actions and menus
 
 A primary action may have a divided arrow segment. The arrow opens a compact
