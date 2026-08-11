@@ -6,6 +6,7 @@ import { createResourcesArtifactSet } from "./artifacts.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const defaultOut = join(directory, "exported");
+const defaultBlogExamplesOrigin = "https://blog-examples.resources.co";
 
 function parseArgs(args) {
   const options = { out: defaultOut, clean: true };
@@ -20,7 +21,7 @@ function parseArgs(args) {
   return options;
 }
 
-export async function exportResourcesSite({ out = defaultOut, clean = true, theme = {}, blogExamplesOrigin = process.env.BLOG_EXAMPLES_ORIGIN || "" } = {}) {
+export async function exportResourcesSite({ out = defaultOut, clean = true, theme = {}, blogExamplesOrigin = process.env.BLOG_EXAMPLES_ORIGIN || defaultBlogExamplesOrigin } = {}) {
   const outDir = resolve(out);
   if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });

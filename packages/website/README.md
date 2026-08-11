@@ -468,6 +468,10 @@ For a reproducible local build:
 ./scripts/build-resources-bunny.sh
 ```
 
+The build defaults `BLOG_EXAMPLES_ORIGIN` to
+`https://blog-examples.resources.co`. Set it explicitly only when building for
+another environment, such as staging.
+
 This produces one copy-and-paste Edge Script, one deferred application bundle,
 and the validated Storage objects:
 

@@ -39,8 +39,8 @@ test("exports resources site as static files", async (t) => {
   assert.match(blog, /A Markdown-based Code Playground/);
   assert.match(archivedPost, /<iframe class="blog-example"[^>]+sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"/);
   assert.match(archivedPost, /src="https:\/\/codesandbox\.io\/embed\/markdown-based-code-playground/);
-  assert.match(visualEditorPost, /src="about:blank"/);
-  assert.match(visualEditorPost, /data-example-path="\/-\/blog-examples\/vtv\/index\.html\?preset=types"/);
+  assert.match(visualEditorPost, /src="https:\/\/blog-examples\.resources\.co\/-\/blog-examples\/vtv\/index\.html\?preset=types"/);
+  assert.doesNotMatch(visualEditorPost, /data-example-path=/);
   assert.match(visualEditorPost, /sandbox="allow-scripts"/);
   assert.doesNotMatch(visualEditorPost, /allow-same-origin/);
   assert.equal(manifest.files.includes("/-/blog-examples/vtv/app.js"), true);
