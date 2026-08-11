@@ -211,6 +211,20 @@ test("Resources.co blog container examples render and surface schema errors in t
       await page.waitForFunction((previous) => document.querySelector("[data-project-preview] #time")?.textContent !== previous, initialTime, { timeout: 5_500 });
     }
     if (template === "article") {
+      const sourceEditor = page.locator(".cm-content");
+      await sourceEditor.press("Control+A");
+      await sourceEditor.fill(snapshot.files.find((file) => file.path === "index.html").content.replace("A small article</h1>", "A changed article</h1>"));
+      await page.locator("[data-project-preview] h1", { hasText: "A changed article" }).waitFor();
+      await page.locator("[data-project-file-trigger]").click();
+      await page.locator('[data-project-file="style.css"]').click();
+      await sourceEditor.press("Control+A");
+      await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
+      await page.waitForFunction(() => {
+        const host = document.querySelector("[data-project-preview] .project-editor__preview-surface");
+        const body = host?.shadowRoot?.querySelector("body");
+        return body && getComputedStyle(body).backgroundColor === "rgb(12, 34, 56)";
+      });
+      assert.equal(await page.locator("[data-project-preview] h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
       await page.getByLabel("Template").selectOption("mark");
       await page.locator("[data-project-file-trigger]").click();
       await assert.doesNotReject(page.locator('[data-project-file="image.svg"]').waitFor());

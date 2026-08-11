@@ -125,6 +125,7 @@ const BROWSER_ASSET_SETS = [
   domUseBrowserAssets,
   htmlUseBrowserAssets,
   styleUseBrowserAssets,
+  { ...styleUseBrowserAssets, namespace: "style-use" },
 ];
 
 function escapeHtml(str) {

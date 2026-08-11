@@ -8,6 +8,7 @@ import { DEFAULT_RESOURCE_LOCALE, loadResourcesLocales, RESOURCE_LOCALES } from 
 import { commandPaletteUseBrowserAssets } from "@macchiato-dev/command-palette-use/browser-assets";
 import { themeUseBrowserAssets } from "@macchiato-dev/theme-use/browser-assets";
 import { userMenuUseBrowserAssets } from "@macchiato-dev/user-menu-use/browser-assets";
+import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 import { renderFastAnonymousHome } from "./edge/app.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -57,7 +58,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   for (const name of blogImageNames) {
     files.set(`/-/blog-images/${name}`, bytes(readFileSync(join(blogImageDirectory, name))));
   }
-  for (const set of [commandPaletteUseBrowserAssets, themeUseBrowserAssets, userMenuUseBrowserAssets]) {
+  for (const set of [commandPaletteUseBrowserAssets, themeUseBrowserAssets, userMenuUseBrowserAssets, { ...styleUseBrowserAssets, namespace: "style-use" }]) {
     for (const asset of set.files) {
       files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
     }

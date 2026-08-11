@@ -3,6 +3,7 @@ import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resour
 import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
 import { mountResourcesPresentation, mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
+import { StyleUse } from "/-/style-use/index.js";
 
 function enterProjectLoadingView(href) {
   const content = document.getElementById("content");
@@ -518,13 +519,35 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       parent.append(element);
     }
     for (const child of parsed.body.childNodes) copy(child, fragment);
-    preview.replaceChildren(fragment);
+    const surfaceHost = document.createElement("div");
+    surfaceHost.className = "project-editor__preview-surface";
+    const surfaceRoot = surfaceHost.attachShadow({ mode: "open" });
+    const surfaceBody = document.createElement("body");
+    surfaceBody.append(fragment);
+    const stylesheetPaths = state.config?.stylesheets || [...parsed.querySelectorAll('link[rel="stylesheet"][href]')]
+      .map((link) => link.getAttribute("href").replace(/^\.\//, ""));
+    const css = [
+      ...parsed.querySelectorAll("style"),
+      ...stylesheetPaths.map((path) => state.files.find((file) => file.path === path)).filter(Boolean),
+    ].map((item) => item.content ?? item.textContent ?? "").join("\n");
+    if (css) {
+      try {
+        new StyleUse(state.config?.cssSchema || { imports: false, urls: false }).validateStylesheet(css);
+        const style = document.createElement("style");
+        style.textContent = `:host { display: block; min-height: 100%; }\n${css}`;
+        surfaceRoot.append(style);
+      } catch (error) {
+        reject(`Stylesheet was omitted: ${error.message}`);
+      }
+    }
+    surfaceRoot.append(surfaceBody);
+    preview.replaceChildren(surfaceHost);
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
       if (generation !== previewGeneration) return;
       try {
         const controller = await mountResourcesProjectPreview({
-          root: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
+          root: surfaceBody, statusRoot: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
           onViolation(error) {
             if (generation !== previewGeneration) return;
             const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });

@@ -5103,7 +5103,7 @@ function previewPolicy(tags) {
     maxTextLength: 2e5
   };
 }
-async function mountResourcesProjectPreview({ root, scripts, violations = [], tags, onViolation = () => {
+async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, onViolation = () => {
 } }) {
   let sandbox;
   const host = new BrowserDomHost(root, previewPolicy(tags), {
@@ -5117,7 +5117,7 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
   const canvas = new CanvasUseHost(host);
   host.start();
   if (violations.length) {
-    root.dataset.previewViolations = String(violations.length);
+    statusRoot.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
   }
   try {
@@ -5135,14 +5135,14 @@ async function mountResourcesProjectPreview({ root, scripts, violations = [], ta
     sandbox?.dispose?.();
     throw error;
   }
-  root.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
+  statusRoot.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   let stopped = false;
   const timer = setInterval(() => {
     if (stopped) return;
     try {
       canvas.renewCommandBudget();
       sandbox.callJsonFunction("__browserUseTick", {});
-      root.dataset.canvasCommands = String(canvas.inspect().commands);
+      statusRoot.dataset.canvasCommands = String(canvas.inspect().commands);
     } catch (error) {
       stopped = true;
       clearInterval(timer);
