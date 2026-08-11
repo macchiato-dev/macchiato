@@ -30450,12 +30450,16 @@
 
   // ../code-editor-use/src/guest.js
   var parent = document.getElementById("editor");
+  var editorSetup = new Compartment();
   var language2 = new Compartment();
   var editability = new Compartment();
   var nativeSelectionTheme = EditorView.theme({
     ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" }
   });
   var applyingHostContent = false;
+  var resetHistoryOnNextEdit = false;
+  var currentLanguage = "javascript";
+  var currentReadOnly = false;
   var documentLimits = { maxLines: 5e3, maxCharacters: 1e6 };
   function documentUsage(doc2) {
     return {
@@ -30482,15 +30486,14 @@
     if (name2 === "markdown") return markdown();
     return [];
   }
-  var state = EditorState.create({
-    doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
-    extensions: [
-      basicSetup,
+  function editorExtensions() {
+    return [
+      editorSetup.of(basicSetup),
       lineNumbers(),
-      language2.of(javascript()),
+      language2.of(languageExtension(currentLanguage)),
       editability.of([
-        EditorState.readOnly.of(false),
-        EditorView.contentAttributes.of({ "aria-readonly": "false" })
+        EditorState.readOnly.of(currentReadOnly),
+        EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" })
       ]),
       oneDark,
       nativeSelectionTheme,
@@ -30506,7 +30509,11 @@
           }));
         }
       })
-    ]
+    ];
+  }
+  var state = EditorState.create({
+    doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
+    extensions: editorExtensions()
   });
   globalThis.__codeEditorView = new EditorView({ state, parent });
   var lineNumberGutter2 = null;
@@ -30640,6 +30647,8 @@
       throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
     }
     const view = globalThis.__codeEditorView;
+    currentLanguage = request.language;
+    currentReadOnly = request.readOnly === true;
     applyingHostContent = true;
     try {
       view.dispatch({
@@ -30656,6 +30665,7 @@
     } finally {
       applyingHostContent = false;
     }
+    if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
     renderLineNumbers();
     return JSON.stringify(documentUsage(view.state.doc));
   };
@@ -30784,6 +30794,14 @@
   globalThis.__codeEditorBeforeInput = (json2) => {
     const event = JSON.parse(json2);
     const view = globalThis.__codeEditorView;
+    if (resetHistoryOnNextEdit) {
+      resetHistoryOnNextEdit = false;
+      view.setState(EditorState.create({
+        doc: view.state.doc,
+        selection: view.state.selection,
+        extensions: editorExtensions()
+      }));
+    }
     const selection2 = view.state.selection.main;
     if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection2.from, to: selection2.to });
     let from = selection2.from;

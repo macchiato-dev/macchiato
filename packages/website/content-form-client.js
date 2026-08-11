@@ -341,6 +341,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let currentSnapshot = state;
   let viewingHistorical = false;
   let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
+  const tabSessionKey = `resources_project_tabs_v1:${projectId || persistence}`;
+  let openTabs = [];
+  try { openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || []; } catch {}
+  if (!openTabs.length) openTabs = Array.isArray(state.config?.editorTabs) ? [...state.config.editorTabs] : state.files.map((file) => file.path);
   let ready = false;
   let pending = false;
   let saveTimer = 0;
@@ -443,7 +447,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     return "plain";
   }
 
-  function sendContent() {
+  function sendContent({ resetHistoryOnEdit = false } = {}) {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
     const selectedFile = state.files.find((file) => file.path === selected);
@@ -486,7 +490,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       delete root.dataset.editorLoading;
       return;
     }
-    editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config" });
+    editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config", resetHistoryOnEdit });
     delete root.dataset.editorLoading;
   }
 
@@ -735,8 +739,18 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderTabs() {
     const menu = root.querySelector("[data-project-file-options]");
+    const tabs = root.querySelector("[data-project-tabs]");
+    const available = new Set([...state.files.map((file) => file.path), "config"]);
+    openTabs = openTabs.filter((path, index) => available.has(path) && openTabs.indexOf(path) === index);
+    if (!openTabs.length) openTabs.push(available.has(selected) ? selected : [...available][0]);
+    if (!openTabs.includes(selected)) openTabs.push(selected);
+    sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
+    tabs.replaceChildren();
     function addChoice({ path, label, config = false }) {
+      const tabPath = config ? "config" : path;
+      const row = document.createElement("div");
+      row.className = "project-editor__file-option-row";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "project-editor__tab";
@@ -749,12 +763,45 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       option.setAttribute("role", "menuitemradio");
       option.setAttribute("aria-checked", button.getAttribute("aria-selected"));
       option.removeAttribute("aria-selected");
-      menu.append(option);
+      row.append(option);
+      if (openTabs.includes(tabPath) && openTabs.length > 1) {
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "project-editor__file-option-close";
+        close.dataset.closeMenuTab = tabPath;
+        close.setAttribute("aria-label", `Close ${label}`);
+        close.textContent = "×";
+        row.append(close);
+      }
+      menu.append(row);
     }
     for (const file of state.files) {
       addChoice({ path: file.path, label: file.path });
     }
     addChoice({ label: root.dataset.configLabel || "Configuration", config: true });
+    for (const path of openTabs) {
+      const tab = document.createElement("div");
+      tab.className = "project-editor__open-tab";
+      tab.dataset.tabPath = path;
+      tab.draggable = true;
+      const select = document.createElement("button");
+      select.type = "button";
+      select.dataset.openTab = path;
+      select.setAttribute("role", "tab");
+      select.setAttribute("aria-selected", String(path === selected));
+      select.textContent = path === "config" ? root.dataset.configLabel || "Configuration" : path;
+      tab.append(select);
+      if (openTabs.length > 1 && path === selected) {
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "project-editor__tab-close";
+        close.dataset.closeTab = path;
+        close.setAttribute("aria-label", `Close ${select.textContent}`);
+        close.textContent = "×";
+        tab.append(close);
+      }
+      tabs.append(tab);
+    }
     root.querySelector("[data-project-file-current]").textContent = selected === "config"
       ? root.dataset.configLabel || "Configuration"
       : selected;
@@ -953,7 +1000,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         renderTabs();
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
-        sendContent();
+        sendContent({ resetHistoryOnEdit: true });
         renderPreview();
         setStatus(`Viewing version ${sequence}`);
         showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
@@ -981,7 +1028,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
       renderTabs();
-      sendContent();
+      sendContent({ resetHistoryOnEdit: true });
       renderPreview();
       showCurrentVersion();
       setStatus("Current version");
@@ -1003,7 +1050,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
         renderTabs();
-        sendContent();
+        sendContent({ resetHistoryOnEdit: true });
         renderPreview();
         showSelectedVersion(relativeVersionTime(timestamp), timestamp);
         setStatus(`Viewing ${button.textContent}`);
@@ -1026,19 +1073,100 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (file) selected = file.dataset.projectFile;
     else if (event.target.closest("[data-project-config]")) selected = "config";
     else return;
+    if (!openTabs.includes(selected)) openTabs.push(selected);
     renderTabs();
     sendContent();
   }
+  const openTabList = root.querySelector("[data-project-tabs]");
+  const tabScrollBack = document.createElement("button");
+  const tabScrollForward = document.createElement("button");
+  for (const [button, label, text] of [[tabScrollBack, "Scroll tabs left", "‹"], [tabScrollForward, "Scroll tabs right", "›"]]) {
+    button.type = "button";
+    button.className = "project-editor__tab-scroll";
+    button.setAttribute("aria-label", label);
+    button.textContent = text;
+    button.hidden = true;
+  }
+  openTabList.before(tabScrollBack);
+  openTabList.after(tabScrollForward);
+  function syncTabOverflow() {
+    const overflowed = openTabList.scrollWidth > openTabList.clientWidth + 2;
+    tabScrollBack.hidden = !overflowed;
+    tabScrollForward.hidden = !overflowed;
+    tabScrollBack.disabled = openTabList.scrollLeft <= 1;
+    tabScrollForward.disabled = openTabList.scrollLeft + openTabList.clientWidth >= openTabList.scrollWidth - 1;
+  }
+  tabScrollBack.addEventListener("click", () => openTabList.scrollBy({ left: -Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
+  tabScrollForward.addEventListener("click", () => openTabList.scrollBy({ left: Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
+  openTabList.addEventListener("scroll", syncTabOverflow);
+  new ResizeObserver(syncTabOverflow).observe(openTabList);
+  function closeOpenTab(path) {
+    if (openTabs.length <= 1) return;
+    const index = openTabs.indexOf(path);
+    if (index < 0) return;
+    openTabs.splice(index, 1);
+    if (selected === path) selected = openTabs[Math.min(index, openTabs.length - 1)];
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+    sendContent();
+  }
+  openTabList.addEventListener("click", (event) => {
+    const close = event.target.closest("[data-close-tab]");
+    if (close && openTabs.length > 1) {
+      closeOpenTab(close.dataset.closeTab);
+      return;
+    }
+    const tab = event.target.closest("[data-open-tab]");
+    if (!tab) return;
+    selected = tab.dataset.openTab;
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+    sendContent();
+  });
+  let draggedTab = "";
+  openTabList.addEventListener("dragstart", (event) => {
+    draggedTab = event.target.closest("[data-tab-path]")?.dataset.tabPath || "";
+    if (draggedTab) event.dataTransfer.effectAllowed = "move";
+  });
+  openTabList.addEventListener("dragover", (event) => { if (draggedTab) event.preventDefault(); });
+  openTabList.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const target = event.target.closest("[data-tab-path]")?.dataset.tabPath;
+    if (!draggedTab || !target || draggedTab === target) return;
+    const sourceIndex = openTabs.indexOf(draggedTab);
+    const targetIndex = openTabs.indexOf(target);
+    openTabs.splice(sourceIndex, 1);
+    openTabs.splice(targetIndex, 0, draggedTab);
+    draggedTab = "";
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+  });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
+  fileTrigger.setAttribute("aria-label", "Browse other files");
+  const fileTriggerIcon = fileTrigger.querySelector("svg");
+  fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
+  fileTriggerIcon.innerHTML = '<path d="M7 4h12v14H7zM4 7v14h12"/><path d="M10 8h6M10 11h6M10 14h4"/>';
+  const fileTriggerArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  fileTriggerArrow.classList.add("project-editor__file-arrow");
+  fileTriggerArrow.setAttribute("viewBox", "0 0 12 12");
+  fileTriggerArrow.setAttribute("fill", "none");
+  fileTriggerArrow.setAttribute("stroke", "currentColor");
+  fileTriggerArrow.setAttribute("stroke-width", "1.5");
+  fileTriggerArrow.setAttribute("aria-hidden", "true");
+  fileTriggerArrow.innerHTML = '<path d="m2 4 4 4 4-4"/>';
+  fileTrigger.append(fileTriggerArrow);
   const fileMenu = root.querySelector("[data-project-file-menu]");
   const fileFilter = root.querySelector("[data-project-file-filter]");
+  fileFilter.previousElementSibling?.remove();
+  fileFilter.setAttribute("aria-label", "Filter files");
   const fileEmpty = root.querySelector("[data-project-file-empty]");
   function filterProjectFiles() {
     const query = fileFilter.value.trim().toLocaleLowerCase();
     let visible = 0;
     for (const option of fileMenu.querySelectorAll('[role="menuitemradio"]')) {
-      option.hidden = Boolean(query && !option.textContent.toLocaleLowerCase().includes(query));
-      if (!option.hidden) visible += 1;
+      const row = option.closest(".project-editor__file-option-row");
+      row.hidden = Boolean(query && !option.textContent.toLocaleLowerCase().includes(query));
+      if (!row.hidden) visible += 1;
     }
     fileEmpty.hidden = visible !== 0;
   }
@@ -1058,7 +1186,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
   });
   fileFilter.addEventListener("input", filterProjectFiles);
-  fileMenu.addEventListener("click", (event) => { selectProjectFile(event); closeFileMenu({ focus: true }); });
+  fileMenu.addEventListener("click", (event) => {
+    const close = event.target.closest("[data-close-menu-tab]");
+    if (close) { closeOpenTab(close.dataset.closeMenuTab); return; }
+    selectProjectFile(event);
+    closeFileMenu({ focus: true });
+  });
   fileMenu.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -1067,7 +1200,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]:not([hidden])')];
+    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]')].filter((option) => !option.closest(".project-editor__file-option-row").hidden);
     const current = Math.max(0, options.indexOf(document.activeElement));
     const next = event.key === "Home" ? 0
       : event.key === "End" ? options.length - 1
@@ -1077,9 +1210,37 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   document.addEventListener("pointerdown", (event) => {
     if (!root.querySelector("[data-project-file-picker]").contains(event.target)) closeFileMenu();
   });
+  const editorOverflow = root.querySelector("[data-editor-overflow]");
+  const editorOverflowTrigger = root.querySelector("[data-editor-overflow-trigger]");
+  const editorOverflowMenu = root.querySelector("[data-editor-overflow-menu]");
+  function closeEditorOverflow({ focus = false } = {}) {
+    editorOverflowMenu.hidden = true;
+    editorOverflowTrigger.setAttribute("aria-expanded", "false");
+    if (focus) editorOverflowTrigger.focus();
+  }
+  editorOverflowTrigger.addEventListener("click", () => {
+    const opening = editorOverflowMenu.hidden;
+    editorOverflowMenu.hidden = !opening;
+    editorOverflowTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) editorOverflowMenu.querySelector('[role="menuitem"]')?.focus();
+  });
+  editorOverflowMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeEditorOverflow({ focus: true });
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!editorOverflow.contains(event.target)) closeEditorOverflow();
+  });
+  root.querySelector("[data-save-tab-configuration]").addEventListener("click", () => {
+    closeEditorOverflow();
+    updateSnapshot({ files: state.files, config: { ...state.config, editorTabs: [...openTabs] } });
+    setStatus("Tab configuration saved");
+  });
   const archiveInput = root.querySelector("[data-project-archive-file]");
-  root.querySelector("[data-project-import]").addEventListener("click", () => archiveInput.click());
+  root.querySelector("[data-project-import]").addEventListener("click", () => { closeEditorOverflow(); archiveInput.click(); });
   root.querySelector("[data-project-export]").addEventListener("click", () => {
+    closeEditorOverflow();
     try {
       const bytes = encodeProjectArchive(state);
       const link = document.createElement("a");
@@ -1255,6 +1416,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     growTextarea(linkPatterns);
     renderContainerElements(container.value);
     selected = next.files[0].path;
+    openTabs = Array.isArray(next.config?.editorTabs) ? [...next.config.editorTabs] : next.files.map((file) => file.path);
     updateSnapshot(next, { destructive: true });
     templateOnlyPending = true;
     renderTabs();
