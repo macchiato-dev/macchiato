@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;padding:18px;color:var(--ink);background:radial-gradient(circle at 50% 35%,#246253,var(--ground) 72%);font:14px system-ui,sans-serif}
 main{width:min(940px,100%);margin:auto}
-header{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 h1{margin:0;color:var(--gold);font:500 clamp(25px,4vw,39px) Georgia,serif}.subtitle,.stats{color:var(--muted)}
 .controls{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
 button.action{padding:8px 12px;border:1px solid #8db7ab;border-radius:7px;color:var(--ink);background:#205c4e;font:inherit;font-weight:700;cursor:pointer}
@@ -19,18 +19,18 @@ button.action:hover{border-color:var(--gold);background:#2a725f}button.action[di
 .game{padding:12px;border:1px solid var(--line);border-radius:16px;background:rgba(5,28,24,.68);box-shadow:0 18px 50px rgba(0,0,0,.28)}
 .statusbar{display:flex;justify-content:space-between;gap:12px;min-height:25px;padding:0 4px 9px}.message{color:#f4d999}
 .board-scroll{overflow:visible;border:1px solid #2b5d51;border-radius:11px;background:#0b2924;padding:clamp(12px,2.5vw,20px)}
-#board{container-type:inline-size;position:relative;width:min(760px,100%);aspect-ratio:760/520;margin:0 auto}
+#board{container-type:inline-size;position:relative;width:min(760px,100%);aspect-ratio:760/590;margin:0 auto}
 .tile{position:absolute;left:0;top:0;z-index:1;width:calc(50 / 760 * 100cqw);height:calc(66 / 760 * 100cqw);padding:0;overflow:hidden;border:1px solid #c5b391;border-radius:5px;background:var(--tile);box-shadow:2px 3px 0 #735e3d,4px 5px 7px rgba(0,0,0,.38);cursor:pointer}
 .tile img{position:absolute;left:0;top:0;max-width:none;pointer-events:none}.tile.bonus img{inset:0;width:100%;height:100%;object-fit:contain}
 .tile:hover{box-shadow:2px 3px 0 #735e3d,4px 7px 9px rgba(0,0,0,.45)}.tile:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
-.tile.selected{outline:3px solid #72d7ff;outline-offset:1px}
+.tile.selected{filter:brightness(.62) saturate(.8);box-shadow:1px 2px 0 #5d4a30,2px 3px 5px rgba(0,0,0,.5)}
 .tile[hidden]{display:none}
 footer{display:flex;justify-content:space-between;gap:12px;margin-top:9px;color:var(--muted);font-size:11px}
-@media(max-width:620px){body{padding:8px}header{align-items:start;flex-direction:column}.controls{justify-content:flex-start}footer{display:block}footer span{display:block;margin-top:4px}}
+@media(max-width:620px){body{padding:8px}h1{font-size:clamp(21px,7vw,30px)}footer{display:block}footer span{display:block;margin-top:4px}}
 </style>
 <main>
 <img id="tile-source" hidden alt="">
-<header><div><h1>Classic Mahjong Solitaire</h1><div class="subtitle">Clear the familiar turtle by matching open pairs.</div></div><div class="controls"><button class="action" id="new">New game</button></div></header>
+<header><h1>Classic Mahjong Solitaire</h1><button class="action" id="new">New game</button></header>
 <section class="game"><div class="statusbar"><span class="message" id="message"></span><span class="stats" id="stats">144 tiles · 0 moves</span></div><div class="board-scroll"><div id="board" role="grid" aria-label="Mahjong solitaire turtle layout"></div></div></section>
 <footer><span>Tile art: FluffyStuff/xhokir, CC BY 4.0</span></footer>
 </main>
@@ -51,7 +51,7 @@ function spriteCell(t){if(t[0]==='m')return[+t[1]-1,0];if(t[0]==='p')return[+t[1
 function tileName(t){if(t[0]==='f')return +t.slice(1)<4?'Flower':'Season';return NAMES[t]||t[1]+' '+({m:'characters',p:'dots',s:'bamboo'}[t[0]])}
 function overlaps(a,b){return Math.abs(a.x-b.x)<1&&Math.abs(a.y-b.y)<1}
 function free(index){const t=state.tiles[index];if(t.removed)return false;const above=state.tiles.some(o=>!o.removed&&o.z>t.z&&overlaps(t,o));if(above)return false;const left=state.tiles.some(o=>!o.removed&&o.z===t.z&&Math.abs(o.y-t.y)<.5&&o.x<t.x&&t.x-o.x<=1);const right=state.tiles.some(o=>!o.removed&&o.z===t.z&&Math.abs(o.y-t.y)<.5&&o.x>t.x&&o.x-t.x<=1);return !left||!right}
-function paint(button,t,index){button.className='tile'+(t.type[0]==='f'?' bonus':'')+(state.selected===index?' selected':'');button.hidden=t.removed;button.title=tileName(t.type);button.setAttribute('aria-label',button.title);button.style.left=(15+t.x*52+t.z*5)/7.6+'cqw';button.style.top=(15+t.y*68-t.z*5)/7.6+'cqw';button.style.zIndex=String(10+t.z*100+Math.round(t.y*2));const image=button.querySelector('img');const source=t.type[0]==='f'?bonusArt[+t.type.slice(1)]:sprite;if(image.src!==source)image.src=source;if(t.type[0]!=='f'){const cell=spriteCell(t.type),scale=.435;image.style.width=2048*scale/7.6+'cqw';image.style.height=654*scale/7.6+'cqw';image.style.left=-(cell[0]*204.8+47)*scale/7.6+'cqw';image.style.top=-(cell[1]*163.5+7)*scale/7.6+'cqw'}}
+function paint(button,t,index){button.className='tile'+(t.type[0]==='f'?' bonus':'')+(state.selected===index?' selected':'');button.hidden=t.removed;button.title=tileName(t.type);button.setAttribute('aria-label',button.title);button.style.left=(15+t.x*52+t.z*5)/7.6+'cqw';button.style.top=(24+t.y*68-t.z*5)/7.6+'cqw';button.style.zIndex=String(10+t.z*100+Math.round(t.y*2));const image=button.querySelector('img');const source=t.type[0]==='f'?bonusArt[+t.type.slice(1)]:sprite;if(image.src!==source)image.src=source;if(t.type[0]!=='f'){const cell=spriteCell(t.type),scale=.435;image.style.width=2048*scale/7.6+'cqw';image.style.height=654*scale/7.6+'cqw';image.style.left=-(cell[0]*204.8+47)*scale/7.6+'cqw';image.style.top=-(cell[1]*163.5+7)*scale/7.6+'cqw'}}
 function remaining(){return state.tiles.filter(t=>!t.removed).length}
 function availablePairs(){const freeTiles=state.tiles.map((t,i)=>({t,i})).filter(x=>free(x.i));const pairs=[];for(let a=0;a<freeTiles.length;a++)for(let b=a+1;b<freeTiles.length;b++)if(freeTiles[a].t.match===freeTiles[b].t.match)pairs.push([freeTiles[a].i,freeTiles[b].i]);return pairs}
 function render(message=''){const board=document.getElementById('board');for(let i=0;i<state.tiles.length;i++)paint(board.children[i],state.tiles[i],i);const left=remaining();document.getElementById('stats').textContent=left+' tiles · '+state.moves+' moves';if(message)document.getElementById('message').textContent=message;else if(!left)document.getElementById('message').textContent='Board cleared in '+state.moves+' moves!';else if(!availablePairs().length)document.getElementById('message').textContent='No moves remain. Start a new game.';else document.getElementById('message').textContent=''}

@@ -42,8 +42,11 @@ test("Mahjong renders fetched artwork through image elements, not CSS", () => {
   assert.doesNotMatch(source, /--tiles|background-image:\s*var\(/);
   assert.doesNotMatch(source, /id="hint"|id="shuffle"|highlighted free tile/i);
   assert.doesNotMatch(source, /A free tile has|nothing covers it|Select a free tile|matching free tile/i);
+  assert.doesNotMatch(source, /Clear the familiar turtle/);
   assert.match(source, /container-type:inline-size/);
   assert.match(source, /width:min\(760px,100%\)/);
+  assert.match(source, /aspect-ratio:760\/590/);
+  assert.doesNotMatch(source, /\.tile\.selected\{outline/);
   assert.match(source, /const rows=\[\[12,1\],\[8,3\],\[10,2\],\[14,0\],\[13,\.5\],\[10,2\],\[8,3\],\[12,1\]\]/);
   assert.match(source, /layer\(1,6,6,4,1\);layer\(2,4,4,5,2\);layer\(3,2,2,6,3\)/);
   assert.match(source, /out\.push\(\{x:6\.5,y:3\.5,z:4\}\)/);
