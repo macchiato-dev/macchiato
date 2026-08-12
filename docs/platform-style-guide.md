@@ -34,7 +34,9 @@ icons, including Full Screen and Details, use the same compact hover background
 as the segmented view controls; the hit area does not change size on hover.
 Tooltips stay on one line and are clamped to the viewport. Near an edge they
 grow inward rather than crossing the window boundary. File tabs show only the
-basename; their tooltip carries the complete project-relative path.
+basename. A tab only shows a tooltip when its basename is truncated or its file
+is in a subdirectory; in either case, the tooltip carries the complete
+project-relative path.
 
 The project file picker separates unopened results from an `Open files` group
 at the bottom. One filter searches both groups. Each group scrolls independently;

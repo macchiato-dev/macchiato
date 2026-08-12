@@ -209,12 +209,13 @@ document.addEventListener("focusout", (event) => {
   if (error) validateSlug(slug, error);
 });
 document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
-function attachInstantTooltip(button, label = button.dataset.instantTooltip) {
+function attachInstantTooltip(button, label = button.dataset.instantTooltip, shouldShow = () => true) {
   if (!label || button.dataset.instantTooltipAttached === "true") return;
   button.dataset.instantTooltip = label;
   button.dataset.instantTooltipAttached = "true";
   let tooltip = null;
   const show = () => {
+    if (!shouldShow(button)) return;
     if (!tooltip) {
       tooltip = document.createElement("span");
       tooltip.className = "instant-tooltip";
@@ -831,7 +832,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       select.setAttribute("aria-selected", String(path === selected));
       const tabLabel = path === "config" ? root.dataset.configLabel || "Configuration" : path.split("/").at(-1);
       select.textContent = tabLabel;
-      attachInstantTooltip(select, path === "config" ? tabLabel : path);
+      const nestedPath = path !== "config" && path.includes("/");
+      attachInstantTooltip(select, path === "config" ? tabLabel : path, (button) => nestedPath || button.scrollWidth > button.clientWidth);
       tab.append(select);
       if (openTabs.length > 1 && path === selected) {
         const close = document.createElement("button");

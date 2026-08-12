@@ -1098,6 +1098,16 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(saveSplitGeometry.primaryTopRight, "0px");
   assert.equal(saveSplitGeometry.arrowTopLeft, "0px");
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
+  const indexTab = page.getByRole("tab", { name: "index.html" });
+  await indexTab.dispatchEvent("pointerenter");
+  await page.waitForTimeout(30);
+  assert.equal(await page.locator("body > .instant-tooltip").count(), 0, "a fully visible root file should not have a tooltip");
+  await indexTab.evaluate((element) => { element.style.width = "24px"; });
+  await indexTab.dispatchEvent("pointerenter");
+  await page.waitForTimeout(30);
+  assert.equal(await page.locator("body > .instant-tooltip").textContent(), "index.html");
+  await indexTab.dispatchEvent("pointerleave");
+  await indexTab.evaluate((element) => { element.style.removeProperty("width"); });
   const crowdedTabGeometry = await page.locator("[data-project-editor]").evaluate((root) => {
     const tabs = root.querySelector("[data-project-tabs]");
     const sample = tabs.querySelector(".project-editor__open-tab");
