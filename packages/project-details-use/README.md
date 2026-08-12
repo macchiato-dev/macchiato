@@ -1,8 +1,8 @@
 # `@macchiato-dev/project-details-use`
 
-`project-details-use` is the focused project view's details pane. It presents a
-project's environment, authority, and identity without making the entire pane a
-permanent form.
+`project-details-use` is the focused project view's settings and details area.
+It presents a project's environment, authority, and identity without making
+the entire area a permanent form.
 
 This package is at the design stage. The first implementation should preserve
 the existing Resources.co project view while extracting each major section
@@ -123,12 +123,24 @@ version history. Merely opening an editor, expanding a section, or inspecting a
 freeze control must not create a draft. Destructive or authority-expanding
 changes should create a recoverable version before they are applied.
 
+## Workspace placement
+
+Details is project-scoped rather than owned by either tabbed half. Project-wide
+icons are aligned on the far right with this area while it is open. If Details
+is closed, those controls remain to the right of the rightmost visible half,
+separated from that half's active-tab controls by a divider. Opening, closing,
+or changing a tab must not make project-wide controls appear to belong to it.
+
+The right half is not reserved for Output View or Details. It has ordinary
+tabs, just like the left half. Details may be opened as the project's dedicated
+settings area without weakening that two-sided tab model.
+
 ## Responsive behavior
 
-On desktop this is the rightmost pane of the focused project view. It may be
-hidden without disposing the editor or project runtime. On narrow screens it is
-a peer of Editor and Output View, selected explicitly rather than squeezed into
-the same viewport. Returning to desktop restores the normal desktop pane model.
+On desktop this occupies the project settings area at the far right. It may be
+hidden without disposing the editor or project runtime. On narrow screens it
+is selected explicitly rather than squeezed beside project content. Returning
+to desktop restores the two tabbed halves and the settings-area placement.
 
 Section modules must tolerate being mounted only while visible. Their durable
 state belongs to the project snapshot or host session, not incidental DOM

@@ -64,6 +64,9 @@ routes them through the synthetic document root, including when an explicit
 application root is nested beneath it. The runner reports blocked operations
 and Escape outward so an embedding host can render persistent status and close
 its own fullscreen shell without taking arrow-key handling away from the guest.
+The host must carry an active runner error into full screen as a dismissible
+overlay. Dismissing it is presentation state only: it neither disposes the VM
+nor erases the error from the host's normal status history.
 
 `data-host-node-count` on the runner root is a low-cost diagnostic of the live
 host-owned DOM allocation. Replaced subtrees release every tracked node,

@@ -75,6 +75,55 @@ When another project is opened, its project-editor runtime is independent and
 disposable. Future project tabs may preserve several runtimes, but the Home and
 read-first contracts remain per project.
 
+## Two tabbed halves
+
+The focused desktop workspace is composed of two independently tabbed halves,
+not an editor pane permanently paired with a special-purpose Output View pane.
+Either half can select a project surface appropriate to that position. Output
+View is one such surface; files, Home, reading views, editors, and compatible
+inspectors can also participate in this model. Opening a split creates another
+tab location rather than creating an intrinsically different kind of pane.
+
+Each half's toolbar describes only its selected tab. It contains the active
+tab's local actions and the control for selecting or opening another tab in
+that half. It must not accumulate project-wide actions, workspace layout
+controls, settings, history, or details controls. A tab that does not support a
+local action does not inherit one merely because another tab did.
+
+Tab order, the selected tab in each half, and the split position are session
+state. Closing the second half must not destroy its project state unless the
+normal tab/runtime disposal policy says to do so. Reopening it can therefore
+restore the previous right-half selection when that state remains available.
+
+## Project controls
+
+Controls affecting the whole project or workspace move to a dedicated group on
+the far right. When the settings/details area is open, this group belongs to
+that area. When it is closed, the group sits immediately to the right of the
+rightmost visible half. A divider separates project controls from the selected
+tab's local controls so scope remains visually unambiguous.
+
+This group includes workspace layout and project-level destinations such as
+settings/details. It is not part of either half and does not move when a tab is
+selected on the left or right. Responsive layouts may present the same group
+more compactly, but must preserve the distinction between active-tab actions
+and whole-project actions.
+
+## Output errors in full screen
+
+Full screen is a layout change around the existing Output View runtime, not a
+new run. Output errors therefore follow that runtime into full screen. An error
+that would normally appear below or beside Output View is rendered there as a
+dismissible overlay above the project surface; it must not remain visible only
+in workspace chrome that full screen has hidden.
+
+Dismissing the overlay hides that occurrence without restarting the project,
+discarding state, or claiming that the underlying error was repaired. A later,
+distinct error opens the overlay again. The message remains available after
+leaving full screen through the normal Output View status/error interface.
+The overlay is keyboard accessible, does not trap focus, and does not prevent
+the full-screen close control from being reached.
+
 ## Relationship to other modules
 
 - `project-details-use` owns the modular, read-first Details pane.

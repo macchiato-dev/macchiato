@@ -5,10 +5,29 @@ Macchiato, and other hubs may theme without changing their behavior.
 
 ## Workspace bars
 
-A focused workspace has one continuous top bar divided on the same boundaries
-as its editor, output, and details panes. Controls belong to the pane they act
-on and disappear with that pane. A hidden editor therefore does not leave a
-file picker behind, and an editor-only view does not advertise output metadata.
+A focused workspace has two independently tabbed halves and an optional
+project settings area. The right half is not a permanently designated Output
+View: either half may contain files, reading or editing surfaces, Output View,
+Home, or another compatible project surface.
+
+Each half's segment of the continuous top bar contains only controls for its
+selected tab, followed by the control for selecting or opening another tab in
+that half. Those controls disappear or change with the selected tab. They do
+not include layout modes, project settings, history, or other actions whose
+scope is the whole project.
+
+Project-wide icons form a separate group at the far right. When project
+settings are open, the group is placed with that area. When settings are
+closed, it follows the rightmost visible half. A divider always separates this
+group from active-tab controls. The group stays spatially stable as tabs change
+so its broader scope is visible rather than inferred from a tooltip.
+
+When Output View enters full screen, its current error status enters with it.
+Show an active error as a dismissible overlay over the output rather than
+leaving it behind in a hidden status rail. The overlay belongs to Output View,
+not to the full-screen close control, and uses the standard error colors and
+message typography. Dismissal hides the occurrence but does not restart the
+runtime or clear its recorded status; a new error may show it again.
 
 Call rendered results **Output View**, not preview. Preview implies a temporary
 deployment rather than the live result of a constrained project.
@@ -24,10 +43,11 @@ Use compact platform-owned line icons for mode changes such as Editor, Split
 view, and Output View. Keep the SVG inline so constrained, offline, and
 self-hosted surfaces do not acquire an icon-font dependency. Treat them as a
 small coherent set with shared stroke weight and optical bounds.
-The three workspace modes are always-visible icon buttons in one shallow,
-beveled segmented control, like paragraph-alignment controls. Raised buttons
+Workspace layout modes are project-wide icons in one shallow, beveled
+segmented control, like paragraph-alignment controls. Raised buttons
 use a light top/left and dark bottom/right edge; the selected mode reverses the
-depth and appears inset. Do not hide these three choices in a dropdown.
+depth and appears inset. Do not hide these choices in a dropdown, and do not
+place them inside either half's active-tab controls.
 Every icon button has an accessible name and a custom tooltip; native
 delayed `title` tooltips are not the primary explanation. Standalone toolbar
 icons, including Full Screen and Details, use the same compact hover background
