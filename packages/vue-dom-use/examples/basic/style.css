@@ -1,0 +1,9 @@
+:root{color-scheme:dark;--bg:#101623;--panel:#182235;--line:#33435e;--ink:#eef4ff;--muted:#9fb0c9;--accent:#78dcca;--error:#ff9b93}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:clamp(18px,4vw,48px);background:radial-gradient(circle at 75% 5%,#203858,var(--bg) 42%);color:var(--ink);font:15px system-ui,sans-serif}
+main{width:min(980px,100%);margin:auto}header{margin-bottom:18px}h1{margin:.2rem 0;font-size:clamp(28px,5vw,48px)}header p{max-width:720px;color:var(--muted)}.eyebrow{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:12px}
+.vue-editor{height:min(62vh,600px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.vue-editor__toolbar,.vue-editor__status{display:flex;align-items:center;gap:12px;padding:9px 12px;color:var(--muted);background:#202d43}.vue-editor__toolbar strong{margin-right:auto;color:var(--ink)}button{border:1px solid var(--line);border-radius:6px;padding:5px 9px;color:var(--ink);background:#263853;cursor:pointer}button:hover{border-color:var(--accent)}button:disabled{opacity:.4;cursor:default}
+.vue-editor__input{width:100%;height:100%;resize:none;border:0;outline:0;padding:16px;background:#111926;color:#e8f1ff;font:15px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;tab-size:2}.vue-editor__status{justify-content:flex-end;font-size:12px}
+details{margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--muted)}summary{cursor:pointer}pre{max-height:240px;overflow:auto;color:var(--ink);font-size:12px}.error{color:var(--error)}
+@media(max-width:560px){body{padding:12px}.vue-editor__toolbar{flex-wrap:wrap}.vue-editor__toolbar strong{width:100%}.vue-editor{height:68vh}}
