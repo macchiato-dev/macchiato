@@ -335,6 +335,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   const readOnly = root.dataset.readOnly === "true";
+  const pendingSnapshotKey = projectId ? `resources_project_pending_v1:${projectId}` : "";
   const initialProjectLayout = root.closest(".project-create__layout");
   const initialDetailsButton = root.querySelector('[data-project-view="details"]');
   const initiallyNarrow = globalThis.matchMedia?.("(max-width: 760px)").matches === true;
@@ -364,6 +365,24 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
   }
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  let recoveredPendingSnapshot = false;
+  if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
+    try {
+      const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
+      if (pendingValue) {
+        const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
+        if (!projectPatchIsEmpty(diffProjectSnapshots(state, recovered))) {
+          state = recovered;
+          snapshotField.value = JSON.stringify(state);
+          recoveredPendingSnapshot = true;
+        } else {
+          sessionStorage.removeItem(pendingSnapshotKey);
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(pendingSnapshotKey);
+    }
+  }
   if (workspacePayload) {
     const fields = root.closest(".project-create__layout")?.querySelector("[data-project-fields]");
     const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
@@ -387,7 +406,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   try { openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || []; } catch {}
   if (!openTabs.length) openTabs = Array.isArray(state.config?.editorTabs) ? [...state.config.editorTabs] : state.files.map((file) => file.path);
   let ready = false;
-  let pending = false;
+  let pending = recoveredPendingSnapshot;
   let saveTimer = 0;
   let pendingDestructive = false;
   let templateOnlyPending = false;
@@ -407,7 +426,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
   function showCurrentVersion() {
-    currentVersion.textContent = latestSavedAt ? relativeVersionTime(latestSavedAt) : (root.dataset.currentVersionLabel || "Current Version");
+    currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
     if (latestSavedAt) {
       currentVersion.dataset.versionTime = String(latestSavedAt);
       currentVersion.title = new Date(latestSavedAt).toLocaleString();
@@ -934,6 +953,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     currentSnapshot = state;
     snapshotField.value = JSON.stringify(state);
     pending = true;
+    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, JSON.stringify(state));
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
     unsavedChangeCount += 1;
@@ -1006,6 +1026,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         templateOnlyPending = false;
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
+        if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
         setStatus("Saved");
       } else {
         setStatus("Saving…");
@@ -1072,8 +1093,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     versionList.replaceChildren();
     const latest = versions.find((version) => version.latest);
     latestSavedAt = Number(latest?.savedAt || latest?.createdAt || 0);
-    if (latest) showSelectedVersion(relativeVersionTime(latest.savedAt || latest.createdAt), latest.savedAt || latest.createdAt);
-    const current = versionChoice(latest ? relativeVersionTime(latest.savedAt || latest.createdAt) : (root.dataset.currentVersionLabel || "Current Version"), latest?.savedAt || Date.now(), { current: true });
+    showCurrentVersion();
+    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", latest?.savedAt || Date.now(), { current: true });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
@@ -1569,7 +1590,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     historyPanel.hidden = true;
     versionButton.setAttribute("aria-expanded", "false");
   });
-  addEventListener("beforeunload", (event) => { if (pending) event.preventDefault(); });
   setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   setInterval(() => {
     for (const label of root.closest(".project-create__layout")?.querySelectorAll("[data-version-time]") || []) {
@@ -1579,6 +1599,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   if (!readOnly && !draft && !memoryOnly) renderStoredVersions();
   renderTabs();
   mountEditorMachine();
+  if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
   addEventListener("pagehide", () => {
     editorGeneration += 1;
     editorController?.destroy();

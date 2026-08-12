@@ -70,6 +70,21 @@ subset and `canvas-use` forwards a bounded Canvas 2D command set. Static
 templates remain projection-only. Changing a file or template destroys the
 old preview runtime before mounting the replacement.
 
+Stored projects autosave their working snapshot. Every direct snapshot change
+also writes a project-scoped recovery copy to session storage before the
+debounced server request, so reload does not require a browser unload prompt or
+lose the edit. A successful server save removes that recovery copy; a reload
+that finds one restores it and immediately resumes the normal save. Merely
+opening, closing, or reordering file tabs remains session UI state. The explicit
+**Save tab configuration** command is the direct action that copies that state
+into project configuration and therefore marks the project as changed.
+
+Version history distinguishes the working **Current Version** from saved
+checkpoints. Relative timestamps belong to checkpoint rows, and `LATEST` marks
+the checkpoint produced by the most recent explicit project save; the current
+working row does not duplicate that timestamp as though it were another saved
+version.
+
 The starter gallery mirrors the Resources design reference: Hello HTML,
 Digital clock, Logo mark, Bar chart, Bouncing ball, and Starfield, alongside
 the product's Article and Blank starters. They reuse the named `page`, `svg`,
