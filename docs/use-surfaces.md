@@ -8,6 +8,14 @@ not a parallel object model or a second editor.
 
 ## Component ownership
 
+The planned default is complete ownership beneath each granted container, with
+an exact guest mirror and revisioned positional addressing. Indexed child access
+makes bounded-depth paths an efficient common primitive, while disposable guest
+DOM wrappers provide library compatibility. The design, stale-path rules,
+detached arena, future explicit exclusions, and migration phases are specified
+in [Container-owned DOM and positional
+mirrors](dom-use-container-ownership.md).
+
 The execution and capability boundaries reinforce each other. Guest code may
 run in a WebAssembly-hosted VM, but its practical isolation is the set of host
 resources it can access. Each DOM-backed component receives one host-owned root

@@ -14,6 +14,14 @@ capability that guest contexts interact with. It orchestrates `html-use` and
 
 ## Isolation and component roots
 
+The intended next ownership model makes a surface own the complete subtree of
+each granted container. The guest keeps an exact structural mirror, most nodes
+are addressed by revisioned child-index paths, and partial DOM wrapper objects
+can be disposable. This should replace most durable per-node host IDs while
+making bulk updates natural. See [Container-owned DOM and positional
+mirrors](../../docs/dom-use-container-ownership.md). The current runtime still
+uses per-node bridge IDs; this is a migration design, not shipped behavior.
+
 `dom-use` is the DOM-policy part of an isolation architecture; it does not by
 itself create a virtual machine. A sandboxed container may run guest code in a
 WebAssembly-hosted VM such as QuickJS, but isolation is primarily defined by
