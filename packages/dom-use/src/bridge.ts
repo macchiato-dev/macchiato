@@ -130,6 +130,13 @@ export class DomUseHostCapability {
     return {};
   }
 
+  releaseNode(id) {
+    const node = this.node(id);
+    if (node.parentNode) throw new Error("Cannot release an attached DOM node");
+    this.pruneTree(node);
+    return {};
+  }
+
   insertBefore(parentId, childId, referenceId) {
     this.node(parentId).insertBefore(this.node(childId), referenceId ? this.node(referenceId) : null);
     this.revision += 1;
@@ -319,6 +326,7 @@ export class DomUseHostCapability {
       case "createTextNode": return this.createTextNode(message.text);
       case "appendChild": return this.appendChild(message.parentId, message.childId);
       case "removeChild": return this.removeChild(message.parentId, message.childId);
+      case "releaseNode": return this.releaseNode(message.id);
       case "insertBefore": return this.insertBefore(message.parentId, message.childId, message.referenceId);
       case "setTextContent": return this.setTextContent(message.id, message.value);
       case "setInnerHTML": return this.setInnerHTML(message.id, message.html);

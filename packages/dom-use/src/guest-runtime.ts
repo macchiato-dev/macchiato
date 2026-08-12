@@ -75,7 +75,11 @@ class HostNode {
   }
 
   replaceChildren(...nodes) {
-    for (const child of [...this.children]) this.removeChild(child);
+    for (const child of [...this.children]) {
+      this.removeChild(child);
+      host("releaseNode", { id: child.__hostNodeId });
+      releaseGuestSubtree(child);
+    }
     this.append(...nodes);
   }
 }

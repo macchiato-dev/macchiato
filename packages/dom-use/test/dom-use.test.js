@@ -671,6 +671,26 @@ test("host bridge releases quota for host-parsed replacement subtrees", () => {
   assert.equal(capability.document.createdNodes, 3);
 });
 
+test("host bridge releases explicitly discarded detached guest subtrees", () => {
+  const capability = new DomUseHostCapability({
+    nodes: {
+      main: { attrs: [], children: ["p"] },
+      p: { attrs: [], children: ["#text"] },
+    },
+    limits: { maxNodes: 8 },
+  });
+  const { id: main } = capability.createElement("main");
+  const { id: paragraph } = capability.createElement("p");
+  const { id: text } = capability.createTextNode("old");
+  capability.appendChild(paragraph, text);
+  capability.appendChild(main, paragraph);
+
+  capability.removeChild(main, paragraph);
+  capability.releaseNode(paragraph);
+  assert.equal(capability.document.createdNodes, 1);
+  assert.throws(() => capability.node(paragraph), /DOM node not found/);
+});
+
 test("host bridge credits a replaced subtree before parsing its successor", () => {
   const capability = new DomUseHostCapability({
     nodes: {
