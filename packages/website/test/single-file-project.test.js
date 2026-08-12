@@ -40,4 +40,8 @@ test("Mahjong renders fetched artwork through image elements, not CSS", () => {
   assert.match(source, /document\.createElement\('img'\)/);
   assert.match(source, /response\.resourceUrl\(\)/);
   assert.doesNotMatch(source, /--tiles|background-image:\s*var\(/);
+  assert.doesNotMatch(source, /id="hint"|id="shuffle"|highlighted free tile/i);
+  assert.match(source, /const rows=\[12,12,12,14,14,12,12\]/);
+  assert.match(source, /layer\(1,6,6,4,\.5\);layer\(2,4,4,5,1\.5\);layer\(3,2,2,6,2\.5\)/);
+  assert.match(source, /return shuffle\(pairs\)/);
 });
