@@ -44,7 +44,7 @@ export function singleFileSnapshot(source, { fetchResources = [] } = {}) {
       },
       domSchema: {
         nodes: Object.fromEntries(["body", ...tags].map((tag) => [tag, { attrs: attributes, events, children }])),
-        urls: { fragments: true, ...(fetchResources.length ? { "img.src": "^data:image/(?:png|jpeg|gif|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+$" } : {}) },
+        urls: { fragments: true, ...(fetchResources.length ? { "img.src": "^(?:macchiato-resource:[0-9]+|data:image/(?:png|jpeg|gif|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+)$" } : {}) },
         maxDepth: 24,
         limits: {
           maxTextLength: 100_000,
@@ -91,6 +91,11 @@ async function main() {
     const snapshot = singleFileSnapshot(source, { fetchResources });
     const existing = await store.getProject(username, slug, users.rows[0].id);
     if (existing) {
+      await store.updateProject(users.rows[0].id, existing.id, {
+        namespace: "user", userSlug: username, slug, name,
+        description: option("--description", "A self-contained HTML, CSS, and JavaScript project."),
+        visibility: "public", template: "html",
+      });
       await store.saveProjectSnapshot(users.rows[0].id, existing.id, snapshot, { reason: "manual", destructive: true });
       await store.publishProject(users.rows[0].id, existing.id);
       console.log(`Updated /${username}/${slug}`);

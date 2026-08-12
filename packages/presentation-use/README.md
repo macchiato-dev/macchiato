@@ -49,6 +49,11 @@ function. Binary assets add `response.dataUrl()`. A constrained DOM schema must
 independently allow the exact image data-URL MIME patterns before those bytes
 can become visible. It may use a larger `img.src` attribute-value limit while
 keeping the general attribute limit small.
+For a resource reused by many image nodes, `response.resourceUrl()` returns a
+short capability reference. The guest DOM transports that reference; the
+runner resolves it to the already validated data URL before assigning the
+browser image's `src`. Thus browser `<img>` elements still receive data URLs
+without copying a large encoded value through every guest DOM reconciliation.
 No fetch grant implies permission for a DOM element or stylesheet to load the
 same URL directly.
 

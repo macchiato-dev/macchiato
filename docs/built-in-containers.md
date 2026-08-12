@@ -63,6 +63,12 @@ container explicitly grants selected image MIME types on `img.src` and gives
 only that tag/attribute pair a larger value limit. Ordinary attributes and CSS
 values retain their smaller limits.
 
+Repeated images can use `response.resourceUrl()`. QuickJS receives a short,
+opaque reference, while the display runner resolves it to the validated data
+URL before setting the browser image. This preserves real `<img>` content and
+the same URL policy without repeatedly serializing a large data URL through the
+guest DOM bridge.
+
 This fetch grant is currently specific to scripts executing in the project's
 QuickJS sandbox. It does not allow external `<script>`, `<link>`, `<img>`, CSS
 URL, or font loads. Future CDN script and stylesheet capabilities must remain

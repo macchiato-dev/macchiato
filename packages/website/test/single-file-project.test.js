@@ -31,13 +31,13 @@ test("records exact constrained CDN fetch grants for the QuickJS runtime", () =>
   assert.equal(snapshot.config.capabilities.fetch.limits.maxUrlLength, 100);
   assert.equal(snapshot.config.domSchema.limits.maxAttributeValueLength, 16_384);
   assert.equal(snapshot.config.domSchema.limits.maxAttributeValueLengths["img.src"], 1_500_000);
-  assert.match(snapshot.config.domSchema.urls["img.src"], /data:image/);
+  assert.match(snapshot.config.domSchema.urls["img.src"], /macchiato-resource/);
   assert.equal(snapshot.config.sandbox.network, false);
 });
 
-test("Mahjong renders fetched artwork through image data URLs, not CSS", () => {
+test("Mahjong renders fetched artwork through image elements, not CSS", () => {
   const source = readFileSync(new URL("../../../examples/mahjong/index.html", import.meta.url), "utf8");
   assert.match(source, /document\.createElement\('img'\)/);
-  assert.match(source, /response\.dataUrl\(\)/);
+  assert.match(source, /response\.resourceUrl\(\)/);
   assert.doesNotMatch(source, /--tiles|background-image:\s*var\(/);
 });

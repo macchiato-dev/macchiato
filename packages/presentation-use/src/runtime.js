@@ -34,9 +34,14 @@ function reconcileChildren(currentParent, nextParent) {
   while (currentParent.childNodes.length > nextParent.childNodes.length) currentParent.lastChild.remove();
 }
 
-export function reconcileRenderedDom(root, html) {
+export function reconcileRenderedDom(root, html, resourceUrls = {}) {
   const template = document.createElement("template");
   template.innerHTML = html;
+  for (const image of template.content.querySelectorAll("img[src^='macchiato-resource:']")) {
+    const resolved = resourceUrls[image.getAttribute("src")];
+    if (!resolved) throw new Error("Rendered image references an unavailable project resource");
+    image.setAttribute("src", resolved);
+  }
   reconcileChildren(root, template.content);
 }
 
@@ -68,6 +73,8 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   });
   const capability = new DomUseHostCapability(project.domSchema || {}, styleUse, { storage });
   const guestFetchResources = project.fetchResources || {};
+  const renderedResourceUrls = Object.fromEntries(Object.values(guestFetchResources).map((resource, index) => [`macchiato-resource:${index}`, resource.dataUrl]));
+  const guestResourceRefs = Object.fromEntries(Object.entries(guestFetchResources).map(([url, resource], index) => [url, { ...resource, resourceRef: `macchiato-resource:${index}` }]));
   const sandbox = await createSandbox({
     modules: project.modules || {},
     memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
@@ -77,7 +84,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
   let renderPending = false;
   let pointerRelease = null;
   const render = () => {
-    reconcileRenderedDom(root, capability.serializeApp().html);
+    reconcileRenderedDom(root, capability.serializeApp().html, renderedResourceUrls);
     root.dataset.hostNodeCount = String(capability.document.createdNodes);
     root.dataset.hostLiveNodeCount = String(capability.liveNodeCount());
   };
@@ -113,7 +120,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     sandbox.evalGlobal(`Object.assign(globalThis, ${JSON.stringify(project.globals || {})})`, "presentation-globals.js");
     if (Object.keys(guestFetchResources).length) {
       sandbox.evalGlobal(`
-        globalThis.__macchiatoFetchResources = ${JSON.stringify(guestFetchResources)};
+        globalThis.__macchiatoFetchResources = ${JSON.stringify(guestResourceRefs)};
         globalThis.fetch = async function fetch(url, options) {
           const method = String(options && options.method || "GET").toUpperCase();
           if (method !== "GET") throw new TypeError("Constrained fetch only supports GET");
@@ -128,6 +135,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
             async text() { return resource.text; },
             async json() { return JSON.parse(resource.text); },
             async dataUrl() { return resource.dataUrl; },
+            async resourceUrl() { return resource.resourceRef; },
           });
         };
       `, "presentation-fetch-guest.js");

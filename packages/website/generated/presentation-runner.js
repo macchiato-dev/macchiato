@@ -5774,9 +5774,14 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     }
     while (currentParent.childNodes.length > nextParent.childNodes.length) currentParent.lastChild.remove();
   }
-  function reconcileRenderedDom(root, html) {
+  function reconcileRenderedDom(root, html, resourceUrls = {}) {
     const template = document.createElement("template");
     template.innerHTML = html;
+    for (const image of template.content.querySelectorAll("img[src^='macchiato-resource:']")) {
+      const resolved = resourceUrls[image.getAttribute("src")];
+      if (!resolved) throw new Error("Rendered image references an unavailable project resource");
+      image.setAttribute("src", resolved);
+    }
     reconcileChildren(root, template.content);
   }
   async function mountPresentationRuntime({ root, project, onStatus = () => {
@@ -5816,6 +5821,8 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     });
     const capability = new DomUseHostCapability(project.domSchema || {}, styleUse, { storage });
     const guestFetchResources = project.fetchResources || {};
+    const renderedResourceUrls = Object.fromEntries(Object.values(guestFetchResources).map((resource, index) => [`macchiato-resource:${index}`, resource.dataUrl]));
+    const guestResourceRefs = Object.fromEntries(Object.entries(guestFetchResources).map(([url, resource], index) => [url, { ...resource, resourceRef: `macchiato-resource:${index}` }]));
     const sandbox = await createSandbox({
       modules: project.modules || {},
       memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
@@ -5825,7 +5832,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     let renderPending = false;
     let pointerRelease = null;
     const render = () => {
-      reconcileRenderedDom(root, capability.serializeApp().html);
+      reconcileRenderedDom(root, capability.serializeApp().html, renderedResourceUrls);
       root.dataset.hostNodeCount = String(capability.document.createdNodes);
       root.dataset.hostLiveNodeCount = String(capability.liveNodeCount());
     };
@@ -5859,7 +5866,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       sandbox.evalGlobal(`Object.assign(globalThis, ${JSON.stringify(project.globals || {})})`, "presentation-globals.js");
       if (Object.keys(guestFetchResources).length) {
         sandbox.evalGlobal(`
-        globalThis.__macchiatoFetchResources = ${JSON.stringify(guestFetchResources)};
+        globalThis.__macchiatoFetchResources = ${JSON.stringify(guestResourceRefs)};
         globalThis.fetch = async function fetch(url, options) {
           const method = String(options && options.method || "GET").toUpperCase();
           if (method !== "GET") throw new TypeError("Constrained fetch only supports GET");
@@ -5874,6 +5881,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
             async text() { return resource.text; },
             async json() { return JSON.parse(resource.text); },
             async dataUrl() { return resource.dataUrl; },
+            async resourceUrl() { return resource.resourceRef; },
           });
         };
       `, "presentation-fetch-guest.js");
