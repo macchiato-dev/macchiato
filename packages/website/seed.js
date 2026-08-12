@@ -921,10 +921,10 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-fields__toolbar { display: flex; height: 48px; min-height: 48px; align-items: center; justify-content: flex-end; margin: -10px -12px 0; padding: 7px 12px; color: #eef2ff; background: #17226e; box-shadow: inset 1px 0 #0f174f, inset 2px 0 #2d3d91, inset 0 1px #0f174f, inset 0 2px #2d3d91, inset 0 -1px #0f174f, inset 0 -2px #2d3d91; font-size: 12px; }
 .project-fields__toolbar-actions { display: flex; align-items: center; gap: 3px; }
 .project-overflow { position: relative; }
-.project-overflow > button, .project-close { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
-.project-close { width: 28px; height: 28px; padding: 0; font-size: 20px; font-weight: 400; line-height: 1; }
+.project-overflow > button, .project-close { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
+.project-close { padding: 0; font-size: 20px; font-weight: 400; line-height: 1; }
 .project-close svg { position: relative; top: 1px; display: block; width: 18px; height: 18px; }
-.project-overflow > button:hover, .project-close:hover { color: #fff; background: #2d3c98; }
+.project-overflow > button:hover, .project-overflow > button:focus-visible, .project-close:hover, .project-close:focus-visible { border-color: var(--track-border); color: #fff; background: #2d3c98; outline: none; }
 .project-overflow__menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 35; min-width: 140px; padding: 5px; border: 1px solid var(--track-border); border-radius: 6px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-overflow__menu[hidden] { display: none; }
 .project-overflow__menu button { width: 100%; padding: 7px 8px; border: 1px solid transparent; border-radius: 5px; color: #ff9da3; background: transparent; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
@@ -983,10 +983,10 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__open-tab:hover .project-editor__tab-close, .project-editor__open-tab:focus-within .project-editor__tab-close { opacity: 1; }
 .project-editor__file-picker { position: relative; display: block; flex: 0 0 45px; min-width: 45px; max-width: 45px; }
 .project-editor__file-picker > button { display: flex; width: 100%; min-height: 30px; align-items: center; justify-content: center; gap: 8px; padding: 5px; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 11px; font-weight: 700; }
-.project-editor__file-picker > button:hover, .project-editor__file-picker > button:focus-visible { border-color: #4053b0; background: #111a56; outline: none; }
+.project-editor__file-picker > button:hover, .project-editor__file-picker > button:focus-visible { border-color: var(--track-border); background: var(--hover); outline: none; }
 .project-editor__file-picker > button > span { display: none; }
 .project-editor__file-picker svg { width: 17px; height: 17px; }
-.project-editor__file-picker svg.project-editor__file-arrow { width: 9px; height: 9px; }
+.project-editor__file-picker svg.project-editor__file-arrow { width: 11px; height: 11px; }
 .project-editor__file-menu { position: absolute; top: calc(100% + 5px); left: 0; z-index: 20; width: min(260px, calc(100vw - 24px)); padding: 5px; border: 1px solid var(--track-border); border-radius: 8px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__file-menu[hidden] { display: none; }
 .project-editor__file-menu label { display: block; padding: 3px; }
@@ -1010,14 +1010,14 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__file-option:hover, .project-editor__file-option:focus-visible { color: var(--text); background: var(--hover); outline: none; }
 .project-editor__file-option[aria-checked="true"] { color: #fff; background: #2d3c98; }
 .project-editor__tab, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-.project-editor__tab:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
+.project-editor__tab:hover, .project-editor__versions:hover, .project-editor__versions:focus-visible, .project-editor__version:hover { border-color: var(--track-border); color: var(--text); background: var(--hover); outline: none; }
 .project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
-.project-editor__versions { flex: 0 0 34px; display: flex; width: 34px; height: 30px; min-height: 30px; align-items: center; justify-content: center; gap: 3px; padding: 3px; }
+.project-editor__versions { flex: 0 0 38px; display: flex; width: 38px; height: 30px; min-height: 30px; align-items: center; justify-content: center; gap: 4px; padding: 3px; }
 .project-editor__versions svg { width: 16px; height: 16px; }
 .project-editor__archive-actions { display: flex; gap: 3px; }
 .project-editor__archive-actions button { padding: 4px 6px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font: inherit; font-size: 10px; cursor: pointer; }
 .project-editor__archive-actions button:hover { color: var(--text); background: var(--hover); }
-.project-editor__versions svg.project-editor__history-arrow { width: 8px; height: 8px; }
+.project-editor__versions svg.project-editor__history-arrow { width: 11px; height: 11px; }
 .project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
 .project-editor__versions > [hidden] { display: none; }
 .project-editor__workspace { display: grid; grid-template-columns: minmax(0, var(--source-width, 50%)) 2px minmax(0, 1fr); min-height: 0; overflow: hidden; background: #151717; }
@@ -1074,9 +1074,9 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[data-instant-tooltip] { position: relative; display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; }
 .project-editor__view-controls button[data-instant-tooltip] svg { width: 16px; height: 16px; }
-.project-editor__view-controls > button[data-instant-tooltip]:hover { color: #fff; background: #3043a4; }
+.project-editor__view-controls > [data-project-present]:hover, .project-editor__view-controls > [data-project-present]:focus-visible { border-color: var(--track-border); color: #fff; background: #3043a4; outline: none; }
 .project-view-segments { display: flex; height: 30px; gap: 0; padding: 0; border: 1px solid #33428f; border-radius: 5px; background: #111a56; box-shadow: none; }
-.project-editor__view-controls .project-view-segments button { border: none; border-radius: 0; color: #cbd4ff; background: transparent; box-shadow: none; }
+.project-editor__view-controls .project-view-segments button { height: 30px; margin-top: -1px; margin-bottom: -1px; border: none; border-radius: 0; color: #cbd4ff; background: transparent; box-shadow: none; }
 .project-editor__view-controls .project-view-segments button:first-child { border-radius: 4px 0 0 4px; }
 .project-editor__view-controls .project-view-segments button:last-child { border-radius: 0 4px 4px 0; }
 .project-editor__view-controls .project-view-segments button + button { box-shadow: inset 1px 0 #4053b0; }
@@ -1089,7 +1089,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls button.project-details-toggle { display: grid; }
 .project-editor__view-controls .project-details-toggle { order: 2; }
 .project-editor__view-controls [data-project-present] { order: -1; }
-.project-editor__view-controls .project-close { order: 3; display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font-size: 20px; line-height: 1; }
+.project-editor__view-controls .project-close { order: 3; display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font-size: 20px; line-height: 1; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor[data-editor-machine-state="starting"]::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 24; background: rgba(13, 16, 16, .78); }
 .project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }

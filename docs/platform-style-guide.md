@@ -52,6 +52,10 @@ arrow. Relative history labels retain useful precision: seconds, minutes plus
 seconds, and hours plus minutes before switching to calendar labels. File tabs
 use a quiet whole-tab hover; only the active tab exposes a close control, whose
 small hover target uses the same subtle border as other interactive icons.
+Focused-project toolbar controls share a 30-pixel hover height. Controls without
+disclosures use square hit areas; Browse Files and History are wider while using
+the same generous disclosure arrow. Their subtle hover border and fill follow
+the app bar without changing the segmented view toggle's distinct treatment.
 
 In the app bar, account hover remains pill-shaped. Create and Notifications use
 the compact rounded-square shape, but share the account control's restrained

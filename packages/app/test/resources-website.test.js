@@ -791,7 +791,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(focusedGeometry.bodyHeight, focusedGeometry.viewportHeight);
   assert.ok(Math.abs(focusedGeometry.breadcrumbCenter - focusedGeometry.headerCenter) < 1);
   await page.locator("[data-project-versions-proxy]").click();
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -903,7 +903,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   await page.locator("[data-project-versions-proxy]").click();
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -921,7 +921,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await selectProjectFile("index.html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
-  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds ago$/);
+  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds? ago$/);
   await page.waitForFunction(() => document.querySelector("[data-project-snapshot]")?.value.includes("Digital Clock"));
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("button", { name: "Save project" }).waitFor());
@@ -941,10 +941,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
   const versionsButton = page.locator("[data-project-versions-proxy]");
-  assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds ago1/);
+  assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
   await versionsButton.click();
   const pastVersions = page.locator("[data-project-version-list] [data-version-sequence]");
-  assert.match(await pastVersions.first().textContent(), /\d+ seconds ago.*LATEST/);
+  assert.match(await pastVersions.first().textContent(), /\d+ seconds? ago.*LATEST/);
   assert.notEqual(await pastVersions.first().getAttribute("title"), "");
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   await assert.doesNotReject(page.locator("[data-project-versions-proxy] .project-editor__version-count", { hasText: "1" }).waitFor());
@@ -1214,18 +1214,37 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByLabel("Version title").fill("Ready for review");
   await page.getByRole("button", { name: "Save version" }).click();
   await page.locator("[data-project-versions-proxy]").waitFor();
-  await page.waitForFunction(() => /^\d+ seconds ago$/.test(document.querySelector("[data-current-version]")?.textContent || ""));
+  await page.waitForFunction(() => /^\d+ seconds? ago$/.test(document.querySelector("[data-current-version]")?.textContent || ""));
   assert.equal(await page.locator("[data-project-versions-proxy]").evaluate((button) => button.innerText.trim()), "");
   assert.equal(await page.locator("[data-project-versions-proxy] svg").count(), 2);
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__history-arrow").count(), 1);
   assert.equal(await page.locator("[data-project-versions-proxy]").getAttribute("aria-label"), "Version history");
-  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds ago$/);
+  const toolbarControls = await page.evaluate(() => {
+    const measure = (selector) => {
+      const element = document.querySelector(selector);
+      const rect = element.getBoundingClientRect();
+      return [rect.width, rect.height];
+    };
+    return {
+      files: measure("[data-project-file-trigger]"),
+      history: measure("[data-project-versions-proxy]"),
+      overflow: measure("[data-editor-overflow-trigger]"),
+      fullScreen: measure("[data-project-present]"),
+      close: measure(".project-close"),
+      modes: [...document.querySelectorAll(".project-view-segments button")].map((button) => button.getBoundingClientRect().height),
+      arrows: [...document.querySelectorAll(".project-editor__file-arrow, .project-editor__history-arrow")].map((arrow) => arrow.getBoundingClientRect().height),
+    };
+  });
+  assert.deepEqual(toolbarControls, {
+    files: [45, 30], history: [38, 30], overflow: [30, 30], fullScreen: [30, 30], close: [30, 30], modes: [30, 30, 30], arrows: [11, 11],
+  });
+  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds? ago$/);
   await page.locator("[data-project-versions-proxy]").click();
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-version-list] .project-editor__latest").count(), 1);
   const latest = page.locator("[data-project-version-list] [data-version-sequence]", { hasText: "LATEST" }).first();
   await latest.waitFor();
-  assert.match(await latest.textContent(), /Ready for review.*\d+ seconds ago.*LATEST/);
+  assert.match(await latest.textContent(), /Ready for review.*\d+ seconds? ago.*LATEST/);
   await page.screenshot({ path: "/tmp/resources-version-history.png" });
   await page.locator("[data-project-history-close]").click();
   await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");
