@@ -23,11 +23,11 @@ function extractCssProperties(source) {
   return Object.fromEntries([...declarations, ...inlineCustomProperties].map((property) => [property, true]));
 }
 
-export function singleFileSnapshot(source) {
+export function singleFileSnapshot(source, { fetchResources = [] } = {}) {
   const tags = extractTags(source);
   const children = [...tags, "#text"];
   const attributes = [
-    "id", "class", "style", "title", "role", "type", "tabindex", "viewBox", "xmlns",
+    "id", "class", "style", "title", "role", "type", "tabindex", "hidden", "disabled", "src", "alt", "viewBox", "xmlns",
     "d", "fill", "opacity", "cx", "cy", "rx", "ry", "r", "stroke", "stroke-width",
     "stroke-linecap", "x1", "y1", "x2", "y2", "aria-*", "data-*",
   ];
@@ -44,18 +44,28 @@ export function singleFileSnapshot(source) {
       },
       domSchema: {
         nodes: Object.fromEntries(["body", ...tags].map((tag) => [tag, { attrs: attributes, events, children }])),
-        urls: { fragments: true },
+        urls: { fragments: true, ...(fetchResources.length ? { "img.src": "^data:image/(?:png|jpeg|gif|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+$" } : {}) },
         maxDepth: 24,
-        limits: { maxTextLength: 100_000, maxAttributeNameLength: 80, maxAttributeValueLength: 100_000, maxAttributes: 32, maxNodes: 1_000 },
+        limits: {
+          maxTextLength: 100_000,
+          maxAttributeNameLength: 80,
+          maxAttributeValueLength: 16_384,
+          ...(fetchResources.length ? { maxAttributeValueLengths: { "img.src": 1_500_000 } } : {}),
+          maxAttributes: 32,
+          maxNodes: 1_000,
+        },
         gas: { enabled: true, tank: { init: 1_000_000, idle: 240_000, event: 240_000 }, refill: 30_000 },
       },
       cssSchema: {
         properties: extractCssProperties(source),
         urls: { "background-image": { pattern: "^data:image/svg\\+xml," } },
         imports: false,
-        limits: { maxStylesheetLength: 150_000, maxPropertyLength: 128, maxValueLength: 16_384, maxUrlLength: 8_192, maxImports: 0 },
+        limits: { maxStylesheetLength: 150_000, maxPropertyLength: 128, maxValueLength: 16_384, maxUrlLength: 1024, maxImports: 0 },
       },
-      capabilities: { events, timerResolution: 50, documentSurface: true, scroll: "vertical" },
+      capabilities: {
+        events, timerResolution: 50, documentSurface: true, scroll: "vertical",
+        ...(fetchResources.length ? { fetch: { resources: fetchResources, limits: { maxFiles: 10, maxUrlLength: 100, maxFileBytes: 1024 * 1024, maxTotalBytes: 4 * 1024 * 1024 } } } : {}),
+      },
       limits: { memoryBytes: 64 * 1024 * 1024, stackBytes: 1024 * 1024 },
       sandbox: { network: false, storage: "memory" },
     },
@@ -77,7 +87,8 @@ async function main() {
     const users = await client.execute({ sql: "SELECT id FROM users WHERE username = ? COLLATE NOCASE", args: [username] });
     if (!users.rows[0]) throw new Error(`Resources user not found: ${username}`);
     const store = createContentStore(client);
-    const snapshot = singleFileSnapshot(source);
+    const fetchResources = process.argv.flatMap((value, index) => value === "--fetch-url" ? [process.argv[index + 1]] : []);
+    const snapshot = singleFileSnapshot(source, { fetchResources });
     const existing = await store.getProject(username, slug, users.rows[0].id);
     if (existing) {
       await store.saveProjectSnapshot(users.rows[0].id, existing.id, snapshot, { reason: "manual", destructive: true });

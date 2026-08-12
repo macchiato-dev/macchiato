@@ -72,6 +72,7 @@ export class DomUseLimits {
   maxEventNameLength: number;
   maxAttributeNameLength: number;
   maxAttributeValueLength: number;
+  maxAttributeValueLengths: Record<string, number>;
   maxAttributes: number;
   maxNodes: number;
 
@@ -80,6 +81,7 @@ export class DomUseLimits {
     this.maxEventNameLength = limits.maxEventNameLength ?? DEFAULT_LIMITS.maxEventNameLength;
     this.maxAttributeNameLength = limits.maxAttributeNameLength ?? DEFAULT_LIMITS.maxAttributeNameLength;
     this.maxAttributeValueLength = limits.maxAttributeValueLength ?? DEFAULT_LIMITS.maxAttributeValueLength;
+    this.maxAttributeValueLengths = limits.maxAttributeValueLengths || {};
     this.maxAttributes = limits.maxAttributes ?? DEFAULT_LIMITS.maxAttributes;
     this.maxNodes = limits.maxNodes ?? DEFAULT_LIMITS.maxNodes;
   }
@@ -594,9 +596,14 @@ export class DomUse {
     this.validateContent(name, "event name");
   }
 
-  validateAttributeValue(value) {
+  validateAttributeValue(value, nodeOrTagName: any = "", attribute = "") {
     const attrValue = String(value);
-    const maxAttributeValueLength = this.limits().maxAttributeValueLength;
+    const tag = String(nodeOrTagName?.tagName || nodeOrTagName).toLowerCase();
+    const name = String(attribute).toLowerCase();
+    const overrides = this.limits().maxAttributeValueLengths;
+    const maxAttributeValueLength = overrides[`${tag}.${name}`]
+      ?? overrides[name]
+      ?? this.limits().maxAttributeValueLength;
     if (maxAttributeValueLength && attrValue.length > maxAttributeValueLength) {
       throw new Error(`Attribute value exceeds maxAttributeValueLength ${maxAttributeValueLength}`);
     }
@@ -753,7 +760,7 @@ export class DomUse {
 
   allowedAttr(tagNameOrNode, attr, value) {
     this.validateAttributeName(attr);
-    this.validateAttributeValue(value);
+    this.validateAttributeValue(value, tagNameOrNode, attr);
     const nodes = this.schema.nodes || {};
     const hasNodePolicy = Object.keys(nodes).length > 0 || Object.keys(this.schema.definitions || {}).length > 0;
     if (!hasNodePolicy) return true;

@@ -384,6 +384,25 @@ test("enforces configurable text and attribute length limits", () => {
   assert.throws(() => paragraph.setAttribute("class", "too-big"), /Attribute value exceeds/);
 });
 
+test("supports narrowly scoped attribute value length limits", () => {
+  const domUse = articleDomUse({
+    nodes: {
+      img: { attrs: ["src", "alt"], children: [] },
+      p: { attrs: ["title"], children: ["#text"] },
+    },
+    urls: { "img.src": /^data:image\/png;base64,/ },
+    limits: {
+      maxAttributeValueLength: 12,
+      maxAttributeValueLengths: { "img.src": 64 },
+    },
+  });
+  const doc = domUse.createDocument();
+  const image = doc.createElement("img");
+  image.setAttribute("src", `data:image/png;base64,${"A".repeat(24)}`);
+  assert.match(image.getAttribute("src"), /^data:image\/png/);
+  assert.throws(() => doc.createElement("p").setAttribute("title", "ordinary attributes stay bounded"), /maxAttributeValueLength 12/);
+});
+
 test("enforces attribute and node count limits", () => {
   const domUse = articleDomUse({
     limits: {

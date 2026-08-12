@@ -67,6 +67,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     storage: isolatedStorage,
   });
   const capability = new DomUseHostCapability(project.domSchema || {}, styleUse, { storage });
+  const guestFetchResources = project.fetchResources || {};
   const sandbox = await createSandbox({
     modules: project.modules || {},
     memoryLimitBytes: project.limits?.memoryBytes || 64 * 1024 * 1024,
@@ -110,6 +111,27 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
     const guestRuntime = project.guestRuntime || (typeof __PRESENTATION_USE_GUEST_RUNTIME__ === "string" ? __PRESENTATION_USE_GUEST_RUNTIME__ : "");
     if (!guestRuntime) throw new Error("presentation-use guest runtime is missing");
     sandbox.evalGlobal(`Object.assign(globalThis, ${JSON.stringify(project.globals || {})})`, "presentation-globals.js");
+    if (Object.keys(guestFetchResources).length) {
+      sandbox.evalGlobal(`
+        globalThis.__macchiatoFetchResources = ${JSON.stringify(guestFetchResources)};
+        globalThis.fetch = async function fetch(url, options) {
+          const method = String(options && options.method || "GET").toUpperCase();
+          if (method !== "GET") throw new TypeError("Constrained fetch only supports GET");
+          const key = String(url);
+          const resource = globalThis.__macchiatoFetchResources[key];
+          if (!resource) throw new TypeError("Fetch URL is outside the container grant");
+          return Object.freeze({
+            ok: resource.status >= 200 && resource.status < 300,
+            status: resource.status,
+            url: key,
+            headers: Object.freeze({ get(name) { return String(name).toLowerCase() === "content-type" ? resource.type : null; } }),
+            async text() { return resource.text; },
+            async json() { return JSON.parse(resource.text); },
+            async dataUrl() { return resource.dataUrl; },
+          });
+        };
+      `, "presentation-fetch-guest.js");
+    }
     sandbox.evalGlobal(guestRuntime, "dom-use-guest-runtime.js");
     const inline = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });
     if (inline.error) throw new Error(inline.error);

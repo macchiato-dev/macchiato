@@ -368,6 +368,13 @@ unused wrapper element. URL or network capabilities require a separate,
 deliberate grant and must never be inferred merely because a rejected value was
 observed.
 
+Reviewed schemas can express that narrow exception with
+`limits.maxAttributeValueLengths`. Keys may be tag/attribute pairs such as
+`img.src`, or attribute names used across allowed elements. The general
+`maxAttributeValueLength` remains the fallback. This lets a bounded image data
+URL be large without granting similarly large `class`, `title`, `style`, or
+other attribute values.
+
 An opt-in development mode may apply low-risk deltas automatically within a
 fixed hard ceiling, while recording the exact before/after schema and the input
 that motivated it. Other deltas should remain suggestions requiring approval.

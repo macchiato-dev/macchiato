@@ -49,19 +49,33 @@ installs the validated inline CSS text without rewriting selectors or
 declarations. Viewport sizing, scrolling, and DOM reconciliation belong to the
 host display shell and do not alter the project's source.
 
-The initial configuration permits no external resources. A future explicit
-CDN capability may allow at most two fonts, three scripts, and three
-stylesheets. Scripts would be fetched by the host and executed in QuickJS,
-never inserted as browser `<script>` elements. Stylesheets would be fetched and
-sanitized before use. Every origin, size, and count would need an explicit
-grant; none is implied by selecting this container.
+The default configuration permits no external resources. A project may grant
+the QuickJS guest up to ten exact fetch URLs from jsDelivr or unpkg. Each URL is
+limited to 100 characters, must use HTTPS, and cannot contain a query string or
+fragment. The host preloads only those declared files, applies per-file and
+aggregate byte limits, and exposes them through a guest `fetch()` implementation;
+the guest never receives the browser's unrestricted fetch function. Binary
+responses provide `response.dataUrl()` in addition to the familiar `ok`,
+`status`, `headers`, `text()`, and `json()` surface.
+
+The data URL is still subject to the display surface. For example, this
+container explicitly grants selected image MIME types on `img.src` and gives
+only that tag/attribute pair a larger value limit. Ordinary attributes and CSS
+values retain their smaller limits.
+
+This fetch grant is currently specific to scripts executing in the project's
+QuickJS sandbox. It does not allow external `<script>`, `<link>`, `<img>`, CSS
+URL, or font loads. Future CDN script and stylesheet capabilities must remain
+separate: scripts would be fetched by the host and executed in QuickJS, while
+stylesheets would be sanitized before use.
 
 Seed or replace a project from an unchanged HTML file:
 
 ```bash
 node packages/website/seed-single-file-project.js \
   --source ./app.html --username benatkin \
-  --slug my-app --name "My app"
+  --slug my-app --name "My app" \
+  --fetch-url https://cdn.jsdelivr.net/npm/example@1.0.0/data.json
 ```
 
 Use `--stdin` instead of `--source` to pipe the raw file. The resulting project

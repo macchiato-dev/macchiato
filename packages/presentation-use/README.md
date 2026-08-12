@@ -39,6 +39,19 @@ boundary. This is transport for the selected entry, not a guest `fetch`
 capability. A future guest-facing project-file/`http-use` facade must remain an
 explicit, separately filtered grant.
 
+A container can now grant a small prefetched `fetch()` surface to its QuickJS
+guest. The initial policy accepts no more than ten exact HTTPS files from
+jsDelivr or unpkg, caps each URL at 100 characters, rejects queries and
+fragments, and applies byte limits to every response and the complete set. The
+host fetches and validates only the declared files before starting guest code;
+the guest receives a response-shaped object rather than the browser's fetch
+function. Binary assets add `response.dataUrl()`. A constrained DOM schema must
+independently allow the exact image data-URL MIME patterns before those bytes
+can become visible. It may use a larger `img.src` attribute-value limit while
+keeping the general attribute limit small.
+No fetch grant implies permission for a DOM element or stylesheet to load the
+same URL directly.
+
 The first demanding fixture is the exported `dom-use` code tour. Its project,
 embed, and fullscreen views are intended to use the same runner; fullscreen is
 only a host layout change around the existing iframe and VM.

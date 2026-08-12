@@ -152,6 +152,8 @@ class HostElement extends HostNode {
 
   get hidden() { return this.attributes.hidden !== undefined; }
   set hidden(value) { if (value) this.setAttribute("hidden", ""); else this.removeAttribute("hidden"); }
+  get disabled() { return this.attributes.disabled !== undefined; }
+  set disabled(value) { if (value) this.setAttribute("disabled", ""); else this.removeAttribute("disabled"); }
   get src() { return this.getAttribute("src") || ""; }
   set src(value) { this.setAttribute("src", value); }
 
