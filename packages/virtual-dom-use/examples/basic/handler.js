@@ -19,11 +19,6 @@ function type(path) {
 async function bundle(entry, options = {}) {
   return (await build({
     entryPoints: [entry], bundle: true, write: false, sourcemap: false,
-    define: {
-      __VUE_OPTIONS_API__: "false",
-      __VUE_PROD_DEVTOOLS__: "false",
-      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: "false",
-    },
     ...options,
   })).outputFiles[0].text;
 }
@@ -40,7 +35,7 @@ async function providerAsset(pathname) {
   return new Response(body, { headers: { "content-type": type(pathname) } });
 }
 
-export async function vueDomEditorHandler(request) {
+export async function virtualDomEditorHandler(request) {
   const { pathname } = new URL(request.url);
   const provider = await providerAsset(pathname);
   if (provider) return provider;
@@ -51,12 +46,12 @@ export async function vueDomEditorHandler(request) {
   }
   if (pathname === "/client.js") return response(await readFile(join(directory, "client.js"), "utf8"), type(pathname));
   if (pathname === "/style.css") return response(await readFile(join(directory, "style.css"), "utf8"), "text/css; charset=utf-8");
-  if (pathname === "/vue-dom-guest.js") {
-    guestBundle ||= bundle(join(repoRoot, "packages/vue-dom-use/src/guest.js"), { format: "iife", platform: "neutral" });
+  if (pathname === "/virtual-dom-guest.js") {
+    guestBundle ||= bundle(join(repoRoot, "packages/virtual-dom-use/src/guest.js"), { format: "iife", platform: "neutral" });
     return response(await guestBundle, type(pathname));
   }
-  if (pathname === "/vue-dom-controller.js") {
-    hostBundle ||= bundle(join(repoRoot, "packages/vue-dom-use/src/controller.js"), { format: "esm", platform: "browser", external: ["@macchiato-dev/quickjs-emscripten-sandbox"] });
+  if (pathname === "/virtual-dom-controller.js") {
+    hostBundle ||= bundle(join(repoRoot, "packages/virtual-dom-use/src/controller.js"), { format: "esm", platform: "browser", external: ["@macchiato-dev/quickjs-emscripten-sandbox"] });
     return response(await hostBundle, type(pathname));
   }
   return new Response("Not found", { status: 404 });

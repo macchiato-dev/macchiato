@@ -1,0 +1,15 @@
+{
+  "name": "@macchiato-dev/virtual-dom-use",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A synchronized virtual DOM capability across a QuickJS boundary",
+  "exports": {
+    ".": "./src/index.js",
+    "./controller": "./src/controller.js"
+  },
+  "files": ["src", "README.md"],
+  "publishConfig": { "access": "public" },
+  "peerDependencies": {
+    "@macchiato-dev/quickjs-emscripten-sandbox": "0.1.0"
+  }
+}

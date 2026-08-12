@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
-  <title>Vue DOM Use Editor</title>
+  <title>Virtual DOM Use Editor</title>
   <link rel="stylesheet" href="/style.css">
   <script type="importmap">__IMPORT_MAP__</script>
 </head>
 <body>
   <main>
     <header>
-      <p class="eyebrow">QuickJS guest / Vue host</p>
-      <h1>Reactive editor boundary</h1>
-      <p>The guest owns Vue-reactive state and transition history. The host Vue component owns the bounded browser DOM.</p>
+      <p class="eyebrow">QuickJS guest / browser host</p>
+      <h1>Shared virtual editor surface</h1>
+      <p>The host and guest retain the same canonical virtual DOM. Atomic batches update both copies and a digest detects divergence.</p>
     </header>
     <div id="editor"></div>
     <details><summary>Boundary inspection</summary><pre id="inspection"></pre></details>

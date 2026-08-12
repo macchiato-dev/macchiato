@@ -9,7 +9,7 @@ import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
-import { vueDomEditorHandler } from "../../vue-dom-use/examples/basic/handler.js";
+import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
@@ -89,22 +89,23 @@ export const BUILTIN_APPS = [
     },
   },
   {
-    name: "Vue DOM Editor Experiment",
-    pluginId: "vue-dom-editor",
-    subdomain: "vue-dom-editor",
-    kind: "reactive sandbox component",
-    description: "A small editor whose Vue-reactive state and transitions live in QuickJS and render through a host Vue component.",
-    handler: vueDomEditorHandler,
+    name: "Virtual DOM Editor Experiment",
+    pluginId: "virtual-dom-editor",
+    subdomain: "virtual-dom-editor",
+    kind: "synchronized sandbox component",
+    description: "A small editor with an identical revisioned virtual DOM in its QuickJS guest and browser host.",
+    handler: virtualDomEditorHandler,
     sourceFiles: [
-      "packages/vue-dom-use/examples/basic/handler.js",
-      "packages/vue-dom-use/examples/basic/client.js",
-      "packages/vue-dom-use/examples/basic/style.css",
-      "packages/vue-dom-use/src/controller.js",
-      "packages/vue-dom-use/src/guest.js",
+      "packages/virtual-dom-use/examples/basic/handler.js",
+      "packages/virtual-dom-use/examples/basic/client.js",
+      "packages/virtual-dom-use/examples/basic/style.css",
+      "packages/virtual-dom-use/src/controller.js",
+      "packages/virtual-dom-use/src/guest.js",
+      "packages/virtual-dom-use/src/model.js",
     ],
     sandbox: {
-      runtime: "QuickJS WASM Vue reactive guest + native Vue host renderer",
-      hostCapabilities: ["bounded textarea DOM", "revisioned semantic events", "read-only transition inspection"],
+      runtime: "QuickJS WASM guest + synchronized virtual DOM host",
+      hostCapabilities: ["bounded textarea DOM", "atomic path batches", "digest-checked synchronization"],
     },
   },
   {

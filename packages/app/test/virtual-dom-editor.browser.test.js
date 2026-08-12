@@ -22,7 +22,7 @@ function getPort() {
 }
 
 function startApp(port, dataDir) {
-  const child = spawn(process.execPath, [appCli, "--data-dir", dataDir, "--host", "127.0.0.1", "--port", String(port), "--app-plugin", "vue-dom-editor"], { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(process.execPath, [appCli, "--data-dir", dataDir, "--host", "127.0.0.1", "--port", String(port), "--app-plugin", "virtual-dom-editor"], { cwd: repoRoot, stdio: ["ignore", "pipe", "pipe"] });
   let output = "";
   const ready = new Promise((resolveReady, reject) => {
     const timer = setTimeout(() => reject(new Error(output)), 30_000);
@@ -37,9 +37,9 @@ async function stop(child) {
   await new Promise((resolveStop) => { child.once("exit", resolveStop); child.kill("SIGTERM"); });
 }
 
-test("vue-dom editor mirrors guest reactive transitions into a host Vue component", async (t) => {
+test("virtual-dom editor applies identical atomic batches in guest and host", async (t) => {
   const port = await getPort();
-  const dataDir = await mkdtemp(join(tmpdir(), "macchiato-vue-dom-"));
+  const dataDir = await mkdtemp(join(tmpdir(), "macchiato-virtual-dom-"));
   const app = startApp(port, dataDir);
   t.after(async () => { await stop(app.child); await rm(dataDir, { recursive: true, force: true }); });
   await app.ready;
@@ -50,8 +50,8 @@ test("vue-dom editor mirrors guest reactive transitions into a host Vue componen
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error" || message.type() === "warning") errors.push(message.text()); });
-  const response = await page.goto(`http://vue-dom-editor.localhost:${port}/`);
-  const editor = page.locator(".vue-editor__input");
+  const response = await page.goto(`http://virtual-dom-editor.localhost:${port}/`);
+  const editor = page.locator(".virtual-editor__input");
   await editor.waitFor();
   assert.equal(response.status(), 200);
   assert.match(response.headers()["content-security-policy"], /wasm-unsafe-eval/);
@@ -61,15 +61,22 @@ test("vue-dom editor mirrors guest reactive transitions into a host Vue componen
   await editor.type("\nGuest transition");
   const changed = await editor.inputValue();
   assert.notEqual(changed, initial);
-  assert.match(await page.locator(".vue-editor__status").textContent(), /Guest revision \d+ · \d+ stored transitions/);
+  assert.match(await page.locator(".virtual-editor__status").textContent(), /Guest revision \d+ · \d+ stored transitions/);
   const transition = JSON.parse(await page.locator("#inspection").textContent());
   assert.equal(transition.action, "input");
-  assert.ok(transition.patches.some((patch) => patch.path[0] === "content" && patch.value === changed));
-  assert.equal("view" in transition, false);
+  assert.ok(transition.batch.operations.some((operation) => operation.op === "spliceText" && operation.path.join(".") === "nodes.input.props.value"));
+  assert.match(transition.digest, /^[0-9a-f]{8}$/);
 
   await page.getByRole("button", { name: "Undo" }).click();
   assert.notEqual(await editor.inputValue(), changed);
   await page.getByRole("button", { name: "Redo" }).click();
   assert.equal(await editor.inputValue(), changed);
+
+  const bulk = Array.from({ length: 300 }, (_, index) => `line ${index + 1}`).join("\n");
+  await editor.fill(bulk);
+  await page.waitForTimeout(50);
+  assert.equal(await editor.inputValue(), bulk);
+  const revision = Number((await page.locator(".virtual-editor__status").textContent()).match(/revision (\d+)/)?.[1]);
+  assert.ok(revision < 20, `bulk input produced too many boundary revisions: ${revision}`);
   assert.deepEqual(errors, []);
 });
