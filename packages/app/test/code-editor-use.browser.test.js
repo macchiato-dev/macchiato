@@ -96,6 +96,43 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.evaluate((document) => globalThis.__codeEditorBridge.setContent(document, "javascript"), editableDocument);
   assert.equal(await page.locator(".cm-content").getAttribute("aria-readonly"), "false");
 
+  const longLogicalLine = Array.from({ length: 80 }, (_, index) => `segment${index}`).join(" ");
+  await page.evaluate((document) => globalThis.__codeEditorBridge.setContent(document, "plain"), longLogicalLine);
+  await page.locator(".cm-content.cm-lineWrapping").waitFor();
+  const wideWrap = await page.locator("#editor").evaluate((editor) => {
+    const line = editor.querySelector(".cm-line").getBoundingClientRect();
+    const scroller = editor.querySelector(".cm-scroller");
+    return { lineHeight: line.height, clientWidth: scroller.clientWidth, scrollWidth: scroller.scrollWidth };
+  });
+  assert.ok(wideWrap.scrollWidth <= wideWrap.clientWidth + 1, "wrapped content should not create horizontal editor overflow");
+  await page.setViewportSize({ width: 520, height: 720 });
+  await page.waitForTimeout(50);
+  const narrowWrap = await page.locator("#editor").evaluate((editor) => {
+    const line = editor.querySelector(".cm-line").getBoundingClientRect();
+    const scroller = editor.querySelector(".cm-scroller");
+    return { lineHeight: line.height, clientWidth: scroller.clientWidth, scrollWidth: scroller.scrollWidth };
+  });
+  assert.ok(narrowWrap.lineHeight > wideWrap.lineHeight, "narrowing the editor should add visual rows to the same logical line");
+  assert.ok(narrowWrap.scrollWidth <= narrowWrap.clientWidth + 1, "narrow wrapped content should remain horizontally contained");
+  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).usage.lines, 1);
+  await page.locator(".cm-content").click({ position: { x: 12, y: 10 } });
+  await page.keyboard.press("Home");
+  const wrapStart = (await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).selection.head;
+  await page.keyboard.press("ArrowDown");
+  const nextVisualRow = (await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).selection.head;
+  assert.ok(nextVisualRow > wrapStart && nextVisualRow < longLogicalLine.length, `ArrowDown should move within a wrapped logical line (${wrapStart} -> ${nextVisualRow} of ${longLogicalLine.length})`);
+  await page.keyboard.down("Shift");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.up("Shift");
+  const wrappedSelection = (await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).selection;
+  assert.ok(wrappedSelection.to > wrappedSelection.from, "Shift+ArrowDown should select across wrapped visual rows");
+  assert.ok(await page.locator(".cm-selectionBackground").count() >= 1, "wrapped selection should remain visibly painted");
+  await page.keyboard.type("WRAPPED");
+  assert.match((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).document, /WRAPPED/);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.reload();
+  await page.locator("body[data-ready='true']").waitFor();
+
   await page.locator(".cm-content").click();
   await page.keyboard.press("Meta+a");
   const selectAllOnFirstPress = await page.evaluate(() => globalThis.__codeEditorBridge.inspect());

@@ -4,7 +4,7 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
-import { Compartment, EditorState, findClusterBreak } from "@codemirror/state";
+import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { redo, undo } from "@codemirror/commands";
@@ -58,6 +58,7 @@ function editorExtensions() {
       EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
     ]),
     oneDark,
+    EditorView.lineWrapping,
     nativeSelectionTheme,
     documentLimitFilter,
     EditorView.updateListener.of((update) => {
@@ -144,16 +145,13 @@ function moveSelection(event) {
       setSelection(event.shiftKey ? selection.anchor : next, next);
       return true;
     }
-    const line = view.state.doc.lineAt(head);
-    const targetNumber = line.number + (event.key === "ArrowUp" ? -1 : 1);
-    if (targetNumber >= 1 && targetNumber <= view.state.doc.lines) {
-      const target = view.state.doc.line(targetNumber);
-      next = target.from + Math.min(head - line.from, target.length);
-    } else if (event.key === "ArrowDown") {
-      next = view.state.doc.length;
-    } else {
-      next = 0;
-    }
+    const moved = view.moveVertically(selection, event.key === "ArrowDown");
+    const range = event.shiftKey
+      ? EditorSelection.range(selection.anchor, moved.head, moved.goalColumn, moved.bidiLevel, moved.assoc)
+      : moved;
+    view.dispatch({ selection: range, scrollIntoView: true });
+    view.focus();
+    return true;
   } else if (event.key === "Home") {
     next = event.mod ? 0 : view.state.doc.lineAt(head).from;
   } else if (event.key === "End") {

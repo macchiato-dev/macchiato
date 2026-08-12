@@ -15,6 +15,10 @@ The guest owns CodeMirror and its state. Browser layout, selection geometry,
 focus, composition, and rendering remain behind `browser-use` handles in one
 granted subtree. Unexpected shape fails closed.
 
+The reference guest enables CodeMirror's line-wrapping extension. Long logical
+lines remain one document line while their visual rows stay inside the granted
+editor surface, without introducing horizontal page scrolling.
+
 ## Three budgets
 
 - The **document budget** caps logical content. The default is 5,000 lines and

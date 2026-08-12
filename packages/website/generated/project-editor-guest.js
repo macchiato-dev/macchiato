@@ -30496,6 +30496,7 @@
         EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" })
       ]),
       oneDark,
+      EditorView.lineWrapping,
       nativeSelectionTheme,
       documentLimitFilter,
       EditorView.updateListener.of((update) => {
@@ -30574,16 +30575,11 @@
         setSelection(event.shiftKey ? selection2.anchor : next, next);
         return true;
       }
-      const line = view.state.doc.lineAt(head);
-      const targetNumber = line.number + (event.key === "ArrowUp" ? -1 : 1);
-      if (targetNumber >= 1 && targetNumber <= view.state.doc.lines) {
-        const target = view.state.doc.line(targetNumber);
-        next = target.from + Math.min(head - line.from, target.length);
-      } else if (event.key === "ArrowDown") {
-        next = view.state.doc.length;
-      } else {
-        next = 0;
-      }
+      const moved = view.moveVertically(selection2, event.key === "ArrowDown");
+      const range = event.shiftKey ? EditorSelection.range(selection2.anchor, moved.head, moved.goalColumn, moved.bidiLevel, moved.assoc) : moved;
+      view.dispatch({ selection: range, scrollIntoView: true });
+      view.focus();
+      return true;
     } else if (event.key === "Home") {
       next = event.mod ? 0 : view.state.doc.lineAt(head).from;
     } else if (event.key === "End") {
