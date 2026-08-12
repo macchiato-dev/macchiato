@@ -22,7 +22,7 @@ button.action:hover{border-color:var(--gold);background:#2a725f}button.action[di
 #board{container-type:inline-size;position:relative;width:min(760px,100%);aspect-ratio:760/590;margin:0 auto}
 .tile{position:absolute;left:0;top:0;z-index:1;width:calc(50 / 760 * 100cqw);height:calc(66 / 760 * 100cqw);padding:0;overflow:hidden;border:1px solid #c5b391;border-radius:5px;background:var(--tile);box-shadow:2px 3px 0 #735e3d,4px 5px 7px rgba(0,0,0,.38);cursor:pointer;transition:filter 90ms linear,opacity 260ms ease-out}
 .tile img{position:absolute;left:0;top:0;max-width:none;pointer-events:none}.tile.bonus img{inset:0;width:100%;height:100%;object-fit:contain}
-.tile:hover{filter:brightness(.84)}.tile:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.tile:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 .tile.selected{filter:brightness(.66) saturate(.85)}
 .tile.removing{opacity:0;pointer-events:none}
 .tile[hidden]{display:none}
