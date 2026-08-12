@@ -38,6 +38,11 @@ basename. A tab only shows a tooltip when its basename is truncated or its file
 is in a subdirectory; in either case, the tooltip carries the complete
 project-relative path.
 
+Pointer-triggered tooltips use a 600 ms delay, close to native desktop tooltip
+timing, and disappear when the pointer leaves. Keyboard focus reveals them
+immediately. Tooltip boxes size to their labels rather than enforcing a minimum
+width.
+
 The project file picker separates unopened results from an `Open files` group
 at the bottom. One filter searches both groups. Each group scrolls independently;
 the open group exposes about five rows before it scrolls, and an open file is

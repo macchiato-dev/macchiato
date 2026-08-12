@@ -1104,7 +1104,9 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(await page.locator("body > .instant-tooltip").count(), 0, "a fully visible root file should not have a tooltip");
   await indexTab.evaluate((element) => { element.style.width = "24px"; });
   await indexTab.dispatchEvent("pointerenter");
-  await page.waitForTimeout(30);
+  await page.waitForTimeout(100);
+  assert.equal(await page.locator("body > .instant-tooltip").count(), 0, "pointer tooltips should respect the native-style delay");
+  await page.waitForTimeout(550);
   assert.equal(await page.locator("body > .instant-tooltip").textContent(), "index.html");
   await indexTab.dispatchEvent("pointerleave");
   await indexTab.evaluate((element) => { element.style.removeProperty("width"); });

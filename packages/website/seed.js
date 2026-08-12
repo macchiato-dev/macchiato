@@ -1041,7 +1041,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__view-controls .project-view-segments button:hover { color: #fff; background: #3043a4; }
 .project-editor__view-controls .project-view-segments button[aria-pressed="true"] { color: #fff; background: #5267c7; box-shadow: none; transform: none; }
 .project-editor__view-controls .project-view-segments button + button[aria-pressed="true"] { box-shadow: inset 1px 0 #4053b0; }
-.instant-tooltip { position: fixed; top: 0; left: 0; z-index: 80; width: auto; min-width: 72px; max-width: calc(100vw - 16px); padding: 6px 9px; overflow: hidden; border: 1px solid #4053b0; border-radius: 5px; color: #eef2ff; background: #111a56; box-shadow: 0 4px 12px rgba(0,0,0,.35); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; opacity: 0; pointer-events: none; }
+.instant-tooltip { position: fixed; top: 0; left: 0; z-index: 80; width: auto; max-width: calc(100vw - 16px); padding: 6px 9px; overflow: hidden; border: 1px solid #4053b0; border-radius: 5px; color: #eef2ff; background: #111a56; box-shadow: 0 4px 12px rgba(0,0,0,.35); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; opacity: 0; pointer-events: none; }
 .instant-tooltip[data-visible] { opacity: 1; }
 .project-editor__view-controls button[aria-pressed="true"] { border-color: #6978cc; color: #fff; background: #4053b0; }
 .project-editor__view-controls button.project-details-toggle { display: grid; }

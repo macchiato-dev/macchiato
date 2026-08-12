@@ -214,6 +214,7 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
   button.dataset.instantTooltip = label;
   button.dataset.instantTooltipAttached = "true";
   let tooltip = null;
+  let showTimer = null;
   const show = () => {
     if (!shouldShow(button)) return;
     if (!tooltip) {
@@ -233,10 +234,16 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     });
   };
   const hide = () => {
+    clearTimeout(showTimer);
+    showTimer = null;
     tooltip?.remove();
     tooltip = null;
   };
-  button.addEventListener("pointerenter", show);
+  button.addEventListener("pointerenter", () => {
+    if (!shouldShow(button)) return;
+    clearTimeout(showTimer);
+    showTimer = setTimeout(show, 600);
+  });
   button.addEventListener("pointerleave", hide);
   button.addEventListener("focus", show);
   button.addEventListener("blur", hide);
