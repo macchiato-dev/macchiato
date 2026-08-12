@@ -10,7 +10,9 @@ const editor = await mountVueDomEditor({
   root: document.querySelector("#editor"),
   guestSource,
   content: "# Vue across QuickJS\n\nEdit this text. Each input is stored as a revisioned transition in the guest reactive object.",
-  onTransition() { inspection.textContent = JSON.stringify(editor.inspect(), null, 2); },
+  onTransition(result, action) {
+    inspection.textContent = JSON.stringify({ action: action.type, ...result }, null, 2);
+  },
   onError(value) { error.textContent = value.message; },
 });
 inspection.textContent = JSON.stringify(editor.inspect(), null, 2);

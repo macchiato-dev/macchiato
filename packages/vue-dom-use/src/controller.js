@@ -2,12 +2,28 @@ import { createApp, h, reactive } from "vue";
 import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 
 const MAX_CONTENT = 100_000;
+const PATCHABLE_PATHS = new Set([
+  "revision", "content", "selectionStart", "selectionEnd", "lines", "characters",
+  "canUndo", "canRedo", "transitionCount",
+]);
 
 function validateView(view) {
   if (!view || view.tree?.type !== "editor") throw new Error("Vue guest returned an unsupported view shape");
   if (typeof view.content !== "string" || view.content.length > MAX_CONTENT) throw new Error("Vue editor content exceeds its limit");
   if (!Number.isSafeInteger(view.revision) || view.revision < 0) throw new Error("Vue guest revision is invalid");
   return view;
+}
+
+function applyPatches(model, result) {
+  if (!Array.isArray(result.patches) || result.patches.length > 32) throw new Error("Vue guest returned an invalid patch batch");
+  for (const patch of result.patches) {
+    if (patch?.op !== "set" || !Array.isArray(patch.path) || patch.path.length !== 1 || !PATCHABLE_PATHS.has(patch.path[0])) {
+      throw new Error("Vue guest attempted an unsupported view patch");
+    }
+    model[patch.path[0]] = patch.value;
+  }
+  validateView(model);
+  if (model.revision !== result.revision) throw new Error("Vue guest patch revision does not match");
 }
 
 export async function mountVueDomEditor({
@@ -26,8 +42,8 @@ export async function mountVueDomEditor({
   let destroyed = false;
   let textarea = null;
 
-  function apply(next) {
-    Object.assign(model, validateView(next));
+  function apply(result) {
+    applyPatches(model, result);
     queueMicrotask(() => {
       if (!textarea || document.activeElement !== textarea) return;
       textarea.setSelectionRange(model.selectionStart, model.selectionEnd);
@@ -41,8 +57,8 @@ export async function mountVueDomEditor({
         component: model.tree.component,
         action: { ...action, baseRevision: model.revision },
       });
-      apply(result.view);
       if (result.rejected) throw new Error(`Vue transition rejected: ${result.reason}`);
+      apply(result);
       if (action.type === "input") onChange(model.content, { revision: model.revision });
       onTransition(result, action);
     } catch (error) {

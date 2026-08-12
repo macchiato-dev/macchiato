@@ -26,8 +26,8 @@ The host owns:
 - input, selection, focus, and measurement normalization;
 - validation, operation budgets, and lifecycle disposal.
 
-The guest sends snapshots initially and compact transition batches afterward.
-The host applies a batch only when its base revision matches. It returns events
+The guest sends one snapshot initially and compact path patches afterward. The
+host applies a batch only when its base revision matches. It returns events
 as small actions such as `{ type: "input", value, selection }`; browser event
 objects and host Vue proxies never cross the boundary. A rejected transition
 stops or reports the component according to the container's development mode.
@@ -59,9 +59,10 @@ so the experiment tests the boundary rather than an editor library:
 2. The guest owns content, selection, derived line/character counts, undo/redo
    history, and a small computed view description.
 3. Each browser event becomes a semantic action with the guest's base revision.
-4. The guest accepts or rejects the action, mutates its reactive object, and
-   returns a validated computed view.
-5. A separate native Vue application mirrors that view and renders the only
+4. The guest accepts or rejects the action and mutates its reactive object.
+5. It diffs the small serializable projection and returns only changed paths.
+6. A separate native Vue application applies those patches to its reactive
+   mirror and renders the only
    real textarea, toolbar, and status elements.
 
 The two Vue graphs deliberately do not share proxies, effects, schedulers, or
@@ -96,12 +97,18 @@ Events that are entirely local to one side remain local. Crossing the boundary
 is a component-level capability, not an automatic consequence of registering a
 Vue event handler.
 
-The next experiment should replace whole computed views with bounded transition
-batches while retaining periodic snapshots for recovery. Text composition,
-selection churn, and rapid typing need explicit coalescing rules before this is
-appropriate for a full editor. The host also needs a declared surface schema;
-the current hard-coded Vue component is narrow, but it is validation code rather
-than a reusable security contract.
+The prototype currently constructs patches by comparing the projection before
+and after a semantic reducer. Vue's deep `watch()` cannot supply reliable paths:
+for nested mutations its old and new values are the same proxy. Vue's
+`onTrigger` exposes a target and key only as a development debugging hook, so it
+is not a production wire protocol. A mature implementation can have hot reducers
+emit patches directly, retaining projection diffing as a correctness check and
+periodic snapshots for recovery.
+
+Text composition, selection churn, and rapid typing need explicit coalescing
+rules before this is appropriate for a full editor. The host also needs a
+declared surface schema; the current hard-coded Vue component is narrow, but it
+is validation code rather than a reusable security contract.
 
 Run the focused browser test with:
 

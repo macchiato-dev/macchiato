@@ -31,6 +31,30 @@ function snapshot() {
   return JSON.parse(JSON.stringify(view.value));
 }
 
+function patchesBetween(before, after, path = [], patches = []) {
+  if (Object.is(before, after)) return patches;
+  const beforeObject = before !== null && typeof before === "object";
+  const afterObject = after !== null && typeof after === "object";
+  if (!beforeObject || !afterObject || Array.isArray(before) !== Array.isArray(after)) {
+    patches.push({ op: "set", path, value: after });
+    return patches;
+  }
+  if (Array.isArray(after)) {
+    if (before.length !== after.length || before.some((value, index) => !Object.is(value, after[index]))) {
+      patches.push({ op: "set", path, value: after });
+    }
+    return patches;
+  }
+  for (const key of Object.keys(before)) {
+    if (!(key in after)) patches.push({ op: "delete", path: [...path, key] });
+  }
+  for (const key of Object.keys(after)) {
+    if (!(key in before)) patches.push({ op: "set", path: [...path, key], value: after[key] });
+    else patchesBetween(before[key], after[key], [...path, key], patches);
+  }
+  return patches;
+}
+
 function remember(type) {
   state.history.splice(state.cursor + 1);
   state.history.push({
@@ -66,11 +90,12 @@ globalThis.__vueDomDispatch = (json) => {
   const envelope = JSON.parse(json);
   const action = envelope.action;
   if (envelope.component !== "editor-root") {
-    return JSON.stringify({ rejected: true, reason: "unknown-component", view: snapshot() });
+    return JSON.stringify({ rejected: true, reason: "unknown-component", revision: state.revision, patches: [] });
   }
   if (action?.baseRevision !== state.revision) {
-    return JSON.stringify({ rejected: true, reason: "stale-revision", view: snapshot() });
+    return JSON.stringify({ rejected: true, reason: "stale-revision", revision: state.revision, patches: [] });
   }
+  const before = snapshot();
   if (action.type === "input") {
     state.content = String(action.value || "");
     state.selectionStart = Number(action.selectionStart || 0);
@@ -88,7 +113,13 @@ globalThis.__vueDomDispatch = (json) => {
     state.cursor += 1;
     restore(state.history[state.cursor]);
   }
-  return JSON.stringify({ rejected: false, view: snapshot() });
+  const after = snapshot();
+  return JSON.stringify({
+    rejected: false,
+    baseRevision: before.revision,
+    revision: after.revision,
+    patches: patchesBetween(before, after),
+  });
 };
 
 globalThis.__vueDomInspect = () => JSON.stringify({

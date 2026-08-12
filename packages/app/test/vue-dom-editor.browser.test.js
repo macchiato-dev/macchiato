@@ -62,9 +62,10 @@ test("vue-dom editor mirrors guest reactive transitions into a host Vue componen
   const changed = await editor.inputValue();
   assert.notEqual(changed, initial);
   assert.match(await page.locator(".vue-editor__status").textContent(), /Guest revision \d+ · \d+ stored transitions/);
-  const inspection = JSON.parse(await page.locator("#inspection").textContent());
-  assert.equal(inspection.view.content, changed);
-  assert.ok(inspection.transitions.length > 1);
+  const transition = JSON.parse(await page.locator("#inspection").textContent());
+  assert.equal(transition.action, "input");
+  assert.ok(transition.patches.some((patch) => patch.path[0] === "content" && patch.value === changed));
+  assert.equal("view" in transition, false);
 
   await page.getByRole("button", { name: "Undo" }).click();
   assert.notEqual(await editor.inputValue(), changed);
