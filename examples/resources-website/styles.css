@@ -270,9 +270,9 @@
   }
   .ub-icon {
     appearance: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 11px;
+    width: 37px;
+    height: 37px;
+    border-radius: 10px;
     border: 1px solid transparent;
     background: transparent;
     color: var(--text);
@@ -280,7 +280,7 @@
     display: grid;
     place-items: center;
     position: relative;
-    transition: background .15s ease;
+    transition: background .15s ease, border-color .15s ease;
   }
   .ub-icon:hover,
   .ub-pop:focus-within .ub-icon,
@@ -291,8 +291,8 @@
   .ub-icon svg { width: 19px; height: 19px; }
   .ub-dot {
     position: absolute;
-    top: 8px;
-    right: 9px;
+    top: 7px;
+    right: 8px;
     width: 9px;
     height: 9px;
     border-radius: 50%;

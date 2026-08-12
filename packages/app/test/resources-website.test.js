@@ -447,6 +447,20 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   });
   assert.notEqual(accountHover.background, accountResting.background);
   assert.notEqual(accountHover.border, accountResting.border);
+  assert.equal(await accountTrigger.evaluate((node) => getComputedStyle(node).borderRadius), "999px");
+  for (const label of ["Notifications", "Create"]) {
+    const trigger = page.getByLabel(label);
+    await trigger.hover();
+    await page.waitForTimeout(180);
+    const hover = await trigger.evaluate((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return { width: rect.width, height: rect.height, radius: style.borderRadius, border: style.borderColor, background: style.backgroundColor };
+    });
+    assert.deepEqual([hover.width, hover.height, hover.radius], [37, 37, "10px"]);
+    assert.notEqual(hover.border, "rgba(0, 0, 0, 0)");
+    assert.notEqual(hover.background, "rgba(0, 0, 0, 0)");
+  }
   await page.getByLabel("Account menu").click();
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).waitFor());
   assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 1);
