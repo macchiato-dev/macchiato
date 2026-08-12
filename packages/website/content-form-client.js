@@ -276,17 +276,54 @@ function rebuildDraft(patches, sequence = patches.length) {
 }
 
 function relativeVersionTime(timestamp, now = Date.now()) {
-  const deltaSeconds = Math.round((Number(timestamp) - now) / 1000);
-  const absolute = Math.abs(deltaSeconds);
-  if (absolute < 45) return "Just now";
-  const [value, unit] = absolute < 60
-    ? [deltaSeconds, "second"]
-    : absolute < 3600
-      ? [Math.round(deltaSeconds / 60), "minute"]
-      : absolute < 86_400
-        ? [Math.round(deltaSeconds / 3600), "hour"]
-        : [Math.round(deltaSeconds / 86_400), "day"];
-  return new Intl.RelativeTimeFormat(document.documentElement.lang || "en", { numeric: "always" }).format(value, unit);
+  const then = new Date(Number(timestamp));
+  const current = new Date(now);
+  const seconds = Math.max(0, Math.floor((current - then) / 1000));
+  const spanish = document.documentElement.lang === "es";
+  const amount = (value, singular, plural) => `${value} ${value === 1 ? singular : plural}`;
+  if (seconds < 60) return `${amount(seconds, spanish ? "segundo" : "second", spanish ? "segundos" : "seconds")} ${spanish ? "atrás" : "ago"}`;
+  const minutes = Math.floor(seconds / 60);
+  const remainderSeconds = seconds % 60;
+  if (minutes < 60) {
+    const parts = [amount(minutes, spanish ? "minuto" : "minute", spanish ? "minutos" : "minutes")];
+    if (remainderSeconds) parts.push(amount(remainderSeconds, spanish ? "segundo" : "second", spanish ? "segundos" : "seconds"));
+    return `${parts.join(" ")} ${spanish ? "atrás" : "ago"}`;
+  }
+  const sameDay = then.getFullYear() === current.getFullYear() && then.getMonth() === current.getMonth() && then.getDate() === current.getDate();
+  if (sameDay || seconds < 8 * 3600) {
+    const hours = Math.floor(minutes / 60);
+    const remainderMinutes = minutes % 60;
+    const parts = [amount(hours, spanish ? "hora" : "hour", spanish ? "horas" : "hours")];
+    if (remainderMinutes) parts.push(amount(remainderMinutes, spanish ? "minuto" : "minute", spanish ? "minutos" : "minutes"));
+    return `${parts.join(" ")} ${spanish ? "atrás" : "ago"}`;
+  }
+  const dayStart = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+  const thenDayStart = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const days = Math.round((dayStart - thenDayStart) / 86_400_000);
+  const clock = formatVersionClock(then, spanish);
+  if (days === 1) return `${spanish ? "Ayer" : "Yesterday"} ${clock}`;
+  const weekdays = spanish
+    ? ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
+    : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  if (days < 7) return `${weekdays[then.getDay()]} ${clock}`;
+  const months = spanish
+    ? ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return spanish
+    ? `${then.getDate()} ${months[then.getMonth()]} ${then.getFullYear()}, ${clock}`
+    : `${months[then.getMonth()]} ${then.getDate()}, ${then.getFullYear()}, ${clock}`;
+}
+
+function formatVersionClock(date, spanish = document.documentElement.lang === "es") {
+  const englishUS = !spanish && /^en-US\b/i.test(navigator.language || "");
+  if (!englishUS) return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const hour = date.getHours();
+  return `${hour % 12 || 12}:${String(date.getMinutes()).padStart(2, "0")}${hour < 12 ? "am" : "pm"}`;
+}
+
+function formatVersionDateTime(timestamp) {
+  const date = new Date(Number(timestamp));
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${formatVersionClock(date)}`;
 }
 
 function versionChoice(label, timestamp, { current = false, sequence = 0, title = "", latest = false } = {}) {
@@ -309,7 +346,7 @@ function versionChoice(label, timestamp, { current = false, sequence = 0, title 
     badge.textContent = "LATEST";
     button.append(badge);
   }
-  button.title = new Date(Number(timestamp)).toLocaleString();
+  button.title = formatVersionDateTime(timestamp);
   if (sequence) button.dataset.versionSequence = String(sequence);
   if (current) {
     button.setAttribute("aria-current", "true");
@@ -412,7 +449,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let templateOnlyPending = false;
   let changeGeneration = 0;
   let unsavedChangeCount = 0;
-  let latestSavedAt = 0;
+  let currentUpdatedAt = recoveredPendingSnapshot ? Date.now() : Number(workspacePayload?.updatedAt || Date.now());
   let saving = false;
   let localHistory = null;
   let editorController = null;
@@ -426,14 +463,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
   function showCurrentVersion() {
-    currentVersion.textContent = root.dataset.currentVersionLabel || "Current Version";
-    if (latestSavedAt) {
-      currentVersion.dataset.versionTime = String(latestSavedAt);
-      currentVersion.title = new Date(latestSavedAt).toLocaleString();
-    } else {
-      currentVersion.removeAttribute("data-version-time");
-      currentVersion.removeAttribute("title");
-    }
+    currentVersion.textContent = relativeVersionTime(currentUpdatedAt);
+    currentVersion.dataset.versionTime = String(currentUpdatedAt);
+    currentVersion.title = formatVersionDateTime(currentUpdatedAt);
   }
 
   function refreshSubmitLabel() {
@@ -447,7 +479,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function showSelectedVersion(label, timestamp) {
     currentVersion.textContent = label;
     currentVersion.dataset.versionTime = String(Number(timestamp));
-    currentVersion.title = new Date(Number(timestamp)).toLocaleString();
+    currentVersion.title = formatVersionDateTime(timestamp);
   }
 
   if (draft || memoryOnly) {
@@ -950,6 +982,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     showCurrentVersion();
     viewingHistorical = false;
     state = normalized;
+    currentUpdatedAt = Date.now();
     currentSnapshot = state;
     snapshotField.value = JSON.stringify(state);
     pending = true;
@@ -1044,7 +1077,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function renderDraftVersions() {
     versionList.replaceChildren();
-    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true });
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
@@ -1091,10 +1124,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
     const { versions } = await response.json();
     versionList.replaceChildren();
-    const latest = versions.find((version) => version.latest);
-    latestSavedAt = Number(latest?.savedAt || latest?.createdAt || 0);
     showCurrentVersion();
-    const current = versionChoice(root.dataset.currentVersionLabel || "Current Version", latest?.savedAt || Date.now(), { current: true });
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
@@ -1579,7 +1610,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.right - panelWidth, innerWidth - panelWidth - 8))}px`;
     historyPanel.style.top = `${buttonRect.bottom + 6}px`;
     if (readOnly) {
-      versionList.replaceChildren(versionChoice(root.dataset.currentVersionLabel || "Current Version", Date.now(), { current: true }));
+      versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
     } else {
       (draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions();
     }

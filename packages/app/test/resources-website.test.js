@@ -166,6 +166,15 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   assert.match(configText, /Resources\.co Edge Preview/);
   assert.match(configText, /in-memory export manifest/);
   assert.match(configText, /Bunny Storage/);
+
+  const creditsResponse = await fetch(`http://resources-edge.localhost:${port}/credits`);
+  const credits = await creditsResponse.text();
+  assert.equal(creditsResponse.status, 200);
+  assert.match(credits, />Credits</);
+  for (const name of ["Lucide", "QuickJS", "CodeMirror", "Codex", "GPT", "Claude Code", "Claude Design", "Claude", "Kimi", "Kimi Code"]) {
+    assert.match(credits, new RegExp(`>${name}<`));
+  }
+  assert.match(credits, /Terms of Use[\s\S]*Privacy Policy[\s\S]*Credits/);
 });
 
 test("Resources.co blog container examples render and surface schema errors in the status rail", async (t) => {
@@ -735,11 +744,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);
   const versionPlacement = await page.evaluate(() => {
-    const details = document.querySelector("[data-project-fields]").getBoundingClientRect();
+    const source = document.querySelector(".project-editor__source-toolbar").getBoundingClientRect();
     const versions = document.querySelector("[data-project-versions-proxy]").getBoundingClientRect();
-    return { versionsLeft: versions.left, detailsLeft: details.left, detailsRight: details.right };
+    return { versionsLeft: versions.left, sourceLeft: source.left, sourceRight: source.right };
   });
-  assert.ok(versionPlacement.versionsLeft >= versionPlacement.detailsLeft && versionPlacement.versionsLeft < versionPlacement.detailsRight);
+  assert.ok(versionPlacement.versionsLeft >= versionPlacement.sourceLeft && versionPlacement.versionsLeft < versionPlacement.sourceRight);
   const editorScrollModel = await newEditor.evaluate(() => ({
     documentHeight: document.documentElement.scrollHeight,
     viewportHeight: document.documentElement.clientHeight,
@@ -768,7 +777,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(focusedGeometry.bodyHeight, focusedGeometry.viewportHeight);
   assert.ok(Math.abs(focusedGeometry.breadcrumbCenter - focusedGeometry.headerCenter) < 1);
   await page.locator("[data-project-versions-proxy]").click();
-  assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -880,7 +889,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   await page.locator("[data-project-versions-proxy]").click();
-  assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -893,12 +902,12 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), restoredDraftVersionCount);
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await page.locator("[data-project-versions-proxy]").click();
-  await page.locator("[data-project-version-list]").getByRole("button", { name: "Current Version" }).click();
+  await page.locator("[data-project-version-list] [aria-current='true']").click();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), restoredDraftVersionCount);
   await selectProjectFile("index.html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
-  assert.equal(await page.locator("[data-current-version]").textContent(), "Current Version");
+  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds ago$/);
   await page.waitForFunction(() => document.querySelector("[data-project-snapshot]")?.value.includes("Digital Clock"));
   await page.getByRole("button", { name: "Create project" }).click();
   await assert.doesNotReject(page.getByRole("button", { name: "Save project" }).waitFor());
@@ -918,10 +927,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
   const versionsButton = page.locator("[data-project-versions-proxy]");
-  assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^Current Version1/);
+  assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds ago1/);
   await versionsButton.click();
   const pastVersions = page.locator("[data-project-version-list] [data-version-sequence]");
-  assert.match(await pastVersions.first().textContent(), /Just now.*LATEST/);
+  assert.match(await pastVersions.first().textContent(), /\d+ seconds ago.*LATEST/);
   assert.notEqual(await pastVersions.first().getAttribute("title"), "");
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   await assert.doesNotReject(page.locator("[data-project-versions-proxy] .project-editor__version-count", { hasText: "1" }).waitFor());
@@ -1191,14 +1200,18 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByLabel("Version title").fill("Ready for review");
   await page.getByRole("button", { name: "Save version" }).click();
   await page.locator("[data-project-versions-proxy]").waitFor();
-  await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent === "Current Version");
-  assert.equal(await page.locator("[data-current-version]").textContent(), "Current Version");
+  await page.waitForFunction(() => /^\d+ seconds ago$/.test(document.querySelector("[data-current-version]")?.textContent || ""));
+  assert.equal(await page.locator("[data-project-versions-proxy]").evaluate((button) => button.innerText.trim()), "");
+  assert.equal(await page.locator("[data-project-versions-proxy] svg").count(), 2);
+  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__history-arrow").count(), 1);
+  assert.equal(await page.locator("[data-project-versions-proxy]").getAttribute("aria-label"), "Version history");
+  assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds ago$/);
   await page.locator("[data-project-versions-proxy]").click();
-  assert.equal(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), "Current Version");
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds ago$/);
   assert.equal(await page.locator("[data-project-version-list] .project-editor__latest").count(), 1);
   const latest = page.locator("[data-project-version-list] [data-version-sequence]", { hasText: "LATEST" }).first();
   await latest.waitFor();
-  assert.match(await latest.textContent(), /Ready for review.*Just now.*LATEST/);
+  assert.match(await latest.textContent(), /Ready for review.*\d+ seconds ago.*LATEST/);
   await page.screenshot({ path: "/tmp/resources-version-history.png" });
   await page.locator("[data-project-history-close]").click();
   await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");

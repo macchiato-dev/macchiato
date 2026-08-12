@@ -28,7 +28,7 @@ The three workspace modes are always-visible icon buttons in one shallow,
 beveled segmented control, like paragraph-alignment controls. Raised buttons
 use a light top/left and dark bottom/right edge; the selected mode reverses the
 depth and appears inset. Do not hide these three choices in a dropdown.
-Every icon button has an accessible name and an instant custom tooltip; native
+Every icon button has an accessible name and a custom tooltip; native
 delayed `title` tooltips are not the primary explanation. Standalone toolbar
 icons, including Full Screen and Details, use the same compact hover background
 as the segmented view controls; the hit area does not change size on hover.
@@ -42,6 +42,21 @@ Pointer-triggered tooltips use a 600 ms delay, close to native desktop tooltip
 timing, and disappear when the pointer leaves. Keyboard focus reveals them
 immediately. Tooltip boxes size to their labels rather than enforcing a minimum
 width.
+
+Use Lucide's recognizable `history` glyph for version history. Lucide SVG paths
+remain inline for offline and constrained surfaces, and every adopted glyph is
+recorded in the website README's icon inventory.
+
+The history trigger is icon-only and pairs the glyph with a compact disclosure
+arrow. Relative history labels retain useful precision: seconds, minutes plus
+seconds, and hours plus minutes before switching to calendar labels. File tabs
+use a quiet whole-tab hover; only the active tab exposes a close control, whose
+small hover target uses the same subtle border as other interactive icons.
+
+In the app bar, account hover remains pill-shaped. Create and Notifications use
+the compact rounded-square shape, but share the account control's restrained
+background and subtle border. These hover regions stop at the app bar and do
+not extend into a focused project's toolbar.
 
 The project file picker separates unopened results from an `Open files` group
 at the bottom. One filter searches both groups. Each group scrolls independently;

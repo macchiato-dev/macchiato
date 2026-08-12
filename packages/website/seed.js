@@ -283,6 +283,7 @@ function sectionsFor(i18n) {
   },
   "/terms": legalRoute(legal.terms, i18n),
   "/privacy": legalRoute(legal.privacy, i18n),
+  "/credits": creditsRoute(i18n),
   "/profile": {
     navKey: "",
     title: t("profile.title"),
@@ -386,6 +387,44 @@ function legalRoute([title, intro, sections], i18n) {
     title: `${title} - Resources.co`,
     crumb: [{ icon: true, href: "/" }, { label: title }],
     blocks: [{ h1: title, paras: [intro] }, ...sections.map(([h2, paragraph]) => ({ h2, paras: [paragraph] }))],
+  };
+}
+
+function creditsRoute(i18n) {
+  const spanish = i18n.locale === "es";
+  const item = (name, description, href) => [name, description, href, { newTab: true }];
+  return {
+    navKey: "",
+    title: `${spanish ? "Créditos" : "Credits"} - Resources.co`,
+    crumb: [{ icon: true, href: "/" }, { label: spanish ? "Créditos" : "Credits" }],
+    blocks: [
+      {
+        h1: spanish ? "Créditos" : "Credits",
+        paras: [spanish
+          ? "Resources.co se construye con software abierto y con la ayuda de herramientas de desarrollo y diseño asistidas por IA."
+          : "Resources.co is built with open-source software and help from AI-assisted development and design tools."],
+      },
+      {
+        h2: spanish ? "Software e interfaz" : "Software and interface",
+        items: [
+          item("Lucide", spanish ? "Iconos de interfaz, incluido el icono History." : "Interface icons, including the History icon.", "https://lucide.dev/"),
+          item("QuickJS", spanish ? "Motor de JavaScript usado en entornos aislados." : "JavaScript engine used by sandboxed environments.", "https://bellard.org/quickjs/"),
+          item("CodeMirror", spanish ? "Editor de código extensible usado por Code Editor Use." : "Extensible code editor used by Code Editor Use.", "https://codemirror.net/"),
+        ],
+      },
+      {
+        h2: spanish ? "Asistencia de IA" : "AI assistance",
+        items: [
+          item("Codex", spanish ? "Asistencia para desarrollo de software." : "Software-development assistance.", "https://openai.com/codex/"),
+          item("GPT", spanish ? "Asistencia para razonamiento, escritura y código." : "Reasoning, writing, and coding assistance.", "https://openai.com/"),
+          item("Claude Code", spanish ? "Asistencia agéntica para desarrollo de software." : "Agentic software-development assistance.", "https://www.anthropic.com/product/claude-code"),
+          item("Claude Design", spanish ? "Asistencia para exploración y desarrollo del diseño." : "Design exploration and development assistance.", "https://claude.ai/"),
+          item("Claude", spanish ? "Asistencia para diseño, escritura y código." : "Design, writing, and coding assistance.", "https://www.anthropic.com/claude"),
+          item("Kimi", spanish ? "Asistencia para investigación y revisión." : "Research and review assistance.", "https://www.kimi.com/"),
+          item("Kimi Code", spanish ? "Asistencia para exploración y revisión del código." : "Code exploration and review assistance.", "https://www.kimi.com/code"),
+        ],
+      },
+    ],
   };
 }
 
@@ -787,7 +826,7 @@ body.blog-example-presenting .content-block:has(.blog-example-block--fullscreen)
 .edge-user-menu__trigger .ub-caret { width: 14px; height: 14px; }
 .edge-user-menu__panel { top: calc(100% + 2px); right: 0; opacity: 0; pointer-events: none; }
 .edge-user-menu[open] .edge-user-menu__panel, .edge-user-menu:focus-within .edge-user-menu__panel, .edge-user-menu:hover .edge-user-menu__panel { opacity: 1; transform: none; pointer-events: auto; }
-.edge-user-menu:hover > .ub-icon, .edge-user-menu:focus-within > .ub-icon, .edge-user-menu[open] > .ub-icon { background: var(--hover); }
+.edge-user-menu:hover > .ub-icon, .edge-user-menu:focus-within > .ub-icon, .edge-user-menu[open] > .ub-icon { border-color: var(--track-border); background: var(--hover); }
 .edge-user-menu:hover > .ub-acct, .edge-user-menu:focus-within > .ub-acct, .edge-user-menu[open] > .ub-acct { border-color: var(--track-border); background: var(--hover); }
 .edge-user-menu__panel .item { display: flex; width: 100%; padding: 9px 12px; border: none; border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 500; text-decoration: none; cursor: pointer; }
 .edge-user-menu__panel .item:hover { background: var(--hover); }
@@ -934,19 +973,20 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__tab-scroll[hidden] { display: none; }
 .project-editor__tab-scroll:disabled { color: #6571a8; cursor: default; }
 .project-editor__open-tab { position: relative; display: flex; flex: 0 0 auto; max-width: 160px; height: 30px; align-items: center; border: 1px solid #33428f; border-radius: 5px; color: #aeb8e9; background: #111a56; }
+.project-editor__open-tab:hover { border-color: #4053b0; background: #182365; }
 .project-editor__open-tab > button { height: 100%; border: none; color: inherit; background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
 .project-editor__open-tab > [role="tab"] { min-width: 0; max-width: 150px; padding: 5px 9px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .project-editor__open-tab:has([aria-selected="true"]) { color: #fff; background: #4053b0; box-shadow: none; }
-.project-editor__open-tab > button.project-editor__tab-close { position: absolute; top: 4px; right: 4px; display: grid; width: 20px; height: 20px; place-items: center; padding: 0 0 1px; border-radius: 3px; font-size: 15px; line-height: 1; background: transparent; opacity: 0; }
-.project-editor__open-tab > button.project-editor__tab-close:hover, .project-editor__open-tab > button.project-editor__tab-close:focus-visible { color: #fff; background: #4053b0; outline: none; }
+.project-editor__open-tab > button.project-editor__tab-close { position: absolute; top: 4px; right: 1px; display: grid; width: 20px; height: 20px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 4px; font-size: 15px; line-height: 1; background: transparent; opacity: 0; }
+.project-editor__open-tab > button.project-editor__tab-close:hover, .project-editor__open-tab > button.project-editor__tab-close:focus-visible { border-color: var(--track-border); color: #fff; background: #4053b0; outline: none; }
 .project-editor__open-tab:hover:has([aria-selected="true"]) > [role="tab"], .project-editor__open-tab:focus-within:has([aria-selected="true"]) > [role="tab"] { mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 24px), transparent 100%); }
 .project-editor__open-tab:hover .project-editor__tab-close, .project-editor__open-tab:focus-within .project-editor__tab-close { opacity: 1; }
 .project-editor__file-picker { position: relative; display: block; flex: 0 0 45px; min-width: 45px; max-width: 45px; }
 .project-editor__file-picker > button { display: flex; width: 100%; min-height: 30px; align-items: center; justify-content: center; gap: 8px; padding: 5px; border: 1px solid transparent; border-radius: 5px; color: #cbd4ff; background: transparent; font: inherit; font-size: 11px; font-weight: 700; }
 .project-editor__file-picker > button:hover, .project-editor__file-picker > button:focus-visible { border-color: #4053b0; background: #111a56; outline: none; }
 .project-editor__file-picker > button > span { display: none; }
-.project-editor__file-picker svg { width: 18px; height: 18px; }
-.project-editor__file-picker svg.project-editor__file-arrow { width: 11px; height: 11px; }
+.project-editor__file-picker svg { width: 17px; height: 17px; }
+.project-editor__file-picker svg.project-editor__file-arrow { width: 9px; height: 9px; }
 .project-editor__file-menu { position: absolute; top: calc(100% + 5px); left: 0; z-index: 20; width: min(260px, calc(100vw - 24px)); padding: 5px; border: 1px solid var(--track-border); border-radius: 8px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__file-menu[hidden] { display: none; }
 .project-editor__file-menu label { display: block; padding: 3px; }
@@ -972,12 +1012,14 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__tab, .project-editor__versions, .project-editor__version, .project-editor__history-head button { min-height: 30px; padding: 5px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
 .project-editor__tab:hover, .project-editor__versions:hover, .project-editor__version:hover { color: var(--text); background: var(--hover); }
 .project-editor__tab[aria-selected="true"] { border-color: var(--track-border); color: var(--text); background: var(--card); }
-.project-editor__versions { flex: 0 0 auto; display: flex; align-items: center; gap: 7px; }
+.project-editor__versions { flex: 0 0 34px; display: flex; width: 34px; height: 30px; min-height: 30px; align-items: center; justify-content: center; gap: 3px; padding: 3px; }
+.project-editor__versions svg { width: 16px; height: 16px; }
 .project-editor__archive-actions { display: flex; gap: 3px; }
 .project-editor__archive-actions button { padding: 4px 6px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); background: transparent; font: inherit; font-size: 10px; cursor: pointer; }
 .project-editor__archive-actions button:hover { color: var(--text); background: var(--hover); }
-.project-editor__versions svg { width: 12px; height: 12px; }
+.project-editor__versions svg.project-editor__history-arrow { width: 8px; height: 8px; }
 .project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
+.project-editor__versions > [hidden] { display: none; }
 .project-editor__workspace { display: grid; grid-template-columns: minmax(0, var(--source-width, 50%)) 2px minmax(0, 1fr); min-height: 0; overflow: hidden; background: #151717; }
 .focused-view .project-editor__workspace { position: relative; }
 .focused-view .project-editor__workspace::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; z-index: 20; height: 2px; background: #454b4a; box-shadow: inset 0 -1px #202524; pointer-events: none; }
@@ -1577,7 +1619,7 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
     <div class="main" id="main">${breadcrumbHtml(route.crumb)}<div id="content" class="content-root">${route.blocks.map((block) => blockHtml(block, { documentRuntime, i18n, blogExamplesOrigin })).join("")}</div></div>
     ${renderResourcesPrimaryMenu(route.navKey, menu)}
     ${homeSocial}
-    <footer class="box footer" data-screen-label="footer"><div class="copy"><span>${escapeHtml(i18n.text("chrome.copyright"))}</span><a href="/terms">${escapeHtml(i18n.text("auth.termsOfUse"))}</a><a href="/privacy">${escapeHtml(i18n.text("auth.privacy"))}</a></div></footer>
+    <footer class="box footer" data-screen-label="footer"><div class="copy"><span>${escapeHtml(i18n.text("chrome.copyright"))}</span><a href="/terms">${escapeHtml(i18n.text("auth.termsOfUse"))}</a><a href="/privacy">${escapeHtml(i18n.text("auth.privacy"))}</a><a href="/credits">${i18n.locale === "es" ? "Créditos" : "Credits"}</a></div></footer>
   </main>${runtime === "browser-use" ? `
   <script type="module" src="${themeUseClientPath}"></script>
   <script type="module">${clientScript()}</script>

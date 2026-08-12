@@ -236,7 +236,7 @@
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.05;
-    transition: background .15s ease;
+    transition: background .15s ease, border-color .15s ease;
   }
   .brand__home:hover { background: var(--hover); }
   .brand__home .dot { color: var(--accent); }
@@ -284,7 +284,10 @@
   }
   .ub-icon:hover,
   .ub-pop:focus-within .ub-icon,
-  .ub-pop[data-open="true"] .ub-icon { background: var(--hover); }
+  .ub-pop[data-open="true"] .ub-icon {
+    border-color: var(--track-border);
+    background: var(--hover);
+  }
   .ub-icon svg { width: 19px; height: 19px; }
   .ub-dot {
     position: absolute;

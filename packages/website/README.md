@@ -717,3 +717,27 @@ other than GET/HEAD. The Storage key is sent only to the validated HTTPS origin
 using `redirect: "manual"`.
 
 See [`edge/README.md`](edge/README.md) for the threat model and remaining work.
+
+## Credits
+
+Resources.co uses [QuickJS](https://bellard.org/quickjs/) for JavaScript
+sandboxes and [CodeMirror](https://codemirror.net/) for constrained code-editing
+surfaces. Development, review, writing, and design have been assisted by
+[Codex](https://openai.com/codex/), [GPT](https://openai.com/),
+[Claude Code](https://www.anthropic.com/product/claude-code),
+[Claude](https://www.anthropic.com/claude), Claude Design,
+[Kimi](https://www.kimi.com/), and [Kimi Code](https://www.kimi.com/code).
+
+### Icon inventory
+
+Lucide icons are copied inline so the interface remains offline-capable and
+does not acquire an icon-font or runtime network dependency. Keep this ledger
+complete whenever another Lucide icon is introduced.
+
+| Source | Icon | Interface use |
+| --- | --- | --- |
+| [Lucide](https://lucide.dev/) | [`history`](https://icones.js.org/collection/lucide?s=history&icon=lucide:history) | Project version-history button |
+
+The remaining home, close, editor, split-view, output-view, details,
+full-screen, file-browser, notification, create, account, and disclosure icons
+are platform-owned inline SVGs rather than Lucide glyphs.
