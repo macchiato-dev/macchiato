@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>element-use Mahjong surface</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">@macchiato-dev/element-use</p>
+        <h1>One game, one small element surface</h1>
+        <p>
+          The Mahjong script runs in QuickJS. Its allowlisted element bridge
+          renders inside a sandboxed iframe.
+        </p>
+      </div><span id="state">Loading…</span>
+    </header>
+    <main>
+      <section class="game">
+        <div id="game"></div><output id="error" role="alert"></output>
+      </section>
+      <section class="source">
+        <nav aria-label="Source files"></nav>
+        <pre><code id="source">Select a source file.</code></pre>
+      </section>
+    </main>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>

@@ -10,6 +10,8 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
+import { elementUseExampleHandler } from "../../element-use/example/handler.js";
+import { elementUseExampleSources } from "../../element-use/example/manifest.js";
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
@@ -20,6 +22,22 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "Mahjong Element Surface",
+    pluginId: "element-use",
+    subdomain: "element-use",
+    kind: "minimal iframe sandbox component",
+    description: [
+      "Classic Mahjong in a hard-coded element surface with an inspectable",
+      "QuickJS host and guest.",
+    ].join(" "),
+    handler: elementUseExampleHandler,
+    sourceFiles: elementUseExampleSources,
+    sandbox: {
+      runtime: "sandboxed iframe + dedicated QuickJS WASM",
+      hostCapabilities: ["hard-coded element surface", "data image inputs", "click events", "bounded timers"],
+    },
+  },
   {
     name: "Macchiato Apps",
     subdomain: "apps",

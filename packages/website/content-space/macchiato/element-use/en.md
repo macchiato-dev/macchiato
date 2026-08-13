@@ -1,0 +1,1 @@
+- **description**: A minimal, inspectable iframe surface that runs Classic Mahjong in QuickJS with hard-coded element, attribute, event, rate, and image limits.
