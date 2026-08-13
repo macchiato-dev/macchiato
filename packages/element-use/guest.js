@@ -1,5 +1,5 @@
-// This file is evaluated directly inside QuickJS. It contains only the small
-// DOM-shaped API needed by the Mahjong game.
+// Evaluated directly inside QuickJS. This is the complete DOM-shaped API that
+// the Mahjong program receives; it has no access to the browser window.
 (function installElementUseGuest() {
   const nodes = Object.create(null);
   const listeners = Object.create(null);
@@ -13,26 +13,6 @@
     return result;
   }
 
-  function styleFor(node) {
-    return new Proxy({}, {
-      get(_target, property) {
-        return node._style[property] || "";
-      },
-      set(_target, property, value) {
-        const next = String(value);
-        if (node._style[property] === next) return true;
-        node._style[property] = next;
-        host({
-          op: "setStyle",
-          id: node._id,
-          property: String(property),
-          value: next,
-        });
-        return true;
-      },
-    });
-  }
-
   function Element(id, tag) {
     this._id = String(id);
     this.localName = String(tag);
@@ -40,23 +20,33 @@
     this.parentNode = null;
     this._attributes = Object.create(null);
     this._style = Object.create(null);
-    this.style = styleFor(this);
-
-    const element = this;
-    this.classList = {
-      contains(name) {
-        return element.className.split(/\s+/).includes(String(name));
+    this.style = new Proxy({}, {
+      get: (_target, property) => this._style[property] || "",
+      set: (_target, property, value) => {
+        const next = String(value);
+        if (this._style[property] !== next) {
+          this._style[property] = next;
+          host({
+            op: "setStyle",
+            id: this._id,
+            property: String(property),
+            value: next,
+          });
+        }
+        return true;
       },
-      add(name) {
-        if (!this.contains(name)) {
-          element.className = `${element.className} ${name}`.trim();
+    });
+
+    this.classList = {
+      contains: (name) => this.className.split(/\s+/).includes(String(name)),
+      add: (name) => {
+        if (!this.classList.contains(name)) {
+          this.className = `${this.className} ${name}`.trim();
         }
       },
-      remove(name) {
-        element.className = element.className
-          .split(/\s+/)
-          .filter((part) => part && part !== String(name))
-          .join(" ");
+      remove: (name) => {
+        this.className = this.className.split(/\s+/)
+          .filter((part) => part && part !== String(name)).join(" ");
       },
     };
   }
@@ -77,7 +67,8 @@
       set(value) {
         if (value && !("hidden" in this._attributes)) {
           this.setAttribute("hidden", "");
-        } else if (!value && "hidden" in this._attributes) {
+        }
+        if (!value && "hidden" in this._attributes) {
           this.removeAttribute("hidden");
         }
       },
@@ -103,7 +94,7 @@
     dataset: {
       get() {
         const element = this;
-        const attributeName = (key) =>
+        const name = (key) =>
           `data-${
             String(key).replace(
               /[A-Z]/g,
@@ -111,11 +102,9 @@
             )
           }`;
         return new Proxy({}, {
-          get(_target, key) {
-            return element._attributes[attributeName(key)];
-          },
+          get: (_target, key) => element._attributes[name(key)],
           set(_target, key, value) {
-            element.setAttribute(attributeName(key), value);
+            element.setAttribute(name(key), value);
             return true;
           },
         });
@@ -123,7 +112,6 @@
     },
   });
 
-  // These reflected string properties all have identical DOM behavior.
   for (const name of ["title", "src", "alt", "type", "role"]) {
     Object.defineProperty(Element.prototype, name, {
       get() {
@@ -140,12 +128,7 @@
     const next = String(value);
     if (this._attributes[attribute] === next) return;
     this._attributes[attribute] = next;
-    host({
-      op: "setAttribute",
-      id: this._id,
-      name: attribute,
-      value: next,
-    });
+    host({ op: "setAttribute", id: this._id, name: attribute, value: next });
   };
 
   Element.prototype.removeAttribute = function removeAttribute(name) {
@@ -182,14 +165,6 @@
     host({ op: "listen", id: this._id, type: String(type), listener });
   };
 
-  function makeNode(record) {
-    const node = nodes[record.id] || new Element(record.id, record.tag);
-    nodes[record.id] = node;
-    node._attributes = Object.assign(Object.create(null), record.attributes);
-    node._text = record.text || "";
-    return node;
-  }
-
   globalThis.document = {
     body: new Element("root", "body"),
     getElementById(id) {
@@ -210,14 +185,17 @@
   };
 
   globalThis.__elementUseInit = function initialize(snapshot) {
-    snapshot.forEach(makeNode);
+    for (const record of snapshot) {
+      const node = nodes[record.id] || new Element(record.id, record.tag);
+      nodes[record.id] = node;
+      node._attributes = Object.assign(Object.create(null), record.attributes);
+      node._text = record.text || "";
+    }
     for (const record of snapshot) {
       const node = nodes[record.id];
       const parent = nodes[record.parent] || document.body;
-      if (node.parentNode !== parent) {
-        node.parentNode = parent;
-        parent.children.push(node);
-      }
+      node.parentNode = parent;
+      parent.children.push(node);
     }
     return JSON.stringify({});
   };

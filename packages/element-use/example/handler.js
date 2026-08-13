@@ -18,8 +18,9 @@ function response(body, contentType) {
   return new Response(body, {
     headers: {
       "content-type": contentType,
+      "access-control-allow-origin": "*",
       "content-security-policy":
-        "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'",
+        "default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net; img-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'",
     },
   });
 }
@@ -42,9 +43,18 @@ export async function elementUseExampleHandler(request) {
       "text/html; charset=utf-8",
     );
   }
-  if (["/client.js", "/style.css", "/manifest.js"].includes(pathname)) {
+  if (
+    ["/client.js", "/style.css", "/manifest.js", "/frame.html", "/frame.js"]
+      .includes(pathname)
+  ) {
     return response(
       await readFile(join(directory, pathname.slice(1))),
+      type(pathname),
+    );
+  }
+  if (pathname === "/host.js" || pathname === "/guest.js") {
+    return response(
+      await readFile(join(repo, "packages/element-use", pathname.slice(1))),
       type(pathname),
     );
   }
@@ -54,11 +64,8 @@ export async function elementUseExampleHandler(request) {
     ) => ({
       title: "Classic Mahjong Solitaire",
       file: await readFile(join(repo, "examples/mahjong/index.html"), "utf8"),
-      fetchResources: Object.fromEntries(
-        mahjongTileUrls.map((
-          url,
-          index,
-        ) => [url, { dataUrl: dataUrls[index] }]),
+      resources: Object.fromEntries(
+        mahjongTileUrls.map((url, index) => [url, dataUrls[index]]),
       ),
     }));
     return response(

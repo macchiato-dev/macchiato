@@ -16,7 +16,6 @@ import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-em
 import { getSiteRoute, hasSiteRoutes, renderSiteRoute } from "@macchiato-dev/site";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
-import { elementUseBrowserAssets } from "@macchiato-dev/element-use/browser-assets";
 import { appDirectoryHandler } from "./app-directory.js";
 import { getDeclarativeApp } from "./declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
@@ -126,7 +125,6 @@ const BROWSER_ASSET_SETS = [
   domUseBrowserAssets,
   htmlUseBrowserAssets,
   styleUseBrowserAssets,
-  elementUseBrowserAssets,
   { ...styleUseBrowserAssets, namespace: "style-use" },
 ];
 

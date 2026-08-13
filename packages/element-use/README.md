@@ -1,29 +1,39 @@
 # @macchiato-dev/element-use
 
-`element-use` is a small, fixed-shape container extracted for the Mahjong game
-surface. It is intentionally not a replacement for the configurable `dom-use`,
-`html-use`, `style-use`, or `browser-use` packages.
+`element-use` is the deliberately small element capability used by the Mahjong
+example. The complete library consists of two readable JavaScript files:
 
-The outer controller creates a script-only sandboxed iframe with an opaque
-origin. Public package assets use CORS so its trusted runner can load ordinary
-ES modules without `allow-same-origin`. The untrusted game never receives the
-iframe's `window` or native `document`; its JavaScript runs in a dedicated
-QuickJS WebAssembly VM and talks to a minimal host element bridge. The policy is
-hard-coded and readable in [`src/policy.js`](src/policy.js): nine element names,
-a short attribute list, the inline styles used by tile positioning, `click`
-events, 320 elements, and base64 image data URLs only.
+- [`host.js`](host.js) contains the fixed policy, validation, rate accounting,
+  native element bridge, and QuickJS setup.
+- [`guest.js`](guest.js) runs inside QuickJS and exposes only the DOM-shaped API
+  the game needs.
 
-Two independent rolling one-minute limits protect the hot bridge:
+There is no iframe code in the library. A composing application supplies a root
+element and decides whether that root lives in the page, an iframe, or another
+container. The example owns its script-only iframe and invokes `host.js` from
+inside it.
 
-- `rateLimit`: 10,000 guest-to-host calls;
-- `imageLimit`: 50 MiB cumulatively assigned to `img.src` data URLs.
+The package has no npm dependencies. `host.js` imports pinned
+`quickjs-emscripten@0.32.0` browser modules from jsDelivr. The example loads the
+tile art from jsDelivr too; its only local library import is `host.js`, which in
+turn reads the local `guest.js` source for evaluation inside QuickJS.
 
-Replacing an image with the same URL counts again. This keeps accounting simple
-and bounds decoding pressure without retaining or hashing large values. There is
-no guest `fetch`, storage, navigation, external stylesheet, font, or script
-capability. Resources are fetched by the parent under the project grant,
-converted to data URLs, and passed into the guest as immutable inputs.
+The hard-coded policy allows nine elements, a short attribute and inline-style
+list, `click`, 320 elements, 10,000 bridge calls per minute, and 50 MiB of
+cumulative base64 image assignments per minute. Each image is capped at 8 MiB.
+There is no guest network, storage, navigation, external stylesheet, font, or
+script capability. The example fetches its approved inputs and passes data URLs
+to the guest.
 
-This narrow package is useful when a known component benefits more from an
-auditable special-purpose surface than from a general schema engine. Changes to
-the Mahjong DOM or CSS must be reflected explicitly in the policy and tests.
+```js
+import { mountElementUse } from "./host.js";
+
+const controller = await mountElementUse({
+  root: document.querySelector("#game"),
+  source: gameHtml,
+  guestUrl: "./guest.js",
+  resources: approvedDataUrls,
+});
+
+controller.destroy();
+```
