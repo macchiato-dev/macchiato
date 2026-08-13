@@ -13,6 +13,7 @@
     "@macchiato-dev/quickjs-emscripten-sandbox": "0.1.0",
     "@macchiato-dev/dashboard": "0.1.0",
     "@macchiato-dev/dom-use": "0.1.0",
+    "@macchiato-dev/element-use": "0.1.0",
     "@macchiato-dev/font-use": "0.1.0",
     "@macchiato-dev/html-use": "0.1.0",
     "@macchiato-dev/http-use": "0.1.0",

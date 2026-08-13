@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Element use</title>
+    <script type="importmap">
+    {
+      "imports": {
+        "@macchiato-dev/quickjs-emscripten-sandbox": "/-/quickjs-emscripten-sandbox/index.js",
+        "@jitl/quickjs-ffi-types": "/-/quickjs-emscripten-sandbox/ffi-types.js",
+        "@jitl/quickjs-singlefile-browser-release-sync": "/-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js",
+        "quickjs-emscripten-core": "/-/quickjs-emscripten-sandbox/quickjs-core.js"
+      }
+    }
+    </script>
+    <style>
+      html, body, [data-element-use-root] {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        overflow: auto;
+        background: #102e29;
+      }
+      [data-element-use-root] {
+        outline: none;
+      }
+    </style>
+  </head>
+  <body data-element-use-root tabindex="0">
+    <script type="module" src="/-/element-use/runner.js"></script>
+  </body>
+</html>

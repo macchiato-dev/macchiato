@@ -1,0 +1,17 @@
+{
+  "name": "@macchiato-dev/element-use",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Minimal fixed-shape iframe and QuickJS element surface",
+  "exports": {
+    ".": "./src/controller.js",
+    "./browser-assets": "./src/browser-assets.js",
+    "./runtime": "./src/runtime.js",
+    "./policy": "./src/policy.js"
+  },
+  "dependencies": {
+    "@macchiato-dev/quickjs-emscripten-sandbox": "0.1.0"
+  },
+  "files": ["src", "runner.html", "README.md"],
+  "publishConfig": { "access": "public" }
+}
