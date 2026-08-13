@@ -53,6 +53,7 @@ test("Mahjong renders fetched artwork through image elements, not CSS", () => {
   assert.match(source, /state\.mismatch\.add\(firstIndex\);state\.mismatch\.add\(index\)/);
   assert.doesNotMatch(source, /Those tiles do not match/);
   assert.doesNotMatch(source, /No moves remain|Board cleared|id="message"/);
+  assert.doesNotMatch(source, /id="stats"|tiles ·|moves/);
   assert.match(source, /image\.style\.inset='0'/);
   assert.match(source, /image\.style\.left='0'/);
   assert.match(source, /image\.style\.inset='auto'/);
