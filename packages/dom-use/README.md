@@ -15,12 +15,15 @@ capability that guest contexts interact with. It orchestrates `html-use` and
 ## Isolation and component roots
 
 The intended next ownership model makes a surface own the complete subtree of
-each granted container. The guest keeps an exact structural mirror, most nodes
-are addressed by revisioned child-index paths, and partial DOM wrapper objects
-can be disposable. This should replace most durable per-node host IDs while
-making bulk updates natural. See [Container-owned DOM and positional
-mirrors](../../docs/dom-use-container-ownership.md). The current runtime still
-uses per-node bridge IDs; this is a migration design, not shipped behavior.
+each granted container. Stable references remain useful for ordinary DOM code;
+an exact guest mirror and revisioned child-index paths complement them for bulk
+operations and ownership checks. A guest can declare an `attached-only` policy,
+promising never to reuse removed nodes so both sides can deterministically drop
+their handles and listeners, or opt into bounded retained-detached semantics.
+See [Container-owned DOM, references, and positional
+mirrors](../../docs/dom-use-container-ownership.md). The current runtime already
+releases explicitly discarded subtrees, but policy negotiation and the hybrid
+mirror design are not yet shipped.
 
 `dom-use` is the DOM-policy part of an isolation architecture; it does not by
 itself create a virtual machine. A sandboxed container may run guest code in a
