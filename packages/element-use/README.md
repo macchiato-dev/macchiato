@@ -4,14 +4,14 @@
 surface. It is intentionally not a replacement for the configurable `dom-use`,
 `html-use`, `style-use`, or `browser-use` packages.
 
-The outer controller creates a sandboxed iframe. It grants `allow-same-origin`
-only so the trusted runner can load ordinary ES modules from its own package;
-the untrusted game never receives the iframe's `window` or native `document`.
-Its JavaScript runs in a dedicated QuickJS WebAssembly VM and talks to a minimal
-host element bridge. The policy is hard-coded and readable in
-[`src/policy.js`](src/policy.js): eight element names, a short attribute list,
-the inline styles used by tile positioning, `click` events, 320 elements, and
-base64 image data URLs only.
+The outer controller creates a script-only sandboxed iframe with an opaque
+origin. Public package assets use CORS so its trusted runner can load ordinary
+ES modules without `allow-same-origin`. The untrusted game never receives the
+iframe's `window` or native `document`; its JavaScript runs in a dedicated
+QuickJS WebAssembly VM and talks to a minimal host element bridge. The policy is
+hard-coded and readable in [`src/policy.js`](src/policy.js): nine element names,
+a short attribute list, the inline styles used by tile positioning, `click`
+events, 320 elements, and base64 image data URLs only.
 
 Two independent rolling one-minute limits protect the hot bridge:
 

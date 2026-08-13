@@ -8,7 +8,7 @@ export function mountElementUse(
   frame.title = project.title || "Game";
   // The trusted runner needs same-origin module loading. Untrusted game code is
   // still confined to QuickJS and never receives the iframe's window object.
-  frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  frame.setAttribute("sandbox", "allow-scripts");
   frame.setAttribute("referrerpolicy", "no-referrer");
   frame.src = runnerUrl;
   root.replaceChildren(frame);

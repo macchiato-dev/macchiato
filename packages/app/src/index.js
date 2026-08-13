@@ -367,7 +367,12 @@ async function serveBrowserAsset(pathname) {
     const content = await readFile(asset.filePath, pathname.endsWith(".wasm") ? undefined : "utf8");
     const body = pathname.endsWith(".js") ? rewriteBrowserAsset(content, asset) : content;
     return new Response(body, {
-      headers: { "content-type": contentTypeFor(pathname) },
+      // These are public browser modules. CORS lets opaque-origin sandboxed
+      // iframes load them without receiving an allow-same-origin grant.
+      headers: {
+        "content-type": contentTypeFor(pathname),
+        "access-control-allow-origin": "*",
+      },
     });
   } catch {
     return new Response("Not found", { status: 404 });
