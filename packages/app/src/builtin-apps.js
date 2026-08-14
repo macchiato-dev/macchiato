@@ -32,7 +32,11 @@ export const BUILTIN_APPS = [
     handler: domUseLiteExampleHandler,
     sourceFiles: [
       "dev/dom-use-lite/prototype/guest.js",
+      "dev/dom-use-lite/prototype/assets/fonts/cormorant-garamond.css",
+      "dev/dom-use-lite/prototype/assets/fonts/libre-baskerville.css",
       "dev/dom-use-lite/prototype/assets/fonts/space-grotesk.css",
+      "dev/dom-use-lite/prototype/assets/icons/settings.svg",
+      "dev/dom-use-lite/prototype/assets/icons/undo-2.svg",
       "dev/dom-use-lite/prototype/web/dom-use-lite.js",
       "dev/dom-use-lite/prototype/web/index.html",
       "dev/dom-use-lite/prototype/src/guest.c",
