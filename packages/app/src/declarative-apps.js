@@ -41,6 +41,10 @@ function validateConfig(config) {
     if (!Array.isArray(config.options.sourceFiles)) throw new Error("options.sourceFiles must be an array.");
     for (const file of config.options.sourceFiles) safeRelativePath(file, "source file");
   }
+  if (config.options.sharedAssets !== undefined &&
+      typeof config.options.sharedAssets !== "boolean") {
+    throw new Error("options.sharedAssets must be boolean");
+  }
   if (config.options.dependencies !== undefined) {
     assertObject(config.options.dependencies, "options.dependencies");
     for (const subdomain of Object.values(config.options.dependencies)) safeRelativePath(subdomain, "dependency subdomain");

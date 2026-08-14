@@ -98,6 +98,24 @@ node packages/app/src/index.js --data-dir ./data --app-plugin development
 `development` is the full repository demo set; `core` is the one-app default.
 Run `macchiato app plugins` to list individual plugin IDs.
 
+### Shared browser assets
+
+The `/-/` namespace is absent by default. An app that imports Macchiato's
+shared browser modules or cached fonts must declare:
+
+```json
+{
+  "options": {
+    "sharedAssets": true
+  }
+}
+```
+
+The server only checks its shared-asset routes for declarations carrying that
+property. Other apps handle `/-/` like any ordinary application path, normally
+returning their implicit missing-path response. A self-contained static app
+should leave the property out.
+
 ### Load an example into Macchiato
 
 Repository examples are ordinary declarative apps with a small installer entry.

@@ -114,6 +114,8 @@ const CONTENT_TYPES = {
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".bin": "application/octet-stream",
+  ".wasm": "application/wasm",
   ".woff2": "font/woff2",
 };
 
@@ -304,7 +306,7 @@ function safeJoin(root, pathname) {
 }
 
 async function serveFile(directory, pathname = "/index.html") {
-  const localPath = pathname === "/" ? "/index.html" : pathname;
+  const localPath = pathname.endsWith("/") ? `${pathname}index.html` : pathname;
   const filePath = safeJoin(directory, localPath);
   try {
     const content = await readFile(filePath);
@@ -381,13 +383,14 @@ async function route(request) {
   const hostHeader = request.headers.get("host") || "localhost";
   const subdomain = getSubdomain(hostHeader);
   const url = new URL(request.url);
-  const cachedFont = serveCachedFont(url.pathname);
-  if (cachedFont) return cachedFont;
-  const asset = await serveBrowserAsset(url.pathname);
-  if (asset) return asset;
-
   const app = getDeclarativeApp(db, subdomain);
   if (!app) return new Response("App not configured", { status: 404 });
+  if (app.options.sharedAssets === true) {
+    const cachedFont = serveCachedFont(url.pathname);
+    if (cachedFont) return cachedFont;
+    const asset = await serveBrowserAsset(url.pathname);
+    if (asset) return asset;
+  }
 
   if (app.handlerName === "app-directory") {
     return appDirectoryHandler(request, { db });

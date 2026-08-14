@@ -10,7 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
-import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/prototype/example/handler.js";
+import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
@@ -24,25 +24,33 @@ const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
   {
-    name: "dom-use-lite Mahjong",
+    name: "dom-use-lite examples",
     pluginId: "dom-use-lite",
     subdomain: "dom-use-lite",
     kind: "byte-bridged MicroQuickJS document",
-    description: "Classic Mahjong rendered by the inspectable dom-use-lite prototype.",
+    description: "Wasm and plain-browser Cat Memory and Mahjong examples.",
     handler: domUseLiteExampleHandler,
     sourceFiles: [
-      "dev/dom-use-lite/prototype/guest.js",
-      "dev/dom-use-lite/prototype/assets/fonts/cormorant-garamond.css",
-      "dev/dom-use-lite/prototype/assets/fonts/libre-baskerville.css",
-      "dev/dom-use-lite/prototype/assets/fonts/space-grotesk.css",
-      "dev/dom-use-lite/prototype/assets/icons/settings.svg",
-      "dev/dom-use-lite/prototype/assets/icons/undo-2.svg",
-      "dev/dom-use-lite/prototype/web/dom-use-lite.js",
-      "dev/dom-use-lite/prototype/web/index.html",
-      "dev/dom-use-lite/prototype/src/guest.c",
-      "dev/dom-use-lite/prototype/src/lib.rs",
-      "dev/dom-use-lite/prototype/build.rs",
-      "dev/dom-use-lite/prototype/example/handler.js",
+      "dev/dom-use-lite/examples/microquickjs-guest-runtime/guest-runtime.js",
+      "dev/dom-use-lite/examples/microquickjs-guest-runtime/src/guest.c",
+      "dev/dom-use-lite/examples/microquickjs-guest-runtime/src/lib.rs",
+      "dev/dom-use-lite/examples/microquickjs-guest-runtime/build.rs",
+      "dev/dom-use-lite/examples/mahjong/application.js",
+      "dev/dom-use-lite/examples/mahjong/index.html",
+      "dev/dom-use-lite/examples/mahjong/style.css",
+      "dev/dom-use-lite/examples/cat-memory/application.js",
+      "dev/dom-use-lite/examples/cat-memory/index.html",
+      "dev/dom-use-lite/examples/cat-memory/style.css",
+      "dev/dom-use-lite/examples/mahjong/assets/fonts/cormorant-garamond.css",
+      "dev/dom-use-lite/examples/mahjong/assets/fonts/libre-baskerville.css",
+      "dev/dom-use-lite/examples/mahjong/assets/fonts/space-grotesk.css",
+      "dev/dom-use-lite/examples/mahjong/assets/icons/settings.svg",
+      "dev/dom-use-lite/examples/mahjong/assets/icons/undo-2.svg",
+      "dev/dom-use-lite/examples/web/dom-use-lite.js",
+      "dev/dom-use-lite/examples/web/index.html",
+      "dev/dom-use-lite/examples/web/wasm-example.html",
+      "dev/dom-use-lite/examples/scripts/stamp-wasm.js",
+      "dev/dom-use-lite/examples/handler.js",
     ],
     sandbox: {
       runtime: "MicroQuickJS bytecode in dedicated WebAssembly",
@@ -221,6 +229,7 @@ export const BUILTIN_APPS = [
     subdomain: "resources-co",
     kind: "multi-page site",
     description: "SQLite-backed Resources.co routes with friendly paths and transitions.",
+    sharedAssets: true,
     seededRoute: true,
     sourceFiles: [
       "packages/website/seed.js",
@@ -311,6 +320,7 @@ export const BUILTIN_APPS = [
     subdomain: "resources-website",
     kind: "static site",
     description: "Declarative static Resources.co source page and assets.",
+    sharedAssets: true,
     handler: resourcesWebsiteHandler,
     setup: resourcesWebsiteSite.setup,
     sourceFiles: [
