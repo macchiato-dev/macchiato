@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { addFileSite, listAppConfigRows, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
+import { addFileSite, listAppConfigRows, removeAppConfig, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
 import { seedResourcesSite } from "../../../packages/website/seed.js";
 import { BUILTIN_APPS } from "./builtin-apps.js";
 import { packageBrowserHandler } from "./package-browser.js";
@@ -24,7 +24,7 @@ function declarationForBuiltin(app) {
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
-  const { aliases, pluginId, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, commands, ...base } = app;
+  const { aliases, pluginId, replaces, setup, seededRoute, fileAccess, sourceFiles, schemas, sandbox, site, adapter, environment, commands, ...base } = app;
   return {
     ...base,
     handler,
@@ -55,6 +55,7 @@ const apps = Object.fromEntries(BUILTIN_APPS.map((app) => [
   {
     declaration: declarationForBuiltin(app),
     setup: app.subdomain === "resources-co" ? seedResourcesSite : app.setup,
+    replaces: app.replaces || [],
     dependencies: app.subdomain === "resources-edge" ? ["resources-co", "blog-examples"] : [],
   },
 ]));
@@ -137,6 +138,8 @@ export function installAppPlugins(db, names, { mappings = {} } = {}) {
     visiting.add(id);
     for (const dependency of plugin.dependencies || []) install(dependency);
     visiting.delete(id);
+
+    for (const replaced of plugin.replaces || []) removeAppConfig(db, replaced);
 
     const subdomain = mappings[id] || plugin.declaration.subdomain || id;
     const dependencies = Object.fromEntries(

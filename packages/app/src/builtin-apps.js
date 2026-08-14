@@ -34,7 +34,6 @@ export const BUILTIN_APPS = [
       "dev/dom-use-lite/prototype/guest.js",
       "dev/dom-use-lite/prototype/web/dom-use-lite.js",
       "dev/dom-use-lite/prototype/web/index.html",
-      "dev/dom-use-lite/prototype/web/page.css",
       "dev/dom-use-lite/prototype/src/guest.c",
       "dev/dom-use-lite/prototype/src/lib.rs",
       "dev/dom-use-lite/prototype/build.rs",
@@ -132,6 +131,7 @@ export const BUILTIN_APPS = [
   {
     name: "Virtual DOM Editor Experiment",
     pluginId: "virtual-dom-editor",
+    replaces: ["vue-dom-editor"],
     subdomain: "virtual-dom-editor",
     kind: "synchronized sandbox component",
     description: "A small editor with an identical revisioned virtual DOM in its QuickJS guest and browser host.",

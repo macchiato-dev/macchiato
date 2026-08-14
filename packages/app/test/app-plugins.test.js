@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { getSiteRoute } from "@macchiato-dev/site";
-import { initSqliteStore, listAppConfigRows, setAppEnvironmentValue } from "@macchiato-dev/app-db-sqlite";
+import { initSqliteStore, listAppConfigRows, setAppEnvironmentValue, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
 import { getDeclarativeApp } from "../src/declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "../src/app-plugins.js";
 
@@ -57,4 +57,21 @@ test("the todo source hostname resolves through the declarative DOM Use Todos ap
   assert.equal(alias.subdomain, canonical.subdomain);
   assert.equal(alias.handlerName, canonical.handlerName);
   assert.deepEqual(alias.aliases, ["todo"]);
+});
+
+test("installing a renamed plugin removes its obsolete declarative app", () => {
+  const db = new DatabaseSync(":memory:");
+  initSqliteStore(db);
+  upsertAppConfig(db, {
+    subdomain: "vue-dom-editor",
+    name: "Previous editor experiment",
+    kind: "sandbox",
+    description: "Replaced plugin",
+    handler: "code:vue-dom-editor",
+  });
+  installAppPlugins(db, ["virtual-dom-editor"]);
+
+  assert.equal(getDeclarativeApp(db, "virtual-dom-editor").options.plugin,
+    "virtual-dom-editor");
+  assert.equal(getDeclarativeApp(db, "vue-dom-editor"), null);
 });
