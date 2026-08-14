@@ -10,6 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
+import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/prototype/example/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
@@ -22,6 +23,28 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "dom-use-lite Mahjong",
+    pluginId: "dom-use-lite",
+    subdomain: "dom-use-lite",
+    kind: "byte-bridged MicroQuickJS document",
+    description: "Classic Mahjong rendered by the inspectable dom-use-lite prototype.",
+    handler: domUseLiteExampleHandler,
+    sourceFiles: [
+      "dev/dom-use-lite/prototype/guest.js",
+      "dev/dom-use-lite/prototype/web/dom-use-lite.js",
+      "dev/dom-use-lite/prototype/web/index.html",
+      "dev/dom-use-lite/prototype/web/page.css",
+      "dev/dom-use-lite/prototype/src/guest.c",
+      "dev/dom-use-lite/prototype/src/lib.rs",
+      "dev/dom-use-lite/prototype/build.rs",
+      "dev/dom-use-lite/prototype/example/handler.js",
+    ],
+    sandbox: {
+      runtime: "MicroQuickJS bytecode in dedicated WebAssembly",
+      hostCapabilities: ["allowlisted document DOM", "sanitized CSS", "embedded images and WOFF2"],
+    },
+  },
   {
     name: "Mahjong Element Surface",
     pluginId: "element-use",
