@@ -1,0 +1,11 @@
+{
+  "name": "@macchiato-dev/dom-use-lite",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Zero-configuration, exfiltration-resistant WebAssembly DOM boundary",
+  "exports": {
+    ".": "./host.js"
+  },
+  "files": ["host.js", "README.md"],
+  "publishConfig": { "access": "public" }
+}
