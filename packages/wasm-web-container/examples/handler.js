@@ -34,6 +34,10 @@ export async function wasmWebContainerExampleHandler(request) {
       });
     } catch (error) {
       if (error?.code === "ENOENT") {
+        if (!["/sqlite-book/index.html", "/sqlite-book/main.wasm",
+          "/sqlite-book/build.json"].includes(pathname)) {
+          return new Response("Not found", { status: 404 });
+        }
         return new Response("Run npm run build:sqlite-book in packages/wasm-web-container.", {
           status: 503
         });
