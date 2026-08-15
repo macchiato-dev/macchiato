@@ -1,0 +1,12 @@
+{
+  "input": {
+    "url": "https://sqlite.org/2026/sqlite-doc-3530400.zip",
+    "algorithm": "sha3-256",
+    "hash": "7ccf86a52e7dd1fb9b31e63edcebe3b553f18f89cd26eef59c7f191a5111836e"
+  },
+  "output": {
+    "file": "dist/pages/sqlite-book/main.wasm",
+    "algorithm": "sha256",
+    "hash": ""
+  }
+}
