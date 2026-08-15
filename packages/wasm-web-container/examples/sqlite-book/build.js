@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -117,6 +117,7 @@ await writeFile(join(build, "runtime.js"), runtimeSource);
 await writeFile(join(build, "application.js"), applicationSource);
 execFileSync(mqjs, ["-m32", "-o", join(build, "runtime.bin"), join(build, "runtime.js")]);
 execFileSync(mqjs, ["-m32", "-o", join(build, "application.bin"), join(build, "application.js")]);
+await rm(dirname(output), { recursive: true, force: true });
 await mkdir(dirname(output), { recursive: true });
 execFileSync(process.execPath, [join(legacy, "scripts/stamp-wasm.js"), target, output,
   `runtime.bin=${join(build, "runtime.bin")}`,

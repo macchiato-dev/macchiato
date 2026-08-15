@@ -7,8 +7,9 @@ import { wasmWebContainerExampleHandler } from "../examples/handler.js";
 test("SQLite reader routes inside its Wasm artifact", async (context) => {
   const server = createServer(async (request, response) => {
     try {
+      const routedUrl = request.url.replace(/^\/project-name(?=\/|$)/, "") || "/";
       const result = await wasmWebContainerExampleHandler(new Request(
-        `http://wasm-web-container.localhost${request.url}`,
+        `http://wasm-web-container.localhost${routedUrl}`,
         { method: request.method }
       ));
       response.writeHead(result.status, Object.fromEntries(result.headers));
@@ -31,7 +32,7 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
     if (new URL(request.url()).hostname !== "127.0.0.1") remoteRequests.push(request.url());
   });
   const origin = `http://127.0.0.1:${server.address().port}`;
-  await page.goto(origin + "/sqlite-book/wasm/");
+  await page.goto(origin + "/project-name/sqlite-book/");
 
   await page.getByRole("heading", {
     name: "SQLite: selected technical documentation"
