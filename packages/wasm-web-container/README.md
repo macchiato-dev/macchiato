@@ -25,6 +25,20 @@ const container = await mountWebContainer("./main.wasm", document, {
 The integrated operation is intentional: callers provide a module source and
 mount target, while the container establishes and owns the Wasm boundary.
 
+## Virtual paths and links
+
+Document-mode guests use canonical virtual paths with a leading slash. The
+browser carries `/wal.html` as `#/wal.html`, but the guest only sees
+`/wal.html`. `/` is the root. A boundary validator rejects backslashes, query
+strings, traversal segments, repeated slashes, and paths without the leading
+slash.
+
+Internal navigation uses fragment-only links. It therefore stays within the
+already-loaded container and works with browser back and forward navigation.
+External addresses are not assigned to `href`: an application may place one
+in inert data and present it in a copy-and-paste dialog. This keeps navigation
+to another origin explicit without granting the guest a network capability.
+
 ## Reconstruction rules
 
 - Keep ordinary commits at or below 256 changed lines. This is a ceiling, not
