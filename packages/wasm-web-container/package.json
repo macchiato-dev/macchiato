@@ -11,6 +11,6 @@
   ],
   "scripts": {
     "build:sqlite-book": "node examples/sqlite-book/build.js",
-    "test": "node --test test"
+    "test": "npm run build:sqlite-book && node --test test/*.test.js"
   }
 }
