@@ -67,11 +67,7 @@
     field.select();
   }
 
-  document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) {
-      if (modalToCloseOnReturn) closeModal(modalToCloseOnReturn);
-      return;
-    }
+  function deactivatePage() {
     if (!lastKeyPress) return;
     var target = lastKeyPress.target;
     var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
@@ -84,6 +80,17 @@
     lastKeyPress = null;
     lastKeyModal = null;
     if (copied) modalToCloseOnReturn = modal;
+  }
+
+  function reactivatePage() {
+    if (modalToCloseOnReturn) closeModal(modalToCloseOnReturn);
+  }
+
+  addEventListener("blur", deactivatePage);
+  addEventListener("focus", reactivatePage);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) deactivatePage();
+    else reactivatePage();
   });
 
   function sourceButton(page) {

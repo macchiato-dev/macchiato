@@ -73,23 +73,12 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.equal(await page.locator(".modal").count(), 1);
   const otherPage = await page.context().newPage();
   await otherPage.bringToFront();
-  const simulatedVisibility = !await page.evaluate(() => document.hidden);
-  if (simulatedVisibility) {
-    await page.evaluate(() => {
-      Object.defineProperty(document, "hidden", { configurable: true, value: true });
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-  }
+  const simulatedActivation = !await page.evaluate(() => document.hidden);
+  if (simulatedActivation) await page.evaluate(() => dispatchEvent(new Event("blur")));
   assert.equal(await page.locator(".modal").count(), 1);
   await otherPage.close();
   await page.bringToFront();
-  if (simulatedVisibility) {
-    await page.evaluate(() => {
-      Object.defineProperty(document, "hidden", { configurable: true, value: false });
-      document.dispatchEvent(new Event("visibilitychange"));
-      delete document.hidden;
-    });
-  }
+  if (simulatedActivation) await page.evaluate(() => dispatchEvent(new Event("focus")));
   await page.locator(".modal-closing").waitFor();
   assert.equal(await page.locator(".modal-panel").isVisible(), false);
   await page.locator(".modal").waitFor({ state: "detached" });
