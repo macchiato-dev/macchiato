@@ -21,14 +21,14 @@
   function showExternal(url) {
     var modal = element("div", "modal");
     var panel = element("section", "modal-panel");
-    var title = element("p", "section-title", "Open the source documentation");
-    var help = element("p", "prose", "Copy this address and paste it into the browser.");
-    var input = document.createElement("input");
-    var close = element("button", "external-link", "Close");
-    input.setAttribute("readonly", "");
-    input.value = url;
+    var field = document.createElement("textarea");
+    var close = element("button", "modal-close", "×");
+    field.setAttribute("aria-label", "External URL");
+    field.setAttribute("readonly", "");
+    field.value = url;
+    close.setAttribute("aria-label", "Close");
     close.addEventListener("click", function () { closeModal(modal); });
-    panel.append(title, help, input, close);
+    panel.append(field, close);
     modal.append(panel);
     document.body.append(modal);
   }

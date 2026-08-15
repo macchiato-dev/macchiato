@@ -7,6 +7,6 @@
   "output": {
     "file": "dist/pages/sqlite-book/main.wasm",
     "algorithm": "sha256",
-    "hash": "07a02d26147311009b44737a65d46e664bd35d699cf6de18249d3ca282097f44"
+    "hash": "cbd9f2fcc29e730c974137ac57ac39398b148414e4ec87696c8afb124bdaca9e"
   }
 }

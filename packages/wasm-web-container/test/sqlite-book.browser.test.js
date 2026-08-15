@@ -59,9 +59,11 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.equal(new URL(page.url()).hash, "#/wal.html");
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
-  assert.equal(await page.locator(".modal input").inputValue(), "https://sqlite.org/wal.html");
-  assert.equal(await page.locator(".modal input").getAttribute("readonly"), "");
+  assert.equal(await page.locator(".modal textarea").inputValue(), "https://sqlite.org/wal.html");
+  assert.equal(await page.locator(".modal textarea").getAttribute("readonly"), "");
   assert.equal(await page.locator('a[href^="http"]').count(), 0);
   assert.deepEqual(remoteRequests, []);
   assert.deepEqual(errors, []);
+  await page.getByRole("button", { name: "Close" }).click();
+  assert.equal(await page.locator(".modal").count(), 0);
 });
