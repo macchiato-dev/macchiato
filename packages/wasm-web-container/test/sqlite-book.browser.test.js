@@ -63,8 +63,20 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.equal(await page.locator(".modal textarea").evaluate((field) =>
     document.activeElement === field && field.selectionStart === 0 &&
       field.selectionEnd === field.value.length), true);
+  await page.evaluate(() => {
+    window.copyEventCount = 0;
+    document.addEventListener("copy", () => window.copyEventCount++);
+  });
+  await page.keyboard.press("Control+c");
+  await page.locator(".modal").waitFor({ state: "detached" });
+  assert.equal(await page.evaluate(() => window.copyEventCount), 1);
+
+  await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
   await page.locator(".modal textarea").click();
   await page.locator(".modal textarea").press("End");
+  await page.keyboard.press("Control+c");
+  await page.waitForTimeout(60);
+  assert.equal(await page.locator(".modal").count(), 1);
   await page.locator(".modal textarea").pressSequentially("-blocked");
   assert.equal(await page.locator(".modal textarea").inputValue(), "https://sqlite.org/wal.html");
   assert.equal(await page.locator(".modal textarea").evaluate((field) => field.selectionStart),

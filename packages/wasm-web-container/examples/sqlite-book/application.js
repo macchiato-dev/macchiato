@@ -38,6 +38,15 @@
       if (event.key === "Escape") {
         event.preventDefault();
         closeModal(modal);
+      } else {
+        var target = event.target;
+        var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+        var copy = event.key === "c" || event.key === "C";
+        if (target.reference === field.reference && copy &&
+            (apple ? event.metaKey : event.ctrlKey) &&
+            field.selectionStart !== field.selectionEnd) {
+          setTimeout(function () { closeModal(modal); }, 40);
+        }
       }
     });
     panel.append(field, close);
