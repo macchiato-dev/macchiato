@@ -11,6 +11,7 @@ import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
 import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/examples/handler.js";
+import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
 import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
@@ -23,6 +24,26 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "Wasm Web Container",
+    pluginId: "wasm-web-container",
+    subdomain: "wasm-web-container",
+    kind: "bounded WebAssembly web container",
+    description: "The integrated container API and its working guest examples.",
+    handler: wasmWebContainerExampleHandler,
+    sourceFiles: [
+      "packages/wasm-web-container/README.md",
+      "packages/wasm-web-container/src/index.js",
+      "packages/wasm-web-container/examples/index.html",
+      "packages/wasm-web-container/examples/handler.js",
+      "dev/dom-use-lite/examples/web/dom-use-lite.js",
+      "dev/dom-use-lite/examples/web/wasm-runner.js",
+    ],
+    sandbox: {
+      runtime: "bounded WebAssembly with a byte-bridged guest",
+      hostCapabilities: ["fixed DOM policy", "scoped storage", "timers", "embedded assets"],
+    },
+  },
   {
     name: "dom-use-lite examples",
     pluginId: "dom-use-lite",
