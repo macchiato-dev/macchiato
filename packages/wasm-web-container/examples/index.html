@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wasm Web Container examples</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #17142c; color: #f2edf9; }
+    main { width: min(34rem, calc(100% - 2rem)); }
+    h1 { margin: 0 0 .45rem; font-size: clamp(1.7rem, 6vw, 2.5rem); }
+    p { margin: 0 0 1.25rem; color: #c9c0dc; line-height: 1.5; }
+    nav { display: grid; gap: .65rem; }
+    a { padding: 1rem 1.1rem; border: 1px solid #514a72; border-radius: .75rem;
+      background: #211d3a; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: #b7a6e5; background: #292347; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Wasm Web Container</h1>
+    <p>Bounded WebAssembly applications with constrained web capabilities.</p>
+    <nav aria-label="Examples">
+      <a href="./cat-memory/wasm/">Cat Memory — WebAssembly</a>
+      <a href="./cat-memory/plain/">Cat Memory — plain web page</a>
+      <a href="./mahjong/wasm/">Mahjong — WebAssembly</a>
+      <a href="./mahjong/plain/">Mahjong — plain web page</a>
+      <a href="./run/">Run a WebAssembly guest</a>
+    </nav>
+  </main>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "wasm-web-container",
+  "version": "0.0.0",
+  "description": "A bounded WebAssembly container for constrained web applications.",
+  "type": "module",
+  "private": true,
+  "exports": "./src/index.js",
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test test"
+  }
+}
