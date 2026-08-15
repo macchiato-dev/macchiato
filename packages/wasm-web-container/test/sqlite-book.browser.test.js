@@ -73,16 +73,26 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.equal(await page.locator(".modal").count(), 1);
   const otherPage = await page.context().newPage();
   await otherPage.bringToFront();
-  if (!await page.evaluate(() => document.hidden)) {
+  const simulatedVisibility = !await page.evaluate(() => document.hidden);
+  if (simulatedVisibility) {
     await page.evaluate(() => {
       Object.defineProperty(document, "hidden", { configurable: true, value: true });
       document.dispatchEvent(new Event("visibilitychange"));
     });
   }
-  await page.locator(".modal").waitFor({ state: "detached" });
+  assert.equal(await page.locator(".modal").count(), 1);
   await otherPage.close();
   await page.bringToFront();
-  await page.evaluate(() => { delete document.hidden; });
+  if (simulatedVisibility) {
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: false });
+      document.dispatchEvent(new Event("visibilitychange"));
+      delete document.hidden;
+    });
+  }
+  await page.locator(".modal-closing").waitFor();
+  assert.equal(await page.locator(".modal-panel").isVisible(), false);
+  await page.locator(".modal").waitFor({ state: "detached" });
   assert.equal(await page.evaluate(() => window.copyEventCount), 1);
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
@@ -99,16 +109,16 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.deepEqual(remoteRequests, []);
   assert.deepEqual(errors, []);
   await page.getByRole("button", { name: "Close" }).click();
-  assert.equal(await page.locator(".modal").count(), 0);
+  await page.locator(".modal").waitFor({ state: "detached" });
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
   await page.locator(".modal-panel").click({ position: { x: 5, y: 5 } });
   assert.equal(await page.locator(".modal").evaluate((modal) =>
     document.activeElement === modal), true);
   await page.keyboard.press("Escape");
-  assert.equal(await page.locator(".modal").count(), 0);
+  await page.locator(".modal").waitFor({ state: "detached" });
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
   await page.locator(".modal").click({ position: { x: 5, y: 5 } });
-  assert.equal(await page.locator(".modal").count(), 0);
+  await page.locator(".modal").waitFor({ state: "detached" });
 });

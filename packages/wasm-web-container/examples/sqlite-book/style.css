@@ -98,6 +98,18 @@ button {
   z-index: 10;
 }
 
+.modal-closing {
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: 180ms;
+  transition-property: opacity;
+  transition-timing-function: ease-out;
+}
+
+.modal-closing .modal-panel {
+  display: none;
+}
+
 .modal-panel {
   background-color: #f8f3e8;
   border-bottom-left-radius: 10px;

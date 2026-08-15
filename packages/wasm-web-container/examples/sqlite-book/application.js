@@ -3,6 +3,8 @@
   var lastKeyField = null;
   var lastKeyPress = null;
   var lastKeyModal = null;
+  var modalToCloseOnReturn = null;
+  var closingModal = null;
 
   function element(tag, className, text) {
     var node = document.createElement(tag);
@@ -18,12 +20,19 @@
   }
 
   function closeModal(modal) {
+    if (modal === closingModal) return;
+    closingModal = modal;
     if (modal === lastKeyModal) {
       lastKeyField = null;
       lastKeyPress = null;
       lastKeyModal = null;
     }
-    modal.remove();
+    if (modal === modalToCloseOnReturn) modalToCloseOnReturn = null;
+    modal.className = "modal modal-closing";
+    setTimeout(function () {
+      modal.remove();
+      if (closingModal === modal) closingModal = null;
+    }, 180);
   }
 
   function showExternal(url) {
@@ -59,7 +68,11 @@
   }
 
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden || !lastKeyPress) return;
+    if (!document.hidden) {
+      if (modalToCloseOnReturn) closeModal(modalToCloseOnReturn);
+      return;
+    }
+    if (!lastKeyPress) return;
     var target = lastKeyPress.target;
     var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
     var copy = lastKeyPress.key === "c" || lastKeyPress.key === "C";
@@ -70,7 +83,7 @@
     lastKeyField = null;
     lastKeyPress = null;
     lastKeyModal = null;
-    if (copied) modal.remove();
+    if (copied) modalToCloseOnReturn = modal;
   });
 
   function sourceButton(page) {
