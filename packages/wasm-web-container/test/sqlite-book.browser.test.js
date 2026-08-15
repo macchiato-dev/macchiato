@@ -69,6 +69,7 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
     document.addEventListener("copy", () => window.copyEventCount++);
   });
   await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+Tab");
   await page.waitForTimeout(60);
   assert.equal(await page.locator(".modal").count(), 1);
   const otherPage = await page.context().newPage();

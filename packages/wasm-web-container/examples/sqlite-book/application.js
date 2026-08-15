@@ -1,6 +1,6 @@
 (function () {
   var book = document.getElementById("book");
-  var lastKeyField = null;
+  var copyWasConfirmed = false;
   var lastKeyPress = null;
   var lastKeyModal = null;
   var modalToCloseOnReturn = null;
@@ -23,7 +23,7 @@
     if (modal === closingModal) return;
     closingModal = modal;
     if (modal === lastKeyModal) {
-      lastKeyField = null;
+      copyWasConfirmed = false;
       lastKeyPress = null;
       lastKeyModal = null;
     }
@@ -44,6 +44,13 @@
     field.setAttribute("aria-label", "External URL");
     field.value = url;
     field.addEventListener("beforeinput", function (event) { event.preventDefault(); });
+    field.addEventListener("copy", function () {
+      if (!lastKeyPress) return;
+      var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      var copy = lastKeyPress.key === "c" || lastKeyPress.key === "C";
+      copyWasConfirmed = copy && (apple ? lastKeyPress.metaKey : lastKeyPress.ctrlKey) &&
+        field.selectionStart !== field.selectionEnd;
+    });
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", function () { closeModal(modal); });
     modal.addEventListener("click", function (event) {
@@ -53,7 +60,6 @@
     });
     modal.addEventListener("keydown", function (event) {
       lastKeyPress = event;
-      lastKeyField = field;
       lastKeyModal = modal;
       if (event.key === "Escape") {
         event.preventDefault();
@@ -69,14 +75,9 @@
 
   function deactivatePage() {
     if (!lastKeyPress) return;
-    var target = lastKeyPress.target;
-    var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-    var copy = lastKeyPress.key === "c" || lastKeyPress.key === "C";
-    var copied = target.reference === lastKeyField.reference && copy &&
-        (apple ? lastKeyPress.metaKey : lastKeyPress.ctrlKey) &&
-        target.selectionStart !== target.selectionEnd;
+    var copied = copyWasConfirmed;
     var modal = lastKeyModal;
-    lastKeyField = null;
+    copyWasConfirmed = false;
     lastKeyPress = null;
     lastKeyModal = null;
     if (copied) modalToCloseOnReturn = modal;
