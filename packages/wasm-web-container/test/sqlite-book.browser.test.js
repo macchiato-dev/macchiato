@@ -38,6 +38,15 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
     name: "SQLite: selected technical documentation"
   }).waitFor();
   assert.equal(await page.locator(".page-list a").count(), 9);
+  const chapterNames = await page.locator(".page-list a").allTextContents();
+  for (const name of chapterNames) {
+    await page.getByRole("link", { name, exact: true }).click();
+    await page.getByRole("heading", { name, exact: true }).waitFor();
+    await page.getByRole("link", { name: "All chapters" }).click();
+    await page.getByRole("heading", {
+      name: "SQLite: selected technical documentation"
+    }).waitFor();
+  }
   await page.getByRole("link", { name: "Write-Ahead Logging" }).click();
   assert.equal(new URL(page.url()).hash, "#/wal.html");
   await page.getByRole("heading", { name: "Write-Ahead Logging" }).waitFor();
