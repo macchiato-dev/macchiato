@@ -27,6 +27,7 @@ export const BUILTIN_APPS = [
     name: "Wasm Web Container",
     pluginId: "wasm-web-container",
     subdomain: "wasm-web-container",
+    replaces: ["dom-use-lite"],
     kind: "bounded WebAssembly web container",
     description: "The integrated container API and its working guest examples.",
     handler: wasmWebContainerExampleHandler,
