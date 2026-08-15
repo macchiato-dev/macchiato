@@ -48,6 +48,8 @@ export const BUILTIN_APPS = [
       "dev/dom-use-lite/examples/mahjong/assets/icons/undo-2.svg",
       "dev/dom-use-lite/examples/web/dom-use-lite.js",
       "dev/dom-use-lite/examples/web/index.html",
+      "dev/dom-use-lite/examples/web/run.html",
+      "dev/dom-use-lite/examples/web/wasm-runner.js",
       "dev/dom-use-lite/examples/web/wasm-example.html",
       "dev/dom-use-lite/examples/scripts/stamp-wasm.js",
       "dev/dom-use-lite/examples/handler.js",
