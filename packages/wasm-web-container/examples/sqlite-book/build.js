@@ -37,9 +37,8 @@ function text(html) {
 }
 
 function identifier(attributes, fallback) {
-  const found = /\bid=["']?([a-z][a-z0-9_.:-]*)/i.exec(attributes)?.[1];
+  const found = /\bid=["']?([a-z0-9][a-z0-9_.:-]*)/i.exec(attributes)?.[1];
   let value = found || fallback.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "section";
-  if (!/^[a-z]/i.test(value)) value = "section-" + value;
   return value.slice(0, 96).replace(/-+$/g, "");
 }
 
