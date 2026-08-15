@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
-import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/examples/handler.js";
+import { wasmWebContainerExampleHandler as prototypeHandler } from
+  "../../../dev/wasm-web-container/examples/handler.js";
 
 const index = new URL("./index.html", import.meta.url);
 const packageRoot = new URL("../", import.meta.url);
@@ -40,5 +41,5 @@ export async function wasmWebContainerExampleHandler(request) {
       throw error;
     }
   }
-  return domUseLiteExampleHandler(request);
+  return prototypeHandler(request);
 }

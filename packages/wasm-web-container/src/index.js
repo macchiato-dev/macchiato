@@ -1,4 +1,4 @@
-import runWasm from "../../../dev/dom-use-lite/examples/web/wasm-runner.js";
+import runWasm from "../../../dev/wasm-web-container/examples/web/wasm-runner.js";
 
 /**
  * Mount one validated, bounded WebAssembly application into a web surface.

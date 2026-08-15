@@ -10,7 +10,6 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
-import { domUseLiteExampleHandler } from "../../../dev/dom-use-lite/examples/handler.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
@@ -36,48 +35,12 @@ export const BUILTIN_APPS = [
       "packages/wasm-web-container/src/index.js",
       "packages/wasm-web-container/examples/index.html",
       "packages/wasm-web-container/examples/handler.js",
-      "dev/dom-use-lite/examples/web/dom-use-lite.js",
-      "dev/dom-use-lite/examples/web/wasm-runner.js",
+      "dev/wasm-web-container/examples/web/wasm-web-container.js",
+      "dev/wasm-web-container/examples/web/wasm-runner.js",
     ],
     sandbox: {
       runtime: "bounded WebAssembly with a byte-bridged guest",
       hostCapabilities: ["fixed DOM policy", "scoped storage", "timers", "embedded assets"],
-    },
-  },
-  {
-    name: "dom-use-lite examples",
-    pluginId: "dom-use-lite",
-    subdomain: "dom-use-lite",
-    kind: "byte-bridged MicroQuickJS document",
-    description: "Wasm and plain-browser Cat Memory and Mahjong examples.",
-    handler: domUseLiteExampleHandler,
-    sourceFiles: [
-      "dev/dom-use-lite/examples/microquickjs-guest-runtime/guest-runtime.js",
-      "dev/dom-use-lite/examples/microquickjs-guest-runtime/src/guest.c",
-      "dev/dom-use-lite/examples/microquickjs-guest-runtime/src/lib.rs",
-      "dev/dom-use-lite/examples/microquickjs-guest-runtime/build.rs",
-      "dev/dom-use-lite/examples/mahjong/application.js",
-      "dev/dom-use-lite/examples/mahjong/index.html",
-      "dev/dom-use-lite/examples/mahjong/style.css",
-      "dev/dom-use-lite/examples/cat-memory/application.js",
-      "dev/dom-use-lite/examples/cat-memory/index.html",
-      "dev/dom-use-lite/examples/cat-memory/style.css",
-      "dev/dom-use-lite/examples/mahjong/assets/fonts/cormorant-garamond.css",
-      "dev/dom-use-lite/examples/mahjong/assets/fonts/libre-baskerville.css",
-      "dev/dom-use-lite/examples/mahjong/assets/fonts/space-grotesk.css",
-      "dev/dom-use-lite/examples/mahjong/assets/icons/settings.svg",
-      "dev/dom-use-lite/examples/mahjong/assets/icons/undo-2.svg",
-      "dev/dom-use-lite/examples/web/dom-use-lite.js",
-      "dev/dom-use-lite/examples/web/index.html",
-      "dev/dom-use-lite/examples/web/run.html",
-      "dev/dom-use-lite/examples/web/wasm-runner.js",
-      "dev/dom-use-lite/examples/web/wasm-example.html",
-      "dev/dom-use-lite/examples/scripts/stamp-wasm.js",
-      "dev/dom-use-lite/examples/handler.js",
-    ],
-    sandbox: {
-      runtime: "MicroQuickJS bytecode in dedicated WebAssembly",
-      hostCapabilities: ["allowlisted document DOM", "sanitized CSS", "embedded images and WOFF2"],
     },
   },
   {

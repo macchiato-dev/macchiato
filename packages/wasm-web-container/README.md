@@ -5,7 +5,7 @@ capabilities. The container owns module validation, instantiation, memory
 limits, the message ABI, host references, and guest lifecycle. DOM access is a
 capability within the container rather than the package's whole identity.
 
-The package is being reconstructed from the working `dev/dom-use-lite`
+The package is being reconstructed from the working `dev/wasm-web-container`
 experiment in small, reviewable commits. During that reconstruction,
 `mountWebContainer()` delegates to the experiment's tested runner. That import
 is temporary and must be gone before publishing.

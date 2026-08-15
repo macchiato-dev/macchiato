@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "../..");
 const workspace = resolve(packageRoot, "../..");
-const legacy = join(workspace, "dev/dom-use-lite/examples");
+const prototype = join(workspace, "dev/wasm-web-container/examples");
 const configuration = JSON.parse(await readFile(join(here, "reproducibility.json"), "utf8"));
 const archive = join(packageRoot, "vendor/sqlite-doc-3530400.zip");
 const build = join(packageRoot, "dist/build/sqlite-book");
@@ -91,17 +91,17 @@ function unzip(name) {
 await download();
 await mkdir(build, { recursive: true });
 const book = pages.map((name) => extract(name, unzip(name)));
-const runtime = join(legacy, "microquickjs-guest-runtime");
+const runtime = join(prototype, "microquickjs-guest-runtime");
 const mqjs = join(runtime, "microquickjs/mqjs");
 const target = join(runtime,
-  "target/wasm32-unknown-unknown/release/dom_use_lite_example_runtime.wasm");
+  "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm");
 if (!await readFile(target).catch(() => null)) {
-  execFileSync("sh", [join(legacy, "scripts/build.sh")], { stdio: "inherit" });
+  execFileSync("sh", [join(prototype, "scripts/build.sh")], { stdio: "inherit" });
 }
-await copyFile(join(legacy, "web/dom-use-lite.js"),
-  join(workspace, "dev/dom-use-lite/dist/pages/dom-use-lite.js"));
-await copyFile(join(legacy, "web/wasm-runner.js"),
-  join(workspace, "dev/dom-use-lite/dist/pages/wasm-runner.js"));
+await copyFile(join(prototype, "web/wasm-web-container.js"),
+  join(workspace, "dev/wasm-web-container/dist/pages/wasm-web-container.js"));
+await copyFile(join(prototype, "web/wasm-runner.js"),
+  join(workspace, "dev/wasm-web-container/dist/pages/wasm-runner.js"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
   `var APPLICATION_SCRIPT=${JSON.stringify("sqlite-book.js")};`,
@@ -119,11 +119,11 @@ execFileSync(mqjs, ["-m32", "-o", join(build, "runtime.bin"), join(build, "runti
 execFileSync(mqjs, ["-m32", "-o", join(build, "application.bin"), join(build, "application.js")]);
 await rm(dirname(output), { recursive: true, force: true });
 await mkdir(dirname(output), { recursive: true });
-execFileSync(process.execPath, [join(legacy, "scripts/stamp-wasm.js"), target, output,
+execFileSync(process.execPath, [join(prototype, "scripts/stamp-wasm.js"), target, output,
   `runtime.bin=${join(build, "runtime.bin")}`,
   `application.bin=${join(build, "application.bin")}`]);
 await writeFile(join(dirname(output), "index.html"),
-  await readFile(join(legacy, "web/wasm-example.html")));
+  await readFile(join(prototype, "web/wasm-example.html")));
 const outputHash = digest(configuration.output.algorithm, await readFile(output));
 if (configuration.output.hash && outputHash !== configuration.output.hash) {
   throw new Error(`output hash ${outputHash}`);
