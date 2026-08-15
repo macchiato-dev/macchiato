@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -98,6 +98,10 @@ const target = join(runtime,
 if (!await readFile(target).catch(() => null)) {
   execFileSync("sh", [join(legacy, "scripts/build.sh")], { stdio: "inherit" });
 }
+await copyFile(join(legacy, "web/dom-use-lite.js"),
+  join(workspace, "dev/dom-use-lite/dist/pages/dom-use-lite.js"));
+await copyFile(join(legacy, "web/wasm-runner.js"),
+  join(workspace, "dev/dom-use-lite/dist/pages/wasm-runner.js"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
   `var APPLICATION_SCRIPT=${JSON.stringify("sqlite-book.js")};`,
