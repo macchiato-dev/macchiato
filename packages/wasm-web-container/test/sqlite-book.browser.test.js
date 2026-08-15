@@ -24,7 +24,8 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
 
   const browser = await chromium.launch({ headless: true });
   context.after(() => browser.close());
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const browserContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await browserContext.newPage();
   const errors = [];
   const remoteRequests = [];
   page.on("pageerror", (error) => errors.push(String(error)));
@@ -68,7 +69,20 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
     document.addEventListener("copy", () => window.copyEventCount++);
   });
   await page.keyboard.press("Control+c");
+  await page.waitForTimeout(60);
+  assert.equal(await page.locator(".modal").count(), 1);
+  const otherPage = await page.context().newPage();
+  await otherPage.bringToFront();
+  if (!await page.evaluate(() => document.hidden)) {
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, value: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  }
   await page.locator(".modal").waitFor({ state: "detached" });
+  await otherPage.close();
+  await page.bringToFront();
+  await page.evaluate(() => { delete document.hidden; });
   assert.equal(await page.evaluate(() => window.copyEventCount), 1);
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();

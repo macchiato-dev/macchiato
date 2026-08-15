@@ -1,5 +1,8 @@
 (function () {
   var book = document.getElementById("book");
+  var lastKeyField = null;
+  var lastKeyPress = null;
+  var lastKeyModal = null;
 
   function element(tag, className, text) {
     var node = document.createElement(tag);
@@ -15,6 +18,11 @@
   }
 
   function closeModal(modal) {
+    if (modal === lastKeyModal) {
+      lastKeyField = null;
+      lastKeyPress = null;
+      lastKeyModal = null;
+    }
     modal.remove();
   }
 
@@ -35,18 +43,12 @@
       else if (target.reference === panel.reference) modal.focus();
     });
     modal.addEventListener("keydown", function (event) {
+      lastKeyPress = event;
+      lastKeyField = field;
+      lastKeyModal = modal;
       if (event.key === "Escape") {
         event.preventDefault();
         closeModal(modal);
-      } else {
-        var target = event.target;
-        var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
-        var copy = event.key === "c" || event.key === "C";
-        if (target.reference === field.reference && copy &&
-            (apple ? event.metaKey : event.ctrlKey) &&
-            field.selectionStart !== field.selectionEnd) {
-          setTimeout(function () { closeModal(modal); }, 40);
-        }
       }
     });
     panel.append(field, close);
@@ -55,6 +57,21 @@
     field.focus();
     field.select();
   }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden || !lastKeyPress) return;
+    var target = lastKeyPress.target;
+    var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    var copy = lastKeyPress.key === "c" || lastKeyPress.key === "C";
+    var copied = target.reference === lastKeyField.reference && copy &&
+        (apple ? lastKeyPress.metaKey : lastKeyPress.ctrlKey) &&
+        target.selectionStart !== target.selectionEnd;
+    var modal = lastKeyModal;
+    lastKeyField = null;
+    lastKeyPress = null;
+    lastKeyModal = null;
+    if (copied) modal.remove();
+  });
 
   function sourceButton(page) {
     var row = element("div", "source-row");
