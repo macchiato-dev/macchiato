@@ -33,8 +33,10 @@ browser carries `/wal.html` as `#/wal.html`, but the guest only sees
 strings, traversal segments, repeated slashes, and paths without the leading
 slash.
 
-Internal navigation uses fragment-only links. It therefore stays within the
-already-loaded container and works with browser back and forward navigation.
+Internal navigation uses real, fragment-only anchors. Ordinary `#section-id`
+links retain native in-page navigation; virtual pages use `#/page.html`. It
+therefore stays within the already-loaded container and works with browser back
+and forward navigation.
 External addresses are not assigned to `href`: an application may place one
 in inert data and present it in a copy-and-paste dialog. This keeps navigation
 to another origin explicit without granting the guest a network capability.
