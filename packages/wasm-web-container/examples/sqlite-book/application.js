@@ -24,8 +24,8 @@
     var field = document.createElement("textarea");
     var close = element("button", "modal-close", "×");
     field.setAttribute("aria-label", "External URL");
-    field.setAttribute("readonly", "");
     field.value = url;
+    field.addEventListener("beforeinput", function (event) { event.preventDefault(); });
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", function () { closeModal(modal); });
     panel.append(field, close);
