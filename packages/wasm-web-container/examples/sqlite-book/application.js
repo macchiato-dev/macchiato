@@ -23,14 +23,28 @@
     var panel = element("section", "modal-panel");
     var field = document.createElement("textarea");
     var close = element("button", "modal-close", "×");
+    modal.setAttribute("tabindex", "-1");
     field.setAttribute("aria-label", "External URL");
     field.value = url;
     field.addEventListener("beforeinput", function (event) { event.preventDefault(); });
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", function () { closeModal(modal); });
+    modal.addEventListener("click", function (event) {
+      var target = event.target;
+      if (target.reference === modal.reference) closeModal(modal);
+      else if (target.reference === panel.reference) modal.focus();
+    });
+    modal.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeModal(modal);
+      }
+    });
     panel.append(field, close);
     modal.append(panel);
     document.body.append(modal);
+    field.focus();
+    field.select();
   }
 
   function sourceButton(page) {

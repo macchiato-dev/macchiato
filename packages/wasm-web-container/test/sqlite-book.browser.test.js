@@ -60,6 +60,9 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
 
   await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
   assert.equal(await page.locator(".modal textarea").inputValue(), "https://sqlite.org/wal.html");
+  assert.equal(await page.locator(".modal textarea").evaluate((field) =>
+    document.activeElement === field && field.selectionStart === 0 &&
+      field.selectionEnd === field.value.length), true);
   await page.locator(".modal textarea").click();
   await page.locator(".modal textarea").press("End");
   await page.locator(".modal textarea").pressSequentially("-blocked");
@@ -70,5 +73,16 @@ test("SQLite reader routes inside its Wasm artifact", async (context) => {
   assert.deepEqual(remoteRequests, []);
   assert.deepEqual(errors, []);
   await page.getByRole("button", { name: "Close" }).click();
+  assert.equal(await page.locator(".modal").count(), 0);
+
+  await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
+  await page.locator(".modal-panel").click({ position: { x: 5, y: 5 } });
+  assert.equal(await page.locator(".modal").evaluate((modal) =>
+    document.activeElement === modal), true);
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator(".modal").count(), 0);
+
+  await page.getByRole("button", { name: "View the original on sqlite.org" }).click();
+  await page.locator(".modal").click({ position: { x: 5, y: 5 } });
   assert.equal(await page.locator(".modal").count(), 0);
 });
