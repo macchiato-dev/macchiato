@@ -10,6 +10,7 @@
     "src"
   ],
   "scripts": {
+    "build:sqlite-book": "node examples/sqlite-book/build.js",
     "test": "node --test test"
   }
 }
