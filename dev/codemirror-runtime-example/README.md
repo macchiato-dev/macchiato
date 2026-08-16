@@ -46,3 +46,25 @@ seconds. After collection the engine reports roughly 28,000 objects, 67,600
 properties, and 6.7 MiB of managed memory. These numbers are deliberately
 recorded before optimization. Guest `Date.now()` is not yet a valid clock, so
 the host timestamps benchmark phases.
+
+## Browser projection milestone
+
+`http://quickjs-codemirror.localhost:3030/` now runs the CodeMirror bundle only
+inside Bellard QuickJS compiled to WebAssembly. The browser module starts the
+VM, accepts an allowlisted DOM snapshot, sanitizes generated CSS, and projects
+the resulting tree into an owned page surface. CodeMirror is not imported into
+the browser realm.
+
+The snapshot is bootstrap instrumentation, not the intended update protocol.
+The working runtime should preserve the identity of the real browser nodes and
+apply ordered mutation batches to them. Most DOM-shaped guest objects can be
+short-lived facade objects. A facade acquires a durable scalar host reference
+only when its identity must cross a batch, survive reordering, or remain in an
+event callback. QuickJS finalizers enqueue releases; they should not cause a
+synchronous host call for every collected wrapper.
+
+The browser visual test checks desktop and mobile bounds, line-number and fold
+gutters, an actual folded range, search controls and highlights, and rejected
+host errors. The test also caught two facade semantic bugs—sibling moves and
+the shared value behind `Text.nodeValue`, `Text.data`, and `textContent`—that a
+tree-count benchmark could not detect.
