@@ -2,8 +2,10 @@
 <meta charset="utf-8">
 <title>CodeMirror runtime comparison</title>
 <style>
-  html, body, #editor { height: 100%; margin: 0; }
-  .cm-editor { height: 100%; }
+  html, body, #quickjs-surface { height: 100%; margin: 0; }
+  body { background: #282c34; color: #abb2bf; }
+  #quickjs-surface { display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+  .cm-editor { height: 100vh; max-height: 100%; min-height: 0; }
 </style>
-<div id="editor"></div>
-<script src="./generated/codemirror-modern.js"></script>
+<div id="quickjs-surface"></div>
+<script type="module" src="./host.js"></script>

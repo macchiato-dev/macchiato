@@ -10,6 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
+import { quickjsCodeMirrorHandler } from "../../../dev/codemirror-runtime-example/handler.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
@@ -23,6 +24,23 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "QuickJS CodeMirror DOM Mirror",
+    pluginId: "quickjs-codemirror",
+    subdomain: "quickjs-codemirror",
+    kind: "full-engine sandbox component",
+    description: "CodeMirror running in QuickJS Wasm and projected through a constrained DOM mirror.",
+    handler: quickjsCodeMirrorHandler,
+    sourceFiles: [
+      "dev/codemirror-runtime-example/index.html",
+      "dev/codemirror-runtime-example/host.js",
+      "dev/codemirror-runtime-example/src/microquickjs-dom.js",
+    ],
+    sandbox: {
+      runtime: "Bellard QuickJS compiled to WebAssembly",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS"],
+    },
+  },
   {
     name: "Wasm Web Container",
     pluginId: "wasm-web-container",

@@ -46,6 +46,14 @@ Object.defineProperty(VirtualNode.prototype, "textContent", {
     }
   }
 });
+Object.defineProperty(VirtualNode.prototype, "nodeValue", {
+  get: function () { return this.nodeType === 3 ? this._text : null; },
+  set: function (text) { if (this.nodeType === 3) this._text = String(text); }
+});
+Object.defineProperty(VirtualNode.prototype, "data", {
+  get: function () { return this.nodeType === 3 ? this._text : undefined; },
+  set: function (text) { if (this.nodeType === 3) this._text = String(text); }
+});
 
 VirtualNode.prototype.appendChild = function (child) {
   if (child.nodeType === 11) {
@@ -65,9 +73,10 @@ VirtualNode.prototype.append = function () {
 };
 VirtualNode.prototype.insertBefore = function (child, before) {
   if (before == null) return this.appendChild(child);
-  var index = this.childNodes.indexOf(before);
-  if (index < 0) throw new Error("reference node is not a child");
+  if (child === before) return child;
+  if (this.childNodes.indexOf(before) < 0) throw new Error("reference node is not a child");
   if (child.parentNode) child.parentNode.removeChild(child);
+  var index = this.childNodes.indexOf(before);
   child.parentNode = this;
   this.childNodes.splice(index, 0, child);
   return child;
@@ -95,7 +104,7 @@ function VirtualElement(tag, document) {
   VirtualNode.call(this, 1, String(tag).toUpperCase(), document);
   this.tagName = this.nodeName;
   this.attributes = {};
-  this.style = {};
+  this.style = { cssText: "" };
   this.className = "";
   this.id = "";
   this.hidden = false;
@@ -152,6 +161,11 @@ VirtualElement.prototype.removeEventListener = function (type, callback) {
 VirtualElement.prototype.focus = function () { this.ownerDocument.activeElement = this; };
 VirtualElement.prototype.blur = function () {
   if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = null;
+};
+VirtualElement.prototype.select = function () {
+  this.focus();
+  this.selectionStart = 0;
+  this.selectionEnd = String(this.value || "").length;
 };
 VirtualElement.prototype.getBoundingClientRect = function () {
   return { left: 0, top: 0, right: 800, bottom: 20, width: 800, height: 20 };
@@ -297,4 +311,35 @@ globalThis.__wwcDomMetrics = function () {
     }
   }
   return { nodes: nodes, elements: elements, text: text, listeners: listeners };
+};
+globalThis.__wwcSnapshot = function () {
+  function copy(node) {
+    if (node.nodeType === 3) return { type: 3, text: node._text };
+    var attributes = {};
+    for (var name in node.attributes) attributes[name] = node.attributes[name];
+    if (node.className) attributes.class = node.className;
+    if (node.id) attributes.id = node.id;
+    var style = {};
+    for (var property in node.style) {
+      if (typeof node.style[property] === "string") style[property] = node.style[property];
+    }
+    var properties = {};
+    for (var index = 0; index < 3; index++) {
+      var property = ["value", "checked", "disabled"][index];
+      if (Object.prototype.hasOwnProperty.call(node, property)) {
+        properties[property] = node[property];
+      }
+    }
+    return {
+      type: node.nodeType,
+      tag: node.tagName ? node.tagName.toLowerCase() : "",
+      attributes: attributes,
+      style: style,
+      properties: properties,
+      children: node.childNodes.map(copy)
+    };
+  }
+  var body = copy(document.body);
+  body.children = document.head.childNodes.map(copy).concat(body.children);
+  return body;
 };

@@ -91,11 +91,8 @@ static void report(JSValue value)
     text = JS_ToCString(context, JS_IsUndefined(stack) ? value : stack);
     if (text == NULL)
         return;
-    while (text[length] != '\0' && length < sizeof(transfer)) {
-        transfer[length] = text[length];
-        length++;
-    }
-    msg((uint32_t)(uintptr_t)transfer, length);
+    while (text[length] != '\0') length++;
+    msg((uint32_t)(uintptr_t)text, length);
     JS_FreeCString(context, text);
     JS_FreeValue(context, stack);
 }
@@ -166,6 +163,24 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         result = JS_Eval(context, benchmark_source,
                          sizeof(benchmark_source) - 1,
                          "guest-benchmark.js", JS_EVAL_TYPE_GLOBAL);
+        if (!JS_IsUndefined(result)) report(result);
+        JS_FreeValue(context, result);
+    }
+    {
+        static const char visual_source[] =
+            "globalThis.__wwcPrepareVisual && __wwcPrepareVisual()";
+        result = JS_Eval(context, visual_source,
+                         sizeof(visual_source) - 1,
+                         "guest-visual.js", JS_EVAL_TYPE_GLOBAL);
+        if (JS_IsException(result)) report(result);
+        JS_FreeValue(context, result);
+    }
+    {
+        static const char snapshot_source[] =
+            "globalThis.__wwcSnapshot ? 'WWC_DOM:'+JSON.stringify(__wwcSnapshot()) : undefined";
+        result = JS_Eval(context, snapshot_source,
+                         sizeof(snapshot_source) - 1,
+                         "guest-snapshot.js", JS_EVAL_TYPE_GLOBAL);
         if (!JS_IsUndefined(result)) report(result);
         JS_FreeValue(context, result);
     }

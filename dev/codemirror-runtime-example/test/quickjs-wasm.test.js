@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { copyFile, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import test from "node:test";
@@ -21,6 +21,7 @@ test("CodeMirror initializes and edits real files inside QuickJS Wasm", async (c
       WWC_APPLICATION_SOURCE: application },
     stdio: "pipe",
   });
+  await copyFile(wasm, path.join(example, "generated/quickjs-codemirror.wasm"));
 
   const bytes = await readFile(wasm);
   const messages = [];
@@ -40,7 +41,10 @@ test("CodeMirror initializes and edits real files inside QuickJS Wasm", async (c
   assert.match(messages[0].text, /^CodeMirror:typescript=1065:nodes=\d+:listeners=\d+$/);
   assert.match(messages[1].text,
     /typescript=1065.*html=648.*css=692.*json=290.*markdown=408/);
-  assert.match(messages[2].text, /^QuickJS:objects=\d+:properties=\d+:atoms=\d+:bytes=\d+$/);
+  assert.match(messages.find(({ text }) => text.startsWith("WWC_DOM:")).text,
+    /^WWC_DOM:\{/);
+  assert.match(messages.at(-1).text,
+    /^QuickJS:objects=\d+:properties=\d+:atoms=\d+:bytes=\d+$/);
   assert.equal(messages.some(({ text }) => /error|crashed/i.test(text)), false);
   context.diagnostic(`initialize=${messages[0].at.toFixed(1)}ms stress=${
     (messages[1].at - messages[0].at).toFixed(1)}ms wasm=${bytes.length} bytes`);

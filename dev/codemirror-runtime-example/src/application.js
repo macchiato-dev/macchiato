@@ -7,6 +7,8 @@ import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
+import { openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
+import { foldCode } from "@codemirror/language";
 import fixtures from "../generated/fixtures.js";
 
 const languages = {
@@ -74,5 +76,13 @@ export function start() {
   globalThis.__wwcResult = () => {
     const metrics = globalThis.__wwcDomMetrics?.();
     return `CodeMirror:typescript=${view.state.doc.lines}:nodes=${metrics?.nodes}:listeners=${metrics?.listeners}`;
+  };
+  globalThis.__wwcPrepareVisual = () => {
+    openSearchPanel(view);
+    view.dispatch({
+      selection: { anchor: view.state.doc.line(13).from },
+      effects: setSearchQuery.of(new SearchQuery({ search: "URL" })),
+    });
+    foldCode(view);
   };
 }
