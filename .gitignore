@@ -1,11 +1,14 @@
 # Dependencies
 node_modules/
 vendor/
+!dev/codemirror-runtime-example/vendor/
+!dev/codemirror-runtime-example/vendor/**
 
 # Build outputs
 dist/
 build/
 target/
+/dev/codemirror-runtime-example/generated/
 /packages/dom-use/lib/
 packages/website/exported/
 *.egg-info/
