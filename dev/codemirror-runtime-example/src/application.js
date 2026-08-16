@@ -15,4 +15,6 @@ export function start() {
     text() { return view.state.doc.toString(); },
     dispose() { view.destroy(); },
   };
+  globalThis.__wwcResult = () =>
+    `CodeMirror:${view.state.doc.toString()}:${view.dom.className}`;
 }

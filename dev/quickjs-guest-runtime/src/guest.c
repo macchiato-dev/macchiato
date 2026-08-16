@@ -1,4 +1,5 @@
 #include "quickjs.h"
+#include "guest-source.h"
 
 __attribute__((import_module("host"), import_name("msg")))
 extern uint32_t msg(uint32_t offset, uint32_t length);
@@ -7,6 +8,26 @@ static JSRuntime *runtime;
 static JSContext *context;
 static char transfer[256];
 static JSClassID host_reference_class;
+
+static JSValue guest_print(JSContext *ctx, JSValueConst this_value,
+                           int argc, JSValueConst *argv)
+{
+    int index;
+    (void)this_value;
+    for (index = 0; index < argc; index++) {
+        const char *text = JS_ToCString(ctx, argv[index]);
+        uint32_t length = 0;
+        if (text == NULL)
+            continue;
+        while (text[length] != '\0' && length < sizeof(transfer)) {
+            transfer[length] = text[length];
+            length++;
+        }
+        msg((uint32_t)(uintptr_t)transfer, length);
+        JS_FreeCString(ctx, text);
+    }
+    return JS_UNDEFINED;
+}
 
 static void release_host_reference(JSRuntime *rt, JSValue value)
 {
@@ -45,6 +66,8 @@ static int install_host_references(void)
     JS_SetPropertyStr(context, global, "hostReference",
                       JS_NewCFunction(context, make_host_reference,
                                       "hostReference", 1));
+    JS_SetPropertyStr(context, global, "print",
+                      JS_NewCFunction(context, guest_print, "print", 1));
     JS_FreeValue(context, global);
     return 0;
 }
@@ -83,12 +106,27 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         return;
     if (install_host_references() < 0)
         return;
-    static const char source[] =
-        "let lease = hostReference(41); lease = null;"
-        "class Runtime { static name = 'QuickJS'; }"
-        "`${Runtime?.name}:${[20, 22].reduce((a, b) => a + b)}`";
-    result = JS_Eval(context, source, sizeof(source) - 1,
-                     "guest-runtime.js", JS_EVAL_TYPE_GLOBAL);
+    if (guest_environment_length != 0) {
+        result = JS_Eval(context, (const char *)guest_environment,
+                         guest_environment_length, "guest-environment.js",
+                         JS_EVAL_TYPE_GLOBAL);
+        if (JS_IsException(result)) {
+            report(result);
+            JS_FreeValue(context, result);
+            return;
+        }
+        JS_FreeValue(context, result);
+    }
+    result = JS_Eval(context, (const char *)guest_application,
+                     guest_application_length, "guest-application.js",
+                     JS_EVAL_TYPE_GLOBAL);
+    if (!JS_IsException(result)) {
+        static const char result_source[] =
+            "globalThis.__wwcResult ? __wwcResult() : 'ready'";
+        JS_FreeValue(context, result);
+        result = JS_Eval(context, result_source, sizeof(result_source) - 1,
+                         "guest-result.js", JS_EVAL_TYPE_GLOBAL);
+    }
     report(result);
     JS_FreeValue(context, result);
     JS_RunGC(runtime);

@@ -38,6 +38,22 @@ WASI or JavaScript host imports.
 Runtime-specific applications belong under `examples/`; the first bootstrap
 probe is documented in `examples/bootstrap/`.
 
+The build can replace that probe with ordinary source files:
+
+```sh
+WWC_GUEST_ENVIRONMENT=/absolute/path/to/environment.js \
+WWC_APPLICATION_SOURCE=/absolute/path/to/application.js \
+cargo build --release --target wasm32-unknown-unknown
+```
+
+The environment is evaluated first and supplies the DOM facade. The
+application is then evaluated unchanged inside QuickJS. Neither source runs in
+the browser realm.
+
+An application may define `globalThis.__wwcResult()` as a development-only
+acceptance probe. The runtime reports its result after successful evaluation;
+production applications can omit it and report `ready`.
+
 For constrained-engine testing, set `WWC_QUICKJS_MEMORY_LIMIT` to a byte count
 while building. The bootstrap passes at 1, 2, and 4 MiB; these numbers measure
 only the probe and are not recommended application defaults.
