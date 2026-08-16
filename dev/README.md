@@ -14,3 +14,12 @@ Current projects include:
 - `quickjs-ng-guest-runtime/` — the independent QuickJS-NG runtime port.
 - `codemirror-runtime-example/` — the shared CodeMirror application and
   Babel/MicroQuickJS compatibility work.
+
+## Changelog 2.0
+
+Development here favors small, executable commits that preserve discoveries,
+including corrected assumptions and the tests that exposed them. A later
+constructed history can turn those commits into a readable derivation of a
+release: each step introduces one concept, demonstrates it, and leaves the
+repository working. This is closer to a versioned technical narrative than a
+traditional list of completed features.
