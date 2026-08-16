@@ -1,8 +1,11 @@
 use std::{env, fs, path::{Path, PathBuf}};
 
 fn bytes(name: &str, source: &[u8]) -> String {
-    let values = source.iter().map(u8::to_string).collect::<Vec<_>>().join(",");
-    format!("static const unsigned char {name}[] = {{{values}}};\nstatic const unsigned int {name}_length = {};\n", source.len())
+    let mut values = source.iter().map(u8::to_string).collect::<Vec<_>>();
+    // QuickJS receives the explicit source length, but its lexer also expects
+    // a readable sentinel byte immediately after large source buffers.
+    values.push("0".into());
+    format!("static const unsigned char {name}[] = {{{}}};\nstatic const unsigned int {name}_length = {};\n", values.join(","), source.len())
 }
 
 fn source(variable: &str, fallback: &str) -> (Vec<u8>, Option<PathBuf>) {

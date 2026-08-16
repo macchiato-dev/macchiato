@@ -9,6 +9,13 @@ static JSContext *context;
 static char transfer[256];
 static JSClassID host_reference_class;
 
+static void report_stage(const char *stage)
+{
+    uint32_t length = 0;
+    while (stage[length] != '\0') length++;
+    msg((uint32_t)(uintptr_t)stage, length);
+}
+
 static JSValue guest_print(JSContext *ctx, JSValueConst this_value,
                            int argc, JSValueConst *argv)
 {
@@ -76,9 +83,12 @@ static void report(JSValue value)
 {
     const char *text;
     uint32_t length = 0;
-    if (JS_IsException(value))
+    JSValue stack = JS_UNDEFINED;
+    if (JS_IsException(value)) {
         value = JS_GetException(context);
-    text = JS_ToCString(context, value);
+        stack = JS_GetPropertyStr(context, value, "stack");
+    }
+    text = JS_ToCString(context, JS_IsUndefined(stack) ? value : stack);
     if (text == NULL)
         return;
     while (text[length] != '\0' && length < sizeof(transfer)) {
@@ -87,6 +97,22 @@ static void report(JSValue value)
     }
     msg((uint32_t)(uintptr_t)transfer, length);
     JS_FreeCString(context, text);
+    JS_FreeValue(context, stack);
+}
+
+static void report_memory(void)
+{
+    JSMemoryUsage usage;
+    int length;
+    JS_ComputeMemoryUsage(runtime, &usage);
+    length = snprintf(transfer, sizeof(transfer),
+                      "QuickJS:objects=%lld:properties=%lld:atoms=%lld:bytes=%lld",
+                      (long long)usage.obj_count, (long long)usage.prop_count,
+                      (long long)usage.atom_count,
+                      (long long)usage.memory_used_size);
+    if (length > 0)
+        msg((uint32_t)(uintptr_t)transfer,
+            (uint32_t)(length < (int)sizeof(transfer) ? length : sizeof(transfer)));
 }
 
 void quickjs_guest_onmsg(uint32_t minimum_length)
@@ -111,6 +137,7 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
                          guest_environment_length, "guest-environment.js",
                          JS_EVAL_TYPE_GLOBAL);
         if (JS_IsException(result)) {
+            report_stage("guest-environment-error");
             report(result);
             JS_FreeValue(context, result);
             return;
@@ -127,7 +154,21 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         result = JS_Eval(context, result_source, sizeof(result_source) - 1,
                          "guest-result.js", JS_EVAL_TYPE_GLOBAL);
     }
+    else {
+        report_stage("guest-application-error");
+    }
+    if (JS_IsException(result)) report_stage("guest-result-error");
     report(result);
     JS_FreeValue(context, result);
+    {
+        static const char benchmark_source[] =
+            "globalThis.__wwcBenchmark ? __wwcBenchmark() : undefined";
+        result = JS_Eval(context, benchmark_source,
+                         sizeof(benchmark_source) - 1,
+                         "guest-benchmark.js", JS_EVAL_TYPE_GLOBAL);
+        if (!JS_IsUndefined(result)) report(result);
+        JS_FreeValue(context, result);
+    }
     JS_RunGC(runtime);
+    report_memory();
 }

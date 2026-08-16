@@ -234,6 +234,8 @@ globalThis.window = globalThis.self = window;
 globalThis.Node = VirtualNode;
 globalThis.Element = globalThis.HTMLElement = VirtualElement;
 globalThis.Document = VirtualDocument;
+function WindowFacade() {}
+globalThis.Window = WindowFacade;
 globalThis.MutationObserver = globalThis.ResizeObserver = EmptyObserver;
 globalThis.navigator = { userAgent: "MicroQuickJS", platform: "Linux", vendor: "", maxTouchPoints: 0 };
 globalThis.innerWidth = 800;
@@ -244,8 +246,26 @@ globalThis.getComputedStyle = function (element) {
     return element.style[name] || "";
   } };
 };
-globalThis.requestAnimationFrame = function () { return 0; };
-globalThis.cancelAnimationFrame = function () {};
+var scheduledTasks = [];
+globalThis.setTimeout = function (callback) {
+  scheduledTasks.push(callback);
+  return scheduledTasks.length;
+};
+globalThis.clearTimeout = function (id) {
+  if (id > 0 && id <= scheduledTasks.length) scheduledTasks[id - 1] = null;
+};
+globalThis.requestAnimationFrame = function (callback) {
+  return setTimeout(function () { callback(Date.now()); }, 0);
+};
+globalThis.cancelAnimationFrame = clearTimeout;
+globalThis.__wwcDrainTasks = function (limit) {
+  var count = 0;
+  while (count < limit && scheduledTasks.length) {
+    var callback = scheduledTasks.shift();
+    if (callback) { callback(); count++; }
+  }
+  return count;
+};
 globalThis.addEventListener = globalThis.removeEventListener = function () {};
 globalThis.matchMedia = function () { return { matches: false, addListener: function () {}, removeListener: function () {} }; };
 function reportConsole() {
@@ -261,4 +281,20 @@ globalThis.console = {
   info: reportConsole,
   warn: reportConsole,
   error: reportConsole
+};
+globalThis.__wwcDomMetrics = function () {
+  var nodes = 0, elements = 0, text = 0, listeners = 0;
+  var pending = [document];
+  while (pending.length) {
+    var node = pending.pop();
+    nodes++;
+    if (node.nodeType === 1) {
+      elements++;
+      for (var type in node._listeners) listeners += node._listeners[type].length;
+    } else if (node.nodeType === 3) text++;
+    for (var index = 0; index < node.childNodes.length; index++) {
+      pending.push(node.childNodes[index]);
+    }
+  }
+  return { nodes: nodes, elements: elements, text: text, listeners: listeners };
 };
