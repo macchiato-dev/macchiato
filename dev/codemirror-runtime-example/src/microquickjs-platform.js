@@ -45,3 +45,15 @@ if (typeof encodeURIComponent === "undefined") {
     return output;
   };
 }
+
+// MicroQuickJS accepts flags when compiling a RegExp but does not expose the
+// standard flag getters CodeMirror uses for validation and cloning.
+[["global", "g"], ["ignoreCase", "i"], ["multiline", "m"]].forEach(
+  function (entry) {
+    if (!(entry[0] in RegExp.prototype)) {
+      Object.defineProperty(RegExp.prototype, entry[0], {
+        get: function () { return this.toString().slice(this.toString().lastIndexOf("/") + 1).indexOf(entry[1]) >= 0; }
+      });
+    }
+  }
+);

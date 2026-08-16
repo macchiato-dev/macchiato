@@ -19,5 +19,7 @@ additional APIs discovered by executing CodeMirror, currently `Array.find`,
 `Object.assign`, and `encodeURIComponent`.
 
 The complete bundle now executes through initialization and reaches
-`document is not defined`. This is the intended next boundary: browser APIs
-belong in the replaceable guest DOM facade rather than the generic host.
+the guest DOM implementation. MicroQuickJS work is paused after reaching
+CodeMirror plugin initialization; Bellard QuickJS is the first end-to-end
+Wasm milestone. Browser-realm execution is only a development baseline and
+does not count as passing the runtime example.
