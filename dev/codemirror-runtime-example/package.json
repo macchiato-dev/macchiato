@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.js",
-    "test": "node --test"
+    "test": "node --test test/collections.test.js",
+    "test:quickjs": "node --test test/quickjs-wasm.test.js"
   },
   "devDependencies": {
     "@babel/core": "^7.28.0",
