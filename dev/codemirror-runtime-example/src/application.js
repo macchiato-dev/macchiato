@@ -6,9 +6,11 @@ import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap }
   from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentLess, redo, undo }
+  from "@codemirror/commands";
 import { bracketMatching, defaultHighlightStyle, foldCode, foldGutter, foldKeymap,
-  indentOnInput, syntaxHighlighting } from "@codemirror/language";
+  getIndentUnit, indentOnInput, indentString, syntaxHighlighting }
+  from "@codemirror/language";
 import { lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
   setSearchQuery } from "@codemirror/search";
@@ -26,6 +28,72 @@ const languages = {
   json,
   markdown,
 };
+
+let readSelectionOnNextKey = false;
+
+function projectBrowserSelection(view) {
+  const range = view.state.selection.main;
+  const anchor = view.domAtPos(range.anchor);
+  const head = view.domAtPos(range.head);
+  const selection = document.getSelection();
+  selection.collapse(anchor.node, anchor.offset);
+  if (range.anchor !== range.head) selection.extend(head.node, head.offset);
+}
+
+function readBrowserSelection(view) {
+  const selection = document.getSelection();
+  if (!selection || !selection.anchorNode || !selection.focusNode) return;
+  const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
+  const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
+  const current = view.state.selection.main;
+  if (current.anchor !== anchor || current.head !== head) {
+    view.dispatch({ selection: { anchor, head } });
+  }
+}
+
+function moveOneLine(view, direction) {
+  const state = view.state;
+  const head = state.selection.main.head;
+  const line = state.doc.lineAt(head);
+  const number = Math.max(1, Math.min(state.doc.lines, line.number + direction));
+  const target = state.doc.line(number);
+  const column = head - line.from;
+  view.dispatch({ selection: { anchor: target.from + Math.min(column, target.length) },
+    scrollIntoView: true, userEvent: "select" });
+}
+
+const browserSelectionProjection = EditorView.updateListener.of((update) => {
+  if (update.docChanged || update.selectionSet || update.viewportChanged) {
+    projectBrowserSelection(update.view);
+  }
+});
+
+let syncingGutter = false;
+function scheduleGutterSync(view) {
+  if (syncingGutter) return;
+  syncingGutter = true;
+  try {
+    const lines = view.contentDOM.querySelectorAll(".cm-line");
+    const numbers = view.dom.querySelectorAll(".cm-lineNumbers .cm-gutterElement");
+    if (!lines.length || numbers.length !== lines.length + 1) return;
+    numbers[0].style.height = "0px";
+    const gutter = numbers[0].parentElement;
+    const top = Math.max(0, lines[0].getBoundingClientRect().top -
+      gutter.getBoundingClientRect().top);
+    gutter.style.setProperty("padding-top", `${top}px`);
+    for (let index = 0; index < lines.length; index++) {
+      numbers[index + 1].style.height = `${lines[index].getBoundingClientRect().height}px`;
+    }
+  } finally {
+    syncingGutter = false;
+  }
+}
+
+const gutterProjection = EditorView.updateListener.of((update) => {
+  if (update.docChanged || update.geometryChanged || update.viewportChanged) {
+    scheduleGutterSync(update.view);
+  }
+});
 
 // The browser's native selection and caret are the projection for this guest,
 // so this intentionally omits CodeMirror's drawSelection() extension.
@@ -55,10 +123,82 @@ export function start() {
   let current = "typescript";
   const view = new EditorView({
     doc: fixtures[current].text,
-    extensions: [editorSetup, language.of(languages[current]()), oneDark, nativeCaret,
+    extensions: [editorSetup, browserSelectionProjection, gutterProjection,
+      language.of(languages[current]()), oneDark, nativeCaret,
       EditorView.lineWrapping],
     parent,
   });
+  projectBrowserSelection(view);
+  scheduleGutterSync(view);
+  view.contentDOM.addEventListener("mouseup", () => {
+    readSelectionOnNextKey = true;
+  });
+  view.contentDOM.addEventListener("pointerup", () => {
+    readSelectionOnNextKey = true;
+  });
+  // A native contenteditable drag would mutate only the projected browser DOM,
+  // bypassing the authoritative CodeMirror document in QuickJS. Selection by
+  // dragging remains available; moving selected text waits for a guest-owned
+  // drag transaction.
+  view.contentDOM.addEventListener("dragstart", (event) => {
+    event.preventDefault();
+  }, true);
+  // The browser projection must not independently mutate contenteditable.
+  // Handle ordinary text/navigation in the guest before CodeMirror's bubble
+  // listener, while leaving shortcuts and composition to their own handlers.
+  view.contentDOM.addEventListener("keydown", (event) => {
+    if (readSelectionOnNextKey) {
+      readBrowserSelection(view);
+      readSelectionOnNextKey = false;
+    }
+    const modifier = event.ctrlKey || event.metaKey;
+    if (!event.altKey && modifier && event.key.toLowerCase() === "z") {
+      (event.shiftKey ? redo : undo)(view);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (!event.altKey && event.ctrlKey && event.key.toLowerCase() === "y") {
+      redo(view);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (event.altKey || modifier) return;
+    if (event.key.length === 1) {
+      const range = view.state.selection.main;
+      const line = view.state.doc.lineAt(range.from);
+      const dedentClosingBrace = event.key === "}" &&
+        !/\S/.test(view.state.sliceDoc(line.from, range.from));
+      const at = range.from + event.key.length;
+      view.dispatch({
+        changes: { from: range.from, to: range.to, insert: event.key },
+        selection: { anchor: at },
+        userEvent: "input.type",
+      });
+      if (dedentClosingBrace) indentLess(view);
+    } else if (!event.shiftKey && event.key === "ArrowUp") moveOneLine(view, -1);
+    else if (!event.shiftKey && event.key === "ArrowDown") moveOneLine(view, 1);
+    else if (!event.shiftKey && event.key === "Enter") {
+      const state = view.state;
+      const range = state.selection.main;
+      const line = state.doc.lineAt(range.from);
+      const before = state.sliceDoc(line.from, range.from);
+      let indent = /^\s*/.exec(line.text)[0];
+      if (/[{[(]\s*$/.test(before)) {
+        indent += indentString(state, getIndentUnit(state));
+      }
+      const insert = state.lineBreak + indent;
+      view.dispatch({
+        changes: { from: range.from, to: range.to, insert },
+        selection: { anchor: range.from + insert.length },
+        userEvent: "input",
+      });
+    }
+    else return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
   globalThis.editorExample = {
     text() { return view.state.doc.toString(); },
     open(name) {

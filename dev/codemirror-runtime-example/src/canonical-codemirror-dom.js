@@ -138,6 +138,58 @@ GuestSelection.prototype.getRangeAt = function (index) {
 function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
+function GuestRect(reference) {
+  GuestObject.call(this, reference);
+}
+GuestRect.prototype = Object.create(GuestObject.prototype);
+["bottom", "height", "left", "right", "top", "width", "x", "y"].forEach(
+  function (name) {
+    Object.defineProperty(GuestRect.prototype, name, {
+      get: function () { return immediate([1, this.reference, stringIndex(name)]); }
+    });
+  }
+);
+GuestElement.prototype.getBoundingClientRect = function () {
+  var result = immediate([3, this.reference, stringIndex("getBoundingClientRect"), []]);
+  return new GuestRect(result[1]);
+};
+function clientRectsFor(object) {
+  var result = immediate([3, object.reference, stringIndex("getClientRects"), []]);
+  var length = immediate([1, result[1], stringIndex("length")]);
+  var rects = [];
+  for (var index = 0; index < length; index++) {
+    var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
+    rects.push(new GuestRect(item[1]));
+  }
+  return rects;
+}
+GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
+GuestElement.prototype.querySelectorAll = function (selector) {
+  var result = immediate([3, this.reference, stringIndex("querySelectorAll"), [
+    encode(String(selector))
+  ]]);
+  var length = immediate([1, result[1], stringIndex("length")]);
+  var nodes = [];
+  for (var index = 0; index < length; index++) {
+    var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
+    nodes.push(nodeForReference(item[1]));
+  }
+  return nodes;
+};
+GuestRange.prototype.getClientRects = function () { return clientRectsFor(this); };
+GuestRange.prototype.getBoundingClientRect = function () {
+  var result = immediate([3, this.reference, stringIndex("getBoundingClientRect"), []]);
+  return new GuestRect(result[1]);
+};
+["clientHeight", "clientWidth", "offsetHeight", "offsetWidth", "scrollHeight", "scrollWidth",
+  "scrollLeft", "scrollTop"].forEach(function (name) {
+  Object.defineProperty(GuestElement.prototype, name, {
+    get: function () { return immediate([1, this.reference, stringIndex(name)]); },
+    set: name === "scrollLeft" || name === "scrollTop" ? function (value) {
+      immediate([2, this.reference, stringIndex(name), encode(Math.round(value))]);
+    } : undefined
+  });
+});
 GuestRange.prototype = Object.create(GuestObject.prototype);
 ["setStart", "setEnd"].forEach(function (name) {
   GuestRange.prototype[name] = function (node, offset) {
@@ -179,6 +231,22 @@ Object.defineProperty(GuestDocument.prototype, "activeElement", {
   }
 });
 globalThis.getSelection = function () { return document.getSelection(); };
+function GuestComputedStyle(reference) {
+  GuestObject.call(this, reference);
+}
+GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
+["direction", "height", "overflow", "paddingBottom", "paddingTop", "position", "whiteSpace",
+  "width"].forEach(function (name) {
+  Object.defineProperty(GuestComputedStyle.prototype, name, {
+    get: function () { return immediate([1, this.reference, stringIndex(name)]); }
+  });
+});
+globalThis.getComputedStyle = function (element) {
+  var result = immediate([3, document.reference, stringIndex("getComputedStyle"), [
+    encode(element)
+  ]]);
+  return new GuestComputedStyle(result[1]);
+};
 
 function GuestStylesheetNode() {
   this.parentNode = null;
@@ -263,7 +331,9 @@ function inlineCssBytes(source) {
   return encodeCss(".wwc-inline { " + source + " }");
 }
 Object.defineProperty(GuestStyle.prototype, "cssText", {
-  get: function () { return this._cssText || ""; },
+  get: function () {
+    return immediate([1, this.reference, stringIndex("cssText")]);
+  },
   set: function (value) {
     this._cssText = String(value);
     immediate([3, this.reference, stringIndex("replaceDeclarations"), [
@@ -424,6 +494,16 @@ globalThis.removeEventListener = function (type, callback) {
       return;
     }
   }
+};
+
+// CodeMirror owns selection while editing. Browser pointer selection is read
+// synchronously by the application on the next key; replaying the browser's
+// asynchronous selectionchange echo can otherwise overwrite a newer guest
+// selection during fast input.
+var documentAddEventListener = GuestDocument.prototype.addEventListener;
+GuestDocument.prototype.addEventListener = function (type, callback) {
+  if (type === "selectionchange") return;
+  return documentAddEventListener.call(this, type, callback);
 };
 
 GuestElement.prototype.addEventListener = function (type, callback, options) {

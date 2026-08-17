@@ -3,7 +3,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Full CodeMirror UI in QuickJS</title>
 <link rel="stylesheet" href="../demo.css">
-<div id="quickjs-surface" data-wasm="../generated/codemirror-full.wasm">
-  <div class="runtime-status" role="status" aria-label="Loading"></div>
-</div>
-<script type="module" src="../host.js"></script>
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>

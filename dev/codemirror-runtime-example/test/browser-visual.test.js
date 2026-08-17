@@ -6,12 +6,19 @@ import { chromium } from "@playwright/test";
 import test from "node:test";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
+const canonicalHost = resolve(root,
+  "../wasm-web-container/examples/web/wasm-web-container.js");
 const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
   ".wasm": "application/wasm" };
 
 test("the demo index and each projected QuickJS editor work", async (context) => {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://example.test").pathname;
+    if (pathname === "/wasm-web-container.js") {
+      response.writeHead(200, { "content-type": "text/javascript" });
+      response.end(await readFile(canonicalHost));
+      return;
+    }
     const relative = pathname === "/" ? "index.html"
       : pathname.endsWith("/") ? `${pathname.slice(1)}index.html` : pathname.slice(1);
     try {
@@ -33,7 +40,7 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   const index = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   await index.goto(base);
   assert.deepEqual(await index.locator("nav strong").allTextContents(),
-    ["Simple editor", "Full UI", "Large document"]);
+    ["Canonical host workbench", "Simple editor", "Full UI", "Large document"]);
   await index.screenshot({ path: "/tmp/quickjs-codemirror-index.png" });
   await index.close();
 
@@ -57,23 +64,66 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await full.goto(`${base}/full/`);
   await full.waitForSelector("body[data-ready]");
   assert.ok(await full.locator(".cm-foldGutter .cm-gutterElement").count() > 1);
-  assert.equal(await full.locator(".cm-search input").first().inputValue(), "URL");
-  await full.locator('.cm-search button[name="close"]').click();
-  await full.locator(".cm-search").waitFor({ state: "detached" });
   await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
   await full.close();
 
   const input = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const inputErrors = [];
+  input.on("pageerror", error => inputErrors.push(error.message));
   await input.goto(`${base}/full/`);
   await input.waitForSelector("body[data-ready]");
-  const secondLine = input.locator(".cm-line").nth(1);
-  await secondLine.click({ position: { x: 120, y: 8 } });
-  await input.keyboard.type("XYZ", { delay: 50 });
-  await input.keyboard.press("ArrowLeft");
+  const content = input.locator(".cm-content");
+  await content.click();
+  await input.keyboard.press("ControlOrMeta+A");
+  await input.keyboard.type("function greetx", { delay: 24 });
   await input.keyboard.press("Backspace");
-  await input.waitForTimeout(150);
-  assert.match(await secondLine.innerText(), /XZ$/);
+  await input.keyboard.type("(name) {");
+  await input.keyboard.press("Enter");
+  await input.keyboard.type("const messagex", { delay: 18 });
+  await input.keyboard.press("Backspace");
+  await input.keyboard.type(" = `Hello, ${name}!`;");
+  await input.keyboard.press("Enter");
+  await input.keyboard.type("return messagx", { delay: 16 });
+  await input.keyboard.press("Backspace");
+  await input.keyboard.type("e;");
+  await input.keyboard.press("Enter");
+  await input.keyboard.type("}");
+  await input.waitForTimeout(100);
+  assert.equal(await content.innerText(),
+    "function greet(name) {\n  const message = `Hello, ${name}!`;\n  return message;\n}");
+  const completedFunction = await content.innerText();
+  await input.keyboard.type("!");
+  await input.keyboard.press("ControlOrMeta+z");
+  assert.equal(await content.innerText(), completedFunction);
+  await input.keyboard.press("ControlOrMeta+Shift+z");
+  assert.equal(await content.innerText(), `${completedFunction}!`);
+  await input.keyboard.press("ControlOrMeta+z");
+  const line = input.locator(".cm-line").nth(2);
+  const lineBox = await line.boundingBox();
+  await input.mouse.click(lineBox.x + 35, lineBox.y + lineBox.height / 2);
+  await input.keyboard.press("ArrowUp");
+  await input.keyboard.type("X");
+  assert.match(await input.locator(".cm-line").nth(1).innerText(), /X/);
+  await input.keyboard.press("Backspace");
+  await input.keyboard.press("ArrowDown");
+  await input.keyboard.type("Y");
+  assert.match(await input.locator(".cm-line").nth(2).innerText(), /Y/);
+  await input.keyboard.press("Backspace");
+  const lineBoxes = await input.locator(".cm-line").evaluateAll(elements =>
+    elements.map(element => element.getBoundingClientRect()));
+  const numberBoxes = await input.locator(".cm-lineNumbers .cm-gutterElement")
+    .evaluateAll(elements => elements.filter(element => element.style.visibility !== "hidden")
+      .map(element => element.getBoundingClientRect()));
+  assert.equal(numberBoxes.length, lineBoxes.length);
+  assert.deepEqual(await input.locator(".cm-lineNumbers .cm-gutterElement")
+    .evaluateAll(elements => elements.filter(element => element.style.visibility !== "hidden")
+      .map(element => element.textContent)), ["1", "2", "3", "4"]);
+  for (let index = 0; index < lineBoxes.length; index++) {
+    assert.ok(Math.abs(numberBoxes[index].top - lineBoxes[index].top) <= 1);
+    assert.ok(Math.abs(numberBoxes[index].height - lineBoxes[index].height) <= 1);
+  }
   assert.equal(await input.evaluate(() => getSelection().isCollapsed), true);
+  assert.deepEqual(inputErrors, []);
   await input.screenshot({ path: "/tmp/quickjs-codemirror-input.png" });
   await input.close();
 });
