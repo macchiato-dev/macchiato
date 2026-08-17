@@ -15,6 +15,7 @@ for (const app of BUILTIN_APPS) {
   const name = `code:${app.subdomain}`;
   handlerNames.set(app.subdomain, name);
   handlers.set(name, app.handler);
+  for (const alias of app.aliases || []) handlers.set(`code:${alias}`, app.handler);
   if (app.commands) commandHandlers.set(app.pluginId || app.subdomain, app.commands);
 }
 

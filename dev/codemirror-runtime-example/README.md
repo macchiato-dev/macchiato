@@ -49,7 +49,7 @@ the host timestamps benchmark phases.
 
 ## Browser projection milestone
 
-`http://quickjs-codemirror.localhost:3030/` now runs the CodeMirror bundle only
+`http://codemirror-quickjs.localhost:3030/` now runs the CodeMirror bundle only
 inside Bellard QuickJS compiled to WebAssembly. The browser module starts the
 VM, accepts an allowlisted DOM snapshot, sanitizes generated CSS, and projects
 the resulting tree into an owned page surface. CodeMirror is not imported into

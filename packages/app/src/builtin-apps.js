@@ -27,7 +27,8 @@ export const BUILTIN_APPS = [
   {
     name: "QuickJS CodeMirror DOM Mirror",
     pluginId: "quickjs-codemirror",
-    subdomain: "quickjs-codemirror",
+    subdomain: "codemirror-quickjs",
+    aliases: ["quickjs-codemirror"],
     kind: "full-engine sandbox component",
     description: "CodeMirror running in QuickJS Wasm and projected through a constrained DOM mirror.",
     handler: quickjsCodeMirrorHandler,
