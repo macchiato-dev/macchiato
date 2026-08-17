@@ -3,6 +3,11 @@
 globalThis.document = document;
 globalThis.window = globalThis.self = globalThis;
 document.defaultView = globalThis;
+function HostWindow() {}
+Object.defineProperty(HostWindow, Symbol.hasInstance, {
+  value: function (candidate) { return candidate === globalThis; }
+});
+globalThis.Window = HostWindow;
 globalThis.Node = GuestObject;
 globalThis.Element = globalThis.HTMLElement = GuestElement;
 globalThis.Document = GuestDocument;
@@ -16,9 +21,14 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
   }
 });
 globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "", maxTouchPoints: 0 };
-globalThis.innerWidth = 800;
-globalThis.innerHeight = 600;
-globalThis.devicePixelRatio = 1;
+["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(
+  function (name) {
+    Object.defineProperty(globalThis, name, {
+      get: function () { return immediate([1, document.reference, stringIndex(name)]); }
+    });
+  }
+);
+globalThis.visualViewport = null;
 
 var projectedClasses = Object.create(null), projectedClassCount = 0;
 function projectClassToken(token) {

@@ -70,6 +70,11 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   const input = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   const inputErrors = [];
   input.on("pageerror", error => inputErrors.push(error.message));
+  input.on("console", message => {
+    if (message.type() === "error" && !message.text().includes("CodeMirror:typescript=")) {
+      inputErrors.push(message.text());
+    }
+  });
   await input.goto(`${base}/full/`);
   await input.waitForSelector("body[data-ready]");
   const content = input.locator(".cm-content");
@@ -94,6 +99,7 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   const completedFunction = await content.innerText();
   await input.keyboard.type("!");
   await input.keyboard.press("ControlOrMeta+z");
+  await input.keyboard.press("ControlOrMeta+End");
   assert.equal(await content.innerText(), completedFunction);
   await input.keyboard.press("ControlOrMeta+Shift+z");
   assert.equal(await content.innerText(), `${completedFunction}!`);
