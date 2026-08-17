@@ -26,6 +26,7 @@ let deliverToGuest;
 let mutationObserver;
 let pendingInput = false;
 let pendingMutations = [];
+let eventDefaultPrevented = false;
 const deferredEvents = [];
 const eventDiagnostics = [];
 
@@ -94,7 +95,7 @@ function installEventListeners(element, types) {
       } else if (pendingInput) {
         deferredEvents.push(event);
       } else {
-        deliverToGuest?.(encodeEvent(event));
+        if (deliverToGuest?.(encodeEvent(event))) event.preventDefault();
       }
     });
   }
@@ -204,14 +205,18 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
           focus, selectionState.focusOffset);
       }
       document.body.dataset.ready = "true";
+    } else if (text === "WWC_EVENT:preventDefault") {
+      eventDefaultPrevented = true;
     } else messages.push(text);
     return 0;
   },
 } });
 memory = instance.exports.memory;
 deliverToGuest = message => {
+  eventDefaultPrevented = false;
   pendingHostMessage = message;
   instance.exports.onmsg(message.length);
+  return eventDefaultPrevented;
 };
 instance.exports.onmsg(0);
 globalThis.__quickjsCodeMirrorHost = { messages, events: eventDiagnostics };

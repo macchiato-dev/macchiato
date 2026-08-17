@@ -68,7 +68,9 @@ Character-data mutations and the browser selection now cross with the input
 event. The guest applies them to its mirror before CodeMirror observes the
 event, and the resulting guest selection is restored after projection. This
 prevents a stale snapshot from removing typed text and makes the native caret
-visible at the position owned by CodeMirror.
+visible at the position owned by CodeMirror. A guest event's `preventDefault`
+result also returns synchronously, preventing navigation keys from executing
+again as browser defaults.
 
 The next protocol step is to send browser `MutationObserver`, selection, and
 measurement records alongside the triggering input event. That lets ordinary

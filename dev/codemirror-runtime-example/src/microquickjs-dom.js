@@ -419,6 +419,7 @@ globalThis.__wwcReceiveHostMessage = function (bytes) {
     }
   }
   __wwcDrainTasks(100);
+  return event.defaultPrevented;
 };
 globalThis.__wwcSnapshot = function () {
   function copy(node) {

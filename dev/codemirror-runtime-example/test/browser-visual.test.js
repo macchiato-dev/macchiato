@@ -69,8 +69,10 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   const secondLine = input.locator(".cm-line").nth(1);
   await secondLine.click({ position: { x: 120, y: 8 } });
   await input.keyboard.type("XYZ", { delay: 50 });
+  await input.keyboard.press("ArrowLeft");
+  await input.keyboard.press("Backspace");
   await input.waitForTimeout(150);
-  assert.match(await secondLine.innerText(), /XYZ/);
+  assert.match(await secondLine.innerText(), /XZ$/);
   assert.equal(await input.evaluate(() => getSelection().isCollapsed), true);
   await input.screenshot({ path: "/tmp/quickjs-codemirror-input.png" });
   await input.close();

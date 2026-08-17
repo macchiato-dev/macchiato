@@ -142,6 +142,10 @@ static void receive_host_message(uint32_t minimum_length)
     bytes = JS_NewArrayBufferCopy(context, host_message, actual_length);
     result = JS_Call(context, receiver, global, 1, &bytes);
     if (JS_IsException(result)) report(result);
+    else if (JS_ToBool(context, result)) {
+        static const char prevented[] = "WWC_EVENT:preventDefault";
+        msg((uint32_t)(uintptr_t)prevented, sizeof(prevented) - 1);
+    }
     JS_FreeValue(context, result);
     JS_FreeValue(context, bytes);
     JS_FreeValue(context, receiver);
