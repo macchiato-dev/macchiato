@@ -196,15 +196,6 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     report(result);
     JS_FreeValue(context, result);
     {
-        static const char benchmark_source[] =
-            "globalThis.__wwcBenchmark ? __wwcBenchmark() : undefined";
-        result = JS_Eval(context, benchmark_source,
-                         sizeof(benchmark_source) - 1,
-                         "guest-benchmark.js", JS_EVAL_TYPE_GLOBAL);
-        if (!JS_IsUndefined(result)) report(result);
-        JS_FreeValue(context, result);
-    }
-    {
         static const char visual_source[] =
             "globalThis.__wwcPrepareVisual && __wwcPrepareVisual()";
         result = JS_Eval(context, visual_source,
