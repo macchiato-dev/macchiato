@@ -41,6 +41,15 @@ External addresses are not assigned to `href`: an application may place one
 in inert data and present it in a copy-and-paste dialog. This keeps navigation
 to another origin explicit without granting the guest a network capability.
 
+Routing and scoped storage belong to the runner's browser services rather than
+the DOM capability host. An optional general-value runner helper can use already-materialized plain
+objects, arrays, strings, booleans, null, signed safe integers, and
+`Uint8Array`. Runtime and runner adapters encode those values into the compact
+WIT-like `msg`/`onmsg` byte exchange; they never stringify or parse JSON. The
+minimal container need not require this recursive codec.
+Fixed-schema messages can continue using the bounded reader and writer
+directly.
+
 ## SQLite documentation reader
 
 The SQLite reader is a curated static example and a likely GitHub Pages
@@ -70,6 +79,11 @@ corpora—potentially hundreds of projects—remain local fixtures and stress-te
 inputs.
 
 ## Reconstruction rules
+
+CodeMirror, ProseMirror, Wordgard, and Xterm.js form the initial demanding
+surface corpus. CodeMirror is first. Their high-frequency paths should use
+measured fixed-schema messages rather than forcing all traffic through an
+optional recursive value codec.
 
 - Keep ordinary commits at or below 256 changed lines. This is a ceiling, not
   a target.
