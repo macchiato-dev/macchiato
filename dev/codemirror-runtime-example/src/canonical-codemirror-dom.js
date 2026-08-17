@@ -29,6 +29,12 @@ globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "", ma
   }
 );
 globalThis.visualViewport = null;
+Date.now = function () {
+  return hostCall(document.reference, "dateNow", []);
+};
+globalThis.performance = {
+  now: function () { return hostCall(document.reference, "performanceNow", []); }
+};
 
 var projectedClasses = Object.create(null), projectedClassCount = 0;
 function projectClassToken(token) {
@@ -58,6 +64,11 @@ rememberNode(document.body);
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function () {
     return immediate([1, this.reference, stringIndex("nodeType")]);
+  }
+});
+Object.defineProperty(GuestObject.prototype, "nodeName", {
+  get: function () {
+    return immediate([1, this.reference, stringIndex("nodeName")]);
   }
 });
 GuestObject.prototype.contains = function (node) {
@@ -162,7 +173,7 @@ GuestRect.prototype = Object.create(GuestObject.prototype);
 ["bottom", "height", "left", "right", "top", "width", "x", "y"].forEach(
   function (name) {
     Object.defineProperty(GuestRect.prototype, name, {
-      get: function () { return immediate([1, this.reference, stringIndex(name)]); }
+      get: function () { return immediate([1, this.reference, stringIndex(name)]) / 64; }
     });
   }
 );
@@ -204,6 +215,9 @@ GuestElement.prototype.querySelectorAll = function (selector) {
     nodes.push(nodeForReference(item[1]));
   }
   return nodes;
+};
+GuestElement.prototype.hasAttribute = function (name) {
+  return hostCall(this.reference, "hasAttribute", [String(name)]);
 };
 GuestRange.prototype.getClientRects = function () { return clientRectsFor(this); };
 GuestRange.prototype.getBoundingClientRect = function () {
@@ -457,6 +471,7 @@ function GuestMutationObserver(callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   this.callback = callback;
   this.reference = null;
+  this.callbackIndex = null;
 }
 GuestMutationObserver.prototype.observe = function (target, options) {
   this.disconnect();
@@ -465,10 +480,10 @@ GuestMutationObserver.prototype.observe = function (target, options) {
     (options.characterData ? 4 : 0) |
     (options.characterDataOldValue ? 8 : 0) |
     (options.subtree ? 16 : 0);
-  var self = this, callbackIndex = callbacks.length;
-  callbacks.push(function (batch) {
+  var self = this, callbackIndex = allocateCallback(function (batch) {
     self.callback(readMutationBatch(batch.reference), self);
-  });
+  }, false);
+  this.callbackIndex = callbackIndex;
   var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
     encode(target), encode(flags), encode(callbackIndex)
   ]]);
@@ -478,6 +493,8 @@ GuestMutationObserver.prototype.disconnect = function () {
   if (this.reference !== null) {
     hostCall(this.reference, "disconnect", []);
     this.reference = null;
+    releaseCallback(this.callbackIndex);
+    this.callbackIndex = null;
   }
 };
 GuestMutationObserver.prototype.takeRecords = function () {
@@ -486,24 +503,24 @@ GuestMutationObserver.prototype.takeRecords = function () {
   return readMutationBatch(result[1]);
 };
 function EmptyObserver() {}
-EmptyObserver.prototype.observe = EmptyObserver.prototype.disconnect = function () {};
+EmptyObserver.prototype.observe = EmptyObserver.prototype.unobserve =
+  EmptyObserver.prototype.disconnect = function () {};
 EmptyObserver.prototype.takeRecords = function () { return []; };
-// CodeMirror owns this projected DOM and all supported edits enter through its
+// CodeMirror owns this bridged DOM and all supported edits enter through its
 // explicit event path. Mirroring the browser's child-list records back into
 // the guest creates a second, competing DOM authority during native selection.
-globalThis.MutationObserver = GuestMutationObserver;
-globalThis.ResizeObserver = EmptyObserver;
+globalThis.MutationObserver = globalThis.ResizeObserver = EmptyObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
 };
 var animationCallbacks = Object.create(null);
 globalThis.requestAnimationFrame = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
-  var index = callbacks.length, handle;
-  callbacks.push(function () {
+  var handle;
+  var index = allocateCallback(function () {
     delete animationCallbacks[handle];
     callback(Date.now());
-  });
+  }, true);
   handle = immediate([3, document.reference, stringIndex("animationFrame"), [encode(index)]]);
   animationCallbacks[handle] = index;
   return handle;
@@ -511,24 +528,54 @@ globalThis.requestAnimationFrame = function (callback) {
 globalThis.cancelAnimationFrame = function (handle) {
   var index = animationCallbacks[handle];
   if (index === undefined) return;
-  callbacks[index] = function () {};
+  releaseCallback(index);
   delete animationCallbacks[handle];
   immediate([3, document.reference, stringIndex("cancelAnimationFrame"), [encode(handle)]]);
 };
 globalThis.setImmediate = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
-  var index = callbacks.length;
-  callbacks.push(callback);
+  var token = { active: true, index: -1 };
+  var index = allocateCallback(function () {
+    token.active = false;
+    callback();
+  }, true);
+  token.index = index;
   immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return index;
+  return token;
+};
+globalThis.setTimeout = function (callback, delay) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var token = { active: true, index: -1 };
+  var index = allocateCallback(function () {
+    token.active = false;
+    callback();
+  }, true);
+  token.index = index;
+  hostCall(document.reference, "timerOnce", [Math.round(delay), index]);
+  return token;
+};
+var intervalCallbacks = Object.create(null);
+globalThis.setInterval = function (callback, delay) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var index = allocateCallback(callback, false);
+  var handle = hostCall(document.reference, "timer", [Math.round(delay), index]);
+  intervalCallbacks[handle] = index;
+  return handle;
+};
+globalThis.clearInterval = function (handle) {
+  var index = intervalCallbacks[handle];
+  if (index === undefined) return;
+  releaseCallback(index);
+  delete intervalCallbacks[handle];
+  hostCall(document.reference, "timerCancel", [handle]);
 };
 globalThis.matchMedia = function () {
   return { matches: false, addListener: function () {}, removeListener: function () {} };
 };
-globalThis.clearTimeout = globalThis.clearInterval = function (handle) {
-  if (Number.isInteger(handle) && handle >= 0 && handle < callbacks.length) {
-    callbacks[handle] = function () {};
-  }
+globalThis.clearTimeout = function (handle) {
+  if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;
+  handle.active = false;
+  retireOneShotCallback(handle.index);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
 
@@ -584,10 +631,9 @@ var windowListeners = [];
 globalThis.addEventListener = function (type, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var record = { type: type, callback: callback, active: true };
-  var callbackIndex = callbacks.length;
-  callbacks.push(function (event) {
+  var callbackIndex = allocateCallback(function (event) {
     if (record.active) record.callback(event || { type: type });
-  });
+  }, false);
   immediate([3, document.reference, stringIndex("windowListen"), [
     encode(type), encode(callbackIndex)
   ]]);
@@ -610,8 +656,7 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (records.some(function (record) {
     return record.type === type && record.callback === callback;
   })) return;
-  var index = callbacks.length;
-  callbacks.push(callback);
+  var index = allocateCallback(callback, false);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture });
   pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
@@ -622,12 +667,17 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     var record = records[index];
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
-      callbacks[record.index] = function () {};
+      releaseCallback(record.index);
       pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
       return;
     }
   }
 };
+// Pointer selections are owned by the document after they begin. Use the same
+// listener bookkeeping as elements so temporary drag listeners are removed at
+// mouseup, just as they are in a browser DOM.
+GuestDocument.prototype.addEventListener = GuestElement.prototype.addEventListener;
+GuestDocument.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
 
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function (value) {
@@ -714,7 +764,7 @@ GuestElement.prototype.replaceChildren = function () {
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 
-// Attribute reads are common during projection. Mirror values in the guest and
+// Attribute reads are common during rendering. Mirror values in the guest and
 // send only mutations across the boundary.
 Object.defineProperty(GuestElement.prototype, "attributes", {
   get: function () {

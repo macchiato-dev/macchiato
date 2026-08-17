@@ -6,7 +6,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap }
   from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap, indentLess, redo, undo }
+import { defaultKeymap, history, historyKeymap, redo, undo }
   from "@codemirror/commands";
 import { bracketMatching, defaultHighlightStyle, foldCode, foldGutter, foldKeymap,
   getIndentUnit, indentOnInput, indentString, syntaxHighlighting }
@@ -42,18 +42,7 @@ function readNativeSelection(view) {
   }
 }
 
-function moveOneLine(view, direction) {
-  const state = view.state;
-  const head = state.selection.main.head;
-  const line = state.doc.lineAt(head);
-  const number = Math.max(1, Math.min(state.doc.lines, line.number + direction));
-  const target = state.doc.line(number);
-  const column = head - line.from;
-  view.dispatch({ selection: { anchor: target.from + Math.min(column, target.length) },
-    scrollIntoView: true, userEvent: "select" });
-}
-
-const projectedLineGeometry = EditorView.theme({
+const bridgedLineGeometry = EditorView.theme({
   ".cm-content": { lineHeight: "18px" },
 });
 
@@ -86,7 +75,7 @@ const gutterProjection = EditorView.updateListener.of((update) => {
   }
 });
 
-// The browser's native selection and caret are the projection for this guest,
+// The browser's native selection and caret are exposed to this guest,
 // so this intentionally omits CodeMirror's drawSelection() extension.
 const editorSetup = [
   lineNumbers(),
@@ -115,16 +104,16 @@ export function start() {
   const view = new EditorView({
     doc: fixtures[current].text,
     extensions: [editorSetup, gutterProjection,
-      language.of(languages[current]()), oneDark, nativeCaret, projectedLineGeometry,
+      language.of(languages[current]()), oneDark, nativeCaret, bridgedLineGeometry,
       EditorView.lineWrapping],
     parent,
   });
   scheduleGutterSync(view);
   // The guest has no ambient ResizeObserver. Give CodeMirror one post-mount
-  // measurement so its height map uses projected browser geometry rather than
+  // measurement so its height map uses browser geometry rather than
   // initial estimates (notably for pointer and drop coordinates).
   setTimeout(() => view.requestMeasure(), 0);
-  // The browser projection must not independently mutate contenteditable.
+  // The browser must not independently mutate contenteditable.
   // Handle ordinary text/navigation in the guest before CodeMirror's bubble
   // listener, while leaving shortcuts and composition to their own handlers.
   view.contentDOM.addEventListener("keydown", (event) => {
@@ -145,19 +134,13 @@ export function start() {
     readNativeSelection(view);
     if (event.key.length === 1) {
       const range = view.state.selection.main;
-      const line = view.state.doc.lineAt(range.from);
-      const dedentClosingBrace = event.key === "}" &&
-        !/\S/.test(view.state.sliceDoc(line.from, range.from));
       const at = range.from + event.key.length;
       view.dispatch({
         changes: { from: range.from, to: range.to, insert: event.key },
         selection: { anchor: at },
         userEvent: "input.type",
       });
-      if (dedentClosingBrace) indentLess(view);
-    } else if (!event.shiftKey && event.key === "ArrowUp") moveOneLine(view, -1);
-    else if (!event.shiftKey && event.key === "ArrowDown") moveOneLine(view, 1);
-    else if (!event.shiftKey && event.key === "Enter") {
+    } else if (!event.shiftKey && event.key === "Enter") {
       const state = view.state;
       const range = state.selection.main;
       const line = state.doc.lineAt(range.from);

@@ -264,11 +264,40 @@ static void receive_host_message(uint32_t minimum_length)
 #endif
 }
 
+/* Run jobs only when the host sends its coalesced end-of-task wake. Draining
+   between listeners would observably differ from a browser event dispatch. */
+static void drain_jobs(void)
+{
+    JSContext *job_context = NULL;
+    int status;
+    while ((status = JS_ExecutePendingJob(runtime, &job_context)) > 0) {}
+    if (status < 0) {
+        (void)job_context;
+        report_stage("pending-job-error");
+    }
+}
+
+static void flush_guest_operations(void)
+{
+    static const char source[] = "globalThis.flush && flush()";
+    JSValue result = JS_Eval(context, source, sizeof(source) - 1,
+                             "guest-flush.js", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(result))
+        report_stage("guest-flush-error");
+    JS_FreeValue(context, result);
+}
+
 void quickjs_guest_onmsg(uint32_t minimum_length)
 {
     JSValue result;
     if (runtime != NULL) {
-        if (minimum_length != 0) receive_host_message(minimum_length);
+        if (minimum_length != 0) {
+            receive_host_message(minimum_length);
+        }
+        else {
+            drain_jobs();
+            flush_guest_operations();
+        }
         return;
     }
     runtime = JS_NewRuntime();
@@ -318,6 +347,7 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     if (JS_IsException(result)) report_stage("guest-result-error");
     report(result);
     JS_FreeValue(context, result);
+    drain_jobs();
 #ifndef WWC_CANONICAL_HOST
     {
         static const char visual_source[] =

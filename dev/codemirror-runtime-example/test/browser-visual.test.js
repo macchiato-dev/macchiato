@@ -11,7 +11,7 @@ const canonicalHost = resolve(root,
 const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
   ".wasm": "application/wasm" };
 
-test("the demo index and each projected QuickJS editor work", async (context) => {
+test("the demo index and each bridged QuickJS editor work", async (context) => {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://example.test").pathname;
     if (pathname === "/wasm-web-container.js") {
@@ -120,16 +120,26 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await input.keyboard.type("e;");
   await input.keyboard.press("Enter");
   await input.keyboard.type("}");
+  await input.waitForFunction(() => {
+    const lines = Array.from(document.querySelectorAll(".cm-line"));
+    return lines.length === 4 && lines.at(-1)?.textContent === "}";
+  });
   await input.waitForTimeout(100);
-  assert.equal(await content.innerText(),
+  assert.equal((await input.locator(".cm-line").allTextContents()).join("\n"),
     "function greet(name) {\n  const message = `Hello, ${name}!`;\n  return message;\n}");
-  const completedFunction = await content.innerText();
+  const inputText = async () => (await input.locator(".cm-line").allTextContents()).join("\n");
+  const completedFunction = await inputText();
+  await input.waitForTimeout(1000);
+  await input.keyboard.press("ArrowLeft");
+  await input.keyboard.press("ArrowRight");
   await input.keyboard.type("!");
   await input.keyboard.press("ControlOrMeta+z");
+  await input.waitForFunction(() => document.querySelectorAll(".cm-line")[3]?.textContent === "}");
   await input.keyboard.press("ControlOrMeta+End");
-  assert.equal(await content.innerText(), completedFunction);
+  assert.equal(await inputText(), completedFunction);
   await input.keyboard.press("ControlOrMeta+Shift+z");
-  assert.equal(await content.innerText(), `${completedFunction}!`);
+  await input.waitForFunction(() => document.querySelectorAll(".cm-line")[3]?.textContent === "}!");
+  assert.equal(await inputText(), `${completedFunction}!`);
   await input.keyboard.press("ControlOrMeta+z");
   const line = input.locator(".cm-line").nth(2);
   const lineBox = await line.boundingBox();
@@ -146,6 +156,7 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await input.keyboard.type("message", { delay: 20 });
   await input.keyboard.press("Enter");
   await input.keyboard.press("Escape");
+  await input.waitForTimeout(50);
   assert.equal(await input.locator(".cm-search").count(), 0);
   await input.keyboard.type("Z");
   assert.match(await content.innerText(), /Z/);
@@ -230,4 +241,93 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   assert.deepEqual(pointerErrors, []);
   await pointer.screenshot({ path: "/tmp/quickjs-codemirror-pointer.png" });
   await pointerContext.close();
+
+  const human = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const humanErrors = [];
+  human.on("pageerror", error => humanErrors.push(error.message));
+  human.on("console", message => {
+    if (message.type() === "error" && !message.text().includes("CodeMirror:typescript=")) {
+      humanErrors.push(message.text());
+    }
+  });
+  await human.goto(`${base}/full/`);
+  await human.waitForSelector("body[data-ready]");
+  const humanSource = (await readFile(resolve(root, "fixtures/human-edit.js"), "utf8")).trimEnd();
+  const humanLines = humanSource.split("\n");
+  const humanContent = human.locator(".cm-content");
+  await humanContent.click();
+  await human.keyboard.press("ControlOrMeta+A");
+  for (let index = 0; index < humanLines.length; index++) {
+    if (index) {
+      await human.keyboard.press("Enter");
+      if (!humanLines[index].trimStart().startsWith("}")) {
+        // Replace inferred indentation when the developer deliberately chooses
+        // different formatting. Closing braces exercise automatic dedenting.
+        await human.keyboard.press("Home");
+        await human.keyboard.press("Shift+End");
+      }
+    }
+    const lineText = humanLines[index].trimStart().startsWith("}") ?
+      humanLines[index].trimStart() : humanLines[index];
+    if (index === 17) {
+      await human.keyboard.type(`${lineText}x`, { delay: 1 });
+      await human.keyboard.press("Backspace");
+    } else {
+      await human.keyboard.type(lineText, { delay: 1 });
+    }
+  }
+  const editorText = async () => (await human.locator(".cm-line").allTextContents()).join("\n");
+  assert.equal(await human.locator(".cm-line").count(), 67);
+  assert.equal(await editorText(), humanSource);
+
+  await human.waitForTimeout(600);
+  await human.keyboard.press("ControlOrMeta+End");
+  await human.keyboard.type(" // temporary direction", { delay: 4 });
+  assert.match(await editorText(), /temporary direction$/);
+  await human.keyboard.press("ControlOrMeta+z");
+  assert.equal(await editorText(), humanSource);
+  await human.keyboard.press("ControlOrMeta+Shift+z");
+  assert.match(await editorText(), /temporary direction$/);
+  await human.keyboard.press("ControlOrMeta+z");
+  assert.equal(await editorText(), humanSource);
+
+  const humanFirstLine = human.locator(".cm-line").first();
+  await humanFirstLine.scrollIntoViewIfNeeded();
+  const firstLineBox = await humanFirstLine.boundingBox();
+  const dragX = firstLineBox.x + 110;
+  const dragY = firstLineBox.y + firstLineBox.height / 2;
+  await human.mouse.dblclick(dragX, dragY);
+  assert.equal(await human.evaluate(() => getSelection().toString()), "ProjectRegistry");
+  await human.evaluate(() => {
+    globalThis.__nativeDragEvents = [];
+    for (const type of ["dragstart", "dragover", "drop", "dragend"]) {
+      document.addEventListener(type, () => __nativeDragEvents.push(type));
+    }
+  });
+  const selectedBox = await human.evaluate(() => {
+    const rect = getSelection().getRangeAt(0).getBoundingClientRect();
+    return { x: rect.x, y: rect.y, height: rect.height };
+  });
+  const dragTarget = await human.locator(".cm-line").nth(9).boundingBox();
+  await human.mouse.move(selectedBox.x + 5, selectedBox.y + selectedBox.height / 2);
+  await human.mouse.down();
+  await human.waitForTimeout(100);
+  await human.mouse.move(dragTarget.x + 150, dragTarget.y + dragTarget.height / 2,
+    { steps: 18 });
+  await human.mouse.up();
+  await human.waitForTimeout(50);
+  assert.ok((await human.evaluate(() => __nativeDragEvents)).includes("dragstart"));
+  const dragged = await editorText();
+  assert.notEqual(dragged, humanSource);
+  assert.equal((dragged.match(/ProjectRegistry/g) || []).length, 1);
+  assert.ok(await humanContent.locator("span[class^=wwc-c]").count() > 50);
+  await human.keyboard.press("ControlOrMeta+z");
+  assert.equal(await editorText(), humanSource);
+  await human.keyboard.press("ControlOrMeta+Shift+z");
+  assert.equal(await editorText(), dragged);
+  await human.keyboard.press("ControlOrMeta+z");
+  assert.equal(await editorText(), humanSource);
+  assert.deepEqual(humanErrors, []);
+  await human.screenshot({ path: "/tmp/quickjs-codemirror-human-edit.png" });
+  await human.close();
 });

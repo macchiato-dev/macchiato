@@ -10,6 +10,14 @@ let flushTimer;
 let flushing = Promise.resolve();
 
 function append(record) {
+  if (["reference-create", "reference-release", "operation-batch"].includes(record.type)) return;
+  if (record.type === "operation" && ![4, 5].includes(record.code) && ![
+    "anchorNode", "anchorOffset", "button", "buttons", "clientX", "clientY",
+    "collapse", "detail", "extend", "focusNode", "focusOffset", "getSelection",
+    "insertBefore", "listen", "nodeValue", "preventDefault", "removeChild",
+    "replaceChild", "stopImmediatePropagation", "stopPropagation", "textContent",
+    "unlisten", "windowListen",
+  ].includes(record.name)) return;
   const line = `${JSON.stringify({ wallTime: new Date().toISOString(), session, ...record })}\n`;
   const size = encoder.encode(line).byteLength;
   records.push({ line, size });
