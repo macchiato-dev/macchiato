@@ -4,13 +4,18 @@ import { extname, resolve } from "node:path";
 const root = resolve(new URL(".", import.meta.url).pathname);
 const types = new Map([
   [".html", "text/html; charset=utf-8"],
+  [".css", "text/css; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".wasm", "application/wasm"],
 ]);
 
 export async function quickjsCodeMirrorHandler(request) {
   const pathname = new URL(request.url).pathname;
-  const relative = pathname === "/" ? "index.html" : pathname.slice(1);
+  const relative = pathname === "/"
+    ? "index.html"
+    : pathname.endsWith("/")
+      ? `${pathname.slice(1)}index.html`
+      : pathname.slice(1);
   if (relative.includes("..") || relative.includes("\\")) {
     return new Response("Not found", { status: 404 });
   }

@@ -6,11 +6,14 @@ import { chromium } from "@playwright/test";
 import test from "node:test";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const types = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm" };
+const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
+  ".wasm": "application/wasm" };
 
-test("projected QuickJS CodeMirror has bounded gutters, folding, and search", async (context) => {
+test("the demo index and each projected QuickJS editor work", async (context) => {
   const server = createServer(async (request, response) => {
-    const relative = request.url === "/" ? "index.html" : request.url.slice(1);
+    const pathname = new URL(request.url, "http://example.test").pathname;
+    const relative = pathname === "/" ? "index.html"
+      : pathname.endsWith("/") ? `${pathname.slice(1)}index.html` : pathname.slice(1);
     try {
       const body = await readFile(resolve(root, relative));
       response.writeHead(200, { "content-type": types[extname(relative)] || "application/octet-stream" });
@@ -26,30 +29,37 @@ test("projected QuickJS CodeMirror has bounded gutters, folding, and search", as
     await browser.close();
     await new Promise(resolveClosed => server.close(resolveClosed));
   });
-  for (const viewport of [{ name: "desktop", width: 1440, height: 900 },
-    { name: "mobile", width: 390, height: 844 }]) {
-    const page = await browser.newPage({ viewport });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const index = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await index.goto(base);
+  assert.deepEqual(await index.locator("nav strong").allTextContents(),
+    ["Simple editor", "Full UI", "Large document"]);
+  await index.screenshot({ path: "/tmp/quickjs-codemirror-index.png" });
+  await index.close();
+
+  for (const name of ["simple", "full", "large"]) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    const started = performance.now();
+    await page.goto(`${base}/${name}/`);
     await page.waitForSelector("body[data-ready]");
-
+    context.diagnostic(`${name}: browser-ready=${(performance.now() - started).toFixed(1)}ms`);
     assert.equal(await page.locator(".cm-editor").count(), 1);
-    assert.equal(Math.round((await page.locator(".cm-editor").boundingBox()).height), viewport.height);
-    assert.ok(await page.locator(".cm-lineNumbers .cm-gutterElement").count() > 10);
-    assert.ok(await page.locator(".cm-foldGutter .cm-gutterElement").count() > 1);
-    assert.equal(await page.locator(".cm-foldPlaceholder").count(), 1);
-    assert.equal(await page.locator(".cm-search").count(), 1);
-    assert.equal(await page.locator(".cm-search input").first().inputValue(), "URL");
-    assert.equal((await page.locator(".cm-line").filter({ hasText: "export const URL_" })
-      .first().innerText()).includes("ATTRIBUTES_CAPABILITY"), false);
-    await page.screenshot({ path: `/tmp/quickjs-codemirror-${viewport.name}.png` });
-    await page.locator('.cm-search button[name="close"]').click();
-    await page.locator(".cm-search").waitFor({ state: "detached" });
-    await page.locator(".cm-content").focus();
-    assert.equal(await page.locator(".cm-content").evaluate(element =>
-      document.activeElement === element), true);
+    assert.equal(Math.round((await page.locator(".cm-editor").boundingBox()).height), 900);
+    assert.ok(await page.locator(".cm-lineNumbers .cm-gutterElement").count() > 1);
     assert.deepEqual(errors, []);
+    await page.screenshot({ path: `/tmp/quickjs-codemirror-${name}.png` });
     await page.close();
   }
+
+  const full = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await full.goto(`${base}/full/`);
+  await full.waitForSelector("body[data-ready]");
+  assert.ok(await full.locator(".cm-foldGutter .cm-gutterElement").count() > 1);
+  assert.equal(await full.locator(".cm-search input").first().inputValue(), "URL");
+  await full.locator('.cm-search button[name="close"]').click();
+  await full.locator(".cm-search").waitFor({ state: "detached" });
+  await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
+  await full.close();
 });

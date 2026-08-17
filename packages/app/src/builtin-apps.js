@@ -34,7 +34,11 @@ export const BUILTIN_APPS = [
     handler: quickjsCodeMirrorHandler,
     sourceFiles: [
       "dev/codemirror-runtime-example/index.html",
+      "dev/codemirror-runtime-example/demo.css",
       "dev/codemirror-runtime-example/host.js",
+      "dev/codemirror-runtime-example/simple/index.html",
+      "dev/codemirror-runtime-example/full/index.html",
+      "dev/codemirror-runtime-example/large/index.html",
       "dev/codemirror-runtime-example/src/microquickjs-dom.js",
     ],
     sandbox: {

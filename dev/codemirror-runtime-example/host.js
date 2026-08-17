@@ -117,7 +117,9 @@ function project(snapshot) {
 }
 
 try {
-const response = await fetch("./generated/quickjs-codemirror.wasm");
+const wasmSource = document.querySelector("#quickjs-surface")?.dataset.wasm;
+if (!wasmSource) throw new Error("The demo does not declare a Wasm guest");
+const response = await fetch(new URL(wasmSource, location.href));
 if (!response.ok) throw new Error(`Wasm response ${response.status}`);
 let memory;
 const messages = [];

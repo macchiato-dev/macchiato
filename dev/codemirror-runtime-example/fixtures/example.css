@@ -1,0 +1,12 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+}
+
+article {
+  max-width: 42rem;
+  margin: 4rem auto;
+  line-height: 1.6;
+}
+
+a { color: #61afef; }

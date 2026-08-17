@@ -1,0 +1,8 @@
+{
+  "container": "article",
+  "limits": {
+    "elements": 500,
+    "links": 8
+  },
+  "allowedHosts": ["*.wikipedia.org"]
+}
