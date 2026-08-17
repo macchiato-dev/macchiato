@@ -128,11 +128,26 @@ export function start() {
   });
   projectBrowserSelection(view);
   scheduleGutterSync(view);
+  // The guest has no ambient ResizeObserver. Give CodeMirror one post-mount
+  // measurement so its height map uses projected browser geometry rather than
+  // initial estimates (notably for pointer and drop coordinates).
+  setTimeout(() => view.requestMeasure(), 0);
+  let dragging = false;
   view.contentDOM.addEventListener("mouseup", () => {
-    readBrowserSelection(view);
+    if (!dragging) readBrowserSelection(view);
   });
   view.contentDOM.addEventListener("pointerup", () => {
-    readBrowserSelection(view);
+    if (!dragging) readBrowserSelection(view);
+  });
+  view.contentDOM.addEventListener("dragstart", () => {
+    dragging = true;
+  });
+  view.contentDOM.addEventListener("dragend", () => {
+    projectBrowserSelection(view);
+    setTimeout(() => {
+      projectBrowserSelection(view);
+      dragging = false;
+    }, 0);
   });
   // The browser projection must not independently mutate contenteditable.
   // Handle ordinary text/navigation in the guest before CodeMirror's bubble

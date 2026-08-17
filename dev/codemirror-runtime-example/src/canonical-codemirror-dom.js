@@ -138,6 +138,7 @@ GuestSelection.prototype.getRangeAt = function (index) {
 function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
+GuestRange.prototype = Object.create(GuestObject.prototype);
 function GuestRect(reference) {
   GuestObject.call(this, reference);
 }
@@ -190,7 +191,6 @@ GuestRange.prototype.getBoundingClientRect = function () {
     } : undefined
   });
 });
-GuestRange.prototype = Object.create(GuestObject.prototype);
 ["setStart", "setEnd"].forEach(function (name) {
   GuestRange.prototype[name] = function (node, offset) {
     hostCall(this.reference, name, [node, offset]);
@@ -494,6 +494,12 @@ GuestDataTransfer.prototype.setData = function (type, value) {
       return result === null ? null : new GuestDataTransfer(result[1]);
     }
   });
+});
+Object.defineProperty(GuestEvent.prototype, "relatedTarget", {
+  get: function () {
+    var result = immediate([1, this.reference, stringIndex("relatedTarget")]);
+    return result === null ? null : nodeForReference(result[1]);
+  }
 });
 
 // Window events are represented by the canonical document service. Keep

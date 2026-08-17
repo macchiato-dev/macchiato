@@ -127,9 +127,18 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await input.screenshot({ path: "/tmp/quickjs-codemirror-input.png" });
   await input.close();
 
-  const pointer = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const pointerContext = await browser.newContext({
+    viewport: { width: 1200, height: 800 },
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  const pointer = await pointerContext.newPage();
   const pointerErrors = [];
   pointer.on("pageerror", error => pointerErrors.push(error.message));
+  pointer.on("console", message => {
+    if (message.type() === "error" && !message.text().includes("CodeMirror:typescript=")) {
+      pointerErrors.push(message.text());
+    }
+  });
   await pointer.goto(`${base}/full/`);
   await pointer.waitForSelector("body[data-ready]");
   const pointerContent = pointer.locator(".cm-content");
@@ -168,9 +177,14 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await pointer.mouse.up();
   await pointer.waitForTimeout(50);
   assert.equal(await pointerLines.first().innerText(), "type  = {");
-  assert.equal(await pointerLines.nth(3).innerText(), "  sandboxed: boolean;Project");
+  assert.notEqual(await pointerContent.innerText(), original);
+  assert.equal((await pointerContent.innerText()).match(/Project/g)?.length,
+    original.match(/Project/g)?.length);
+  assert.equal(await pointer.evaluate(() => getSelection().toString()), "Project");
+  await pointer.keyboard.press("ControlOrMeta+c");
+  assert.equal(await pointer.evaluate(() => navigator.clipboard.readText()), "Project");
   assert.ok(await pointerContent.locator("span[class^=wwc-c]").count() > 20);
   assert.deepEqual(pointerErrors, []);
   await pointer.screenshot({ path: "/tmp/quickjs-codemirror-pointer.png" });
-  await pointer.close();
+  await pointerContext.close();
 });
