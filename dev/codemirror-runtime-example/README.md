@@ -55,9 +55,16 @@ VM, accepts an allowlisted DOM snapshot, sanitizes generated CSS, and projects
 the resulting tree into an owned page surface. CodeMirror is not imported into
 the browser realm.
 
-The snapshot is bootstrap instrumentation, not the intended update protocol.
-The working runtime should preserve the identity of the real browser nodes and
-apply ordered mutation batches to them. Most DOM-shaped guest objects can be
+The initial snapshot now assigns durable guest identities and reconciles the
+real browser nodes in place. Browser events return to QuickJS through a compact
+binary record, and a CodeMirror-owned search button can update the guest and
+remove its projected panel without detaching the editor or losing focus.
+
+The next protocol step is to send browser `MutationObserver`, selection, and
+measurement records alongside the triggering input event. That lets ordinary
+contenteditable input be observed by CodeMirror without an editor command in
+the host. Once that works, steady-state guest writes should become ordered
+mutation batches rather than repeated full-tree snapshots. Most DOM-shaped guest objects can be
 short-lived facade objects. A facade acquires a durable scalar host reference
 only when its identity must cross a batch, survive reordering, or remain in an
 event callback. QuickJS finalizers enqueue releases; they should not cause a

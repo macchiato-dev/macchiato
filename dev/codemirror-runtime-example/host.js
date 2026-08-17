@@ -132,9 +132,10 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
     const text = new TextDecoder().decode(new Uint8Array(memory.buffer, offset, length));
     if (text.startsWith("WWC_DOM:")) {
       const snapshot = JSON.parse(text.slice(8));
-      const body = project(snapshot);
       const surface = document.querySelector("#quickjs-surface");
-      const children = [...body.childNodes];
+      guestIds.set(surface, snapshot.id);
+      installEventListeners(surface, snapshot.listeners);
+      const children = (snapshot.children || []).map(project);
       for (let index = 0; index < children.length; index++) {
         const child = children[index];
         if (surface.childNodes[index] !== child) {

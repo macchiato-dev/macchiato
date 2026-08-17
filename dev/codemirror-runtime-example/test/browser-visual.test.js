@@ -46,6 +46,9 @@ test("projected QuickJS CodeMirror has bounded gutters, folding, and search", as
     await page.screenshot({ path: `/tmp/quickjs-codemirror-${viewport.name}.png` });
     await page.locator('.cm-search button[name="close"]').click();
     await page.locator(".cm-search").waitFor({ state: "detached" });
+    await page.locator(".cm-content").focus();
+    assert.equal(await page.locator(".cm-content").evaluate(element =>
+      document.activeElement === element), true);
     assert.deepEqual(errors, []);
     await page.close();
   }

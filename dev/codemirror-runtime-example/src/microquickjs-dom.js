@@ -355,6 +355,8 @@ globalThis.__wwcReceiveHostMessage = function (bytes) {
     for (var index = 0; index < node.childNodes.length; index++) pending.push(node.childNodes[index]);
   }
   if (!target) throw new Error("Unknown host event target: " + targetId);
+  if (type === "focus") document.activeElement = target;
+  else if (type === "blur" && document.activeElement === target) document.activeElement = null;
   if (value !== "" && Object.prototype.hasOwnProperty.call(target, "value")) target.value = value;
   var stopped = false;
   var event = {
