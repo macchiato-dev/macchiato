@@ -64,6 +64,12 @@ real browser nodes in place. Browser events return to QuickJS through a compact
 binary record, and a CodeMirror-owned search button can update the guest and
 remove its projected panel without detaching the editor or losing focus.
 
+Character-data mutations and the browser selection now cross with the input
+event. The guest applies them to its mirror before CodeMirror observes the
+event, and the resulting guest selection is restored after projection. This
+prevents a stale snapshot from removing typed text and makes the native caret
+visible at the position owned by CodeMirror.
+
 The next protocol step is to send browser `MutationObserver`, selection, and
 measurement records alongside the triggering input event. That lets ordinary
 contenteditable input be observed by CodeMirror without an editor command in

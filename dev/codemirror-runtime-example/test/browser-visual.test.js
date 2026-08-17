@@ -62,4 +62,16 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await full.locator(".cm-search").waitFor({ state: "detached" });
   await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
   await full.close();
+
+  const input = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await input.goto(`${base}/full/`);
+  await input.waitForSelector("body[data-ready]");
+  const secondLine = input.locator(".cm-line").nth(1);
+  await secondLine.click({ position: { x: 120, y: 8 } });
+  await input.keyboard.type("XYZ", { delay: 50 });
+  await input.waitForTimeout(150);
+  assert.match(await secondLine.innerText(), /XYZ/);
+  assert.equal(await input.evaluate(() => getSelection().isCollapsed), true);
+  await input.screenshot({ path: "/tmp/quickjs-codemirror-input.png" });
+  await input.close();
 });

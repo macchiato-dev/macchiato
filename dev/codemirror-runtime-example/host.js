@@ -23,13 +23,31 @@ const projectedNodes = new Map();
 const guestIds = new WeakMap();
 const installedListeners = new WeakMap();
 let deliverToGuest;
+let mutationObserver;
+let pendingInput = false;
+let pendingMutations = [];
+const deferredEvents = [];
+const eventDiagnostics = [];
+
+function encodeString(encoder, value) {
+  return encoder.encode(value || "");
+}
 
 function encodeEvent(event) {
   const encoder = new TextEncoder();
   const strings = [event.type, event.key || "", event.code || "",
     typeof event.target.value === "string" ? event.target.value : ""]
-    .map(value => encoder.encode(value));
-  const length = 4 + strings.reduce((sum, value) => sum + 4 + value.length, 0) + 1;
+    .map(value => encodeString(encoder, value));
+  const mutations = pendingMutations.concat(mutationObserver?.takeRecords() || [])
+    .filter(record => record.type === "characterData" && guestIds.has(record.target))
+    .map(record => ({ id: guestIds.get(record.target), text: encodeString(encoder, record.target.data) }));
+  pendingMutations = [];
+  eventDiagnostics.push({ type: event.type, mutations: mutations.length });
+  const selection = document.getSelection();
+  const anchorId = guestIds.get(selection?.anchorNode) || 0;
+  const focusId = guestIds.get(selection?.focusNode) || 0;
+  const length = 4 + strings.reduce((sum, value) => sum + 4 + value.length, 0) + 1 + 4 +
+    mutations.reduce((sum, mutation) => sum + 8 + mutation.text.length, 0) + 16;
   const bytes = new Uint8Array(length);
   const view = new DataView(bytes.buffer);
   let offset = 0;
@@ -40,6 +58,17 @@ function encodeEvent(event) {
   }
   bytes[offset] = (event.metaKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) |
     (event.altKey ? 4 : 0) | (event.shiftKey ? 8 : 0);
+  offset++;
+  view.setUint32(offset, mutations.length, true); offset += 4;
+  for (const mutation of mutations) {
+    view.setUint32(offset, mutation.id, true); offset += 4;
+    view.setUint32(offset, mutation.text.length, true); offset += 4;
+    bytes.set(mutation.text, offset); offset += mutation.text.length;
+  }
+  view.setUint32(offset, anchorId, true); offset += 4;
+  view.setUint32(offset, selection?.anchorOffset || 0, true); offset += 4;
+  view.setUint32(offset, focusId, true); offset += 4;
+  view.setUint32(offset, selection?.focusOffset || 0, true);
   return bytes;
 }
 
@@ -51,7 +80,22 @@ function installEventListeners(element, types) {
     installed.add(type);
     element.addEventListener(type, event => {
       event.stopPropagation();
-      deliverToGuest?.(encodeEvent(event));
+      // The browser applies a contenteditable mutation after `beforeinput`.
+      // Delivering synchronously would project the old guest tree over that
+      // mutation before it happens. The next task observes the completed edit
+      // and holds later keyboard events so they cannot restore stale content.
+      if (type === "beforeinput") {
+        pendingInput = true;
+        setTimeout(() => {
+          deliverToGuest?.(encodeEvent(event));
+          pendingInput = false;
+          while (deferredEvents.length) deliverToGuest?.(encodeEvent(deferredEvents.shift()));
+        }, 0);
+      } else if (pendingInput) {
+        deferredEvents.push(event);
+      } else {
+        deliverToGuest?.(encodeEvent(event));
+      }
     });
   }
 }
@@ -137,6 +181,10 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
     if (text.startsWith("WWC_DOM:")) {
       const snapshot = JSON.parse(text.slice(8));
       const surface = document.querySelector("#quickjs-surface");
+      if (!mutationObserver) {
+        mutationObserver = new MutationObserver(records => pendingMutations.push(...records));
+        mutationObserver.observe(surface, { subtree: true, childList: true, characterData: true });
+      }
       guestIds.set(surface, snapshot.id);
       installEventListeners(surface, snapshot.listeners);
       const children = (snapshot.children || []).map(project);
@@ -147,6 +195,14 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
         }
       }
       while (surface.childNodes.length > children.length) surface.lastChild.remove();
+      const selectionState = snapshot.selection;
+      const anchor = projectedNodes.get(selectionState?.anchorId);
+      const focus = projectedNodes.get(selectionState?.focusId);
+      if (anchor?.isConnected && focus?.isConnected) {
+        const selection = document.getSelection();
+        selection.setBaseAndExtent(anchor, selectionState.anchorOffset,
+          focus, selectionState.focusOffset);
+      }
       document.body.dataset.ready = "true";
     } else messages.push(text);
     return 0;
@@ -158,7 +214,7 @@ deliverToGuest = message => {
   instance.exports.onmsg(message.length);
 };
 instance.exports.onmsg(0);
-globalThis.__quickjsCodeMirrorHost = { messages };
+globalThis.__quickjsCodeMirrorHost = { messages, events: eventDiagnostics };
 } catch (error) {
   const status = document.querySelector(".runtime-status");
   if (status) {

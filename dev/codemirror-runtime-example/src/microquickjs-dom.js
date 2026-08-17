@@ -257,6 +257,22 @@ document.body.appendChild(mount);
 var window = globalThis;
 document.defaultView = window;
 
+var mutationObservers = [];
+function VirtualMutationObserver(callback) {
+  this.callback = callback;
+  this.records = [];
+  this.target = null;
+  mutationObservers.push(this);
+}
+VirtualMutationObserver.prototype.observe = function (target, options) {
+  this.target = target; this.options = options || {};
+};
+VirtualMutationObserver.prototype.disconnect = function () {
+  this.target = null; this.records.length = 0;
+};
+VirtualMutationObserver.prototype.takeRecords = function () {
+  var records = this.records.slice(); this.records.length = 0; return records;
+};
 function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.disconnect = function () {};
 EmptyObserver.prototype.takeRecords = function () { return []; };
@@ -268,7 +284,8 @@ globalThis.Element = globalThis.HTMLElement = VirtualElement;
 globalThis.Document = VirtualDocument;
 function WindowFacade() {}
 globalThis.Window = WindowFacade;
-globalThis.MutationObserver = globalThis.ResizeObserver = EmptyObserver;
+globalThis.MutationObserver = VirtualMutationObserver;
+globalThis.ResizeObserver = EmptyObserver;
 globalThis.navigator = { userAgent: "MicroQuickJS", platform: "Linux", vendor: "", maxTouchPoints: 0 };
 globalThis.innerWidth = 800;
 globalThis.innerHeight = 600;
@@ -348,13 +365,37 @@ globalThis.__wwcReceiveHostMessage = function (bytes) {
   var value = text();
   var modifiers = u8();
   var pending = [document];
-  var target = null;
+  var byId = {};
   while (pending.length) {
     var node = pending.pop();
-    if (node._hostId === targetId) { target = node; break; }
+    byId[node._hostId] = node;
     for (var index = 0; index < node.childNodes.length; index++) pending.push(node.childNodes[index]);
   }
+  var target = byId[targetId];
   if (!target) throw new Error("Unknown host event target: " + targetId);
+  var mutationCount = u32();
+  for (var mutationIndex = 0; mutationIndex < mutationCount; mutationIndex++) {
+    var mutationTarget = byId[u32()];
+    var mutationText = text();
+    if (!mutationTarget || mutationTarget.nodeType !== 3) continue;
+    var oldValue = mutationTarget.data;
+    mutationTarget.data = mutationText;
+    for (var observerIndex = 0; observerIndex < mutationObservers.length; observerIndex++) {
+      var observer = mutationObservers[observerIndex];
+      if (observer.target && observer.target.contains(mutationTarget)) {
+        observer.records.push({ type: "characterData", target: mutationTarget,
+          oldValue: oldValue, addedNodes: [], removedNodes: [] });
+      }
+    }
+  }
+  var anchorNode = byId[u32()], anchorOffset = u32();
+  var focusNode = byId[u32()], focusOffset = u32();
+  if (anchorNode && focusNode) {
+    document._selection.collapse(anchorNode, anchorOffset);
+    if (anchorNode !== focusNode || anchorOffset !== focusOffset) {
+      document._selection.extend(focusNode, focusOffset);
+    }
+  }
   if (type === "focus") document.activeElement = target;
   else if (type === "blur" && document.activeElement === target) document.activeElement = null;
   if (value !== "" && Object.prototype.hasOwnProperty.call(target, "value")) target.value = value;
@@ -411,6 +452,12 @@ globalThis.__wwcSnapshot = function () {
     };
   }
   var body = copy(document.body);
+  body.selection = {
+    anchorId: document._selection.anchorNode && document._selection.anchorNode._hostId || 0,
+    anchorOffset: document._selection.anchorOffset || 0,
+    focusId: document._selection.focusNode && document._selection.focusNode._hostId || 0,
+    focusOffset: document._selection.focusOffset || 0
+  };
   body.listeners = Object.keys(document._listeners).reduce(function (types, type) {
     if (types.indexOf(type) < 0) types.push(type);
     return types;
