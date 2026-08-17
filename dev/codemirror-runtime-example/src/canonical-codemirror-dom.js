@@ -181,6 +181,18 @@ function clientRectsFor(object) {
   return rects;
 }
 GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
+GuestElement.prototype.focus = function () {
+  hostCall(this.reference, "focus", []);
+};
+GuestElement.prototype.select = function () {
+  hostCall(this.reference, "select", []);
+};
+GuestElement.prototype.querySelector = function (selector) {
+  var result = immediate([3, this.reference, stringIndex("querySelector"), [
+    encode(String(selector))
+  ]]);
+  return result === null ? null : nodeForReference(result[1]);
+};
 GuestElement.prototype.querySelectorAll = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelectorAll"), [
     encode(String(selector))
@@ -622,6 +634,26 @@ Object.defineProperty(GuestElement.prototype, "tabIndex", {
     pendingOperations.push([2, this.reference, stringIndex("tabIndex"), encode(value)]);
   }
 });
+["value", "checked"].forEach(function (name) {
+  Object.defineProperty(GuestElement.prototype, name, {
+    get: function () { return immediate([1, this.reference, stringIndex(name)]); },
+    set: function (value) {
+      immediate([2, this.reference, stringIndex(name),
+        encode(name === "checked" ? Boolean(value) : String(value))]);
+    }
+  });
+});
+["change", "click", "keydown", "keyup"].forEach(function (type) {
+  Object.defineProperty(GuestElement.prototype, "on" + type, {
+    get: function () { return this["_guestOn" + type] || null; },
+    set: function (callback) {
+      var previous = this["_guestOn" + type];
+      if (previous) this.removeEventListener(type, previous);
+      this["_guestOn" + type] = typeof callback === "function" ? callback : null;
+      if (this["_guestOn" + type]) this.addEventListener(type, this["_guestOn" + type]);
+    }
+  });
+});
 Object.defineProperty(GuestElement.prototype, "ownerDocument", {
   get: function () { return document; }
 });
@@ -712,3 +744,38 @@ GuestElement.prototype.removeAttribute = function (name) {
     encode(String(name))
   ]]);
 };
+function GuestClassList(element) { this.element = element; }
+GuestClassList.prototype.tokens = function () {
+  return (this.element.getAttribute("class") || "").split(/\s+/).filter(Boolean);
+};
+GuestClassList.prototype.contains = function (token) {
+  return this.tokens().indexOf(projectClassToken(String(token))) > -1;
+};
+GuestClassList.prototype.add = function () {
+  var tokens = this.tokens();
+  for (var index = 0; index < arguments.length; index++) {
+    var token = projectClassToken(String(arguments[index]));
+    if (tokens.indexOf(token) < 0) tokens.push(token);
+  }
+  this.element.setAttribute("class", tokens.join(" "));
+};
+GuestClassList.prototype.remove = function () {
+  var remove = [];
+  for (var index = 0; index < arguments.length; index++) {
+    remove.push(projectClassToken(String(arguments[index])));
+  }
+  this.element.setAttribute("class", this.tokens().filter(function (token) {
+    return remove.indexOf(token) < 0;
+  }).join(" "));
+};
+GuestClassList.prototype.toggle = function (token, force) {
+  var present = this.contains(token), next = force === undefined ? !present : Boolean(force);
+  if (next && !present) this.add(token);
+  if (!next && present) this.remove(token);
+  return next;
+};
+Object.defineProperty(GuestElement.prototype, "classList", {
+  get: function () {
+    return this._guestClassList || (this._guestClassList = new GuestClassList(this));
+  }
+});

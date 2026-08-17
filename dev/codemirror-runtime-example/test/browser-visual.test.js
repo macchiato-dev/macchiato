@@ -142,6 +142,16 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await input.keyboard.type("Y");
   assert.match(await input.locator(".cm-line").nth(2).innerText(), /Y/);
   await input.keyboard.press("Backspace");
+  await input.keyboard.press("ControlOrMeta+f");
+  await input.keyboard.type("message", { delay: 20 });
+  await input.keyboard.press("Enter");
+  await input.keyboard.press("Escape");
+  assert.equal(await input.locator(".cm-search").count(), 0);
+  await input.keyboard.type("Z");
+  assert.match(await content.innerText(), /Z/);
+  await input.keyboard.press("ControlOrMeta+z");
+  assert.match(await input.evaluate(() => document.activeElement.className), /cm-content/);
+  await input.keyboard.press("ArrowRight");
   const lineBoxes = await input.locator(".cm-line").evaluateAll(elements =>
     elements.map(element => element.getBoundingClientRect()));
   const numberBoxes = await input.locator(".cm-lineNumbers .cm-gutterElement")
