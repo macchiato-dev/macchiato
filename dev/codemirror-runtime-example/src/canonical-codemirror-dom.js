@@ -137,6 +137,10 @@ Object.defineProperty(GuestElement.prototype, "contentEditable", {
   get: function () { return this.getAttribute("contenteditable") || "inherit"; },
   set: function (value) { this.setAttribute("contenteditable", String(value)); }
 });
+Object.defineProperty(GuestElement.prototype, "className", {
+  get: function () { return this.getAttribute("class") || ""; },
+  set: function (value) { this.setAttribute("class", String(value)); }
+});
 
 function GuestSelection(reference) {
   GuestObject.call(this, reference);
@@ -578,6 +582,19 @@ globalThis.clearTimeout = function (handle) {
   retireOneShotCallback(handle.index);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
+globalThis.requestIdleCallback = function (callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var started = Date.now();
+  return setTimeout(function () {
+    callback({
+      didTimeout: false,
+      timeRemaining: function () {
+        return Math.max(0, 50 - (Date.now() - started));
+      }
+    });
+  }, 0);
+};
+globalThis.cancelIdleCallback = globalThis.clearTimeout;
 
 function reportConsole() {
   var parts = [];

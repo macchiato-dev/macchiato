@@ -67,6 +67,52 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
   await full.close();
 
+  const completionContext = await browser.newContext({
+    viewport: { width: 1200, height: 800 },
+    recordVideo: { dir: "/tmp/quickjs-codemirror-video", size: { width: 1200, height: 800 } },
+  });
+  const completion = await completionContext.newPage();
+  const completionErrors = [];
+  completion.on("pageerror", error => completionErrors.push(error.message));
+  await completion.goto(`${base}/full/`);
+  await completion.waitForSelector("body[data-ready]");
+  await completion.locator(".cm-content").click();
+  await completion.keyboard.press("ControlOrMeta+End");
+  await completion.keyboard.press("Enter");
+  await completion.keyboard.type("f");
+  const completionList = completion.locator("[role=listbox]");
+  await completionList.waitFor();
+  assert.match(await completionList.locator("xpath=..").getAttribute("class"),
+    /(?:^|\s)cm-tooltip-autocomplete(?:\s|$)/);
+  assert.deepEqual(await completionList.evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      fontFamily: style.fontFamily,
+      listStyleType: style.listStyleType,
+      margin: style.margin,
+      padding: style.padding,
+    };
+  }), { fontFamily: "monospace", listStyleType: "none", margin: "0px", padding: "0px" });
+  assert.equal(await completionList.locator("[role=option]").first()
+    .getAttribute("aria-selected"), "true");
+  await completion.screenshot({ path: "/tmp/quickjs-codemirror-autocomplete.png" });
+  await completion.keyboard.press("ArrowDown");
+  assert.equal(await completionList.locator("[role=option]").nth(1)
+    .getAttribute("aria-selected"), "true");
+  await completion.keyboard.press("Enter");
+  assert.match((await completion.locator(".cm-line").allTextContents()).join("\n"),
+    /(?:^|\n)finally$/);
+  await completion.keyboard.press("ControlOrMeta+z");
+  await completion.keyboard.press("Backspace");
+  await completion.keyboard.type("i");
+  await completionList.waitFor();
+  assert.ok(await completionList.locator("[role=option]").count() > 1);
+  await completion.keyboard.press("Escape");
+  await completionList.waitFor({ state: "hidden" });
+  assert.deepEqual(completionErrors, []);
+  await completion.close();
+  await completionContext.close();
+
   const folding = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   const foldingErrors = [];
   folding.on("pageerror", error => foldingErrors.push(error.message));
@@ -118,8 +164,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   await input.keyboard.type("return messagx", { delay: 16 });
   await input.keyboard.press("Backspace");
   await input.keyboard.type("e;");
-  await input.keyboard.press("Enter");
-  await input.keyboard.type("}");
+  await input.keyboard.press("ArrowDown");
   await input.waitForFunction(() => {
     const lines = Array.from(document.querySelectorAll(".cm-line"));
     return lines.length === 4 && lines.at(-1)?.textContent === "}";
@@ -258,23 +303,28 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   await humanContent.click();
   await human.keyboard.press("ControlOrMeta+A");
   for (let index = 0; index < humanLines.length; index++) {
+    const trimmed = humanLines[index].trimStart();
     if (index) {
-      await human.keyboard.press("Enter");
-      if (!humanLines[index].trimStart().startsWith("}")) {
-        // Replace inferred indentation when the developer deliberately chooses
-        // different formatting. Closing braces exercise automatic dedenting.
-        await human.keyboard.press("Home");
-        await human.keyboard.press("Shift+End");
+      if (trimmed.startsWith("}")) {
+        await human.keyboard.press("ArrowDown");
+        if (trimmed.length > 1) await human.keyboard.type(trimmed.slice(1), { delay: 3 });
+        await human.waitForTimeout(10);
+        continue;
       }
+      await human.keyboard.press("Enter");
+      // Replace inferred indentation when the developer deliberately chooses
+      // different formatting. Existing closing brackets are traversed above.
+      await human.keyboard.press("Home");
+      await human.keyboard.press("Shift+End");
     }
-    const lineText = humanLines[index].trimStart().startsWith("}") ?
-      humanLines[index].trimStart() : humanLines[index];
+    const lineText = humanLines[index];
     if (index === 17) {
-      await human.keyboard.type(`${lineText}x`, { delay: 1 });
+      await human.keyboard.type(`${lineText}x`, { delay: 3 });
       await human.keyboard.press("Backspace");
     } else {
-      await human.keyboard.type(lineText, { delay: 1 });
+      await human.keyboard.type(lineText, { delay: 3 });
     }
+    await human.waitForTimeout(10);
   }
   const editorText = async () => (await human.locator(".cm-line").allTextContents()).join("\n");
   assert.equal(await human.locator(".cm-line").count(), 67);

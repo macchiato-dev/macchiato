@@ -4,12 +4,13 @@ import { css } from "@codemirror/lang-css";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap }
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap,
+  insertBracket }
   from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap, redo, undo }
+import { defaultKeymap, history, historyKeymap, insertNewlineAndIndent, redo, undo }
   from "@codemirror/commands";
 import { bracketMatching, defaultHighlightStyle, foldCode, foldGutter, foldKeymap,
-  getIndentUnit, indentOnInput, indentString, syntaxHighlighting }
+  indentOnInput, syntaxHighlighting }
   from "@codemirror/language";
 import { lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
@@ -28,19 +29,6 @@ const languages = {
   json,
   markdown,
 };
-
-function readNativeSelection(view) {
-  const selection = document.getSelection();
-  if (!selection || !selection.anchorNode || !selection.focusNode ||
-      !view.contentDOM.contains(selection.anchorNode) ||
-      !view.contentDOM.contains(selection.focusNode)) return;
-  const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
-  const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
-  const current = view.state.selection.main;
-  if (current.anchor !== anchor || current.head !== head) {
-    view.dispatch({ selection: { anchor, head } });
-  }
-}
 
 const bridgedLineGeometry = EditorView.theme({
   ".cm-content": { lineHeight: "18px" },
@@ -100,9 +88,10 @@ const editorSetup = [
 export function start() {
   const parent = document.getElementById("editor");
   const language = new Compartment();
-  let current = "typescript";
+  const initial = parent.getAttribute("data-initial");
+  let current = initial && fixtures[initial] ? initial : "typescript";
   const view = new EditorView({
-    doc: fixtures[current].text,
+    doc: initial === "blank" ? "" : fixtures[current].text,
     extensions: [editorSetup, gutterProjection,
       language.of(languages[current]()), oneDark, nativeCaret, bridgedLineGeometry,
       EditorView.lineWrapping],
@@ -113,26 +102,34 @@ export function start() {
   // measurement so its height map uses browser geometry rather than
   // initial estimates (notably for pointer and drop coordinates).
   setTimeout(() => view.requestMeasure(), 0);
-  // The browser must not independently mutate contenteditable.
-  // Handle ordinary text/navigation in the guest before CodeMirror's bubble
-  // listener, while leaving shortcuts and composition to their own handlers.
-  view.contentDOM.addEventListener("keydown", (event) => {
+  // Native CodeMirror uses browser-owned contenteditable mutations. The guest
+  // adapter currently owns edits explicitly while its MutationObserver and
+  // selection ordering are brought to parity. Cancel the native mutation
+  // before dispatch so there can never be two authorities for one keypress.
+  if (Number.isInteger(document.reference)) view.contentDOM.addEventListener("keydown", (event) => {
     const modifier = event.ctrlKey || event.metaKey;
     if (!event.altKey && modifier && event.key.toLowerCase() === "z") {
-      (event.shiftKey ? redo : undo)(view);
       event.preventDefault();
       event.stopImmediatePropagation();
+      (event.shiftKey ? redo : undo)(view);
       return;
     }
     if (!event.altKey && event.ctrlKey && event.key.toLowerCase() === "y") {
-      redo(view);
       event.preventDefault();
       event.stopImmediatePropagation();
+      redo(view);
       return;
     }
     if (event.altKey || modifier) return;
-    readNativeSelection(view);
+    if (event.key.length !== 1 && (event.shiftKey || event.key !== "Enter")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
     if (event.key.length === 1) {
+      const bracket = insertBracket(view.state, event.key);
+      if (bracket) {
+        view.dispatch(bracket);
+        return;
+      }
       const range = view.state.selection.main;
       const at = range.from + event.key.length;
       view.dispatch({
@@ -140,25 +137,10 @@ export function start() {
         selection: { anchor: at },
         userEvent: "input.type",
       });
-    } else if (!event.shiftKey && event.key === "Enter") {
-      const state = view.state;
-      const range = state.selection.main;
-      const line = state.doc.lineAt(range.from);
-      const before = state.sliceDoc(line.from, range.from);
-      let indent = /^\s*/.exec(line.text)[0];
-      if (/[{[(]\s*$/.test(before)) {
-        indent += indentString(state, getIndentUnit(state));
-      }
-      const insert = state.lineBreak + indent;
-      view.dispatch({
-        changes: { from: range.from, to: range.to, insert },
-        selection: { anchor: range.from + insert.length },
-        userEvent: "input",
-      });
+      return;
     }
-    else return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
+    if (view.contentDOM.getAttribute("aria-activedescendant") && acceptCompletion(view)) return;
+    insertNewlineAndIndent(view);
   }, true);
   globalThis.editorExample = {
     text() { return view.state.doc.toString(); },

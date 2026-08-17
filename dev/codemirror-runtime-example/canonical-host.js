@@ -11,7 +11,8 @@ try {
     development: true,
     onDebug(message) { console.error(`QuickJS guest: ${message}`); },
   });
-  const response = await fetch("../generated/codemirror-canonical.wasm", { credentials: "same-origin" });
+  const response = await fetch(new URL("./generated/codemirror-canonical.wasm", import.meta.url),
+    { credentials: "same-origin" });
   if (!response.ok) throw new Error(`Wasm response ${response.status}`);
   const { instance } = await WebAssembly.instantiateStreaming(response, host.imports);
   await host.connect(instance);
