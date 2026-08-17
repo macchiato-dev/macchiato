@@ -5,7 +5,14 @@
   html, body, #quickjs-surface { height: 100%; margin: 0; }
   body { background: #282c34; color: #abb2bf; }
   #quickjs-surface { display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+  .runtime-status { align-self: center; justify-self: center; width: 22px; height: 22px;
+    border: 2px solid rgba(171, 178, 191, .2); border-top-color: #61afef;
+    border-radius: 50%; animation: runtime-spin 700ms linear infinite; }
+  .runtime-status[data-error] { color: #e06c75; max-width: min(560px, calc(100vw - 40px)); }
+  .runtime-status[data-error] { width: auto; height: auto; border: 0; border-radius: 0;
+    animation: none; font: 14px/1.5 system-ui, sans-serif; }
+  @keyframes runtime-spin { to { transform: rotate(360deg); } }
   .cm-editor { height: 100vh; max-height: 100%; min-height: 0; }
 </style>
-<div id="quickjs-surface"></div>
+<div id="quickjs-surface"><div class="runtime-status" role="status" aria-label="Loading"></div></div>
 <script type="module" src="./host.js"></script>

@@ -116,7 +116,9 @@ function project(snapshot) {
   return element;
 }
 
+try {
 const response = await fetch("./generated/quickjs-codemirror.wasm");
+if (!response.ok) throw new Error(`Wasm response ${response.status}`);
 let memory;
 const messages = [];
 let pendingHostMessage;
@@ -155,3 +157,11 @@ deliverToGuest = message => {
 };
 instance.exports.onmsg(0);
 globalThis.__quickjsCodeMirrorHost = { messages };
+} catch (error) {
+  const status = document.querySelector(".runtime-status");
+  if (status) {
+    status.dataset.error = "";
+    status.textContent = `QuickJS CodeMirror could not start: ${error?.message || error}`;
+  }
+  throw error;
+}
