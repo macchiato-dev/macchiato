@@ -10,6 +10,7 @@ import { Compartment } from "@codemirror/state";
 import { openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
 import { foldCode } from "@codemirror/language";
 import fixtures from "../generated/fixtures.js";
+import { nativeCaret } from "./native-caret.js";
 
 const languages = {
   typescript: () => javascript({ typescript: true }),
@@ -25,7 +26,7 @@ export function start() {
   let current = "typescript";
   const view = new EditorView({
     doc: fixtures[current].text,
-    extensions: [basicSetup, language.of(languages[current]()), oneDark,
+    extensions: [basicSetup, language.of(languages[current]()), oneDark, nativeCaret,
       EditorView.lineWrapping],
     parent,
   });
