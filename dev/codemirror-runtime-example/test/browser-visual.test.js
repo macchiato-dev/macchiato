@@ -126,4 +126,51 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   assert.deepEqual(inputErrors, []);
   await input.screenshot({ path: "/tmp/quickjs-codemirror-input.png" });
   await input.close();
+
+  const pointer = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const pointerErrors = [];
+  pointer.on("pageerror", error => pointerErrors.push(error.message));
+  await pointer.goto(`${base}/full/`);
+  await pointer.waitForSelector("body[data-ready]");
+  const pointerContent = pointer.locator(".cm-content");
+  const pointerLines = pointer.locator(".cm-line");
+  const original = await pointerContent.innerText();
+  const selectionStart = await pointerLines.nth(1).boundingBox();
+  const selectionEnd = await pointerLines.nth(4).boundingBox();
+  await pointer.mouse.move(selectionStart.x + 20, selectionStart.y + selectionStart.height / 2);
+  await pointer.mouse.down();
+  await pointer.mouse.move(selectionEnd.x + 30, selectionEnd.y + selectionEnd.height / 2,
+    { steps: 15 });
+  await pointer.mouse.up();
+  assert.ok((await pointer.evaluate(() => getSelection().toString())).length > 20);
+  await pointer.evaluate(() => {
+    globalThis.__copyMutations = [];
+    new MutationObserver(records => __copyMutations.push(...records.map(record => record.type)))
+      .observe(document.querySelector(".cm-content"),
+        { subtree: true, childList: true, characterData: true, attributes: true });
+  });
+  await pointer.keyboard.press("ControlOrMeta+c");
+  await pointer.waitForTimeout(50);
+  assert.equal(await pointerContent.innerText(), original);
+  assert.deepEqual(await pointer.evaluate(() => __copyMutations), []);
+  const clickTarget = await pointerLines.nth(10).boundingBox();
+  await pointer.mouse.click(clickTarget.x + 40, clickTarget.y + clickTarget.height / 2);
+  assert.equal(await pointerContent.innerText(), original);
+
+  const firstLine = await pointerLines.first().boundingBox();
+  await pointer.mouse.dblclick(firstLine.x + 72, firstLine.y + firstLine.height / 2);
+  assert.equal(await pointer.evaluate(() => getSelection().toString()), "Project");
+  const dropLine = await pointerLines.nth(3).boundingBox();
+  await pointer.mouse.move(firstLine.x + 72, firstLine.y + firstLine.height / 2);
+  await pointer.mouse.down();
+  await pointer.mouse.move(dropLine.x + 150, dropLine.y + dropLine.height / 2,
+    { steps: 16 });
+  await pointer.mouse.up();
+  await pointer.waitForTimeout(50);
+  assert.equal(await pointerLines.first().innerText(), "type  = {");
+  assert.equal(await pointerLines.nth(3).innerText(), "  sandboxed: boolean;Project");
+  assert.ok(await pointerContent.locator("span[class^=wwc-c]").count() > 20);
+  assert.deepEqual(pointerErrors, []);
+  await pointer.screenshot({ path: "/tmp/quickjs-codemirror-pointer.png" });
+  await pointer.close();
 });

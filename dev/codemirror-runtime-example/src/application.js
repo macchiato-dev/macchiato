@@ -29,8 +29,6 @@ const languages = {
   markdown,
 };
 
-let readSelectionOnNextKey = false;
-
 function projectBrowserSelection(view) {
   const range = view.state.selection.main;
   const anchor = view.domAtPos(range.anchor);
@@ -131,26 +129,15 @@ export function start() {
   projectBrowserSelection(view);
   scheduleGutterSync(view);
   view.contentDOM.addEventListener("mouseup", () => {
-    readSelectionOnNextKey = true;
+    readBrowserSelection(view);
   });
   view.contentDOM.addEventListener("pointerup", () => {
-    readSelectionOnNextKey = true;
+    readBrowserSelection(view);
   });
-  // A native contenteditable drag would mutate only the projected browser DOM,
-  // bypassing the authoritative CodeMirror document in QuickJS. Selection by
-  // dragging remains available; moving selected text waits for a guest-owned
-  // drag transaction.
-  view.contentDOM.addEventListener("dragstart", (event) => {
-    event.preventDefault();
-  }, true);
   // The browser projection must not independently mutate contenteditable.
   // Handle ordinary text/navigation in the guest before CodeMirror's bubble
   // listener, while leaving shortcuts and composition to their own handlers.
   view.contentDOM.addEventListener("keydown", (event) => {
-    if (readSelectionOnNextKey) {
-      readBrowserSelection(view);
-      readSelectionOnNextKey = false;
-    }
     const modifier = event.ctrlKey || event.metaKey;
     if (!event.altKey && modifier && event.key.toLowerCase() === "z") {
       (event.shiftKey ? redo : undo)(view);

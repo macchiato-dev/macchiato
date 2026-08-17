@@ -469,6 +469,33 @@ globalThis.console = {
   log: reportConsole, info: reportConsole, warn: reportConsole, error: reportConsole
 };
 
+function GuestDataTransfer(reference) {
+  GuestObject.call(this, reference);
+}
+GuestDataTransfer.prototype = Object.create(GuestObject.prototype);
+GuestDataTransfer.prototype.getData = function (type) {
+  return immediate([3, this.reference, stringIndex("getData"), [encode(type)]]);
+};
+GuestDataTransfer.prototype.setData = function (type, value) {
+  immediate([3, this.reference, stringIndex("setData"), [encode(type), encode(value)]]);
+};
+["dropEffect", "effectAllowed"].forEach(function (name) {
+  Object.defineProperty(GuestDataTransfer.prototype, name, {
+    get: function () { return immediate([1, this.reference, stringIndex(name)]); },
+    set: function (value) {
+      immediate([2, this.reference, stringIndex(name), encode(value)]);
+    }
+  });
+});
+["clipboardData", "dataTransfer"].forEach(function (name) {
+  Object.defineProperty(GuestEvent.prototype, name, {
+    get: function () {
+      var result = immediate([1, this.reference, stringIndex(name)]);
+      return result === null ? null : new GuestDataTransfer(result[1]);
+    }
+  });
+});
+
 // Window events are represented by the canonical document service. Keep
 // listener identity and removal in the guest so the host only needs to emit a
 // small, auditable set of ambient browser signals.
