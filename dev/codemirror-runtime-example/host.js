@@ -19,35 +19,62 @@ function safeCss(value) {
   return value;
 }
 
-function render(snapshot) {
+const projectedNodes = new Map();
+
+function createProjectedNode(snapshot) {
   if (snapshot.type === 3) return document.createTextNode(snapshot.text);
   if (!SAFE_TAGS.has(snapshot.tag)) throw new Error(`QuickJS DOM blocked tag: ${snapshot.tag}`);
-  const element = document.createElement(snapshot.tag);
+  return document.createElement(snapshot.tag);
+}
+
+function project(snapshot) {
+  let node = projectedNodes.get(snapshot.id);
+  if (!node) {
+    node = createProjectedNode(snapshot);
+    projectedNodes.set(snapshot.id, node);
+  }
+  if (snapshot.type === 3) {
+    if (node.data !== snapshot.text) node.data = snapshot.text;
+    return node;
+  }
+  const element = node;
+  const attributes = snapshot.attributes || {};
+  for (const name of element.getAttributeNames()) {
+    if (!Object.hasOwn(attributes, name)) element.removeAttribute(name);
+  }
   for (const [name, value] of Object.entries(snapshot.attributes || {})) {
     if (!SAFE_ATTRIBUTES.has(name)) throw new Error(`QuickJS DOM blocked attribute: ${name}`);
     if (name === "form" && value !== "") throw new Error("QuickJS DOM blocked form owner");
     if (name === "type" && !/^(?:button|checkbox|search|text)$/.test(value)) {
       throw new Error(`QuickJS DOM blocked input type: ${value}`);
     }
-    element.setAttribute(name, value);
+    if (element.getAttribute(name) !== value) element.setAttribute(name, value);
   }
   for (const [name, value] of Object.entries(snapshot.properties || {})) {
     if (!SAFE_PROPERTIES.has(name)) {
       throw new Error(`QuickJS DOM blocked property: ${name}`);
     }
-    element[name] = value;
+    if (element[name] !== value) element[name] = value;
   }
   const styles = snapshot.style || {};
-  if (styles.cssText) element.style.cssText = safeCss(styles.cssText);
+  if (styles.cssText && element.style.cssText !== styles.cssText) {
+    element.style.cssText = safeCss(styles.cssText);
+  }
   for (const [name, value] of Object.entries(styles)) {
     if (name !== "cssText") element.style.setProperty(
       name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`), safeCss(value));
   }
+  const children = snapshot.children || [];
   if (snapshot.tag === "style") {
-    element.textContent = safeCss((snapshot.children || [])
-      .filter(child => child.type === 3).map(child => child.text).join(""));
+    const css = safeCss(children.filter(child => child.type === 3)
+      .map(child => child.text).join(""));
+    if (element.textContent !== css) element.textContent = css;
   } else {
-    for (const child of snapshot.children || []) element.appendChild(render(child));
+    for (let index = 0; index < children.length; index++) {
+      const child = project(children[index]);
+      if (element.childNodes[index] !== child) element.insertBefore(child, element.childNodes[index] || null);
+    }
+    while (element.childNodes.length > children.length) element.lastChild.remove();
   }
   return element;
 }
@@ -61,8 +88,16 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
     const text = new TextDecoder().decode(new Uint8Array(memory.buffer, offset, length));
     if (text.startsWith("WWC_DOM:")) {
       const snapshot = JSON.parse(text.slice(8));
-      const body = render(snapshot);
-      document.querySelector("#quickjs-surface").replaceChildren(...body.childNodes);
+      const body = project(snapshot);
+      const surface = document.querySelector("#quickjs-surface");
+      const children = [...body.childNodes];
+      for (let index = 0; index < children.length; index++) {
+        const child = children[index];
+        if (surface.childNodes[index] !== child) {
+          surface.insertBefore(child, surface.childNodes[index] || null);
+        }
+      }
+      while (surface.childNodes.length > children.length) surface.lastChild.remove();
       document.body.dataset.ready = "true";
     } else messages.push(text);
     return 0;

@@ -8,6 +8,7 @@ function VirtualNode(type, name, document) {
   this.parentNode = null;
   this.childNodes = [];
   this._text = "";
+  this._hostId = document ? document._nextHostId++ : 0;
 }
 
 Object.defineProperty(VirtualNode.prototype, "firstChild", {
@@ -202,6 +203,7 @@ VirtualSelection.prototype.getRangeAt = function (index) { return this.ranges[in
 
 function VirtualDocument() {
   VirtualNode.call(this, 9, "#document", null);
+  this._nextHostId = 1;
   this.ownerDocument = this;
   this.documentElement = new VirtualElement("html", this);
   this.head = new VirtualElement("head", this);
@@ -314,7 +316,7 @@ globalThis.__wwcDomMetrics = function () {
 };
 globalThis.__wwcSnapshot = function () {
   function copy(node) {
-    if (node.nodeType === 3) return { type: 3, text: node._text };
+    if (node.nodeType === 3) return { id: node._hostId, type: 3, text: node._text };
     var attributes = {};
     for (var name in node.attributes) attributes[name] = node.attributes[name];
     if (node.className) attributes.class = node.className;
@@ -331,6 +333,7 @@ globalThis.__wwcSnapshot = function () {
       }
     }
     return {
+      id: node._hostId,
       type: node.nodeType,
       tag: node.tagName ? node.tagName.toLowerCase() : "",
       attributes: attributes,
