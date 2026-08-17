@@ -27,7 +27,6 @@ export async function quickjsCodeMirrorHandler(request) {
     return new Response(await readFile(path), {
       headers: {
         "content-type": types.get(extname(path)) || "application/octet-stream",
-        "content-security-policy": "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'unsafe-inline'",
       },
     });
   } catch {
