@@ -66,6 +66,10 @@ const browserSelectionProjection = EditorView.updateListener.of((update) => {
   }
 });
 
+const projectedLineGeometry = EditorView.theme({
+  ".cm-content": { lineHeight: "18px" },
+});
+
 let syncingGutter = false;
 function scheduleGutterSync(view) {
   if (syncingGutter) return;
@@ -79,6 +83,8 @@ function scheduleGutterSync(view) {
     const top = Math.max(0, lines[0].getBoundingClientRect().top -
       gutter.getBoundingClientRect().top);
     gutter.style.setProperty("padding-top", `${top}px`);
+    const foldGutter = view.dom.querySelectorAll(".cm-foldGutter")[0];
+    if (foldGutter) foldGutter.style.setProperty("padding-top", `${top}px`);
     for (let index = 0; index < lines.length; index++) {
       numbers[index + 1].style.height = `${lines[index].getBoundingClientRect().height}px`;
     }
@@ -122,7 +128,7 @@ export function start() {
   const view = new EditorView({
     doc: fixtures[current].text,
     extensions: [editorSetup, browserSelectionProjection, gutterProjection,
-      language.of(languages[current]()), oneDark, nativeCaret,
+      language.of(languages[current]()), oneDark, nativeCaret, projectedLineGeometry,
       EditorView.lineWrapping],
     parent,
   });

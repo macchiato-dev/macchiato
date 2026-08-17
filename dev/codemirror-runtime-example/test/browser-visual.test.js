@@ -67,6 +67,33 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
   await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
   await full.close();
 
+  const folding = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  const foldingErrors = [];
+  folding.on("pageerror", error => foldingErrors.push(error.message));
+  folding.on("console", message => {
+    if (message.type() === "error" && !message.text().includes("CodeMirror:typescript=")) {
+      foldingErrors.push(message.text());
+    }
+  });
+  await folding.goto(`${base}/full/`);
+  await folding.waitForSelector("body[data-ready]");
+  const foldLines = [0, 6, 11, 16];
+  const foldMarkers = folding.locator('.cm-foldGutter span[title="Fold line"]');
+  assert.equal(await foldMarkers.count(), foldLines.length);
+  for (let index = 0; index < foldLines.length; index++) {
+    const lineBox = await folding.locator(".cm-line").nth(foldLines[index]).boundingBox();
+    const markerBox = await foldMarkers.nth(index).boundingBox();
+    assert.ok(Math.abs(markerBox.y - lineBox.y) <= 1);
+  }
+  await foldMarkers.first().click();
+  assert.equal(await folding.locator(".cm-line").count(), 16);
+  assert.match(await folding.locator(".cm-line").first().innerText(), /…/);
+  await folding.locator('.cm-foldGutter span[title="Unfold line"]:visible').click();
+  assert.equal(await folding.locator(".cm-line").count(), 20);
+  assert.deepEqual(foldingErrors, []);
+  await folding.screenshot({ path: "/tmp/quickjs-codemirror-folding.png" });
+  await folding.close();
+
   const input = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   const inputErrors = [];
   input.on("pageerror", error => inputErrors.push(error.message));
