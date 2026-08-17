@@ -1,14 +1,21 @@
-import { basicSetup } from "codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorView } from "@codemirror/view";
-import { Compartment } from "@codemirror/state";
-import { openSearchPanel, SearchQuery, setSearchQuery } from "@codemirror/search";
-import { foldCode } from "@codemirror/language";
+import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap }
+  from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { bracketMatching, defaultHighlightStyle, foldCode, foldGutter, foldKeymap,
+  indentOnInput, syntaxHighlighting } from "@codemirror/language";
+import { lintKeymap } from "@codemirror/lint";
+import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
+  setSearchQuery } from "@codemirror/search";
+import { Compartment, EditorState } from "@codemirror/state";
+import { crosshairCursor, dropCursor, EditorView, highlightActiveLine,
+  highlightActiveLineGutter, keymap, lineNumbers,
+  rectangularSelection } from "@codemirror/view";
 import fixtures from "../generated/fixtures.js";
 import { nativeCaret } from "./native-caret.js";
 
@@ -20,13 +27,35 @@ const languages = {
   markdown,
 };
 
+// The browser's native selection and caret are the projection for this guest,
+// so this intentionally omits CodeMirror's drawSelection() extension.
+const editorSetup = [
+  lineNumbers(),
+  highlightActiveLineGutter(),
+  history(),
+  foldGutter(),
+  dropCursor(),
+  EditorState.allowMultipleSelections.of(true),
+  indentOnInput(),
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+  bracketMatching(),
+  closeBrackets(),
+  autocompletion(),
+  rectangularSelection(),
+  crosshairCursor(),
+  highlightActiveLine(),
+  highlightSelectionMatches(),
+  keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
+    ...historyKeymap, ...foldKeymap, ...completionKeymap, ...lintKeymap]),
+];
+
 export function start() {
   const parent = document.getElementById("editor");
   const language = new Compartment();
   let current = "typescript";
   const view = new EditorView({
     doc: fixtures[current].text,
-    extensions: [basicSetup, language.of(languages[current]()), oneDark, nativeCaret,
+    extensions: [editorSetup, language.of(languages[current]()), oneDark, nativeCaret,
       EditorView.lineWrapping],
     parent,
   });

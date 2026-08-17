@@ -20,6 +20,17 @@ globalThis.innerWidth = 800;
 globalThis.innerHeight = 600;
 globalThis.devicePixelRatio = 1;
 
+var projectedClasses = Object.create(null), projectedClassCount = 0;
+function projectClassToken(token) {
+  if (/^[a-z_][a-z0-9_-]*$/i.test(token)) return token;
+  return projectedClasses[token] ||
+    (projectedClasses[token] = "wwc-c" + (++projectedClassCount));
+}
+function projectClassName(value) {
+  return String(value).split(/\s+/).filter(Boolean).map(projectClassToken).join(" ");
+}
+globalThis.__wwcProjectClassName = projectClassName;
+
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function () {
     return immediate([1, this.reference, stringIndex("nodeType")]);
@@ -109,11 +120,66 @@ function GuestStylesheetNode() {
   this.parentNode = null;
   this._text = "";
 }
+function projectStylesheet(source) {
+  var output = "", at = 0;
+  // This guest does not project synthetic cursor animation or print-only UI.
+  var pattern = /(?:@(?:-webkit-)?keyframes\s+[-_a-z0-9]+|@media\s+print)\s*\{/ig;
+  while (true) {
+    pattern.lastIndex = at;
+    var match = pattern.exec(source);
+    if (!match) {
+      output += source.slice(at);
+      output = output.replace(/\.([^\d\s.#:\[\]{};>+~(),][^\s.#:\[\]{};>+~(),]*)/g,
+        function (_, token) {
+          return "." + projectClassToken(token);
+        });
+      return omitCssUrls(output);
+    }
+    output += source.slice(at, match.index);
+    var cursor = pattern.lastIndex, depth = 1, quote = "";
+    while (cursor < source.length && depth) {
+      var character = source[cursor++];
+      if (quote) {
+        if (character === "\\") cursor++;
+        else if (character === quote) quote = "";
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === "/" && source[cursor] === "*") {
+        var end = source.indexOf("*/", cursor + 1);
+        if (end < 0) throw new SyntaxError("CSS at-rule comment is incomplete");
+        cursor = end + 2;
+      } else if (character === "{") depth++;
+      else if (character === "}") depth--;
+    }
+    if (depth) throw new SyntaxError("CSS at-rule block is incomplete");
+    at = cursor;
+  }
+}
+function omitCssUrls(source) {
+  var output = "", at = 0, pattern = /url\s*\(/ig;
+  while (true) {
+    pattern.lastIndex = at;
+    var match = pattern.exec(source);
+    if (!match) return output + source.slice(at);
+    output += source.slice(at, match.index) + "none";
+    var cursor = pattern.lastIndex, depth = 1, quote = "";
+    while (cursor < source.length && depth) {
+      var character = source[cursor++];
+      if (quote) {
+        if (character === "\\") cursor++;
+        else if (character === quote) quote = "";
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === "(") depth++;
+      else if (character === ")") depth--;
+    }
+    if (depth) throw new SyntaxError("CSS url() is incomplete");
+    at = cursor;
+  }
+}
 Object.defineProperty(GuestStylesheetNode.prototype, "textContent", {
   get: function () { return this._text; },
   set: function (value) {
     this._text = String(value);
-    if (this.parentNode) document.installStylesheet(this._text);
+    if (this.parentNode) document.installStylesheet(projectStylesheet(this._text));
   }
 });
 GuestStylesheetNode.prototype.setAttribute = function () {
@@ -213,7 +279,7 @@ GuestElement.prototype.insertBefore = function (child, next) {
   if (child instanceof GuestStylesheetNode) {
     if (this !== document.head) throw new TypeError("stylesheet must enter the logical head");
     child.parentNode = this;
-    document.installStylesheet(child.textContent);
+    document.installStylesheet(projectStylesheet(child.textContent));
     return child;
   }
   detachGuestNode(child);
@@ -275,6 +341,7 @@ GuestElement.prototype.getAttribute = function (name) {
 };
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
+  if (name === "class") text = projectClassName(text);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
   values[name] = text;
   pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [
