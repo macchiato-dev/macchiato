@@ -84,6 +84,11 @@ CodeMirror, ProseMirror, Wordgard, and Xterm.js form the initial demanding
 surface corpus. CodeMirror is first. Their high-frequency paths should use
 measured fixed-schema messages rather than forcing all traffic through an
 optional recursive value codec.
+The core should provide simple bounded operation batches. Host-assisted
+diffing, patching, and retained mirrors can remain a separate module when a
+measured surface benefits from them.
+Raw Wasm call count is not itself a reason for complexity; measure conversion,
+bookkeeping, guest execution, and browser work around those calls.
 
 - Keep ordinary commits at or below 256 changed lines. This is a ceiling, not
   a target.
