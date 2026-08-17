@@ -8,6 +8,7 @@ function VirtualNode(type, name, document) {
   this.parentNode = null;
   this.childNodes = [];
   this._text = "";
+  this._listeners = {};
   this._hostId = document ? document._nextHostId++ : 0;
 }
 
@@ -100,6 +101,14 @@ VirtualNode.prototype.contains = function (node) {
   for (; node; node = node.parentNode) if (node === this) return true;
   return false;
 };
+VirtualNode.prototype.addEventListener = function (type, callback) {
+  (this._listeners[type] || (this._listeners[type] = [])).push(callback);
+};
+VirtualNode.prototype.removeEventListener = function (type, callback) {
+  var listeners = this._listeners[type] || [];
+  var index = listeners.indexOf(callback);
+  if (index >= 0) listeners.splice(index, 1);
+};
 
 function VirtualElement(tag, document) {
   VirtualNode.call(this, 1, String(tag).toUpperCase(), document);
@@ -109,7 +118,6 @@ function VirtualElement(tag, document) {
   this.className = "";
   this.id = "";
   this.hidden = false;
-  this._listeners = {};
   var element = this;
   this.classList = {
     add: function () {
@@ -151,14 +159,6 @@ VirtualElement.prototype.hasAttribute = function (name) {
   return Object.prototype.hasOwnProperty.call(this.attributes, name);
 };
 VirtualElement.prototype.removeAttribute = function (name) { delete this.attributes[name]; };
-VirtualElement.prototype.addEventListener = function (type, callback) {
-  (this._listeners[type] || (this._listeners[type] = [])).push(callback);
-};
-VirtualElement.prototype.removeEventListener = function (type, callback) {
-  var listeners = this._listeners[type] || [];
-  var index = listeners.indexOf(callback);
-  if (index >= 0) listeners.splice(index, 1);
-};
 VirtualElement.prototype.focus = function () { this.ownerDocument.activeElement = this; };
 VirtualElement.prototype.blur = function () {
   if (this.ownerDocument.activeElement === this) this.ownerDocument.activeElement = null;
@@ -200,6 +200,24 @@ Object.defineProperty(VirtualSelection.prototype, "rangeCount", {
 VirtualSelection.prototype.addRange = function (range) { this.ranges = [range]; };
 VirtualSelection.prototype.removeAllRanges = function () { this.ranges = []; };
 VirtualSelection.prototype.getRangeAt = function (index) { return this.ranges[index]; };
+VirtualSelection.prototype.collapse = function (node, offset) {
+  this.anchorNode = this.focusNode = node;
+  this.anchorOffset = this.focusOffset = offset;
+  var range = new VirtualRange(node.ownerDocument);
+  range.startContainer = range.endContainer = node;
+  range.startOffset = range.endOffset = offset;
+  range.collapsed = true;
+  this.ranges = [range];
+};
+VirtualSelection.prototype.extend = function (node, offset) {
+  this.focusNode = node;
+  this.focusOffset = offset;
+  if (this.ranges[0]) {
+    this.ranges[0].endContainer = node;
+    this.ranges[0].endOffset = offset;
+    this.ranges[0].collapsed = false;
+  }
+};
 
 function VirtualDocument() {
   VirtualNode.call(this, 9, "#document", null);
@@ -230,8 +248,6 @@ VirtualDocument.prototype.getElementById = function (id) {
   }
   return null;
 };
-VirtualDocument.prototype.addEventListener = function () {};
-VirtualDocument.prototype.removeEventListener = function () {};
 VirtualDocument.prototype.hasFocus = function () { return true; };
 
 var document = new VirtualDocument();
@@ -314,6 +330,53 @@ globalThis.__wwcDomMetrics = function () {
   }
   return { nodes: nodes, elements: elements, text: text, listeners: listeners };
 };
+globalThis.__wwcReceiveHostMessage = function (bytes) {
+  bytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  var offset = 0;
+  function u8() { var value = view.getUint8(offset); offset++; return value; }
+  function u32() { var value = view.getUint32(offset, true); offset += 4; return value; }
+  function text() {
+    var length = u32(), value = "";
+    for (var end = offset + length; offset < end;) value += String.fromCharCode(u8());
+    return decodeURIComponent(escape(value));
+  }
+  var targetId = u32();
+  var type = text();
+  var key = text();
+  var code = text();
+  var value = text();
+  var modifiers = u8();
+  var pending = [document];
+  var target = null;
+  while (pending.length) {
+    var node = pending.pop();
+    if (node._hostId === targetId) { target = node; break; }
+    for (var index = 0; index < node.childNodes.length; index++) pending.push(node.childNodes[index]);
+  }
+  if (!target) throw new Error("Unknown host event target: " + targetId);
+  if (value !== "" && Object.prototype.hasOwnProperty.call(target, "value")) target.value = value;
+  var stopped = false;
+  var event = {
+    type: type, target: target, currentTarget: target, key: key, code: code,
+    metaKey: !!(modifiers & 1), ctrlKey: !!(modifiers & 2),
+    altKey: !!(modifiers & 4), shiftKey: !!(modifiers & 8),
+    defaultPrevented: false,
+    preventDefault: function () { this.defaultPrevented = true; },
+    stopPropagation: function () { stopped = true; },
+    stopImmediatePropagation: function () { stopped = true; this._immediate = true; }
+  };
+  for (var current = target; current && !stopped; current = current.parentNode) {
+    event.currentTarget = current;
+    if (typeof current["on" + type] === "function") current["on" + type].call(current, event);
+    var listeners = (current._listeners && current._listeners[type] || []).slice();
+    for (var listenerIndex = 0; listenerIndex < listeners.length; listenerIndex++) {
+      listeners[listenerIndex].call(current, event);
+      if (event._immediate) break;
+    }
+  }
+  __wwcDrainTasks(100);
+};
 globalThis.__wwcSnapshot = function () {
   function copy(node) {
     if (node.nodeType === 3) return { id: node._hostId, type: 3, text: node._text };
@@ -326,8 +389,8 @@ globalThis.__wwcSnapshot = function () {
       if (typeof node.style[property] === "string") style[property] = node.style[property];
     }
     var properties = {};
-    for (var index = 0; index < 3; index++) {
-      var property = ["value", "checked", "disabled"][index];
+    for (var index = 0; index < 5; index++) {
+      var property = ["value", "checked", "disabled", "contentEditable", "tabIndex"][index];
       if (Object.prototype.hasOwnProperty.call(node, property)) {
         properties[property] = node[property];
       }
@@ -339,10 +402,17 @@ globalThis.__wwcSnapshot = function () {
       attributes: attributes,
       style: style,
       properties: properties,
+      listeners: Object.keys(node).filter(function (name) {
+        return name.slice(0, 2) === "on" && typeof node[name] === "function";
+      }).map(function (name) { return name.slice(2); }).concat(Object.keys(node._listeners || {})),
       children: node.childNodes.map(copy)
     };
   }
   var body = copy(document.body);
+  body.listeners = Object.keys(document._listeners).reduce(function (types, type) {
+    if (types.indexOf(type) < 0) types.push(type);
+    return types;
+  }, body.listeners);
   body.children = document.head.childNodes.map(copy).concat(body.children);
   return body;
 };

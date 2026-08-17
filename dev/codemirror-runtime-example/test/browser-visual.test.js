@@ -43,8 +43,10 @@ test("projected QuickJS CodeMirror has bounded gutters, folding, and search", as
     assert.equal(await page.locator(".cm-search input").first().inputValue(), "URL");
     assert.equal((await page.locator(".cm-line").filter({ hasText: "export const URL_" })
       .first().innerText()).includes("ATTRIBUTES_CAPABILITY"), false);
-    assert.deepEqual(errors, []);
     await page.screenshot({ path: `/tmp/quickjs-codemirror-${viewport.name}.png` });
+    await page.locator('.cm-search button[name="close"]').click();
+    await page.locator(".cm-search").waitFor({ state: "detached" });
+    assert.deepEqual(errors, []);
     await page.close();
   }
 });

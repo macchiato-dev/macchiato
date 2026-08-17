@@ -1,5 +1,6 @@
 #include "quickjs.h"
 #include "guest-source.h"
+#include <stdlib.h>
 
 __attribute__((import_module("host"), import_name("msg")))
 extern uint32_t msg(uint32_t offset, uint32_t length);
@@ -8,6 +9,8 @@ static JSRuntime *runtime;
 static JSContext *context;
 static char transfer[256];
 static JSClassID host_reference_class;
+static uint8_t *host_message;
+static uint32_t host_message_capacity;
 
 static void report_stage(const char *stage)
 {
@@ -112,12 +115,47 @@ static void report_memory(void)
             (uint32_t)(length < (int)sizeof(transfer) ? length : sizeof(transfer)));
 }
 
+static void report_snapshot(void)
+{
+    static const char source[] =
+        "globalThis.__wwcSnapshot ? 'WWC_DOM:'+JSON.stringify(__wwcSnapshot()) : undefined";
+    JSValue result = JS_Eval(context, source, sizeof(source) - 1,
+                             "guest-snapshot.js", JS_EVAL_TYPE_GLOBAL);
+    if (!JS_IsUndefined(result)) report(result);
+    JS_FreeValue(context, result);
+}
+
+static void receive_host_message(uint32_t minimum_length)
+{
+    JSValue global, receiver, bytes, result;
+    uint32_t actual_length;
+    if (minimum_length > host_message_capacity) {
+        uint8_t *next = realloc(host_message, minimum_length);
+        if (next == NULL) return;
+        host_message = next;
+        host_message_capacity = minimum_length;
+    }
+    actual_length = msg((uint32_t)(uintptr_t)host_message, host_message_capacity);
+    if (actual_length > host_message_capacity) return;
+    global = JS_GetGlobalObject(context);
+    receiver = JS_GetPropertyStr(context, global, "__wwcReceiveHostMessage");
+    bytes = JS_NewArrayBufferCopy(context, host_message, actual_length);
+    result = JS_Call(context, receiver, global, 1, &bytes);
+    if (JS_IsException(result)) report(result);
+    JS_FreeValue(context, result);
+    JS_FreeValue(context, bytes);
+    JS_FreeValue(context, receiver);
+    JS_FreeValue(context, global);
+    report_snapshot();
+}
+
 void quickjs_guest_onmsg(uint32_t minimum_length)
 {
     JSValue result;
-    (void)minimum_length;
-    if (runtime != NULL)
+    if (runtime != NULL) {
+        if (minimum_length != 0) receive_host_message(minimum_length);
         return;
+    }
     runtime = JS_NewRuntime();
     if (runtime == NULL)
         return;
@@ -175,15 +213,7 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         if (JS_IsException(result)) report(result);
         JS_FreeValue(context, result);
     }
-    {
-        static const char snapshot_source[] =
-            "globalThis.__wwcSnapshot ? 'WWC_DOM:'+JSON.stringify(__wwcSnapshot()) : undefined";
-        result = JS_Eval(context, snapshot_source,
-                         sizeof(snapshot_source) - 1,
-                         "guest-snapshot.js", JS_EVAL_TYPE_GLOBAL);
-        if (!JS_IsUndefined(result)) report(result);
-        JS_FreeValue(context, result);
-    }
+    report_snapshot();
     JS_RunGC(runtime);
     report_memory();
 }

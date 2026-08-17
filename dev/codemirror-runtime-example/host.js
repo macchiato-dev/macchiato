@@ -8,7 +8,7 @@ const SAFE_ATTRIBUTES = new Set([
   "main-field", "name", "placeholder", "role", "spellcheck", "tabindex",
   "translate", "type", "value", "writingsuggestions",
 ]);
-const SAFE_PROPERTIES = new Set(["checked", "disabled", "value"]);
+const SAFE_PROPERTIES = new Set(["checked", "contentEditable", "disabled", "tabIndex", "value"]);
 
 function safeCss(value) {
   const withoutInlineSvg = value.replace(
@@ -20,6 +20,41 @@ function safeCss(value) {
 }
 
 const projectedNodes = new Map();
+const guestIds = new WeakMap();
+const installedListeners = new WeakMap();
+let deliverToGuest;
+
+function encodeEvent(event) {
+  const encoder = new TextEncoder();
+  const strings = [event.type, event.key || "", event.code || "",
+    typeof event.target.value === "string" ? event.target.value : ""]
+    .map(value => encoder.encode(value));
+  const length = 4 + strings.reduce((sum, value) => sum + 4 + value.length, 0) + 1;
+  const bytes = new Uint8Array(length);
+  const view = new DataView(bytes.buffer);
+  let offset = 0;
+  view.setUint32(offset, guestIds.get(event.target), true); offset += 4;
+  for (const value of strings) {
+    view.setUint32(offset, value.length, true); offset += 4;
+    bytes.set(value, offset); offset += value.length;
+  }
+  bytes[offset] = (event.metaKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) |
+    (event.altKey ? 4 : 0) | (event.shiftKey ? 8 : 0);
+  return bytes;
+}
+
+function installEventListeners(element, types) {
+  let installed = installedListeners.get(element);
+  if (!installed) installedListeners.set(element, installed = new Set());
+  for (const type of types || []) {
+    if (installed.has(type)) continue;
+    installed.add(type);
+    element.addEventListener(type, event => {
+      event.stopPropagation();
+      deliverToGuest?.(encodeEvent(event));
+    });
+  }
+}
 
 function createProjectedNode(snapshot) {
   if (snapshot.type === 3) return document.createTextNode(snapshot.text);
@@ -32,12 +67,14 @@ function project(snapshot) {
   if (!node) {
     node = createProjectedNode(snapshot);
     projectedNodes.set(snapshot.id, node);
+    guestIds.set(node, snapshot.id);
   }
   if (snapshot.type === 3) {
     if (node.data !== snapshot.text) node.data = snapshot.text;
     return node;
   }
   const element = node;
+  installEventListeners(element, snapshot.listeners);
   const attributes = snapshot.attributes || {};
   for (const name of element.getAttributeNames()) {
     if (!Object.hasOwn(attributes, name)) element.removeAttribute(name);
@@ -82,8 +119,15 @@ function project(snapshot) {
 const response = await fetch("./generated/quickjs-codemirror.wasm");
 let memory;
 const messages = [];
+let pendingHostMessage;
 const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
   msg(offset, length) {
+    if (pendingHostMessage) {
+      const message = pendingHostMessage;
+      pendingHostMessage = null;
+      new Uint8Array(memory.buffer, offset, length).set(message);
+      return message.length;
+    }
     if (!length) return 0;
     const text = new TextDecoder().decode(new Uint8Array(memory.buffer, offset, length));
     if (text.startsWith("WWC_DOM:")) {
@@ -104,5 +148,9 @@ const { instance } = await WebAssembly.instantiateStreaming(response, { host: {
   },
 } });
 memory = instance.exports.memory;
+deliverToGuest = message => {
+  pendingHostMessage = message;
+  instance.exports.onmsg(message.length);
+};
 instance.exports.onmsg(0);
 globalThis.__quickjsCodeMirrorHost = { messages };
