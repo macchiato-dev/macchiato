@@ -15,9 +15,8 @@ import { lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
   setSearchQuery } from "@codemirror/search";
 import { Compartment, EditorState } from "@codemirror/state";
-import { crosshairCursor, dropCursor, EditorView, highlightActiveLine,
-  highlightActiveLineGutter, keymap, lineNumbers,
-  rectangularSelection } from "@codemirror/view";
+import { dropCursor, EditorView, highlightActiveLine,
+  highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
 import fixtures from "../generated/fixtures.js";
 import { nativeCaret } from "./native-caret.js";
 
@@ -29,18 +28,11 @@ const languages = {
   markdown,
 };
 
-function projectBrowserSelection(view) {
-  const range = view.state.selection.main;
-  const anchor = view.domAtPos(range.anchor);
-  const head = view.domAtPos(range.head);
+function readNativeSelection(view) {
   const selection = document.getSelection();
-  selection.collapse(anchor.node, anchor.offset);
-  if (range.anchor !== range.head) selection.extend(head.node, head.offset);
-}
-
-function readBrowserSelection(view) {
-  const selection = document.getSelection();
-  if (!selection || !selection.anchorNode || !selection.focusNode) return;
+  if (!selection || !selection.anchorNode || !selection.focusNode ||
+      !view.contentDOM.contains(selection.anchorNode) ||
+      !view.contentDOM.contains(selection.focusNode)) return;
   const anchor = view.posAtDOM(selection.anchorNode, selection.anchorOffset);
   const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
   const current = view.state.selection.main;
@@ -59,12 +51,6 @@ function moveOneLine(view, direction) {
   view.dispatch({ selection: { anchor: target.from + Math.min(column, target.length) },
     scrollIntoView: true, userEvent: "select" });
 }
-
-const browserSelectionProjection = EditorView.updateListener.of((update) => {
-  if (update.docChanged || update.selectionSet || update.viewportChanged) {
-    projectBrowserSelection(update.view);
-  }
-});
 
 const projectedLineGeometry = EditorView.theme({
   ".cm-content": { lineHeight: "18px" },
@@ -113,8 +99,6 @@ const editorSetup = [
   bracketMatching(),
   closeBrackets(),
   autocompletion(),
-  rectangularSelection(),
-  crosshairCursor(),
   highlightActiveLine(),
   highlightSelectionMatches(),
   keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
@@ -127,34 +111,20 @@ export function start() {
   let current = "typescript";
   const view = new EditorView({
     doc: fixtures[current].text,
-    extensions: [editorSetup, browserSelectionProjection, gutterProjection,
+    extensions: [editorSetup, gutterProjection,
       language.of(languages[current]()), oneDark, nativeCaret, projectedLineGeometry,
       EditorView.lineWrapping],
     parent,
   });
-  projectBrowserSelection(view);
   scheduleGutterSync(view);
   // The guest has no ambient ResizeObserver. Give CodeMirror one post-mount
   // measurement so its height map uses projected browser geometry rather than
   // initial estimates (notably for pointer and drop coordinates).
   setTimeout(() => view.requestMeasure(), 0);
-  let dragging = false;
-  view.contentDOM.addEventListener("mouseup", () => {
-    if (!dragging) readBrowserSelection(view);
-  });
-  view.contentDOM.addEventListener("pointerup", () => {
-    if (!dragging) readBrowserSelection(view);
-  });
-  view.contentDOM.addEventListener("dragstart", () => {
-    dragging = true;
-  });
-  view.contentDOM.addEventListener("dragend", () => {
-    projectBrowserSelection(view);
-    setTimeout(() => {
-      projectBrowserSelection(view);
-      dragging = false;
-    }, 0);
-  });
+  view.contentDOM.addEventListener("dragstart", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
   // The browser projection must not independently mutate contenteditable.
   // Handle ordinary text/navigation in the guest before CodeMirror's bubble
   // listener, while leaving shortcuts and composition to their own handlers.
@@ -173,6 +143,7 @@ export function start() {
       return;
     }
     if (event.altKey || modifier) return;
+    readNativeSelection(view);
     if (event.key.length === 1) {
       const range = view.state.selection.main;
       const line = view.state.doc.lineAt(range.from);

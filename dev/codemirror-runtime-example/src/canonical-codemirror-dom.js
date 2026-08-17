@@ -63,6 +63,12 @@ Object.defineProperty(GuestObject.prototype, "nodeType", {
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
+GuestObject.prototype.closest = function (selector) {
+  var result = immediate([3, this.reference, stringIndex("closest"), [
+    encode(String(selector))
+  ]]);
+  return result === null ? null : nodeForReference(result[1]);
+};
 ["nodeValue", "textContent"].forEach(function (name) {
   Object.defineProperty(GuestObject.prototype, name, {
     get: function () {
@@ -362,97 +368,16 @@ GuestStyle.prototype.removeProperty = function (name) {
   return "";
 };
 
-function hostGet(reference, name) {
-  return immediate([1, reference, stringIndex(name)]);
-}
 function hostCall(reference, name, args) {
   return immediate([3, reference, stringIndex(name), (args || []).map(encode)]);
 }
-function mutationNode(recordReference, kind, index) {
-  var result = hostCall(recordReference, kind, [index]);
-  return nodeForReference(result[1]);
-}
-function readMutationBatch(batchReference) {
-  var length = hostGet(batchReference, "length"), records = [];
-  for (var index = 0; index < length; index++) {
-    var result = hostCall(batchReference, "item", [index]);
-    var reference = result[1], type = hostGet(reference, "type");
-    var targetResult = hostGet(reference, "target");
-    var record = { type: type, target: nodeForReference(targetResult[1]) };
-    if (type === "childList") {
-      var added = hostGet(reference, "addedNodeCount");
-      var removed = hostGet(reference, "removedNodeCount");
-      record.addedNodes = [];
-      record.removedNodes = [];
-      for (var add = 0; add < added; add++) {
-        record.addedNodes.push(mutationNode(reference, "addedNodeAt", add));
-      }
-      for (var remove = 0; remove < removed; remove++) {
-        record.removedNodes.push(mutationNode(reference, "removedNodeAt", remove));
-      }
-      var previous = hostGet(reference, "previousSibling");
-      var next = hostGet(reference, "nextSibling");
-      record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
-      record.nextSibling = next === null ? null : nodeForReference(next[1]);
-      record.removedNodes.forEach(detachGuestNode);
-      var children = childrenOf(record.target);
-      var position = record.nextSibling ? children.indexOf(record.nextSibling) : children.length;
-      if (position < 0) position = children.length;
-      record.addedNodes.forEach(function (node) {
-        detachGuestNode(node);
-        children.splice(position++, 0, node);
-        node._guestParent = record.target;
-      });
-    } else if (type === "characterData") {
-      record.oldValue = hostGet(reference, "oldValue");
-    } else if (type === "attributes") {
-      record.attributeName = hostGet(reference, "attributeName");
-      record.oldValue = hostGet(reference, "oldValue");
-      var value = hostCall(record.target.reference, "getAttribute", [record.attributeName]);
-      var values = record.target._attributeValues ||
-        (record.target._attributeValues = Object.create(null));
-      if (value === null) delete values[record.attributeName];
-      else values[record.attributeName] = value;
-    }
-    records.push(record);
-  }
-  return records;
-}
-function GuestMutationObserver(callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  this.callback = callback;
-  this.reference = null;
-}
-GuestMutationObserver.prototype.observe = function (target, options) {
-  this.disconnect();
-  var flags = (options.attributes ? 1 : 0) |
-    (options.attributeOldValue ? 2 : 0) |
-    (options.characterData ? 4 : 0) |
-    (options.characterDataOldValue ? 8 : 0) |
-    (options.subtree ? 16 : 0);
-  var self = this, callbackIndex = callbacks.length;
-  callbacks.push(function (batch) {
-    self.callback(readMutationBatch(batch.reference), self);
-  });
-  var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
-    encode(target), encode(flags), encode(callbackIndex)
-  ]]);
-  this.reference = result[1];
-};
-GuestMutationObserver.prototype.disconnect = function () {
-  if (this.reference !== null) {
-    hostCall(this.reference, "disconnect", []);
-    this.reference = null;
-  }
-};
-GuestMutationObserver.prototype.takeRecords = function () {
-  if (this.reference === null) return [];
-  var result = hostCall(this.reference, "takeRecords", []);
-  return readMutationBatch(result[1]);
-};
 function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.disconnect = function () {};
-globalThis.MutationObserver = GuestMutationObserver;
+EmptyObserver.prototype.takeRecords = function () { return []; };
+// CodeMirror owns this projected DOM and all supported edits enter through its
+// explicit event path. Mirroring the browser's child-list records back into
+// the guest creates a second, competing DOM authority during native selection.
+globalThis.MutationObserver = EmptyObserver;
 globalThis.ResizeObserver = EmptyObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
@@ -466,6 +391,15 @@ globalThis.clearTimeout = globalThis.clearInterval = function (handle) {
   if (Number.isInteger(handle) && handle >= 0 && handle < callbacks.length) {
     callbacks[handle] = function () {};
   }
+};
+
+// Native selection is browser-owned. The application imports its endpoints at
+// the next editing boundary instead of replaying every selectionchange through
+// QuickJS and causing CodeMirror to reconcile an already-current DOM.
+var documentAddEventListener = GuestDocument.prototype.addEventListener;
+GuestDocument.prototype.addEventListener = function (type, callback) {
+  if (type === "selectionchange") return;
+  return documentAddEventListener.call(this, type, callback);
 };
 function reportConsole() {
   var parts = [];
@@ -539,16 +473,6 @@ globalThis.removeEventListener = function (type, callback) {
   }
 };
 
-// CodeMirror owns selection while editing. Browser pointer selection is read
-// synchronously by the application on the next key; replaying the browser's
-// asynchronous selectionchange echo can otherwise overwrite a newer guest
-// selection during fast input.
-var documentAddEventListener = GuestDocument.prototype.addEventListener;
-GuestDocument.prototype.addEventListener = function (type, callback) {
-  if (type === "selectionchange") return;
-  return documentAddEventListener.call(this, type, callback);
-};
-
 GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var records = this._eventListeners || (this._eventListeners = []);
@@ -556,7 +480,20 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
     return record.type === type && record.callback === callback;
   })) return;
   var index = callbacks.length;
-  callbacks.push(callback);
+  var nativeSelection = type === "mousedown" || type === "mousemove" ||
+    type === "mouseup" || type === "pointerdown" || type === "pointermove" ||
+    type === "pointerup";
+  var nativeCopy = type === "keydown";
+  callbacks.push(nativeSelection || nativeCopy ? function (event) {
+    var node = event && event.target;
+    var content = node instanceof GuestObject && node.closest(".cm-content");
+    if (content && nativeSelection) return;
+    if (content && nativeCopy &&
+        (event.key === "Meta" || event.key === "Control" ||
+          (!event.altKey && (event.ctrlKey || event.metaKey) &&
+            String(event.key).toLowerCase() === "c"))) return;
+    callback(event);
+  } : callback);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture });
   pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
