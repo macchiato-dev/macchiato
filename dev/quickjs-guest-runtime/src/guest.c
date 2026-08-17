@@ -11,12 +11,17 @@ static char transfer[256];
 static JSClassID host_reference_class;
 static uint8_t *host_message;
 static uint32_t host_message_capacity;
+#ifdef WWC_CANONICAL_HOST
+static uint32_t *pending_releases;
+static uint32_t pending_release_count;
+static uint32_t pending_release_capacity;
+#endif
 
 static void report_stage(const char *stage)
 {
 #ifdef WWC_CANONICAL_HOST
     (void)stage;
-    msg(128u * 8192u + 1u, 0);
+    return;
 #else
     uint32_t length = 0;
     while (stage[length] != '\0') length++;
@@ -67,6 +72,10 @@ static JSValue guest_bridge(JSContext *ctx, JSValueConst this_value,
         return JS_ThrowTypeError(ctx, "bridge requires a bounded Uint8Array");
     }
     actual = msg((uint32_t)(uintptr_t)(bytes + offset), (uint32_t)length);
+#ifdef WWC_CANONICAL_HOST
+    while (pending_release_count != 0)
+        msg(pending_releases[--pending_release_count], 0);
+#endif
     JS_FreeValue(ctx, buffer);
     return JS_NewUint32(ctx, actual);
 }
@@ -75,8 +84,23 @@ static void release_host_reference(JSRuntime *rt, JSValue value)
 {
     uintptr_t control = (uintptr_t)JS_GetOpaque(value, host_reference_class);
     (void)rt;
-    if (control != 0)
+    if (control != 0) {
+#ifdef WWC_CANONICAL_HOST
+        if (pending_release_count == pending_release_capacity) {
+            uint32_t next_capacity = pending_release_capacity == 0 ? 64 :
+                                     pending_release_capacity * 2;
+            uint32_t *next = realloc(pending_releases,
+                                     next_capacity * sizeof(*next));
+            if (next == NULL)
+                return;
+            pending_releases = next;
+            pending_release_capacity = next_capacity;
+        }
+        pending_releases[pending_release_count++] = (uint32_t)control;
+#else
         msg((uint32_t)control, 0);
+#endif
+    }
 }
 
 static JSValue make_host_reference(JSContext *ctx, JSValueConst this_value,
@@ -116,6 +140,20 @@ static int install_host_references(void)
     return 0;
 }
 
+#ifdef WWC_CANONICAL_HOST
+static void report_text(const char *text, uint32_t length)
+{
+    JSValue global = JS_GetGlobalObject(context);
+    JSValue reporter = JS_GetPropertyStr(context, global, "__wwcReportError");
+    JSValue message = JS_NewStringLen(context, text, length);
+    JSValue result = JS_Call(context, reporter, global, 1, &message);
+    JS_FreeValue(context, result);
+    JS_FreeValue(context, message);
+    JS_FreeValue(context, reporter);
+    JS_FreeValue(context, global);
+}
+#endif
+
 static void report(JSValue value)
 {
     const char *text;
@@ -125,11 +163,28 @@ static void report(JSValue value)
         value = JS_GetException(context);
         stack = JS_GetPropertyStr(context, value, "stack");
     }
+#ifdef WWC_CANONICAL_HOST
+    text = JS_ToCString(context, value);
+#else
     text = JS_ToCString(context, JS_IsUndefined(stack) ? value : stack);
+#endif
     if (text == NULL)
         return;
     while (text[length] != '\0') length++;
+#ifdef WWC_CANONICAL_HOST
+    report_text(text, length);
+    if (!JS_IsUndefined(stack)) {
+        const char *stack_text = JS_ToCString(context, stack);
+        uint32_t stack_length = 0;
+        if (stack_text != NULL) {
+            while (stack_text[stack_length] != '\0') stack_length++;
+            report_text(stack_text, stack_length);
+            JS_FreeCString(context, stack_text);
+        }
+    }
+#else
     msg((uint32_t)(uintptr_t)text, length);
+#endif
     JS_FreeCString(context, text);
     JS_FreeValue(context, stack);
 }
@@ -242,6 +297,14 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     result = JS_Eval(context, (const char *)guest_application,
                      guest_application_length, "guest-application.js",
                      JS_EVAL_TYPE_GLOBAL);
+#ifdef WWC_CANONICAL_HOST
+    if (!JS_IsException(result)) {
+        static const char flush_source[] = "globalThis.flush && flush()";
+        JS_FreeValue(context, result);
+        result = JS_Eval(context, flush_source, sizeof(flush_source) - 1,
+                         "guest-flush.js", JS_EVAL_TYPE_GLOBAL);
+    }
+#endif
     if (!JS_IsException(result)) {
         static const char result_source[] =
             "globalThis.__wwcResult ? __wwcResult() : 'ready'";
@@ -253,9 +316,7 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         report_stage("guest-application-error");
     }
     if (JS_IsException(result)) report_stage("guest-result-error");
-#ifndef WWC_CANONICAL_HOST
     report(result);
-#endif
     JS_FreeValue(context, result);
 #ifndef WWC_CANONICAL_HOST
     {

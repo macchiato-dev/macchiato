@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 const root = resolve(new URL(".", import.meta.url).pathname);
+const canonicalHost = resolve(root,
+  "../wasm-web-container/examples/web/wasm-web-container.js");
 const types = new Map([
   [".html", "text/html; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
@@ -11,6 +13,11 @@ const types = new Map([
 
 export async function quickjsCodeMirrorHandler(request) {
   const pathname = new URL(request.url).pathname;
+  if (pathname === "/wasm-web-container.js") {
+    return new Response(await readFile(canonicalHost), {
+      headers: { "content-type": "text/javascript; charset=utf-8" },
+    });
+  }
   const relative = pathname === "/"
     ? "index.html"
     : pathname.endsWith("/")

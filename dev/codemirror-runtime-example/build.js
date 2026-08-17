@@ -9,8 +9,31 @@ const modern = new URL("generated/codemirror-full.js", import.meta.url).pathname
 const ponyfills = new URL("generated/microquickjs-ponyfills.js", import.meta.url).pathname;
 const microModern = new URL("generated/codemirror-micro-modern.js", import.meta.url).pathname;
 const micro = new URL("generated/codemirror-micro.js", import.meta.url).pathname;
+const canonicalEnvironment = new URL("generated/canonical-dom.js", import.meta.url);
 
 await mkdir(generated, { recursive: true });
+
+// Reuse the canonical container wire codec, CSS compiler, and DOM wrappers.
+// The example adds only the full-engine browser surface still being developed.
+const canonicalRuntimePath = new URL(
+  "../wasm-web-container/examples/microquickjs-guest-runtime/guest-runtime.js",
+  import.meta.url);
+const canonicalRuntime = await readFile(canonicalRuntimePath, "utf8");
+const runtimeEnd = canonicalRuntime.indexOf("function attributes(source)");
+if (runtimeEnd < 0) throw new Error("canonical guest runtime boundary was not found");
+const fullEngineSurface = await readFile(
+  new URL("src/canonical-codemirror-dom.js", import.meta.url), "utf8");
+await writeFile(canonicalEnvironment,
+  "var FONT_RESOURCES = {};\nvar RUNTIME_RESOURCES = { files: {} };\n" +
+  canonicalRuntime.slice(0, runtimeEnd)
+    .replace("var bridge = print;", "var bridge = globalThis.bridge;")
+    .replaceAll("new HostReference(reference)", "hostReference(reference)")
+    .replace("var document = new GuestDocument(documentReference[1]);",
+      "var document = new GuestDocument(documentReference[1]);\n" +
+      "globalThis.__wwcReportError = function(error) { immediate([3, document.reference, " +
+      "stringIndex('debug'), [encode(String(error))]]); };")
+    .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
+  "\n" + fullEngineSurface);
 
 const workspace = new URL("../../", import.meta.url);
 const fixtureFiles = {
