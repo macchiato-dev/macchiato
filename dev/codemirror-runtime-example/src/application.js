@@ -15,8 +15,9 @@ import { lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
   setSearchQuery } from "@codemirror/search";
 import { Compartment, EditorState } from "@codemirror/state";
-import { dropCursor, EditorView, highlightActiveLine,
-  highlightActiveLineGutter, keymap, lineNumbers } from "@codemirror/view";
+import { crosshairCursor, dropCursor, EditorView, highlightActiveLine,
+  highlightActiveLineGutter, keymap, lineNumbers,
+  rectangularSelection } from "@codemirror/view";
 import fixtures from "../generated/fixtures.js";
 import { nativeCaret } from "./native-caret.js";
 
@@ -99,6 +100,8 @@ const editorSetup = [
   bracketMatching(),
   closeBrackets(),
   autocompletion(),
+  rectangularSelection(),
+  crosshairCursor(),
   highlightActiveLine(),
   highlightSelectionMatches(),
   keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
@@ -121,10 +124,6 @@ export function start() {
   // measurement so its height map uses projected browser geometry rather than
   // initial estimates (notably for pointer and drop coordinates).
   setTimeout(() => view.requestMeasure(), 0);
-  view.contentDOM.addEventListener("dragstart", (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }, true);
   // The browser projection must not independently mutate contenteditable.
   // Handle ordinary text/navigation in the guest before CodeMirror's bubble
   // listener, while leaving shortcuts and composition to their own handlers.

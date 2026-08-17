@@ -209,8 +209,10 @@ test("the demo index and each projected QuickJS editor work", async (context) =>
     { steps: 16 });
   await pointer.mouse.up();
   await pointer.waitForTimeout(50);
-  assert.equal(await pointerContent.innerText(), original);
-  await pointer.mouse.dblclick(firstLine.x + 72, firstLine.y + firstLine.height / 2);
+  assert.equal(await pointerLines.first().innerText(), "type  = {");
+  assert.notEqual(await pointerContent.innerText(), original);
+  assert.equal((await pointerContent.innerText()).match(/Project/g)?.length,
+    original.match(/Project/g)?.length);
   assert.equal(await pointer.evaluate(() => getSelection().toString()), "Project");
   await pointer.keyboard.press("ControlOrMeta+c");
   assert.equal(await pointer.evaluate(() => navigator.clipboard.readText()), "Project");

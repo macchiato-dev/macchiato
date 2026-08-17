@@ -371,19 +371,145 @@ GuestStyle.prototype.removeProperty = function (name) {
 function hostCall(reference, name, args) {
   return immediate([3, reference, stringIndex(name), (args || []).map(encode)]);
 }
+function hostGet(reference, name) {
+  return immediate([1, reference, stringIndex(name)]);
+}
+function mutationNode(recordReference, kind, index) {
+  var result = hostCall(recordReference, kind, [index]);
+  return nodeForReference(result[1]);
+}
+function synchronizeGuestChildren(target) {
+  var result = hostCall(target.reference, "childNodes", []);
+  var length = hostGet(result[1], "length"), next = [];
+  for (var index = 0; index < length; index++) {
+    var item = hostCall(result[1], "item", [index]);
+    next.push(nodeForReference(item[1]));
+  }
+  var previous = childrenOf(target).slice();
+  for (var old = 0; old < previous.length; old++) {
+    if (next.indexOf(previous[old]) < 0 && previous[old]._guestParent === target) {
+      previous[old]._guestParent = null;
+    }
+  }
+  for (var child = 0; child < next.length; child++) {
+    if (next[child]._guestParent && next[child]._guestParent !== target) {
+      detachGuestNode(next[child]);
+    }
+    next[child]._guestParent = target;
+  }
+  target._guestChildren = next;
+}
+function readMutationBatch(batchReference) {
+  var length = hostGet(batchReference, "length"), records = [], changedParents = [];
+  for (var index = 0; index < length; index++) {
+    var result = hostCall(batchReference, "item", [index]);
+    var reference = result[1], type = hostGet(reference, "type");
+    var targetResult = hostGet(reference, "target");
+    var record = { type: type, target: nodeForReference(targetResult[1]) };
+    if (type === "childList") {
+      var added = hostGet(reference, "addedNodeCount");
+      var removed = hostGet(reference, "removedNodeCount");
+      record.addedNodes = [];
+      record.removedNodes = [];
+      for (var add = 0; add < added; add++) {
+        record.addedNodes.push(mutationNode(reference, "addedNodeAt", add));
+      }
+      for (var remove = 0; remove < removed; remove++) {
+        record.removedNodes.push(mutationNode(reference, "removedNodeAt", remove));
+      }
+      var previous = hostGet(reference, "previousSibling");
+      var next = hostGet(reference, "nextSibling");
+      record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
+      record.nextSibling = next === null ? null : nodeForReference(next[1]);
+      if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
+    } else if (type === "characterData") {
+      record.oldValue = hostGet(reference, "oldValue");
+    } else if (type === "attributes") {
+      record.attributeName = hostGet(reference, "attributeName");
+      record.oldValue = hostGet(reference, "oldValue");
+      var attribute = hostCall(record.target.reference, "getAttribute", [record.attributeName]);
+      var values = record.target._attributeValues ||
+        (record.target._attributeValues = Object.create(null));
+      if (attribute === null) delete values[record.attributeName];
+      else values[record.attributeName] = attribute;
+    }
+    records.push(record);
+  }
+  // Mutation records describe intermediate edits, but their callback observes
+  // the browser's final tree. Reconcile each affected parent once so native
+  // editing and drag operations cannot leave the guest between two records.
+  changedParents.forEach(synchronizeGuestChildren);
+  return records;
+}
+function GuestMutationObserver(callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  this.callback = callback;
+  this.reference = null;
+}
+GuestMutationObserver.prototype.observe = function (target, options) {
+  this.disconnect();
+  var flags = (options.attributes ? 1 : 0) |
+    (options.attributeOldValue ? 2 : 0) |
+    (options.characterData ? 4 : 0) |
+    (options.characterDataOldValue ? 8 : 0) |
+    (options.subtree ? 16 : 0);
+  var self = this, callbackIndex = callbacks.length;
+  callbacks.push(function (batch) {
+    self.callback(readMutationBatch(batch.reference), self);
+  });
+  var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
+    encode(target), encode(flags), encode(callbackIndex)
+  ]]);
+  this.reference = result[1];
+};
+GuestMutationObserver.prototype.disconnect = function () {
+  if (this.reference !== null) {
+    hostCall(this.reference, "disconnect", []);
+    this.reference = null;
+  }
+};
+GuestMutationObserver.prototype.takeRecords = function () {
+  if (this.reference === null) return [];
+  var result = hostCall(this.reference, "takeRecords", []);
+  return readMutationBatch(result[1]);
+};
 function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.disconnect = function () {};
 EmptyObserver.prototype.takeRecords = function () { return []; };
 // CodeMirror owns this projected DOM and all supported edits enter through its
 // explicit event path. Mirroring the browser's child-list records back into
 // the guest creates a second, competing DOM authority during native selection.
-globalThis.MutationObserver = EmptyObserver;
+globalThis.MutationObserver = GuestMutationObserver;
 globalThis.ResizeObserver = EmptyObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
 };
-globalThis.requestAnimationFrame = function (callback) { return setTimeout(callback, 0); };
-globalThis.cancelAnimationFrame = function () {};
+var animationCallbacks = Object.create(null);
+globalThis.requestAnimationFrame = function (callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var index = callbacks.length, handle;
+  callbacks.push(function () {
+    delete animationCallbacks[handle];
+    callback(Date.now());
+  });
+  handle = immediate([3, document.reference, stringIndex("animationFrame"), [encode(index)]]);
+  animationCallbacks[handle] = index;
+  return handle;
+};
+globalThis.cancelAnimationFrame = function (handle) {
+  var index = animationCallbacks[handle];
+  if (index === undefined) return;
+  callbacks[index] = function () {};
+  delete animationCallbacks[handle];
+  immediate([3, document.reference, stringIndex("cancelAnimationFrame"), [encode(handle)]]);
+};
+globalThis.setImmediate = function (callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var index = callbacks.length;
+  callbacks.push(callback);
+  immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
+  return index;
+};
 globalThis.matchMedia = function () {
   return { matches: false, addListener: function () {}, removeListener: function () {} };
 };
@@ -392,15 +518,8 @@ globalThis.clearTimeout = globalThis.clearInterval = function (handle) {
     callbacks[handle] = function () {};
   }
 };
+globalThis.clearImmediate = globalThis.clearTimeout;
 
-// Native selection is browser-owned. The application imports its endpoints at
-// the next editing boundary instead of replaying every selectionchange through
-// QuickJS and causing CodeMirror to reconcile an already-current DOM.
-var documentAddEventListener = GuestDocument.prototype.addEventListener;
-GuestDocument.prototype.addEventListener = function (type, callback) {
-  if (type === "selectionchange") return;
-  return documentAddEventListener.call(this, type, callback);
-};
 function reportConsole() {
   var parts = [];
   for (var index = 0; index < arguments.length; index++) {
@@ -480,20 +599,7 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
     return record.type === type && record.callback === callback;
   })) return;
   var index = callbacks.length;
-  var nativeSelection = type === "mousedown" || type === "mousemove" ||
-    type === "mouseup" || type === "pointerdown" || type === "pointermove" ||
-    type === "pointerup";
-  var nativeCopy = type === "keydown";
-  callbacks.push(nativeSelection || nativeCopy ? function (event) {
-    var node = event && event.target;
-    var content = node instanceof GuestObject && node.closest(".cm-content");
-    if (content && nativeSelection) return;
-    if (content && nativeCopy &&
-        (event.key === "Meta" || event.key === "Control" ||
-          (!event.altKey && (event.ctrlKey || event.metaKey) &&
-            String(event.key).toLowerCase() === "c"))) return;
-    callback(event);
-  } : callback);
+  callbacks.push(callback);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture });
   pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
