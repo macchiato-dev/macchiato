@@ -14,9 +14,14 @@ static uint32_t host_message_capacity;
 
 static void report_stage(const char *stage)
 {
+#ifdef WWC_CANONICAL_HOST
+    (void)stage;
+    msg(128u * 8192u + 1u, 0);
+#else
     uint32_t length = 0;
     while (stage[length] != '\0') length++;
     msg((uint32_t)(uintptr_t)stage, length);
+#endif
 }
 
 static JSValue guest_print(JSContext *ctx, JSValueConst this_value,
@@ -37,6 +42,33 @@ static JSValue guest_print(JSContext *ctx, JSValueConst this_value,
         JS_FreeCString(ctx, text);
     }
     return JS_UNDEFINED;
+}
+
+/* Exchange one bounded wire buffer with the canonical wasm-web-container
+   host. The JavaScript guest owns the codec and reuses the same Uint8Array. */
+static JSValue guest_bridge(JSContext *ctx, JSValueConst this_value,
+                            int argc, JSValueConst *argv)
+{
+    JSValue buffer;
+    uint8_t *bytes;
+    size_t offset, length, element_size, buffer_length;
+    uint32_t actual;
+    (void)this_value;
+    if (argc < 1)
+        return JS_ThrowTypeError(ctx, "bridge requires a Uint8Array");
+    buffer = JS_GetTypedArrayBuffer(ctx, argv[0], &offset, &length,
+                                    &element_size);
+    if (JS_IsException(buffer))
+        return buffer;
+    bytes = JS_GetArrayBuffer(ctx, &buffer_length, buffer);
+    if (bytes == NULL || element_size != 1 || offset > buffer_length ||
+        length > buffer_length - offset) {
+        JS_FreeValue(ctx, buffer);
+        return JS_ThrowTypeError(ctx, "bridge requires a bounded Uint8Array");
+    }
+    actual = msg((uint32_t)(uintptr_t)(bytes + offset), (uint32_t)length);
+    JS_FreeValue(ctx, buffer);
+    return JS_NewUint32(ctx, actual);
 }
 
 static void release_host_reference(JSRuntime *rt, JSValue value)
@@ -78,6 +110,8 @@ static int install_host_references(void)
                                       "hostReference", 1));
     JS_SetPropertyStr(context, global, "print",
                       JS_NewCFunction(context, guest_print, "print", 1));
+    JS_SetPropertyStr(context, global, "bridge",
+                      JS_NewCFunction(context, guest_bridge, "bridge", 1));
     JS_FreeValue(context, global);
     return 0;
 }
@@ -138,10 +172,30 @@ static void receive_host_message(uint32_t minimum_length)
     actual_length = msg((uint32_t)(uintptr_t)host_message, host_message_capacity);
     if (actual_length > host_message_capacity) return;
     global = JS_GetGlobalObject(context);
+#ifdef WWC_CANONICAL_HOST
+    receiver = JS_GetPropertyStr(context, global, "dispatch");
+    if (actual_length != 4) {
+        JS_FreeValue(context, receiver);
+        JS_FreeValue(context, global);
+        return;
+    }
+    bytes = JS_NewUint32(context,
+                         (uint32_t)host_message[0] |
+                         (uint32_t)host_message[1] << 8 |
+                         (uint32_t)host_message[2] << 16 |
+                         (uint32_t)host_message[3] << 24);
+#else
     receiver = JS_GetPropertyStr(context, global, "__wwcReceiveHostMessage");
     bytes = JS_NewArrayBufferCopy(context, host_message, actual_length);
+#endif
     result = JS_Call(context, receiver, global, 1, &bytes);
-    if (JS_IsException(result)) report(result);
+    if (JS_IsException(result)) {
+#ifdef WWC_CANONICAL_HOST
+        report_stage("event");
+#else
+        report(result);
+#endif
+    }
     else if (JS_ToBool(context, result)) {
         static const char prevented[] = "WWC_EVENT:preventDefault";
         msg((uint32_t)(uintptr_t)prevented, sizeof(prevented) - 1);
@@ -150,7 +204,9 @@ static void receive_host_message(uint32_t minimum_length)
     JS_FreeValue(context, bytes);
     JS_FreeValue(context, receiver);
     JS_FreeValue(context, global);
+#ifndef WWC_CANONICAL_HOST
     report_snapshot();
+#endif
 }
 
 void quickjs_guest_onmsg(uint32_t minimum_length)
@@ -197,8 +253,11 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         report_stage("guest-application-error");
     }
     if (JS_IsException(result)) report_stage("guest-result-error");
+#ifndef WWC_CANONICAL_HOST
     report(result);
+#endif
     JS_FreeValue(context, result);
+#ifndef WWC_CANONICAL_HOST
     {
         static const char visual_source[] =
             "globalThis.__wwcPrepareVisual && __wwcPrepareVisual()";
@@ -211,4 +270,5 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     report_snapshot();
     JS_RunGC(runtime);
     report_memory();
+#endif
 }

@@ -36,6 +36,9 @@ fn main() {
     if let Ok(limit) = env::var("WWC_QUICKJS_MEMORY_LIMIT") {
         build.define("QUICKJS_MEMORY_LIMIT", Some(limit.as_str()));
     }
+    if env::var_os("WWC_CANONICAL_HOST").is_some() {
+        build.define("WWC_CANONICAL_HOST", None);
+    }
     build
         .include(&libc)
         .include(&quickjs)
@@ -60,6 +63,7 @@ fn main() {
     println!("cargo:rerun-if-changed=libc-ponyfill");
     println!("cargo:rerun-if-changed=quickjs");
     println!("cargo:rerun-if-env-changed=WWC_QUICKJS_MEMORY_LIMIT");
+    println!("cargo:rerun-if-env-changed=WWC_CANONICAL_HOST");
     println!("cargo:rerun-if-env-changed=WWC_GUEST_ENVIRONMENT");
     println!("cargo:rerun-if-env-changed=WWC_APPLICATION_SOURCE");
     if let Some(path) = environment_path { println!("cargo:rerun-if-changed={}", path.display()); }
