@@ -40,3 +40,9 @@ export async function quickjsCodeMirrorHandler(request) {
     return new Response("Not found", { status: 404 });
   }
 }
+
+export function instrumentedQuickjsCodeMirrorHandler(request) {
+  const url = new URL(request.url);
+  if (url.pathname === "/") url.pathname = "/instrumented/";
+  return quickjsCodeMirrorHandler(new Request(url, request));
+}

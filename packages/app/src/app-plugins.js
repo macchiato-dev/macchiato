@@ -25,7 +25,7 @@ function declarationForBuiltin(app) {
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
-  const { aliases, pluginId, replaces, setup, seededRoute, fileAccess, sourceFiles,
+  const { aliases, pluginId, replaces, setup, seededRoute, fileAccess, writableFiles, sourceFiles,
     schemas, sandbox, sharedAssets, site, adapter, environment, commands, ...base } = app;
   return {
     ...base,
@@ -34,12 +34,13 @@ function declarationForBuiltin(app) {
       sandbox: sandbox.runtime,
       capabilities: sandbox.hostCapabilities || [],
     } : {},
-    access: fileAccess ? {
-      fileAccess: {
+    access: {
+      ...(fileAccess ? { fileAccess: {
         ...fileAccess,
         gitRoot: fileAccess.gitRoot === repoRoot ? "$repo" : fileAccess.gitRoot,
-      },
-    } : {},
+      } } : {}),
+      ...(writableFiles ? { writableFiles } : {}),
+    },
     options: {
       aliases: aliases || [],
       sourceFiles: sourceFiles || [],

@@ -11,6 +11,7 @@ import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
 import { quickjsCodeMirrorHandler } from "../../../dev/codemirror-runtime-example/handler.js";
+import { instrumentedCodeMirrorHandler } from "./instrumented-codemirror.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
@@ -24,6 +25,24 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "Instrumented QuickJS CodeMirror",
+    pluginId: "quickjs-codemirror-instrumented",
+    subdomain: "codemirror-quickjs-instrumented",
+    kind: "instrumented full-engine sandbox component",
+    description: "CodeMirror with an opt-in Wasm container boundary trace persisted through a bounded declarative file grant.",
+    handler: instrumentedCodeMirrorHandler,
+    writableFiles: { "interaction-trace.ndjson": { maxBytes: 1048576 } },
+    sourceFiles: [
+      "dev/codemirror-runtime-example/instrumented/index.html",
+      "dev/codemirror-runtime-example/instrumented-host.js",
+      "packages/app/src/instrumented-codemirror.js",
+    ],
+    sandbox: {
+      runtime: "Bellard QuickJS compiled to WebAssembly with opt-in boundary instrumentation",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS", "bounded trace-file write"],
+    },
+  },
   {
     name: "QuickJS CodeMirror DOM Mirror",
     pluginId: "quickjs-codemirror",

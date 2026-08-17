@@ -9,6 +9,7 @@ dist/
 build/
 target/
 /dev/codemirror-runtime-example/generated/
+/dev/codemirror-runtime-example/interaction-trace.ndjson
 /packages/dom-use/lib/
 packages/website/exported/
 *.egg-info/

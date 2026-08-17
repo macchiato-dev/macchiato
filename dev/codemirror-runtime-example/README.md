@@ -87,3 +87,16 @@ gutters, an actual folded range, search controls and highlights, and rejected
 host errors. The test also caught two facade semantic bugs—sibling moves and
 the shared value behind `Text.nodeValue`, `Text.data`, and `textContent`—that a
 tree-count benchmark could not detect.
+
+## Instrumented browser demo
+
+The ordinary demos run at `codemirror-quickjs.localhost`. The same full editor
+is available at `codemirror-quickjs-instrumented.localhost` with opt-in
+instrumentation at the Wasm container boundary. That page records native event
+delivery, guest operation batches, DOM calls, reference lifetimes, and failures
+as bounded NDJSON in `interaction-trace.ndjson`.
+
+Instrumentation is supplied through the container's optional `instrument`
+callback. When omitted, records are not constructed or serialized. The debug
+app receives one exact declarative writable-file grant; it has no general file
+access. Its trace keeps the newest 900 KiB under a 1 MiB server-side limit.
