@@ -10,7 +10,7 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
   get: function () {
     if (!this._documentElement) {
       var result = immediate([1, this.reference, stringIndex("documentElement")]);
-      this._documentElement = new GuestElement(result[1]);
+      this._documentElement = nodeForReference(result[1]);
     }
     return this._documentElement;
   }
@@ -31,6 +31,20 @@ function projectClassName(value) {
 }
 globalThis.__wwcProjectClassName = projectClassName;
 
+var guestNodes = Object.create(null);
+function rememberNode(node) {
+  guestNodes[node.reference] = node;
+  return node;
+}
+function nodeForReference(reference) {
+  if (guestNodes[reference]) return guestNodes[reference];
+  var nodeType = immediate([1, reference, stringIndex("nodeType")]);
+  return rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
+}
+globalThis.__wwcNodeForReference = nodeForReference;
+rememberNode(document.head);
+rememberNode(document.body);
+
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function () {
     return immediate([1, this.reference, stringIndex("nodeType")]);
@@ -41,6 +55,9 @@ GuestObject.prototype.contains = function (node) {
 };
 ["nodeValue", "textContent"].forEach(function (name) {
   Object.defineProperty(GuestObject.prototype, name, {
+    get: function () {
+      return immediate([1, this.reference, stringIndex(name)]);
+    },
     set: function (value) {
       pendingOperations.push([2, this.reference, stringIndex(name), encode(String(value))]);
     }
@@ -58,7 +75,12 @@ function detachGuestNode(node) {
   }
   node._guestParent = null;
 }
+globalThis.__wwcSetElementTextContent = function (element, value) {
+  element.replaceChildren(value);
+  return true;
+};
 Object.defineProperties(GuestObject.prototype, {
+  childNodes: { get: function () { return childrenOf(this); } },
   parentNode: { get: function () { return this._guestParent || null; } },
   parentElement: { get: function () {
     return this._guestParent instanceof GuestElement ? this._guestParent : null;
@@ -79,31 +101,73 @@ Object.defineProperties(GuestObject.prototype, {
     return siblings[siblings.indexOf(this) - 1] || null;
   } }
 });
+Object.defineProperty(GuestElement.prototype, "children", {
+  get: function () {
+    return childrenOf(this).filter(function (node) { return node instanceof GuestElement; });
+  }
+});
+Object.defineProperty(GuestElement.prototype, "contentEditable", {
+  get: function () { return this.getAttribute("contenteditable") || "inherit"; },
+  set: function (value) { this.setAttribute("contenteditable", String(value)); }
+});
 
 function GuestSelection(reference) {
   GuestObject.call(this, reference);
 }
 GuestSelection.prototype = Object.create(GuestObject.prototype);
-["anchorOffset", "focusOffset", "rangeCount"].forEach(function (name) {
+["anchorOffset", "focusOffset", "isCollapsed", "rangeCount"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function () { return immediate([1, this.reference, stringIndex(name)]); }
   });
 });
+["collapse", "extend"].forEach(function (name) {
+  GuestSelection.prototype[name] = function (node, offset) {
+    hostCall(this.reference, name, [node, offset]);
+  };
+});
+GuestSelection.prototype.removeAllRanges = function () {
+  hostCall(this.reference, "removeAllRanges", []);
+};
+GuestSelection.prototype.addRange = function (range) {
+  hostCall(this.reference, "addRange", [range]);
+};
+GuestSelection.prototype.getRangeAt = function (index) {
+  var result = hostCall(this.reference, "getRangeAt", [index]);
+  return new GuestRange(result[1]);
+};
+function GuestRange(reference) {
+  GuestObject.call(this, reference);
+}
+GuestRange.prototype = Object.create(GuestObject.prototype);
+["setStart", "setEnd"].forEach(function (name) {
+  GuestRange.prototype[name] = function (node, offset) {
+    hostCall(this.reference, name, [node, offset]);
+  };
+});
+GuestRange.prototype.collapse = function (toStart) {
+  hostCall(this.reference, "collapse", [Boolean(toStart)]);
+};
 ["anchorNode", "focusNode"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function () {
       var result = immediate([1, this.reference, stringIndex(name)]);
-      return result === null ? null : new GuestObject(result[1]);
+      return result === null ? null : nodeForReference(result[1]);
     }
   });
 });
 GuestDocument.prototype.getSelection = function () {
   var result = immediate([3, this.reference, stringIndex("getSelection"), []]);
-  return result === null ? null : new GuestSelection(result[1]);
+  if (result === null) return null;
+  if (!this._selection) this._selection = new GuestSelection(result[1]);
+  return this._selection;
 };
 GuestDocument.prototype.createTextNode = function (text) {
   var result = immediate([3, this.reference, stringIndex("createTextNode"), [encode(String(text))]]);
-  return new GuestObject(result[1]);
+  return rememberNode(new GuestObject(result[1]));
+};
+GuestDocument.prototype.createRange = function () {
+  var result = immediate([3, this.reference, stringIndex("createRange"), []]);
+  return new GuestRange(result[1]);
 };
 GuestDocument.prototype.hasFocus = function () {
   return immediate([3, this.reference, stringIndex("hasFocus"), []]);
@@ -111,7 +175,7 @@ GuestDocument.prototype.hasFocus = function () {
 Object.defineProperty(GuestDocument.prototype, "activeElement", {
   get: function () {
     var result = immediate([1, this.reference, stringIndex("activeElement")]);
-    return result === null ? null : new GuestElement(result[1]);
+    return result === null ? null : nodeForReference(result[1]);
   }
 });
 globalThis.getSelection = function () { return document.getSelection(); };
@@ -185,10 +249,14 @@ Object.defineProperty(GuestStylesheetNode.prototype, "textContent", {
 GuestStylesheetNode.prototype.setAttribute = function () {
   throw new TypeError("stylesheet attributes are not available");
 };
-var createElement = GuestDocument.prototype.createElement;
 GuestDocument.prototype.createElement = function (tag) {
   if (String(tag).toLowerCase() === "style") return new GuestStylesheetNode();
-  return createElement.call(this, tag);
+  var result = immediate([3, this.reference, stringIndex("createElement"), [encode(String(tag))]]);
+  return nodeForReference(result[1]);
+};
+GuestDocument.prototype.getElementById = function (id) {
+  var result = immediate([3, this.reference, stringIndex("getElementById"), [encode(String(id))]]);
+  return result === null ? null : nodeForReference(result[1]);
 };
 
 function inlineCssBytes(source) {
@@ -214,10 +282,98 @@ GuestStyle.prototype.removeProperty = function (name) {
   return "";
 };
 
+function hostGet(reference, name) {
+  return immediate([1, reference, stringIndex(name)]);
+}
+function hostCall(reference, name, args) {
+  return immediate([3, reference, stringIndex(name), (args || []).map(encode)]);
+}
+function mutationNode(recordReference, kind, index) {
+  var result = hostCall(recordReference, kind, [index]);
+  return nodeForReference(result[1]);
+}
+function readMutationBatch(batchReference) {
+  var length = hostGet(batchReference, "length"), records = [];
+  for (var index = 0; index < length; index++) {
+    var result = hostCall(batchReference, "item", [index]);
+    var reference = result[1], type = hostGet(reference, "type");
+    var targetResult = hostGet(reference, "target");
+    var record = { type: type, target: nodeForReference(targetResult[1]) };
+    if (type === "childList") {
+      var added = hostGet(reference, "addedNodeCount");
+      var removed = hostGet(reference, "removedNodeCount");
+      record.addedNodes = [];
+      record.removedNodes = [];
+      for (var add = 0; add < added; add++) {
+        record.addedNodes.push(mutationNode(reference, "addedNodeAt", add));
+      }
+      for (var remove = 0; remove < removed; remove++) {
+        record.removedNodes.push(mutationNode(reference, "removedNodeAt", remove));
+      }
+      var previous = hostGet(reference, "previousSibling");
+      var next = hostGet(reference, "nextSibling");
+      record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
+      record.nextSibling = next === null ? null : nodeForReference(next[1]);
+      record.removedNodes.forEach(detachGuestNode);
+      var children = childrenOf(record.target);
+      var position = record.nextSibling ? children.indexOf(record.nextSibling) : children.length;
+      if (position < 0) position = children.length;
+      record.addedNodes.forEach(function (node) {
+        detachGuestNode(node);
+        children.splice(position++, 0, node);
+        node._guestParent = record.target;
+      });
+    } else if (type === "characterData") {
+      record.oldValue = hostGet(reference, "oldValue");
+    } else if (type === "attributes") {
+      record.attributeName = hostGet(reference, "attributeName");
+      record.oldValue = hostGet(reference, "oldValue");
+      var value = hostCall(record.target.reference, "getAttribute", [record.attributeName]);
+      var values = record.target._attributeValues ||
+        (record.target._attributeValues = Object.create(null));
+      if (value === null) delete values[record.attributeName];
+      else values[record.attributeName] = value;
+    }
+    records.push(record);
+  }
+  return records;
+}
+function GuestMutationObserver(callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  this.callback = callback;
+  this.reference = null;
+}
+GuestMutationObserver.prototype.observe = function (target, options) {
+  this.disconnect();
+  var flags = (options.attributes ? 1 : 0) |
+    (options.attributeOldValue ? 2 : 0) |
+    (options.characterData ? 4 : 0) |
+    (options.characterDataOldValue ? 8 : 0) |
+    (options.subtree ? 16 : 0);
+  var self = this, callbackIndex = callbacks.length;
+  callbacks.push(function (batch) {
+    self.callback(readMutationBatch(batch.reference), self);
+  });
+  var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
+    encode(target), encode(flags), encode(callbackIndex)
+  ]]);
+  this.reference = result[1];
+};
+GuestMutationObserver.prototype.disconnect = function () {
+  if (this.reference !== null) {
+    hostCall(this.reference, "disconnect", []);
+    this.reference = null;
+  }
+};
+GuestMutationObserver.prototype.takeRecords = function () {
+  if (this.reference === null) return [];
+  var result = hostCall(this.reference, "takeRecords", []);
+  return readMutationBatch(result[1]);
+};
 function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.disconnect = function () {};
-EmptyObserver.prototype.takeRecords = function () { return []; };
-globalThis.MutationObserver = globalThis.ResizeObserver = EmptyObserver;
+globalThis.MutationObserver = GuestMutationObserver;
+globalThis.ResizeObserver = EmptyObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
 };
@@ -226,11 +382,21 @@ globalThis.cancelAnimationFrame = function () {};
 globalThis.matchMedia = function () {
   return { matches: false, addListener: function () {}, removeListener: function () {} };
 };
+globalThis.clearTimeout = globalThis.clearInterval = function (handle) {
+  if (Number.isInteger(handle) && handle >= 0 && handle < callbacks.length) {
+    callbacks[handle] = function () {};
+  }
+};
+function reportConsole() {
+  var parts = [];
+  for (var index = 0; index < arguments.length; index++) {
+    var value = arguments[index];
+    parts.push(value && value.stack ? String(value) + "\n" + value.stack : String(value));
+  }
+  globalThis.__wwcReportError(parts.join("\n"));
+}
 globalThis.console = {
-  log: function (value) { globalThis.__wwcReportError(value); },
-  info: function (value) { globalThis.__wwcReportError(value); },
-  warn: function (value) { globalThis.__wwcReportError(value); },
-  error: function (value) { globalThis.__wwcReportError(value && value.stack || value); },
+  log: reportConsole, info: reportConsole, warn: reportConsole, error: reportConsole
 };
 
 // Window events are represented by the canonical document service. Keep
@@ -255,6 +421,31 @@ globalThis.removeEventListener = function (type, callback) {
     if (record.active && record.type === type && record.callback === callback) {
       record.active = false;
       windowListeners.splice(i, 1);
+      return;
+    }
+  }
+};
+
+GuestElement.prototype.addEventListener = function (type, callback, options) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  var records = this._eventListeners || (this._eventListeners = []);
+  if (records.some(function (record) {
+    return record.type === type && record.callback === callback;
+  })) return;
+  var index = callbacks.length;
+  callbacks.push(callback);
+  var capture = options === true || Boolean(options && options.capture);
+  records.push({ type: type, callback: callback, index: index, capture: capture });
+  pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+};
+GuestElement.prototype.removeEventListener = function (type, callback) {
+  var records = this._eventListeners || [];
+  for (var index = 0; index < records.length; index++) {
+    var record = records[index];
+    if (record.type === type && record.callback === callback) {
+      records.splice(index, 1);
+      callbacks[record.index] = function () {};
+      pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
       return;
     }
   }
@@ -299,7 +490,7 @@ GuestElement.prototype.removeChild = function (child) {
   pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
-GuestElement.prototype.remove = function () {
+GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
 };

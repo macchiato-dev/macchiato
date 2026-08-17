@@ -59,7 +59,6 @@ export function start() {
       EditorView.lineWrapping],
     parent,
   });
-
   globalThis.editorExample = {
     text() { return view.state.doc.toString(); },
     open(name) {
