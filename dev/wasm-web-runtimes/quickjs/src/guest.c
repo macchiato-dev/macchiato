@@ -6,6 +6,9 @@
 __attribute__((import_module("host"), import_name("msg")))
 extern uint32_t msg(uint32_t offset, uint32_t length);
 
+__attribute__((import_module("host"), import_name("now")))
+extern double host_now(void);
+
 static JSRuntime *runtime;
 static JSContext *context;
 static char transfer[256];
@@ -85,6 +88,15 @@ static JSValue guest_bridge(JSContext *ctx, JSValueConst this_value,
 #endif
     JS_FreeValue(ctx, buffer);
     return JS_NewUint32(ctx, actual);
+}
+
+static JSValue guest_now(JSContext *ctx, JSValueConst this_value,
+                         int argc, JSValueConst *argv)
+{
+    (void)this_value;
+    (void)argc;
+    (void)argv;
+    return JS_NewFloat64(ctx, host_now());
 }
 
 static void release_host_reference(JSRuntime *rt, JSValue value)
@@ -177,6 +189,8 @@ static int install_host_references(void)
                       JS_NewCFunction(context, guest_print, "print", 1));
     JS_SetPropertyStr(context, global, "bridge",
                       JS_NewCFunction(context, guest_bridge, "bridge", 1));
+    JS_SetPropertyStr(context, global, "hostNow",
+                      JS_NewCFunction(context, guest_now, "hostNow", 0));
     JS_FreeValue(context, global);
     return 0;
 }

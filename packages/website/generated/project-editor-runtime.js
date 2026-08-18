@@ -441,6 +441,7 @@ var WasmWebBridge = class {
     const listenedObjects = /* @__PURE__ */ new Set();
     const mutationObservers = /* @__PURE__ */ new Set();
     const intervals = /* @__PURE__ */ new Map();
+    const animationTimeouts = /* @__PURE__ */ new Set();
     const cleanupCallbacks = /* @__PURE__ */ new Map();
     let nextInterval = 1;
     let nextCleanupCallback = 1;
@@ -868,10 +869,20 @@ var WasmWebBridge = class {
         return id;
       }
       if (object === document && name === "animationFrame" && args.length === 1 && Number.isInteger(args[0])) {
-        return options.frameInterval > 0 ? setTimeout(() => deliver(args[0]), Math.max(1, options.frameInterval)) : requestAnimationFrame(() => deliver(args[0]));
+        const configured = typeof options.frameInterval === "function" ? options.frameInterval() : options.frameInterval;
+        const delay = Number.isFinite(configured) ? Math.max(0, configured) : 0;
+        if (delay > 0) {
+          const handle = setTimeout(() => {
+            animationTimeouts.delete(handle);
+            deliver(args[0]);
+          }, Math.max(1, delay));
+          animationTimeouts.add(handle);
+          return handle;
+        }
+        return requestAnimationFrame(() => deliver(args[0]));
       }
       if (object === document && name === "cancelAnimationFrame" && args.length === 1 && Number.isInteger(args[0])) {
-        if (options.frameInterval > 0)
+        if (animationTimeouts.delete(args[0]))
           clearTimeout(args[0]);
         else
           cancelAnimationFrame(args[0]);
@@ -1804,8 +1815,11 @@ ${declarations.join("\n")}
       if (!checkpointQueued) {
         checkpointQueued = true;
         queueMicrotask(() => {
-          checkpointQueued = false;
-          instance.exports.onmsg(0);
+          try {
+            instance.exports.onmsg(0);
+          } finally {
+            checkpointQueued = false;
+          }
         });
       }
     }
@@ -1850,6 +1864,8 @@ ${declarations.join("\n")}
       for (const timer of intervals.values())
         clearInterval(timer);
       intervals.clear();
+      animationTimeouts.forEach(clearTimeout);
+      animationTimeouts.clear();
       for (const handle of cleanupCallbacks.values()) {
         if (typeof cancelIdleCallback === "function")
           cancelIdleCallback(handle);
@@ -1924,16 +1940,24 @@ function callMessage(name, payload) {
 }
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = false;
+  let reportedError = null, starting = true;
   const machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
     if (text.startsWith("__wwcError:") && !reportedError) {
-      reportedError = true;
-      onError?.(new Error(text.slice(11)));
+      const error = new Error(text.slice(11));
+      reportedError = error;
+      if (!starting) queueMicrotask(() => onError?.(error));
     } else options.onMessage?.(text);
   } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
-  for (const script of scripts) await machine.onmsg(taggedMessage(1, script.code));
+  for (const script of scripts) {
+    await machine.onmsg(taggedMessage(1, script.code));
+    if (reportedError) {
+      machine.destroy();
+      throw reportedError;
+    }
+  }
+  starting = false;
   return Object.freeze({
     destroy() {
       machine.destroy();
@@ -1974,9 +1998,11 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
         return;
       }
       const message = JSON.parse(text);
-      if (message.type === "change") onChange(message.content);
-      else if (message.type === "ready") onReady?.(message);
-      else if (message.type === "limit") onLimit?.(message);
+      queueMicrotask(() => {
+        if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
+        else if (message.type === "ready") onReady?.(message);
+        else if (message.type === "limit") onLimit?.(message);
+      });
     }
   });
   await machine.onmsg(0);
@@ -2077,7 +2103,7 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
       root,
       scripts,
       options: {
-        frameInterval: 250,
+        frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,
         services: {
           route: { get: () => location.pathname, listen() {
           } },

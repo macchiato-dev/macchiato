@@ -1508,7 +1508,7 @@ function dispatch(message) {
 globalThis.document = document;
 globalThis.window = globalThis.self = globalThis;
 globalThis.__wwcPostMessage = function (message) {
-  return immediate([3, document.reference, stringIndex("postMessage"), [encode(String(message))]]);
+  pendingOperations.push([3, document.reference, stringIndex("postMessage"), [encode(String(message))]]);
 };
 globalThis.__wwcReportError = function (message) {
   globalThis.__wwcPostMessage("__wwcError:" + String(message));
@@ -1554,7 +1554,7 @@ globalThis.visualViewport = null;
 globalThis.scrollBy = function (x, y) {
   hostCall(document.reference, "scrollBy", [Math.round(x), Math.round(y)]);
 };
-var runtimePerformanceNow = globalThis.__microQuickJS && globalThis.performance && globalThis.performance.now;
+var runtimePerformanceNow = typeof hostNow === "function" ? hostNow : globalThis.__microQuickJS && globalThis.performance && globalThis.performance.now;
 var runtimePerformanceOrigin = runtimePerformanceNow ? runtimePerformanceNow() : 0;
 var runtimeEpochOrigin = hostCall(document.reference, "dateNow", []);
 Date.now = function () {
@@ -1590,6 +1590,7 @@ function nodeForReference(reference) {
   if (entry) delete guestNodes[reference];
   var nodeType = immediate([1, reference, stringIndex("nodeType")]);
   var node = rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
+  node._nodeType = nodeType;
   var parentResult = immediate([1, reference, stringIndex("parentNode")]);
   if (parentResult !== null) {
     var parent = nodeForReference(parentResult[1]);
@@ -1604,12 +1605,18 @@ rememberNode(document.head);
 rememberNode(document.body);
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function get() {
-    return immediate([1, this.reference, stringIndex("nodeType")]);
+    if (this._nodeType === undefined) {
+      this._nodeType = immediate([1, this.reference, stringIndex("nodeType")]);
+    }
+    return this._nodeType;
   }
 });
 Object.defineProperty(GuestObject.prototype, "nodeName", {
   get: function get() {
-    return immediate([1, this.reference, stringIndex("nodeName")]);
+    if (this._nodeName === undefined) {
+      this._nodeName = immediate([1, this.reference, stringIndex("nodeName")]);
+    }
+    return this._nodeName;
   }
 });
 GuestObject.prototype.contains = function (node) {
@@ -1619,15 +1626,28 @@ GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [encode(String(selector))]]);
   return result === null ? null : nodeForReference(result[1]);
 };
-["nodeValue", "textContent"].forEach(function (name) {
-  Object.defineProperty(GuestObject.prototype, name, {
-    get: function get() {
-      return immediate([1, this.reference, stringIndex(name)]);
-    },
-    set: function set(value) {
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(String(value))]);
+Object.defineProperty(GuestObject.prototype, "nodeValue", {
+  get: function get() {
+    if (this._nodeValue === undefined) {
+      this._nodeValue = immediate([1, this.reference, stringIndex("nodeValue")]);
     }
-  });
+    return this._nodeValue;
+  },
+  set: function set(value) {
+    this._nodeValue = String(value);
+    pendingOperations.push([2, this.reference, stringIndex("nodeValue"), encode(this._nodeValue)]);
+  }
+});
+Object.defineProperty(GuestObject.prototype, "textContent", {
+  get: function get() {
+    if (this._nodeType === 3 && this._nodeValue !== undefined) return this._nodeValue;
+    return immediate([1, this.reference, stringIndex("textContent")]);
+  },
+  set: function set(value) {
+    value = String(value);
+    if (this._nodeType === 3) this._nodeValue = value;
+    pendingOperations.push([2, this.reference, stringIndex("textContent"), encode(value)]);
+  }
 });
 function childrenOf(node) {
   return node._guestChildren || (node._guestChildren = []);
@@ -1920,8 +1940,13 @@ GuestDocument.prototype.getSelection = function () {
   return this._selection;
 };
 GuestDocument.prototype.createTextNode = function (text) {
-  var result = immediate([3, this.reference, stringIndex("createTextNode"), [encode(String(text))]]);
-  return rememberNode(new GuestObject(result[1]));
+  text = String(text);
+  var result = immediate([3, this.reference, stringIndex("createTextNode"), [encode(text)]]);
+  var node = rememberNode(new GuestObject(result[1]));
+  node._nodeType = 3;
+  node._nodeName = "#text";
+  node._nodeValue = text;
+  return node;
 };
 GuestDocument.prototype.createRange = function () {
   var result = immediate([3, this.reference, stringIndex("createRange"), []]);
@@ -2026,8 +2051,12 @@ GuestStylesheetNode.prototype.setAttribute = function () {
 };
 GuestDocument.prototype.createElement = function (tag) {
   if (String(tag).toLowerCase() === "style") return new GuestStylesheetNode();
-  var result = immediate([3, this.reference, stringIndex("createElement"), [encode(String(tag))]]);
-  return nodeForReference(result[1]);
+  tag = String(tag);
+  var result = immediate([3, this.reference, stringIndex("createElement"), [encode(tag)]]);
+  var node = rememberNode(new GuestElement(result[1]));
+  node._nodeType = 1;
+  node._nodeName = tag.toUpperCase();
+  return node;
 };
 GuestDocument.prototype.getElementById = function (id) {
   var result = immediate([3, this.reference, stringIndex("getElementById"), [encode(String(id))]]);

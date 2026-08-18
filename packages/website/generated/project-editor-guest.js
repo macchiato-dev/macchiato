@@ -30470,6 +30470,22 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     if (name2 === "markdown") return markdown();
     return [];
   }
+  function hasSyntaxErrors(state) {
+    if (currentLanguage === "javascript") {
+      try {
+        Function(state.doc.toString());
+        return false;
+      } catch (error) {
+        if (error instanceof SyntaxError) return true;
+        throw error;
+      }
+    }
+    const cursor2 = syntaxTree(state).cursor();
+    do {
+      if (cursor2.type.isError) return true;
+    } while (cursor2.next());
+    return false;
+  }
   function editorExtensions() {
     return [
       editorSetup.of(basicSetup),
@@ -30484,56 +30500,35 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
       nativeSelectionTheme,
       documentLimitFilter,
       EditorView.updateListener.of((update) => {
-        if (update.docChanged || update.viewportChanged) renderLineNumbers();
         if (update.docChanged && !applyingHostContent) {
           globalThis.__browserUseNotify(JSON.stringify({
             type: "change",
             content: update.state.doc.toString(),
             characters: update.state.doc.length,
-            lines: update.state.doc.lines
+            lines: update.state.doc.lines,
+            syntaxErrors: hasSyntaxErrors(update.state)
           }));
         }
       })
     ];
   }
-  var lineNumberGutter2 = null;
-  var renderedLineNumberRange = "";
   function mountEditor(content2 = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
     const state = EditorState.create({ doc: content2, extensions: editorExtensions() });
     globalThis.__codeEditorView = new EditorView({ state, parent });
-    renderLineNumbers();
+    globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", (event) => {
+      const handle = globalThis.__codeEditorBeforeInput;
+      if (typeof handle !== "function") return;
+      const result2 = JSON.parse(handle(JSON.stringify({ inputType: event.inputType, data: event.data })));
+      if (!result2.handled) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
     globalThis.__browserUseNotify(JSON.stringify({
       type: "ready",
       characters: state.doc.length,
       lines: state.doc.lines
     }));
     return globalThis.__codeEditorView;
-  }
-  function renderLineNumbers() {
-    const view = globalThis.__codeEditorView;
-    if (!view) return;
-    if (!lineNumberGutter2) {
-      const gutters2 = document.createElement("div");
-      gutters2.className = "cm-gutters";
-      lineNumberGutter2 = document.createElement("div");
-      lineNumberGutter2.className = "cm-gutter cm-lineNumbers";
-      gutters2.appendChild(lineNumberGutter2);
-      view.scrollDOM.insertBefore(gutters2, view.contentDOM);
-    }
-    const first = view.state.doc.lineAt(view.viewport.from).number;
-    lineNumberGutter2.style.paddingTop = `${Math.max(0, view.lineBlockAt(view.viewport.from).top)}px`;
-    lineNumberGutter2.style.height = `${Math.max(view.contentHeight, view.scrollDOM.clientHeight)}px`;
-    const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
-    const range = `${first}:${last}`;
-    if (range === renderedLineNumberRange) return;
-    renderedLineNumberRange = range;
-    while (lineNumberGutter2.firstChild) lineNumberGutter2.firstChild.remove();
-    for (let number2 = first; number2 <= last; number2 += 1) {
-      const item = document.createElement("div");
-      item.className = "cm-gutterElement";
-      item.textContent = String(number2);
-      lineNumberGutter2.appendChild(item);
-    }
   }
   if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();
   function setSelection(anchor, head = anchor) {
@@ -30644,8 +30639,6 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     if (!globalThis.__codeEditorView || languageChanged) {
       globalThis.__codeEditorView?.destroy();
       parent.replaceChildren();
-      lineNumberGutter2 = null;
-      renderedLineNumberRange = "";
       const view2 = mountEditor(request.content);
       return JSON.stringify(documentUsage(view2.state.doc));
     }
@@ -30667,7 +30660,6 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
       applyingHostContent = false;
     }
     if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
-    renderLineNumbers();
     return JSON.stringify(documentUsage(view.state.doc));
   };
   var searchPanel = null;

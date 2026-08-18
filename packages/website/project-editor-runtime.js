@@ -53,7 +53,7 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
       root,
       scripts,
       options: {
-        frameInterval: 250,
+        frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
         services: {
           route: { get: () => location.pathname, listen() {} },
           storage: { get: () => null, set() {}, delete() {}, listen() {} },

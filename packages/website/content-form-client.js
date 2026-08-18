@@ -456,6 +456,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let editorGeneration = 0;
   let previewController = null;
   let previewTimer = 0;
+  let editorPreviewTimer = 0;
   let previewGeneration = 0;
   let activeError = "";
   let activeErrorAction = null;
@@ -574,6 +575,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
 
   function renderPreview() {
+    clearTimeout(editorPreviewTimer);
+    editorPreviewTimer = 0;
     const generation = ++previewGeneration;
     activeError = "";
     renderStatusState();
@@ -753,8 +756,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           preview.dataset.projectPrograms = String(inspection?.programs || 0);
         }
       } catch (error) {
-        const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
-        if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, true, null, "output");
+        setStatus(`Blocked: ${error.message}`, true, null, "output");
       }
     }, 120);
   }
@@ -778,6 +780,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     delete preview.dataset.projectMachineId;
     delete preview.dataset.canvasCommands;
   }
+
+  editorMount.addEventListener("beforeinput", disposeProjectMachine, true);
 
   async function mountEditorMachine(reason = "project-open") {
     const generation = ++editorGeneration;
@@ -1169,13 +1173,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
   }
 
-  function receiveEditorChange(content) {
+  function receiveEditorChange(content, { syntaxErrors = false } = {}) {
     if (typeof content !== "string") return;
     if (readOnly || selected === "config" || content === selectedContent()) return;
     try {
       clearNotice();
       if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;
-      renderPreview();
+      clearTimeout(editorPreviewTimer);
+      disposeProjectMachine();
+      if (syntaxErrors) {
+        setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
+      } else {
+        editorPreviewTimer = setTimeout(renderPreview, 250);
+      }
     } catch {}
   }
   function selectProjectFile(event) {

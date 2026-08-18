@@ -4,6 +4,7 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
+import { syntaxTree } from "@codemirror/language";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -52,6 +53,22 @@ function languageExtension(name) {
   if (name === "markdown") return markdown();
   return [];
 }
+function hasSyntaxErrors(state) {
+  if (currentLanguage === "javascript") {
+    try {
+      Function(state.doc.toString());
+      return false;
+    } catch (error) {
+      if (error instanceof SyntaxError) return true;
+      throw error;
+    }
+  }
+  const cursor = syntaxTree(state).cursor();
+  do {
+    if (cursor.type.isError) return true;
+  } while (cursor.next());
+  return false;
+}
 function editorExtensions() {
   return [
     editorSetup.of(basicSetup),
@@ -66,60 +83,33 @@ function editorExtensions() {
     nativeSelectionTheme,
     documentLimitFilter,
     EditorView.updateListener.of((update) => {
-      if (update.docChanged || update.viewportChanged) renderLineNumbers();
       if (update.docChanged && !applyingHostContent) {
         globalThis.__browserUseNotify(JSON.stringify({
           type: "change",
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
+          syntaxErrors: hasSyntaxErrors(update.state),
         }));
       }
     }),
   ];
 }
-let lineNumberGutter = null;
-let renderedLineNumberRange = "";
 function mountEditor(content = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
   const state = EditorState.create({ doc: content, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent });
-  renderLineNumbers();
+  globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", (event) => {
+    const handle = globalThis.__codeEditorBeforeInput;
+    if (typeof handle !== "function") return;
+    const result = JSON.parse(handle(JSON.stringify({ inputType: event.inputType, data: event.data })));
+    if (!result.handled) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
   globalThis.__browserUseNotify(JSON.stringify({
     type: "ready", characters: state.doc.length, lines: state.doc.lines,
   }));
   return globalThis.__codeEditorView;
-}
-function renderLineNumbers() {
-  const view = globalThis.__codeEditorView;
-  if (!view) return;
-  if (!lineNumberGutter) {
-    const gutters = document.createElement("div");
-    gutters.className = "cm-gutters";
-    lineNumberGutter = document.createElement("div");
-    lineNumberGutter.className = "cm-gutter cm-lineNumbers";
-    gutters.appendChild(lineNumberGutter);
-    view.scrollDOM.insertBefore(gutters, view.contentDOM);
-  }
-  const first = view.state.doc.lineAt(view.viewport.from).number;
-  // This is a guest-assisted virtual gutter rather than CodeMirror's native
-  // gutter plugin. Keep its first rendered number aligned with the document
-  // block that starts the current virtual viewport.
-  lineNumberGutter.style.paddingTop = `${Math.max(0, view.lineBlockAt(view.viewport.from).top)}px`;
-  lineNumberGutter.style.height = `${Math.max(view.contentHeight, view.scrollDOM.clientHeight)}px`;
-  // The virtual DOM cannot provide CodeMirror's normal synchronous geometry.
-  // Keep this guest-assisted gutter viewport bounded even if its conservative
-  // viewport estimate temporarily spans the entire document.
-  const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
-  const range = `${first}:${last}`;
-  if (range === renderedLineNumberRange) return;
-  renderedLineNumberRange = range;
-  while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
-  for (let number = first; number <= last; number += 1) {
-    const item = document.createElement("div");
-    item.className = "cm-gutterElement";
-    item.textContent = String(number);
-    lineNumberGutter.appendChild(item);
-  }
 }
 if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();
 function setSelection(anchor, head = anchor) {
@@ -234,8 +224,6 @@ globalThis.__codeEditorSetContent = (json) => {
   if (!globalThis.__codeEditorView || languageChanged) {
     globalThis.__codeEditorView?.destroy();
     parent.replaceChildren();
-    lineNumberGutter = null;
-    renderedLineNumberRange = "";
     const view = mountEditor(request.content);
     return JSON.stringify(documentUsage(view.state.doc));
   }
@@ -257,7 +245,6 @@ globalThis.__codeEditorSetContent = (json) => {
     applyingHostContent = false;
   }
   if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
-  renderLineNumbers();
   return JSON.stringify(documentUsage(view.state.doc));
 };
 let searchPanel = null;

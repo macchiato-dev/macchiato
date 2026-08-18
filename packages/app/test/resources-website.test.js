@@ -869,17 +869,30 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await template.selectOption("mark");
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "2");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await assert.doesNotReject(newEditor.locator("[data-project-file-current]", { hasText: "image.svg" }).waitFor());
+  await assert.doesNotReject(newEditor.locator('[data-open-tab="image.svg"][aria-selected="true"]').waitFor());
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("circle", { exact: false }).waitFor());
   await assert.doesNotReject(newEditor.locator("[data-project-preview] circle").waitFor());
   await template.selectOption("chart");
   await assert.doesNotReject(newEditor.locator("[data-project-preview] rect").nth(2).waitFor());
   assert.doesNotMatch(await page.locator("[data-project-status]").textContent(), /Preview stopped/);
   await template.selectOption("stars");
-  await page.waitForFunction(() => Number(document.querySelector("[data-project-preview]")?.dataset.canvasCommands) > 100);
+  await page.waitForFunction(() => {
+    const preview = document.querySelector("[data-project-preview]");
+    const canvas = preview?.querySelector(".project-editor__preview-surface")
+      ?.shadowRoot?.querySelector("canvas");
+    return canvas?.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
+      .data.some((value, index) => index % 4 === 3 && value > 0);
+  });
+  const starfieldBefore = await page.evaluate(() => document.querySelector("[data-project-preview]")
+    .querySelector(".project-editor__preview-surface").shadowRoot.querySelector("canvas").toDataURL());
+  await page.waitForTimeout(300);
+  const starfieldAfter = await page.evaluate(() => document.querySelector("[data-project-preview]")
+    .querySelector(".project-editor__preview-surface").shadowRoot.querySelector("canvas").toDataURL());
+  assert.notEqual(starfieldAfter, starfieldBefore);
   assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
   await template.selectOption("clock");
-  await page.waitForFunction(() => /^\d{2}:\d{2}:\d{2}$/.test(document.querySelector("[data-project-preview] #time")?.textContent || ""));
+  await page.waitForFunction(() => /^\d{2}:\d{2}:\d{2}$/.test(document.querySelector("[data-project-preview] .project-editor__preview-surface")
+    ?.shadowRoot?.querySelector("#time")?.textContent || ""));
   assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
   await template.selectOption("hello");
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "2");
@@ -942,7 +955,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
-  await assert.doesNotReject(page.locator("[data-project-versions-proxy] .project-editor__version-count", { hasText: "1" }).waitFor());
+  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
   const projectEditor = page.locator(".project-editor");
   await assert.doesNotReject(projectEditor.locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
@@ -950,7 +963,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
-  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
+  await page.waitForFunction(() => document.querySelector("[data-project-preview] .project-editor__preview-surface")
+    ?.shadowRoot?.textContent.includes("Updated."));
   const versionsButton = page.locator("[data-project-versions-proxy]");
   assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
   await versionsButton.click();
@@ -958,13 +972,15 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.match(await pastVersions.first().textContent(), /\d+ seconds? ago.*LATEST/);
   assert.notEqual(await pastVersions.first().getAttribute("title"), "");
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
-  await assert.doesNotReject(page.locator("[data-project-versions-proxy] .project-editor__version-count", { hasText: "1" }).waitFor());
+  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent.endsWith("ago"));
-  await page.waitForFunction(() => !document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
+  await page.waitForFunction(() => !document.querySelector("[data-project-preview] .project-editor__preview-surface")
+    ?.shadowRoot?.textContent.includes("Updated."));
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
   await page.locator("[data-project-version-list] [aria-current='true']").click();
-  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.textContent.includes("Updated."));
+  await page.waitForFunction(() => document.querySelector("[data-project-preview] .project-editor__preview-surface")
+    ?.shadowRoot?.textContent.includes("Updated."));
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
@@ -994,7 +1010,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   const snapshotBeforeTemplate = await page.locator("[data-project-snapshot]").inputValue();
   const templateBeforeReplacement = await storedTemplate.inputValue();
   await storedTemplate.selectOption("mark");
-  await assert.doesNotReject(newEditor.locator("[data-project-file-current]", { hasText: "image.svg" }).waitFor());
+  await assert.doesNotReject(newEditor.locator('[data-open-tab="image.svg"][aria-selected="true"]').waitFor());
   await assert.doesNotReject(page.locator("[data-project-notice]").getByRole("button", { name: "Undo" }).waitFor());
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > storedVersionCount);
@@ -1051,12 +1067,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await guest.locator("[data-project-save]").textContent(), "");
   assert.equal(await guest.locator("[data-project-status]").getAttribute("data-state"), "normal");
   await guest.close();
-  await page.getByRole("button", { name: "Delete project", exact: true }).click();
+  await page.getByRole("button", { name: "Project menu" }).click();
+  await page.getByRole("menuitem", { name: "Delete project", exact: true }).click();
   const deleteDialog = page.getByRole("alertdialog", { name: "Delete project" });
   await assert.doesNotReject(deleteDialog.waitFor());
   await deleteDialog.getByRole("button", { name: "Cancel" }).click();
   assert.equal(await deleteDialog.isHidden(), true);
-  await page.getByRole("button", { name: "Delete project", exact: true }).click();
+  await page.getByRole("button", { name: "Project menu" }).click();
+  await page.getByRole("menuitem", { name: "Delete project", exact: true }).click();
   await deleteDialog.getByRole("button", { name: "Delete project", exact: true }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Projects", exact: true }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/projects");

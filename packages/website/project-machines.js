@@ -28,17 +28,25 @@ function callMessage(name, payload) {
 }
 export async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = false;
+  let reportedError = null, starting = true;
   const machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
     if (text.startsWith("__wwcError:") && !reportedError) {
-      reportedError = true;
-      onError?.(new Error(text.slice(11)));
+      const error = new Error(text.slice(11));
+      reportedError = error;
+      if (!starting) queueMicrotask(() => onError?.(error));
     }
     else options.onMessage?.(text);
   } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
-  for (const script of scripts) await machine.onmsg(taggedMessage(1, script.code));
+  for (const script of scripts) {
+    await machine.onmsg(taggedMessage(1, script.code));
+    if (reportedError) {
+      machine.destroy();
+      throw reportedError;
+    }
+  }
+  starting = false;
   return Object.freeze({
     destroy() { machine.destroy(); },
     inspect() { return { runtime: "quickjs", programs: scripts.length, machine: { machineId } }; }, });
@@ -70,9 +78,11 @@ export async function createProjectEditorMachine({ root, onChange, onReady, onLi
         return;
       }
       const message = JSON.parse(text);
-      if (message.type === "change") onChange(message.content);
-      else if (message.type === "ready") onReady?.(message);
-      else if (message.type === "limit") onLimit?.(message);
+      queueMicrotask(() => {
+        if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
+        else if (message.type === "ready") onReady?.(message);
+        else if (message.type === "limit") onLimit?.(message);
+      });
     },
   });
   await machine.onmsg(0);

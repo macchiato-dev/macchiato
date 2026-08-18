@@ -1,5 +1,5 @@
 (() => {
-  // node_modules/@lezer/common/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range = class {
@@ -2050,7 +2050,7 @@
     return result;
   }
 
-  // node_modules/@lezer/lr/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -3812,7 +3812,7 @@
     return spec.get;
   }
 
-  // node_modules/@lezer/highlight/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -4536,7 +4536,7 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // node_modules/@lezer/javascript/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -4748,7 +4748,7 @@
     tokenPrec: 15201
   });
 
-  // node_modules/@marijn/find-cluster-break/src/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -4822,7 +4822,7 @@
     return code2 < 65536 ? 1 : 2;
   }
 
-  // node_modules/@codemirror/state/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -8196,7 +8196,7 @@
     return strict === true ? -1 : string2.length;
   }
 
-  // node_modules/style-mod/src/style-mod.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -8327,7 +8327,7 @@
     }
   };
 
-  // node_modules/w3c-keyname/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -8433,7 +8433,7 @@
     return name2;
   }
 
-  // node_modules/crelt/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/crelt/index.js
   function crelt() {
     var elt2 = arguments[0];
     if (typeof elt2 == "string") elt2 = document.createElement(elt2);
@@ -8462,7 +8462,7 @@
     }
   }
 
-  // node_modules/@codemirror/view/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -18490,7 +18490,7 @@
     return activeLineGutterHighlighter;
   }
 
-  // node_modules/@codemirror/language/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -20134,7 +20134,7 @@
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // node_modules/@codemirror/autocomplete/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/autocomplete/dist/index.js
   var CompletionContext = class {
     /**
     Create a new completion context. (Mostly useful for testing
@@ -21951,7 +21951,7 @@
   ];
   var completionKeymapExt = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ keymap.computeN([completionConfig], (state) => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
-  // node_modules/@codemirror/lang-javascript/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -22263,7 +22263,7 @@
     return true;
   });
 
-  // node_modules/@lezer/html/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/html/dist/index.js
   var scriptText = 55;
   var StartCloseScriptTag = 1;
   var styleText = 56;
@@ -22607,7 +22607,7 @@
     });
   }
 
-  // node_modules/@lezer/css/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/css/dist/index.js
   var descendantOp = 148;
   var Unit = 1;
   var identifier = 149;
@@ -22782,7 +22782,7 @@
     tokenPrec: 2444
   });
 
-  // node_modules/@codemirror/lang-css/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-css/dist/index.js
   var _properties = null;
   function properties() {
     if (!_properties && typeof document == "object" && document.body) {
@@ -23643,7 +23643,7 @@
     return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
   }
 
-  // node_modules/@codemirror/lang-html/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-html/dist/index.js
   var Targets = ["_blank", "_self", "_top", "_parent"];
   var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
   var Methods = ["get", "post", "put", "delete"];
@@ -24383,7 +24383,7 @@
     return true;
   });
 
-  // node_modules/@lezer/json/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/json/dist/index.js
   var jsonHighlighting = styleTags({
     String: tags.string,
     Number: tags.number,
@@ -24415,7 +24415,7 @@
     tokenPrec: 0
   });
 
-  // node_modules/@codemirror/lang-json/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-json/dist/index.js
   var jsonLanguage = /* @__PURE__ */ LRLanguage.define({
     name: "json",
     parser: /* @__PURE__ */ parser4.configure({
@@ -24438,7 +24438,7 @@
     return new LanguageSupport(jsonLanguage);
   }
 
-  // node_modules/@lezer/markdown/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/markdown/dist/index.js
   var CompositeBlock = class _CompositeBlock {
     static create(type, value, from, parentHash, end) {
       let hash2 = parentHash + (parentHash << 8) + type + (value << 4) | 0;
@@ -26502,7 +26502,7 @@
     }]
   };
 
-  // node_modules/@codemirror/lang-markdown/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-markdown/dist/index.js
   var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
   var headingProp = /* @__PURE__ */ new NodeProp();
   var commonmark = /* @__PURE__ */ parser5.configure({
@@ -26923,7 +26923,7 @@
     }
   });
 
-  // node_modules/@codemirror/theme-one-dark/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -27067,7 +27067,7 @@
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // node_modules/@codemirror/commands/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config2 = getConfig(target.state, line.from);
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -28161,7 +28161,7 @@
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // node_modules/@codemirror/lint/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lint/dist/index.js
   var SelectedDiagnostic = class {
     constructor(from, to, diagnostic) {
       this.from = from;
@@ -28770,7 +28770,7 @@
     baseTheme4
   ];
 
-  // node_modules/@codemirror/search/dist/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/search/dist/index.js
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
   var SearchCursor = class {
     /**
@@ -29852,10 +29852,10 @@
     baseTheme5
   ];
 
-  // generated/fixtures.js
+  // dev/wasm-web-runtimes/examples/codemirror/generated/fixtures.js
   var fixtures_default = { "typescript": { "path": "examples/codemirror/fixtures/example.ts", "text": 'type Project = {\n  name: string;\n  files: string[];\n  sandboxed: boolean;\n};\n\nconst projects: Project[] = [\n  { name: "Article", files: ["index.html", "style.css"], sandboxed: true },\n  { name: "Clock", files: ["index.html", "clock.js"], sandboxed: true },\n];\n\nexport function projectSummary(project: Project): string {\n  const mode = project.sandboxed ? "sandboxed" : "trusted";\n  return `${project.name}: ${project.files.length} files, ${mode}`;\n}\n\nfor (const project of projects) {\n  console.log(projectSummary(project));\n}\n' }, "html": { "path": "examples/codemirror/fixtures/example.html", "text": '<!doctype html>\n<meta charset="utf-8">\n<title>Small article</title>\n<article>\n  <h1>A small article</h1>\n  <p>A constrained document can still be useful and expressive.</p>\n  <p><a href="https://en.wikipedia.org/wiki/WebAssembly">Read about WebAssembly</a>.</p>\n</article>\n' }, "css": { "path": "examples/codemirror/fixtures/example.css", "text": ":root {\n  color-scheme: dark;\n  font-family: system-ui, sans-serif;\n}\n\narticle {\n  max-width: 42rem;\n  margin: 4rem auto;\n  line-height: 1.6;\n}\n\na { color: #61afef; }\n" }, "json": { "path": "examples/codemirror/fixtures/example.json", "text": '{\n  "container": "article",\n  "limits": {\n    "elements": 500,\n    "links": 8\n  },\n  "allowedHosts": ["*.wikipedia.org"]\n}\n' }, "markdown": { "path": "examples/codemirror/fixtures/example.md", "text": "# Sandboxed editor\n\nThe editor state belongs to QuickJS. The browser receives a constrained DOM\nprojection and returns only explicitly supported events and measurements.\n\n## Goals\n\n- Preserve familiar CodeMirror behavior.\n- Keep the browser host generic.\n- Measure before adding specialized batching.\n" } };
 
-  // src/native-caret.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/native-caret.js
   var nativeCaret = EditorView.theme({
     "&.cm-focused .cm-content, &.cm-focused .cm-line": {
       caretColor: "#528bff !important"
@@ -29863,7 +29863,7 @@
     ".cm-cursorLayer": { display: "none" }
   });
 
-  // src/application.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/application.js
   var languages = {
     typescript: () => javascript({ typescript: true }),
     html,
@@ -30049,6 +30049,6 @@
     };
   }
 
-  // src/modern-entry.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/modern-entry.js
   start();
 })();
