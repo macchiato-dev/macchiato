@@ -102,9 +102,9 @@ execFileSync("npm", ["run", "build:machine"], {
   cwd: join(prototype, ".."), stdio: "inherit"
 });
 const outputRoot = dirname(dirname(output));
-await copyFile(join(prototype, "web/generated/wasm-web-machine.js"),
+await copyFile(join(prototype, "../dist/module/wasm-web-machine.js"),
   join(outputRoot, "wasm-web-machine.js"));
-await copyFile(join(prototype, "web/generated/wasm-web-machine.js.map"),
+await copyFile(join(prototype, "../dist/module/wasm-web-machine.js.map"),
   join(outputRoot, "wasm-web-machine.js.map"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
