@@ -29930,23 +29930,23 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var searchExtensions = [searchState, Prec.low(searchHighlighter), baseTheme5];
   var fixtures_default = {
     "typescript": {
-      "path": "dev/codemirror-runtime-example/fixtures/example.ts",
+      "path": "examples/codemirror/fixtures/example.ts",
       "text": 'type Project = {\n  name: string;\n  files: string[];\n  sandboxed: boolean;\n};\n\nconst projects: Project[] = [\n  { name: "Article", files: ["index.html", "style.css"], sandboxed: true },\n  { name: "Clock", files: ["index.html", "clock.js"], sandboxed: true },\n];\n\nexport function projectSummary(project: Project): string {\n  const mode = project.sandboxed ? "sandboxed" : "trusted";\n  return `${project.name}: ${project.files.length} files, ${mode}`;\n}\n\nfor (const project of projects) {\n  console.log(projectSummary(project));\n}\n'
     },
     "html": {
-      "path": "dev/codemirror-runtime-example/fixtures/example.html",
+      "path": "examples/codemirror/fixtures/example.html",
       "text": '<!doctype html>\n<meta charset="utf-8">\n<title>Small article</title>\n<article>\n  <h1>A small article</h1>\n  <p>A constrained document can still be useful and expressive.</p>\n  <p><a href="https://en.wikipedia.org/wiki/WebAssembly">Read about WebAssembly</a>.</p>\n</article>\n'
     },
     "css": {
-      "path": "dev/codemirror-runtime-example/fixtures/example.css",
+      "path": "examples/codemirror/fixtures/example.css",
       "text": ":root {\n  color-scheme: dark;\n  font-family: system-ui, sans-serif;\n}\n\narticle {\n  max-width: 42rem;\n  margin: 4rem auto;\n  line-height: 1.6;\n}\n\na { color: #61afef; }\n"
     },
     "json": {
-      "path": "dev/codemirror-runtime-example/fixtures/example.json",
+      "path": "examples/codemirror/fixtures/example.json",
       "text": '{\n  "container": "article",\n  "limits": {\n    "elements": 500,\n    "links": 8\n  },\n  "allowedHosts": ["*.wikipedia.org"]\n}\n'
     },
     "markdown": {
-      "path": "dev/codemirror-runtime-example/fixtures/example.md",
+      "path": "examples/codemirror/fixtures/example.md",
       "text": "# Sandboxed editor\n\nThe editor state belongs to QuickJS. The browser receives a constrained DOM\nprojection and returns only explicitly supported events and measurements.\n\n## Goals\n\n- Preserve familiar CodeMirror behavior.\n- Keep the browser host generic.\n- Measure before adding specialized batching.\n"
     }
   };

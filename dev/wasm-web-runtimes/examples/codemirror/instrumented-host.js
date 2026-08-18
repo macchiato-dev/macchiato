@@ -1,4 +1,4 @@
-import createWasmWebContainer from "./wasm-web-container.js";
+import WasmWebMachine from "./wasm-web-machine.js";
 
 const endpoint = "/-/writable-files/interaction-trace.ndjson";
 const encoder = new TextEncoder();
@@ -63,16 +63,16 @@ append({
 });
 
 try {
-  const host = createWasmWebContainer(document, {
+  const response = await fetch("../generated/codemirror-canonical.wasm", { credentials: "same-origin" });
+  if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+  const module = await WebAssembly.compileStreaming(response);
+  const machine = new WasmWebMachine(module, document, {
     services,
     development: true,
     instrument: append,
     onDebug(message) { append({ type: "guest-debug", message }); },
   });
-  const response = await fetch("../generated/codemirror-canonical.wasm", { credentials: "same-origin" });
-  if (!response.ok) throw new Error(`Wasm response ${response.status}`);
-  const { instance } = await WebAssembly.instantiateStreaming(response, host.imports);
-  await host.connect(instance);
+  await machine.onmsg(0);
   document.body.dataset.ready = "true";
 } catch (error) {
   append({ type: "startup-error", message: error?.stack || String(error) });

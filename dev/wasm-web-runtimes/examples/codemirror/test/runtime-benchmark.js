@@ -6,8 +6,8 @@ import { performance } from "node:perf_hooks";
 import { chromium } from "@playwright/test";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const hostPath = resolve(root,
-  "../wasm-web-container/examples/web/wasm-web-container.js");
+const machineModule = resolve(root,
+  "../../../wasm-web-machine/dist/module/wasm-web-machine.js");
 const iterations = Number(process.env.BENCHMARK_ITERATIONS || 6);
 const warmups = Number(process.env.BENCHMARK_WARMUPS || 2);
 const benchmarkKeyDelay = Number(process.env.BENCHMARK_KEY_DELAY || 12);
@@ -54,9 +54,9 @@ function summarize(values) {
 async function serve() {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://benchmark.test").pathname;
-    if (pathname === "/wasm-web-container.js") {
+    if (pathname === "/wasm-web-machine.js") {
       response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
-      response.end(await readFile(hostPath));
+      response.end(await readFile(machineModule));
       return;
     }
     const relative = pathname === "/" ? "index.html"

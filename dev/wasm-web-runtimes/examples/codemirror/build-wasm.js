@@ -3,7 +3,7 @@ import { copyFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const example = resolve(new URL(".", import.meta.url).pathname);
-const runtime = resolve(example, "../quickjs-guest-runtime");
+const runtime = resolve(example, "../../quickjs");
 const environment = resolve(example, "src/microquickjs-dom.js");
 const canonicalEnvironment = resolve(example, "generated/canonical-dom.js");
 const output = resolve(runtime,
@@ -34,7 +34,7 @@ await copyFile(output, destination);
 console.log(`canonical: ${(await stat(destination)).size} bytes`);
 
 const microRuntime = resolve(example,
-  "../wasm-web-container/examples/microquickjs-guest-runtime");
+  "../microquickjs-suite/microquickjs-guest-runtime");
 const microCompiler = resolve(microRuntime, "microquickjs/mqjs");
 const microRuntimeBytecode = resolve(example, "generated/microquickjs-runtime.bin");
 const microApplicationBytecode = resolve(example, "generated/codemirror-micro.bin");
@@ -48,7 +48,7 @@ execFileSync(microCompiler, ["-m32", "-o", microApplicationBytecode,
   resolve(example, "generated/codemirror-micro.js")], { stdio: "inherit" });
 const microDestination = resolve(example, "generated/codemirror-microquickjs.wasm");
 execFileSync(process.execPath, [
-  resolve(example, "../wasm-web-container/examples/scripts/stamp-wasm.js"),
+  resolve(example, "../microquickjs-suite/scripts/stamp-wasm.js"),
   resolve(microRuntime,
     "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
   microDestination,

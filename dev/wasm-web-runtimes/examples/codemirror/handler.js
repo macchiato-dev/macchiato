@@ -15,7 +15,7 @@ const types = new Map([
 
 export async function quickjsCodeMirrorHandler(request) {
   const pathname = new URL(request.url).pathname;
-  if (pathname === "/wasm-web-machine.js" || pathname === "/wasm-web-container.js") {
+  if (pathname === "/wasm-web-machine.js") {
     return new Response(await readFile(canonicalHost), {
       headers: { "content-type": "text/javascript; charset=utf-8" },
     });

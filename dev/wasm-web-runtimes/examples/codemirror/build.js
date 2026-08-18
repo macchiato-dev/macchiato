@@ -17,7 +17,7 @@ await mkdir(generated, { recursive: true });
 // Reuse the canonical container wire codec, CSS compiler, and DOM wrappers.
 // The example adds only the full-engine browser surface still being developed.
 const canonicalRuntimePath = new URL(
-  "../wasm-web-container/examples/microquickjs-guest-runtime/guest-runtime.js",
+  "../microquickjs-suite/microquickjs-guest-runtime/guest-runtime.js",
   import.meta.url);
 const canonicalRuntime = await readFile(canonicalRuntimePath, "utf8");
 const runtimeEnd = canonicalRuntime.indexOf("function attributes(source)");
@@ -37,11 +37,11 @@ await writeFile(canonicalEnvironment,
 
 const workspace = new URL("../../", import.meta.url);
 const fixtureFiles = {
-  typescript: "dev/codemirror-runtime-example/fixtures/example.ts",
-  html: "dev/codemirror-runtime-example/fixtures/example.html",
-  css: "dev/codemirror-runtime-example/fixtures/example.css",
-  json: "dev/codemirror-runtime-example/fixtures/example.json",
-  markdown: "dev/codemirror-runtime-example/fixtures/example.md",
+  typescript: "examples/codemirror/fixtures/example.ts",
+  html: "examples/codemirror/fixtures/example.html",
+  css: "examples/codemirror/fixtures/example.css",
+  json: "examples/codemirror/fixtures/example.json",
+  markdown: "examples/codemirror/fixtures/example.md",
 };
 const fixtures = {};
 for (const [language, path] of Object.entries(fixtureFiles)) {

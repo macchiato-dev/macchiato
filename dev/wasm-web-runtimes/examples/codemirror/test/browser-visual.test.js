@@ -6,8 +6,8 @@ import { chromium } from "@playwright/test";
 import test from "node:test";
 
 const root = resolve(new URL("..", import.meta.url).pathname);
-const canonicalHost = resolve(root,
-  "../wasm-web-container/examples/web/wasm-web-container.js");
+const machineModule = resolve(root,
+  "../../../wasm-web-machine/dist/module/wasm-web-machine.js");
 const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
   ".wasm": "application/wasm" };
 const runtime = process.env.CODEMIRROR_RUNTIME || "";
@@ -17,9 +17,9 @@ const screenshotTag = runtime || "quickjs";
 test("the demo index and each bridged QuickJS editor work", async (context) => {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://example.test").pathname;
-    if (pathname === "/wasm-web-container.js") {
+    if (pathname === "/wasm-web-machine.js") {
       response.writeHead(200, { "content-type": "text/javascript" });
-      response.end(await readFile(canonicalHost));
+      response.end(await readFile(machineModule));
       return;
     }
     const relative = pathname === "/" ? "index.html"
