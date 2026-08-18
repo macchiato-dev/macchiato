@@ -16,9 +16,8 @@ is temporary and must be gone before publishing.
 import mountWebContainer from "wasm-web-container";
 
 const container = await mountWebContainer("./main.wasm", document, {
-  onDataHref(value, event, element) {
-    // The attribute is inert unless the embedding application handles it.
-  }
+  allowNavigate: "fragment",
+  allowFont: [expectedFontSha256]
 });
 ```
 
@@ -37,9 +36,10 @@ Internal navigation uses real, fragment-only anchors. Ordinary `#section-id`
 links retain native in-page navigation; virtual pages use `#/page.html`. It
 therefore stays within the already-loaded container and works with browser back
 and forward navigation.
-External addresses are not assigned to `href`: an application may place one
-in inert data and present it in a copy-and-paste dialog. This keeps navigation
-to another origin explicit without granting the guest a network capability.
+Navigation is default-deny. `allowNavigate: "fragment"` permits canonical
+virtual fragments, `"self"` permits same-origin URLs, and a synchronous
+predicate function can express another policy. An application may keep an
+external address in inert data and present it in a copy-and-paste dialog.
 
 Routing and scoped storage belong to the runner's browser services rather than
 the DOM capability host. An optional general-value runner helper can use already-materialized plain
