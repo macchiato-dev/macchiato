@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { chmodSync, mkdirSync } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -307,14 +307,50 @@ function safeJoin(root, pathname) {
   return target;
 }
 
-async function serveFile(directory, pathname = "/index.html") {
+function parseByteRange(header, size) {
+  if (!header?.startsWith("bytes=") || header.includes(",")) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header);
+  if (!match || (!match[1] && !match[2])) return null;
+  let start;
+  let end;
+  if (!match[1]) {
+    const suffix = Number(match[2]);
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) return null;
+    start = Math.max(0, size - suffix);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+  }
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
+      start < 0 || start >= size || end < start) return null;
+  return { start, end: Math.min(end, size - 1) };
+}
+
+async function serveFile(request, directory, pathname = "/index.html") {
   const localPath = pathname.endsWith("/") ? `${pathname}index.html` : pathname;
   const filePath = safeJoin(directory, localPath);
   try {
-    const content = await readFile(filePath);
-    return new Response(content, {
-      headers: { "content-type": contentTypeFor(filePath) },
-    });
+    const file = await stat(filePath);
+    if (!file.isFile()) return new Response("Not found", { status: 404 });
+    const rangeHeader = request.headers.get("range");
+    const range = rangeHeader ? parseByteRange(rangeHeader, file.size) : null;
+    if (rangeHeader && !range) {
+      return new Response(null, {
+        status: 416,
+        headers: { "content-range": `bytes */${file.size}` },
+      });
+    }
+    const content = request.method === "HEAD" ? null : await readFile(filePath);
+    const body = content && range ? content.subarray(range.start, range.end + 1) : content;
+    const length = range ? range.end - range.start + 1 : file.size;
+    const headers = {
+      "accept-ranges": "bytes",
+      "content-length": String(length),
+      "content-type": contentTypeFor(filePath),
+    };
+    if (range) headers["content-range"] = `bytes ${range.start}-${range.end}/${file.size}`;
+    return new Response(body, { status: range ? 206 : 200, headers });
   } catch {
     return new Response("Not found", { status: 404 });
   }
@@ -436,7 +472,7 @@ async function route(request) {
   if (row) {
     const writableResponse = await directoryWritableFileResponse(request, app, row.directory);
     if (writableResponse) return writableResponse;
-    return serveFile(row.directory, url.pathname);
+    return serveFile(request, row.directory, url.pathname);
   }
 
   return new Response("Configured app has no runnable handler", { status: 500 });
