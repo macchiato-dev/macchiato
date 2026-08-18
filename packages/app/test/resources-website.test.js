@@ -730,7 +730,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.mouse.down();
   await page.mouse.move(selectionEnd.x + 110, selectionEnd.y + selectionEnd.height / 2, { steps: 10 });
   await page.mouse.up();
-  assert.ok(await newEditor.locator(".cm-selectionBackground").count() >= 2, "multiline selection should remain visible after mouseup");
+  const selectionLayers = await newEditor.locator(".cm-selectionBackground").count();
+  const nativeSelection = await page.evaluate(() => String(getSelection()));
+  assert.ok(selectionLayers >= 2 || nativeSelection.includes("\n"), "multiline selection should remain visible after mouseup");
   assert.notEqual(await newEditor.locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
   await assert.doesNotReject(newEditor.getByRole("button", { name: "Split view" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());

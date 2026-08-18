@@ -2,6 +2,11 @@
 // runtime. These are browser-shaped guest objects, never browser-realm objects.
 globalThis.document = document;
 globalThis.window = globalThis.self = globalThis;
+globalThis.__wwcPostMessage = function (message) {
+  return immediate([3, document.reference, stringIndex("postMessage"), [
+    encode(String(message))
+  ]]);
+};
 document.defaultView = globalThis;
 function HostWindow() {}
 Object.defineProperty(HostWindow, Symbol.hasInstance, {

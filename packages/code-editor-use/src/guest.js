@@ -11,6 +11,10 @@ import { redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 
+if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
+  globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
+}
+
 const parent = document.getElementById("editor");
 const editorSetup = new Compartment();
 const language = new Compartment();
@@ -74,14 +78,17 @@ function editorExtensions() {
     }),
   ];
 }
-const state = EditorState.create({
-  doc: 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);',
-  extensions: editorExtensions(),
-});
-
-globalThis.__codeEditorView = new EditorView({ state, parent });
 let lineNumberGutter = null;
 let renderedLineNumberRange = "";
+function mountEditor(content = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
+  const state = EditorState.create({ doc: content, extensions: editorExtensions() });
+  globalThis.__codeEditorView = new EditorView({ state, parent });
+  renderLineNumbers();
+  globalThis.__browserUseNotify(JSON.stringify({
+    type: "ready", characters: state.doc.length, lines: state.doc.lines,
+  }));
+  return globalThis.__codeEditorView;
+}
 function renderLineNumbers() {
   const view = globalThis.__codeEditorView;
   if (!view) return;
@@ -114,7 +121,7 @@ function renderLineNumbers() {
     lineNumberGutter.appendChild(item);
   }
 }
-renderLineNumbers();
+if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();
 function setSelection(anchor, head = anchor) {
   const view = globalThis.__codeEditorView;
   const length = view.state.doc.length;
@@ -195,6 +202,7 @@ globalThis.__codeEditorSelectLine = (json) => {
 };
 globalThis.__codeEditorInspect = () => {
   const view = globalThis.__codeEditorView;
+  if (!view) return JSON.stringify({ document: "", selection: null, viewport: null, usage: { characters: 0, lines: 0 }, limits: documentLimits });
   const selection = view.state.selection.main;
   return JSON.stringify({
     document: view.state.doc.toString(),
@@ -210,7 +218,8 @@ globalThis.__codeEditorConfigureLimits = (json) => {
     if (!Number.isSafeInteger(request[name]) || request[name] < 1) throw new TypeError(`${name} must be a positive integer`);
   }
   documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
-  return JSON.stringify({ limits: documentLimits, ...documentUsage(globalThis.__codeEditorView.state.doc) });
+  const view = globalThis.__codeEditorView;
+  return JSON.stringify({ limits: documentLimits, ...(view ? documentUsage(view.state.doc) : { characters: 0, lines: 0 }) });
 };
 globalThis.__codeEditorSetContent = (json) => {
   const request = JSON.parse(json);
@@ -219,9 +228,13 @@ globalThis.__codeEditorSetContent = (json) => {
   if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
     throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
-  const view = globalThis.__codeEditorView;
   currentLanguage = request.language;
   currentReadOnly = request.readOnly === true;
+  if (!globalThis.__codeEditorView) {
+    const view = mountEditor(request.content);
+    return JSON.stringify(documentUsage(view.state.doc));
+  }
+  const view = globalThis.__codeEditorView;
   applyingHostContent = true;
   try {
     view.dispatch({
@@ -407,8 +420,3 @@ globalThis.__codeEditorBeforeInput = (json) => {
   const nextSelection = view.state.selection.main;
   return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
 };
-globalThis.__browserUseNotify(JSON.stringify({
-  type: "ready",
-  characters: state.doc.length,
-  lines: state.doc.lines,
-}));

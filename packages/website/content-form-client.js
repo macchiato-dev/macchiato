@@ -807,6 +807,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
+      root.dataset.editorMachineError = error.message;
       setStatus(`Editor failed to start: ${error.message}`, true, null, "editor");
     }
   }

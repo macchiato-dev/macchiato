@@ -1,25 +1,19 @@
-import { mountQuickJsCodeEditor } from "@macchiato-dev/code-editor-use/controller";
-import { getOrCreateRoleSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
 import { mountPresentationUse } from "@macchiato-dev/presentation-use";
-import { createProjectOutputMachine } from "./project-machines.js";
+import { createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
 
 export async function mountResourcesProjectEditor(options) {
-  const frontend = await getOrCreateRoleSandbox("resources-frontend", {
-    wasmMachine: "dedicated",
-    memoryLimitBytes: 16 * 1024 * 1024,
-    maxStackBytes: 512 * 1024,
-  });
-  frontend.evalGlobal("globalThis.__resourcesProjectWorkspaceLoaded = true", "resources-project-workspace.js");
+  const frontend = await createProjectAppMachine(options.root);
   document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
-  document.documentElement.dataset.resourcesFrontendMachineId = frontend.inspectMachine().machineId;
-  const guestSource = await (await fetch("/-/resources-site/project-editor-guest.js")).text();
-  const controller = await mountQuickJsCodeEditor({
-    ...options,
-    guestSource,
-    limits: { ...options.limits, wasmMachine: "dedicated", role: "resources-project-editor" },
+  document.documentElement.dataset.resourcesFrontendMachineId = frontend.machineId;
+  const controller = await createProjectEditorMachine({
+    root: options.root,
+    onChange: options.onChange,
+    onReady: options.onReady,
+    onLimit: options.onLimit,
   });
   return Object.freeze({
     ...controller,
+    destroy() { controller.destroy(); frontend.destroy(); },
     history: Object.freeze({
       initialize(value) { return controller.callGuest("__resourcesProjectHistoryInitialize", value); },
       setCurrent(snapshot) { return controller.callGuest("__resourcesProjectHistorySetCurrent", { snapshot }); },

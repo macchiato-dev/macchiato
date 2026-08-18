@@ -64,8 +64,11 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     }
   }
   const editorGuest = bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js")));
+  const projectRuntime = bytes(readFileSync(join(generatedDirectory, "project-quickjs-runtime.wasm")));
+  const editorMachine = bytes(readFileSync(join(generatedDirectory, "project-editor-quickjs-runtime.wasm")));
   const editorRuntime = bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"), "utf8")
-    .replace("/-/resources-site/project-editor-guest.js", `/-/resources-site/project-editor-guest.js?v=${version(editorGuest)}`));
+    .replaceAll("/-/resources-site/project-quickjs-runtime.wasm", `/-/resources-site/project-quickjs-runtime.wasm?v=${version(projectRuntime)}`)
+    .replace("/-/resources-site/project-editor-quickjs-runtime.wasm", `/-/resources-site/project-editor-quickjs-runtime.wasm?v=${version(editorMachine)}`));
   const containerElements = bytes(readFileSync(join(hubSourceDirectory, "container-elements.js")));
   const contentForm = bytes(readFileSync(join(directory, "content-form-client.js"), "utf8")
     .replace("/-/resources-site/project-editor-runtime.js", `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`)
@@ -75,7 +78,8 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/presentation-runner.js", bytes(readFileSync(join(generatedDirectory, "presentation-runner.js"))));
   files.set("/-/resources-site/presentation-runner.html", bytes(readFileSync(join(directory, "../../packages/presentation-use/runner.html"))));
   files.set("/-/resources-site/project-editor-guest.js", editorGuest);
-  files.set("/-/resources-site/project-quickjs-runtime.wasm", bytes(readFileSync(join(generatedDirectory, "project-quickjs-runtime.wasm"))));
+  files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
+  files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);
   files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(hubSourceDirectory, "project-history.js"))));
   files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js"))));
   files.set("/-/resources-site/container-elements.js", containerElements);

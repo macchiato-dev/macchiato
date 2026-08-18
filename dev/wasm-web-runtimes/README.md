@@ -24,6 +24,7 @@ The composition layer outside `WasmWebMachine` decides when to fetch code,
 create another VM, dispose one, or transfer state. Fetch is supplied as a
 constrained service; it is never ambient authority inside the machine.
 
-QuickJS runtime message tag `1` currently means UTF-8 JavaScript source. A
+QuickJS runtime message tag `1` means UTF-8 JavaScript source. Tag `2` invokes
+a named global with a UTF-8 string argument and reports its string result. A
 bytecode tag can be added without changing the machine or its two-function
 `msg`/`onmsg` ABI.

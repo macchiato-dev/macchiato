@@ -1,6 +1,7 @@
 #include "quickjs.h"
 #include "guest-source.h"
 #include <stdlib.h>
+#include <string.h>
 
 __attribute__((import_module("host"), import_name("msg")))
 extern uint32_t msg(uint32_t offset, uint32_t length);
@@ -277,6 +278,54 @@ static void receive_host_message(uint32_t minimum_length)
                          JS_EVAL_TYPE_GLOBAL);
         if (JS_IsException(result)) report(result);
         JS_FreeValue(context, result);
+        drain_jobs();
+        flush_guest_operations();
+        return;
+    }
+    if (actual_length > 1 && host_message[0] == 2) {
+        uint32_t name_length = 0;
+        const char *result_text;
+        uint32_t result_length = 0;
+        char *response_text;
+        JSValue reporter, report_value, report_result;
+        while (name_length + 1 < actual_length && host_message[name_length + 1] != 0)
+            name_length++;
+        if (name_length == 0 || name_length > 127 || name_length + 2 > actual_length)
+            return;
+        global = JS_GetGlobalObject(context);
+        receiver = JS_GetPropertyStr(context, global,
+                                     (const char *)(host_message + 1));
+        bytes = JS_NewStringLen(context,
+                                (const char *)(host_message + name_length + 2),
+                                actual_length - name_length - 2);
+        result = JS_Call(context, receiver, global, 1, &bytes);
+        if (JS_IsException(result)) {
+            report(result);
+        } else {
+            result_text = JS_ToCString(context, result);
+            if (result_text != NULL) {
+                while (result_text[result_length] != '\0') result_length++;
+                response_text = malloc(14 + result_length);
+                if (response_text != NULL) {
+                    memcpy(response_text, "__wwcResponse:", 14);
+                    memcpy(response_text + 14, result_text, result_length);
+                    reporter = JS_GetPropertyStr(context, global, "__wwcPostMessage");
+                    report_value = JS_NewStringLen(context, response_text,
+                                                   14 + result_length);
+                    report_result = JS_Call(context, reporter, global, 1,
+                                            &report_value);
+                    JS_FreeValue(context, report_result);
+                    JS_FreeValue(context, report_value);
+                    JS_FreeValue(context, reporter);
+                    free(response_text);
+                }
+                JS_FreeCString(context, result_text);
+            }
+        }
+        JS_FreeValue(context, result);
+        JS_FreeValue(context, bytes);
+        JS_FreeValue(context, receiver);
+        JS_FreeValue(context, global);
         drain_jobs();
         flush_guest_operations();
         return;
