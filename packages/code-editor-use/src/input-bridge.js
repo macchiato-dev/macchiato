@@ -95,6 +95,17 @@ export class CodeMirrorInputBridge {
     this.sandbox.callJsonFunction("__browserUseFlush", {});
   }
 
+  needsGuestCommand(event) {
+    if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "Escape"].includes(event.key)) return true;
+    if (event.code === "Space" && event.ctrlKey) return true;
+    if (!(event.ctrlKey || event.metaKey)) return false;
+    return event.key.toLowerCase() === "f" || event.key.toLowerCase() === "z";
+  }
+
+  canUseBeforeInputOnly(event) {
+    return event.key.length === 1 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.isComposing;
+  }
+
   syncSelectionVisibility(selection) {
     this.root.classList.toggle("cm-native-selection", Boolean(selection && selection.to > selection.from));
   }
@@ -212,6 +223,18 @@ export class CodeMirrorInputBridge {
     }, true);
     this.listen(this.root, "keydown", (event) => {
       if (this.isStopped()) return;
+      // Printable keys continue through CodeMirror's requested DOM listener and
+      // then through beforeinput. Avoid a separate synchronous guest command
+      // call when this bridge has no command of its own to handle.
+      if (!this.needsGuestCommand(event)) {
+        this.snapshot = null;
+        // A plain character is applied by the beforeinput transaction below.
+        // CodeMirror's general keydown listener has no additional work for it,
+        // so do not make a second host/guest crossing for the same keystroke.
+        // The browser default remains enabled and still emits beforeinput.
+        if (this.canUseBeforeInputOnly(event)) event.stopImmediatePropagation();
+        return;
+      }
       const result = this.sandbox.callJsonFunction("__codeEditorCommand", {
         key: event.key, code: event.code, ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey,
         mod: event.ctrlKey || event.metaKey,

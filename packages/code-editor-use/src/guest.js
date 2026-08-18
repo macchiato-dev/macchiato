@@ -81,6 +81,7 @@ const state = EditorState.create({
 
 globalThis.__codeEditorView = new EditorView({ state, parent });
 let lineNumberGutter = null;
+let renderedLineNumberRange = "";
 function renderLineNumbers() {
   const view = globalThis.__codeEditorView;
   if (!view) return;
@@ -92,7 +93,6 @@ function renderLineNumbers() {
     gutters.appendChild(lineNumberGutter);
     view.scrollDOM.insertBefore(gutters, view.contentDOM);
   }
-  while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
   const first = view.state.doc.lineAt(view.viewport.from).number;
   // This is a guest-assisted virtual gutter rather than CodeMirror's native
   // gutter plugin. Keep its first rendered number aligned with the document
@@ -103,6 +103,10 @@ function renderLineNumbers() {
   // Keep this guest-assisted gutter viewport bounded even if its conservative
   // viewport estimate temporarily spans the entire document.
   const last = Math.min(view.state.doc.lineAt(view.viewport.to).number, first + 99);
+  const range = `${first}:${last}`;
+  if (range === renderedLineNumberRange) return;
+  renderedLineNumberRange = range;
+  while (lineNumberGutter.firstChild) lineNumberGutter.firstChild.remove();
   for (let number = first; number <= last; number += 1) {
     const item = document.createElement("div");
     item.className = "cm-gutterElement";

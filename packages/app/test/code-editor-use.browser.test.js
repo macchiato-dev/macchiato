@@ -257,6 +257,11 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.reload();
   await page.locator("body[data-ready='true']").waitFor();
   await page.locator(".cm-content").click();
+  const gutterNodeBeforeTyping = await page.locator(".cm-gutterElement").first().evaluate((node) => {
+    node.__performanceSentinel = "retained";
+    return node.textContent;
+  });
+  const operationsBeforeTyping = (await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).surface.operations.window;
 
   await page.keyboard.press("Control+End");
   await page.keyboard.type("A");
@@ -265,6 +270,10 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.keyboard.press("ArrowRight");
   await page.keyboard.type("C");
   assert.match(await page.locator(".cm-line").last().textContent(), /;BAC$/);
+  assert.equal(await page.locator(".cm-gutterElement").first().evaluate((node) => node.__performanceSentinel), "retained");
+  assert.equal(await page.locator(".cm-gutterElement").first().textContent(), gutterNodeBeforeTyping);
+  const operationsAfterTyping = (await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).surface.operations.window;
+  assert.ok(operationsAfterTyping - operationsBeforeTyping < 400, "ordinary typing should not rebuild the virtual gutter");
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+z");
