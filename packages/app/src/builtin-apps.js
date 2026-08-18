@@ -10,7 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
-import { quickjsCodeMirrorHandler } from "../../../dev/codemirror-runtime-example/handler.js";
+import { microQuickjsCodeMirrorHandler, quickjsCodeMirrorHandler } from "../../../dev/codemirror-runtime-example/handler.js";
 import { instrumentedCodeMirrorHandler } from "./instrumented-codemirror.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
@@ -25,6 +25,24 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "MicroQuickJS CodeMirror",
+    pluginId: "microquickjs-codemirror",
+    subdomain: "codemirror-microquickjs",
+    kind: "small-engine sandbox component",
+    description: "CodeMirror in MicroQuickJS with the shared runtime benchmark and recordings.",
+    handler: microQuickjsCodeMirrorHandler,
+    sourceFiles: [
+      "dev/codemirror-runtime-example/microquickjs/index.html",
+      "dev/codemirror-runtime-example/microquickjs/full/index.html",
+      "dev/codemirror-runtime-example/microquickjs/benchmark/index.html",
+      "dev/codemirror-runtime-example/test/runtime-benchmark.js",
+    ],
+    sandbox: {
+      runtime: "MicroQuickJS compiled to WebAssembly",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS"],
+    },
+  },
   {
     name: "Instrumented QuickJS CodeMirror",
     pluginId: "quickjs-codemirror-instrumented",

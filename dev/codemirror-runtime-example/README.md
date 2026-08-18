@@ -69,6 +69,27 @@ general boundary changes reduced the full interaction run from about 203 to
 121 seconds and a representative single-key median from roughly 18–19 ms to
 about 12–13 ms.
 
+## Runtime benchmark
+
+`npm run benchmark:runtimes` runs the full CodeMirror application in Bellard
+QuickJS and MicroQuickJS using one Chromium process, one viewport, the same
+source document, and the same key-by-key edit and undo/redo trace. It warms both
+runtimes before measuring and alternates QuickJS-first and MicroQuickJS-first
+runs to expose ordering bias. The complete measurements are written to
+`benchmark-results.json`; the command prints a compact summary.
+
+In the August 18, 2026 six-run sample, MicroQuickJS was faster in both run
+orders. Its median ready time was 200.3 ms versus 250.5 ms, median typing trace
+was 1002.4 ms versus 1215.5 ms, and pooled median key latency was 6.9 ms versus
+8.7 ms. This describes this host bridge and Babel-lowered CodeMirror workload,
+not a general JavaScript-engine ranking.
+
+The local `codemirror-microquickjs` declarative app serves the MicroQuickJS
+editor, the same benchmark result, the QuickJS comparison target, and the
+side-by-side recording archive. Open
+`http://codemirror-microquickjs.localhost:3030/benchmark/` for the latest
+comparison.
+
 ## Browser projection milestone
 
 Each sandboxed editor runs the CodeMirror bundle only inside its selected

@@ -7,6 +7,7 @@
     "test": "node --test test/collections.test.js test/virtual-dom.test.js",
     "test:quickjs": "npm run build && node --test test/quickjs-wasm.test.js",
     "test:browser": "npm run test:quickjs && node --test test/browser-visual.test.js",
+    "benchmark:runtimes": "npm run build && node test/runtime-benchmark.js",
     "test:video": "npm run build && node test/video-comparison.js"
   },
   "devDependencies": {
