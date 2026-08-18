@@ -100,8 +100,8 @@ if (!await readFile(target).catch(() => null)) {
 }
 await copyFile(join(prototype, "web/wasm-web-container.js"),
   join(workspace, "dev/wasm-web-container/dist/pages/wasm-web-container.js"));
-await copyFile(join(prototype, "web/wasm-runner.js"),
-  join(workspace, "dev/wasm-web-container/dist/pages/wasm-runner.js"));
+await copyFile(join(prototype, "web/wasm-web-machine.js"),
+  join(workspace, "dev/wasm-web-container/dist/pages/wasm-web-machine.js"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
   `var APPLICATION_SCRIPT=${JSON.stringify("sqlite-book.js")};`,
@@ -122,8 +122,17 @@ await mkdir(dirname(output), { recursive: true });
 execFileSync(process.execPath, [join(prototype, "scripts/stamp-wasm.js"), target, output,
   `runtime.bin=${join(build, "runtime.bin")}`,
   `application.bin=${join(build, "application.bin")}`]);
-await writeFile(join(dirname(output), "index.html"),
-  await readFile(join(prototype, "web/wasm-example.html")));
+await writeFile(join(dirname(output), "index.html"), `<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import createWasmWebMachine from "../wasm-web-machine.js";
+  await createWasmWebMachine("./main.wasm", document, {
+    allowNavigate: "fragment",
+  });
+</script>
+`);
 const outputHash = digest(configuration.output.algorithm, await readFile(output));
 if (configuration.output.hash && outputHash !== configuration.output.hash) {
   throw new Error(`output hash ${outputHash}`);
