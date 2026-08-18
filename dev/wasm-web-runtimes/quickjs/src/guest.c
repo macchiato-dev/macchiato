@@ -262,14 +262,15 @@ static void receive_host_message(uint32_t minimum_length)
 {
     JSValue global, receiver, bytes, result;
     uint32_t actual_length;
-    if (minimum_length > host_message_capacity) {
-        uint8_t *next = realloc(host_message, minimum_length);
+    if (minimum_length + 1 > host_message_capacity) {
+        uint8_t *next = realloc(host_message, minimum_length + 1);
         if (next == NULL) return;
         host_message = next;
-        host_message_capacity = minimum_length;
+        host_message_capacity = minimum_length + 1;
     }
     actual_length = msg((uint32_t)(uintptr_t)host_message, host_message_capacity);
-    if (actual_length > host_message_capacity) return;
+    if (actual_length >= host_message_capacity) return;
+    host_message[actual_length] = 0;
     /* Runtime tag 1 loads source inside QuickJS. The machine sees only opaque
        bytes; future tags may load bytecode or transfer serialized state. */
     if (actual_length > 1 && host_message[0] == 1) {
@@ -450,8 +451,13 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     else {
         report_stage("guest-application-error");
     }
-    if (JS_IsException(result)) report_stage("guest-result-error");
-    report(result);
+    if (JS_IsException(result)) {
+        report_stage("guest-result-error");
+        report(result);
+    }
+#ifndef WWC_CANONICAL_HOST
+    else report(result);
+#endif
     JS_FreeValue(context, result);
     drain_jobs();
 #ifndef WWC_CANONICAL_HOST

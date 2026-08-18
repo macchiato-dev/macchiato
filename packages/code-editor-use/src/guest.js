@@ -228,9 +228,14 @@ globalThis.__codeEditorSetContent = (json) => {
   if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
     throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
+  const languageChanged = currentLanguage !== request.language;
   currentLanguage = request.language;
   currentReadOnly = request.readOnly === true;
-  if (!globalThis.__codeEditorView) {
+  if (!globalThis.__codeEditorView || languageChanged) {
+    globalThis.__codeEditorView?.destroy();
+    parent.replaceChildren();
+    lineNumberGutter = null;
+    renderedLineNumberRange = "";
     const view = mountEditor(request.content);
     return JSON.stringify(documentUsage(view.state.doc));
   }

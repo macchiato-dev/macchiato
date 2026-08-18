@@ -770,11 +770,13 @@ test("Resources.co edge account creates organizations and projects in a real bro
     viewportHeight: document.documentElement.clientHeight,
     sourceOverflow: getComputedStyle(document.querySelector(".project-editor__source")).overflow,
     previewOverflow: getComputedStyle(document.querySelector(".project-editor__preview")).overflow,
+    outputOverflow: getComputedStyle(document.querySelector("[data-project-preview]")).overflow,
     codeOverflow: getComputedStyle(document.querySelector(".cm-scroller")).overflow,
   }));
   assert.equal(editorScrollModel.documentHeight, editorScrollModel.viewportHeight);
   assert.equal(editorScrollModel.sourceOverflow, "hidden");
-  assert.equal(editorScrollModel.previewOverflow, "auto");
+  assert.equal(editorScrollModel.previewOverflow, "hidden");
+  assert.equal(editorScrollModel.outputOverflow, "auto");
   assert.equal(editorScrollModel.codeOverflow, "auto");
   const topBarHeights = await page.locator(".focused-header, .layout.focused-view > .userbar").evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().height));
   assert.deepEqual(topBarHeights, [54, 54]);
@@ -833,7 +835,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await selectProjectFile("script.js");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("getContext", { exact: false }).waitFor());
-  await page.waitForFunction(() => Number(document.querySelector("[data-project-preview]")?.dataset.canvasCommands) > 10);
+  await page.waitForFunction(() => {
+    const preview = document.querySelector("[data-project-preview]");
+    const canvas = preview?.querySelector(".project-editor__preview-surface")
+      ?.shadowRoot?.querySelector("canvas") || preview?.querySelector("canvas");
+    if (!canvas) return false;
+    return canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
+      .data.some((value, index) => index % 4 === 3 && value > 0);
+  });
   assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
   assert.equal(await newEditor.locator(".cm-gutterElement").count() > 1, true);
   assert.equal(await newEditor.locator(".cm-scroller").evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft) <= 4), true);

@@ -7,6 +7,9 @@ globalThis.__wwcPostMessage = function (message) {
     encode(String(message))
   ]]);
 };
+globalThis.__wwcReportError = function (message) {
+  globalThis.__wwcPostMessage("__wwcError:" + String(message));
+};
 document.defaultView = globalThis;
 function HostWindow() {}
 Object.defineProperty(HostWindow, Symbol.hasInstance, {
@@ -271,6 +274,41 @@ GuestElement.prototype.getBoundingClientRect = function () {
 };
 function clientRectsFor(object) { return measuredRects(object, "measureClientRects"); }
 GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
+function GuestCanvasContext(reference) { GuestObject.call(this, reference); }
+GuestCanvasContext.prototype = Object.create(GuestObject.prototype);
+GuestElement.prototype.getContext = function (type) {
+  var result = immediate([3, this.reference, stringIndex("getContext"), [encode(type)]]);
+  return result === null ? null : new GuestCanvasContext(result[1]);
+};
+["height", "width"].forEach(function (name) {
+  Object.defineProperty(GuestElement.prototype, name, {
+    get: function () { return immediate([1, this.reference, stringIndex(name)]); }
+  });
+});
+["fillStyle", "strokeStyle"].forEach(function (name) {
+  Object.defineProperty(GuestCanvasContext.prototype, name, {
+    set: function (value) {
+      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
+    }
+  });
+});
+Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
+  set: function (value) {
+    pendingOperations.push([2, this.reference, stringIndex("lineWidth"),
+      encode(Math.round(Number(value) * 1024))]);
+  }
+});
+["arc", "beginPath", "clearRect", "closePath", "fill", "fillRect", "lineTo",
+  "moveTo", "restore", "rotate", "save", "scale", "stroke", "strokeRect",
+  "translate"].forEach(function (name) {
+  GuestCanvasContext.prototype[name] = function () {
+    var args = [];
+    for (var index = 0; index < arguments.length; index++) {
+      args.push(encode(Math.round(Number(arguments[index]) * 1024)));
+    }
+    pendingOperations.push([3, this.reference, stringIndex(name), args]);
+  };
+});
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
 };
@@ -294,6 +332,12 @@ GuestElement.prototype.querySelectorAll = function (selector) {
     nodes.push(nodeForReference(reference));
   }
   return nodes;
+};
+GuestDocument.prototype.querySelector = function (selector) {
+  return this.body.querySelector(selector);
+};
+GuestDocument.prototype.querySelectorAll = function (selector) {
+  return this.body.querySelectorAll(selector);
 };
 GuestElement.prototype.hasAttribute = function (name) {
   return hostCall(this.reference, "hasAttribute", [String(name)]);

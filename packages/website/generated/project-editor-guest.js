@@ -30638,9 +30638,14 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
       throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
     }
+    const languageChanged = currentLanguage !== request.language;
     currentLanguage = request.language;
     currentReadOnly = request.readOnly === true;
-    if (!globalThis.__codeEditorView) {
+    if (!globalThis.__codeEditorView || languageChanged) {
+      globalThis.__codeEditorView?.destroy();
+      parent.replaceChildren();
+      lineNumberGutter2 = null;
+      renderedLineNumberRange = "";
       const view2 = mountEditor(request.content);
       return JSON.stringify(documentUsage(view2.state.doc));
     }

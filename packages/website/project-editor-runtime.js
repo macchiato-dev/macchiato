@@ -1,8 +1,11 @@
 import { mountPresentationUse } from "@macchiato-dev/presentation-use";
 import { createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
 
+const projectApps = new WeakMap();
+
 export async function mountResourcesProjectEditor(options) {
-  const frontend = await createProjectAppMachine(options.root);
+  if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
+  const frontend = await projectApps.get(options.root);
   document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
   document.documentElement.dataset.resourcesFrontendMachineId = frontend.machineId;
   const controller = await createProjectEditorMachine({
@@ -13,7 +16,7 @@ export async function mountResourcesProjectEditor(options) {
   });
   return Object.freeze({
     ...controller,
-    destroy() { controller.destroy(); frontend.destroy(); },
+    destroy() { controller.destroy(); },
     history: Object.freeze({
       initialize(value) { return controller.callGuest("__resourcesProjectHistoryInitialize", value); },
       setCurrent(snapshot) { return controller.callGuest("__resourcesProjectHistorySetCurrent", { snapshot }); },
@@ -50,11 +53,13 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
       root,
       scripts,
       options: {
+        frameInterval: 250,
         services: {
           route: { get: () => location.pathname, listen() {} },
           storage: { get: () => null, set() {}, delete() {}, listen() {} },
         },
       },
+      onError: onViolation,
     });
   } catch (error) {
     throw error;

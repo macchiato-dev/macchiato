@@ -747,8 +747,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         if (generation !== previewGeneration) controller.destroy();
         else {
           previewController = controller;
-          const machine = controller.inspect?.().machine;
+          const inspection = controller.inspect?.();
+          const machine = inspection?.machine;
           preview.dataset.projectMachineId = machine?.machineId || "wasm-web-machine";
+          preview.dataset.projectPrograms = String(inspection?.programs || 0);
         }
       } catch (error) {
         const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });

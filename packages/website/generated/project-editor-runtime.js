@@ -622,6 +622,9 @@ var WasmWebBridge = class {
         return object.value;
       if (object instanceof HTMLInputElement && name === "checked")
         return object.checked;
+      if (object instanceof HTMLCanvasElement && ["height", "width"].includes(name)) {
+        return object[name];
+      }
       if (object instanceof Event && [
         "altKey",
         "ctrlKey",
@@ -662,6 +665,14 @@ var WasmWebBridge = class {
       fail(`property get ${name} is not allowed`);
     }
     function set(object, name, next) {
+      if (object instanceof CanvasRenderingContext2D && ["fillStyle", "strokeStyle"].includes(name) && typeof next === "string" && /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]+)$/i.test(next)) {
+        object[name] = next;
+        return null;
+      }
+      if (object instanceof CanvasRenderingContext2D && name === "lineWidth" && Number.isInteger(next) && next >= 0 && next <= 1024e4) {
+        object.lineWidth = next / 1024;
+        return null;
+      }
       if (object instanceof DataTransfer && ["dropEffect", "effectAllowed"].includes(name) && typeof next === "string" && next.length <= 16) {
         object[name] = next;
         return null;
@@ -716,6 +727,32 @@ var WasmWebBridge = class {
       fail(`property set ${name} is not allowed`);
     }
     function call(object, name, args) {
+      if (object instanceof HTMLCanvasElement && name === "getContext" && args.length === 1 && args[0] === "2d") {
+        const context = object.getContext("2d");
+        return context ? reference(context) : null;
+      }
+      const canvasMethods = {
+        arc: 6,
+        beginPath: 0,
+        clearRect: 4,
+        closePath: 0,
+        fill: 0,
+        fillRect: 4,
+        lineTo: 2,
+        moveTo: 2,
+        restore: 0,
+        rotate: 1,
+        save: 0,
+        scale: 2,
+        stroke: 0,
+        strokeRect: 4,
+        translate: 2
+      };
+      const canvasArity = name === "arc" ? args.length === 5 || args.length === 6 : args.length === canvasMethods[name];
+      if (object instanceof CanvasRenderingContext2D && name in canvasMethods && canvasArity && args.every((argument) => Number.isInteger(argument) && Math.abs(argument) <= 1024e6)) {
+        object[name](...args.map((argument) => argument / 1024));
+        return null;
+      }
       if (object === document && name === "detachedRoots" && args.length === 0) {
         return new Uint8Array();
       }
@@ -831,10 +868,13 @@ var WasmWebBridge = class {
         return id;
       }
       if (object === document && name === "animationFrame" && args.length === 1 && Number.isInteger(args[0])) {
-        return requestAnimationFrame(() => deliver(args[0]));
+        return options.frameInterval > 0 ? setTimeout(() => deliver(args[0]), Math.max(1, options.frameInterval)) : requestAnimationFrame(() => deliver(args[0]));
       }
       if (object === document && name === "cancelAnimationFrame" && args.length === 1 && Number.isInteger(args[0])) {
-        cancelAnimationFrame(args[0]);
+        if (options.frameInterval > 0)
+          clearTimeout(args[0]);
+        else
+          cancelAnimationFrame(args[0]);
         return null;
       }
       if (object === document && name === "task" && args.length === 1 && Number.isInteger(args[0])) {
@@ -1536,7 +1576,7 @@ var WasmWebBridge = class {
             fail("stylesheet function tokens do not balance");
           declaration.setProperty(property, value2, important ? "important" : "");
           if (!declaration.getPropertyValue(property)) {
-            fail(`CSS value ${value2} for ${property} in rule ${ruleIndex + 1} was not accepted`);
+            continue;
           }
           declarations.push(`  ${property}: ${value2}${important ? " !important" : ""};`);
         }
@@ -1882,9 +1922,15 @@ function callMessage(name, payload) {
   message.set(argument, functionName.length + 2);
   return message;
 }
-async function createProjectOutputMachine({ root, scripts, options = {} }) {
+async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  const machine = new WasmWebMachine(module, root, options);
+  let reportedError = false;
+  const machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
+    if (text.startsWith("__wwcError:") && !reportedError) {
+      reportedError = true;
+      onError?.(new Error(text.slice(11)));
+    } else options.onMessage?.(text);
+  } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
   for (const script of scripts) await machine.onmsg(taggedMessage(1, script.code));
@@ -1899,10 +1945,16 @@ async function createProjectOutputMachine({ root, scripts, options = {} }) {
 }
 async function createProjectAppMachine(root) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  const machine = new WasmWebMachine(module, root);
+  let requested = false;
+  const machine = new WasmWebMachine(module, root, {
+    onMessage(text) {
+      requested ||= text === "mount-project-editor";
+    }
+  });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
-  await machine.onmsg(taggedMessage(1, "globalThis.__resourcesRole='frontend'"));
+  await machine.onmsg(taggedMessage(1, "__wwcPostMessage('mount-project-editor')"));
+  if (!requested) throw new Error("Project app did not request its editor");
   return Object.freeze({ machineId, destroy() {
     machine.destroy();
   } });
@@ -1910,9 +1962,13 @@ async function createProjectAppMachine(root) {
 async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
   const machineId = `wasm-web-machine-${nextMachine++}`;
-  let response;
+  let response, machineError;
   const machine = new WasmWebMachine(module, root, {
     onMessage(text) {
+      if (text.startsWith("__wwcError:")) {
+        machineError = text.slice(11);
+        return;
+      }
       if (text.startsWith("__wwcResponse:")) {
         response = { value: text.slice(14) };
         return;
@@ -1924,10 +1980,13 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
     }
   });
   await machine.onmsg(0);
+  if (machineError) throw new Error(machineError);
   function call(name, payload) {
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = void 0;
+    machineError = void 0;
     machine.onmsg(callMessage(name, payload));
+    if (machineError) throw new Error(machineError);
     if (!response) throw new Error(`Guest function ${name} did not respond`);
     return JSON.parse(response.value);
   }
@@ -1954,8 +2013,10 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
 }
 
 // packages/website/project-editor-runtime.js
+var projectApps = /* @__PURE__ */ new WeakMap();
 async function mountResourcesProjectEditor(options) {
-  const frontend = await createProjectAppMachine(options.root);
+  if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
+  const frontend = await projectApps.get(options.root);
   document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
   document.documentElement.dataset.resourcesFrontendMachineId = frontend.machineId;
   const controller = await createProjectEditorMachine({
@@ -1968,7 +2029,6 @@ async function mountResourcesProjectEditor(options) {
     ...controller,
     destroy() {
       controller.destroy();
-      frontend.destroy();
     },
     history: Object.freeze({
       initialize(value) {
@@ -2017,6 +2077,7 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
       root,
       scripts,
       options: {
+        frameInterval: 250,
         services: {
           route: { get: () => location.pathname, listen() {
           } },
@@ -2025,7 +2086,8 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
           }, listen() {
           } }
         }
-      }
+      },
+      onError: onViolation
     });
   } catch (error) {
     throw error;
