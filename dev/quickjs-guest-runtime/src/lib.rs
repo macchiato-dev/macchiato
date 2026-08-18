@@ -106,11 +106,17 @@ pub unsafe extern "C" fn modf(value: f64, integer: *mut f64) -> f64 {
 
 unsafe extern "C" {
     fn quickjs_guest_onmsg(minimum_length: u32);
+    fn quickjs_guest_memory_used() -> u32;
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn onmsg(minimum_length: u32) {
     unsafe { quickjs_guest_onmsg(minimum_length) }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn guest_memory_used() -> u32 {
+    unsafe { quickjs_guest_memory_used() }
 }
 
 #[panic_handler]

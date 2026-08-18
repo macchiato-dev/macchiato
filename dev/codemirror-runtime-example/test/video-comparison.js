@@ -218,6 +218,19 @@ async function record(browser, base, name, pathname, source) {
   return result;
 }
 
+async function warmup(browser, base, pathname, source) {
+  const context = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+  const page = await context.newPage();
+  try {
+    await page.goto(`${base}/${pathname}/`);
+    await page.waitForSelector(".cm-editor");
+    if (pathname === "test/pages/wasm") await page.waitForSelector("body[data-ready]");
+    await typeSource(page, source, async () => {});
+  } finally {
+    await context.close();
+  }
+}
+
 function run(command, args) {
   return new Promise((resolveRun, reject) => {
     const child = spawn(command, args, { stdio: "inherit" });
@@ -266,25 +279,43 @@ const browser = await chromium.launch();
 try {
   const source = (await readFile(resolve(root, "fixtures/video-class.js"), "utf8")).trimEnd();
   const base = `http://127.0.0.1:${server.address().port}`;
-  const direct = await record(browser, base, "direct", "test/pages/direct", source);
-  const wasm = await record(browser, base, "wasm", "test/pages/wasm", source);
-  assert.deepEqual(wasm.lineStates, direct.lineStates);
-  assert.equal(withoutTrailingSpace(direct.text), source);
-  assert.equal(withoutTrailingSpace(wasm.text), source);
-  assert.equal(wasm.text, direct.text);
-  assert.deepEqual(wasm.completionAppearances, direct.completionAppearances);
-  assert.deepEqual(direct.errors, []);
-  assert.deepEqual(wasm.errors, []);
-  const directFrames = await deduplicate(direct.video, resolve(output, "direct"));
-  const wasmFrames = await deduplicate(wasm.video, resolve(output, "wasm"));
-  const report = { output,
-    direct: { video: direct.video, frames: directFrames,
-      checkpoints: direct.checkpoints, devtoolsProfile: direct.devtoolsProfile,
-      errors: direct.errors },
-    wasm: { video: wasm.video, frames: wasmFrames,
-      checkpoints: wasm.checkpoints, devtoolsProfile: wasm.devtoolsProfile,
-      errors: wasm.errors },
-    completionAppearances: direct.completionAppearances };
+  await warmup(browser, base, "test/pages/direct", source);
+  await warmup(browser, base, "test/pages/wasm", source);
+  const orders = [
+    ["native-wasm", ["direct", "wasm"]],
+    ["wasm-native", ["wasm", "direct"]],
+  ];
+  const runs = [];
+  let completionAppearances = [];
+  for (const [name, order] of orders) {
+    const results = {};
+    for (const kind of order) {
+      const pathname = kind === "direct" ? "test/pages/direct" : "test/pages/wasm";
+      results[kind] = await record(browser, base, `${name}/${kind}`, pathname, source);
+    }
+    const { direct, wasm } = results;
+    assert.deepEqual(wasm.lineStates, direct.lineStates);
+    assert.equal(withoutTrailingSpace(direct.text), source);
+    assert.equal(withoutTrailingSpace(wasm.text), source);
+    assert.equal(wasm.text, direct.text);
+    assert.deepEqual(wasm.completionAppearances, direct.completionAppearances);
+    assert.deepEqual(direct.errors, []);
+    assert.deepEqual(wasm.errors, []);
+    if (completionAppearances.length === 0) completionAppearances = direct.completionAppearances;
+    for (const kind of ["direct", "wasm"]) {
+      const result = results[kind];
+      result.frames = await deduplicate(result.video, resolve(output, name, kind));
+    }
+    const recorded = Object.fromEntries(["direct", "wasm"].map(kind => {
+      const result = results[kind];
+      return [kind, { video: result.video, frames: result.frames,
+        checkpoints: result.checkpoints, devtoolsProfile: result.devtoolsProfile,
+        errors: result.errors }];
+    }));
+    runs.push({ name, order, ...recorded });
+  }
+  const report = { output, warmedUp: ["direct", "wasm"], runs,
+    completionAppearances };
   await writeFile(resolve(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
 } finally {
