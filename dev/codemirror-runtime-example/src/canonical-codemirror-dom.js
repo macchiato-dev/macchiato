@@ -36,11 +36,18 @@ globalThis.visualViewport = null;
 globalThis.scrollBy = function (x, y) {
   hostCall(document.reference, "scrollBy", [Math.round(x), Math.round(y)]);
 };
+var runtimePerformanceNow = globalThis.__microQuickJS && globalThis.performance &&
+  globalThis.performance.now;
+var runtimePerformanceOrigin = runtimePerformanceNow ? runtimePerformanceNow() : 0;
+var runtimeEpochOrigin = hostCall(document.reference, "dateNow", []);
 Date.now = function () {
-  return hostCall(document.reference, "dateNow", []);
+  return runtimePerformanceNow ? runtimeEpochOrigin +
+    runtimePerformanceNow() - runtimePerformanceOrigin :
+    hostCall(document.reference, "dateNow", []);
 };
 globalThis.performance = {
-  now: function () { return hostCall(document.reference, "performanceNow", []); }
+  now: runtimePerformanceNow ||
+    function () { return hostCall(document.reference, "performanceNow", []); }
 };
 
 var projectedClasses = Object.create(null), projectedClassCount = 0;
@@ -271,32 +278,26 @@ function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
-function GuestRect(reference) {
-  GuestObject.call(this, reference);
-}
-GuestRect.prototype = Object.create(GuestObject.prototype);
-["bottom", "height", "left", "right", "top", "width", "x", "y"].forEach(
-  function (name) {
-    Object.defineProperty(GuestRect.prototype, name, {
-      get: function () { return immediate([1, this.reference, stringIndex(name)]) / 64; }
-    });
-  }
-);
-GuestElement.prototype.getBoundingClientRect = function () {
-  var result = immediate([3, this.reference, stringIndex("getBoundingClientRect"), []]);
-  return new GuestRect(result[1]);
-};
-function clientRectsFor(object) {
-  var result = immediate([3, object.reference, stringIndex("getClientRects"), []]);
-  var length = immediate([1, result[1], stringIndex("length")]);
+var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
+function measuredRects(object, method) {
+  var bytes = hostCall(document.reference, method, [object]);
+  var count = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var rects = [];
-  for (var index = 0; index < length; index++) {
-    var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
-    rects.push(new GuestRect(item[1]));
+  for (var index = 0; index < count; index++) {
+    var rect = {};
+    for (var property = 0; property < rectProperties.length; property++) {
+      var at = 4 + index * 32 + property * 4;
+      rect[rectProperties[property]] = (bytes[at] | bytes[at + 1] << 8 |
+        bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
+    }
+    rects.push(rect);
   }
-  releaseHostReferenceLease(result[1]);
   return rects;
 }
+GuestElement.prototype.getBoundingClientRect = function () {
+  return measuredRects(this, "measureRect")[0];
+};
+function clientRectsFor(object) { return measuredRects(object, "measureClientRects"); }
 GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
@@ -311,16 +312,15 @@ GuestElement.prototype.querySelector = function (selector) {
   return result === null ? null : nodeForReference(result[1]);
 };
 GuestElement.prototype.querySelectorAll = function (selector) {
-  var result = immediate([3, this.reference, stringIndex("querySelectorAll"), [
-    encode(String(selector))
-  ]]);
-  var length = immediate([1, result[1], stringIndex("length")]);
+  var bytes = hostCall(this.reference, "querySelectorAllReferences", [String(selector)]);
+  var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var nodes = [];
   for (var index = 0; index < length; index++) {
-    var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
-    nodes.push(nodeForReference(item[1]));
+    var at = 4 + index * 4;
+    var reference = bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24;
+    nodes.push(nodeForReference(reference));
   }
-  releaseHostReferenceLease(result[1]);
   return nodes;
 };
 GuestElement.prototype.hasAttribute = function (name) {
@@ -328,8 +328,7 @@ GuestElement.prototype.hasAttribute = function (name) {
 };
 GuestRange.prototype.getClientRects = function () { return clientRectsFor(this); };
 GuestRange.prototype.getBoundingClientRect = function () {
-  var result = immediate([3, this.reference, stringIndex("getBoundingClientRect"), []]);
-  return new GuestRect(result[1]);
+  return measuredRects(this, "measureRect")[0];
 };
 ["clientHeight", "clientWidth", "offsetHeight", "offsetWidth", "scrollHeight", "scrollWidth",
   "scrollLeft", "scrollTop"].forEach(function (name) {
@@ -485,19 +484,19 @@ Object.defineProperty(GuestStyle.prototype, "cssText", {
   },
   set: function (value) {
     this._cssText = String(value);
-    immediate([3, this.reference, stringIndex("replaceDeclarations"), [
+    pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [
       encode(inlineCssBytes(this._cssText))
     ]]);
   }
 });
 GuestStyle.prototype.setProperty = function (name, value, priority) {
   var suffix = priority ? " !" + priority : "";
-  immediate([3, this.reference, stringIndex("applyDeclarations"), [
+  pendingOperations.push([3, this.reference, stringIndex("applyDeclarations"), [
     encode(inlineCssBytes(String(name) + ": " + String(value) + suffix + ";"))
   ]]);
 };
 GuestStyle.prototype.removeProperty = function (name) {
-  immediate([3, this.reference, stringIndex("removeProperty"), [encode(String(name))]]);
+  pendingOperations.push([3, this.reference, stringIndex("removeProperty"), [encode(String(name))]]);
   return "";
 };
 
@@ -512,11 +511,14 @@ function mutationNode(recordReference, kind, index) {
   return nodeForReference(result[1]);
 }
 function synchronizeGuestChildren(target) {
-  var result = hostCall(target.reference, "childNodes", []);
-  var length = hostGet(result[1], "length"), next = [];
+  var bytes = hostCall(target.reference, "childNodeReferences", []);
+  var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
+  var next = [];
   for (var index = 0; index < length; index++) {
-    var item = hostCall(result[1], "item", [index]);
-    next.push(nodeForReference(item[1]));
+    var at = 4 + index * 4;
+    var reference = bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24;
+    next.push(nodeForReference(reference));
   }
   var previous = childrenOf(target).slice();
   for (var old = 0; old < previous.length; old++) {
@@ -531,7 +533,6 @@ function synchronizeGuestChildren(target) {
     setParent(next[child], target);
   }
   target._guestChildren = next;
-  releaseHostReferenceLease(result[1]);
 }
 function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"), records = [], changedParents = [];

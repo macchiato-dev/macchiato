@@ -5,6 +5,9 @@ const services = {
   storage: { get: () => null, set() {}, delete() {}, listen() {} },
 };
 const profiling = new URL(location.href).searchParams.has("profile");
+const instrumenting = new URL(location.href).searchParams.has("instrument");
+const instrumentation = [];
+if (instrumenting) globalThis.__wwcInstrumentation = instrumentation;
 const references = new Map();
 const referenceLeases = new Map();
 if (profiling) {
@@ -43,6 +46,7 @@ try {
     services,
     development: true,
     profiling,
+    instrument: instrumenting ? event => instrumentation.push(event) : undefined,
     onDebug(message) {
       if (profiling && message.startsWith("OWNERSHIP:")) {
         globalThis.__wwcGuestOwnership = JSON.parse(message.slice(10));
