@@ -13,8 +13,8 @@ renames catch bindings that MicroQuickJS rejects when they shadow a function
 binding, without changing the application or either full-engine target.
 
 The Babel output compiles to MicroQuickJS bytecode. Four ISC-licensed ungap
-collection implementations are vendored by source file and installed only by
-the MicroQuickJS entry point. A small, separate platform ponyfill contains
+collection fallbacks are vendored by source file and installed only when the
+host lacks the native C collection. A small, separate platform ponyfill contains
 additional APIs discovered by executing CodeMirror, currently `Array.find`,
 `Object.assign`, and `encodeURIComponent`.
 
