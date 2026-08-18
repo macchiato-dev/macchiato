@@ -244,16 +244,6 @@ static void report_memory(void)
             (uint32_t)(length < (int)sizeof(transfer) ? length : sizeof(transfer)));
 }
 
-uint32_t quickjs_guest_memory_used(void)
-{
-    JSMemoryUsage usage;
-    if (runtime == NULL)
-        return 0;
-    JS_ComputeMemoryUsage(runtime, &usage);
-    return usage.memory_used_size > UINT32_MAX ? UINT32_MAX :
-           (uint32_t)usage.memory_used_size;
-}
-
 static void report_snapshot(void)
 {
     static const char source[] =

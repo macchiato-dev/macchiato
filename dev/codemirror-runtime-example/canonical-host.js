@@ -7,7 +7,6 @@ const services = {
 const profiling = new URL(location.href).searchParams.has("profile");
 const references = new Map();
 const referenceLeases = new Map();
-let runtimeMetrics = () => null;
 if (profiling) {
   globalThis.__wwcReferenceMetrics = () => ({
     active: references.size,
@@ -28,7 +27,6 @@ if (profiling) {
       .map(([kind, values]) => [kind, values.length])
       .sort((left, right) => right[1] - left[1]),
     guest: globalThis.__wwcGuestOwnership || null,
-    runtime: runtimeMetrics(),
   });
 }
 
@@ -51,7 +49,6 @@ try {
       else referenceLeases.delete(id);
     } : undefined,
   });
-  runtimeMetrics = () => host.metrics();
   const response = await fetch(new URL("./generated/codemirror-canonical.wasm", import.meta.url),
     { credentials: "same-origin" });
   if (!response.ok) throw new Error(`Wasm response ${response.status}`);
