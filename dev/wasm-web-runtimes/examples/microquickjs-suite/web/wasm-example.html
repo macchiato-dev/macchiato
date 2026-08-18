@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>

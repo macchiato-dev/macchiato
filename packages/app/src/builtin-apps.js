@@ -10,7 +10,7 @@ import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/ht
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
-import { microQuickjsCodeMirrorHandler, quickjsCodeMirrorHandler } from "../../../dev/codemirror-runtime-example/handler.js";
+import { microQuickjsCodeMirrorHandler, quickjsCodeMirrorHandler } from "../../../dev/wasm-web-runtimes/examples/codemirror/handler.js";
 import { instrumentedCodeMirrorHandler } from "./instrumented-codemirror.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
@@ -33,10 +33,10 @@ export const BUILTIN_APPS = [
     description: "CodeMirror in MicroQuickJS with the shared runtime benchmark.",
     handler: microQuickjsCodeMirrorHandler,
     sourceFiles: [
-      "dev/codemirror-runtime-example/microquickjs/index.html",
-      "dev/codemirror-runtime-example/microquickjs/full/index.html",
-      "dev/codemirror-runtime-example/microquickjs/benchmark/index.html",
-      "dev/codemirror-runtime-example/test/runtime-benchmark.js",
+      "dev/wasm-web-runtimes/examples/codemirror/microquickjs/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/microquickjs/full/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/microquickjs/benchmark/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/test/runtime-benchmark.js",
     ],
     sandbox: {
       runtime: "MicroQuickJS compiled to WebAssembly",
@@ -52,8 +52,8 @@ export const BUILTIN_APPS = [
     handler: instrumentedCodeMirrorHandler,
     writableFiles: { "interaction-trace.ndjson": { maxBytes: 1048576 } },
     sourceFiles: [
-      "dev/codemirror-runtime-example/instrumented/index.html",
-      "dev/codemirror-runtime-example/instrumented-host.js",
+      "dev/wasm-web-runtimes/examples/codemirror/instrumented/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/instrumented-host.js",
       "packages/app/src/instrumented-codemirror.js",
     ],
     sandbox: {
@@ -70,13 +70,13 @@ export const BUILTIN_APPS = [
     description: "CodeMirror running in QuickJS Wasm and projected through a constrained DOM mirror.",
     handler: quickjsCodeMirrorHandler,
     sourceFiles: [
-      "dev/codemirror-runtime-example/index.html",
-      "dev/codemirror-runtime-example/demo.css",
-      "dev/codemirror-runtime-example/host.js",
-      "dev/codemirror-runtime-example/simple/index.html",
-      "dev/codemirror-runtime-example/full/index.html",
-      "dev/codemirror-runtime-example/large/index.html",
-      "dev/codemirror-runtime-example/src/microquickjs-dom.js",
+      "dev/wasm-web-runtimes/examples/codemirror/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/demo.css",
+      "dev/wasm-web-runtimes/examples/codemirror/host.js",
+      "dev/wasm-web-runtimes/examples/codemirror/simple/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/full/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/large/index.html",
+      "dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-dom.js",
     ],
     sandbox: {
       runtime: "Bellard QuickJS compiled to WebAssembly",

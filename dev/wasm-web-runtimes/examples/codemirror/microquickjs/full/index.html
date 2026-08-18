@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full CodeMirror UI in MicroQuickJS</title>
+<link rel="stylesheet" href="../../demo.css">
+<main>
+  <div id="editor"></div>
+  <div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+</main>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-microquickjs.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-container");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroQuickJS CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>

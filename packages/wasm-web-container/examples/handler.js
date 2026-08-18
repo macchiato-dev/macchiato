@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { wasmWebContainerExampleHandler as prototypeHandler } from
-  "../../../dev/wasm-web-container/examples/handler.js";
+  "../../../dev/wasm-web-runtimes/examples/microquickjs-suite/handler.js";
 
 const index = new URL("./index.html", import.meta.url);
 const packageRoot = new URL("../", import.meta.url);

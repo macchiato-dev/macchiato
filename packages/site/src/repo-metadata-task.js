@@ -102,7 +102,12 @@ export function readRepoProjectMetadata({ repoRoot = process.cwd() } = {}) {
   const packageNames = new Set();
 
   for (const packageDir of packageDirs) {
-    const pkg = readJson(join(root, packageDir, "package.json"));
+    const packagePath = join(root, packageDir, "package.json");
+    // A working tree may contain an unstaged package move. Git still reports
+    // the old path until it is staged, so ignore vanished paths just as the
+    // project-building pass below already does.
+    if (!existsSync(packagePath) || !statSync(packagePath).isFile()) continue;
+    const pkg = readJson(packagePath);
     if (pkg.name) packageNames.add(pkg.name);
   }
 

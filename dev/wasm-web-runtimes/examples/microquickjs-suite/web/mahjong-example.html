@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const encoder = new TextEncoder();
+  const prefix = `-wwc--${location.pathname.replace(/\W+/g, "-")
+    .replace(/^-|-$/g, "") || "root"}--`;
+  const area = (kind) => kind === "local" ? [localStorage, 8192] :
+    kind === "session" ? [sessionStorage, 128 * 1024] : null;
+  const key = (name) => prefix + name;
+  const size = (storage, replacementKey, replacementValue) => {
+    let bytes = 0;
+    for (let index = 0; index < storage.length; index++) {
+      const found = storage.key(index);
+      if (!found?.startsWith(prefix) || found === replacementKey) continue;
+      bytes += encoder.encode(found).length +
+        encoder.encode(storage.getItem(found) || "").length;
+    }
+    return bytes + encoder.encode(replacementKey).length +
+      encoder.encode(replacementValue).length;
+  };
+  const storage = {
+    get(kind, name) { return area(kind)?.[0].getItem(key(name)) ?? null; },
+    set(kind, name, value) {
+      const selected = area(kind);
+      if (!selected) throw new Error("Unknown storage area");
+      const [storageArea, limit] = selected;
+      const storageKey = key(name);
+      if (size(storageArea, storageKey, value) > limit) {
+        throw new Error(`${kind} storage quota exceeded`);
+      }
+      storageArea.setItem(storageKey, value);
+    },
+    delete(kind, name) { area(kind)?.[0].removeItem(key(name)); },
+    listen(kind, name, callback) {
+      const storageKey = key(name);
+      addEventListener("storage", (event) => {
+        if (kind === "local" && event.storageArea === localStorage &&
+            event.key === storageKey) callback();
+      });
+    },
+  };
+  const allowFont = [
+    "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
+    "22219fb90e3b9bd28debd1825fe8d9a0154a0e31f8b3fa601ac1a0a5aa5e6d1b",
+    "d80df8ff5aecd299a61549f9e29ab1ed0b9b05f4ea71d50fe978e07d5240b235",
+  ];
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    allowFont,
+    services: { storage },
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>
