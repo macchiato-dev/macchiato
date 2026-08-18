@@ -254,6 +254,9 @@ static void report_snapshot(void)
     JS_FreeValue(context, result);
 }
 
+static void drain_jobs(void);
+static void flush_guest_operations(void);
+
 static void receive_host_message(uint32_t minimum_length)
 {
     JSValue global, receiver, bytes, result;
@@ -266,6 +269,18 @@ static void receive_host_message(uint32_t minimum_length)
     }
     actual_length = msg((uint32_t)(uintptr_t)host_message, host_message_capacity);
     if (actual_length > host_message_capacity) return;
+    /* Runtime tag 1 loads source inside QuickJS. The machine sees only opaque
+       bytes; future tags may load bytecode or transfer serialized state. */
+    if (actual_length > 1 && host_message[0] == 1) {
+        result = JS_Eval(context, (const char *)(host_message + 1),
+                         actual_length - 1, "dynamic-application.js",
+                         JS_EVAL_TYPE_GLOBAL);
+        if (JS_IsException(result)) report(result);
+        JS_FreeValue(context, result);
+        drain_jobs();
+        flush_guest_operations();
+        return;
+    }
     global = JS_GetGlobalObject(context);
 #ifdef WWC_CANONICAL_HOST
     receiver = JS_GetPropertyStr(context, global, "dispatch");
