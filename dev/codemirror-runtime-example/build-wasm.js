@@ -32,3 +32,27 @@ execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown
 const destination = resolve(example, "generated/codemirror-canonical.wasm");
 await copyFile(output, destination);
 console.log(`canonical: ${(await stat(destination)).size} bytes`);
+
+const microRuntime = resolve(example,
+  "../wasm-web-container/examples/microquickjs-guest-runtime");
+const microCompiler = resolve(microRuntime, "microquickjs/mqjs");
+const microRuntimeBytecode = resolve(example, "generated/microquickjs-runtime.bin");
+const microApplicationBytecode = resolve(example, "generated/codemirror-micro.bin");
+execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+  cwd: microRuntime,
+  stdio: "inherit",
+});
+execFileSync(microCompiler, ["-m32", "-o", microRuntimeBytecode,
+  resolve(example, "generated/microquickjs-runtime.js")], { stdio: "inherit" });
+execFileSync(microCompiler, ["-m32", "-o", microApplicationBytecode,
+  resolve(example, "generated/codemirror-micro.js")], { stdio: "inherit" });
+const microDestination = resolve(example, "generated/codemirror-microquickjs.wasm");
+execFileSync(process.execPath, [
+  resolve(example, "../wasm-web-container/examples/scripts/stamp-wasm.js"),
+  resolve(microRuntime,
+    "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
+  microDestination,
+  `runtime.bin=${microRuntimeBytecode}`,
+  `application.bin=${microApplicationBytecode}`,
+], { stdio: "inherit" });
+console.log(`microquickjs: ${(await stat(microDestination)).size} bytes`);

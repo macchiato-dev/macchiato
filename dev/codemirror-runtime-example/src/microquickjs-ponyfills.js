@@ -3,7 +3,6 @@ import SetPonyfill from "../vendor/ungap/set.js";
 import WeakMapPonyfill from "../vendor/ungap/weakmap.js";
 import WeakSetPonyfill from "../vendor/ungap/weakset.js";
 import "./microquickjs-platform.js";
-import "./microquickjs-dom.js";
 
 globalThis.Map = MapPonyfill;
 globalThis.Set = SetPonyfill;

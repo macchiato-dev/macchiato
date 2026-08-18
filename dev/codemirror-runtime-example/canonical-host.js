@@ -31,7 +31,15 @@ if (profiling) {
 }
 
 try {
+  const guestUrl = document.querySelector("[data-wasm]")?.dataset.wasm ||
+    "./generated/codemirror-canonical.wasm";
+  const response = await fetch(new URL(guestUrl, import.meta.url),
+    { credentials: "same-origin" });
+  if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-container");
   const host = createWasmWebContainer(document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services,
     development: true,
     profiling,
@@ -49,12 +57,10 @@ try {
       else referenceLeases.delete(id);
     } : undefined,
   });
-  const response = await fetch(new URL("./generated/codemirror-canonical.wasm", import.meta.url),
-    { credentials: "same-origin" });
-  if (!response.ok) throw new Error(`Wasm response ${response.status}`);
-  const { instance } = await WebAssembly.instantiateStreaming(response, host.imports);
+  const instance = new WebAssembly.Instance(module, host.imports);
   await host.connect(instance);
   document.body.dataset.ready = "true";
+  document.querySelector(".runtime-status")?.remove();
 } catch (error) {
   const status = document.querySelector(".runtime-status");
   status.dataset.error = "";

@@ -1,5 +1,30 @@
 // MicroQuickJS omits newer standard-library methods. Keep this list driven by
 // execution of the real CodeMirror bundle instead of installing a broad shim.
+globalThis.__microQuickJS = true;
+
+if (typeof Symbol === "undefined") {
+  var nextSymbol = 0;
+  var symbolRegistry = Object.create(null);
+  var SymbolPonyfill = function (description) {
+    return "@@symbol:" + String(description || "") + ":" + nextSymbol++;
+  };
+  SymbolPonyfill.iterator = "@@iterator";
+  SymbolPonyfill.hasInstance = "@@hasInstance";
+  SymbolPonyfill.toPrimitive = "@@toPrimitive";
+  SymbolPonyfill.for = function (name) {
+    return symbolRegistry[name] || (symbolRegistry[name] = SymbolPonyfill(name));
+  };
+  globalThis.Symbol = SymbolPonyfill;
+}
+
+// A JavaScript ponyfill cannot make a reference weak. This preserves the API
+// while the MicroQuickJS adapter moves identity retention into its native
+// host-reference finalizers.
+if (typeof WeakRef === "undefined") {
+  globalThis.WeakRef = function WeakRefPonyfill(value) { this.value = value; };
+  WeakRef.prototype.deref = function () { return this.value; };
+}
+
 if (!Array.prototype.find) {
   Array.prototype.find = function (predicate, receiver) {
     for (var index = 0; index < this.length; index++) {
@@ -8,7 +33,7 @@ if (!Array.prototype.find) {
   };
 }
 
-if (!Object.assign) {
+  if (!Object.assign) {
   Object.assign = function (target) {
     if (target == null) throw new TypeError("Cannot convert null to object");
     for (var sourceIndex = 1; sourceIndex < arguments.length; sourceIndex++) {
@@ -43,6 +68,21 @@ if (typeof encodeURIComponent === "undefined") {
       }
     }
     return output;
+  };
+}
+
+if (!Object.defineProperties) {
+  Object.defineProperties = function (target, descriptors) {
+    Object.keys(descriptors).forEach(function (name) {
+      Object.defineProperty(target, name, descriptors[name]);
+    });
+    return target;
+  };
+}
+
+if (!Number.isInteger) {
+  Number.isInteger = function (value) {
+    return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
   };
 }
 

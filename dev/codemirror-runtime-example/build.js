@@ -1,4 +1,4 @@
-import { transformFileAsync } from "@babel/core";
+import { transformAsync } from "@babel/core";
 import presetEnv from "@babel/preset-env";
 import { build } from "esbuild";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -9,6 +9,7 @@ const modern = new URL("generated/codemirror-full.js", import.meta.url).pathname
 const ponyfills = new URL("generated/microquickjs-ponyfills.js", import.meta.url).pathname;
 const microModern = new URL("generated/codemirror-micro-modern.js", import.meta.url).pathname;
 const micro = new URL("generated/codemirror-micro.js", import.meta.url).pathname;
+const microRuntime = new URL("generated/microquickjs-runtime.js", import.meta.url).pathname;
 const canonicalEnvironment = new URL("generated/canonical-dom.js", import.meta.url);
 
 await mkdir(generated, { recursive: true });
@@ -85,10 +86,7 @@ await build({
   outfile: ponyfills,
 });
 
-await writeFile(microModern,
-  await readFile(ponyfills, "utf8") + "\n" + await readFile(modern, "utf8"));
-
-const lowered = await transformFileAsync(microModern, {
+const lowerForMicroQuickJS = async source => (await transformAsync(source, {
   comments: false,
   compact: false,
   plugins: [microQuickJSSyntax],
@@ -99,6 +97,19 @@ const lowered = await transformFileAsync(microModern, {
     targets: { ie: "11" },
     useBuiltIns: false,
   }]],
-});
+})).code;
 
-await writeFile(micro, lowered.code);
+const modernApplication = await readFile(modern, "utf8");
+await writeFile(microModern, modernApplication);
+await writeFile(micro, await lowerForMicroQuickJS(modernApplication));
+
+// MicroQuickJS supplies `print` and `HostReference` as native globals. The
+// canonical full-QuickJS build uses equivalent Rust-hosted bindings instead.
+const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
+  "function releaseHostReferenceLease(reference) { new HostReference(reference); }\n" +
+  "function releaseHostReference(reference) { void reference; }\n" +
+  (await readFile(canonicalEnvironment, "utf8"))
+    .replace("var bridge = globalThis.bridge;", "var bridge = print;")
+    .replaceAll("hostReference(", "new HostReference(") +
+  "\nload('application.bin');\ncloseGuest();\n";
+await writeFile(microRuntime, await lowerForMicroQuickJS(microEnvironment));

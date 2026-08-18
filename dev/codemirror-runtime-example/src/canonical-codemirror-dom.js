@@ -21,11 +21,18 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
   }
 });
 globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "", maxTouchPoints: 0 };
+// MicroQuickJS resolves free variables statically, so declare browser globals
+// before installing their live host-backed accessors.
+var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;
 ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(
   function (name) {
-    Object.defineProperty(globalThis, name, {
-      get: function () { return immediate([1, document.reference, stringIndex(name)]); }
-    });
+    if (globalThis.__microQuickJS) {
+      globalThis[name] = immediate([1, document.reference, stringIndex(name)]);
+    } else {
+      Object.defineProperty(globalThis, name, {
+        get: function () { return immediate([1, document.reference, stringIndex(name)]); }
+      });
+    }
   }
 );
 globalThis.visualViewport = null;
