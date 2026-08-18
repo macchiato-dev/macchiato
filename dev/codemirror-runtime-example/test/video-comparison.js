@@ -55,15 +55,17 @@ function completionAppearance() {
   };
 }
 
-async function typeSource(page, source) {
+async function typeSource(page, source, checkpoint) {
   const lines = source.split("\n");
   const mistakeLine = lines.findIndex(line => line.includes("this.value +="));
   const completionAppearances = [];
   const lineStates = [];
   const content = page.locator(".cm-content");
   await content.click();
+  await checkpoint("editor focused");
   await page.keyboard.type("f");
   await page.locator(".cm-tooltip-autocomplete").waitFor({ state: "visible" });
+  await checkpoint("autocomplete visible");
   const completion = await page.evaluate(completionAppearance);
   assert.ok(completion, "autocomplete should have a measurable appearance");
   completionAppearances.push(completion);
@@ -73,6 +75,7 @@ async function typeSource(page, source) {
   await page.keyboard.press("Backspace");
   await page.waitForFunction(() =>
     Array.from(document.querySelectorAll(".cm-line"), line => line.textContent).join("\n") === "");
+  await checkpoint("editor cleared");
   for (let line = 0; line < lines.length; line++) {
     const sourceLine = lines[line].trimStart();
     if (line && sourceLine.startsWith("}")) {
@@ -92,15 +95,18 @@ async function typeSource(page, source) {
     await page.waitForTimeout(90);
     lineStates.push((await page.locator(".cm-line").allTextContents()).join("\n"));
   }
+  await checkpoint("typing complete");
   await page.waitForTimeout(1200);
   const text = async () => (await page.locator(".cm-line").allTextContents()).join("\n");
   await content.focus();
+  await checkpoint("history check started");
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type(" // changed direction", { delay: 30 });
   const changed = await text();
   assert.match(changed, / \/\/ changed direction$/);
   await page.keyboard.press("ControlOrMeta+z");
   assert.equal(withoutTrailingSpace(await text()), withoutTrailingSpace(source));
+  await checkpoint("history check complete");
   await page.keyboard.press("Control+y");
   assert.equal(await text(), changed);
   await page.keyboard.press("ControlOrMeta+z");
@@ -120,18 +126,84 @@ async function record(browser, base, name, pathname, source) {
     recordVideo: { dir: directory, size: { width: 1200, height: 800 } },
   });
   const page = await context.newPage();
+  const startedAt = performance.now();
+  const devtools = await context.newCDPSession(page);
+  const diagnostics = [];
+  const diagnostic = (type, detail) => diagnostics.push({
+    type,
+    elapsedMs: Math.round((performance.now() - startedAt) * 10) / 10,
+    detail,
+  });
+  devtools.on("Runtime.consoleAPICalled", event => diagnostic("console", event));
+  devtools.on("Runtime.exceptionThrown", event => diagnostic("exception", event));
+  devtools.on("Log.entryAdded", event => diagnostic("log", event));
+  await devtools.send("Runtime.enable");
+  await devtools.send("Log.enable");
+  await devtools.send("Performance.enable");
+  await devtools.send("Profiler.enable");
+  await devtools.send("Profiler.start");
+  await devtools.send("HeapProfiler.startSampling", { samplingInterval: 32768 });
+  const checkpoints = [];
+  const measurements = async () => {
+    const [{ metrics }, heap] = await Promise.all([
+      devtools.send("Performance.getMetrics"),
+      devtools.send("Runtime.getHeapUsage"),
+    ]);
+    const wanted = new Set(["Documents", "Frames", "JSEventListeners", "Nodes",
+      "LayoutCount", "RecalcStyleCount", "ScriptDuration", "TaskDuration",
+      "JSHeapUsedSize", "JSHeapTotalSize"]);
+    const selected = Object.fromEntries(metrics
+      .filter(metric => wanted.has(metric.name))
+      .map(metric => [metric.name, metric.value]));
+    return { ...selected, ...heap };
+  };
+  const checkpoint = async label => {
+    const elapsedMs = Math.round((performance.now() - startedAt) * 10) / 10;
+    checkpoints.push({ label, elapsedMs, metrics: await measurements() });
+    await page.evaluate(({ label, elapsedMs }) => {
+      let marker = document.getElementById("comparison-checkpoint");
+      if (!marker) {
+        marker = document.createElement("div");
+        marker.id = "comparison-checkpoint";
+        Object.assign(marker.style, {
+          position: "fixed", right: "12px", bottom: "12px", zIndex: "2147483647",
+          padding: "5px 8px", border: "1px solid #586273", borderRadius: "5px",
+          background: "rgba(20, 24, 31, .9)", color: "#dce5f2",
+          font: "12px/1.2 ui-monospace, monospace", pointerEvents: "none",
+        });
+        document.body.appendChild(marker);
+      }
+      marker.textContent = `${label} · ${(elapsedMs / 1000).toFixed(2)}s`;
+    }, { label, elapsedMs });
+  };
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
+  checkpoints.push({ label: "navigation started", elapsedMs: 0,
+    metrics: await measurements() });
   await page.goto(`${base}/${pathname}/`);
+  await checkpoint("navigation complete");
   await page.waitForSelector(".cm-editor");
-  if (pathname === "test/pages/wasm") await page.waitForSelector("body[data-ready]");
+  await checkpoint("editor visible");
+  if (pathname === "test/pages/wasm") {
+    await page.waitForSelector("body[data-ready]");
+    await checkpoint("Wasm ready");
+  }
   const video = page.video();
-  const result = await typeSource(page, source);
+  const result = await typeSource(page, source, checkpoint);
   await page.screenshot({ path: resolve(directory, "final.png") });
+  await checkpoint("capture complete");
+  const [{ profile: cpu }, { profile: heap }] = await Promise.all([
+    devtools.send("Profiler.stop"),
+    devtools.send("HeapProfiler.stopSampling"),
+  ]);
+  const profileFile = resolve(directory, "devtools-profile.json");
+  await writeFile(profileFile, `${JSON.stringify({ diagnostics, cpu, heap })}\n`);
   await page.close();
   await context.close();
   result.video = await video.path();
   result.errors = errors;
+  result.checkpoints = checkpoints;
+  result.devtoolsProfile = `${name}/devtools-profile.json`;
   return result;
 }
 
@@ -194,8 +266,13 @@ try {
   assert.deepEqual(wasm.errors, []);
   const directFrames = await deduplicate(direct.video, resolve(output, "direct"));
   const wasmFrames = await deduplicate(wasm.video, resolve(output, "wasm"));
-  const report = { output, direct: { video: direct.video, frames: directFrames },
-    wasm: { video: wasm.video, frames: wasmFrames },
+  const report = { output,
+    direct: { video: direct.video, frames: directFrames,
+      checkpoints: direct.checkpoints, devtoolsProfile: direct.devtoolsProfile,
+      errors: direct.errors },
+    wasm: { video: wasm.video, frames: wasmFrames,
+      checkpoints: wasm.checkpoints, devtoolsProfile: wasm.devtoolsProfile,
+      errors: wasm.errors },
     completionAppearances: direct.completionAppearances };
   await writeFile(resolve(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
