@@ -1,10 +1,12 @@
 import { build } from "esbuild";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
+const workspace = join(directory, "..", "..");
 const guest = await build({
   entryPoints: [join(directory, "project-editor-guest.js")],
   bundle: true,
@@ -32,3 +34,21 @@ await mkdir(outputDirectory, { recursive: true });
 await writeFile(join(outputDirectory, "project-editor-runtime.js"), runtime);
 await writeFile(join(outputDirectory, "project-editor-guest.js"), guest);
 await writeFile(join(outputDirectory, "presentation-runner.js"), presentationRunner);
+
+execFileSync("npm", ["run", "build:machine"], {
+  cwd: join(workspace, "dev", "wasm-web-machine"), stdio: "inherit",
+});
+execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+  cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
+  env: {
+    ...process.env,
+    WWC_CANONICAL_HOST: "1",
+    WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror", "generated", "canonical-dom.js"),
+    WWC_APPLICATION_SOURCE: join(directory, "project-output-bootstrap.js"),
+  },
+  stdio: "inherit",
+});
+await copyFile(
+  join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
+  join(outputDirectory, "project-quickjs-runtime.wasm"),
+);
