@@ -9,6 +9,16 @@ licensed ungap repository:
 - `weakset.js`: `ungap/weakset` at `143d91db60e70c76b660c0910d8a2714e4fc4200`
 
 They are ponyfills: importing them does not mutate globals. The MicroQuickJS
-entry point installs them explicitly before loading the ordinary application.
-Changes remove unsupported reflection, add Babel-compatible `@@iterator`
-objects, use SameValueZero key matching, and keep the source ES5-readable.
+entry point installs `Map` and `Set` explicitly before loading the ordinary
+application. It retains the weak ponyfills as a fallback for other ES5 hosts,
+while MicroQuickJS itself supplies `WeakMap` and `WeakSet` in C. Changes remove
+unsupported reflection, add Babel-compatible `@@iterator` objects, use
+SameValueZero key matching, and keep the source ES5-readable.
+
+The weak collection ponyfills attach a non-enumerable generated property to
+each object key. They do not retain keys in a side list, but they are not native
+ephemeron tables: keys must be extensible, associations remain on a key until
+deleted or until that key is collected, and reflective property inspection can
+observe the generated slot. They are not used by the MicroQuickJS build: its
+compacting collector owns native weak tables, applies ephemeron marking, prunes
+dead keys, and relocates surviving entries without modifying key objects.

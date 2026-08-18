@@ -10,6 +10,9 @@ const canonicalHost = resolve(root,
   "../wasm-web-container/examples/web/wasm-web-container.js");
 const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
   ".wasm": "application/wasm" };
+const runtime = process.env.CODEMIRROR_RUNTIME || "";
+const demoPath = name => `${runtime ? `/${runtime}` : ""}/${name}/`;
+const screenshotTag = runtime || "quickjs";
 
 test("the demo index and each bridged QuickJS editor work", async (context) => {
   const server = createServer(async (request, response) => {
@@ -40,28 +43,29 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   const index = await browser.newPage({ viewport: { width: 1200, height: 800 } });
   await index.goto(base);
   assert.deepEqual(await index.locator("nav strong").allTextContents(),
-    ["Canonical host workbench", "Simple editor", "Full UI", "Large document"]);
+    ["MicroQuickJS", "Canonical host workbench", "Simple editor", "Full UI", "Large document"]);
   await index.screenshot({ path: "/tmp/quickjs-codemirror-index.png" });
   await index.close();
 
-  for (const name of ["simple", "full", "large"]) {
+  const demoNames = runtime === "microquickjs" ? ["full"] : ["simple", "full", "large"];
+  for (const name of demoNames) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     const started = performance.now();
-    await page.goto(`${base}/${name}/`);
+    await page.goto(`${base}${demoPath(name)}`);
     await page.waitForSelector("body[data-ready]");
     context.diagnostic(`${name}: browser-ready=${(performance.now() - started).toFixed(1)}ms`);
     assert.equal(await page.locator(".cm-editor").count(), 1);
     assert.equal(Math.round((await page.locator(".cm-editor").boundingBox()).height), 900);
     assert.ok(await page.locator(".cm-lineNumbers .cm-gutterElement").count() > 1);
     assert.deepEqual(errors, []);
-    await page.screenshot({ path: `/tmp/quickjs-codemirror-${name}.png` });
+    await page.screenshot({ path: `/tmp/${screenshotTag}-codemirror-${name}.png` });
     await page.close();
   }
 
   const full = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await full.goto(`${base}/full/`);
+  await full.goto(`${base}${demoPath("full")}`);
   await full.waitForSelector("body[data-ready]");
   assert.ok(await full.locator(".cm-foldGutter .cm-gutterElement").count() > 1);
   await full.screenshot({ path: "/tmp/quickjs-codemirror-full-mobile.png" });
@@ -74,7 +78,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   const completion = await completionContext.newPage();
   const completionErrors = [];
   completion.on("pageerror", error => completionErrors.push(error.message));
-  await completion.goto(`${base}/full/`);
+  await completion.goto(`${base}${demoPath("full")}`);
   await completion.waitForSelector("body[data-ready]");
   await completion.locator(".cm-content").click();
   await completion.keyboard.press("ControlOrMeta+End");
@@ -121,7 +125,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
       foldingErrors.push(message.text());
     }
   });
-  await folding.goto(`${base}/full/`);
+  await folding.goto(`${base}${demoPath("full")}`);
   await folding.waitForSelector("body[data-ready]");
   const foldLines = [0, 6, 11, 16];
   const foldMarkers = folding.locator('.cm-foldGutter span[title="Fold line"]');
@@ -148,7 +152,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
       inputErrors.push(message.text());
     }
   });
-  await input.goto(`${base}/full/`);
+  await input.goto(`${base}${demoPath("full")}`);
   await input.waitForSelector("body[data-ready]");
   const content = input.locator(".cm-content");
   await content.click();
@@ -238,7 +242,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
       pointerErrors.push(message.text());
     }
   });
-  await pointer.goto(`${base}/full/`);
+  await pointer.goto(`${base}${demoPath("full")}`);
   await pointer.waitForSelector("body[data-ready]");
   const pointerContent = pointer.locator(".cm-content");
   const pointerLines = pointer.locator(".cm-line");
@@ -295,7 +299,7 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
       humanErrors.push(message.text());
     }
   });
-  await human.goto(`${base}/full/`);
+  await human.goto(`${base}${demoPath("full")}`);
   await human.waitForSelector("body[data-ready]");
   const humanSource = (await readFile(resolve(root, "fixtures/human-edit.js"), "utf8")).trimEnd();
   const humanLines = humanSource.split("\n");

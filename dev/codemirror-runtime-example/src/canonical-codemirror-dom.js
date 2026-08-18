@@ -21,9 +21,6 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
   }
 });
 globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "", maxTouchPoints: 0 };
-// MicroQuickJS resolves free variables statically, so declare browser globals
-// before installing their live host-backed accessors.
-var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;
 ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(
   function (name) {
     if (globalThis.__microQuickJS) {
@@ -36,6 +33,9 @@ var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;
   }
 );
 globalThis.visualViewport = null;
+globalThis.scrollBy = function (x, y) {
+  hostCall(document.reference, "scrollBy", [Math.round(x), Math.round(y)]);
+};
 Date.now = function () {
   return hostCall(document.reference, "dateNow", []);
 };
@@ -731,6 +731,9 @@ GuestDataTransfer.prototype.getData = function (type) {
 };
 GuestDataTransfer.prototype.setData = function (type, value) {
   immediate([3, this.reference, stringIndex("setData"), [encode(type), encode(value)]]);
+};
+GuestDataTransfer.prototype.clearData = function () {
+  immediate([3, this.reference, stringIndex("clearData"), []]);
 };
 ["dropEffect", "effectAllowed"].forEach(function (name) {
   Object.defineProperty(GuestDataTransfer.prototype, name, {

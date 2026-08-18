@@ -108,8 +108,10 @@ await writeFile(micro, await lowerForMicroQuickJS(modernApplication));
 const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
   "function releaseHostReferenceLease(reference) { new HostReference(reference); }\n" +
   "function releaseHostReference(reference) { void reference; }\n" +
+  "var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;\n" +
   (await readFile(canonicalEnvironment, "utf8"))
     .replace("var bridge = globalThis.bridge;", "var bridge = print;")
     .replaceAll("hostReference(", "new HostReference(") +
+  "\nPromise._immediateFn = function(callback) { setTimeout(callback, 0); };\n" +
   "\nload('application.bin');\ncloseGuest();\n";
 await writeFile(microRuntime, await lowerForMicroQuickJS(microEnvironment));

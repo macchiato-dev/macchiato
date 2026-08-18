@@ -86,6 +86,14 @@ if (!Number.isInteger) {
   };
 }
 
+if (!String.prototype.localeCompare) {
+  String.prototype.localeCompare = function (other) {
+    var left = String(this);
+    var right = String(other);
+    return left < right ? -1 : left > right ? 1 : 0;
+  };
+}
+
 // MicroQuickJS accepts flags when compiling a RegExp but does not expose the
 // standard flag getters CodeMirror uses for validation and cloning.
 [["global", "g"], ["ignoreCase", "i"], ["multiline", "m"]].forEach(
