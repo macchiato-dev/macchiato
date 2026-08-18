@@ -31,9 +31,13 @@ change its identity does not rotate the machine.
 
 Future project tabs should generalize this to one editor machine per retained
 workspace, not force the product back to one global editor. Background tabs may
-remain warm under explicit machine and memory limits. An eviction policy can
-checkpoint their state, dispose their machines, and restore them when selected.
-The tab model and eviction UX remain to be designed.
+remain warm under explicit machine and memory limits, or serialize their state,
+dispose their machines, and restore them when selected. A hybrid can retain a
+small working set of live machines while keeping serialized checkpoints for the
+rest. The choice is per component and workload: a live machine preserves
+ephemeral browser and editor identity; serialized state makes disposal,
+migration, recovery, and multi-machine scheduling cheaper. The tab model,
+serialization boundary, and eviction UX remain to be designed.
 
 ### Project
 
@@ -106,6 +110,15 @@ can be garbage-collected after its references are dropped without becoming the
 only copy of a draft, version, or authored file. The editor VM constructs local
 snapshot diffs and checkpoints, while the host stores returned history and the
 server validates durable versions again.
+
+Serialization does not have to reproduce every implementation detail of a
+machine. A project editor checkpoint can contain authored files, configuration,
+versions, open tabs, selections, and other deliberately recoverable state while
+omitting disposable DOM references, timers, caches, and runtime internals. When
+those internals are important to continuity, retaining the live machine is the
+better policy. Components may also expose a versioned serialization protocol so
+the state can be restored by a newer runtime rather than depending on a raw VM
+memory image.
 
 When project code is eventually allowed to update specific files, the editor
 machine should expose a rate-limited file-change capability. The project machine
