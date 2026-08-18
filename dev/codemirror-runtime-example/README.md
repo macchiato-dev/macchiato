@@ -71,22 +71,23 @@ about 12–13 ms.
 
 ## Runtime benchmark
 
-`npm run benchmark:runtimes` runs the full CodeMirror application in Bellard
-QuickJS and MicroQuickJS using one Chromium process, one viewport, the same
-source document, and the same key-by-key edit and undo/redo trace. It warms both
-runtimes before measuring and alternates QuickJS-first and MicroQuickJS-first
-runs to expose ordering bias. The complete measurements are written to
-`benchmark-results.json`; the command prints a compact summary.
+`npm run benchmark:runtimes` runs the full CodeMirror application directly in
+the browser, in Bellard QuickJS, and in MicroQuickJS using one Chromium process,
+one viewport, the same class-writing source document, and the same key-by-key
+edit and undo/redo trace. It warms all three runtimes before measuring and uses
+all six runtime orders to expose ordering bias. The complete measurements are
+written to `benchmark-results.json`; the command prints a compact summary.
 
-In the August 18, 2026 six-run sample, MicroQuickJS was faster in both run
-orders. Its median ready time was 200.3 ms versus 250.5 ms, median typing trace
-was 1002.4 ms versus 1215.5 ms, and pooled median key latency was 6.9 ms versus
-8.7 ms. This describes this host bridge and Babel-lowered CodeMirror workload,
-not a general JavaScript-engine ranking.
+In the August 18, 2026 six-run sample, native CodeMirror was fastest and
+MicroQuickJS was faster than QuickJS. Median ready times were 104.7, 234.2, and
+320.2 ms; pooled median key latencies were 3.8, 10.3, and 11.6 ms respectively.
+This describes this host bridge and
+Babel-lowered CodeMirror workload, not a general JavaScript-engine ranking.
 
 The local `codemirror-microquickjs` declarative app serves the MicroQuickJS
-editor, the same benchmark result, the QuickJS comparison target, and the
-side-by-side recording archive. Open
+editor, the same benchmark result, and the QuickJS comparison target. The
+separate `codemirror-comparison` declarative app remains the home of all
+side-by-side recording archives. Open
 `http://codemirror-microquickjs.localhost:3030/benchmark/` for the latest
 comparison.
 

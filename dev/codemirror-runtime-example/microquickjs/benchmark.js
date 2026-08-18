@@ -13,7 +13,9 @@ if (!response.ok) {
   const cards = Object.entries(result.report).map(([runtime, measurements]) => {
     const rows = Object.entries(labels).map(([key, label]) =>
       `<dt>${label}</dt><dd>${measurements[key].median.toFixed(1)} ms</dd>`).join("");
-    return `<article><h2>${runtime === "quickjs" ? "QuickJS" : "MicroQuickJS"}</h2>
+    const names = { native: "Native browser", quickjs: "QuickJS",
+      microquickjs: "MicroQuickJS" };
+    return `<article><h2>${names[runtime]}</h2>
       <dl>${rows}</dl></article>`;
   }).join("");
   target.innerHTML = `<div class="grid">${cards}</div>

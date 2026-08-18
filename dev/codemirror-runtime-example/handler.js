@@ -2,8 +2,6 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 const root = resolve(new URL(".", import.meta.url).pathname);
-const comparisonRoot = resolve(process.env.HOME || "/root",
-  "artifacts/codemirror-comparison");
 const canonicalHost = resolve(root,
   "../wasm-web-container/examples/web/wasm-web-container.js");
 const types = new Map([
@@ -70,11 +68,6 @@ async function staticResponse(rootDirectory, relative) {
 
 export function microQuickjsCodeMirrorHandler(request) {
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/comparisons/")) {
-    const relative = url.pathname.slice("/comparisons/".length) || "index.html";
-    return staticResponse(comparisonRoot,
-      relative.endsWith("/") ? `${relative}index.html` : relative);
-  }
   if (url.pathname === "/benchmark-results.json") {
     return staticResponse(root, "benchmark-results.json");
   }

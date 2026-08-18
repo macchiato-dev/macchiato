@@ -30,7 +30,7 @@ export const BUILTIN_APPS = [
     pluginId: "microquickjs-codemirror",
     subdomain: "codemirror-microquickjs",
     kind: "small-engine sandbox component",
-    description: "CodeMirror in MicroQuickJS with the shared runtime benchmark and recordings.",
+    description: "CodeMirror in MicroQuickJS with the shared runtime benchmark.",
     handler: microQuickjsCodeMirrorHandler,
     sourceFiles: [
       "dev/codemirror-runtime-example/microquickjs/index.html",
