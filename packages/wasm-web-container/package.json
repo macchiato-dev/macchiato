@@ -4,11 +4,6 @@
   "description": "A bounded WebAssembly container for constrained web applications.",
   "type": "module",
   "private": true,
-  "exports": "./src/index.js",
-  "files": [
-    "README.md",
-    "src"
-  ],
   "scripts": {
     "build:sqlite-book": "node examples/sqlite-book/build.js",
     "test": "npm run build:sqlite-book && node --test test/*.test.js"

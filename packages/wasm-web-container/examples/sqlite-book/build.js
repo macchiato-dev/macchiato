@@ -98,10 +98,14 @@ const target = join(runtime,
 if (!await readFile(target).catch(() => null)) {
   execFileSync("sh", [join(prototype, "scripts/build.sh")], { stdio: "inherit" });
 }
-await copyFile(join(prototype, "web/wasm-web-container.js"),
-  join(workspace, "dev/wasm-web-container/dist/pages/wasm-web-container.js"));
-await copyFile(join(prototype, "web/wasm-web-machine.js"),
-  join(workspace, "dev/wasm-web-container/dist/pages/wasm-web-machine.js"));
+execFileSync("npm", ["run", "build:machine"], {
+  cwd: join(prototype, ".."), stdio: "inherit"
+});
+const outputRoot = dirname(dirname(output));
+await copyFile(join(prototype, "web/generated/wasm-web-machine.js"),
+  join(outputRoot, "wasm-web-machine.js"));
+await copyFile(join(prototype, "web/generated/wasm-web-machine.js.map"),
+  join(outputRoot, "wasm-web-machine.js.map"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
   `var APPLICATION_SCRIPT=${JSON.stringify("sqlite-book.js")};`,
@@ -127,10 +131,31 @@ await writeFile(join(dirname(output), "index.html"), `<!doctype html>
 <body>
 <noscript>This application requires JavaScript and WebAssembly.</noscript>
 <script type="module">
-  import createWasmWebMachine from "../wasm-web-machine.js";
-  await createWasmWebMachine("./main.wasm", document, {
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  function virtualPath() {
+    const value = location.hash;
+    if (value === "#/") return "/";
+    if (!/^#\\/[a-z0-9][a-z0-9._/-]{0,254}(?:#[a-z0-9][a-z0-9_.:-]{0,127})?$/i
+      .test(value) || value.includes("//")) return "/";
+    const path = value.slice(2).split("#", 1)[0];
+    return path.split("/").some((part) => part === "." || part === "..") ?
+      "/" : value.slice(1);
+  }
+
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
     allowNavigate: "fragment",
+    services: {
+      route: {
+        get: virtualPath,
+        listen(callback) { addEventListener("hashchange", callback); },
+      },
+    },
+    stamp: new Uint8Array(stamp),
   });
+  await machine.onmsg(0);
 </script>
 `);
 const outputHash = digest(configuration.output.algorithm, await readFile(output));

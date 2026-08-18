@@ -5,24 +5,9 @@ capabilities. The container owns module validation, instantiation, memory
 limits, the message ABI, host references, and guest lifecycle. DOM access is a
 capability within the container rather than the package's whole identity.
 
-The package is being reconstructed from the working `dev/wasm-web-container`
-experiment in small, reviewable commits. During that reconstruction,
-`mountWebContainer()` delegates to the experiment's tested runner. That import
-is temporary and must be gone before publishing.
-
-## Current API
-
-```js
-import mountWebContainer from "wasm-web-container";
-
-const container = await mountWebContainer("./main.wasm", document, {
-  allowNavigate: "fragment",
-  allowFont: [expectedFontSha256]
-});
-```
-
-The integrated operation is intentional: callers provide a module source and
-mount target, while the container establishes and owns the Wasm boundary.
+The package is reserved for a later composition layer. Current examples
+integrate the lower-level `WasmWebMachine` directly and keep their loading,
+services, and policy in readable inline JavaScript.
 
 ## Virtual paths and links
 
