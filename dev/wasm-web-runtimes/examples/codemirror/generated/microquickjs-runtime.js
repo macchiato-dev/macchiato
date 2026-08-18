@@ -1027,6 +1027,9 @@ function resolved(value) {
 }
 function fetch(url) {
   var source = RUNTIME_RESOURCES.files[url] || (url.slice(0, 2) === "./" ? RUNTIME_RESOURCES.files[url.slice(2)] : undefined);
+  if (source === undefined && typeof globalThis.__wwcFetchMissing === "function") {
+    return globalThis.__wwcFetchMissing(String(url));
+  }
   return resolved({
     ok: source !== undefined,
     status: source === undefined ? 404 : 200,

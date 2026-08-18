@@ -113,3 +113,10 @@ globalThis.__resourcesProjectStatusReport = (json) => {
 };
 
 globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();
+
+globalThis.__resourcesProjectRequestOutput = (json) => {
+  const generation = Number(JSON.parse(json).generation);
+  if (!Number.isSafeInteger(generation) || generation < 1) throw new TypeError("Project output generation is invalid");
+  globalThis.__browserUseNotify(JSON.stringify({ type: "mount-project-output", generation }));
+  return JSON.stringify({ requested: true, generation });
+};

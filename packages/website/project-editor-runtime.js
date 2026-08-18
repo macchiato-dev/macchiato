@@ -1,5 +1,7 @@
 import { mountPresentationUse } from "@macchiato-dev/presentation-use";
-import { createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
+import { createConstrainedFetch, createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
+
+export { createConstrainedFetch, createProjectOutputMachine };
 
 const projectApps = new WeakMap();
 
@@ -35,6 +37,9 @@ export async function mountResourcesProjectEditor(options) {
       report(generation, event) { return controller.callGuest("__resourcesProjectStatusReport", { generation, event }); },
       inspect() { return controller.callGuest("__resourcesProjectStatusInspect", {}); },
     }),
+    projectOutput: Object.freeze({
+      request(generation) { return controller.requestOutput(generation); },
+    }),
   });
 }
 
@@ -42,7 +47,7 @@ export function mountResourcesPresentation(options) {
   return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
 }
 
-export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, onViolation = () => {} }) {
+export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], onViolation = () => {} }) {
   if (violations.length) {
     statusRoot.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
@@ -54,6 +59,7 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
       scripts,
       options: {
         frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
+        fetchResource: createConstrainedFetch(allowedFetchOrigins),
         services: {
           route: { get: () => location.pathname, listen() {} },
           storage: { get: () => null, set() {}, delete() {}, listen() {} },

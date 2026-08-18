@@ -739,8 +739,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     previewTimer = setTimeout(async () => {
       if (generation !== previewGeneration) return;
       try {
+        editorController?.projectOutput.request(generation);
         const controller = await mountResourcesProjectPreview({
           root: surfaceBody, statusRoot: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
+          allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins || [],
           onViolation(error) {
             if (generation !== previewGeneration) return;
             const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
@@ -757,6 +759,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         }
       } catch (error) {
         setStatus(`Blocked: ${error.message}`, true, null, "output");
+        queueMicrotask(() => {
+          if (generation === previewGeneration) routeProjectStatus(generation, { type: "blocked", message: error.message });
+        });
       }
     }, 120);
   }

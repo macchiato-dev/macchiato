@@ -651,6 +651,34 @@ test("Resources.co edge account creates organizations and projects in a real bro
   page.on("console", (message) => { if (message.type() === "error") projectErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 500) projectErrors.push(`${response.status()} ${response.url()}`); });
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
+  const fetchProbe = await page.evaluate(async () => {
+    const { createProjectOutputMachine } = await import("/-/resources-site/project-editor-runtime.js");
+    async function run(fetchResource) {
+      const root = document.createElement("div");
+      document.body.append(root);
+      const controller = await createProjectOutputMachine({
+        root,
+        scripts: [{ code: `const result = document.createElement("p"); document.body.append(result);
+          fetch("https://assets.example/probe.txt").then((response) => response.text())
+            .then((text) => { result.textContent = text; })
+            .catch((error) => { result.textContent = error.message; });` }],
+        options: { fetchResource },
+      });
+      const deadline = Date.now() + 2_000;
+      while (!root.textContent && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+      const text = root.textContent;
+      controller.destroy(); root.remove();
+      return text;
+    }
+    return {
+      allowed: await run(async (url) => ({ status: url.endsWith("/probe.txt") ? 200 : 404, body: "fetched through msg/onmsg" })),
+      blocked: await run(undefined),
+    };
+  });
+  assert.deepEqual(fetchProbe, {
+    allowed: "fetched through msg/onmsg",
+    blocked: "Project network access is disabled",
+  });
   await assert.doesNotReject(page.getByRole("heading", { name: "Your projects", exact: true }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/");
   assert.equal(await page.getByRole("link", { name: "View all projects" }).getAttribute("href"), "/projects");

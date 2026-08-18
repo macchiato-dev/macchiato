@@ -31012,4 +31012,10 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return projectStatusResult({ accepted: true, event });
   };
   globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();
+  globalThis.__resourcesProjectRequestOutput = (json2) => {
+    const generation = Number(JSON.parse(json2).generation);
+    if (!Number.isSafeInteger(generation) || generation < 1) throw new TypeError("Project output generation is invalid");
+    globalThis.__browserUseNotify(JSON.stringify({ type: "mount-project-output", generation }));
+    return JSON.stringify({ requested: true, generation });
+  };
 })();
