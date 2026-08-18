@@ -49,17 +49,66 @@ globalThis.__wwcProjectClassName = projectClassName;
 
 var guestNodes = Object.create(null);
 function rememberNode(node) {
-  guestNodes[node.reference] = node;
+  guestNodes[node.reference] = new WeakRef(node);
   return node;
 }
 function nodeForReference(reference) {
-  if (guestNodes[reference]) return guestNodes[reference];
+  var entry = guestNodes[reference];
+  var known = entry && entry.deref();
+  if (known) {
+    // Each returned host reference carries a lease. Reusing the existing
+    // identity means no new finalizer token will be created for this one.
+    releaseHostReferenceLease(reference);
+    return known;
+  }
+  if (entry) delete guestNodes[reference];
   var nodeType = immediate([1, reference, stringIndex("nodeType")]);
-  return rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
+  var node = rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
+  var parentResult = immediate([1, reference, stringIndex("parentNode")]);
+  if (parentResult !== null) {
+    var parent = nodeForReference(parentResult[1]);
+    var children = childrenOf(parent);
+    if (children.indexOf(node) < 0) children.push(node);
+    setParent(node, parent);
+  }
+  return node;
 }
 globalThis.__wwcNodeForReference = nodeForReference;
 rememberNode(document.head);
 rememberNode(document.body);
+
+if (hostGet(document.reference, "profiling") === true) {
+  setInterval(function () {
+    var live = 0, parented = 0, listeners = 0, roots = Object.create(null);
+    Object.keys(guestNodes).forEach(function (reference) {
+      var node = guestNodes[reference].deref();
+      if (!node) return;
+      live++;
+      if (parentOf(node)) parented++;
+      listeners += node._eventListeners ? node._eventListeners.length : 0;
+      var root = node, guard = 0;
+      while (parentOf(root) && guard++ < 4096) root = parentOf(root);
+      roots[root.reference] = (roots[root.reference] || 0) + 1;
+    });
+    var seen = [], visit = function (node) {
+      if (!node || seen.indexOf(node) > -1) return;
+      seen.push(node);
+      childrenOf(node).forEach(visit);
+    };
+    visit(document.head);
+    visit(document.body);
+    hostCall(document.reference, "debug", ["OWNERSHIP:" + JSON.stringify({
+      live: live,
+      parented: parented,
+      tree: seen.length,
+      roots: Object.keys(roots).map(function (reference) {
+        return [Number(reference), roots[reference]];
+      }).sort(function (left, right) { return right[1] - left[1]; }).slice(0, 8),
+      listeners: listeners,
+      callbacks: callbackStates.filter(Boolean).length
+    })]);
+  }, 250);
+}
 
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function () {
@@ -93,24 +142,67 @@ GuestObject.prototype.closest = function (selector) {
 function childrenOf(node) {
   return node._guestChildren || (node._guestChildren = []);
 }
+function parentOf(node) { return node._guestParent || null; }
+function setParent(node, parent) {
+  node._guestParent = parent || null;
+}
 function detachGuestNode(node) {
-  var parent = node._guestParent || null;
+  var parent = parentOf(node);
   if (parent) {
     var siblings = childrenOf(parent);
     var index = siblings.indexOf(node);
     if (index > -1) siblings.splice(index, 1);
   }
-  node._guestParent = null;
+  setParent(node, null);
 }
+var guestCollectionPending = false, guestCleanupPressure = 0;
+function requestCleanupOpportunity(callback) {
+  var index = allocateCallback(callback, true);
+  hostCall(document.reference, "cleanupOpportunity", [1000, index]);
+}
+globalThis.reconcileGuestConnectivity = function () {
+  var bytes = hostCall(document.reference, "detachedRoots", []), detached = 0;
+  var subtreeSize = function (node) {
+    var size = 1, children = childrenOf(node);
+    for (var index = 0; index < children.length; index++) size += subtreeSize(children[index]);
+    return size;
+  };
+  for (var at = 0; at + 3 < bytes.length; at += 4) {
+    var reference = bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24;
+    var entry = guestNodes[reference], node = entry && entry.deref();
+    if (!node || !parentOf(node)) continue;
+    var root = node, guard = 0;
+    while (parentOf(root) && guard++ < 4096) root = parentOf(root);
+    if (root === document.head || root === document.body || root === document.documentElement) {
+      detached += subtreeSize(node);
+      detachGuestNode(node);
+    }
+  }
+  guestCleanupPressure += detached;
+  if (guestCleanupPressure >= 128) {
+    guestCleanupPressure = 0;
+    gc();
+  } else if (detached && !guestCollectionPending) {
+    guestCollectionPending = true;
+    requestCleanupOpportunity(function () {
+      guestCollectionPending = false;
+      guestCleanupPressure = 0;
+      gc();
+    });
+  }
+  return detached;
+};
 globalThis.__wwcSetElementTextContent = function (element, value) {
   element.replaceChildren(value);
   return true;
 };
 Object.defineProperties(GuestObject.prototype, {
   childNodes: { get: function () { return childrenOf(this); } },
-  parentNode: { get: function () { return this._guestParent || null; } },
+  parentNode: { get: function () { return parentOf(this); } },
   parentElement: { get: function () {
-    return this._guestParent instanceof GuestElement ? this._guestParent : null;
+    var parent = parentOf(this);
+    return parent instanceof GuestElement ? parent : null;
   } },
   firstChild: { get: function () { return childrenOf(this)[0] || null; } },
   lastChild: { get: function () {
@@ -118,13 +210,15 @@ Object.defineProperties(GuestObject.prototype, {
     return children.length ? children[children.length - 1] : null;
   } },
   nextSibling: { get: function () {
-    if (!this._guestParent) return null;
-    var siblings = childrenOf(this._guestParent);
+    var parent = parentOf(this);
+    if (!parent) return null;
+    var siblings = childrenOf(parent);
     return siblings[siblings.indexOf(this) + 1] || null;
   } },
   previousSibling: { get: function () {
-    if (!this._guestParent) return null;
-    var siblings = childrenOf(this._guestParent);
+    var parent = parentOf(this);
+    if (!parent) return null;
+    var siblings = childrenOf(parent);
     return siblings[siblings.indexOf(this) - 1] || null;
   } }
 });
@@ -193,6 +287,7 @@ function clientRectsFor(object) {
     var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
     rects.push(new GuestRect(item[1]));
   }
+  releaseHostReferenceLease(result[1]);
   return rects;
 }
 GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
@@ -218,6 +313,7 @@ GuestElement.prototype.querySelectorAll = function (selector) {
     var item = immediate([3, result[1], stringIndex("item"), [encode(index)]]);
     nodes.push(nodeForReference(item[1]));
   }
+  releaseHostReferenceLease(result[1]);
   return nodes;
 };
 GuestElement.prototype.hasAttribute = function (name) {
@@ -417,19 +513,20 @@ function synchronizeGuestChildren(target) {
   }
   var previous = childrenOf(target).slice();
   for (var old = 0; old < previous.length; old++) {
-    if (next.indexOf(previous[old]) < 0 && previous[old]._guestParent === target) {
-      previous[old]._guestParent = null;
+    if (next.indexOf(previous[old]) < 0 && parentOf(previous[old]) === target) {
+      setParent(previous[old], null);
     }
   }
   for (var child = 0; child < next.length; child++) {
-    if (next[child]._guestParent && next[child]._guestParent !== target) {
+    if (parentOf(next[child]) && parentOf(next[child]) !== target) {
       detachGuestNode(next[child]);
     }
-    next[child]._guestParent = target;
+    setParent(next[child], target);
   }
   target._guestChildren = next;
+  releaseHostReferenceLease(result[1]);
 }
-function readMutationBatch(batchReference) {
+function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"), records = [], changedParents = [];
   for (var index = 0; index < length; index++) {
     var result = hostCall(batchReference, "item", [index]);
@@ -445,7 +542,9 @@ function readMutationBatch(batchReference) {
         record.addedNodes.push(mutationNode(reference, "addedNodeAt", add));
       }
       for (var remove = 0; remove < removed; remove++) {
-        record.removedNodes.push(mutationNode(reference, "removedNodeAt", remove));
+        var removedNode = mutationNode(reference, "removedNodeAt", remove);
+        record.removedNodes.push(removedNode);
+        detachGuestNode(removedNode);
       }
       var previous = hostGet(reference, "previousSibling");
       var next = hostGet(reference, "nextSibling");
@@ -464,17 +563,21 @@ function readMutationBatch(batchReference) {
       else values[record.attributeName] = attribute;
     }
     records.push(record);
+    releaseHostReferenceLease(reference);
   }
   // Mutation records describe intermediate edits, but their callback observes
   // the browser's final tree. Reconcile each affected parent once so native
   // editing and drag operations cannot leave the guest between two records.
   changedParents.forEach(synchronizeGuestChildren);
+  if (batchToken) releaseHostReference(batchToken);
+  else releaseHostReferenceLease(batchReference);
   return records;
 }
 function GuestMutationObserver(callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   this.callback = callback;
   this.reference = null;
+  this._hostReference = null;
   this.callbackIndex = null;
 }
 GuestMutationObserver.prototype.observe = function (target, options) {
@@ -485,18 +588,21 @@ GuestMutationObserver.prototype.observe = function (target, options) {
     (options.characterDataOldValue ? 8 : 0) |
     (options.subtree ? 16 : 0);
   var self = this, callbackIndex = allocateCallback(function (batch) {
-    self.callback(readMutationBatch(batch.reference), self);
+    self.callback(readMutationBatch(batch.reference, batch._hostReference), self);
   }, false);
   this.callbackIndex = callbackIndex;
   var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
     encode(target), encode(flags), encode(callbackIndex)
   ]]);
   this.reference = result[1];
+  this._hostReference = hostReference(this.reference);
 };
 GuestMutationObserver.prototype.disconnect = function () {
   if (this.reference !== null) {
     hostCall(this.reference, "disconnect", []);
+    releaseHostReference(this._hostReference);
     this.reference = null;
+    this._hostReference = null;
     releaseCallback(this.callbackIndex);
     this.callbackIndex = null;
   }
@@ -510,10 +616,11 @@ function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.unobserve =
   EmptyObserver.prototype.disconnect = function () {};
 EmptyObserver.prototype.takeRecords = function () { return []; };
-// CodeMirror owns this bridged DOM and all supported edits enter through its
-// explicit event path. Mirroring the browser's child-list records back into
-// the guest creates a second, competing DOM authority during native selection.
-globalThis.MutationObserver = globalThis.ResizeObserver = EmptyObserver;
+// Native contenteditable behavior mutates the host tree after the guest event
+// handler returns. Mirror those browser-owned edits on the normal microtask so
+// the guest tree has the same ownership and detached nodes become collectible.
+globalThis.MutationObserver = GuestMutationObserver;
+globalThis.ResizeObserver = EmptyObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
 };
@@ -667,13 +774,26 @@ globalThis.removeEventListener = function (type, callback) {
   }
 };
 
+function allocateElementCallback(callback) {
+  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
+  if (index >= 4096) throw new RangeError("event callback space exhausted");
+  var state = { active: true, callback: new WeakRef(callback) };
+  callbackStates[index] = state;
+  callbacks[index] = function (event) {
+    var current = state.callback.deref();
+    if (state.active && current) current(event);
+    else releaseCallback(index);
+  };
+  return index;
+}
+
 GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var records = this._eventListeners || (this._eventListeners = []);
   if (records.some(function (record) {
     return record.type === type && record.callback === callback;
   })) return;
-  var index = allocateCallback(callback, false);
+  var index = allocateElementCallback(callback);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture });
   pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
@@ -727,7 +847,7 @@ Object.defineProperty(GuestElement.prototype, "ownerDocument", {
 GuestElement.prototype.appendChild = function (child) {
   detachGuestNode(child);
   childrenOf(this).push(child);
-  child._guestParent = this;
+  setParent(child, this);
   pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
   return child;
 };
@@ -743,14 +863,14 @@ GuestElement.prototype.insertBefore = function (child, next) {
   var index = next === null ? children.length : children.indexOf(next);
   if (index < 0) throw new TypeError("reference node is not a child");
   children.splice(index, 0, child);
-  child._guestParent = this;
+  setParent(child, this);
   pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [
     encode(child), encode(next)
   ]]);
   return child;
 };
 GuestElement.prototype.removeChild = function (child) {
-  if (child._guestParent !== this) throw new TypeError("node is not a child");
+  if (parentOf(child) !== this) throw new TypeError("node is not a child");
   detachGuestNode(child);
   pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
   return child;
@@ -768,14 +888,16 @@ GuestElement.prototype.append = function () {
 };
 GuestElement.prototype.replaceChildren = function () {
   var current = childrenOf(this).slice();
-  for (var i = 0; i < current.length; i++) detachGuestNode(current[i]);
+  for (var i = 0; i < current.length; i++) {
+    detachGuestNode(current[i]);
+  }
   var args = [];
   for (var j = 0; j < arguments.length; j++) {
     var child = arguments[j];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     detachGuestNode(child);
     childrenOf(this).push(child);
-    child._guestParent = this;
+    setParent(child, this);
     args.push(encode(child));
   }
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);

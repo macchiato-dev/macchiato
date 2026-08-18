@@ -145,9 +145,18 @@ async function record(browser, base, name, pathname, source) {
   await devtools.send("HeapProfiler.startSampling", { samplingInterval: 32768 });
   const checkpoints = [];
   const measurements = async () => {
-    const [{ metrics }, heap] = await Promise.all([
+    const [{ metrics }, heap, dom] = await Promise.all([
       devtools.send("Performance.getMetrics"),
       devtools.send("Runtime.getHeapUsage"),
+      page.evaluate(() => {
+        const walker = document.createTreeWalker(document, NodeFilter.SHOW_ALL);
+        let attachedNodes = 0;
+        while (walker.nextNode()) attachedNodes++;
+        return {
+          attachedNodes,
+          hostReferences: globalThis.__wwcReferenceMetrics?.() || null,
+        };
+      }),
     ]);
     const wanted = new Set(["Documents", "Frames", "JSEventListeners", "Nodes",
       "LayoutCount", "RecalcStyleCount", "ScriptDuration", "TaskDuration",
@@ -155,7 +164,7 @@ async function record(browser, base, name, pathname, source) {
     const selected = Object.fromEntries(metrics
       .filter(metric => wanted.has(metric.name))
       .map(metric => [metric.name, metric.value]));
-    return { ...selected, ...heap };
+    return { ...selected, ...heap, ...dom };
   };
   const checkpoint = async label => {
     const elapsedMs = Math.round((performance.now() - startedAt) * 10) / 10;
@@ -180,7 +189,7 @@ async function record(browser, base, name, pathname, source) {
   page.on("pageerror", error => errors.push(error.message));
   checkpoints.push({ label: "navigation started", elapsedMs: 0,
     metrics: await measurements() });
-  await page.goto(`${base}/${pathname}/`);
+  await page.goto(`${base}/${pathname}/?profile=1`);
   await checkpoint("navigation complete");
   await page.waitForSelector(".cm-editor");
   await checkpoint("editor visible");
@@ -190,6 +199,8 @@ async function record(browser, base, name, pathname, source) {
   }
   const video = page.video();
   const result = await typeSource(page, source, checkpoint);
+  await devtools.send("HeapProfiler.collectGarbage");
+  await checkpoint("browser garbage collected");
   await page.screenshot({ path: resolve(directory, "final.png") });
   await checkpoint("capture complete");
   const [{ profile: cpu }, { profile: heap }] = await Promise.all([

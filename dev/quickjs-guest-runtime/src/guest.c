@@ -15,6 +15,13 @@ static uint32_t host_message_capacity;
 static uint32_t *pending_releases;
 static uint32_t pending_release_count;
 static uint32_t pending_release_capacity;
+
+static void flush_pending_releases(void)
+{
+    while (pending_release_count != 0)
+        msg(pending_releases[--pending_release_count], 0);
+}
+
 #endif
 
 static void report_stage(const char *stage)
@@ -73,8 +80,7 @@ static JSValue guest_bridge(JSContext *ctx, JSValueConst this_value,
     }
     actual = msg((uint32_t)(uintptr_t)(bytes + offset), (uint32_t)length);
 #ifdef WWC_CANONICAL_HOST
-    while (pending_release_count != 0)
-        msg(pending_releases[--pending_release_count], 0);
+    flush_pending_releases();
 #endif
     JS_FreeValue(ctx, buffer);
     return JS_NewUint32(ctx, actual);
@@ -118,6 +124,34 @@ static JSValue make_host_reference(JSContext *ctx, JSValueConst this_value,
     return value;
 }
 
+static JSValue release_host_reference_lease(JSContext *ctx,
+                                            JSValueConst this_value,
+                                            int argc, JSValueConst *argv)
+{
+    uint32_t reference;
+    (void)this_value;
+    if (argc < 1 || JS_ToUint32(ctx, &reference, argv[0]) < 0)
+        return JS_EXCEPTION;
+    msg(reference + 1, 0);
+    return JS_UNDEFINED;
+}
+
+static JSValue release_host_reference_token(JSContext *ctx,
+                                            JSValueConst this_value,
+                                            int argc, JSValueConst *argv)
+{
+    uintptr_t control;
+    (void)this_value;
+    if (argc < 1 || !JS_IsObject(argv[0]))
+        return JS_ThrowTypeError(ctx, "host reference token required");
+    control = (uintptr_t)JS_GetOpaque2(ctx, argv[0], host_reference_class);
+    if (control == 0)
+        return JS_EXCEPTION;
+    JS_SetOpaque((JSValue)argv[0], NULL);
+    msg((uint32_t)control, 0);
+    return JS_UNDEFINED;
+}
+
 static int install_host_references(void)
 {
     JSClassDef definition = {
@@ -132,6 +166,12 @@ static int install_host_references(void)
     JS_SetPropertyStr(context, global, "hostReference",
                       JS_NewCFunction(context, make_host_reference,
                                       "hostReference", 1));
+    JS_SetPropertyStr(context, global, "releaseHostReferenceLease",
+                      JS_NewCFunction(context, release_host_reference_lease,
+                                      "releaseHostReferenceLease", 1));
+    JS_SetPropertyStr(context, global, "releaseHostReference",
+                      JS_NewCFunction(context, release_host_reference_token,
+                                      "releaseHostReference", 1));
     JS_SetPropertyStr(context, global, "print",
                       JS_NewCFunction(context, guest_print, "print", 1));
     JS_SetPropertyStr(context, global, "bridge",
@@ -279,11 +319,14 @@ static void drain_jobs(void)
 
 static void flush_guest_operations(void)
 {
-    static const char source[] = "globalThis.flush && flush()";
+    static const char source[] =
+        "globalThis.flush && flush();"
+        "globalThis.reconcileGuestConnectivity && reconcileGuestConnectivity()";
     JSValue result = JS_Eval(context, source, sizeof(source) - 1,
                              "guest-flush.js", JS_EVAL_TYPE_GLOBAL);
-    if (JS_IsException(result))
+    if (JS_IsException(result)) {
         report_stage("guest-flush-error");
+    }
     JS_FreeValue(context, result);
 }
 
