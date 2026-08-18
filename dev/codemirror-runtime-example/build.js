@@ -31,8 +31,7 @@ await writeFile(canonicalEnvironment,
     .replaceAll("new HostReference(reference)", "hostReference(reference)")
     .replace("var document = new GuestDocument(documentReference[1]);",
       "var document = new GuestDocument(documentReference[1]);\n" +
-      "globalThis.__wwcReportError = function(error) { immediate([3, document.reference, " +
-      "stringIndex('debug'), [encode(String(error))]]); };")
+      "globalThis.__wwcReportError = function() {};")
     .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
   "\n" + fullEngineSurface);
 

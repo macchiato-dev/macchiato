@@ -4,35 +4,6 @@ const services = {
   route: { get: () => "/", listen() {} },
   storage: { get: () => null, set() {}, delete() {}, listen() {} },
 };
-const profiling = new URL(location.href).searchParams.has("profile");
-const instrumenting = new URL(location.href).searchParams.has("instrument");
-const instrumentation = [];
-if (instrumenting) globalThis.__wwcInstrumentation = instrumentation;
-const references = new Map();
-const referenceLeases = new Map();
-if (profiling) {
-  globalThis.__wwcReferenceMetrics = () => ({
-    active: references.size,
-    nodes: Array.from(references.values()).filter(value => value instanceof Node).length,
-    leases: Array.from(referenceLeases.values()).reduce((sum, count) => sum + count, 0),
-    maximumLease: Math.max(0, ...referenceLeases.values()),
-    detachedLeases: Array.from(references).reduce((sum, [id, value]) =>
-      sum + (value instanceof Node && !value.isConnected ? referenceLeases.get(id) || 0 : 0), 0),
-    attachedLeases: Array.from(references).reduce((sum, [id, value]) =>
-      sum + (value instanceof Node && value.isConnected ? referenceLeases.get(id) || 0 : 0), 0),
-    detached: Object.entries(Object.groupBy(
-      Array.from(references.values()).filter(value => value instanceof Node && !value.isConnected),
-      value => value.nodeType === Node.TEXT_NODE ? "#text" :
-        `${value.nodeName.toLowerCase()}.${String(value.className || "").split(/\s+/, 1)[0] || "-"}`,
-    )).map(([kind, values]) => [kind, values.length]).sort((left, right) => right[1] - left[1]),
-    types: Object.entries(Object.groupBy(Array.from(references.values()),
-      value => value?.constructor?.name || typeof value))
-      .map(([kind, values]) => [kind, values.length])
-      .sort((left, right) => right[1] - left[1]),
-    guest: globalThis.__wwcGuestOwnership || null,
-  });
-}
-
 try {
   const guestUrl = document.querySelector("[data-wasm]")?.dataset.wasm ||
     "./generated/codemirror-canonical.wasm";
@@ -44,22 +15,6 @@ try {
   const host = createWasmWebContainer(document, {
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services,
-    development: true,
-    profiling,
-    instrument: instrumenting ? event => instrumentation.push(event) : undefined,
-    onDebug(message) {
-      if (profiling && message.startsWith("OWNERSHIP:")) {
-        globalThis.__wwcGuestOwnership = JSON.parse(message.slice(10));
-        return;
-      }
-      console.error(`QuickJS guest: ${message}`);
-    },
-    onReferenceCreate: profiling ? (id, value) => references.set(id, value) : undefined,
-    onReferenceRelease: profiling ? id => references.delete(id) : undefined,
-    onReferenceLease: profiling ? (id, count) => {
-      if (count) referenceLeases.set(id, count);
-      else referenceLeases.delete(id);
-    } : undefined,
   });
   const instance = new WebAssembly.Instance(module, host.imports);
   await host.connect(instance);

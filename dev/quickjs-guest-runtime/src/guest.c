@@ -320,8 +320,7 @@ static void drain_jobs(void)
 static void flush_guest_operations(void)
 {
     static const char source[] =
-        "globalThis.flush && flush();"
-        "globalThis.reconcileGuestConnectivity && reconcileGuestConnectivity()";
+        "globalThis.flush && flush()";
     JSValue result = JS_Eval(context, source, sizeof(source) - 1,
                              "guest-flush.js", JS_EVAL_TYPE_GLOBAL);
     if (JS_IsException(result)) {

@@ -91,39 +91,6 @@ globalThis.__wwcNodeForReference = nodeForReference;
 rememberNode(document.head);
 rememberNode(document.body);
 
-if (hostGet(document.reference, "profiling") === true) {
-  setInterval(function () {
-    var live = 0, parented = 0, listeners = 0, roots = Object.create(null);
-    Object.keys(guestNodes).forEach(function (reference) {
-      var node = guestNodes[reference].deref();
-      if (!node) return;
-      live++;
-      if (parentOf(node)) parented++;
-      listeners += node._eventListeners ? node._eventListeners.length : 0;
-      var root = node, guard = 0;
-      while (parentOf(root) && guard++ < 4096) root = parentOf(root);
-      roots[root.reference] = (roots[root.reference] || 0) + 1;
-    });
-    var seen = [], visit = function (node) {
-      if (!node || seen.indexOf(node) > -1) return;
-      seen.push(node);
-      childrenOf(node).forEach(visit);
-    };
-    visit(document.head);
-    visit(document.body);
-    hostCall(document.reference, "debug", ["OWNERSHIP:" + JSON.stringify({
-      live: live,
-      parented: parented,
-      tree: seen.length,
-      roots: Object.keys(roots).map(function (reference) {
-        return [Number(reference), roots[reference]];
-      }).sort(function (left, right) { return right[1] - left[1]; }).slice(0, 8),
-      listeners: listeners,
-      callbacks: callbackStates.filter(Boolean).length
-    })]);
-  }, 250);
-}
-
 Object.defineProperty(GuestObject.prototype, "nodeType", {
   get: function () {
     return immediate([1, this.reference, stringIndex("nodeType")]);
