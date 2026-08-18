@@ -18,15 +18,24 @@ host lacks the native C collection. A small, separate platform ponyfill contains
 additional APIs discovered by executing CodeMirror, currently `Array.find`,
 `Object.assign`, and `encodeURIComponent`.
 
-The complete bundle now executes through initialization and reaches
-the guest DOM implementation. MicroQuickJS work is paused after reaching
-CodeMirror plugin initialization; Bellard QuickJS is the first end-to-end
-Wasm milestone. Browser-realm execution is only a development baseline and
-does not count as passing the runtime example.
+The complete bundle executes end to end in MicroQuickJS. The same acceptance
+suite exercises completion, folding, search, selection, clipboard behavior,
+native text dragging, undo/redo, gutters, and sustained human-shaped editing.
+Browser-realm execution remains a development baseline and does not count as
+passing the runtime example.
+
+Syntax and runtime semantics deliberately have different owners. Babel lowers
+modern syntax to the ES5-shaped language MicroQuickJS accepts. `Map`, `Set`,
+`WeakMap`, and `WeakSet` are C runtime classes. Ordered collections use compact
+strong tables with insertion order and SameValueZero keys. Weak collections
+use GC-integrated ephemeron tables and never decorate their keys. The vendored
+ungap implementations are readable fallbacks for other small ES5 hosts, not a
+substitute for native lifetime semantics.
 
 ## Browser demos
 
-`http://codemirror-quickjs.localhost:3030/` is a directory of three builds:
+`http://codemirror-quickjs.localhost:3030/` links to the direct baseline,
+QuickJS builds, and the full MicroQuickJS build. The QuickJS configurations are:
 
 - `simple/` uses a small document and deliberately small configuration;
 - `full/` demonstrates languages, search, folding, history, completion,
@@ -51,10 +60,19 @@ development machine, Wasm initialization is about 120–180 ms and the browser
 pages become ready in about 160–275 ms. Current artifact sizes are roughly
 1.5 MiB for simple and 1.9 MiB for full and large.
 
+The MicroQuickJS artifact is roughly 1.4 MiB and becomes browser-ready in about
+200–250 ms on the current development machine. Its monotonic clock is a direct
+Wasm import; one serialized epoch read gives `Date.now()` wall-clock meaning.
+Geometry and node lists cross as compact byte records, while ordered style
+writes share the next operation batch. In the current browser test, these
+general boundary changes reduced the full interaction run from about 203 to
+121 seconds and a representative single-key median from roughly 18–19 ms to
+about 12–13 ms.
+
 ## Browser projection milestone
 
-Each editor runs the CodeMirror bundle only inside Bellard QuickJS compiled to
-WebAssembly. The browser module starts the
+Each sandboxed editor runs the CodeMirror bundle only inside its selected
+JavaScript VM compiled to WebAssembly. The browser module starts the
 VM, accepts an allowlisted DOM snapshot, sanitizes generated CSS, and projects
 the resulting tree into an owned page surface. CodeMirror is not imported into
 the browser realm.
@@ -72,11 +90,11 @@ visible at the position owned by CodeMirror. A guest event's `preventDefault`
 result also returns synchronously, preventing navigation keys from executing
 again as browser defaults.
 
-The next protocol step is to send browser `MutationObserver`, selection, and
-measurement records alongside the triggering input event. That lets ordinary
-contenteditable input be observed by CodeMirror without an editor command in
-the host. Once that works, steady-state guest writes should become ordered
-mutation batches rather than repeated full-tree snapshots. Most DOM-shaped guest objects can be
+Browser `MutationObserver`, selection, and measurement records are available
+synchronously to the guest, so ordinary contenteditable input is observed by
+CodeMirror without editor-specific commands in the host. Steady-state guest
+writes use ordered operation batches rather than repeated full-tree snapshots.
+Most DOM-shaped guest objects can be
 short-lived facade objects. A facade acquires a durable scalar host reference
 only when its identity must cross a batch, survive reordering, or remain in an
 event callback. QuickJS finalizers enqueue releases; they should not cause a
