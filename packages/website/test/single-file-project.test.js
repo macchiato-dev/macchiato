@@ -35,37 +35,39 @@ test("records exact constrained CDN fetch grants for the QuickJS runtime", () =>
   assert.equal(snapshot.config.sandbox.network, false);
 });
 
-test("Mahjong renders fetched artwork through image elements, not CSS", () => {
+test("Mahjong keeps its improved game and artwork in portable project files", () => {
   const example = new URL("../../../examples/mahjong/", import.meta.url);
-  const source = readFileSync(new URL("index.html", example), "utf8");
+  const html = readFileSync(new URL("index.html", example), "utf8");
+  const source = readFileSync(new URL("mahjong.js", example), "utf8");
+  const css = readFileSync(new URL("style.css", example), "utf8");
+  assert.match(html, /src="\.\/mahjong\.js"/);
+  assert.match(html, /href="\.\/style\.css"/);
   assert.match(source, /document\.createElement\(["']img["']\)/);
   assert.match(source, /response\.resourceUrl\(\)/);
-  assert.doesNotMatch(source, /https:\/\/cdn\.jsdelivr\.net/);
+  assert.doesNotMatch(`${html}\n${source}\n${css}`, /https:\/\/cdn\.jsdelivr\.net/);
   assert.equal(existsSync(new URL("tiles/ExampleRegular.png", example)), true);
   for (const kind of ["Flower", "Season"]) for (let number = 1; number <= 4; number += 1)
-    assert.equal(existsSync(new URL(`tiles/Regular/${kind}${number}.svg`, example)), true);
-  assert.doesNotMatch(source, /--tiles|background-image:\s*var\(/);
-  assert.doesNotMatch(source, /id="hint"|id="shuffle"|highlighted free tile/i);
+    assert.equal(existsSync(new URL(`tiles/${kind}${number}.svg`, example)), true);
+  for (const icon of ["settings.svg", "undo-2.svg"])
+    assert.equal(existsSync(new URL(`icons/${icon}`, example)), true);
+  assert.doesNotMatch(css, /--tiles|background-image:\s*var\(/);
+  assert.doesNotMatch(source, /id="shuffle"|highlighted free tile/i);
   assert.doesNotMatch(source, /A free tile has|nothing covers it|Select a free tile|matching free tile/i);
-  assert.doesNotMatch(source, /Clear the familiar turtle/);
-  assert.match(source, /container-type:\s*inline-size/);
-  assert.match(source, /width:\s*min\(760px,\s*100%\)/);
-  assert.match(source, /aspect-ratio:\s*760\/590/);
-  assert.doesNotMatch(source, /\.tile\.selected\s*\{[^}]*outline/);
-  assert.doesNotMatch(source, /\.tile:hover/);
-  assert.match(source, /\.tile\.removing\s*\{[^}]*opacity:\s*0/);
-  assert.match(source, /\.tile\.deselecting\s*\{[^}]*filter:\s*none/);
-  assert.match(source, /state\.mismatch\.add\(firstIndex\)[\s\S]*state\.mismatch\.add\(index\)/);
+  assert.match(css, /container-type:\s*inline-size/);
+  assert.match(css, /width:\s*min\(760px,\s*100%\)/);
+  assert.match(css, /aspect-ratio:\s*760\s*\/\s*590/);
+  assert.doesNotMatch(css, /\.tile\.selected\s*\{[^}]*outline/);
+  assert.doesNotMatch(css, /\.tile:hover/);
+  assert.match(css, /\.tile\[hidden\]\s*\{[^}]*display:\s*none/);
   assert.doesNotMatch(source, /Those tiles do not match/);
-  assert.doesNotMatch(source, /No moves remain|Board cleared|id="message"/);
-  assert.doesNotMatch(source, /id="stats"|tiles ·|moves/);
-  assert.match(source, /image\.style\.inset\s*=\s*["']0["']/);
-  assert.match(source, /image\.style\.left\s*=\s*["']0["']/);
-  assert.match(source, /image\.style\.inset\s*=\s*["']auto["']/);
-  assert.match(source, /const rows\s*=\s*\[\[12,\s*1\],[\s\S]*\[12,\s*1\]\]/);
+  assert.match(source, /settingButton\("Enable undo"/);
+  assert.match(source, /settingButton\("Show time \/ moves"/);
+  assert.match(source, /settingButton\("Show hint button"/);
+  assert.match(source, /winMessage\.textContent = "You Win!"/);
+  assert.match(source, /var rows\s*=\s*\[\[12,1\],[\s\S]*\[12,1\]\]/);
   assert.match(source, /layer\(1,\s*6,\s*6,\s*4,\s*1\)[\s\S]*layer\(3,\s*2,\s*2,\s*6,\s*3\)/);
-  assert.match(source, /out\.push\(\{\s*x:\s*6\.5,\s*y:\s*3\.5,\s*z:\s*4\s*\}\)/);
-  assert.match(source, /return shuffle\(pairs\)/);
-  assert.match(source, /const SOLUTION\s*=\s*\[\s*\[/);
+  assert.match(source, /result\.push\(\{\s*x:\s*6\.5,\s*y:\s*3\.5,\s*z:\s*4\s*\}\)/);
+  assert.match(source, /shuffle\(types\)/);
+  assert.match(source, /var solution\s*=\s*\[\s*\[/);
   assert.doesNotMatch(source, /row\.shift\(\).*row\.pop\(/);
 });

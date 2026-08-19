@@ -1,0 +1,88 @@
+:root {
+  --ground: #102e29;
+  --panel: #17473d;
+  --line: #3d7467;
+  --gold: #efc76f;
+  --ink: #f7f0df;
+  --muted: #b9d1ca;
+  --tile: #e8d9bd;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 18px;
+  color: var(--ink);
+  background: radial-gradient(circle at 50% 35%, #246253, var(--ground) 72%);
+  font: 14px system-ui, sans-serif;
+}
+
+main { width: min(940px, 100%); margin: auto; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+main > header { position: relative; z-index: 600; }
+h1 { margin: 0; color: var(--gold); font: 600 clamp(29px, 4.5vw, 44px) "Cormorant Garamond", serif; }
+.controls { display: flex; align-items: center; gap: 7px; font-family: "Space Grotesk", sans-serif; }
+
+button.action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #8db7ab;
+  border-radius: 7px;
+  color: var(--ink);
+  background: #205c4e;
+  font: 700 13px "Space Grotesk", sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button.action:hover { border-color: var(--gold); background: #2a725f; }
+.game { padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5, 28, 24, .68); box-shadow: 0 18px 50px rgba(0, 0, 0, .28); }
+.board-scroll { position: relative; border: 1px solid #2b5d51; border-radius: 11px; background: #0b2924; padding: 20px; }
+.board { container-type: inline-size; position: relative; width: min(760px, 100%); aspect-ratio: 760 / 590; margin: auto; }
+
+.tile {
+  position: absolute;
+  width: 6.578947368421052cqw;
+  height: 8.68421052631579cqw;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #c5b391;
+  border-radius: clamp(2px, .6579cqw, 5px);
+  background: var(--tile);
+  box-shadow:
+    clamp(1px, .2632cqw, 2px) clamp(1px, .3947cqw, 3px) 0 #735e3d,
+    clamp(-2px, -.2632cqw, -1px) clamp(2px, .5263cqw, 4px)
+      clamp(4px, 1.0526cqw, 8px)
+      rgba(0, 0, 0, .26);
+  cursor: pointer;
+  transition: filter 90ms linear, opacity 260ms ease-out;
+}
+
+.tile img { position: absolute; left: 0; top: 0; max-width: none; pointer-events: none; }
+.tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.tile.selected { filter: brightness(.66) saturate(.85); }
+.tile[hidden] { display: none; }
+.tile-name-display { position: absolute; right: 10px; bottom: 7px; min-width: 120px; color: var(--gold); font: 600 14px "Libre Baskerville", serif; text-align: right; }
+.stats { min-width: 128px; color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
+.control-icon { width: 16px; height: 16px; }
+.settings { position: relative; }
+.settings-dismiss { position: fixed; inset: 0; z-index: 90; }
+.settings-menu { position: absolute; right: 0; top: 40px; z-index: 100; min-width: 250px; padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: #133a32; box-shadow: 0 12px 30px rgba(0, 0, 0, .4); }
+.setting { width: 100%; padding: 8px; border: 0; border-radius: 6px; color: var(--ink); background: transparent; font: 600 12px "Space Grotesk", sans-serif; text-align: left; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.setting:hover { background: #205c4e; }
+.setting::after { content: ""; min-width: 30px; width: 30px; height: 17px; border: 1px solid #6e9a8e; border-radius: 999px; background: radial-gradient(circle at 7px 50%, var(--muted) 0 5px, transparent 6px), #0b2924; transition: background 120ms ease, border-color 120ms ease; }
+.setting[aria-pressed="true"]::after { border-color: var(--gold); background: radial-gradient(circle at 21px 50%, var(--gold) 0 5px, transparent 6px), #2a725f; }
+.game-status { min-height: 16px; padding-top: 5px; color: var(--gold); font: 12px "Space Grotesk", sans-serif; text-align: center; }
+.win-message { position: absolute; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; color: var(--gold); opacity: 0; font: 600 clamp(35px, 5.4vw, 53px) "Cormorant Garamond", serif; pointer-events: none; transition: opacity 20s ease-in; }
+.win-message.visible { opacity: 1; }
+footer { display: flex; gap: 10px; margin-top: 9px; color: var(--muted); font: 11px "Space Grotesk", sans-serif; }
+footer button { padding: 0; border: 0; color: var(--gold); background: transparent; font: inherit; text-decoration: underline; cursor: pointer; }
+.modal { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(3, 18, 15, .78); }
+.modal-card { width: min(560px, 100%); padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #133a32; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); font-family: "Space Grotesk", sans-serif; }
+.modal-card header { margin-bottom: 12px; }
+.modal-card input { width: 100%; padding: 9px; border: 1px solid #8db7ab; border-radius: 6px; color: var(--ink); background: #092720; font: 12px "Space Grotesk", sans-serif; }
+[hidden] { display: none !important; }
