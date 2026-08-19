@@ -458,6 +458,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let previewTimer = 0;
   let editorPreviewTimer = 0;
   let previewGeneration = 0;
+  let outputFrame = null;
+  let outputFramePort = null;
+  let outputFrameReady = null;
+  let outputFrameRequested = false;
   let activeError = "";
   let activeErrorAction = null;
   let activeStatusSurface = "output";
@@ -574,7 +578,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     delete root.dataset.editorLoading;
   }
 
-  function renderPreview() {
+  async function renderPreview() {
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
     const generation = ++previewGeneration;
@@ -585,18 +589,17 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } catch (error) {
       setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
     }
-    delete preview.dataset.previewRuntime;
-    delete preview.dataset.previewViolations;
-    delete preview.dataset.projectMachineId;
-    delete preview.dataset.canvasCommands;
-    previewController?.destroy();
-    previewController = null;
     const entry = state.config?.entry || "index.html";
     const source = state.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
     const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
     if (containerName === "presentation" || containerName === "single-file-web-app") {
+      previewController?.destroy();
+      previewController = null;
+      outputFrame?.remove();
+      outputFrame = outputFramePort = outputFrameReady = null;
+      delete preview.dataset.projectMachineId;
       const containerEntry = state.config?.containerEntry || entry;
       const containerSource = state.files.find((file) => file.path === containerEntry)?.content || source;
       const artifactPath = String(state.config?.artifactPath || "");
@@ -642,6 +645,44 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       });
       preview.dataset.previewRuntime = "presentation-use";
       return;
+    }
+    const outputOptions = state.config?.output || {};
+    const useOutputFrame = outputOptions.iframe !== false && outputFrameRequested;
+    let surfaceHost, surfaceRoot, surfaceBody;
+    if (useOutputFrame) {
+      if (!outputFrame) {
+        outputFrame = document.createElement("iframe");
+        outputFrame.className = "project-editor__preview-surface";
+        outputFrame.title = `${title} output`;
+        outputFrame.sandbox = "allow-same-origin allow-scripts";
+        outputFrame.src = "/-/resources-site/project-output-frame.html";
+        outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
+        outputFrame.hidden = true;
+        outputFrameReady = new Promise((resolve, reject) => {
+          outputFrame.addEventListener("load", () => {
+            const channel = new MessageChannel();
+            channel.port1.addEventListener("message", (event) => {
+              if (event.data?.type === "ready") { outputFramePort = channel.port1; resolve(); }
+            });
+            channel.port1.start();
+            outputFrame.contentWindow.postMessage({ protocol: "resources-project-output-frame-v1", type: "connect" }, location.origin, [channel.port2]);
+          }, { once: true });
+          outputFrame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
+        });
+        preview.append(outputFrame);
+      }
+      surfaceHost = outputFrame;
+      await outputFrameReady;
+      if (generation !== previewGeneration) return;
+      preview.dataset.outputSurface = "iframe";
+    } else {
+      surfaceHost = document.createElement("div");
+      surfaceHost.className = "project-editor__preview-surface";
+      surfaceRoot = surfaceHost.attachShadow({ mode: "open" });
+      surfaceBody = document.createElement("body");
+      surfaceRoot.append(surfaceBody);
+      preview.replaceChildren(surfaceHost);
+      preview.dataset.outputSurface = "direct";
     }
     const parsed = new DOMParser().parseFromString(source, "text/html");
     const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
@@ -712,36 +753,59 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       parent.append(element);
     }
     for (const child of parsed.body.childNodes) copy(child, fragment);
-    const surfaceHost = document.createElement("div");
-    surfaceHost.className = "project-editor__preview-surface";
-    const surfaceRoot = surfaceHost.attachShadow({ mode: "open" });
-    const surfaceBody = document.createElement("body");
-    surfaceBody.append(fragment);
+    const staging = document.createElement("div");
+    staging.append(fragment);
+    const serializeOutputNode = (node) => node.nodeType === Node.TEXT_NODE ? [0, node.textContent] : [
+      1, node.localName, node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
+      [...node.attributes].map((attribute) => [attribute.name, attribute.value]),
+      [...node.childNodes].map(serializeOutputNode),
+    ];
+    const outputTree = [...staging.childNodes].map(serializeOutputNode);
     const stylesheetPaths = state.config?.stylesheets || [...parsed.querySelectorAll('link[rel="stylesheet"][href]')]
       .map((link) => link.getAttribute("href").replace(/^\.\//, ""));
     const css = [
       ...parsed.querySelectorAll("style"),
       ...stylesheetPaths.map((path) => state.files.find((file) => file.path === path)).filter(Boolean),
     ].map((item) => item.content ?? item.textContent ?? "").join("\n");
+    let renderedCss = "";
     if (css) {
       try {
         new StyleUse(state.config?.cssSchema || { imports: false, urls: false }).validateStylesheet(css);
-        const style = document.createElement("style");
-        style.textContent = `:host { display: block; min-height: 100%; }\n${css}`;
-        surfaceRoot.append(style);
+        renderedCss = css;
+        if (!useOutputFrame) {
+          const style = document.createElement("style");
+          style.textContent = `:host { display: block; min-height: 100%; }\n${css}`;
+          surfaceRoot.append(style);
+        }
       } catch (error) {
         reject(`Stylesheet was omitted: ${error.message}`);
       }
     }
-    surfaceRoot.append(surfaceBody);
-    preview.replaceChildren(surfaceHost);
+    let stagedRoot = "";
+    if (useOutputFrame) {
+      await new Promise((resolve) => {
+        const receive = (event) => {
+          if (event.data?.type !== "staged" || event.data.generation !== generation) return;
+          stagedRoot = event.data.root;
+          outputFramePort.removeEventListener("message", receive);
+          resolve();
+        };
+        outputFramePort.addEventListener("message", receive);
+        outputFramePort.postMessage({ type: "stage", generation, css: renderedCss });
+      });
+      if (generation !== previewGeneration) return;
+      surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
+      if (!surfaceBody) throw new Error("Project output frame root is unavailable");
+    } else {
+      surfaceBody.append(...staging.childNodes);
+    }
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
       if (generation !== previewGeneration) return;
       try {
         editorController?.projectOutput.request(generation);
         const controller = await mountResourcesProjectPreview({
-          root: surfaceBody, statusRoot: preview, scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
+          root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
           allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins || [],
           onViolation(error) {
             if (generation !== previewGeneration) return;
@@ -751,7 +815,26 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         });
         if (generation !== previewGeneration) controller.destroy();
         else {
+          if (useOutputFrame) {
+            controller.setContent(outputTree);
+            await controller.run(scripts);
+            await new Promise((resolve) => {
+              const receive = (event) => {
+                if (event.data?.type !== "committed" || event.data.generation !== generation) return;
+                outputFramePort.removeEventListener("message", receive);
+                resolve();
+              };
+              outputFramePort.addEventListener("message", receive);
+              outputFramePort.postMessage({ type: "commit", generation });
+            });
+            if (generation !== previewGeneration) { controller.destroy(); return; }
+            outputFrame.hidden = false;
+            for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
+          }
+          previewController?.destroy();
           previewController = controller;
+          delete preview.dataset.previewViolations;
+          delete preview.dataset.canvasCommands;
           const inspection = controller.inspect?.();
           const machine = inspection?.machine;
           preview.dataset.projectMachineId = machine?.machineId || "wasm-web-machine";
@@ -780,6 +863,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     clearTimeout(previewTimer);
     previewController?.destroy();
     previewController = null;
+    outputFramePort?.close();
+    outputFrame?.remove();
+    outputFrame = outputFramePort = outputFrameReady = null;
+    outputFrameRequested = false;
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
     delete preview.dataset.projectMachineId;
@@ -1186,9 +1273,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (syntaxErrors) {
         setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
       } else {
+        outputFrameRequested = true;
         // Keep the current output alive while the user is typing. Rebuilding
         // its DOM and QuickJS machine is intentionally a trailing-edge task.
-        editorPreviewTimer = setTimeout(renderPreview, 500);
+        const debounceMs = Math.min(5_000, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
+        editorPreviewTimer = setTimeout(renderPreview, debounceMs);
       }
     } catch {}
   }

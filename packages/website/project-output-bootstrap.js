@@ -2,6 +2,21 @@
 let nextFetch = 1;
 const pendingFetches = new Map();
 
+function outputNode(value) {
+  if (!Array.isArray(value) || (value[0] !== 0 && value[0] !== 1)) throw new TypeError("Invalid project output node");
+  if (value[0] === 0) return document.createTextNode(String(value[1]));
+  const node = value[2] ? document.createElementNS("http://www.w3.org/2000/svg", value[1]) : document.createElement(value[1]);
+  for (const attribute of value[3] || []) node.setAttribute(attribute[0], attribute[1]);
+  for (const child of value[4] || []) node.append(outputNode(child));
+  return node;
+}
+
+globalThis.__resourcesOutputSetContent = (json) => {
+  const nodes = JSON.parse(json);
+  document.body.replaceChildren(...nodes.map(outputNode));
+  return JSON.stringify({ mounted: nodes.length });
+};
+
 globalThis.__wwcFetchMissing = (url) => new Promise((resolve, reject) => {
   const id = nextFetch++;
   pendingFetches.set(id, { resolve, reject });

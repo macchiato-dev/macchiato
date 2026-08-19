@@ -27,7 +27,7 @@ export function createConstrainedFetch(allowedOrigins = [], maxBytes = 1_048_576
   }; }
 export async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = null, starting = true, destroyed = false, machine;
+  let reportedError = null, response, starting = true, destroyed = false, machine;
   async function answerFetch(request) {
     try {
       if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
@@ -36,6 +36,7 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
     } catch (error) { if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })); }
   }
   machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
+    if (text.startsWith("__wwcResponse:")) { response = text.slice(14); return; }
     if (text.startsWith("__wwcError:") && !reportedError) {
       reportedError = new Error(text.slice(11));
       if (!starting) queueMicrotask(() => onError?.(reportedError));
@@ -53,9 +54,25 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
   for (const script of scripts) { await machine.onmsg(taggedMessage(1, script.code));
     if (reportedError) { machine.destroy(); throw reportedError; }
   }
+  let programs = scripts.length;
   starting = false;
-  return Object.freeze({ destroy() { destroyed = true; machine.destroy(); },
-    inspect() { return { runtime: "quickjs", programs: scripts.length, machine: { machineId } }; } });
+  function call(name, payload) {
+    response = undefined;
+    machine.onmsg(callMessage(name, payload));
+    if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
+    return JSON.parse(response);
+  }
+  return Object.freeze({
+    setContent(tree) { return call("__resourcesOutputSetContent", tree); },
+    async run(nextScripts) {
+      reportedError = null;
+      for (const script of nextScripts) await machine.onmsg(taggedMessage(1, script.code));
+      if (reportedError) throw reportedError;
+      programs += nextScripts.length;
+    },
+    destroy() { destroyed = true; machine.destroy(); },
+    inspect() { return { runtime: "quickjs", programs, machine: { machineId } }; },
+  });
 }
 export async function createProjectAppMachine(root) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");

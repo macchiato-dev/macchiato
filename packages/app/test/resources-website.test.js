@@ -215,26 +215,27 @@ test("Resources.co blog container examples render and surface schema errors in t
       await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000"));
       await page.waitForTimeout(500);
       await page.locator("[data-preview-runtime='quickjs']").waitFor();
-      const initialTime = await page.locator("[data-project-preview] #time").textContent();
+      const output = page.frameLocator("[data-project-preview] iframe.project-editor__preview-surface");
+      const initialTime = await output.locator("#time").textContent();
       await page.waitForTimeout(1_500);
-      assert.equal(await page.locator("[data-project-preview] #time").textContent(), initialTime);
-      await page.waitForFunction((previous) => document.querySelector("[data-project-preview] #time")?.textContent !== previous, initialTime, { timeout: 5_500 });
+      assert.equal(await output.locator("#time").textContent(), initialTime);
+      await page.waitForTimeout(4_200);
+      assert.notEqual(await output.locator("#time").textContent(), initialTime);
     }
     if (template === "article") {
       const sourceEditor = page.locator(".cm-content");
       await sourceEditor.press("Control+A");
       await sourceEditor.fill(snapshot.files.find((file) => file.path === "index.html").content.replace("A small article</h1>", "A changed article</h1>"));
-      await page.locator("[data-project-preview] h1", { hasText: "A changed article" }).waitFor();
+      const output = page.frameLocator("[data-project-preview] iframe.project-editor__preview-surface");
+      await output.locator("h1", { hasText: "A changed article" }).waitFor();
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="style.css"]').click();
       await sourceEditor.press("Control+A");
       await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
-      await page.waitForFunction(() => {
-        const host = document.querySelector("[data-project-preview] .project-editor__preview-surface");
-        const body = host?.shadowRoot?.querySelector("body");
-        return body && getComputedStyle(body).backgroundColor === "rgb(12, 34, 56)";
-      });
-      assert.equal(await page.locator("[data-project-preview] h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
+      await output.locator("body").waitFor();
+      await page.waitForTimeout(1_100);
+      assert.equal(await output.locator("body").evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
+      assert.equal(await output.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
       await page.getByLabel("Template").selectOption("mark");
       await page.locator("[data-project-file-trigger]").click();
       await assert.doesNotReject(page.locator('[data-project-file="image.svg"]').waitFor());
@@ -999,8 +1000,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
-  await page.waitForFunction(() => document.querySelector("[data-project-preview] .project-editor__preview-surface")
-    ?.shadowRoot?.textContent.includes("Updated."));
+  await page.waitForTimeout(2_000);
+  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor();
   assert.notEqual(await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"), projectMachineBeforeEdit);
   const versionsButton = page.locator("[data-project-versions-proxy]");
   assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
@@ -1011,13 +1012,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent.endsWith("ago"));
-  await page.waitForFunction(() => !document.querySelector("[data-project-preview] .project-editor__preview-surface")
-    ?.shadowRoot?.textContent.includes("Updated."));
+  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
   await page.locator("[data-project-version-list] [aria-current='true']").click();
-  await page.waitForFunction(() => document.querySelector("[data-project-preview] .project-editor__preview-surface")
-    ?.shadowRoot?.textContent.includes("Updated."));
+  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();

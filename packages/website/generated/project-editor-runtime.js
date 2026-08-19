@@ -417,14 +417,19 @@ var WasmWebBridge = class {
   destroy;
   send;
   constructor(target, options) {
-    const targetRoots = target === document ? [] : target instanceof Element ? [target] : Array.from(target || []);
+    const elementFromItsRealm = (value2) => Boolean(value2?.ownerDocument?.defaultView?.Element && value2 instanceof value2.ownerDocument.defaultView.Element);
+    const documentTarget = target === document;
+    const targetRoots = documentTarget ? [] : elementFromItsRealm(target) ? [target] : Array.from(target || []);
     const portalRoots = Array.from(options.portals || []);
-    if (target !== document && (!targetRoots.length || [...targetRoots, ...portalRoots].some((root) => !(root instanceof Element)))) {
+    if (!documentTarget && (!targetRoots.length || [...targetRoots, ...portalRoots].some((root) => !elementFromItsRealm(root)))) {
       fail("target must be document, an element, or a non-empty element collection");
     }
     const roots = [.../* @__PURE__ */ new Set([...targetRoots, ...portalRoots])];
-    const primaryRoot = target === document ? document.body : targetRoots[0];
-    const logicalHead = target === document ? document.head : portalRoots[0] || primaryRoot;
+    const hostDocument = documentTarget ? document : targetRoots[0].ownerDocument;
+    const realm = hostDocument.defaultView || globalThis;
+    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element: Element2, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
+    const primaryRoot = documentTarget ? hostDocument.body : targetRoots[0];
+    const logicalHead = documentTarget ? hostDocument.head : portalRoots[0] || primaryRoot;
     const chunks = [];
     const leases = [];
     const reverse = /* @__PURE__ */ new WeakMap();
@@ -537,29 +542,29 @@ var WasmWebBridge = class {
       fail("unknown encoded value");
     }
     function insideDocument(node) {
-      if (node === document)
+      if (node === hostDocument)
         return true;
       if (!(node instanceof Node))
         return false;
-      if (target === document)
-        return node === document.head || node === document.body || document.documentElement.contains(node);
+      if (documentTarget)
+        return node === hostDocument.head || node === hostDocument.body || hostDocument.documentElement.contains(node);
       return ownedNodes.has(node) || roots.some((root) => node === root || root.contains(node));
     }
     function get(object, name) {
-      if (object === document && name === "profiling" && options.development === true) {
+      if (object === hostDocument && name === "profiling" && options.development === true) {
         return options.profiling === true;
       }
-      if (object === document && (name === "documentElement" || name === "head" || name === "body")) {
+      if (object === hostDocument && (name === "documentElement" || name === "head" || name === "body")) {
         return reference(name === "head" ? logicalHead : primaryRoot);
       }
-      if (object === document && name === "activeElement") {
+      if (object === hostDocument && name === "activeElement") {
         return object.activeElement && insideDocument(object.activeElement) ? reference(object.activeElement) : null;
       }
-      if (object === document && name === "platform")
+      if (object === hostDocument && name === "platform")
         return navigator.platform;
-      if (object === document && name === "hidden")
-        return document.hidden;
-      if (object === document && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
+      if (object === hostDocument && name === "hidden")
+        return hostDocument.hidden;
+      if (object === hostDocument && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
         return Math.round(globalThis[name]);
       }
       if (object instanceof Node && (name === "parentNode" || name === "parentElement")) {
@@ -606,12 +611,12 @@ var WasmWebBridge = class {
         "width"
       ].includes(name))
         return object[name];
-      if (object instanceof Element && name === "childElementCount") {
+      if (object instanceof Element2 && name === "childElementCount") {
         return object.childElementCount;
       }
       if (object instanceof HTMLElement && name === "style")
         return reference(object.style);
-      if (object instanceof Element && ["clientHeight", "clientWidth", "scrollHeight", "scrollWidth"].includes(name)) {
+      if (object instanceof Element2 && ["clientHeight", "clientWidth", "scrollHeight", "scrollWidth"].includes(name)) {
         return object[name];
       }
       if (object instanceof HTMLElement && ["offsetHeight", "offsetWidth", "scrollLeft", "scrollTop"].includes(name)) {
@@ -754,21 +759,21 @@ var WasmWebBridge = class {
         object[name](...args.map((argument) => argument / 1024));
         return null;
       }
-      if (object === document && name === "detachedRoots" && args.length === 0) {
+      if (object === hostDocument && name === "detachedRoots" && args.length === 0) {
         return new Uint8Array();
       }
-      if (object === document && name === "debug" && options.development === true) {
+      if (object === hostDocument && name === "debug" && options.development === true) {
         if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 16 * 1024) {
           fail("debug message is not bounded text");
         }
         options.onDebug?.(args[0]);
         return null;
       }
-      if (object === document && name === "postMessage" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 2 * 1024 * 1024) {
+      if (object === hostDocument && name === "postMessage" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 2 * 1024 * 1024) {
         options.onMessage?.(args[0]);
         return null;
       }
-      if (object === document && name === "installStylesheet") {
+      if (object === hostDocument && name === "installStylesheet") {
         installStylesheet(args[0]);
         return null;
       }
@@ -784,16 +789,16 @@ var WasmWebBridge = class {
         object.removeProperty(args[0]);
         return null;
       }
-      if (object === document && name === "renderSvg")
+      if (object === hostDocument && name === "renderSvg")
         return renderSvg(args[0]);
-      if (object === document && name === "getSelection" && args.length === 0) {
-        const selection = document.getSelection();
+      if (object === hostDocument && name === "getSelection" && args.length === 0) {
+        const selection = hostDocument.getSelection();
         return selection ? reference(selection) : null;
       }
-      if (object === document && name === "getComputedStyle" && args.length === 1 && args[0] instanceof Element && insideDocument(args[0])) {
+      if (object === hostDocument && name === "getComputedStyle" && args.length === 1 && args[0] instanceof Element2 && insideDocument(args[0])) {
         return reference(getComputedStyle(args[0]));
       }
-      if (object === document && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
+      if (object === hostDocument && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element2 && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
         const rects = name === "measureRect" ? [args[0].getBoundingClientRect()] : Array.from(args[0].getClientRects());
         const bytes = new Uint8Array(4 + rects.length * 32);
         const view = new DataView(bytes.buffer);
@@ -802,23 +807,23 @@ var WasmWebBridge = class {
         rects.forEach((rect, index) => names.forEach((property, propertyIndex) => view.setInt32(4 + index * 32 + propertyIndex * 4, Math.round(rect[property] * 64), true)));
         return bytes;
       }
-      if (object === document && name === "createRange" && args.length === 0) {
-        return reference(document.createRange());
+      if (object === hostDocument && name === "createRange" && args.length === 0) {
+        return reference(hostDocument.createRange());
       }
-      if (object === document && name === "hasFocus" && args.length === 0) {
-        return document.hasFocus();
+      if (object === hostDocument && name === "hasFocus" && args.length === 0) {
+        return hostDocument.hasFocus();
       }
-      if (object === document && name === "scrollBy" && args.length === 2 && args.every(Number.isInteger)) {
+      if (object === hostDocument && name === "scrollBy" && args.length === 2 && args.every(Number.isInteger)) {
         window.scrollBy(args[0], args[1]);
         return null;
       }
-      if (object === document && name === "dateNow" && args.length === 0) {
+      if (object === hostDocument && name === "dateNow" && args.length === 0) {
         return Date.now();
       }
-      if (object === document && name === "performanceNow" && args.length === 0) {
+      if (object === hostDocument && name === "performanceNow" && args.length === 0) {
         return Math.round(performance.now());
       }
-      if (object === document && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
+      if (object === hostDocument && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
         const flags = args[1];
         if (flags < 1 || flags > 31)
           fail("mutation observer flags are not allowed");
@@ -834,14 +839,14 @@ var WasmWebBridge = class {
         });
         return reference(observer);
       }
-      if (object === document && name === "timer") {
+      if (object === hostDocument && name === "timer") {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]) || intervals.size >= 1024)
           fail("timer is not allowed");
         const id = nextInterval++;
         intervals.set(id, setInterval(() => deliver(args[1]), args[0]));
         return id;
       }
-      if (object === document && name === "timerCancel" && args.length === 1 && Number.isInteger(args[0])) {
+      if (object === hostDocument && name === "timerCancel" && args.length === 1 && Number.isInteger(args[0])) {
         const timer = intervals.get(args[0]);
         if (timer !== void 0) {
           clearInterval(timer);
@@ -849,13 +854,13 @@ var WasmWebBridge = class {
         }
         return null;
       }
-      if (object === document && name === "timerOnce") {
+      if (object === hostDocument && name === "timerOnce") {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]))
           fail("one-shot timer is not allowed");
         setTimeout(() => deliver(args[1]), args[0]);
         return null;
       }
-      if (object === document && name === "cleanupOpportunity" && args.length === 2) {
+      if (object === hostDocument && name === "cleanupOpportunity" && args.length === 2) {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 6e4 || !Number.isInteger(args[1]) || cleanupCallbacks.size >= 1024) {
           fail("cleanup opportunity is not allowed");
         }
@@ -868,7 +873,7 @@ var WasmWebBridge = class {
         cleanupCallbacks.set(id, handle);
         return id;
       }
-      if (object === document && name === "animationFrame" && args.length === 1 && Number.isInteger(args[0])) {
+      if (object === hostDocument && name === "animationFrame" && args.length === 1 && Number.isInteger(args[0])) {
         const configured = typeof options.frameInterval === "function" ? options.frameInterval() : options.frameInterval;
         const delay = Number.isFinite(configured) ? Math.max(0, configured) : 0;
         if (delay > 0) {
@@ -881,22 +886,22 @@ var WasmWebBridge = class {
         }
         return requestAnimationFrame(() => deliver(args[0]));
       }
-      if (object === document && name === "cancelAnimationFrame" && args.length === 1 && Number.isInteger(args[0])) {
+      if (object === hostDocument && name === "cancelAnimationFrame" && args.length === 1 && Number.isInteger(args[0])) {
         if (animationTimeouts.delete(args[0]))
           clearTimeout(args[0]);
         else
           cancelAnimationFrame(args[0]);
         return null;
       }
-      if (object === document && name === "task" && args.length === 1 && Number.isInteger(args[0])) {
+      if (object === hostDocument && name === "task" && args.length === 1 && Number.isInteger(args[0])) {
         setTimeout(() => deliver(args[0]), 0);
         return null;
       }
-      if (object === document && name === "windowListen") {
+      if (object === hostDocument && name === "windowListen") {
         if (!["beforeprint", "blur", "focus", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
           fail("window event listener is not allowed");
         }
-        document.defaultView.addEventListener(args[0], (event) => deliver(args[1], event));
+        hostDocument.defaultView.addEventListener(args[0], (event) => deliver(args[1], event));
         return null;
       }
       if (object instanceof Event && ["preventDefault", "stopImmediatePropagation", "stopPropagation"].includes(name) && args.length === 0) {
@@ -941,14 +946,14 @@ var WasmWebBridge = class {
           fail("mutation node index is invalid");
         return reference(nodes[args[0]]);
       }
-      if (object instanceof Element && name === "getAttribute" && args.length === 1 && typeof args[0] === "string" && (isAllowedAttribute(args[0]) || args[0] === "style")) {
+      if (object instanceof Element2 && name === "getAttribute" && args.length === 1 && typeof args[0] === "string" && (isAllowedAttribute(args[0]) || args[0] === "style")) {
         return object.getAttribute(args[0]);
       }
       if (object instanceof MutationObserver && name === "disconnect" && args.length === 0) {
         object.disconnect();
         return null;
       }
-      if (object instanceof Element && name === "getAttribute") {
+      if (object instanceof Element2 && name === "getAttribute") {
         fail(`getAttribute ${String(args[0])} is not allowed on ${object.constructor.name}`);
       }
       if (object instanceof MutationObserver && name === "takeRecords" && args.length === 0) {
@@ -980,24 +985,24 @@ var WasmWebBridge = class {
       if (object instanceof Node && name === "contains") {
         fail(`contains argument is ${args[0]?.constructor?.name || String(args[0])}; inside=${args[0] instanceof Node && insideDocument(args[0])}`);
       }
-      if (object === document && name === "storageGet") {
+      if (object === hostDocument && name === "storageGet") {
         if (!options.services?.storage)
           fail("storage is not available");
         return options.services.storage.get(args[0], args[1]);
       }
-      if (object === document && name === "storageSet") {
+      if (object === hostDocument && name === "storageSet") {
         if (!options.services?.storage)
           fail("storage is not available");
         options.services.storage.set(args[0], args[1], args[2]);
         return null;
       }
-      if (object === document && name === "storageDelete") {
+      if (object === hostDocument && name === "storageDelete") {
         if (!options.services?.storage)
           fail("storage is not available");
         options.services.storage.delete(args[0], args[1]);
         return null;
       }
-      if (object === document && name === "storageListen") {
+      if (object === hostDocument && name === "storageListen") {
         if (!options.services?.storage)
           fail("storage is not available");
         const callback = args[2];
@@ -1006,12 +1011,12 @@ var WasmWebBridge = class {
         options.services.storage.listen(args[0], args[1], () => deliver(callback));
         return null;
       }
-      if (object === document && name === "routeGet") {
+      if (object === hostDocument && name === "routeGet") {
         if (!options.services?.route)
           fail("routing is not available");
         return options.services.route.get();
       }
-      if (object === document && name === "routeListen") {
+      if (object === hostDocument && name === "routeListen") {
         if (!options.services?.route)
           fail("routing is not available");
         if (!Number.isInteger(args[0]))
@@ -1019,38 +1024,38 @@ var WasmWebBridge = class {
         options.services.route.listen(() => deliver(args[0]));
         return null;
       }
-      if (object === document && name === "createElement") {
+      if (object === hostDocument && name === "createElement") {
         const tag = args[0];
         if (!ELEMENTS.has(tag))
           fail(`element ${tag} is not allowed`);
-        return reference(ownNode(document.createElement(tag)));
+        return reference(ownNode(hostDocument.createElement(tag)));
       }
-      if (object === document && name === "createElementNS") {
+      if (object === hostDocument && name === "createElementNS") {
         const [namespace, tag] = args;
         if (namespace !== "http://www.w3.org/2000/svg" || !SVG_ELEMENTS.has(tag)) {
           fail(`namespaced element ${tag} is not allowed`);
         }
-        return reference(ownNode(document.createElementNS(namespace, tag)));
+        return reference(ownNode(hostDocument.createElementNS(namespace, tag)));
       }
-      if (object === document && name === "createComment") {
+      if (object === hostDocument && name === "createComment") {
         if (typeof args[0] !== "string" || args[0].length > 4096) {
           fail("comment text is not allowed");
         }
-        return reference(ownNode(document.createComment(args[0])));
+        return reference(ownNode(hostDocument.createComment(args[0])));
       }
-      if (object === document && name === "createTextNode") {
+      if (object === hostDocument && name === "createTextNode") {
         if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 1024 * 1024) {
           fail("text node content is not bounded text");
         }
-        return reference(ownNode(document.createTextNode(args[0])));
+        return reference(ownNode(hostDocument.createTextNode(args[0])));
       }
-      if (object === document && name === "getElementById") {
+      if (object === hostDocument && name === "getElementById") {
         if (typeof args[0] !== "string")
           fail("element id must be a string");
-        const found = target === document ? document.getElementById(args[0]) : roots.map((root) => root.id === args[0] ? root : root.querySelector(`#${CSS.escape(args[0])}`)).find(Boolean);
+        const found = documentTarget ? hostDocument.getElementById(args[0]) : roots.map((root) => root.id === args[0] ? root : root.querySelector(`#${CSS.escape(args[0])}`)).find(Boolean);
         return found && insideDocument(found) ? reference(found) : null;
       }
-      if (object instanceof Element && name === "setAttribute") {
+      if (object instanceof Element2 && name === "setAttribute") {
         if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
           fail(`attribute ${args[0]} is not allowed`);
         }
@@ -1102,7 +1107,7 @@ var WasmWebBridge = class {
         object.setAttribute(args[0], args[1]);
         return null;
       }
-      if (object instanceof Element && name === "removeAttribute") {
+      if (object instanceof Element2 && name === "removeAttribute") {
         if (args.length !== 1 || typeof args[0] !== "string" || !isAllowedAttribute(args[0])) {
           fail("attribute removal is not allowed");
         }
@@ -1113,18 +1118,18 @@ var WasmWebBridge = class {
         if (args.length !== 1 || typeof args[0] !== "string" || !/^\.[a-z_][a-z0-9_-]{0,63}$/i.test(args[0])) {
           fail("closest selector is not allowed");
         }
-        const element = object instanceof Element ? object : object.parentElement;
+        const element = object instanceof Element2 ? object : object.parentElement;
         const found = element?.closest(args[0]);
         return found && insideDocument(found) ? reference(found) : null;
       }
-      if (object instanceof Element && name === "childAt") {
+      if (object instanceof Element2 && name === "childAt") {
         const index = args[0];
         if (!Number.isInteger(index) || index < 0)
           fail("child index is not allowed");
         const child = object.children[index];
         return child ? reference(child) : null;
       }
-      if (object instanceof Element && name === "scrollIntoView" && args.length === 0) {
+      if (object instanceof Element2 && name === "scrollIntoView" && args.length === 0) {
         object.scrollIntoView();
         return null;
       }
@@ -1136,10 +1141,10 @@ var WasmWebBridge = class {
         object.select();
         return null;
       }
-      if (object instanceof Element && name === "getBoundingClientRect" && args.length === 0) {
+      if (object instanceof Element2 && name === "getBoundingClientRect" && args.length === 0) {
         return reference(object.getBoundingClientRect());
       }
-      if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name) && args.length === 1 && typeof args[0] === "string" && args[0].length <= 128 && SAFE_SELECTOR.test(args[0])) {
+      if (object instanceof Element2 && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name) && args.length === 1 && typeof args[0] === "string" && args[0].length <= 128 && SAFE_SELECTOR.test(args[0])) {
         if (name === "querySelector") {
           const found2 = object.querySelector(args[0]);
           return found2 ? reference(found2) : null;
@@ -1153,17 +1158,17 @@ var WasmWebBridge = class {
         found.forEach((node, index) => view.setUint32(4 + index * 4, reference(node)[1], true));
         return bytes;
       }
-      if (object instanceof Element && name === "hasAttribute" && args.length === 1 && typeof args[0] === "string" && isAllowedAttribute(args[0])) {
+      if (object instanceof Element2 && name === "hasAttribute" && args.length === 1 && typeof args[0] === "string" && isAllowedAttribute(args[0])) {
         return object.hasAttribute(args[0]);
       }
-      if ((object instanceof Element || object instanceof Range) && name === "getClientRects" && args.length === 0) {
+      if ((object instanceof Element2 || object instanceof Range) && name === "getClientRects" && args.length === 0) {
         return reference(Array.from(object.getClientRects()));
       }
       if (object instanceof Range && name === "getBoundingClientRect" && args.length === 0) {
         return reference(object.getBoundingClientRect());
       }
       if (object instanceof Node && ["append", "appendChild", "replaceChildren"].includes(name)) {
-        if (object === logicalHead && target === document && args.some((node) => !(node instanceof HTMLMetaElement || node instanceof HTMLTitleElement || node instanceof Comment))) {
+        if (object === logicalHead && documentTarget && args.some((node) => !(node instanceof HTMLMetaElement || node instanceof HTMLTitleElement || node instanceof Comment))) {
           fail("only viewport meta and title elements may enter the logical head");
         }
         object[name](...args);
@@ -1188,7 +1193,7 @@ var WasmWebBridge = class {
       fail(`method ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function listen(object, type, callback, capture = false) {
-      const elementEvent = object instanceof Element && [
+      const elementEvent = object instanceof Element2 && [
         "beforeinput",
         "blur",
         "change",
@@ -1228,7 +1233,7 @@ var WasmWebBridge = class {
         "touchstart",
         "wheel"
       ].includes(type);
-      const documentEvent = object === document && ["mousemove", "mouseup", "selectionchange", "visibilitychange"].includes(type);
+      const documentEvent = object === hostDocument && ["mousemove", "mouseup", "selectionchange", "visibilitychange"].includes(type);
       if (!elementEvent && !documentEvent || !Number.isInteger(callback))
         fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
@@ -1268,7 +1273,7 @@ var WasmWebBridge = class {
         });
       try {
         if (item[0] === 0)
-          return reference(document);
+          return reference(hostDocument);
         if (item[0] === 1)
           return get(object, name);
         if (item[0] === 2)
@@ -1606,7 +1611,7 @@ ${declarations.join("\n")}
         }
         return;
       }
-      const style = document.createElement("style");
+      const style = hostDocument.createElement("style");
       style.textContent = `${output.join("\n\n")}
 `;
       logicalHead.append(style);
@@ -1946,7 +1951,7 @@ function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
 }
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = null, starting = true, destroyed = false, machine;
+  let reportedError = null, response, starting = true, destroyed = false, machine;
   async function answerFetch(request) {
     try {
       if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
@@ -1957,6 +1962,10 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
     }
   }
   machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
+    if (text.startsWith("__wwcResponse:")) {
+      response = text.slice(14);
+      return;
+    }
     if (text.startsWith("__wwcError:") && !reportedError) {
       reportedError = new Error(text.slice(11));
       if (!starting) queueMicrotask(() => onError?.(reportedError));
@@ -1979,14 +1988,30 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
       throw reportedError;
     }
   }
+  let programs = scripts.length;
   starting = false;
+  function call(name, payload) {
+    response = void 0;
+    machine.onmsg(callMessage(name, payload));
+    if (response === void 0) throw new Error(`Guest function ${name} did not respond`);
+    return JSON.parse(response);
+  }
   return Object.freeze({
+    setContent(tree) {
+      return call("__resourcesOutputSetContent", tree);
+    },
+    async run(nextScripts) {
+      reportedError = null;
+      for (const script of nextScripts) await machine.onmsg(taggedMessage(1, script.code));
+      if (reportedError) throw reportedError;
+      programs += nextScripts.length;
+    },
     destroy() {
       destroyed = true;
       machine.destroy();
     },
     inspect() {
-      return { runtime: "quickjs", programs: scripts.length, machine: { machineId } };
+      return { runtime: "quickjs", programs, machine: { machineId } };
     }
   });
 }
@@ -2146,6 +2171,12 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
   statusRoot.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   return {
     inspect: () => ({ ...controller.inspect(), violations: violations.length }),
+    setContent(tree) {
+      return controller.setContent(tree);
+    },
+    run(scripts2) {
+      return controller.run(scripts2);
+    },
     destroy() {
       controller.destroy();
     }

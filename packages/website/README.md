@@ -62,13 +62,22 @@ the native controller/provider bundle and the CodeMirror guest bundle remain
 separate to avoid a large combined parse/allocation spike.
 
 The project program is not executed in the editor runtime. Each executable
-preview gets a second, disposable QuickJS runtime with its own memory limit,
-DOM handle table, timer pump, capabilities, and lifetime. The preview extracts
-inline and same-project scripts before projecting the declared container DOM;
-those scripts run only inside QuickJS. `browser-use` forwards the admitted DOM
-subset and `canvas-use` forwards a bounded Canvas 2D command set. Static
-templates remain projection-only. Changing a file or template destroys the
-old preview runtime before mounting the replacement.
+output generation gets a disposable QuickJS context with its own DOM handle
+table, timers, capabilities, and lifetime. The preview extracts inline and
+same-project scripts before projecting the declared container DOM; those
+scripts run only inside QuickJS. `browser-use` forwards the admitted DOM subset
+and `canvas-use` forwards a bounded Canvas 2D command set.
+
+The initial output mounts directly so opening an editor does not wait for an
+iframe. The first real source edit starts a configurable 900 ms trailing
+debounce, prepares a hidden root in one static sandboxed iframe, and swaps it in
+only after its output machine has mounted successfully. Later generations reuse
+that iframe and alternate between its two roots; they do not reload the frame.
+Set `config.output.debounceMs` between 250 and 5000, or set
+`config.output.iframe` to `false` for the direct development surface. The
+current implementation still creates a WebAssembly/QuickJS runtime for each
+generation. Reusing one runtime across multiple disposable contexts is the next
+runtime boundary, not a behavior this UI silently assumes today.
 
 Stored projects autosave their working snapshot. Every direct snapshot change
 also writes a project-scoped recovery copy to session storage before the

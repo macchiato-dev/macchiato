@@ -141,10 +141,10 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   const presentationAsset = key.startsWith("-/resources-site/presentation-runner.");
   headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") || presentationAsset ? "cross-origin" : "same-origin");
   if (key.startsWith("-/blog-examples/") || presentationAsset) headers.set("access-control-allow-origin", "*");
-  const presentationRunner = key === "-/resources-site/presentation-runner.html";
+  const embeddedRunner = key === "-/resources-site/presentation-runner.html" || key === "-/resources-site/project-output-frame.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    : `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${presentationRunner ? "'self'" : "'none'"}; form-action 'self'`);
+    : `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${embeddedRunner ? "'self'" : "'none'"}; form-action 'self'`);
   headers.set("cache-control", key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" : "public, max-age=31536000, immutable");
   const etag = upstreamHeaders.get("etag");
   const lastModified = upstreamHeaders.get("last-modified");

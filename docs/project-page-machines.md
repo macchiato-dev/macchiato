@@ -47,10 +47,21 @@ surface delegated by the host. It does not receive the editor DOM, site DOM, or
 version store.
 
 The project machine is the most disposable role. An ordinary source edit may
-replace it after the preview debounce. A container change disposes it
-immediately. A future container may instead support a reviewed hot-update
-protocol, but retaining a guest is never implicit merely because the DOM mount
-is unchanged.
+replace it after the output debounce. A container change disposes it
+immediately. The browser may retain one static iframe and alternate its hidden
+DOM roots without retaining the old project machine. A future container may
+instead support a reviewed hot-update protocol, but retaining a guest is never
+implicit merely because the browser mount is unchanged.
+
+The intended runtime API separates the expensive engine from its disposable
+execution contexts. A reusable runtime owns the compiled Wasm module, QuickJS
+runtime, memory ceiling, and shared immutable resources. It can create two
+isolated contexts with distinct DOM roots and reference tables: the visible
+context continues running while the next context mounts into the hidden root;
+after a successful swap, the old context is destroyed. Context failure leaves
+the visible generation intact. This must remain an explicit runtime/context
+API—passing a runtime object or a class that owns it—not an inference based on
+two machines receiving the same iframe.
 
 ## DOM authority
 

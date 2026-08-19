@@ -73,6 +73,8 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
   statusRoot.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   return {
     inspect: () => ({ ...controller.inspect(), violations: violations.length }),
+    setContent(tree) { return controller.setContent(tree); },
+    run(scripts) { return controller.run(scripts); },
     destroy() { controller.destroy(); },
   };
 }
