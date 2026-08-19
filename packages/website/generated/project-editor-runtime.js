@@ -2075,7 +2075,10 @@ async function mountResourcesProjectEditor(options) {
       request(generation) {
         return controller.requestOutput(generation);
       }
-    })
+    }),
+    setTheme(theme) {
+      return controller.callGuest("__codeEditorSetTheme", { theme });
+    }
   });
 }
 async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {

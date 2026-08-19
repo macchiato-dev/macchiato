@@ -3,6 +3,10 @@ import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resour
 import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
 import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
+
+const editorAnimationStyles = document.createElement("style");
+editorAnimationStyles.textContent = "@keyframes cm-blink{0%,49%{opacity:1}50%,100%{opacity:0}}";
+document.head.append(editorAnimationStyles);
 import { StyleUse } from "/-/style-use/index.js";
 
 function enterProjectLoadingView(href) {
@@ -463,10 +467,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let outputFramePort = null;
   let outputFrameReady = null;
   let outputFrameRequested = true;
-  const syncOutputTheme = () => outputFramePort?.postMessage({
-    type: "theme",
-    colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
-  });
+  const syncOutputTheme = () => {
+    const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    outputFramePort?.postMessage({ type: "theme", colorScheme: theme });
+    editorController?.setTheme(theme);
+  };
   document.addEventListener("themechange", syncOutputTheme);
   let activeError = "";
   let activeErrorAction = null;
@@ -860,6 +865,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         return;
       }
       editorController = controller;
+      editorController.setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
       root.dataset.editorMachineId = controller.inspect().machine.machineId;
       root.dataset.editorMachineState = "ready";
       if (localHistory) localHistory = editorController.history.initialize(localHistory);

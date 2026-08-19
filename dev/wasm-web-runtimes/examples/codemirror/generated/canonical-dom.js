@@ -1410,7 +1410,8 @@ function GuestStylesheetNode() {
 }
 function projectStylesheet(source) {
   var output = "", at = 0;
-  // This guest does not project synthetic cursor animation or print-only UI.
+  // Synthetic cursor animation and print-only UI are supplied by the host
+  // surface rather than represented in the compact stylesheet protocol.
   var pattern = /(?:@(?:-webkit-)?keyframes\s+[-_a-z0-9]+|@media\s+print)\s*\{/ig;
   while (true) {
     pattern.lastIndex = at;
@@ -1636,11 +1637,26 @@ function EmptyObserver() {}
 EmptyObserver.prototype.observe = EmptyObserver.prototype.unobserve =
   EmptyObserver.prototype.disconnect = function () {};
 EmptyObserver.prototype.takeRecords = function () { return []; };
+function GuestIntersectionObserver(callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  this.callback = callback;
+  this.active = true;
+}
+GuestIntersectionObserver.prototype.observe = function (target) {
+  var observer = this;
+  setTimeout(function () {
+    if (observer.active) observer.callback([{ target: target, isIntersecting: true, intersectionRatio: 1 }], observer);
+  }, 0);
+};
+GuestIntersectionObserver.prototype.unobserve = function () {};
+GuestIntersectionObserver.prototype.disconnect = function () { this.active = false; };
+GuestIntersectionObserver.prototype.takeRecords = function () { return []; };
 // Native contenteditable behavior mutates the host tree after the guest event
 // handler returns. Mirror those browser-owned edits on the normal microtask so
 // the guest tree has the same ownership and detached nodes become collectible.
 globalThis.MutationObserver = GuestMutationObserver;
 globalThis.ResizeObserver = EmptyObserver;
+globalThis.IntersectionObserver = GuestIntersectionObserver;
 globalThis.getComputedStyle = function () {
   return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
 };
@@ -1800,10 +1816,11 @@ globalThis.removeEventListener = function (type, callback) {
 function allocateElementCallback(callback) {
   var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
-  var state = { active: true, callback: new WeakRef(callback) };
+  // A browser EventTarget strongly retains its listeners until removal.
+  var state = { active: true, callback: callback };
   callbackStates[index] = state;
   callbacks[index] = function (event) {
-    var current = state.callback.deref();
+    var current = state.callback;
     if (state.active && current) current(event);
     else releaseCallback(index);
   };

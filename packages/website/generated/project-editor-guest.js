@@ -30459,9 +30459,36 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   var editorSetup = new Compartment();
   var language2 = new Compartment();
   var editability = new Compartment();
+  var appearance = new Compartment();
   var nativeSelectionTheme = EditorView.theme({
     ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" }
   });
+  var lightEditorTheme = EditorView.theme({
+    "&": { color: "#263338", backgroundColor: "#d9e1e3" },
+    ".cm-content": { caretColor: "#1f5268" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#1f5268" },
+    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#9fbfcd" },
+    ".cm-activeLine": { backgroundColor: "#cedadd" },
+    ".cm-gutters": { color: "#66777e", backgroundColor: "#cbd6d9", borderRightColor: "#aebec3" },
+    ".cm-activeLineGutter": { color: "#25363d", backgroundColor: "#becdd1" },
+    ".cm-panels, .cm-tooltip": { color: "#263338", backgroundColor: "#d2dcdf" }
+  }, { dark: false });
+  var lightHighlightStyle = HighlightStyle.define([
+    { tag: tags.keyword, color: "#6c3d82" },
+    { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "#265d73" },
+    { tag: [tags.function(tags.variableName), tags.labelName], color: "#7a4b22" },
+    { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: "#765b12" },
+    { tag: [tags.definition(tags.name), tags.separator], color: "#304f66" },
+    { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: "#875025" },
+    { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: "#3b6b64" },
+    { tag: [tags.meta, tags.comment], color: "#63747a", fontStyle: "italic" },
+    { tag: tags.string, color: "#43682e" },
+    { tag: tags.invalid, color: "#a12c36" }
+  ]);
+  var currentTheme = "dark";
+  function appearanceExtension() {
+    return currentTheme === "light" ? [lightEditorTheme, syntaxHighlighting(lightHighlightStyle)] : oneDark;
+  }
   var applyingHostContent = false;
   var resetHistoryOnNextEdit = false;
   var currentLanguage = "javascript";
@@ -30501,7 +30528,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
         EditorState.readOnly.of(currentReadOnly),
         EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" })
       ]),
-      oneDark,
+      appearance.of(appearanceExtension()),
       EditorView.lineWrapping,
       nativeSelectionTheme,
       documentLimitFilter,
@@ -30631,6 +30658,13 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
     const view = globalThis.__codeEditorView;
     return JSON.stringify({ limits: documentLimits, ...view ? documentUsage(view.state.doc) : { characters: 0, lines: 0 } });
+  };
+  globalThis.__codeEditorSetTheme = (json2) => {
+    const requested = JSON.parse(json2).theme;
+    if (!["dark", "light"].includes(requested)) throw new TypeError("Editor theme must be dark or light");
+    currentTheme = requested;
+    globalThis.__codeEditorView?.dispatch({ effects: appearance.reconfigure(appearanceExtension()) });
+    return JSON.stringify({ theme: currentTheme });
   };
   globalThis.__codeEditorSetContent = (json2) => {
     const request = JSON.parse(json2);

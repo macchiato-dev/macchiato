@@ -1059,7 +1059,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__preview > [data-project-preview][data-preview-runtime="presentation-use"] { box-sizing: border-box; width: 100%; height: 100%; padding: 0; overflow: hidden; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] { box-sizing: border-box; display: grid; width: 100%; height: 100%; place-items: center; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] .project-editor__presentation-frame { aspect-ratio: 16 / 10; height: auto; max-height: 100%; }
-.project-editor__mount .cm-editor { background: #1d2020; }
+html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: #1d2020; }
 .project-editor__mount .cm-scroller { overflow: auto; }
 .project-editor__mount .cm-panels-bottom { max-width: 100%; }
 .project-editor__mount .cm-panel.cm-search { box-sizing: border-box; display: flex; width: 100%; min-width: 0; align-items: center; gap: 5px; padding: 5px 7px; overflow: hidden; }
@@ -1069,7 +1069,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__splitter { position: relative; cursor: col-resize; background: #454b4a; box-shadow: inset 1px 0 #202524; outline: none; }
 .project-editor__splitter::after { display: none; }
 .project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: var(--project-toolbar-strong); font-size: 12px; }
-.project-editor__preview > [data-project-preview] { padding: 20px; color: #edf3f2; }
+.project-editor__preview > [data-project-preview] { padding: 0; color: #edf3f2; }
 .project-editor__view-controls { display: flex; align-items: center; gap: 4px; }
 .project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[data-instant-tooltip] { position: relative; display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; }
@@ -1273,7 +1273,7 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
   .project-editor__workspace[data-view="split"] .project-editor__preview,
   .project-editor__workspace[data-view="split"] .project-editor__splitter { display: none; }
   .project-editor__source { padding: 6px; }
-  .project-editor__preview > [data-project-preview] { padding: 14px; }
+  .project-editor__preview > [data-project-preview] { padding: 0; }
   .project-editor__status { gap: 7px; }
   .project-editor__save { max-width: 34%; overflow: hidden; }
   .layout {

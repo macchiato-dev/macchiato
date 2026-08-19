@@ -39,6 +39,7 @@ export async function mountResourcesProjectEditor(options) {
     projectOutput: Object.freeze({
       request(generation) { return controller.requestOutput(generation); },
     }),
+    setTheme(theme) { return controller.callGuest("__codeEditorSetTheme", { theme }); },
   });
 }
 
