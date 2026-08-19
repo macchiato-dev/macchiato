@@ -1138,8 +1138,8 @@ html[data-theme="light"] .layout.focused-view {
   --project-toolbar-border: #a8b7e3; --project-toolbar-selected-border: #8296d2;
 }
 .layout.focused-view > .focused-header,
-.layout.focused-view > .brand { height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 0 9px; border: none; border-radius: 0; background: var(--project-toolbar-bg); box-shadow: none; }
-.layout.focused-view > .userbar { height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 7px 9px 7px 0; border: none; border-radius: 0; background: var(--project-toolbar-bg); box-shadow: none; }
+.layout.focused-view > .brand { position: relative; z-index: 60; height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 0 9px; border: none; border-radius: 0; background: var(--project-toolbar-bg); box-shadow: none; }
+.layout.focused-view > .userbar { position: relative; z-index: 60; height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 7px 9px 7px 0; border: none; border-radius: 0; background: var(--project-toolbar-bg); box-shadow: none; }
 .layout.focused-view > .userbar .ub-pop,
 .layout.focused-view > .userbar .edge-user-menu { padding-bottom: 0; margin-bottom: 0; }
 .layout.focused-view > .userbar .ub-pop::after,

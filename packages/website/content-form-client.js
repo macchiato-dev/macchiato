@@ -371,7 +371,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const versionCount = versionButton.querySelector(".project-editor__version-count");
   const currentVersion = versionButton.querySelector("[data-current-version]");
   const historyPanel = root.querySelector("[data-project-history]");
-  const versionList = root.querySelector("[data-project-version-list]");
+  const versionList = historyPanel.querySelector("[data-project-version-list]");
+  // A transformed focused-view ancestor would otherwise make `position:
+  // fixed` relative to the project surface instead of the viewport.
+  document.body.append(historyPanel);
   const projectId = root.dataset.projectId;
   const persistence = root.dataset.persistence || "stored";
   const draft = persistence === "session";
@@ -1692,7 +1695,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     positionHistory();
   });
-  root.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
+  historyPanel.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
   document.addEventListener("pointerdown", (event) => {
     if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
     closeHistory();
@@ -1708,6 +1711,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   mountEditorMachine();
   if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
   addEventListener("pagehide", () => {
+    historyPanel.remove();
     document.removeEventListener("themechange", syncOutputTheme);
     editorGeneration += 1;
     editorController?.destroy();
