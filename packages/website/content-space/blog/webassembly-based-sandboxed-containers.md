@@ -16,10 +16,10 @@ Today I present the beginning of a project to run code in WebAssembly with conta
 
 Here are the current containers:
 
-- [Article](/try?template=article): a small set of semantic HTML elements, constrained styles, and links that match configured URL patterns.
-- [Page](/try?template=hello): a more general layout vocabulary whose DOM and CSS remain controlled by schemas.
-- [SVG](/try?template=mark): a bounded vector surface for declarative shapes, paths, text, and gradients.
-- [Canvas](/try?template=ball): limited drawing and animation operations instead of access to the surrounding browser.
+- [Article](/try/article): a small set of semantic HTML elements, constrained styles, and links that match configured URL patterns.
+- [Page](/try/hello): a more general layout vocabulary whose DOM and CSS remain controlled by schemas.
+- [SVG](/try/mark): a bounded vector surface for declarative shapes, paths, text, and gradients.
+- [Canvas](/try/ball): limited drawing and animation operations instead of access to the surrounding browser.
 
 ![Five bounded surfaces represent article, page, SVG, canvas, and code editor containers.](/-/blog-images/webassembly-container-surfaces.png "Containers assemble WebAssembly machines, *-use modules, and reviewed configurations for a particular kind of document.")
 
@@ -36,3 +36,5 @@ This is alpha software, not yet a claim that arbitrary hostile code is safe. The
 The goal is a practical middle ground between trusting an application and putting every small application in a full virtual machine. A tiny tool should be able to start quickly, run locally or on a server, and receive only the capabilities its job requires. If these containers can become more compatible without becoming less inspectable, they could make it much easier to try agent-generated tools and third-party interactive documents on sensitive data. The next step is to keep making the contracts smaller, the behavior more predictable, and the security properties easier to test and audit.
 
 Follow Resources.co on [X](https://x.com/ResourcesCo) or [LinkedIn](https://www.linkedin.com/company/resources-co/) for updates. We plan to extend this work beyond browser surfaces with backend and full-stack containers built around the same explicit-capability model.
+
+*Update:* The links above now open related templates because a new generic container has been released.

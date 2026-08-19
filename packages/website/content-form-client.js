@@ -435,7 +435,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (templateField) templateField.value = state.config?.template || "article";
     if (patternsField) patternsField.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
   }
-  const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
+  const requestedTemplate = memoryOnly
+    ? /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(location.pathname)?.[1]
+      || new URL(location.href).searchParams.get("template")
+    : null;
   if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
     state = normalizeProjectSnapshot(STARTING_POINTS[requestedTemplate]);
     snapshotField.value = JSON.stringify(state);
@@ -1636,6 +1639,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   template?.addEventListener("change", async () => {
     const next = STARTING_POINTS[template.value];
     if (!next) return;
+    if (memoryOnly && (location.pathname === "/try" || location.pathname.startsWith("/try/"))) {
+      history.replaceState(history.state, "", `/try/${encodeURIComponent(template.value)}`);
+    }
     if (pending) {
       if (templateOnlyPending) {
         clearTimeout(saveTimer);

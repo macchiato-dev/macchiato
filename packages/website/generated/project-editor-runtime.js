@@ -5,8 +5,10 @@ var CHUNK_SIZE = 8192;
 var CHUNK_COUNT = 128;
 var ELEMENTS = /* @__PURE__ */ new Set([
   "a",
+  "article",
   "br",
   "button",
+  "canvas",
   "div",
   "footer",
   "h1",
@@ -24,24 +26,48 @@ var ELEMENTS = /* @__PURE__ */ new Set([
   "title",
   "ul"
 ]);
-var SVG_ELEMENTS = /* @__PURE__ */ new Set(["circle", "ellipse", "line", "path", "svg"]);
+var SVG_ELEMENTS = /* @__PURE__ */ new Set([
+  "circle",
+  "defs",
+  "ellipse",
+  "g",
+  "line",
+  "linearGradient",
+  "path",
+  "rect",
+  "stop",
+  "svg",
+  "text",
+  "title"
+]);
 var SVG_IMAGE_ATTRIBUTES = /* @__PURE__ */ new Set([
   "aria-hidden",
+  "aria-label",
+  "aria-labelledby",
   "class",
   "cx",
   "cy",
   "d",
   "fill",
+  "gradientUnits",
+  "height",
+  "id",
+  "offset",
   "opacity",
   "r",
+  "role",
   "rx",
   "ry",
+  "stop-color",
   "stroke",
   "stroke-linecap",
   "stroke-width",
   "viewBox",
+  "width",
+  "x",
   "x1",
   "x2",
+  "y",
   "y1",
   "y2"
 ]);
@@ -67,10 +93,13 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "data-href",
   "fill",
   "form",
+  "gradientUnits",
+  "height",
   "href",
   "id",
   "main-field",
   "name",
+  "offset",
   "opacity",
   "r",
   "placeholder",
@@ -83,6 +112,7 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "stroke-linecap",
   "stroke-width",
   "tabindex",
+  "target",
   "title",
   "translate",
   "type",
@@ -91,8 +121,12 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "writingsuggestions",
   "x1",
   "x2",
+  "width",
+  "x",
+  "y",
   "y1",
-  "y2"
+  "y2",
+  "stop-color"
 ]);
 var CSS_PROPERTIES = /* @__PURE__ */ new Set([
   "-webkit-user-modify",
@@ -273,10 +307,10 @@ function xmlAttribute(value) {
 function svgImageAttributeAllowed(name, value) {
   if (typeof value !== "string")
     return false;
-  if (["cx", "cy", "r", "rx", "ry", "stroke-width", "x1", "x2", "y1", "y2"].includes(name))
+  if (["cx", "cy", "height", "r", "rx", "ry", "stroke-width", "width", "x", "x1", "x2", "y", "y1", "y2"].includes(name))
     return /^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value);
-  if (["fill", "stroke"].includes(name)) {
-    return /^(?:none|white|#[0-9a-f]{3,8})$/i.test(value);
+  if (["fill", "stop-color", "stroke"].includes(name)) {
+    return /^(?:none|white|#[0-9a-f]{3,8}|url\(#[a-z][a-z0-9_.:-]{0,127}\))$/i.test(value);
   }
   if (name === "opacity")
     return /^(?:0|1|\.\d+|0?\.\d+)$/.test(value) && Number(value) <= 1;
@@ -286,6 +320,14 @@ function svgImageAttributeAllowed(name, value) {
     return /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:\s+-?(?:\d+(?:\.\d*)?|\.\d+)){3}$/.test(value);
   if (name === "aria-hidden")
     return value === "true" || value === "false";
+  if (["aria-label", "aria-labelledby", "id"].includes(name))
+    return /^[a-z][a-z0-9_.: -]{0,127}$/i.test(value);
+  if (name === "role")
+    return value === "img";
+  if (name === "offset")
+    return /^(?:100|[0-9]{1,2})%$/.test(value) || /^(?:0|1|0?\.\d+)$/.test(value);
+  if (name === "gradientUnits")
+    return ["objectBoundingBox", "userSpaceOnUse"].includes(value);
   if (name === "class")
     return value === "" || /^[a-z_][a-z0-9_-]{0,127}(?:\s+[a-z_][a-z0-9_-]{0,127})*$/i.test(value);
   if (name === "d")
@@ -1019,6 +1061,9 @@ var WasmWebBridge = class {
         }
         if (args[0] === "href" && (!(object instanceof HTMLAnchorElement) || !navigationAllowed(args[1]))) {
           fail("href is not allowed by navigation policy");
+        }
+        if (args[0] === "target" && (!(object instanceof HTMLAnchorElement) || args[1] !== "_blank")) {
+          fail("target is only allowed as _blank on links");
         }
         if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
           fail("tabindex must use normal or programmatic focus order");

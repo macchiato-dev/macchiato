@@ -8,8 +8,9 @@ test("WebAssembly containers post is complete in English and Spanish", () => {
   for (const locale of ["en", "es"]) {
     const post = loadBlogPosts(undefined, locale).find(({ slug }) => slug === "webassembly-based-sandboxed-containers");
     assert.ok(post);
-    assert.match(post.paragraphs.at(-2), locale === "en" ? /practical middle ground/ : /punto medio práctico/);
-    assert.match(post.paragraphs.at(-1), locale === "en" ? /backend and full-stack containers/ : /contenedores de backend y full stack/);
+    assert.ok(post.paragraphs.some((paragraph) => (locale === "en" ? /practical middle ground/ : /punto medio práctico/).test(paragraph)));
+    assert.ok(post.paragraphs.some((paragraph) => (locale === "en" ? /backend and full-stack containers/ : /contenedores de backend y full stack/).test(paragraph)));
+    assert.match(post.paragraphs.at(-1), locale === "en" ? /new generic container/ : /nuevo contenedor genérico/);
     assert.ok(post.paragraphs.length >= 10);
     assert.equal(post.body.filter(({ type }) => type === "image").length, 2);
     assert.equal(post.body.find(({ type }) => type === "list").items.length, 4);
@@ -19,6 +20,8 @@ test("WebAssembly containers post is complete in English and Spanish", () => {
 test("blog inline rendering supports emphasis without weakening escaping", () => {
   assert.equal(renderBlogInline("Use *dom-use* with <care>.", escapeHtml), "Use <em>dom-use</em> with &lt;care&gt;.");
   assert.equal(renderBlogInline("[Try Article](/try?template=article)", escapeHtml), '<a href="/try?template=article">Try Article</a>');
+  assert.equal(renderBlogInline("[Try Starfield](/try?template=stars)", escapeHtml), '<a href="/try?template=stars">Try Starfield</a>');
+  assert.equal(renderBlogInline("[Try Starfield](/try/stars)", escapeHtml), '<a href="/try/stars">Try Starfield</a>');
 });
 
 test("draft posts are excluded from published content", () => {

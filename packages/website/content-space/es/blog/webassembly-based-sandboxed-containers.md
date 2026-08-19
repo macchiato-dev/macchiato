@@ -16,10 +16,10 @@ Hoy presento el comienzo de un proyecto para ejecutar código en WebAssembly med
 
 Estos son los contenedores actuales:
 
-- [Article](/try?template=article): un conjunto pequeño de HTML semántico, estilos restringidos y enlaces que coinciden con patrones de URL configurados.
-- [Page](/try?template=hello): un vocabulario de diseño más general cuyo DOM y CSS siguen controlados por esquemas.
-- [SVG](/try?template=mark): una superficie vectorial acotada para formas, trazados, texto y gradientes declarativos.
-- [Canvas](/try?template=ball): operaciones limitadas de dibujo y animación en vez de acceso al navegador circundante.
+- [Article](/try/article): un conjunto pequeño de HTML semántico, estilos restringidos y enlaces que coinciden con patrones de URL configurados.
+- [Page](/try/hello): un vocabulario de diseño más general cuyo DOM y CSS siguen controlados por esquemas.
+- [SVG](/try/mark): una superficie vectorial acotada para formas, trazados, texto y gradientes declarativos.
+- [Canvas](/try/ball): operaciones limitadas de dibujo y animación en vez de acceso al navegador circundante.
 
 ![Cinco superficies acotadas representan los contenedores article, page, SVG, canvas y editor de código.](/-/blog-images/webassembly-container-surfaces.png "Los contenedores componen máquinas WebAssembly, módulos *-use y configuraciones revisadas para un tipo concreto de documento.")
 
@@ -34,3 +34,5 @@ Esto todavía no constituye una afirmación de que cualquier código hostil sea 
 El objetivo es encontrar un punto medio práctico entre confiar en una aplicación y colocar cada aplicación pequeña dentro de una máquina virtual completa. Una herramienta diminuta debería poder iniciarse rápidamente, ejecutarse localmente o en un servidor y recibir solamente las capacidades que necesita. Si estos contenedores siguen ganando compatibilidad sin perder facilidad de inspección, podrían facilitar mucho probar herramientas producidas por agentes y documentos interactivos de terceros sobre datos sensibles. El siguiente paso no es declarar terminado el aislamiento, sino continuar reduciendo sus contratos, haciendo más predecible su comportamiento y facilitando las pruebas y auditorías de sus propiedades de seguridad.
 
 Sigue a Resources.co en [X](https://x.com/ResourcesCo) o [LinkedIn](https://www.linkedin.com/company/resources-co/) para recibir novedades. Planeamos ampliar este trabajo más allá de las superficies del navegador con contenedores de backend y full stack basados en el mismo modelo de capacidades explícitas.
+
+*Actualización:* Los enlaces anteriores ahora abren plantillas relacionadas porque se ha publicado un nuevo contenedor genérico.

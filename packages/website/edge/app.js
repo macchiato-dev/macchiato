@@ -29,6 +29,7 @@ const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
 const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new", "/profile"]);
 const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new", "/profile"]);
 const DISCOVERABLE_PROJECT_NAMESPACES = Object.freeze(["benatkin", "resources", "macchiato"]);
+const TRY_TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "slides"]);
 
 async function fetchStorage(fetchImpl, request) {
   const response = await fetchImpl(request);
@@ -461,6 +462,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
   return async function resourcesEdgeHandler(request) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const directTryTemplate = /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname)?.[1] || "";
+    if (directTryTemplate && !TRY_TEMPLATES.has(directTryTemplate)) return new Response("Not found", { status: 404 });
+    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/try" && url.searchParams.has("template")) {
+      const template = url.searchParams.get("template");
+      if (!TRY_TEMPLATES.has(template)) return new Response("Not found", { status: 404 });
+      return new Response(null, { status: 302, headers: { location: `/try/${template}`, "cache-control": "no-store" } });
+    }
     const languageRoute = request.method === "GET"
       ? parseLanguageSelection(new URL(request.url)) || parseLanguageRoute(pathname)
       : null;
@@ -699,7 +707,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       if (PROTECTED_ACCOUNT_PATHS.has(pathname) && !session) {
         return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
       }
-      const accountShellPath = (pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname;
+      const accountShellPath = directTryTemplate
+        ? "/try"
+        : ((pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname);
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
       const dynamicNamespace = !manifest.files.has(staticKey) && requestedNamespace && contentStore?.getNamespace
         ? await contentStore.getNamespace(requestedNamespace, session?.sub)
@@ -746,7 +756,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
             ? managedOrganizationHtml(dynamicNamespace, managedOrganization, token, manifest.messages[locale], url)
             : namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
           html = namespaceDocument(html, dynamicNamespace);
-        } else if (pathname === "/try") {
+        } else if (pathname === "/try" || directTryTemplate) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => tryProjectHtml(manifest.messages[locale]));
         } else if (session && ACCOUNT_PATHS.has(pathname)) {
@@ -775,7 +785,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
         const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
         const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try", signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, contentFormVersion);
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, contentFormVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

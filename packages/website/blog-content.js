@@ -82,7 +82,7 @@ export function renderBlogInline(markdown, escapeHtml) {
   };
   let output = "";
   let cursor = 0;
-  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/try\?template=(?:article|hello|mark|ball))\)/g;
+  const links = /\[([^\]\n]{1,200})\]\((https:\/\/[^\s)]+|\/(?:blog|language\/en\/blog)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/try\/(?:[a-z0-9]+(?:-[a-z0-9]+)*)|\/try\?template=[a-z0-9]+(?:-[a-z0-9]+)*)\)/g;
   for (const match of markdown.matchAll(links)) {
     output += renderText(markdown.slice(cursor, match.index));
     const external = match[2].startsWith("https://");
