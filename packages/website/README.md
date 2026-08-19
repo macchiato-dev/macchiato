@@ -93,6 +93,11 @@ in-app System/Dark/Light selection instead of consulting only the operating
 system preference. Theme changes are synchronized without recreating the
 iframe or its QuickJS machine.
 
+The focused project view follows the same resolved appearance for its app bar,
+project toolbar, controls, details pane, and surrounding surfaces. The code
+editing surface remains deliberately dark in either appearance; that is an
+editor presentation choice rather than a failure to propagate the site theme.
+
 The selected site language is passed separately to the project machine and is
 available to browser-shaped guests as `navigator.language`. It is environment
 context, not a forced rendering decision: the host does not rewrite the

@@ -1997,7 +1997,7 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
   await machine.onmsg(0);
   if (options.environment?.language) await machine.onmsg(taggedMessage(
     1,
-    `if(globalThis.navigator) navigator.language=${JSON.stringify(options.environment.language)};`
+    `globalThis.navigator=Object.assign(globalThis.navigator||{},{language:${JSON.stringify(options.environment.language)}});`
   ));
   for (const script of scripts) {
     await machine.onmsg(taggedMessage(1, script.code));

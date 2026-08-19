@@ -252,6 +252,21 @@ fails.
 The server should record which mode produced a response. That mode belongs in
 debug headers or server logs, not in guest-visible page content.
 
+### Shared HTML and CSS generation
+
+A later rendering path should run jsdom inside QuickJS/WebAssembly on both the
+server and the client. The same versioned guest program should generate HTML
+and CSS in both places, so server output and client regeneration do not drift
+because they use different DOM implementations or serializers. The server
+would still validate the generated tree and stylesheet before emitting them;
+jsdom supplies compatible authoring semantics, not authority over host DOM or
+network capabilities.
+
+This is a future replacement for duplicated server/client generation logic,
+not a requirement for the current project editor. It needs its own measured
+bundle, startup, memory, deterministic-serialization, and sandbox-policy work
+before it becomes a default rendering mode.
+
 ## Document, Style, and Policy Pass-Through
 
 Normal mode should treat HTML, CSS, and CSP similarly: authored input can pass
