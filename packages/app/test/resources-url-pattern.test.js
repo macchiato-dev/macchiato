@@ -10,6 +10,13 @@ test("resource URL patterns support wildcard hosts and paths", () => {
   assert.equal(urlMatchesAllowedPatterns("https://en.wikipedia.org.evil.test/wiki/Hypertext", ["*.wikipedia.org"]), false);
 });
 
+test("document fragments are allowed without an external URL grant", () => {
+  assert.equal(urlMatchesAllowedPatterns("#chapter-2", []), true);
+  assert.equal(urlMatchesAllowedPatterns("#/slides/12", []), true);
+  assert.equal(urlMatchesAllowedPatterns("https://example.test/#chapter-2", []), false);
+  assert.equal(urlMatchesAllowedPatterns("#bad\nfragment", []), false);
+});
+
 test("resource URL patterns support exact URLs and JavaScript regex syntax", () => {
   const exact = compileAllowedUrlPattern("`https://example.test/a?x=1`");
   assert.equal(exact("https://example.test/a?x=1"), true);

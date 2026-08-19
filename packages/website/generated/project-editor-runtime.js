@@ -6,22 +6,35 @@ var CHUNK_COUNT = 128;
 var ELEMENTS = /* @__PURE__ */ new Set([
   "a",
   "article",
+  "aside",
+  "b",
   "br",
   "button",
   "canvas",
+  "code",
+  "dialog",
   "div",
   "footer",
+  "form",
   "h1",
+  "h2",
+  "h3",
+  "h4",
   "header",
+  "i",
   "img",
   "input",
   "label",
-  "main",
   "li",
+  "main",
   "meta",
+  "nav",
+  "ol",
   "p",
   "section",
+  "small",
   "span",
+  "strong",
   "textarea",
   "title",
   "ul"
@@ -74,19 +87,24 @@ var SVG_IMAGE_ATTRIBUTES = /* @__PURE__ */ new Set([
 var ATTRIBUTES = /* @__PURE__ */ new Set([
   "aria-autocomplete",
   "aria-expanded",
+  "aria-haspopup",
   "aria-hidden",
   "aria-label",
   "aria-live",
+  "aria-modal",
   "aria-multiline",
   "aria-pressed",
   "aria-selected",
   "autocapitalize",
+  "accept",
   "autocomplete",
   "autocorrect",
   "class",
   "content",
   "contenteditable",
   "data-language",
+  "hidden",
+  "maxlength",
   "cx",
   "cy",
   "d",
@@ -385,7 +403,7 @@ var WasmWebBridge = class {
     const roots = [.../* @__PURE__ */ new Set([...targetRoots, ...portalRoots])];
     const hostDocument = documentTarget ? document : targetRoots[0].ownerDocument;
     const realm = hostDocument.defaultView || globalThis;
-    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
+    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLDialogElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
     const primaryRoot = documentTarget ? hostDocument.body : targetRoots[0];
     const logicalHead = documentTarget ? hostDocument.head : portalRoots[0] || primaryRoot;
     const chunks = [];
@@ -572,7 +590,7 @@ var WasmWebBridge = class {
       if (object instanceof Element && name === "childElementCount") {
         return object.childElementCount;
       }
-      if (object instanceof HTMLElement && name === "style")
+      if (object instanceof Element && "style" in object && name === "style")
         return reference(object.style);
       if (object instanceof Element && ["clientHeight", "clientWidth", "scrollHeight", "scrollWidth"].includes(name)) {
         return object[name];
@@ -638,7 +656,7 @@ var WasmWebBridge = class {
             fail(`innerHTML element ${element.localName} is not allowed`);
           }
           for (const attribute of Array.from(element.attributes)) {
-            if (attribute.name === "style" && /^--[a-z][a-z0-9-]{0,63}:\s*#[0-9a-f]{3,8}$/i.test(attribute.value))
+            if (attribute.name === "style" && /^--[a-z][a-z0-9-]{0,63}:\s*(?:#[0-9a-f]{3,8}|-?(?:\d+(?:\.\d*)?|\.\d+)%)$/i.test(attribute.value))
               continue;
             if (attribute.name === "xmlns" && svg && attribute.value === "http://www.w3.org/2000/svg")
               continue;
@@ -667,10 +685,11 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof HTMLImageElement && name === "src" && typeof next === "string") {
-        if (!/^data:image\/(?:png|svg\+xml);base64,[a-z0-9+/=]+$/i.test(next)) {
-          fail("image source must be an embedded PNG or SVG data URL");
+        const resolved = typeof options.resolveImage === "function" ? options.resolveImage(next) : next;
+        if (typeof resolved !== "string" || resolved.length > 8 * 1024 * 1024 || !/^data:image\/(?:gif|jpeg|png|svg\+xml|webp);base64,[a-z0-9+/=]+$/i.test(resolved)) {
+          fail("image source must be an embedded project image");
         }
-        object.src = next;
+        object.src = resolved;
         return null;
       }
       if (object instanceof HTMLElement && name === "hidden" && typeof next === "boolean") {
@@ -712,6 +731,14 @@ var WasmWebBridge = class {
       fail(`property set ${name} is not allowed`);
     }
     function call(object, name, args) {
+      if (object instanceof HTMLDialogElement && name === "showModal" && args.length === 0) {
+        object.showModal();
+        return null;
+      }
+      if (object instanceof HTMLDialogElement && name === "close" && args.length <= 1 && (args.length === 0 || typeof args[0] === "string")) {
+        object.close(args[0]);
+        return null;
+      }
       if (object instanceof HTMLCanvasElement && name === "getContext" && args.length === 1 && args[0] === "2d") {
         const context = object.getContext("2d");
         return context ? reference(context) : null;
@@ -877,7 +904,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object === hostDocument && name === "windowListen") {
-        if (!["beforeprint", "blur", "focus", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
+        if (!["beforeprint", "blur", "focus", "hashchange", "keydown", "pagehide", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
           fail("window event listener is not allowed");
         }
         hostDocument.defaultView.addEventListener(args[0], (event) => deliver(args[1], event));
@@ -1097,7 +1124,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof Node && name === "closest") {
-        if (args.length !== 1 || typeof args[0] !== "string" || !/^\.[a-z_][a-z0-9_-]{0,63}$/i.test(args[0])) {
+        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 128 || !SAFE_SELECTOR.test(args[0])) {
           fail("closest selector is not allowed");
         }
         const element = object instanceof Element ? object : object.parentElement;
@@ -1215,7 +1242,7 @@ var WasmWebBridge = class {
         "touchstart",
         "wheel"
       ].includes(type);
-      const documentEvent = object === hostDocument && ["mousemove", "mouseup", "selectionchange", "visibilitychange"].includes(type);
+      const documentEvent = object === hostDocument && ["click", "keydown", "mousemove", "mouseup", "selectionchange", "visibilitychange"].includes(type);
       if (!elementEvent && !documentEvent || !Number.isInteger(callback))
         fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
@@ -1935,6 +1962,56 @@ function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
     return { status: response.status, body: decoder2.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
   };
 }
+function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1048576) {
+  const projectFiles = new Map(files.map((file) => [file.path, file]));
+  const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
+  return async (value) => {
+    if (/^https:\/\//.test(value)) return remoteFetch(value);
+    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
+      throw new Error("Project file fetch requires a relative file path");
+    const path = value.replace(/^\.\//, "");
+    if (!path || path.startsWith("/") || path.split("/").includes(".."))
+      throw new Error("Project file fetch path is invalid");
+    const file = projectFiles.get(path);
+    if (!file) throw new Error(`Project file not found: ${path}`);
+    const extension = path.split(".").at(-1).toLowerCase();
+    const mime = {
+      css: "text/css",
+      gif: "image/gif",
+      html: "text/html",
+      jpeg: "image/jpeg",
+      jpg: "image/jpeg",
+      js: "text/javascript",
+      json: "application/json",
+      png: "image/png",
+      svg: "image/svg+xml",
+      txt: "text/plain"
+    }[extension] || "application/octet-stream";
+    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
+    let bytes;
+    if (data) bytes = Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0));
+    else bytes = encoder2.encode(file.content);
+    if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 32768)
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+    return { status: 200, body: data ? "" : file.content, resourceUrl: `data:${mime};base64,${btoa(binary)}` };
+  };
+}
+function createProjectImageResolver(files = []) {
+  const images = /* @__PURE__ */ new Map();
+  for (const file of files) {
+    if (/^data:image\/(?:gif|jpeg|png|webp);base64,/i.test(file.content)) images.set(file.path, file.content);
+    else if (file.path.toLowerCase().endsWith(".svg")) {
+      const bytes = encoder2.encode(file.content);
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 32768)
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+      images.set(file.path, `data:image/svg+xml;base64,${btoa(binary)}`);
+    }
+  }
+  return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
+}
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   let reportedError = null, response, starting = true, destroyed = false, machine;
@@ -2130,24 +2207,29 @@ async function mountResourcesProjectEditor(options) {
     }
   });
 }
-async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {
+async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, files = [], allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {
 } }) {
   if (violations.length) {
     statusRoot.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
   }
   let controller;
+  const projectLocation = () => {
+    const hash = root.ownerDocument?.defaultView?.location?.hash || "";
+    return /^#\/[A-Za-z0-9._/-]*(?:#[A-Za-z0-9_.:-]+)?$/.test(hash) && !hash.includes("//") ? hash.slice(1) : "/";
+  };
   try {
     controller = await createProjectOutputMachine({
       root,
       scripts,
       options: {
         frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,
-        fetchResource: createConstrainedFetch(allowedFetchOrigins),
+        fetchResource: createProjectFetch(files, allowedFetchOrigins),
+        resolveImage: createProjectImageResolver(files),
         allowNavigate,
         environment,
         services: {
-          route: { get: () => location.pathname, listen() {
+          route: { get: projectLocation, listen() {
           } },
           storage: { get: () => null, set() {
           }, delete() {

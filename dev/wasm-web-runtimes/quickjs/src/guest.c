@@ -287,7 +287,11 @@ static void receive_host_message(uint32_t minimum_length)
     host_message[actual_length] = 0;
     /* Runtime tag 1 loads source inside QuickJS. The machine sees only opaque
        bytes; future tags may load bytecode or transfer serialized state. */
-    if (actual_length > 1 && host_message[0] == 1) {
+    if (actual_length > 1 && host_message[0] == 1
+#ifdef WWC_CANONICAL_HOST
+        && actual_length != 4
+#endif
+    ) {
         result = JS_Eval(context, (const char *)(host_message + 1),
                          actual_length - 1, "dynamic-application.js",
                          JS_EVAL_TYPE_GLOBAL);
@@ -297,7 +301,11 @@ static void receive_host_message(uint32_t minimum_length)
         flush_guest_operations();
         return;
     }
-    if (actual_length > 1 && host_message[0] == 2) {
+    if (actual_length > 1 && host_message[0] == 2
+#ifdef WWC_CANONICAL_HOST
+        && actual_length != 4
+#endif
+    ) {
         uint32_t name_length = 0;
         const char *result_text;
         uint32_t result_length = 0;

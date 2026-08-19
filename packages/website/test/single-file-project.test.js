@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { StyleUse } from "@macchiato-dev/style-use";
 import { singleFileSnapshot } from "../seed-single-file-project.js";
 
@@ -36,9 +36,14 @@ test("records exact constrained CDN fetch grants for the QuickJS runtime", () =>
 });
 
 test("Mahjong renders fetched artwork through image elements, not CSS", () => {
-  const source = readFileSync(new URL("../../../examples/mahjong/index.html", import.meta.url), "utf8");
+  const example = new URL("../../../examples/mahjong/", import.meta.url);
+  const source = readFileSync(new URL("index.html", example), "utf8");
   assert.match(source, /document\.createElement\(["']img["']\)/);
   assert.match(source, /response\.resourceUrl\(\)/);
+  assert.doesNotMatch(source, /https:\/\/cdn\.jsdelivr\.net/);
+  assert.equal(existsSync(new URL("tiles/ExampleRegular.png", example)), true);
+  for (const kind of ["Flower", "Season"]) for (let number = 1; number <= 4; number += 1)
+    assert.equal(existsSync(new URL(`tiles/Regular/${kind}${number}.svg`, example)), true);
   assert.doesNotMatch(source, /--tiles|background-image:\s*var\(/);
   assert.doesNotMatch(source, /id="hint"|id="shuffle"|highlighted free tile/i);
   assert.doesNotMatch(source, /A free tile has|nothing covers it|Select a free tile|matching free tile/i);

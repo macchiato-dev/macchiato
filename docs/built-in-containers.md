@@ -1,9 +1,18 @@
 # Built-in Containers
 
-A container is a named, reusable environment made from WebAssembly machines,
-`*-use` capabilities, schemas, and budgets. A project invokes a container by
-name instead of repeating that configuration. Containers may be composed from
-smaller containers whose responsibilities and limits remain independent.
+Projects currently run in one generic WebAssembly container. Templates choose
+the initial files and configuration; they are not separate security
+containers. The generic container runs project JavaScript in QuickJS and
+projects its DOM through the machine's constrained browser surface.
+
+Fragment-only links are always available. External navigation still requires
+an explicit Allowed Link URL Pattern.
+
+## Templates
+
+The following names describe starting points within the generic container.
+They select example files and sensible initial constraints; changing one does
+not select a different runtime.
 
 ## Article
 
@@ -29,20 +38,21 @@ elements. Its HTML and SVG element/attribute grants are audited separately.
 
 ## Presentation
 
-`presentation` runs a portable presentation in QuickJS and projects its DOM
-through `dom-use`. It can use a larger, presentation-specific surface and a
-single in-memory archive while retaining node, storage, and execution budgets.
+`presentation` starts with a portable presentation application. It uses the
+same QuickJS machine and project-file model as every other template while
+retaining suitable node, storage, and execution budgets.
 
-## Single-file HTML/CSS/JS
+## Project files
 
-`single-file-web-app` accepts exactly one raw `index.html` file. It does not
-split inline markup, styles, or JavaScript into generated project files. It is
-a composition of two containers:
+The initial single-file template accepts a raw `index.html` without splitting
+its inline markup, styles, or JavaScript. A project can also contain supporting
+files such as images, data, stylesheets, and scripts. Relative guest calls such
+as `fetch("./tiles/Flower1.svg")` resolve only against those project files and
+do not grant network access.
 
-- `single-file-html-runtime` builds the runnable input and executes inline
-  JavaScript in the project's QuickJS WebAssembly VM.
-- `single-file-web-surface` displays the result through `dom-use` and checks
-  inline CSS with `style-use`.
+Every project file appears in the Files picker and is included in project ZIP
+exports and imports. This keeps examples such as Mahjong portable and prevents
+their assets from silently depending on a CDN.
 
 The runtime executes the inline JavaScript text as supplied and the surface
 installs the validated inline CSS text without rewriting selectors or
@@ -84,5 +94,6 @@ node packages/website/seed-single-file-project.js \
   --fetch-url https://cdn.jsdelivr.net/npm/example@1.0.0/data.json
 ```
 
-Use `--stdin` instead of `--source` to pipe the raw file. The resulting project
-snapshot contains exactly one content file, `index.html`.
+Use `--stdin` instead of `--source` to pipe the raw file. This seed command
+creates a project with only `index.html`; supporting files can subsequently be
+added through the project file model and remain part of its portable archive.

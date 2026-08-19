@@ -1,4 +1,4 @@
-import { createConstrainedFetch, createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
+import { createConstrainedFetch, createProjectAppMachine, createProjectEditorMachine, createProjectFetch, createProjectImageResolver, createProjectOutputMachine } from "./project-machines.js";
 
 export { createConstrainedFetch, createProjectOutputMachine };
 
@@ -43,23 +43,29 @@ export async function mountResourcesProjectEditor(options) {
   });
 }
 
-export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {} }) {
+export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, files = [], allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {} }) {
   if (violations.length) {
     statusRoot.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
   }
   let controller;
+  const projectLocation = () => {
+    const hash = root.ownerDocument?.defaultView?.location?.hash || "";
+    return /^#\/[A-Za-z0-9._/-]*(?:#[A-Za-z0-9_.:-]+)?$/.test(hash) && !hash.includes("//")
+      ? hash.slice(1) : "/";
+  };
   try {
     controller = await createProjectOutputMachine({
       root,
       scripts,
       options: {
         frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
-        fetchResource: createConstrainedFetch(allowedFetchOrigins),
+        fetchResource: createProjectFetch(files, allowedFetchOrigins),
+        resolveImage: createProjectImageResolver(files),
         allowNavigate,
         environment,
         services: {
-          route: { get: () => location.pathname, listen() {} },
+          route: { get: projectLocation, listen() {} },
           storage: { get: () => null, set() {}, delete() {}, listen() {} },
         },
       },

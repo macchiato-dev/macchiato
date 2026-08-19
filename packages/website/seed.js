@@ -1074,7 +1074,7 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: var(--project-toolbar-strong); font-size: 12px; }
 .project-editor__preview > [data-project-preview] { padding: 0; color: #edf3f2; }
 .project-editor__view-controls { display: flex; align-items: center; gap: 4px; }
-.project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: #aeb9b7; background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
+.project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: var(--project-toolbar-fg); background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[data-instant-tooltip] { position: relative; display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; }
 .project-editor__view-controls button[data-instant-tooltip] svg { width: 16px; height: 16px; }
 .project-editor__view-controls > [data-project-present]:hover, .project-editor__view-controls > [data-project-present]:focus-visible { border-color: var(--track-border); color: var(--project-toolbar-strong); background: var(--project-toolbar-hover); outline: none; }

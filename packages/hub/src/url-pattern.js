@@ -40,6 +40,11 @@ export function compileAllowedUrlPattern(input) {
 }
 
 export function urlMatchesAllowedPatterns(url, patterns) {
+  const value = String(url || "");
+  // A fragment stays within the already-rendered document and cannot contact
+  // another origin. Standard containers therefore allow it independently of
+  // the explicit grants required for network-capable URLs.
+  if (value.length <= 2048 && /^#[^\u0000-\u001f\u007f]*$/.test(value)) return true;
   return (patterns || []).some((pattern) => compileAllowedUrlPattern(pattern)(url));
 }
 

@@ -410,6 +410,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
   }
   let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  // Keep very large project history on the host. Mirroring multi-megabyte
+  // snapshots into the editor VM delays (and can prevent) the first render,
+  // while the existing host history path has the same observable behavior.
+  const historyInEditorMachine = snapshotField.value.length <= 256_000;
   let recoveredPendingSnapshot = false;
   if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
     try {
@@ -449,7 +453,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const tabSessionKey = `resources_project_tabs_v1:${projectId || persistence}`;
   let openTabs = [];
   try { openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || []; } catch {}
-  if (!openTabs.length) openTabs = Array.isArray(state.config?.editorTabs) ? [...state.config.editorTabs] : state.files.map((file) => file.path);
+  if (!openTabs.length) openTabs = Array.isArray(state.config?.editorTabs) ? [...state.config.editorTabs] : [selected];
   let ready = false;
   let pending = recoveredPendingSnapshot;
   let saveTimer = 0;
@@ -669,6 +673,33 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const reject = (message) => {
       if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
     };
+    const projectFile = (path) => state.files.find((candidate) => candidate.path === path);
+    const resolveModulePath = (from, specifier) => {
+      const parts = from.split("/");
+      parts.pop();
+      for (const part of specifier.split("/")) {
+        if (!part || part === ".") continue;
+        if (part === "..") parts.pop();
+        else parts.push(part);
+      }
+      return parts.join("/");
+    };
+    const bundleProjectModule = (path, source, seen = new Set()) => {
+      if (seen.has(path)) return "";
+      seen.add(path);
+      const imports = [];
+      const body = source.replace(/^[ \t]*import\s+(?:[^"']+?\s+from\s+)?["']([^"']+)["'];?[ \t]*$/gm,
+        (_statement, specifier) => {
+          if (!specifier.startsWith(".")) throw new Error(`Module import is outside the project: ${specifier}`);
+          const dependencyPath = resolveModulePath(path, specifier);
+          const dependency = projectFile(dependencyPath);
+          if (!dependency) throw new Error(`Project module not found: ${dependencyPath}`);
+          imports.push(bundleProjectModule(dependencyPath, dependency.content, seen));
+          return "";
+        }).replace(/^\s*export\s+(?=(?:const|let|var|function|class)\b)/gm, "");
+      if (/^\s*export\s/m.test(body)) throw new Error(`Unsupported module export in ${path}`);
+      return `${imports.join("\n")}\n${body}`;
+    };
     for (const script of parsed.querySelectorAll("script")) {
       let ancestor = script.parentElement;
       let blocked = false;
@@ -678,11 +709,16 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       }
       if (blocked) continue;
       const src = script.getAttribute("src");
+      const module = script.getAttribute("type") === "module";
       if (src) {
         const path = src.replace(/^\.\//, "");
-        const file = state.files.find((candidate) => candidate.path === path);
-        if (file) scripts.push({ source: path, code: file.content });
-      } else if (script.textContent.trim()) scripts.push({ source: entry, code: script.textContent });
+        const file = projectFile(path);
+        if (file) scripts.push({ source: path, code: module
+          ? `(async function () {\n${bundleProjectModule(path, file.content)}\n})();`
+          : file.content });
+      } else if (script.textContent.trim()) scripts.push({ source: entry, code: module
+        ? `(async function () {\n${bundleProjectModule(entry, script.textContent)}\n})();`
+        : script.textContent });
     }
     const fragment = document.createDocumentFragment();
     function copy(node, parent) {
@@ -703,8 +739,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const element = node.namespaceURI === "http://www.w3.org/2000/svg"
         ? document.createElementNS("http://www.w3.org/2000/svg", name)
         : document.createElement(name);
-      for (const attribute of ["id", "class", "title", "role", "aria-label"]) {
-        if (node.hasAttribute(attribute) && /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))) element.setAttribute(attribute, node.getAttribute(attribute));
+      for (const attribute of ["id", "class", "title", "role", "type", "tabindex", "hidden", "maxlength", "placeholder",
+        "aria-label", "aria-live", "aria-modal", "aria-haspopup", "aria-expanded"]) {
+        if (node.hasAttribute(attribute) && (attribute === "hidden" || /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))))
+          element.setAttribute(attribute, node.getAttribute(attribute));
       }
       if (name === "canvas") {
         for (const attribute of ["width", "height"]) if (/^[0-9]{1,5}$/.test(node.getAttribute(attribute) || "")) element.setAttribute(attribute, node.getAttribute(attribute));
@@ -789,6 +827,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         editorController?.projectOutput.request(generation);
         const controller = await mountResourcesProjectPreview({
           root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
+          files: state.files,
           allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins
             || state.config?.capabilities?.fetch?.resources || [],
           allowNavigate: (value) => urlMatchesAllowedPatterns(value,
@@ -884,7 +923,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       editorController.setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
       root.dataset.editorMachineId = controller.inspect().machine.machineId;
       root.dataset.editorMachineState = "ready";
-      if (localHistory) localHistory = editorController.history.initialize(localHistory);
+      if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);
       ready = true;
       sendContent();
       if (!previewController) renderPreview();
@@ -1082,7 +1121,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     pendingDestructive ||= destructive || branchedFromHistory;
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
-      if (editorController) localHistory = editorController.history.setCurrent(state);
+      if (editorController && historyInEditorMachine) localHistory = editorController.history.setCurrent(state);
       if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
     }
     clearTimeout(saveTimer);
@@ -1092,7 +1131,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function checkpointDraft({ destructive = false } = {}) {
     const now = Date.now();
-    if (editorController) {
+    if (editorController && historyInEditorMachine) {
       localHistory = editorController.history.checkpoint(state, {
         now,
         destructive,

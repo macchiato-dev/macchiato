@@ -29,6 +29,47 @@ export function createConstrainedFetch(allowedOrigins = [], maxBytes = 1_048_576
     const mime = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
     return { status: response.status, body: decoder.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
   }; }
+export function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1_048_576) {
+  const projectFiles = new Map(files.map((file) => [file.path, file]));
+  const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
+  return async (value) => {
+    if (/^https:\/\//.test(value)) return remoteFetch(value);
+    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
+      throw new Error("Project file fetch requires a relative file path");
+    const path = value.replace(/^\.\//, "");
+    if (!path || path.startsWith("/") || path.split("/").includes(".."))
+      throw new Error("Project file fetch path is invalid");
+    const file = projectFiles.get(path);
+    if (!file) throw new Error(`Project file not found: ${path}`);
+    const extension = path.split(".").at(-1).toLowerCase();
+    const mime = { css: "text/css", gif: "image/gif", html: "text/html", jpeg: "image/jpeg",
+      jpg: "image/jpeg", js: "text/javascript", json: "application/json", png: "image/png",
+      svg: "image/svg+xml", txt: "text/plain" }[extension] || "application/octet-stream";
+    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
+    let bytes;
+    if (data) bytes = Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0));
+    else bytes = encoder.encode(file.content);
+    if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 0x8000)
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    return { status: 200, body: data ? "" : file.content, resourceUrl: `data:${mime};base64,${btoa(binary)}` };
+  };
+}
+export function createProjectImageResolver(files = []) {
+  const images = new Map();
+  for (const file of files) {
+    if (/^data:image\/(?:gif|jpeg|png|webp);base64,/i.test(file.content)) images.set(file.path, file.content);
+    else if (file.path.toLowerCase().endsWith(".svg")) {
+      const bytes = encoder.encode(file.content);
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 0x8000)
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      images.set(file.path, `data:image/svg+xml;base64,${btoa(binary)}`);
+    }
+  }
+  return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
+}
 export async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   let reportedError = null, response, starting = true, destroyed = false, machine;
