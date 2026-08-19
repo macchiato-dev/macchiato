@@ -1067,6 +1067,7 @@ html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: #
 .project-editor__mount .cm-panel.cm-search button { flex: 0 0 auto; min-width: 25px; min-height: 25px; margin: 0; padding: 2px 6px; border: 1px solid #55615f; border-radius: 3px; color: #d8e0de; background: #292e2d; font: inherit; cursor: pointer; }
 .project-editor__mount .cm-panel.cm-search button:hover { color: #fff; background: #353c3a; }
 .project-editor__splitter { position: relative; cursor: col-resize; background: #454b4a; box-shadow: inset 1px 0 #202524; outline: none; }
+html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-shadow: inset 1px 0 #e8edef; }
 .project-editor__splitter::after { display: none; }
 .project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: var(--project-toolbar-strong); font-size: 12px; }
 .project-editor__preview > [data-project-preview] { padding: 0; color: #edf3f2; }
