@@ -786,8 +786,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     delete preview.dataset.canvasCommands;
   }
 
-  editorMount.addEventListener("beforeinput", disposeProjectMachine, true);
-
   async function mountEditorMachine(reason = "project-open") {
     const generation = ++editorGeneration;
     ready = false;
@@ -1185,11 +1183,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       clearNotice();
       if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;
       clearTimeout(editorPreviewTimer);
-      disposeProjectMachine();
       if (syntaxErrors) {
         setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
       } else {
-        editorPreviewTimer = setTimeout(renderPreview, 250);
+        // Keep the current output alive while the user is typing. Rebuilding
+        // its DOM and QuickJS machine is intentionally a trailing-edge task.
+        editorPreviewTimer = setTimeout(renderPreview, 500);
       }
     } catch {}
   }

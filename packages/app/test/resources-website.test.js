@@ -987,12 +987,21 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
   const projectEditor = page.locator(".project-editor");
   await assert.doesNotReject(projectEditor.locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
+  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.projectMachineId);
+  const projectMachineBeforeEdit = await page.locator("[data-project-preview]").getAttribute("data-project-machine-id");
   await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
+  await page.waitForTimeout(250);
+  assert.equal(
+    await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"),
+    projectMachineBeforeEdit,
+    "editing should leave the current output machine alive during the debounce window",
+  );
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.waitForFunction(() => document.querySelector("[data-project-preview] .project-editor__preview-surface")
     ?.shadowRoot?.textContent.includes("Updated."));
+  assert.notEqual(await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"), projectMachineBeforeEdit);
   const versionsButton = page.locator("[data-project-versions-proxy]");
   assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
   await versionsButton.click();
