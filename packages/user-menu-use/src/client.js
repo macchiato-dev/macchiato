@@ -19,3 +19,8 @@ document.addEventListener("keydown", (event) => {
   open.removeAttribute("open");
   open.querySelector("summary")?.focus();
 });
+
+document.addEventListener("change", (event) => {
+  const select = event.target.closest?.("select[data-language-select]");
+  if (select?.form) select.form.requestSubmit();
+});

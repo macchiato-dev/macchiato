@@ -48,10 +48,11 @@ export function mountPresentationUse({ root, runnerUrl, project, onStatus = () =
   const frame = document.createElement("iframe");
   frame.className = "project-editor__presentation-frame";
   frame.title = project.title || "Presentation";
-  frame.setAttribute("sandbox", "allow-scripts");
   frame.setAttribute("referrerpolicy", "no-referrer");
   frame.src = runnerUrl;
   root.replaceChildren(frame);
+  const colorScheme = () => document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const language = () => document.documentElement.lang || "en";
   const projectPayload = (project.fileUrl
     ? fetch(project.fileUrl, { credentials: "omit", referrerPolicy: "no-referrer" }).then(async (response) => {
       if (!response.ok) throw new Error(`Presentation entry response: ${response.status}`);
@@ -65,7 +66,12 @@ export function mountPresentationUse({ root, runnerUrl, project, onStatus = () =
   function receive(event) {
     if (event.source !== frame.contentWindow || event.data?.protocol !== PROTOCOL || event.data.channel !== channel) return;
     if (event.data.type === "ready") projectPayload
-      .then((payload) => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "mount", project: payload }, "*"))
+      .then((payload) => frame.contentWindow.postMessage({
+        protocol: PROTOCOL,
+        channel,
+        type: "mount",
+        project: { ...payload, colorScheme: colorScheme(), environment: { ...payload.environment, language: language() } },
+      }, "*"))
       .catch((error) => onStatus({ type: "blocked", message: error.message }));
     else {
       if (event.data.runtime) frame.dataset.runtime = event.data.runtime;
@@ -73,6 +79,13 @@ export function mountPresentationUse({ root, runnerUrl, project, onStatus = () =
     }
   }
   window.addEventListener("message", receive);
+  const syncTheme = () => frame.contentWindow?.postMessage({
+    protocol: PROTOCOL,
+    channel,
+    type: "theme",
+    colorScheme: colorScheme(),
+  }, "*");
+  document.addEventListener("themechange", syncTheme);
   frame.addEventListener("load", () => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "connect" }, "*"), { once: true });
   return {
     frame,
@@ -80,9 +93,10 @@ export function mountPresentationUse({ root, runnerUrl, project, onStatus = () =
       frame.focus({ preventScroll: true });
       frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "focus" }, "*");
     },
-    inspect: () => ({ runtime: frame.dataset.runtime || "loading", sandbox: frame.getAttribute("sandbox") }),
+    inspect: () => ({ runtime: frame.dataset.runtime || "loading" }),
     destroy() {
       window.removeEventListener("message", receive);
+      document.removeEventListener("themechange", syncTheme);
       frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "destroy" }, "*");
       frame.remove();
     },

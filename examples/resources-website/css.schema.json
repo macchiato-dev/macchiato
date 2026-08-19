@@ -185,6 +185,9 @@
         "--bg": {
           "$ref": "background"
         },
+        "--bg-color": {
+          "$ref": "color"
+        },
         "--gap": {
           "$ref": "spacing"
         },
@@ -305,6 +308,9 @@
         },
         "background": {
           "$ref": "background"
+        },
+        "background-color": {
+          "$ref": "color"
         },
         "background-attachment": {
           "enum": [

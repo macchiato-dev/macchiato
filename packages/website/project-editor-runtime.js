@@ -47,7 +47,7 @@ export function mountResourcesPresentation(options) {
   return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
 }
 
-export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], onViolation = () => {} }) {
+export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], environment = {}, onViolation = () => {} }) {
   if (violations.length) {
     statusRoot.dataset.previewViolations = String(violations.length);
     violations.forEach(onViolation);
@@ -60,6 +60,7 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
       options: {
         frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
         fetchResource: createConstrainedFetch(allowedFetchOrigins),
+        environment,
         services: {
           route: { get: () => location.pathname, listen() {} },
           storage: { get: () => null, set() {}, delete() {}, listen() {} },

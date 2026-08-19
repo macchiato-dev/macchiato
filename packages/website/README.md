@@ -68,16 +68,38 @@ same-project scripts before projecting the declared container DOM; those
 scripts run only inside QuickJS. `browser-use` forwards the admitted DOM subset
 and `canvas-use` forwards a bounded Canvas 2D command set.
 
-The initial output mounts directly so opening an editor does not wait for an
-iframe. The first real source edit starts a configurable 900 ms trailing
-debounce, prepares a hidden root in one static sandboxed iframe, and swaps it in
-only after its output machine has mounted successfully. Later generations reuse
-that iframe and alternate between its two roots; they do not reload the frame.
+Output mounts in one static iframe from the beginning, so initial rendering,
+ordinary refreshes, and future hot reload use the same surface semantics. A
+source edit starts a configurable 900 ms trailing debounce and prepares the
+next generation in the iframe's hidden root. It swaps only after its output
+machine has mounted successfully. Later generations reuse that iframe and
+alternate between its two roots; they do not reload the frame.
 Set `config.output.debounceMs` between 250 and 5000, or set
 `config.output.iframe` to `false` for the direct development surface. The
 current implementation still creates a WebAssembly/QuickJS runtime for each
 generation. Reusing one runtime across multiple disposable contexts is the next
 runtime boundary, not a behavior this UI silently assumes today.
+
+The iframe is deliberately not given the HTML `sandbox` attribute. It is a
+layout and lifecycle boundary; QuickJS plus the constrained DOM bridge remains
+the code boundary. The static frame evaluates CSS media queries such as
+`prefers-color-scheme` in the normal browser realm without exposing
+`matchMedia`, its window, or other browser globals to the project guest.
+
+Both output-frame paths receive the resolved Resources appearance. They expose that
+choice as `html[data-theme="light"|"dark"]`, the standard `color-scheme`
+property, and `--macchiato-color-scheme`. Project CSS can therefore follow the
+in-app System/Dark/Light selection instead of consulting only the operating
+system preference. Theme changes are synchronized without recreating the
+iframe or its QuickJS machine.
+
+The selected site language is passed separately to the project machine and is
+available to browser-shaped guests as `navigator.language`. It is environment
+context, not a forced rendering decision: the host does not rewrite the
+guest's `<html lang>` attribute or translate its content. A guest application
+or container configuration decides whether to use it. Cat Memory Match is the
+small reference behavior: it uses Spanish labels when `navigator.language`
+starts with `es`, and otherwise keeps its English labels.
 
 Stored projects autosave their working snapshot. Every direct snapshot change
 also writes a project-scoped recovery copy to session storage before the

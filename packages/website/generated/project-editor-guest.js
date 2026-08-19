@@ -30429,6 +30429,28 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
+  // packages/code-editor-use/src/syntax.js
+  function hasSyntaxErrors(state, language3) {
+    const source = state.doc.toString();
+    if (language3 === "javascript") {
+      try {
+        Function(source);
+        return false;
+      } catch (error) {
+        if (error instanceof SyntaxError) return true;
+        throw error;
+      }
+    }
+    if (language3 === "html") {
+      return false;
+    }
+    const cursor2 = syntaxTree(state).cursor();
+    do {
+      if (cursor2.type.isError) return true;
+    } while (cursor2.next());
+    return false;
+  }
+
   // packages/code-editor-use/src/guest.js
   if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
     globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -30470,22 +30492,6 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     if (name2 === "markdown") return markdown();
     return [];
   }
-  function hasSyntaxErrors(state) {
-    if (currentLanguage === "javascript") {
-      try {
-        Function(state.doc.toString());
-        return false;
-      } catch (error) {
-        if (error instanceof SyntaxError) return true;
-        throw error;
-      }
-    }
-    const cursor2 = syntaxTree(state).cursor();
-    do {
-      if (cursor2.type.isError) return true;
-    } while (cursor2.next());
-    return false;
-  }
   function editorExtensions() {
     return [
       editorSetup.of(basicSetup),
@@ -30506,7 +30512,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
             content: update.state.doc.toString(),
             characters: update.state.doc.length,
             lines: update.state.doc.lines,
-            syntaxErrors: hasSyntaxErrors(update.state)
+            syntaxErrors: hasSyntaxErrors(update.state, currentLanguage)
           }));
         }
       })

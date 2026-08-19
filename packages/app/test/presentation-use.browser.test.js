@@ -15,14 +15,14 @@ test("presentation-use keeps guest code in QuickJS and blocks ungranted URL sink
   const server = createServer(async (request, response) => {
     if (request.url === "/") {
       response.setHeader("content-type", "text/html; charset=utf-8");
-      response.end(`<!doctype html><div id="preview"></div><output id="status"></output><script type="module">
+      response.end(`<!doctype html><html lang="es"><body><div id="preview"></div><output id="status"></output><script type="module">
         import { mountResourcesPresentation } from "/-/project-editor-runtime.js";
         const status = document.querySelector("#status");
         window.presentationController = mountResourcesPresentation({
           root: document.querySelector("#preview"),
           project: {
             title: "URL boundary probe",
-            file: '<main id="app"><button id="image">Set image URL</button><button id="link">Set link URL</button><button id="count">Count</button><p id="state">ready</p><p id="ticks">0</p><img id="picture" alt=""><a id="target">target</a></main><script>let count = 0; let ticks = 0; document.getElementById("image").addEventListener("click", () => { document.getElementById("picture").src = "https://tracker.example/private.png"; }); document.getElementById("link").addEventListener("click", () => { document.getElementById("target").setAttribute("href", "https://tracker.example/leak"); }); document.getElementById("count").addEventListener("click", () => { document.getElementById("count").textContent = "Count " + (++count); }); document.addEventListener("keydown", (event) => { document.getElementById("state").textContent = event.key; }); setInterval(() => { document.getElementById("ticks").textContent = String(++ticks); }, 100);<\\/script>',
+            file: '<main id="app"><button id="image">Set image URL</button><button id="link">Set link URL</button><button id="count">Count</button><p id="state">ready</p><p id="ticks">0</p><p id="language"></p><img id="picture" alt=""><a id="target">target</a></main><script>let count = 0; let ticks = 0; document.getElementById("language").textContent = navigator.language; document.getElementById("image").addEventListener("click", () => { document.getElementById("picture").src = "https://tracker.example/private.png"; }); document.getElementById("link").addEventListener("click", () => { document.getElementById("target").setAttribute("href", "https://tracker.example/leak"); }); document.getElementById("count").addEventListener("click", () => { document.getElementById("count").textContent = "Count " + (++count); }); document.addEventListener("keydown", (event) => { document.getElementById("state").textContent = event.key; }); setInterval(() => { document.getElementById("ticks").textContent = String(++ticks); }, 100);<\\/script>',
             domSchema: {
               nodes: {
                 body: { attrs: [], events: ["keydown"], children: ["main"] },
@@ -58,12 +58,24 @@ test("presentation-use keeps guest code in QuickJS and blocks ungranted URL sink
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   const frameElement = page.locator(".project-editor__presentation-frame");
   await frameElement.waitFor({ timeout: 10_000 }).catch(() => assert.fail(`presentation frame did not mount: ${browserErrors.join(" | ")}`));
-  assert.equal(await frameElement.getAttribute("sandbox"), "allow-scripts");
+  assert.equal(await frameElement.getAttribute("sandbox"), null);
   const guest = page.frameLocator(".project-editor__presentation-frame");
   await guest.locator("[data-runtime='quickjs-dom-use']").waitFor({ timeout: 15_000 }).catch(async () => {
     assert.fail(`presentation runtime did not mount: ${await page.locator("#status").textContent()} | ${await guest.locator("body").innerText()} | ${browserErrors.join(" | ")}`);
   });
+  assert.equal(await guest.locator("html").getAttribute("data-theme"), "dark");
+  assert.equal(await guest.locator("html").evaluate((node) =>
+    getComputedStyle(node).getPropertyValue("--macchiato-color-scheme").trim()), "dark");
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+    document.dispatchEvent(new CustomEvent("themechange", {
+      detail: { choice: "light", theme: "light" },
+    }));
+  });
+  await guest.locator('html[data-theme="light"]').waitFor();
+  assert.equal(await guest.locator("html").evaluate((node) => node.style.colorScheme), "light");
   assert.equal(await guest.locator("#state").textContent(), "ready");
+  assert.equal(await guest.locator("#language").textContent(), "es");
   await page.evaluate(() => window.presentationController.focus());
   await page.keyboard.press("ArrowRight");
   await guest.locator("#state").getByText("ArrowRight").waitFor();

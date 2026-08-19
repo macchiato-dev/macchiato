@@ -196,9 +196,10 @@ test("generated QuickJS environment matches its directly runnable source", async
   context.__browserUseFlush();
   assert.equal(context.intersections, 1);
   assert.deepEqual(
-    JSON.parse(context.__browserUseConfigureEnvironment(JSON.stringify({ innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 }))),
-    { platform: "Linux", innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 },
+    JSON.parse(context.__browserUseConfigureEnvironment(JSON.stringify({ language: "es", innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 }))),
+    { platform: "Linux", language: "es", innerWidth: 640, innerHeight: 480, devicePixelRatio: 2 },
   );
+  assert.equal(context.navigator.language, "es");
 });
 
 test("QuickJS guest timers honor their requested delay", () => {

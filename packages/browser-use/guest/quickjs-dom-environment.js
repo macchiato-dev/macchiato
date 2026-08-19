@@ -243,10 +243,11 @@
     if (typeof environment.platform === "string") navigator.platform = environment.platform.slice(0, 80);
     if (typeof environment.userAgent === "string") navigator.userAgent = environment.userAgent.slice(0, 500);
     if (typeof environment.vendor === "string") navigator.vendor = environment.vendor.slice(0, 120);
+    if (typeof environment.language === "string" && /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/.test(environment.language)) navigator.language = environment.language;
     if (Number.isFinite(environment.innerWidth) && environment.innerWidth > 0) innerWidth = environment.innerWidth;
     if (Number.isFinite(environment.innerHeight) && environment.innerHeight > 0) innerHeight = environment.innerHeight;
     if (Number.isFinite(environment.devicePixelRatio) && environment.devicePixelRatio > 0) devicePixelRatio = environment.devicePixelRatio;
-    return JSON.stringify({ platform: navigator.platform, innerWidth, innerHeight, devicePixelRatio });
+    return JSON.stringify({ platform: navigator.platform, language: navigator.language, innerWidth, innerHeight, devicePixelRatio });
   };
   globalThis.__browserUseFlush = () => {
     let count = 0;

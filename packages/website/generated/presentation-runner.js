@@ -5887,6 +5887,9 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       `, "presentation-fetch-guest.js");
       }
       sandbox.evalGlobal(guestRuntime, "dom-use-guest-runtime.js");
+      sandbox.evalGlobal(`globalThis.navigator = Object.assign(globalThis.navigator || {}, {
+      language: ${JSON.stringify(project.environment?.language || "en")}
+    })`, "presentation-environment.js");
       const inline = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });
       if (inline.error) throw new Error(inline.error);
       for (const [index, script] of [...inline, ...project.scripts || []].entries()) {
@@ -5958,6 +5961,12 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
   var mount = document.querySelector("[data-presentation-root]");
   var active = null;
   var channel = null;
+  function applyColorScheme(value) {
+    const colorScheme = value === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = colorScheme;
+    document.documentElement.style.colorScheme = colorScheme;
+    document.documentElement.style.setProperty("--macchiato-color-scheme", colorScheme);
+  }
   mount.tabIndex = 0;
   mount.addEventListener("pointerup", () => setTimeout(() => {
     if (document.activeElement === document.body) mount.focus({ preventScroll: true });
@@ -5967,6 +5976,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
   }
   async function start(project) {
     active?.destroy();
+    applyColorScheme(project.colorScheme);
     active = await mountPresentationRuntime({ root: mount, project, onStatus: (status) => send(status.type, status) });
     send("mounted", { runtime: "quickjs-dom-use" });
   }
@@ -5974,6 +5984,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
     if (event.data?.protocol !== PROTOCOL) return;
     channel = event.data.channel;
     if (event.data.type === "connect") send("ready");
+    if (event.data.type === "theme") applyColorScheme(event.data.colorScheme);
     if (event.data.type === "focus") mount.focus({ preventScroll: true });
     if (event.data.type === "destroy") active?.destroy();
     if (event.data.type === "mount") start(event.data.project).catch((error) => {

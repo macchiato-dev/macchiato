@@ -7,8 +7,19 @@ addEventListener("message", (event) => {
   const styles = roots.map(() => document.head.appendChild(document.createElement("style")));
   let active = 0;
   const stagedGenerations = new Map();
+  const applyColorScheme = (value) => {
+    const colorScheme = value === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = colorScheme;
+    document.documentElement.style.colorScheme = colorScheme;
+    document.documentElement.style.setProperty("--macchiato-color-scheme", colorScheme);
+  };
   port.addEventListener("message", (message) => {
+    if (message.data?.type === "theme") {
+      applyColorScheme(message.data.colorScheme);
+      return;
+    }
     if (message.data?.type === "stage" && typeof message.data.css === "string") {
+      applyColorScheme(message.data.colorScheme);
       const staged = active ^ 1;
       styles[staged].textContent = message.data.css;
       styles[staged].disabled = true;

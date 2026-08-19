@@ -202,7 +202,9 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.getByLabel("Template").inputValue(), template);
     assert.equal(await page.locator(".project-create__fields").isVisible(), true);
     assert.equal(await page.locator(".project-view__identity").count(), 0);
-    assert.equal(await page.locator(`[data-project-preview] ${previewSelector}`).count(), 1);
+    const preview = page.frameLocator(".project-editor__presentation-frame").locator(previewSelector);
+    await preview.waitFor();
+    assert.equal(await preview.count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-status]").isHidden(), true);
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
@@ -375,6 +377,7 @@ test("apps directory renders in a real browser", async (t) => {
   const browser = await chromium.launch();
   t.after(async () => browser.close());
   const page = await browser.newPage();
+  await page.emulateMedia({ colorScheme: "light" });
   const errors = [];
   const badResponses = [];
 
@@ -433,7 +436,8 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
   assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
-  assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
+  assert.deepEqual(edgeTheme, ["#1233f0", "#1233f0"]);
+  assert.equal(await page.locator("html").getAttribute("data-theme-choice"), "system");
   await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
   const accountTrigger = page.getByLabel("Account menu");
   const accountResting = await accountTrigger.evaluate((node) => {
@@ -477,14 +481,12 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
 
   await page.getByLabel("Account menu").click();
   await page.getByLabel("Language").selectOption("es");
-  await page.getByRole("button", { name: "Change" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "es");
   await page.getByRole("link", { name: "Acerca de" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Acerca de Resources.co" }).waitFor());
   await page.getByLabel("Menú de cuenta").click();
   await page.getByLabel("Idioma").selectOption("en");
-  await page.getByRole("button", { name: "Cambiar" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "About Resources.co" }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
 

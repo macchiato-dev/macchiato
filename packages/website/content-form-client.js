@@ -461,7 +461,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let outputFrame = null;
   let outputFramePort = null;
   let outputFrameReady = null;
-  let outputFrameRequested = false;
+  let outputFrameRequested = true;
+  const syncOutputTheme = () => outputFramePort?.postMessage({
+    type: "theme",
+    colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
+  });
+  document.addEventListener("themechange", syncOutputTheme);
   let activeError = "";
   let activeErrorAction = null;
   let activeStatusSurface = "output";
@@ -654,7 +659,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         outputFrame = document.createElement("iframe");
         outputFrame.className = "project-editor__preview-surface";
         outputFrame.title = `${title} output`;
-        outputFrame.sandbox = "allow-same-origin allow-scripts";
         outputFrame.src = "/-/resources-site/project-output-frame.html";
         outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
         outputFrame.hidden = true;
@@ -791,7 +795,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           resolve();
         };
         outputFramePort.addEventListener("message", receive);
-        outputFramePort.postMessage({ type: "stage", generation, css: renderedCss });
+        outputFramePort.postMessage({
+          type: "stage",
+          generation,
+          css: renderedCss,
+          colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
+        });
       });
       if (generation !== previewGeneration) return;
       surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
@@ -807,6 +816,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         const controller = await mountResourcesProjectPreview({
           root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
           allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins || [],
+          environment: { language: document.documentElement.lang || "en" },
           onViolation(error) {
             if (generation !== previewGeneration) return;
             const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
@@ -866,7 +876,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     outputFramePort?.close();
     outputFrame?.remove();
     outputFrame = outputFramePort = outputFrameReady = null;
-    outputFrameRequested = false;
+    outputFrameRequested = true;
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
     delete preview.dataset.projectMachineId;
@@ -1738,6 +1748,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   mountEditorMachine();
   if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
   addEventListener("pagehide", () => {
+    document.removeEventListener("themechange", syncOutputTheme);
     editorGeneration += 1;
     editorController?.destroy();
     disposeProjectMachine();

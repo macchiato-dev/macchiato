@@ -4,13 +4,13 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
-import { syntaxTree } from "@codemirror/language";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
+import { hasSyntaxErrors } from "./syntax.js";
 
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -53,22 +53,6 @@ function languageExtension(name) {
   if (name === "markdown") return markdown();
   return [];
 }
-function hasSyntaxErrors(state) {
-  if (currentLanguage === "javascript") {
-    try {
-      Function(state.doc.toString());
-      return false;
-    } catch (error) {
-      if (error instanceof SyntaxError) return true;
-      throw error;
-    }
-  }
-  const cursor = syntaxTree(state).cursor();
-  do {
-    if (cursor.type.isError) return true;
-  } while (cursor.next());
-  return false;
-}
 function editorExtensions() {
   return [
     editorSetup.of(basicSetup),
@@ -89,7 +73,7 @@ function editorExtensions() {
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
-          syntaxErrors: hasSyntaxErrors(update.state),
+          syntaxErrors: hasSyntaxErrors(update.state, currentLanguage),
         }));
       }
     }),

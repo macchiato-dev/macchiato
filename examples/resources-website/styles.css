@@ -169,6 +169,7 @@
   html { height: 100%; }
   html {
     background: var(--bg);
+    background-color: var(--bg-color);
     background-attachment: fixed;
   }
 
@@ -176,6 +177,7 @@
     font-family: "Space Grotesk", system-ui, sans-serif;
     color: var(--text);
     background: var(--bg);
+    background-color: var(--bg-color);
     background-attachment: fixed;
     min-height: 100vh;
     padding: clamp(20px, 3vw, 40px);

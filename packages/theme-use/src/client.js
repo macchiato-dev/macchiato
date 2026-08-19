@@ -18,14 +18,18 @@ function resolved(choice) {
 
 function apply(choice, persist = true) {
   if (!choices.has(choice)) return;
-  root.dataset.theme = resolved(choice);
+  const theme = resolved(choice);
+  root.dataset.theme = theme;
   root.dataset.themeChoice = choice;
-  for (const button of document.querySelectorAll("[data-theme-choice]")) {
+  for (const button of document.querySelectorAll("button[data-theme-choice]")) {
     button.setAttribute("aria-pressed", String(button.dataset.themeChoice === choice));
   }
   if (persist) {
     try { localStorage.setItem(storageKey, choice); } catch {}
   }
+  document.dispatchEvent(new CustomEvent("themechange", {
+    detail: { choice, theme },
+  }));
 }
 
 document.addEventListener("click", (event) => {
@@ -35,4 +39,4 @@ document.addEventListener("click", (event) => {
 media.addEventListener?.("change", () => {
   if (root.dataset.themeChoice === "system") apply("system", false);
 });
-apply(storedTheme() || "dark", false);
+apply(storedTheme() || "system", false);

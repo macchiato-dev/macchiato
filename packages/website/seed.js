@@ -849,9 +849,9 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .edge-guest-menu { position: relative; }
 .edge-guest-menu .ub-acct { padding: 4px; }
 .edge-guest-menu .edge-user-menu__panel { min-width: 210px; }
-.profile-language { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; padding: 2px 5px 5px; }
+.profile-language { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 2px 5px 5px; }
 .profile-language select, .profile-language button { min-height: 36px; border: 1px solid var(--track-border); border-radius: 9px; color: var(--text); background: var(--track); font: inherit; font-size: 13px; }
-.profile-language select { min-width: 0; padding: 6px 9px; }
+.profile-language select { min-width: 0; padding: 6px 32px 6px 9px; }
 .profile-language button { padding: 6px 10px; cursor: pointer; }
 .profile-language button:hover { border-color: var(--accent); }
 .item--danger:hover { color: #ff6b6b; }
@@ -1121,6 +1121,14 @@ html:has(.focused-view),
 body:has(.focused-view) { height: 100%; background: var(--pop-bg); overflow: hidden; }
 body:has(.focused-view) { padding: 0; }
 .layout.focused-view { width: 100%; height: 100vh; max-width: none; min-height: 0; margin: 0; gap: 0; overflow: hidden; background: var(--pop-bg); grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 54px minmax(0, 1fr); grid-template-areas: "brand userbar" "main main"; }
+.layout.focused-view {
+  --card: rgba(9,15,42,0.52); --card-border: rgba(255,255,255,0.12);
+  --text: #eef2ff; --muted: #aeb9e8; --accent: #30d5c8;
+  --hover: rgba(255,255,255,0.07); --pop-bg: #0c1230;
+  --active-bg: #2f5bff; --active-fg: #fff;
+  --track: rgba(255,255,255,0.10); --track-border: rgba(255,255,255,0.16);
+  color: var(--text);
+}
 .layout.focused-view > .focused-header,
 .layout.focused-view > .brand { height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 0 9px; border: none; border-radius: 0; background: #17226e; box-shadow: none; }
 .layout.focused-view > .userbar { height: 54px; min-height: 54px; align-self: stretch; justify-self: stretch; padding: 7px 9px 7px 0; border: none; border-radius: 0; background: #17226e; box-shadow: none; }

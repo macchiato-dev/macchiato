@@ -81,12 +81,11 @@ function message(messages, key, fallback) {
 function languageMenuHtml(locale, pathname, messages) {
   return `<div class="menu__head">${message(messages, "chrome.language", "Language")}</div>
     <form class="profile-language" method="get" action="/language">
-      <select name="locale" aria-label="${message(messages, "chrome.language", "Language")}">
+      <select name="locale" aria-label="${message(messages, "chrome.language", "Language")}" data-language-select>
         <option value="en"${locale === "en" ? " selected" : ""}>English</option>
         <option value="es"${locale === "es" ? " selected" : ""}>Español</option>
       </select>
       <input type="hidden" name="return" value="${escapeHtml(pathname)}">
-      <button type="submit">${message(messages, "chrome.changeLanguage", "Change")}</button>
     </form>`;
 }
 
