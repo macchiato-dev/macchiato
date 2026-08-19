@@ -77,8 +77,6 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-output-frame.html", bytes(readFileSync(join(directory, "project-output-frame.html"))));
   files.set("/-/resources-site/project-output-frame.js", bytes(readFileSync(join(directory, "project-output-frame.js"))));
   files.set("/-/resources-site/project-editor-runtime.js", editorRuntime);
-  files.set("/-/resources-site/presentation-runner.js", bytes(readFileSync(join(generatedDirectory, "presentation-runner.js"))));
-  files.set("/-/resources-site/presentation-runner.html", bytes(readFileSync(join(directory, "../../packages/presentation-use/runner.html"))));
   files.set("/-/resources-site/project-editor-guest.js", editorGuest);
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);

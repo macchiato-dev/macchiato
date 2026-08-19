@@ -1206,6 +1206,11 @@ Object.defineProperty(GuestElement.prototype, "className", {
   get: function () { return this.getAttribute("class") || ""; },
   set: function (value) { this.setAttribute("class", String(value)); }
 });
+Object.defineProperty(GuestElement.prototype, "innerHTML", {
+  set: function (value) {
+    pendingOperations.push([2, this.reference, stringIndex("innerHTML"), encode(String(value))]);
+  }
+});
 
 function GuestSelection(reference) {
   GuestObject.call(this, reference);
@@ -1984,5 +1989,32 @@ GuestClassList.prototype.toggle = function (token, force) {
 Object.defineProperty(GuestElement.prototype, "classList", {
   get: function () {
     return this._guestClassList || (this._guestClassList = new GuestClassList(this));
+  }
+});
+function datasetAttribute(name) {
+  return "data-" + String(name).replace(/[A-Z]/g, function (letter) {
+    return "-" + letter.toLowerCase();
+  });
+}
+Object.defineProperty(GuestElement.prototype, "dataset", {
+  get: function () {
+    var element = this;
+    return this._guestDataset || (this._guestDataset = new Proxy({}, {
+      get: function (_, name) {
+        if (typeof name !== "string") return undefined;
+        var value = element.getAttribute(datasetAttribute(name));
+        return value === null ? undefined : value;
+      },
+      set: function (_, name, value) {
+        if (typeof name !== "string") return false;
+        element.setAttribute(datasetAttribute(name), String(value));
+        return true;
+      },
+      deleteProperty: function (_, name) {
+        if (typeof name !== "string") return false;
+        element.removeAttribute(datasetAttribute(name));
+        return true;
+      }
+    }));
   }
 });

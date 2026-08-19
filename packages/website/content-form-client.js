@@ -2,7 +2,7 @@ import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normaliz
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
-import { mountResourcesPresentation, mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
+import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 import { StyleUse } from "/-/style-use/index.js";
 
 function enterProjectLoadingView(href) {
@@ -167,7 +167,7 @@ const STARTING_POINTS = Object.freeze({
   },
   slides: {
     files: [{ path: "index.html", content: "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Small presentation</title><style>html,body{margin:0;height:100%;background:#101321;color:#f4f6ff;font:20px system-ui}main{height:100%;display:grid;place-items:center;text-align:center}small{color:#9da8d8}</style></head><body><main><div><h1>Small presentation</h1><p>A portable, single-file starting point.</p><small>Import a Resources project ZIP to replace it.</small></div></main></body></html>" }],
-    config: { entry: "index.html", template: "slides", container: "presentation", sandbox: { network: false, storage: "session" } },
+    config: { entry: "index.html", template: "slides", container: "single-file-web-app", sandbox: { network: false, storage: "session" } },
   },
 });
 
@@ -603,59 +603,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const source = state.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
-    const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
-    if (containerName === "presentation" || containerName === "single-file-web-app") {
-      previewController?.destroy();
-      previewController = null;
-      outputFrame?.remove();
-      outputFrame = outputFramePort = outputFrameReady = null;
-      delete preview.dataset.projectMachineId;
-      const containerEntry = state.config?.containerEntry || entry;
-      const containerSource = state.files.find((file) => file.path === containerEntry)?.content || source;
-      const artifactPath = String(state.config?.artifactPath || "");
-      const artifactOrigin = root.querySelector("[data-blog-examples-origin]")?.dataset.blogExamplesOrigin || "";
-      const fileUrl = artifactOrigin && /^\/-\/blog-examples\/[A-Za-z0-9._~?&=/%+-]+$/.test(artifactPath) ? `${artifactOrigin}${artifactPath}` : "";
-      const stylesheetPaths = state.config?.stylesheets || [];
-      // An absent stylesheet list means the single-file runtime owns its
-      // inline <style> blocks. Passing an empty string would suppress that
-      // extraction and leave the display surface unstyled.
-      const css = state.config?.stylesheets
-        ? stylesheetPaths.map((path) => state.files.find((file) => file.path === path)?.content || "").join("\n")
-        : undefined;
-      const scriptPaths = state.config?.scripts || [...source.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((match) => match[1].replace(/^\.\//, ""));
-      const modules = Object.fromEntries(Object.entries(state.config?.modules || {}).map(([specifier, path]) => [specifier, state.files.find((file) => file.path === path)?.content || ""]));
-      const assets = Object.fromEntries(state.files.filter((file) => /^data:[^,]+,/.test(file.content)).map((file) => [file.path, file.content]));
-      const scripts = scriptPaths.map((path) => ({ source: path, code: state.files.find((file) => file.path === path)?.content || "" })).filter((script) => script.code);
-      previewController = mountResourcesPresentation({
-        root: preview,
-        project: {
-          title, fileUrl, file: fileUrl ? undefined : containerSource, html: source, css: state.config?.containerEntry ? undefined : css,
-          scripts: state.config?.containerEntry ? [] : scripts,
-          modules: state.config?.containerEntry ? {} : modules,
-          globals: { __PRESENTATION_USE_ASSETS__: assets },
-          domSchema: state.config?.domSchema || {},
-          cssSchema: state.config?.cssSchema || {},
-          capabilities: state.config?.capabilities || { events: ["click", "input", "change", "keydown"], sessionStorage: true },
-          limits: state.config?.limits || {},
-        },
-        onStatus(event) {
-          if (generation !== previewGeneration) return;
-          const routed = routeProjectStatus(generation, event);
-          if (routed && !routed.accepted) return;
-          if (event.type === "mounted" && parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "ready" }, "*");
-          if (event.type === "escape") {
-            if (root.dataset.presenting === "true") closePresentation();
-            if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
-          }
-          if (event.type === "blocked") {
-            setStatus(`Blocked: ${routed?.blocking?.message || event.message}`, "error", null, "output");
-            if (parent !== window) parent.postMessage({ protocol: "resources-project-presentation-v1", type: "status", status: "blocked", message: event.message }, "*");
-          }
-        },
-      });
-      preview.dataset.previewRuntime = "presentation-use";
-      return;
-    }
     const outputOptions = state.config?.output || {};
     const useOutputFrame = outputOptions.iframe !== false && outputFrameRequested;
     let surfaceHost, surfaceRoot, surfaceBody;
@@ -728,7 +675,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           reject(`<${name}> was omitted because the ${state.config?.container || "selected"} container schema does not allow it.`);
           return;
         }
-        for (const child of node.childNodes) copy(child, parent);
+        if (["html", "body"].includes(name)) {
+          for (const child of node.childNodes) copy(child, parent);
+        }
         return;
       }
       const element = node.namespaceURI === "http://www.w3.org/2000/svg"
@@ -1497,13 +1446,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
       updateSnapshot(imported, { destructive: true });
       if (template) template.value = imported.config.template || "blank";
-      if (container) container.value = imported.config.container || "presentation";
+      if (container) container.value = imported.config.container || "single-file-web-app";
       renderTabs();
       sendContent();
       renderPreview();
-      if (["presentation", "single-file-web-app"].includes(imported.config.container) && /<script\b/i.test(imported.files.find((item) => item.path === imported.config.entry)?.content || "")) {
-        setStatus("Presentation imported · QuickJS execution is not connected yet", "warning");
-      } else setStatus("ZIP imported");
+      setStatus("ZIP imported");
     } catch (error) { setStatus(error.message, "error"); }
     finally { archiveInput.value = ""; }
   });
@@ -1629,7 +1576,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const container = form?.querySelector("[data-project-container]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
   if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
-  if (container && !container.querySelector('option[value="presentation"]')) container.add(new Option("Presentation", "presentation", false, false));
   if (container && !container.querySelector('option[value="single-file-web-app"]')) container.add(new Option("Single-file HTML/CSS/JS", "single-file-web-app", false, false));
   function growTextarea(textarea) {
     if (!textarea) return;

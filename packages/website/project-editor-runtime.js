@@ -1,4 +1,3 @@
-import { mountPresentationUse } from "@macchiato-dev/presentation-use";
 import { createConstrainedFetch, createProjectAppMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
 
 export { createConstrainedFetch, createProjectOutputMachine };
@@ -41,10 +40,6 @@ export async function mountResourcesProjectEditor(options) {
       request(generation) { return controller.requestOutput(generation); },
     }),
   });
-}
-
-export function mountResourcesPresentation(options) {
-  return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
 }
 
 export async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {} }) {

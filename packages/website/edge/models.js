@@ -138,10 +138,9 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("x-content-type-options", "nosniff");
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
-  const presentationAsset = key.startsWith("-/resources-site/presentation-runner.");
-  headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") || presentationAsset ? "cross-origin" : "same-origin");
-  if (key.startsWith("-/blog-examples/") || presentationAsset) headers.set("access-control-allow-origin", "*");
-  const embeddedRunner = key === "-/resources-site/presentation-runner.html" || key === "-/resources-site/project-output-frame.html";
+  headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") ? "cross-origin" : "same-origin");
+  if (key.startsWith("-/blog-examples/")) headers.set("access-control-allow-origin", "*");
+  const embeddedRunner = key === "-/resources-site/project-output-frame.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     : `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${embeddedRunner ? "'self'" : "'none'"}; form-action 'self'`);

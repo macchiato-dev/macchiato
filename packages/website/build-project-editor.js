@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,19 +28,9 @@ const runtime = await build({
   platform: "browser",
   write: false,
 }).then((result) => result.outputFiles[0].text);
-const guestRuntime = await readFile(join(directory, "../../packages/dom-use/lib/guest-runtime.js"), "utf8");
-const presentationRunner = await build({
-  entryPoints: [join(directory, "../../packages/presentation-use/src/runner.js")],
-  bundle: true,
-  format: "iife",
-  platform: "browser",
-  define: { __PRESENTATION_USE_GUEST_RUNTIME__: JSON.stringify(guestRuntime) },
-  write: false,
-}).then((result) => result.outputFiles[0].text);
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(join(outputDirectory, "project-editor-runtime.js"), runtime);
 await writeFile(join(outputDirectory, "project-editor-guest.js"), guest);
-await writeFile(join(outputDirectory, "presentation-runner.js"), presentationRunner);
 
 execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
   cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),

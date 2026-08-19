@@ -1,101 +1,3 @@
-// packages/presentation-use/src/controller.js
-var PROTOCOL = "macchiato-presentation-use-v1";
-var CDN_ORIGINS = /* @__PURE__ */ new Set(["https://cdn.jsdelivr.net", "https://unpkg.com"]);
-var DEFAULT_FETCH_LIMITS = Object.freeze({ maxFiles: 10, maxUrlLength: 100, maxFileBytes: 1024 * 1024, maxTotalBytes: 4 * 1024 * 1024 });
-function validateProjectFetchConfig(config = {}) {
-  const limits = { ...DEFAULT_FETCH_LIMITS, ...config.limits || {} };
-  const resources = [...new Set(config.resources || [])];
-  if (resources.length > Math.min(10, limits.maxFiles)) throw new Error(`Project fetch allows at most ${Math.min(10, limits.maxFiles)} files`);
-  for (const value of resources) {
-    if (typeof value !== "string" || value.length > Math.min(100, limits.maxUrlLength)) throw new Error("Project fetch URL exceeds 100 characters");
-    const url = new URL(value);
-    if (!CDN_ORIGINS.has(url.origin)) throw new Error(`Project fetch origin not allowed: ${url.origin}`);
-    if (url.search || url.hash) throw new Error("Project fetch URLs cannot contain a query string or fragment");
-    if (url.protocol !== "https:") throw new Error("Project fetch requires HTTPS");
-  }
-  return { resources, limits };
-}
-function bytesToBase64(bytes) {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 32768) binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
-  return btoa(binary);
-}
-async function loadProjectFetchResources(config) {
-  if (!config?.resources?.length) return {};
-  const { resources, limits } = validateProjectFetchConfig(config);
-  const loaded = {};
-  let totalBytes = 0;
-  await Promise.all(resources.map(async (value) => {
-    const response = await fetch(value, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" });
-    if (!response.ok) throw new Error(`Project fetch response ${response.status}: ${value}`);
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > limits.maxFileBytes) throw new Error(`Project fetch file exceeds ${limits.maxFileBytes} bytes: ${value}`);
-    totalBytes += bytes.byteLength;
-    if (totalBytes > limits.maxTotalBytes) throw new Error(`Project fetch total exceeds ${limits.maxTotalBytes} bytes`);
-    const type = (response.headers.get("content-type") || "application/octet-stream").split(";", 1)[0].toLowerCase();
-    const text = /^(?:text\/|application\/(?:json|javascript|xml)|image\/svg\+xml)/.test(type) ? new TextDecoder().decode(bytes) : "";
-    loaded[value] = { status: response.status, type, text, dataUrl: `data:${type};base64,${bytesToBase64(bytes)}` };
-  }));
-  return loaded;
-}
-function mountPresentationUse({ root, runnerUrl, project, onStatus = () => {
-} }) {
-  if (!(root instanceof Element)) throw new TypeError("presentation-use root must be an Element");
-  if (!runnerUrl) throw new TypeError("presentation-use runnerUrl is required");
-  const channel = crypto.randomUUID();
-  const frame = document.createElement("iframe");
-  frame.className = "project-editor__presentation-frame";
-  frame.title = project.title || "Presentation";
-  frame.setAttribute("referrerpolicy", "no-referrer");
-  frame.src = runnerUrl;
-  root.replaceChildren(frame);
-  const colorScheme = () => document.documentElement.dataset.theme === "light" ? "light" : "dark";
-  const language = () => document.documentElement.lang || "en";
-  const projectPayload = (project.fileUrl ? fetch(project.fileUrl, { credentials: "omit", referrerPolicy: "no-referrer" }).then(async (response) => {
-    if (!response.ok) throw new Error(`Presentation entry response: ${response.status}`);
-    return { ...project, file: await response.text(), fileUrl: void 0 };
-  }) : Promise.resolve(project)).then(async (payload) => ({
-    ...payload,
-    fetchResources: await loadProjectFetchResources(payload.capabilities?.fetch)
-  }));
-  function receive(event) {
-    if (event.source !== frame.contentWindow || event.data?.protocol !== PROTOCOL || event.data.channel !== channel) return;
-    if (event.data.type === "ready") projectPayload.then((payload) => frame.contentWindow.postMessage({
-      protocol: PROTOCOL,
-      channel,
-      type: "mount",
-      project: { ...payload, colorScheme: colorScheme(), environment: { ...payload.environment, language: language() } }
-    }, "*")).catch((error) => onStatus({ type: "blocked", message: error.message }));
-    else {
-      if (event.data.runtime) frame.dataset.runtime = event.data.runtime;
-      onStatus(event.data);
-    }
-  }
-  window.addEventListener("message", receive);
-  const syncTheme = () => frame.contentWindow?.postMessage({
-    protocol: PROTOCOL,
-    channel,
-    type: "theme",
-    colorScheme: colorScheme()
-  }, "*");
-  document.addEventListener("themechange", syncTheme);
-  frame.addEventListener("load", () => frame.contentWindow.postMessage({ protocol: PROTOCOL, channel, type: "connect" }, "*"), { once: true });
-  return {
-    frame,
-    focus() {
-      frame.focus({ preventScroll: true });
-      frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "focus" }, "*");
-    },
-    inspect: () => ({ runtime: frame.dataset.runtime || "loading" }),
-    destroy() {
-      window.removeEventListener("message", receive);
-      document.removeEventListener("themechange", syncTheme);
-      frame.contentWindow?.postMessage({ protocol: PROTOCOL, channel, type: "destroy" }, "*");
-      frame.remove();
-    }
-  };
-}
-
 // dev/wasm-web-machine/dist/module/wasm-web-machine.js
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var encoder = new TextEncoder();
@@ -363,7 +265,7 @@ function isAllowedProperty(name) {
   return CSS_PROPERTIES.has(name) || /^--[a-z][a-z0-9-]{0,63}$/i.test(name);
 }
 function isAllowedAttribute(name) {
-  return ATTRIBUTES.has(name) || /^aria-[a-z][a-z0-9-]{0,63}$/.test(name);
+  return ATTRIBUTES.has(name) || /^(?:aria|data)-[a-z][a-z0-9-]{0,63}$/.test(name);
 }
 function xmlAttribute(value) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -441,7 +343,7 @@ var WasmWebBridge = class {
     const roots = [.../* @__PURE__ */ new Set([...targetRoots, ...portalRoots])];
     const hostDocument = documentTarget ? document : targetRoots[0].ownerDocument;
     const realm = hostDocument.defaultView || globalThis;
-    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element: Element2, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
+    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
     const primaryRoot = documentTarget ? hostDocument.body : targetRoots[0];
     const logicalHead = documentTarget ? hostDocument.head : portalRoots[0] || primaryRoot;
     const chunks = [];
@@ -625,12 +527,12 @@ var WasmWebBridge = class {
         "width"
       ].includes(name))
         return object[name];
-      if (object instanceof Element2 && name === "childElementCount") {
+      if (object instanceof Element && name === "childElementCount") {
         return object.childElementCount;
       }
       if (object instanceof HTMLElement && name === "style")
         return reference(object.style);
-      if (object instanceof Element2 && ["clientHeight", "clientWidth", "scrollHeight", "scrollWidth"].includes(name)) {
+      if (object instanceof Element && ["clientHeight", "clientWidth", "scrollHeight", "scrollWidth"].includes(name)) {
         return object[name];
       }
       if (object instanceof HTMLElement && ["offsetHeight", "offsetWidth", "scrollLeft", "scrollTop"].includes(name)) {
@@ -685,6 +587,27 @@ var WasmWebBridge = class {
       fail(`property get ${name} is not allowed`);
     }
     function set(object, name, next) {
+      if (object instanceof HTMLElement && name === "innerHTML" && typeof next === "string" && next.length <= 256 * 1024) {
+        const template = hostDocument.createElement("template");
+        template.innerHTML = next;
+        for (const element of template.content.querySelectorAll("*")) {
+          const svg = element instanceof SVGElement;
+          if (!(svg ? SVG_ELEMENTS : ELEMENTS).has(element.localName)) {
+            fail(`innerHTML element ${element.localName} is not allowed`);
+          }
+          for (const attribute of Array.from(element.attributes)) {
+            if (attribute.name === "style" && /^--[a-z][a-z0-9-]{0,63}:\s*#[0-9a-f]{3,8}$/i.test(attribute.value))
+              continue;
+            if (attribute.name === "xmlns" && svg && attribute.value === "http://www.w3.org/2000/svg")
+              continue;
+            if (!isAllowedAttribute(attribute.name) || svg && (!SVG_IMAGE_ATTRIBUTES.has(attribute.name) || !svgImageAttributeAllowed(attribute.name, attribute.value))) {
+              fail(`innerHTML attribute ${attribute.name} is not allowed`);
+            }
+          }
+        }
+        object.replaceChildren(template.content);
+        return null;
+      }
       if (object instanceof CanvasRenderingContext2D && ["fillStyle", "strokeStyle"].includes(name) && typeof next === "string" && /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]+)$/i.test(next)) {
         object[name] = next;
         return null;
@@ -809,10 +732,10 @@ var WasmWebBridge = class {
         const selection = hostDocument.getSelection();
         return selection ? reference(selection) : null;
       }
-      if (object === hostDocument && name === "getComputedStyle" && args.length === 1 && args[0] instanceof Element2 && insideDocument(args[0])) {
+      if (object === hostDocument && name === "getComputedStyle" && args.length === 1 && args[0] instanceof Element && insideDocument(args[0])) {
         return reference(getComputedStyle(args[0]));
       }
-      if (object === hostDocument && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element2 && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
+      if (object === hostDocument && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
         const rects = name === "measureRect" ? [args[0].getBoundingClientRect()] : Array.from(args[0].getClientRects());
         const bytes = new Uint8Array(4 + rects.length * 32);
         const view = new DataView(bytes.buffer);
@@ -960,14 +883,14 @@ var WasmWebBridge = class {
           fail("mutation node index is invalid");
         return reference(nodes[args[0]]);
       }
-      if (object instanceof Element2 && name === "getAttribute" && args.length === 1 && typeof args[0] === "string" && (isAllowedAttribute(args[0]) || args[0] === "style")) {
+      if (object instanceof Element && name === "getAttribute" && args.length === 1 && typeof args[0] === "string" && (isAllowedAttribute(args[0]) || args[0] === "style")) {
         return object.getAttribute(args[0]);
       }
       if (object instanceof MutationObserver && name === "disconnect" && args.length === 0) {
         object.disconnect();
         return null;
       }
-      if (object instanceof Element2 && name === "getAttribute") {
+      if (object instanceof Element && name === "getAttribute") {
         fail(`getAttribute ${String(args[0])} is not allowed on ${object.constructor.name}`);
       }
       if (object instanceof MutationObserver && name === "takeRecords" && args.length === 0) {
@@ -1069,7 +992,7 @@ var WasmWebBridge = class {
         const found = documentTarget ? hostDocument.getElementById(args[0]) : roots.map((root) => root.id === args[0] ? root : root.querySelector(`#${CSS.escape(args[0])}`)).find(Boolean);
         return found && insideDocument(found) ? reference(found) : null;
       }
-      if (object instanceof Element2 && name === "setAttribute") {
+      if (object instanceof Element && name === "setAttribute") {
         if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
           fail(`attribute ${args[0]} is not allowed`);
         }
@@ -1091,14 +1014,14 @@ var WasmWebBridge = class {
         if (object instanceof SVGElement && (!SVG_IMAGE_ATTRIBUTES.has(args[0]) || !svgImageAttributeAllowed(args[0], args[1]))) {
           fail(`SVG attribute ${args[0]} value is not allowed`);
         }
-        if (args[0] === "data-href" && args[1].length > 2048) {
-          fail("data-href is too long");
+        if (args[0].startsWith("data-") && args[1].length > 2048) {
+          fail("data attribute is too long");
         }
         if (args[0] === "href" && (!(object instanceof HTMLAnchorElement) || !navigationAllowed(args[1]))) {
           fail("href is not allowed by navigation policy");
         }
-        if (args[0] === "tabindex" && args[1] !== "-1") {
-          fail("only programmatic tab focus is allowed");
+        if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
+          fail("tabindex must use normal or programmatic focus order");
         }
         if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement) || args[1].length > 2048)) {
           fail("value attribute is not allowed on this element");
@@ -1121,7 +1044,7 @@ var WasmWebBridge = class {
         object.setAttribute(args[0], args[1]);
         return null;
       }
-      if (object instanceof Element2 && name === "removeAttribute") {
+      if (object instanceof Element && name === "removeAttribute") {
         if (args.length !== 1 || typeof args[0] !== "string" || !isAllowedAttribute(args[0])) {
           fail("attribute removal is not allowed");
         }
@@ -1132,18 +1055,18 @@ var WasmWebBridge = class {
         if (args.length !== 1 || typeof args[0] !== "string" || !/^\.[a-z_][a-z0-9_-]{0,63}$/i.test(args[0])) {
           fail("closest selector is not allowed");
         }
-        const element = object instanceof Element2 ? object : object.parentElement;
+        const element = object instanceof Element ? object : object.parentElement;
         const found = element?.closest(args[0]);
         return found && insideDocument(found) ? reference(found) : null;
       }
-      if (object instanceof Element2 && name === "childAt") {
+      if (object instanceof Element && name === "childAt") {
         const index = args[0];
         if (!Number.isInteger(index) || index < 0)
           fail("child index is not allowed");
         const child = object.children[index];
         return child ? reference(child) : null;
       }
-      if (object instanceof Element2 && name === "scrollIntoView" && args.length === 0) {
+      if (object instanceof Element && name === "scrollIntoView" && args.length === 0) {
         object.scrollIntoView();
         return null;
       }
@@ -1155,10 +1078,10 @@ var WasmWebBridge = class {
         object.select();
         return null;
       }
-      if (object instanceof Element2 && name === "getBoundingClientRect" && args.length === 0) {
+      if (object instanceof Element && name === "getBoundingClientRect" && args.length === 0) {
         return reference(object.getBoundingClientRect());
       }
-      if (object instanceof Element2 && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name) && args.length === 1 && typeof args[0] === "string" && args[0].length <= 128 && SAFE_SELECTOR.test(args[0])) {
+      if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name) && args.length === 1 && typeof args[0] === "string" && args[0].length <= 128 && SAFE_SELECTOR.test(args[0])) {
         if (name === "querySelector") {
           const found2 = object.querySelector(args[0]);
           return found2 ? reference(found2) : null;
@@ -1172,10 +1095,10 @@ var WasmWebBridge = class {
         found.forEach((node, index) => view.setUint32(4 + index * 4, reference(node)[1], true));
         return bytes;
       }
-      if (object instanceof Element2 && name === "hasAttribute" && args.length === 1 && typeof args[0] === "string" && isAllowedAttribute(args[0])) {
+      if (object instanceof Element && name === "hasAttribute" && args.length === 1 && typeof args[0] === "string" && isAllowedAttribute(args[0])) {
         return object.hasAttribute(args[0]);
       }
-      if ((object instanceof Element2 || object instanceof Range) && name === "getClientRects" && args.length === 0) {
+      if ((object instanceof Element || object instanceof Range) && name === "getClientRects" && args.length === 0) {
         return reference(Array.from(object.getClientRects()));
       }
       if (object instanceof Range && name === "getBoundingClientRect" && args.length === 0) {
@@ -1207,7 +1130,7 @@ var WasmWebBridge = class {
       fail(`method ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function listen(object, type, callback, capture = false) {
-      const elementEvent = object instanceof Element2 && [
+      const elementEvent = object instanceof Element && [
         "beforeinput",
         "blur",
         "change",
@@ -2155,9 +2078,6 @@ async function mountResourcesProjectEditor(options) {
     })
   });
 }
-function mountResourcesPresentation(options) {
-  return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
-}
 async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {
 } }) {
   if (violations.length) {
@@ -2205,7 +2125,6 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
 export {
   createConstrainedFetch,
   createProjectOutputMachine,
-  mountResourcesPresentation,
   mountResourcesProjectEditor,
   mountResourcesProjectPreview
 };
