@@ -1,6 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
-import { containerElementNames, describeContainerElement } from "/-/resources-site/container-elements.js";
+import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
 import { mountResourcesPresentation, mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 import { StyleUse } from "/-/style-use/index.js";
@@ -216,7 +216,7 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
   let tooltip = null;
   let showTimer = null;
   const show = () => {
-    if (!shouldShow(button)) return;
+    if (!shouldShow(button) || button.getAttribute("aria-expanded") === "true") return;
     if (!tooltip) {
       tooltip = document.createElement("span");
       tooltip.className = "instant-tooltip";
@@ -247,6 +247,7 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
   button.addEventListener("pointerleave", hide);
   button.addEventListener("focus", show);
   button.addEventListener("blur", hide);
+  button.addEventListener("instanttooltiphide", hide);
 }
 for (const button of document.querySelectorAll("button[data-instant-tooltip]")) {
   attachInstantTooltip(button);
@@ -481,10 +482,14 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   function refreshSubmitLabel() {
     const button = root.closest("form")?.querySelector("[data-project-submit]");
     if (!button || draft) return;
-    button.textContent = unsavedChangeCount
-      ? `${unsavedChangeCount} unsaved ${unsavedChangeCount === 1 ? "change" : "changes"}`
-      : button.dataset.defaultLabel;
+    button.textContent = button.dataset.defaultLabel;
+    const disabled = unsavedChangeCount === 0
+      && workspacePayload?.hasUnpublishedChanges !== true
+      && !recoveredPendingSnapshot;
+    button.disabled = disabled;
+    root.closest("form")?.querySelector("[data-save-menu-trigger]")?.toggleAttribute("disabled", disabled);
   }
+  refreshSubmitLabel();
 
   function showSelectedVersion(label, timestamp) {
     currentVersion.textContent = label;
@@ -816,6 +821,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         const controller = await mountResourcesProjectPreview({
           root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
           allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins || [],
+          allowNavigate: (value) => urlMatchesAllowedPatterns(value,
+            state.config?.containerOptions?.allowedLinkPatterns || []),
           environment: { language: document.documentElement.lang || "en" },
           onViolation(error) {
             if (generation !== previewGeneration) return;
@@ -1097,6 +1104,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
     unsavedChangeCount += 1;
+    if (workspacePayload) workspacePayload.hasUnpublishedChanges = true;
     refreshSubmitLabel();
     if (draft) root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
     changeGeneration += 1;
@@ -1490,7 +1498,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       updateSnapshot(imported, { destructive: true });
       if (template) template.value = imported.config.template || "blank";
       if (container) container.value = imported.config.container || "presentation";
-      renderContainerElements(container?.value);
       renderTabs();
       sendContent();
       renderPreview();
@@ -1620,23 +1627,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const form = root.closest("form") || document.querySelector("[data-project-fields]");
   const template = form?.querySelector("[data-project-template]");
   const container = form?.querySelector("[data-project-container]");
-  const containerOutline = form?.querySelector("[data-container-outline]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
   if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
   if (container && !container.querySelector('option[value="presentation"]')) container.add(new Option("Presentation", "presentation", false, false));
   if (container && !container.querySelector('option[value="single-file-web-app"]')) container.add(new Option("Single-file HTML/CSS/JS", "single-file-web-app", false, false));
-  function renderContainerElements(name) {
-    if (!containerOutline) return;
-    containerOutline.replaceChildren(...containerElementNames(name).map((element) => {
-      const tag = document.createElement("span");
-      tag.className = "element-tag";
-      tag.tabIndex = 0;
-      tag.dataset.elementTag = element;
-      tag.textContent = element;
-      tag.title = describeContainerElement(name, element);
-      return tag;
-    }));
-  }
   function growTextarea(textarea) {
     if (!textarea) return;
     textarea.style.height = "auto";
@@ -1645,14 +1639,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   if (template && state.config?.template) template.value = state.config.template;
   if (container && state.config?.container) {
     container.value = state.config.container;
-    renderContainerElements(container.value);
   }
   if (linkPatterns) linkPatterns.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
   growTextarea(linkPatterns);
-  renderContainerElements(container?.value);
   function updateContainer() {
     if (!container) return;
-    renderContainerElements(container.value);
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     try {
       validateAllowedUrlPatterns(allowedLinkPatterns);
@@ -1677,7 +1668,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
     if (template) template.value = next.config.template || "blank";
     growTextarea(linkPatterns);
-    renderContainerElements(container.value);
     selected = next.files[0].path;
     openTabs = Array.isArray(next.config?.editorTabs) ? [...next.config.editorTabs] : next.files.map((file) => file.path);
     updateSnapshot(next, { destructive: true });
@@ -1713,29 +1703,47 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     field.addEventListener("input", () => { unsavedChangeCount += 1; refreshSubmitLabel(); }, { once: true });
     field.addEventListener("change", () => { if (!unsavedChangeCount) { unsavedChangeCount = 1; refreshSubmitLabel(); } });
   }
-  versionButton.addEventListener("click", () => {
+  function closeHistory({ restoreFocus = false } = {}) {
+    historyPanel.hidden = true;
+    versionButton.setAttribute("aria-expanded", "false");
+    if (restoreFocus) versionButton.focus();
+  }
+  function positionHistory() {
+    const gap = 6;
+    const edge = 8;
+    const buttonRect = versionButton.getBoundingClientRect();
+    const panelRect = historyPanel.getBoundingClientRect();
+    const maxLeft = Math.max(edge, innerWidth - panelRect.width - edge);
+    const left = Math.max(edge, Math.min(buttonRect.left, maxLeft));
+    const roomBelow = innerHeight - buttonRect.bottom - gap - edge;
+    const roomAbove = buttonRect.top - gap - edge;
+    const openAbove = panelRect.height > roomBelow && roomAbove > roomBelow;
+    const availableHeight = Math.max(120, openAbove ? roomAbove : roomBelow);
+    historyPanel.style.left = `${left}px`;
+    historyPanel.style.top = openAbove
+      ? `${Math.max(edge, buttonRect.top - gap - Math.min(panelRect.height, availableHeight))}px`
+      : `${buttonRect.bottom + gap}px`;
+    historyPanel.style.maxHeight = `${availableHeight}px`;
+  }
+  versionButton.addEventListener("click", async () => {
     if (!historyPanel.hidden) {
-      historyPanel.hidden = true;
-      versionButton.setAttribute("aria-expanded", "false");
+      closeHistory();
       return;
     }
+    versionButton.dispatchEvent(new Event("instanttooltiphide"));
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
-    const buttonRect = versionButton.getBoundingClientRect();
-    const panelWidth = historyPanel.getBoundingClientRect().width;
-    historyPanel.style.left = `${Math.max(8, Math.min(buttonRect.right - panelWidth, innerWidth - panelWidth - 8))}px`;
-    historyPanel.style.top = `${buttonRect.bottom + 6}px`;
     if (readOnly) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
     } else {
-      (draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions();
+      await ((draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions());
     }
+    positionHistory();
   });
-  root.querySelector("[data-project-history-close]").addEventListener("click", () => { historyPanel.hidden = true; versionButton.setAttribute("aria-expanded", "false"); versionButton.focus(); });
+  root.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
   document.addEventListener("pointerdown", (event) => {
     if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
-    historyPanel.hidden = true;
-    versionButton.setAttribute("aria-expanded", "false");
+    closeHistory();
   });
   setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
   setInterval(() => {

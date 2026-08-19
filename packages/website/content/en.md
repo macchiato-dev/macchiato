@@ -184,7 +184,7 @@
 - **projectEditor.currentVersion**: Current Version
 - **projectEditor.templateReplaced**: Template replaced the project.
 - **common.undo**: Undo
-- **projectView.unsavedDraft**: This draft has unsaved changes.
+- **projectView.unsavedDraft**: There are draft changes.
 - **projectView.revertPublished**: Revert to published version
 - **common.dismiss**: Dismiss
 - **common.cancel**: Cancel

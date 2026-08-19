@@ -141,7 +141,7 @@ export async function mountPresentationRuntime({ root, project, onStatus = () =>
       `, "presentation-fetch-guest.js");
     }
     sandbox.evalGlobal(guestRuntime, "dom-use-guest-runtime.js");
-    sandbox.evalGlobal(`globalThis.navigator = Object.assign(globalThis.navigator || {}, {
+    sandbox.evalGlobal(`var navigator = globalThis.navigator = Object.assign(globalThis.navigator || {}, {
       language: ${JSON.stringify(project.environment?.language || "en")}
     })`, "presentation-environment.js");
     const inline = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });

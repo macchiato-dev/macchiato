@@ -5887,7 +5887,7 @@ Z\x8B\0mm\0\xCF~6\0	\xCB'\0FO\xB7\0\x9Ef?\0-\xEA_\0\xBA'u\0\xE5\xEB\xC7\0={\xF1
       `, "presentation-fetch-guest.js");
       }
       sandbox.evalGlobal(guestRuntime, "dom-use-guest-runtime.js");
-      sandbox.evalGlobal(`globalThis.navigator = Object.assign(globalThis.navigator || {}, {
+      sandbox.evalGlobal(`var navigator = globalThis.navigator = Object.assign(globalThis.navigator || {}, {
       language: ${JSON.stringify(project.environment?.language || "en")}
     })`, "presentation-environment.js");
       const inline = sandbox.callJsonFunction("__macchiatoBoot", sourceHtml, { rawArgument: true });

@@ -1109,7 +1109,7 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__status-action:hover { background: rgba(255, 255, 255, 0.1); }
 .project-editor__status-action:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
 .project-editor__save { flex: 0 0 auto; }
-.project-editor__history { position: fixed; top: 48px; left: 10px; z-index: 60; width: min(330px, calc(100% - 20px)); padding: 10px; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
+.project-editor__history { position: fixed; top: 48px; left: 10px; z-index: 60; width: min(330px, calc(100vw - 16px)); max-height: calc(100vh - 16px); padding: 10px; overflow: auto; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .project-editor__history-head { padding: 3px 5px 9px; }
 .project-editor__version { width: 100%; text-align: left; }
@@ -1184,11 +1184,6 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .focused-view .project-view__meta { margin: 0; padding: 0 16px 16px; }
 .focused-view .project-view__meta span { border-radius: 3px; background: transparent; }
 .focused-view .project-surface { border-radius: 0; }
-.container-outline { padding: 7px 9px; border: 1px solid var(--track-border); color: var(--muted); font-size: 11px; }
-.container-outline strong { display: block; margin-bottom: 6px; color: var(--text); }
-.element-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.element-tag { display: inline-flex; align-items: center; padding: 2px 6px; border: 1px solid var(--track-border); border-radius: 999px; color: var(--accent); background: var(--track); font-family: "Space Mono", monospace; font-size: 10px; line-height: 1.3; }
-.element-tag:hover, .element-tag:focus { border-color: var(--accent); color: var(--text); background: var(--hover); }
 .field-label-with-help { display: flex; align-items: center; gap: 6px; }
 .field-help { position: relative; display: inline-flex; }
 .field-help__trigger { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; border: 1px solid var(--muted); border-radius: 999px; color: var(--muted); font-size: 11px; }

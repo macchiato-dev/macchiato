@@ -2158,7 +2158,7 @@ async function mountResourcesProjectEditor(options) {
 function mountResourcesPresentation(options) {
   return mountPresentationUse({ runnerUrl: "/-/resources-site/presentation-runner.html", ...options });
 }
-async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], environment = {}, onViolation = () => {
+async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, violations = [], tags, allowedFetchOrigins = [], allowNavigate = false, environment = {}, onViolation = () => {
 } }) {
   if (violations.length) {
     statusRoot.dataset.previewViolations = String(violations.length);
@@ -2172,6 +2172,7 @@ async function mountResourcesProjectPreview({ root, statusRoot = root, scripts, 
       options: {
         frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,
         fetchResource: createConstrainedFetch(allowedFetchOrigins),
+        allowNavigate,
         environment,
         services: {
           route: { get: () => location.pathname, listen() {
