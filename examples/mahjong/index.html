@@ -486,17 +486,18 @@
         render();
       }
       document.getElementById("new").addEventListener("click", build);
-      const loaded = await Promise.all(
+      Promise.all(
         [SPRITE].concat(BONUS).map((url) =>
           fetch(url).then((response) => {
             if (!response.ok) throw new Error("Tile art failed to load");
             return response.resourceUrl();
           })
         ),
-      );
-      sprite = loaded[0];
-      bonusArt = loaded.slice(1);
-      build();
+      ).then((loaded) => {
+        sprite = loaded[0];
+        bonusArt = loaded.slice(1);
+        build();
+      });
     </script>
   </body>
 </html>

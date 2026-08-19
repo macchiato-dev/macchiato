@@ -1041,6 +1041,8 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__source > .project-editor__mount { min-height: 0; overflow: hidden; }
 .project-editor__preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
 .project-editor__preview > [data-project-preview] { min-height: 0; overflow: auto; }
+html[data-theme="light"] .project-editor__preview,
+html[data-theme="light"] .project-editor__preview > [data-project-preview] { background: #e7ecff; }
 .project-editor__present-close { display: none; }
 body.project-presenting { overflow: hidden; }
 body.project-presenting .content-block:has(.project-editor__preview--presenting) { animation: blockIn 0s linear both; transform: none; }

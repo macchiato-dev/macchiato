@@ -15,6 +15,7 @@ test("project fetch is origin constrained, credentialless, and bounded", async (
   assert.deepEqual(await fetchResource("https://assets.example/app.txt"), {
     status: 200,
     body: "small response",
+    resourceUrl: "data:text/plain;base64,c21hbGwgcmVzcG9uc2U=",
   });
   assert.equal(calls[0].options.credentials, "omit");
   assert.equal(calls[0].options.referrerPolicy, "no-referrer");

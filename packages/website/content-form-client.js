@@ -430,12 +430,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   if (workspacePayload) {
     const fields = root.closest(".project-create__layout")?.querySelector("[data-project-fields]");
-    const containerName = typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name;
     const templateField = fields?.querySelector("[data-project-template]");
-    const containerField = fields?.querySelector("[data-project-container]");
     const patternsField = fields?.querySelector("#project-link-patterns");
     if (templateField) templateField.value = state.config?.template || "article";
-    if (containerField) containerField.value = containerName || "page";
     if (patternsField) patternsField.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
   }
   const requestedTemplate = memoryOnly ? new URL(location.href).searchParams.get("template") : null;
@@ -472,6 +469,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let outputFrameRequested = true;
   const syncOutputTheme = () => {
     const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    if (outputFrame) {
+      outputFrame.style.colorScheme = theme;
+      outputFrame.style.backgroundColor = theme === "light" ? "#e7ecff" : "#151717";
+    }
     outputFramePort?.postMessage({ type: "theme", colorScheme: theme });
     editorController?.setTheme(theme);
   };
@@ -621,6 +622,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         outputFrame.title = `${title} output`;
         outputFrame.src = "/-/resources-site/project-output-frame.html";
         outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
+        outputFrame.style.colorScheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+        outputFrame.style.backgroundColor = document.documentElement.dataset.theme === "light" ? "#e7ecff" : "#151717";
         outputFrame.hidden = true;
         outputFrameReady = new Promise((resolve, reject) => {
           outputFrame.addEventListener("load", () => {
@@ -649,7 +652,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       preview.dataset.outputSurface = "direct";
     }
     const parsed = new DOMParser().parseFromString(source, "text/html");
-    const allowed = new Set(containerElementNames(typeof state.config?.container === "string" ? state.config.container : state.config?.container?.name));
+    // Projects share one web-page container. A project may narrow or extend
+    // its authored surface through its generated DOM schema, but choosing a
+    // separate built-in container is no longer part of the editing model.
+    const allowed = new Set([
+      ...containerElementNames("web-page"),
+      ...Object.keys(state.config?.domSchema?.nodes || {}),
+    ]);
     const scripts = [];
     const violations = [];
     const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName)
@@ -777,7 +786,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         editorController?.projectOutput.request(generation);
         const controller = await mountResourcesProjectPreview({
           root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
-          allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins || [],
+          allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins
+            || state.config?.capabilities?.fetch?.resources || [],
           allowNavigate: (value) => urlMatchesAllowedPatterns(value,
             state.config?.containerOptions?.allowedLinkPatterns || []),
           environment: { language: document.documentElement.lang || "en" },
@@ -1331,7 +1341,6 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     requestAnimationFrame(syncTabOverflow);
   });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
-  fileTrigger.setAttribute("aria-label", "Browse other files");
   const fileTriggerIcon = fileTrigger.querySelector("svg");
   fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
   fileTriggerIcon.innerHTML = '<path d="M7 4h12v14H7zM4 7v14h12"/><path d="M10 8h6M10 11h6M10 14h4"/>';
@@ -1582,23 +1591,17 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   // asynchronously loaded project snapshot too.
   const form = root.closest("form") || document.querySelector("[data-project-fields]");
   const template = form?.querySelector("[data-project-template]");
-  const container = form?.querySelector("[data-project-container]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
   if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
-  if (container && !container.querySelector('option[value="single-file-web-app"]')) container.add(new Option("Single-file HTML/CSS/JS", "single-file-web-app", false, false));
   function growTextarea(textarea) {
     if (!textarea) return;
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight + 2}px`;
   }
   if (template && state.config?.template) template.value = state.config.template;
-  if (container && state.config?.container) {
-    container.value = state.config.container;
-  }
   if (linkPatterns) linkPatterns.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
   growTextarea(linkPatterns);
   function updateContainer() {
-    if (!container) return;
     const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     try {
       validateAllowedUrlPatterns(allowedLinkPatterns);
@@ -1611,15 +1614,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     }
     clearNotice();
     templateOnlyPending = false;
-    const previousContainer = state.config?.container;
-    updateSnapshot({ files: state.files, config: { ...state.config, container: container.value, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
-    if (previousContainer !== container.value) rotateContainerMachines();
-    else { sendContent(); renderPreview(); }
+    updateSnapshot({ files: state.files, config: { ...state.config, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
+    sendContent();
+    renderPreview();
   }
 
   function applyTemplateSnapshot(next, { notice = true, previousSnapshot = state } = {}) {
-    const previousContainer = state.config?.container;
-    if (container) container.value = next.config.container || "page";
     if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
     if (template) template.value = next.config.template || "blank";
     growTextarea(linkPatterns);
@@ -1628,8 +1628,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     updateSnapshot(next, { destructive: true });
     templateOnlyPending = true;
     renderTabs();
-    if (previousContainer !== next.config.container) rotateContainerMachines("template-container-change");
-    else { sendContent(); renderPreview(); }
+    sendContent();
+    renderPreview();
     if (notice) showTemplateNotice(previousSnapshot);
   }
 
@@ -1647,14 +1647,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const previousSnapshot = state;
     applyTemplateSnapshot(next, { previousSnapshot });
   });
-  container?.addEventListener("change", updateContainer);
   for (const textarea of form?.querySelectorAll("textarea[data-autogrow]") || []) {
     textarea.addEventListener("input", () => growTextarea(textarea));
     growTextarea(textarea);
   }
   linkPatterns?.addEventListener("input", updateContainer);
   for (const field of form?.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select") || []) {
-    if (field.matches("[data-project-template], [data-project-container], #project-link-patterns, [data-version-title-input]")) continue;
+    if (field.matches("[data-project-template], #project-link-patterns, [data-version-title-input]")) continue;
     field.addEventListener("input", () => { unsavedChangeCount += 1; refreshSubmitLabel(); }, { once: true });
     field.addEventListener("change", () => { if (!unsavedChangeCount) { unsavedChangeCount = 1; refreshSubmitLabel(); } });
   }

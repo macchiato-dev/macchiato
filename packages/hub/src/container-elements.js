@@ -32,6 +32,9 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
 });
 
 export function containerElementNames(container) {
+  if (container === "web-page") {
+    return [...new Set(Object.values(CONTAINER_ELEMENT_RULES).flatMap((rules) => Object.keys(rules)))];
+  }
   return Object.keys(CONTAINER_ELEMENT_RULES[container] || {});
 }
 

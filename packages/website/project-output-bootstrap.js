@@ -34,6 +34,7 @@ globalThis.__resourcesFetchResolve = (json) => {
     status: result.status,
     text: () => Promise.resolve(result.body),
     arrayBuffer: () => Promise.resolve(new TextEncoder().encode(result.body)),
+    resourceUrl: () => result.resourceUrl,
   });
   return JSON.stringify({ accepted: true });
 };

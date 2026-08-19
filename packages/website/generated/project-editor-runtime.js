@@ -1,4 +1,4 @@
-// dev/wasm-web-machine/dist/module/wasm-web-machine.js
+// ../../dev/wasm-web-machine/dist/module/wasm-web-machine.js
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var encoder = new TextEncoder();
 var CHUNK_SIZE = 8192;
@@ -1851,7 +1851,7 @@ var WasmWebMachine = class {
   };
 };
 
-// packages/website/project-machines.js
+// project-machines.js
 var encoder2 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
@@ -1883,7 +1883,11 @@ function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
     if (url.protocol !== "https:" || !origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
     const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" }), bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
-    return { status: response.status, body: decoder2.decode(bytes) };
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += 32768)
+      binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+    const mime = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
+    return { status: response.status, body: decoder2.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
   };
 }
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
@@ -2023,7 +2027,7 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
   });
 }
 
-// packages/website/project-editor-runtime.js
+// project-editor-runtime.js
 var projectApps = /* @__PURE__ */ new WeakMap();
 async function mountResourcesProjectEditor(options) {
   if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
