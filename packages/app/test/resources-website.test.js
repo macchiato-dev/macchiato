@@ -649,6 +649,54 @@ test("Resources project ZIP import accepts legacy container metadata", async (t)
   assert.deepEqual(errors, []);
 });
 
+test("Resources project CodeMirror follows repeated explicit and system theme changes", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage({ colorScheme: "dark" });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await page.locator(".project-editor .cm-editor").waitFor({ state: "visible" });
+  const choose = async (choice) => {
+    await page.locator(`[data-theme-choice="${choice}"]`).first().evaluate((button) => button.click());
+  };
+  const colors = () => page.evaluate(() => ({
+    choice: document.documentElement.dataset.themeChoice,
+    theme: document.documentElement.dataset.theme,
+    editor: getComputedStyle(document.querySelector(".cm-editor")).backgroundColor,
+    gutter: getComputedStyle(document.querySelector(".cm-gutters")).backgroundColor,
+  }));
+  const dark = { choice: "dark", theme: "dark", editor: "rgb(29, 32, 32)", gutter: "rgb(40, 44, 52)" };
+  const light = { choice: "light", theme: "light", editor: "rgb(217, 225, 227)", gutter: "rgb(203, 214, 217)" };
+
+  for (const expected of [light, dark, light, dark]) {
+    await choose(expected.choice);
+    assert.deepEqual(await colors(), expected);
+  }
+  await choose("system");
+  assert.deepEqual(await colors(), { ...dark, choice: "system" });
+  for (const expected of [light, dark, light]) {
+    await page.emulateMedia({ colorScheme: expected.theme });
+    await page.waitForFunction((theme) => document.documentElement.dataset.theme === theme, expected.theme);
+    assert.deepEqual(await colors(), { ...expected, choice: "system" });
+  }
+  await choose("dark");
+  await choose("system");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  assert.deepEqual(await colors(), { ...dark, choice: "system" });
+  assert.deepEqual(errors, []);
+});
+
 test("Resources.co edge account creates organizations and projects in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

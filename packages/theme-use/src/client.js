@@ -36,7 +36,12 @@ document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-theme-choice]");
   if (button) apply(button.dataset.themeChoice);
 });
-media.addEventListener?.("change", () => {
-  if (root.dataset.themeChoice === "system") apply("system", false);
-});
+const syncSystemTheme = () => {
+  if (root.dataset.themeChoice === "system" && root.dataset.theme !== resolved("system")) apply("system", false);
+};
+// Keep the MediaQueryList callback attached through repeated explicit/system
+// switches. The two standard registration forms cover browser and emulation
+// implementations that only notify one form; the state check makes it idempotent.
+media.onchange = syncSystemTheme;
+media.addEventListener?.("change", syncSystemTheme);
 apply(storedTheme() || "system", false);
