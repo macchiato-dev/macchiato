@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
 import { EditorState } from "@codemirror/state";
 import { hasSyntaxErrors } from "../src/syntax.js";
 
@@ -16,4 +17,12 @@ test("HTML syntax checking delegates embedded CSS to the output sanitizer", () =
 test("HTML delegates detailed script and structure errors to the output pipeline", () => {
   assert.equal(hasSyntaxErrors(htmlState("<script>const = ;</script>"), "html"), false);
   assert.equal(hasSyntaxErrors(htmlState("<div class=>broken</div>"), "html"), false);
+});
+
+test("CSS syntax checking delegates definitive validation to the output sanitizer", () => {
+  const state = EditorState.create({
+    doc: ".tile { width: calc(7 / 760 * 100cqw); }",
+    extensions: [css()],
+  });
+  assert.equal(hasSyntaxErrors(state, "css"), false);
 });

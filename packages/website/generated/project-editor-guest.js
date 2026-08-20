@@ -30441,7 +30441,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
         throw error;
       }
     }
-    if (language3 === "html") {
+    if (language3 === "html" || language3 === "css") {
       return false;
     }
     const cursor2 = syntaxTree(state).cursor();

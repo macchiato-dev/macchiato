@@ -1299,7 +1299,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;
       clearTimeout(editorPreviewTimer);
       if (syntaxErrors) {
-        setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
+        // Briefly invalid source is normal while typing. Keep the last good
+        // output visible and only surface the warning if it remains invalid.
+        editorPreviewTimer = setTimeout(() => {
+          setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
+        }, 5_000);
       } else {
         outputFrameRequested = true;
         // Keep the current output alive while the user is typing. Rebuilding
