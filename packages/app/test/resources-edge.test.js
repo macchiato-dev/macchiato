@@ -245,3 +245,70 @@ test("provider linking requires a signed-in account and starts a fresh provider 
   assert.equal(target.origin, "https://gitlab.com");
   assert.equal(target.searchParams.get("client_id"), "gitlab-client");
 });
+
+test("project API distinguishes expired authorization from invalid project data", async () => {
+  const authConfig = createAuthConfig({
+    PUBLIC_ORIGIN: "https://resources.example",
+    GITHUB_CLIENT_ID: "client",
+    GITHUB_CLIENT_SECRET: "secret",
+    SESSION_SIGNING_KEY: "a-production-secret-must-be-longer-than-this",
+  });
+  const sessionValue = {
+    v: 1, sub: "user-1", login: "latte", name: "Latte",
+    iat: 1, exp: 100_000,
+  };
+  const session = await seal(sessionValue, authConfig.sessionSecret);
+  const handler = createResourcesEdgeHandler({
+    config, authConfig, contentStore: {}, now: () => 10_000,
+  });
+  const request = (token, snapshot) => handler(new Request(
+    "https://resources.example/api/projects/project-1/snapshot",
+    {
+      method: "POST",
+      headers: {
+        cookie: `__Host-resources_session=${session}`,
+        "content-type": "application/json",
+        origin: "https://resources.example",
+        "x-resources-csrf": token,
+      },
+      body: JSON.stringify({ snapshot }),
+    },
+  ));
+
+  const expired = await request(await seal({
+    v: 1, sub: "user-1", action: "project:project-1", exp: 9_999,
+  }, authConfig.sessionSecret), { files: [], config: {} });
+  assert.equal(expired.status, 403);
+  assert.deepEqual(await expired.json(), {
+    error: "request_token",
+    message: "save authorization expired; reload the page and try again",
+  });
+
+  const token = await seal({
+    v: 1, sub: "user-1", action: "project:project-1", exp: sessionValue.exp,
+  }, authConfig.sessionSecret);
+  const invalid = await request(token, {
+    files: [], config: { containerOptions: { allowedLinkPatterns: [42] } },
+  });
+  assert.equal(invalid.status, 422);
+  assert.equal((await invalid.json()).error, "snapshot");
+
+  const malformed = await handler(new Request(
+    "https://resources.example/api/projects/project-1/snapshot",
+    {
+      method: "POST",
+      headers: {
+        cookie: `__Host-resources_session=${session}`,
+        "content-type": "application/json",
+        origin: "https://resources.example",
+        "x-resources-csrf": token,
+      },
+      body: "{",
+    },
+  ));
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await malformed.json(), {
+    error: "request_json",
+    message: "request body is not valid JSON",
+  });
+});

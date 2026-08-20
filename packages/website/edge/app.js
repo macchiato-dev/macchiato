@@ -247,7 +247,11 @@ function namespaceRoute(pathname) {
 }
 
 async function csrfToken(session, action, authConfig, now) {
-  return seal({ v: 1, sub: session.sub, action, exp: now() + 20 * 60_000 }, authConfig.sessionSecret);
+  // The editor can remain open for the full login session. A shorter token
+  // lifetime turns an otherwise valid long-running workspace into a failed
+  // save, while the token is already signed and bound to the session user and
+  // exact action.
+  return seal({ v: 1, sub: session.sub, action, exp: session.exp }, authConfig.sessionSecret);
 }
 
 async function validCsrf(value, session, action, authConfig, now) {
@@ -429,11 +433,23 @@ async function readCreateForm(request, session, action, authConfig, now) {
 }
 
 async function readProjectJson(request, session, action, authConfig, now) {
-  if (request.headers.get("content-type")?.split(";")[0] !== "application/json") throw new ContentValidationError("request", "JSON is required");
-  if (Number(request.headers.get("content-length") || 0) > 72 * 1024 * 1024) throw new ContentValidationError("request", "project update is too large");
-  if (request.headers.get("origin") !== new URL(request.url).origin) throw new ContentValidationError("request", "invalid request origin");
-  if (!await validCsrf(request.headers.get("x-resources-csrf"), session, action, authConfig, now)) throw new ContentValidationError("request", "invalid request token");
-  return request.json();
+  if (request.headers.get("content-type")?.split(";")[0] !== "application/json") throw new ContentValidationError("request_encoding", "JSON is required");
+  if (Number(request.headers.get("content-length") || 0) > 72 * 1024 * 1024) throw new ContentValidationError("request_size", "project update is too large");
+  if (request.headers.get("origin") !== new URL(request.url).origin) throw new ContentValidationError("request_origin", "invalid request origin");
+  if (!await validCsrf(request.headers.get("x-resources-csrf"), session, action, authConfig, now)) throw new ContentValidationError("request_token", "save authorization expired; reload the page and try again");
+  try {
+    return await request.json();
+  } catch {
+    throw new ContentValidationError("request_json", "request body is not valid JSON");
+  }
+}
+
+function projectValidationStatus(field) {
+  if (field === "snapshot") return 422;
+  if (field === "request_size") return 413;
+  if (field === "request_encoding") return 415;
+  if (field === "request_origin" || field === "request_token") return 403;
+  return 400;
 }
 
 export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
@@ -578,7 +594,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         return Response.json({ error: "method_not_allowed" }, { status: 405, headers: { allow: operation === "versions" ? "GET" : "POST", "cache-control": "no-store" } });
       } catch (error) {
         if (!(error instanceof ContentValidationError)) throw error;
-        return Response.json({ error: error.field || "invalid" }, { status: 400, headers: { "cache-control": "no-store" } });
+        return Response.json({ error: error.field || "invalid", message: error.message }, {
+          status: projectValidationStatus(error.field), headers: { "cache-control": "no-store" },
+        });
       }
     }
     const createAction = request.method === "POST" && (pathname === "/projects" || pathname === "/organizations");

@@ -1170,12 +1170,31 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     saving = true;
     setStatus("Saving…");
     try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/snapshot`, {
+      const requestSave = () => fetch(`/api/projects/${encodeURIComponent(projectId)}/snapshot`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-resources-csrf": root.dataset.csrf },
         body: JSON.stringify({ snapshot: savingSnapshot, destructive: savingDestructive }),
       });
-      if (!response.ok) throw new Error(`Save failed (${response.status})`);
+      let response = await requestSave();
+      if (response.status === 403) {
+        const failure = await response.clone().json().catch(() => null);
+        if (failure?.error === "request_token") {
+          // Refresh only the action-bound token, without reloading the editor
+          // and losing its in-memory state, then retry this exact snapshot.
+          const page = await fetch(location.href, { cache: "no-store" });
+          const documentCopy = new DOMParser().parseFromString(await page.text(), "text/html");
+          const fresh = [...documentCopy.querySelectorAll("[data-project-editor]")]
+            .find((editor) => editor.dataset.projectId === projectId)?.dataset.csrf;
+          if (fresh) {
+            root.dataset.csrf = fresh;
+            response = await requestSave();
+          }
+        }
+      }
+      if (!response.ok) {
+        const failure = await response.json().catch(() => null);
+        throw new Error(failure?.message || `Save failed (${response.status})`);
+      }
       const result = await response.json();
       versionCount.textContent = String(result.versionCount);
       if (changeGeneration === savingGeneration) {
