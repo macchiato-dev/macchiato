@@ -341,6 +341,19 @@ export function createContentStore(client, {
       await initialize();
       const target = Number(sequence);
       if (!Number.isSafeInteger(target) || target < 1) throw new ContentValidationError("version", "version is invalid");
+      // The current checkpoint is already the authoritative materialization of
+      // the newest version. Reading it directly also keeps the newest saved
+      // version available if an older, imported patch is damaged.
+      const latest = await client.execute({
+        sql: `SELECT s.last_version_sequence, s.checkpoint_snapshot_json
+              FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?`,
+        args: [String(projectId), String(userId)],
+      });
+      if (latest.rows[0] && Number(latest.rows[0].last_version_sequence) === target) {
+        return parsedSnapshot(latest.rows[0].checkpoint_snapshot_json);
+      }
       const found = await client.execute({
         sql: `SELECT v.sequence, v.patch_json
               FROM resource_project_versions v

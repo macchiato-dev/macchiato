@@ -1253,7 +1253,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         renderTabs();
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
-        sendContent({ resetHistoryOnEdit: true });
+        sendContent();
         renderPreview();
         setStatus(`Viewing version ${sequence}`);
         showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
@@ -1279,7 +1279,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
       renderTabs();
-      sendContent({ resetHistoryOnEdit: true });
+      sendContent();
       renderPreview();
       showCurrentVersion();
       setStatus("Current version");
@@ -1301,7 +1301,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
         renderTabs();
-        sendContent({ resetHistoryOnEdit: true });
+        sendContent();
         renderPreview();
         showSelectedVersion(relativeVersionTime(timestamp), timestamp);
         setStatus(`Viewing ${button.textContent}`);

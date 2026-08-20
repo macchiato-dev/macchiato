@@ -5,7 +5,7 @@ import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
-import { EditorView, lineNumbers } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -86,6 +86,15 @@ function languageExtension(name) {
 }
 function editorExtensions() {
   return [
+    keymap.of([
+      { key: "Ctrl-z", run: undo },
+      { key: "Ctrl-Shift-z", run: redo },
+      { key: "Ctrl-y", run: redo },
+      { key: "Meta-z", run: undo },
+      { key: "Meta-Shift-z", run: redo },
+      { key: "Mod-z", run: undo },
+      { key: "Mod-Shift-z", run: redo },
+    ]),
     editorSetup.of(basicSetup),
     lineNumbers(),
     language.of(languageExtension(currentLanguage)),
@@ -409,7 +418,7 @@ globalThis.__codeEditorBeforeInput = (json) => {
     const pairs = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'", "`": "`" };
     const closing = new Set(Object.values(pairs));
     if (from === to && pairs[insert]) {
-      view.dispatch({ changes: { from, to, insert: insert + pairs[insert] }, selection: { anchor: from + 1 }, userEvent: "input" });
+      view.dispatch({ changes: { from, to, insert: insert + pairs[insert] }, selection: { anchor: from + 1 }, userEvent: "input.type" });
       const pairedSelection = view.state.selection.main;
       return JSON.stringify({ handled: true, from: pairedSelection.from, to: pairedSelection.to });
     }
@@ -429,7 +438,7 @@ globalThis.__codeEditorBeforeInput = (json) => {
   view.dispatch({
     changes: { from, to, insert },
     selection: { anchor: from + insert.length },
-    userEvent: "input",
+    userEvent: event.inputType.startsWith("delete") ? "delete.backward" : "input.type",
   });
   const nextSelection = view.state.selection.main;
   return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });

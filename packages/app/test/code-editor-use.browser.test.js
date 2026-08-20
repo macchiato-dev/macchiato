@@ -417,12 +417,12 @@ test("code-editor-use runs CodeMirror inside QuickJS through a constrained DOM b
   await page.locator(".cm-content").click();
   await page.keyboard.press("Meta+ArrowDown");
   await page.keyboard.type(" edit");
-  await page.evaluate(() => globalThis.__codeEditorBridge.setContent("selected version", "plain", { resetHistoryOnEdit: true }));
+  await page.evaluate(() => globalThis.__codeEditorBridge.setContent("selected version", "plain"));
   await page.locator(".cm-content").fill("selected version branch");
   await page.keyboard.press("Meta+z");
   assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).document, "selected version");
   await page.keyboard.press("Meta+z");
-  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).document, "selected version", "undo must not cross the version branch point");
+  assert.equal((await page.evaluate(() => globalThis.__codeEditorBridge.inspect())).document, "main line edit", "version selection must preserve the prior editing history");
 
   await page.locator(".cm-line").first().evaluate((node) => node.setAttribute("onclick", "alert(1)"));
   await assert.doesNotReject(page.getByText(/Editor stopped: DOM shape rejected attribute: onclick/).waitFor());

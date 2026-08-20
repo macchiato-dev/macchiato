@@ -24,7 +24,7 @@ async function stores({ now = () => 200 } = {}) {
     emailVerified: true,
   });
   let id = 0;
-  return { account, content: createContentStore(client, { now, randomId: () => `content-${++id}` }) };
+  return { account, content: createContentStore(client, { now, randomId: () => `content-${++id}` }), db };
 }
 
 test("content schema caps the site at 50,000 projects", () => {
@@ -138,7 +138,7 @@ test("content store enforces account limits and exposes namespace pages", async 
 
 test("content store versions multi-file project state periodically and around destructive changes", async () => {
   let clock = 1_000;
-  const { account, content } = await stores({ now: () => clock });
+  const { account, content, db } = await stores({ now: () => clock });
   const created = await content.createProject(account.id, {
     namespace: "user", userSlug: account.login, slug: "history", name: "History",
     description: "", visibility: "private", template: "html",
@@ -186,6 +186,12 @@ test("content store versions multi-file project state periodically and around de
   workspace = await content.getProjectWorkspace("latte", "history", account.id);
   assert.equal(workspace.snapshot.files.find((file) => file.path === "index.html").content, "<h1>One</h1>");
   assert.equal(workspace.snapshot.files.length, 2);
+
+  // The newest checkpoint is independently materialized. It remains readable
+  // even when a legacy/imported patch earlier in the chain is damaged.
+  db.prepare(`UPDATE resource_project_versions SET patch_json = ? WHERE project_id = ? AND sequence = 1`)
+    .run(JSON.stringify({ version: 1, files: [], config: [] }), created.id);
+  assert.deepEqual(await content.getProjectVersion(created.id, 4, account.id), workspace.snapshot);
 });
 
 test("template replacement and undo keep project metadata aligned with the snapshot", async () => {
