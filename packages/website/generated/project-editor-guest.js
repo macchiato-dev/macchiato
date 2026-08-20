@@ -30521,15 +30521,6 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   }
   function editorExtensions() {
     return [
-      keymap.of([
-        { key: "Ctrl-z", run: undo },
-        { key: "Ctrl-Shift-z", run: redo },
-        { key: "Ctrl-y", run: redo },
-        { key: "Meta-z", run: undo },
-        { key: "Meta-Shift-z", run: redo },
-        { key: "Mod-z", run: undo },
-        { key: "Mod-Shift-z", run: redo }
-      ]),
       editorSetup.of(basicSetup),
       lineNumbers(),
       language2.of(languageExtension(currentLanguage)),

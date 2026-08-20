@@ -5,7 +5,7 @@ import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { EditorView, lineNumbers } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -86,15 +86,6 @@ function languageExtension(name) {
 }
 function editorExtensions() {
   return [
-    keymap.of([
-      { key: "Ctrl-z", run: undo },
-      { key: "Ctrl-Shift-z", run: redo },
-      { key: "Ctrl-y", run: redo },
-      { key: "Meta-z", run: undo },
-      { key: "Meta-Shift-z", run: redo },
-      { key: "Mod-z", run: undo },
-      { key: "Mod-Shift-z", run: redo },
-    ]),
     editorSetup.of(basicSetup),
     lineNumbers(),
     language.of(languageExtension(currentLanguage)),
