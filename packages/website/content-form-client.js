@@ -1,7 +1,7 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames } from "/-/resources-site/container-elements.js";
-import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "/-/resources-site/project-archive.js";
+import { decodeProjectArchive, encodeProjectArchive, isProjectImage, projectArchiveFilename } from "/-/resources-site/project-archive.js";
 import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
 
 const editorAnimationStyles = document.createElement("style");
@@ -1515,7 +1515,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const bytes = encodeProjectArchive(state);
       const link = document.createElement("a");
       link.href = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
-      link.download = `${state.config?.template || "project"}.zip`;
+      const projectName = String(root.closest("form")?.elements?.namedItem("slug")?.value || root.dataset.projectSlug || "").trim();
+      link.download = projectArchiveFilename(projectName);
       link.click();
       URL.revokeObjectURL(link.href);
     } catch (error) { setStatus(error.message, "error"); }
@@ -1529,7 +1530,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
       updateSnapshot(imported, { destructive: true });
       if (template) template.value = imported.config.template || "blank";
-      if (container) container.value = imported.config.container || "single-file-web-app";
+      if (linkPatterns) {
+        linkPatterns.value = (imported.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+        growTextarea(linkPatterns);
+      }
       renderTabs();
       sendContent();
       renderPreview();

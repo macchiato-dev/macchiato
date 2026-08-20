@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
+import { encodeProjectArchive } from "@macchiato-dev/hub/project-archive";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
@@ -606,6 +607,45 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   assert.equal(await page.locator(".project-create__fields").isVisible(), true);
   assert.equal(await page.locator(".command-trigger [data-command-shortcut]").isVisible(), true);
   assert.equal(await page.locator(".command-trigger__icon").isHidden(), true);
+  assert.deepEqual(errors, []);
+});
+
+test("Resources project ZIP import accepts legacy container metadata", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  const archive = encodeProjectArchive({
+    files: [{ path: "index.html", content: "<!doctype html><title>Imported Mahjong</title><main>Mahjong</main>" }],
+    config: {
+      entry: "index.html", template: "html", container: "single-file-web-app",
+      containerOptions: { allowedLinkPatterns: ["*.wikipedia.org"] },
+    },
+  });
+  await page.locator("[data-project-archive-file]").setInputFiles({
+    name: "mahjong.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
+  });
+  await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+  assert.match(await page.locator("[data-project-snapshot]").inputValue(), /Imported Mahjong/);
+  assert.equal(await page.getByLabel("Template").inputValue(), "html");
+  assert.equal(await page.getByLabel("Allowed Link URL Patterns").inputValue(), "*.wikipedia.org");
+
+  await page.getByRole("button", { name: "Editor menu" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+  assert.equal((await downloadPromise).suggestedFilename(), "untitled-project.zip");
   assert.deepEqual(errors, []);
 });
 

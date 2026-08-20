@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeProjectArchive, encodeProjectArchive, isProjectImage } from "@macchiato-dev/hub/project-archive";
+import { decodeProjectArchive, encodeProjectArchive, isProjectImage, projectArchiveFilename } from "@macchiato-dev/hub/project-archive";
 
 test("project archives round-trip text, binary images, and configuration", async () => {
   const snapshot = {
@@ -20,4 +20,10 @@ test("project archives round-trip text, binary images, and configuration", async
 test("project archives enforce the portable artifact size limit", () => {
   const content = "x".repeat(50 * 1024 * 1024);
   assert.throws(() => encodeProjectArchive({ files: [{ path: "too-large.txt", content }], config: {} }), /50 MB/);
+});
+
+test("project archives use the project Name for downloads", () => {
+  assert.equal(projectArchiveFilename("classic-chinese-mahjong"), "classic-chinese-mahjong.zip");
+  assert.equal(projectArchiveFilename(""), "untitled-project.zip");
+  assert.equal(projectArchiveFilename("Not a valid Name"), "untitled-project.zip");
 });

@@ -34,6 +34,11 @@ export function isProjectImage(file) {
   return Boolean(file && IMAGE_TYPES[extension(file.path)] && /^data:image\//.test(file.content));
 }
 
+export function projectArchiveFilename(name) {
+  const value = String(name || "").trim();
+  return `${/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) ? value : "untitled-project"}.zip`;
+}
+
 export function encodeProjectArchive(snapshot) {
   const manifest = { format: "resources-project", version: 1, config: snapshot.config };
   const entries = [...snapshot.files, { path: "macchiato.project.json", content: JSON.stringify(manifest, null, 2) + "\n" }]
