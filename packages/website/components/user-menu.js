@@ -4,7 +4,7 @@ import { defineCommandPalette, renderCommandPalette } from "@macchiato-dev/comma
 const svg = (body, attributes = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"') => `<svg viewBox="0 0 24 24" ${attributes}>${body}</svg>`;
 const avatar = `<span class="ub-avatar">MD</span>`;
 export const resourcesBlankAvatarHtml = `<span class="ub-avatar ub-avatar--blank" aria-hidden="true">${svg('<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>')}</span>`;
-export const resourcesBellIconHtml = `${svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>')}<span class="ub-dot"></span>`;
+export const resourcesBellIconHtml = svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>');
 export const resourcesCreateIconHtml = svg('<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>', 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"');
 export const resourcesAppearanceHtml = `<div class="menu__head">Appearance</div><div class="seg" role="group" aria-label="Appearance"><button class="seg__btn" type="button" data-theme-choice="system" aria-pressed="true"><span>System</span></button><button class="seg__btn" type="button" data-theme-choice="dark" aria-pressed="false"><span>Dark</span></button><button class="seg__btn" type="button" data-theme-choice="light" aria-pressed="false"><span>Light</span></button></div>`;
 const guestHtml = `<div class="ub-guest">

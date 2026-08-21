@@ -1020,7 +1020,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__versions svg.project-editor__history-arrow { width: 11px; height: 11px; }
 .project-editor__version-count { display: inline-flex; min-width: 19px; min-height: 19px; align-items: center; justify-content: center; padding: 1px 5px; border: 1px solid #6978cc; border-radius: 999px; font-size: 10px; }
 .project-editor__versions > [hidden] { display: none; }
-.project-editor__workspace { display: grid; grid-template-columns: minmax(0, var(--source-width, 50%)) 2px minmax(0, 1fr); min-height: 0; overflow: hidden; background: #151717; }
+.project-editor__workspace { display: grid; grid-template-columns: minmax(0, calc(var(--source-width, 50%) + 2px)) 2px minmax(0, 1fr); min-height: 0; overflow: hidden; background: #151717; }
 .focused-view .project-editor__workspace { position: relative; }
 .focused-view .project-editor__workspace::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; z-index: 20; height: 2px; background: #454b4a; box-shadow: inset 0 -1px #202524; pointer-events: none; }
 .project-editor__workspace[data-view="editor"] { grid-template-columns: 1fr; }
@@ -1036,7 +1036,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__preview-toolbar { width: auto; flex: 0 0 auto; }
 .project-editor:has(.project-editor__workspace[data-view="editor"]) [data-project-present] { display: none; }
 .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__preview-toolbar > [data-preview-title] { visibility: hidden; }
-.project-editor__source, .project-editor__preview { min-width: 0; min-height: 0; overflow: auto; }
+.project-editor__source, .project-editor__preview { position: relative; min-width: 0; min-height: 0; overflow: auto; }
 .project-editor__source { display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 0; overflow: hidden; }
 .project-editor__source > .project-editor__mount { min-height: 0; overflow: hidden; }
 .project-editor__preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
@@ -1094,9 +1094,10 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__view-controls [data-project-present] { order: -1; }
 .project-editor__view-controls .project-close { order: 3; display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: var(--project-toolbar-fg); background: transparent; font-size: 20px; line-height: 1; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
-.project-editor[data-editor-machine-state="starting"]::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 24; background: rgba(13, 16, 16, .78); }
-.project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
-.project-editor[data-editor-machine-state="starting"]::after { position: absolute; z-index: 25; top: calc(50% - 13px); left: calc(50% - 13px); }
+.project-editor__pane-loading { display: none; }
+.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: rgba(13, 16, 16, .78); }
+html[data-theme="light"] .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { background: rgba(231, 236, 255, .82); }
+.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[hidden] { display: none; }
 .project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
@@ -1244,7 +1245,7 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 }
 @keyframes projectSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .project-editor[data-editor-machine-state="starting"]::after, .project-route-loading__spinner { animation: projectSpin 1.8s linear infinite; }
+  .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after, .project-route-loading__spinner { animation: projectSpin 1.8s linear infinite; }
 }
 
 @media (max-width: 760px) {
@@ -1388,7 +1389,7 @@ function homeIcon() {
 function userbarHtml() {
   return `<section class="box userbar" data-screen-label="userbar">
     <div class="ub-pop">
-      <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span class="ub-dot"></span></button>
+      <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></button>
       <div class="popover user-menu" role="menu"><div class="menu__head">Notifications</div><div class="menu__empty">You're all caught up.</div></div>
     </div>
     <div class="ub-pop">
