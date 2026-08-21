@@ -23,7 +23,8 @@ export function createTerminalDomPolicy(input = {}) {
     tags: ["div", "span", "textarea", "canvas", "style"],
     events: ["auxclick", "blur", "click", "compositionend", "compositionstart", "compositionupdate", "contextmenu", "copy", "focus", "input", "keydown", "keypress", "keyup", "mousedown", "mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "mouseup", "paste", "pointerdown", "pointerleave", "pointermove", "pointerup", "scroll", "touchend", "touchmove", "touchstart", "wheel"],
     attributes: {
-      class: "^[^<>\"']{0,300}$", style: "^[^<>\"']{0,3000}$",
+      class: "^[^<>\"']{0,300}$",
+      style: /^(?![\s\S]*(?:url\s*\(|@import|:\/\/|\/\/|image-set\s*\(|src\s*\())[^<>"']{0,3000}$/i,
       role: "^(?:application|document|list|listitem|presentation|textbox)$",
       "aria-label": "^[^<>]{0,200}$", "aria-multiline": "^(?:true|false)$",
       "aria-live": "^(?:off|polite|assertive)$", "aria-hidden": "^(?:true|false)$",
