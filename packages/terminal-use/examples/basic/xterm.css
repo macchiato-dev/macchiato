@@ -22,4 +22,7 @@
   display: inline-block; visibility: hidden; position: absolute;
   top: 0; left: -9999em; line-height: normal;
 }
-.xterm .xterm-rows { font-family: "SFMono-Regular", Consolas, monospace; }
+.xterm .xterm-rows {
+  position: relative; z-index: 2;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}

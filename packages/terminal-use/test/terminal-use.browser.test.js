@@ -54,6 +54,12 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await page.mouse.move(secondRow.x + 120, secondRow.y + secondRow.height / 2, { steps: 5 });
   await page.mouse.up();
   assert.match(await page.evaluate(() => globalThis.__terminalBridge.inspect().selection), /^first selection line\nsecond/);
+  assert.equal(await page.locator("#terminal .xterm-rows").evaluate((node) => getComputedStyle(node).zIndex), "2");
+  const selectedTextColors = await rows.nth(0).locator("span").first().evaluate((node) => ({
+    foreground: getComputedStyle(node).color,
+    background: getComputedStyle(node).backgroundColor,
+  }));
+  assert.notEqual(selectedTextColors.foreground, selectedTextColors.background);
   const streamInspection = await page.evaluate(() => globalThis.__terminalBridge.inspect());
   assert.equal(streamInspection.pong, null);
   assert.equal(streamInspection.columns, inspection.columns);

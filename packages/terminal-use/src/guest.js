@@ -2,7 +2,11 @@ import { Terminal } from "@xterm/xterm";
 
 const terminal = new Terminal({
   cols: 80, rows: 24, scrollback: 1_000, convertEol: true, cursorBlink: true,
-  theme: { background: "#10141c", foreground: "#d8e2f0", cursor: "#69e6d3" },
+  theme: {
+    background: "#10141c", foreground: "#d8e2f0", cursor: "#69e6d3",
+    selectionBackground: "#36566f", selectionInactiveBackground: "#2b4357",
+    selectionForeground: "#f7fbff",
+  },
 });
 terminal.open(document.getElementById("terminal"));
 let pong = null;
