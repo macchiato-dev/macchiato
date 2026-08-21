@@ -100,6 +100,12 @@ test("prose-editor-use runs a constrained ProseMirror composer with a QuickJS co
   assert.match(await page.locator("#status").textContent(), /across 2 paragraphs/);
   assert.deepEqual(errors, []);
 
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator("body[data-ready='true']").waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.equal(await page.getByRole("button", { name: "Send message" }).isVisible(), true);
+
   await editor.evaluate((node) => node.setAttribute("onclick", "alert(1)"));
   await assert.doesNotReject(page.getByText(/Editor stopped: DOM shape rejected attribute: onclick/).waitFor());
   assert.equal(await page.locator(".ProseMirror").count(), 0);
@@ -137,6 +143,7 @@ test("the same message editor host swaps to Wordgard through QuickJS controller 
   await page.keyboard.press("Control+b");
   await page.keyboard.type(" in bold", { delay: 10 });
   await page.keyboard.press("Control+b");
+  assert.equal((await editor.locator("strong").textContent()).replace("\u00a0", " "), " in bold");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Second paragraph", { delay: 10 });
   await page.getByRole("button", { name: "Undo" }).click();
@@ -148,6 +155,12 @@ test("the same message editor host swaps to Wordgard through QuickJS controller 
   assert.equal(await page.locator("wordgard-editor").count(), 1, "visual capture must not violate the editor surface");
   assert.doesNotMatch(await page.locator("#status").textContent(), /stopped/i);
   assert.deepEqual(errors, []);
+
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator("body[data-ready='true']").waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.equal(await page.getByRole("button", { name: "Send message" }).isVisible(), true);
 
   await editor.evaluate((node) => node.setAttribute("onclick", "alert(1)"));
   await assert.doesNotReject(page.getByText(/Editor stopped: DOM shape rejected attribute: onclick/).waitFor());
