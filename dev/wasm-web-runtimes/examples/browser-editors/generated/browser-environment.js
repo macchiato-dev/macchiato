@@ -941,12 +941,21 @@ Object.defineProperty(GuestDocument.prototype, "hidden", {
 var documentReference = immediate([0, null, null]);
 var document = new GuestDocument(documentReference[1]);
 globalThis.__wwcReportError = function() {};
-var navigator = {};
-Object.defineProperty(navigator, "platform", {
-  get: function () {
-    return immediate([1, document.reference, stringIndex("platform")]);
+function GuestNavigator(reference) {
+  GuestObject.call(this, reference);
+}
+GuestNavigator.prototype = Object.create(GuestObject.prototype);
+var navigatorReference = immediate([1, document.reference, stringIndex("navigator")]);
+var navigator = new GuestNavigator(navigatorReference[1]);
+["language", "languages", "maxTouchPoints", "platform", "userAgent", "vendor"].forEach(
+  function (name) {
+    Object.defineProperty(GuestNavigator.prototype, name, {
+      get: function () {
+        return immediate([1, this.reference, stringIndex(name)]);
+      }
+    });
   }
-});
+);
 var localStorage = new GuestStorage("local");
 var sessionStorage = new GuestStorage("session");
 var routeCallbacks = [];
@@ -1039,8 +1048,8 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
     return this._documentElement;
   }
 });
-globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "",
-  language: "en-US", languages: ["en-US"], maxTouchPoints: 0 };
+// Navigator identity is host-backed by the base runtime. UI libraries use it
+// for browser behavior and to distinguish Command shortcuts from Emacs keys.
 ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(
   function (name) {
     if (globalThis.__microQuickJS) {

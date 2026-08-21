@@ -938,12 +938,21 @@ Object.defineProperty(GuestDocument.prototype, "hidden", {
 
 var documentReference = immediate([0, null, null]);
 var document = new GuestDocument(documentReference[1]);
-var navigator = {};
-Object.defineProperty(navigator, "platform", {
-  get: function () {
-    return immediate([1, document.reference, stringIndex("platform")]);
+function GuestNavigator(reference) {
+  GuestObject.call(this, reference);
+}
+GuestNavigator.prototype = Object.create(GuestObject.prototype);
+var navigatorReference = immediate([1, document.reference, stringIndex("navigator")]);
+var navigator = new GuestNavigator(navigatorReference[1]);
+["language", "languages", "maxTouchPoints", "platform", "userAgent", "vendor"].forEach(
+  function (name) {
+    Object.defineProperty(GuestNavigator.prototype, name, {
+      get: function () {
+        return immediate([1, this.reference, stringIndex(name)]);
+      }
+    });
   }
-});
+);
 var localStorage = new GuestStorage("local");
 var sessionStorage = new GuestStorage("session");
 var routeCallbacks = [];

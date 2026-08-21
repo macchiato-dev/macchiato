@@ -85,6 +85,35 @@ test("formatting commands are handled by each guest editor", async () => {
   }
 });
 
+test("ProseMirror preserves macOS Emacs keys", async () => {
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "platform", { value: "MacIntel", configurable: true });
+  });
+  try {
+    const { page, errors } = await pageFor(context, "prosemirror");
+    const editor = page.locator("[contenteditable=true]").first();
+    await editor.click();
+    await page.keyboard.press("Control+End");
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("X");
+    await page.waitForTimeout(100);
+    assert.match(await editor.locator("p").nth(1).textContent(), /^XSelect text/);
+
+    await page.keyboard.press("Control+End");
+    await page.keyboard.press("Control+b");
+    await page.keyboard.type("Y");
+    await page.waitForTimeout(100);
+    assert.match(await editor.textContent(), /\.Y$/);
+    assert.equal(await editor.locator("strong").count(), 0);
+    assert.deepEqual(errors, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
 test("xterm Pong renders, moves, pauses, and resets", async () => {
   const browser = await chromium.launch();
   try {

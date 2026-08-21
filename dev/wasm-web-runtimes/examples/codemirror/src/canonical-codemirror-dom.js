@@ -50,8 +50,8 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
     return this._documentElement;
   }
 });
-globalThis.navigator = { userAgent: "QuickJS", platform: "Linux", vendor: "",
-  language: "en-US", languages: ["en-US"], maxTouchPoints: 0 };
+// Navigator identity is host-backed by the base runtime. UI libraries use it
+// for browser behavior and to distinguish Command shortcuts from Emacs keys.
 ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(
   function (name) {
     if (globalThis.__microQuickJS) {
