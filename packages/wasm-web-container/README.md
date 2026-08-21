@@ -19,6 +19,17 @@ or a `.bin` resource bundle. A runtime may implement one or both input methods.
 Fetching and bundle validation belong to the container; evaluation belongs to
 the selected runtime.
 
+Container configuration names the entry point rather than assuming that every
+bundle starts at `index.html` or has only one runnable surface. A bundle may
+declare multiple entry points—for example an application, a builder, and a
+display-only view—while sharing the same files. The caller selects an entry
+point explicitly and the container applies that entry point's runtime and
+capability policy. Entry points do not grant one another ambient authority.
+
+Resources.co projects, including the Mahjong example, should consume this
+container contract. Their current project runtime is an integration stage, not
+a separate container design to preserve.
+
 The `.bin` header uses the same bounded reader/writer style as the machine ABI:
 
 - unsigned format version;
