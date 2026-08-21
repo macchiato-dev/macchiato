@@ -9440,11 +9440,23 @@ ${h.join(`
   });
   terminal.open(document.getElementById("terminal"));
   var pong;
+  var TICK_MS = 40;
+  var START_SPEED = 0.64;
+  var MAX_SPEED = 0.92;
+  var MAX_BOUNCE_ANGLE = Math.PI * 0.32;
   function resetBall(direction = Math.random() < 0.5 ? -1 : 1) {
     pong.ballX = pong.width / 2;
     pong.ballY = pong.height / 2;
-    pong.velocityX = 0.8 * direction;
-    pong.velocityY = Math.random() * 0.6 - 0.3;
+    const angle = (Math.random() - 0.5) * 0.5;
+    pong.velocityX = Math.cos(angle) * START_SPEED * direction;
+    pong.velocityY = Math.sin(angle) * START_SPEED;
+  }
+  function returnBall(paddleY, direction) {
+    const impact = Math.max(-1, Math.min(1, (pong.ballY - paddleY) / 1.5));
+    const angle = impact * MAX_BOUNCE_ANGLE;
+    const speed = Math.min(MAX_SPEED, Math.hypot(pong.velocityX, pong.velocityY) * 1.035);
+    pong.velocityX = Math.cos(angle) * speed * direction;
+    pong.velocityY = Math.sin(angle) * speed;
   }
   function render() {
     const rows = [
@@ -9468,7 +9480,7 @@ ${h.join(`
   }
   function update() {
     if (!pong || pong.paused) return;
-    pong.computerY += Math.sign(pong.ballY - pong.computerY) * 0.4;
+    pong.computerY += Math.sign(pong.ballY - pong.computerY) * 0.2;
     pong.computerY = Math.max(1, Math.min(pong.height - 2, pong.computerY));
     pong.ballX += pong.velocityX;
     pong.ballY += pong.velocityY;
@@ -9476,15 +9488,13 @@ ${h.join(`
       pong.ballY = Math.max(0, Math.min(pong.height - 1, pong.ballY));
       pong.velocityY *= -1;
     }
-    if (pong.velocityX < 0 && pong.ballX <= 2 && Math.abs(pong.ballY - pong.playerY) <= 2) {
+    if (pong.velocityX < 0 && pong.ballX <= 2 && Math.abs(pong.ballY - pong.playerY) <= 1.6) {
       pong.ballX = 2;
-      pong.velocityX = Math.min(1.2, -pong.velocityX * 1.04);
-      pong.velocityY += (pong.ballY - pong.playerY) * 0.12;
+      returnBall(pong.playerY, 1);
     }
-    if (pong.velocityX > 0 && pong.ballX >= pong.width - 3 && Math.abs(pong.ballY - pong.computerY) <= 2) {
+    if (pong.velocityX > 0 && pong.ballX >= pong.width - 3 && Math.abs(pong.ballY - pong.computerY) <= 1.6) {
       pong.ballX = pong.width - 3;
-      pong.velocityX = Math.max(-1.2, -pong.velocityX * 1.04);
-      pong.velocityY += (pong.ballY - pong.computerY) * 0.12;
+      returnBall(pong.computerY, -1);
     }
     if (pong.ballX < 0) {
       pong.computerScore += 1;
@@ -9510,15 +9520,15 @@ ${h.join(`
       computerY: 7,
       ballX: 29,
       ballY: 7,
-      velocityX: -0.8,
-      velocityY: 0.25,
+      velocityX: -START_SPEED,
+      velocityY: 0.2,
       playerScore: 0,
       computerScore: 0,
       paused: false,
       frames: 0
     };
     render();
-    pong.timer = setInterval(update, 100);
+    pong.timer = setInterval(update, TICK_MS);
     terminal.focus();
   }
   terminal.onData((data) => {
