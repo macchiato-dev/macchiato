@@ -606,6 +606,12 @@ GuestDocument.prototype.getElementById = function (id) {
   var result = immediate([3, this.reference, stringIndex("getElementById"), [encode(String(id))]]);
   return result === null ? null : nodeForReference(result[1]);
 };
+GuestDocument.prototype.elementFromPoint = function (x, y) {
+  var result = immediate([3, this.reference, stringIndex("elementFromPoint"), [
+    encode(Math.round(Number(x))), encode(Math.round(Number(y)))
+  ]]);
+  return result === null ? null : nodeForReference(result[1]);
+};
 
 function inlineCssBytes(source) {
   return encodeCss(".wwc-inline { " + source + " }");

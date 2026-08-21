@@ -12633,12 +12633,31 @@
     undo,
     redo
   };
+  var toolbarSelection = null;
   Object.keys(commands).forEach((name) => {
     const button = document.querySelector(`[data-command="${name}"]`);
-    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("mousedown", (event) => {
+      const selection = document.getSelection();
+      if (selection && selection.anchorNode && selection.focusNode) {
+        toolbarSelection = TextSelection.create(
+          view.state.doc,
+          view.posAtDOM(selection.anchorNode, selection.anchorOffset),
+          view.posAtDOM(selection.focusNode, selection.focusOffset)
+        );
+      }
+      event.preventDefault();
+    });
     button.addEventListener("click", () => {
-      commands[name](view.state, view.dispatch, view);
-      view.focus();
+      try {
+        if (toolbarSelection && !toolbarSelection.eq(view.state.selection)) {
+          view.dispatch(view.state.tr.setSelection(toolbarSelection));
+        }
+        toolbarSelection = null;
+        commands[name](view.state, (transaction) => view.dispatch(transaction), view);
+        view.focus();
+      } catch (error) {
+        status.textContent = String(error && error.stack || error);
+      }
     });
   });
   view.focus();

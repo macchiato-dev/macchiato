@@ -2,7 +2,7 @@ import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { Schema } from "prosemirror-model";
-import { EditorState } from "prosemirror-state";
+import { EditorState, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
 const schema = new Schema({
@@ -80,12 +80,29 @@ const commands = {
   strong: toggleMark(schema.marks.strong), emphasis: toggleMark(schema.marks.emphasis),
   code: toggleMark(schema.marks.code), undo, redo,
 };
+let toolbarSelection = null;
 Object.keys(commands).forEach(name => {
   const button = document.querySelector(`[data-command="${name}"]`);
-  button.addEventListener("mousedown", event => event.preventDefault());
+  button.addEventListener("mousedown", event => {
+    const selection = document.getSelection();
+    if (selection && selection.anchorNode && selection.focusNode) {
+      toolbarSelection = TextSelection.create(view.state.doc,
+        view.posAtDOM(selection.anchorNode, selection.anchorOffset),
+        view.posAtDOM(selection.focusNode, selection.focusOffset));
+    }
+    event.preventDefault();
+  });
   button.addEventListener("click", () => {
-    commands[name](view.state, view.dispatch, view);
-    view.focus();
+    try {
+      if (toolbarSelection && !toolbarSelection.eq(view.state.selection)) {
+        view.dispatch(view.state.tr.setSelection(toolbarSelection));
+      }
+      toolbarSelection = null;
+      commands[name](view.state, transaction => view.dispatch(transaction), view);
+      view.focus();
+    } catch (error) {
+      status.textContent = String(error && error.stack || error);
+    }
   });
 });
 view.focus();

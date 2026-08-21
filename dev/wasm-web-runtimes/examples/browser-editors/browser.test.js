@@ -50,12 +50,33 @@ test("formatting commands are handled by each guest editor", async () => {
     for (const name of ["prosemirror", "wordgard"]) {
       const { page, errors } = await pageFor(browser, name);
       const editor = page.locator("[contenteditable=true]").first();
-      await editor.click();
-      await page.keyboard.press("Control+a");
-      await page.waitForTimeout(100);
+      const word = await editor.evaluate(root => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const start = walker.currentNode.data.indexOf("executing");
+          if (start < 0) continue;
+          const range = document.createRange();
+          range.setStart(walker.currentNode, start);
+          range.setEnd(walker.currentNode, start + "executing".length);
+          const rect = range.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+        throw new Error("formatting test word was not found");
+      });
+      if (name === "prosemirror") {
+        await page.mouse.dblclick(word.x, word.y);
+        assert.equal(await page.evaluate(() => getSelection().toString()), "executing");
+      } else {
+        await editor.click();
+        await page.keyboard.press("Control+a");
+      }
       await page.getByRole("button", { name: "Bold" }).click();
       await page.waitForTimeout(100);
-      assert.ok(await editor.locator("strong").count() > 0);
+      if (name === "prosemirror") {
+        assert.equal(await editor.locator("strong").textContent(), "executing");
+      } else {
+        assert.ok(await editor.locator("strong").count() > 0);
+      }
       assert.deepEqual(errors, []);
       await page.close();
     }
