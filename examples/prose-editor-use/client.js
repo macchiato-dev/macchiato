@@ -40,6 +40,7 @@ const initial = sandbox.callJsonFunction("__proseEditorBoot", editor.snapshot())
 if (!violation) summary(initial);
 
 for (const button of document.querySelectorAll("[data-command]")) {
+  button.addEventListener("mousedown", (event) => event.preventDefault());
   button.addEventListener("click", () => editor[button.dataset.command]?.());
 }
 

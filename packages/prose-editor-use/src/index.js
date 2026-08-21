@@ -295,8 +295,9 @@ export function createWordgardEditor({
   });
   const run = (command) => {
     if (stopped) return false;
+    editor.flush();
     const handled = Command.dispatch(editor, command);
-    if (handled) editor.focus();
+    editor.focus();
     return handled;
   };
   return Object.freeze({

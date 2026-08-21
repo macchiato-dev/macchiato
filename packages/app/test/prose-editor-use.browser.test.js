@@ -83,9 +83,9 @@ test("prose-editor-use runs a constrained ProseMirror composer with a QuickJS co
   await editor.click();
   await page.keyboard.press("Control+a");
   await page.keyboard.type("A useful comment");
-  await page.keyboard.press("Control+b");
+  await page.getByRole("button", { name: "Bold" }).click();
   await page.keyboard.type(" in bold");
-  await page.keyboard.press("Control+b");
+  await page.getByRole("button", { name: "Bold" }).click();
   assert.equal((await editor.locator("strong").textContent()).replace("\u00a0", " "), " in bold");
   await page.keyboard.press("Enter");
   await page.keyboard.type("with a second paragraph");
@@ -139,11 +139,14 @@ test("the same message editor host swaps to Wordgard through QuickJS controller 
   await page.keyboard.press("Control+b");
   await page.keyboard.press("Enter");
   await page.keyboard.type("Second paragraph", { delay: 10 });
-  await page.keyboard.press("Control+z");
-  await page.keyboard.press("Control+Shift+z");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await page.getByRole("button", { name: "Redo" }).click();
   await page.getByRole("button", { name: "Send message" }).click();
   assert.match((await page.locator("#sent").textContent()).replaceAll("\u00a0", " "), /A Wordgard message in bold\n\nSecond paragraph/);
   assert.match(await page.locator("#status").textContent(), /across 2 paragraphs/);
+  await page.screenshot({ caret: "initial" });
+  assert.equal(await page.locator("wordgard-editor").count(), 1, "visual capture must not violate the editor surface");
+  assert.doesNotMatch(await page.locator("#status").textContent(), /stopped/i);
   assert.deepEqual(errors, []);
 
   await editor.evaluate((node) => node.setAttribute("onclick", "alert(1)"));
