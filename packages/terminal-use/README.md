@@ -6,11 +6,13 @@ following the same broad architecture as `code-editor-use`: terminal state and
 setup code belong to the guest, while a small host adapter owns browser layout,
 input, selection, accessibility, and an explicitly accounted DOM subtree.
 
-The first rough implementation embeds xterm.js 6 in a dedicated QuickJS/WASM
-guest and projects its browser operations through `browser-use`. The basic app
-is an in-memory Pong game that exercises ANSI cursor movement, color, screen
-clearing, animation, and xterm keyboard sequences. It deliberately does not
-emulate a shell or grant access to a process.
+The first implementation embeds xterm.js 6 in a dedicated QuickJS/WASM guest
+and projects its browser operations through `browser-use`. The basic app is an
+in-memory Pong game that exercises ANSI cursor movement, color, screen
+clearing, animation, and xterm keyboard sequences. Its browser test then
+disposes the game loop and exercises the same surface as an ordinary bounded
+input/output byte stream. It deliberately does not emulate a shell or grant
+access to a process.
 
 ## Run the rough example
 

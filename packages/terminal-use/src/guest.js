@@ -132,6 +132,13 @@ globalThis.__terminalStartPong = () => {
   terminal.focus();
   return JSON.stringify({ started: true });
 };
+globalThis.__terminalStopPong = () => {
+  if (pong?.timer) clearInterval(pong.timer);
+  pong = null;
+  terminal.reset();
+  terminal.focus();
+  return JSON.stringify({ stopped: true });
+};
 globalThis.__terminalInspect = () => JSON.stringify({
   columns: terminal.cols, rows: terminal.rows,
   cursorX: terminal.buffer.active.cursorX, cursorY: terminal.buffer.active.cursorY,

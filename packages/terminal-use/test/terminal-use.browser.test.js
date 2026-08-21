@@ -37,6 +37,17 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await page.keyboard.press("Space");
   await page.waitForTimeout(50);
   assert.equal((await page.evaluate(() => globalThis.__terminalBridge.inspect())).pong.paused, true);
+  await page.evaluate(() => {
+    globalThis.__terminalBridge.stopPong();
+    globalThis.__terminalBridge.write("\u001b[1;36mBounded terminal stream\u001b[0m\r\nready> ");
+  });
+  await page.getByText("Bounded terminal stream").waitFor();
+  await page.keyboard.type("status");
+  assert.equal(await page.evaluate(() => globalThis.__terminalBridge.input()), "status");
+  const streamInspection = await page.evaluate(() => globalThis.__terminalBridge.inspect());
+  assert.equal(streamInspection.pong, null);
+  assert.equal(streamInspection.columns, 80);
+  assert.equal(streamInspection.rows, 24);
   assert.ok(inspection.surface.elements <= inspection.surface.limits.elements);
   assert.ok(inspection.surface.operations.peakWindow < inspection.surface.limits.operations);
   assert.deepEqual(errors, []);

@@ -4,6 +4,7 @@ const root = document.getElementById("terminal");
 const status = document.getElementById("status");
 const shape = document.getElementById("shape");
 let blocked = false;
+const input = [];
 function showError(error) {
   blocked = true;
   const message = error?.message || String(error);
@@ -18,7 +19,7 @@ let controller;
 controller = await mountQuickJsTerminal({
   root, guestSource,
   onReady() { if (!blocked) { status.textContent = "QuickJS terminal ready; starting Pong…"; status.dataset.state = "ready"; } },
-  onData() {},
+  onData(data) { input.push(data); },
   onViolation: showError,
 });
 try {
@@ -32,6 +33,13 @@ try {
 const updateShape = () => { shape.textContent = `${root.querySelectorAll("*").length} constrained elements`; };
 updateShape();
 const shapeTimer = setInterval(updateShape, 1_000);
-globalThis.__terminalBridge = Object.freeze({ inspect: () => controller.inspect(), write: (text) => controller.write(text), startPong: () => controller.startPong(), destroy: () => controller.destroy() });
+globalThis.__terminalBridge = Object.freeze({
+  inspect: () => controller.inspect(),
+  input: () => input.join(""),
+  write: (text) => controller.write(text),
+  startPong: () => controller.startPong(),
+  stopPong: () => controller.stopPong(),
+  destroy: () => controller.destroy(),
+});
 document.body.dataset.ready = "true";
 addEventListener("pagehide", () => { clearInterval(shapeTimer); controller.destroy(); }, { once: true });
