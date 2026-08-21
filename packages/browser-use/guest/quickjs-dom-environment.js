@@ -48,6 +48,11 @@
       },
     });
   }
+  function listen(id, type, callback) {
+    const listenerId = String(++callbackId);
+    callbacks.set(listenerId, callback);
+    host({ op: "listen", id, type, listenerId });
+  }
   function node(id) {
     id = String(id);
     if (cache.has(id)) return cache.get(id);
@@ -69,11 +74,7 @@
         if (id === "document" && property === "head") return document.head;
         if (property === "style") return style(id);
         if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));
-        if (property === "addEventListener") return (type, callback) => {
-          const listenerId = String(++callbackId);
-          callbacks.set(listenerId, callback);
-          host({ op: "listen", id, type, listenerId });
-        };
+        if (property === "addEventListener") return (type, callback) => listen(id, type, callback);
         if (property === "removeEventListener") return () => {};
         if (property === "classList") return {
           add: (...names) => {
@@ -129,7 +130,7 @@
     createEvent: (type) => ({ type: String(type || "Event") }),
     getSelection: () => rpc("getSelection"),
     hasFocus: () => true,
-    addEventListener() {},
+    addEventListener: (type, callback) => listen("document", type, callback),
     removeEventListener() {},
     get defaultView() { return window; },
     get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },

@@ -182,8 +182,11 @@ export class BrowserDomHost {
   inspectSurface() {
     const shape = this.inspect();
     const tagLimits = this.policy.maxTagCounts;
+    const eventListeners = {};
+    for (const { type } of this.listeners.values()) eventListeners[type] = (eventListeners[type] || 0) + 1;
     return Object.freeze({
       ...shape,
+      eventListeners: Object.freeze(eventListeners),
       limits: Object.freeze({
         elements: this.policy.maxElements,
         textLength: this.policy.maxTextLength,
@@ -282,6 +285,8 @@ export class BrowserDomHost {
       ctrlKey: event.ctrlKey,
       metaKey: event.metaKey,
       shiftKey: event.shiftKey,
+      detail: event.detail,
+      timeStamp: event.timeStamp,
       button: event.button,
       buttons: event.buttons,
       clientX: event.clientX,
