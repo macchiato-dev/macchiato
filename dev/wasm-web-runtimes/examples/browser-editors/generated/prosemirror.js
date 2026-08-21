@@ -12626,6 +12626,20 @@
     },
     attributes: { "aria-label": "Message", spellcheck: "true" }
   });
+  function nativeTextSelection() {
+    const selection = document.getSelection();
+    return selection && selection.anchorNode && selection.focusNode ? TextSelection.create(
+      view.state.doc,
+      view.posAtDOM(selection.anchorNode, selection.anchorOffset),
+      view.posAtDOM(selection.focusNode, selection.focusOffset)
+    ) : null;
+  }
+  view.dom.addEventListener("keydown", () => {
+    const selection = nativeTextSelection();
+    if (selection && !selection.eq(view.state.selection)) {
+      view.dispatch(view.state.tr.setSelection(selection));
+    }
+  }, true);
   var commands = {
     strong: toggleMark(schema.marks.strong),
     emphasis: toggleMark(schema.marks.emphasis),
@@ -12637,14 +12651,7 @@
   Object.keys(commands).forEach((name) => {
     const button = document.querySelector(`[data-command="${name}"]`);
     button.addEventListener("mousedown", (event) => {
-      const selection = document.getSelection();
-      if (selection && selection.anchorNode && selection.focusNode) {
-        toolbarSelection = TextSelection.create(
-          view.state.doc,
-          view.posAtDOM(selection.anchorNode, selection.anchorOffset),
-          view.posAtDOM(selection.focusNode, selection.focusOffset)
-        );
-      }
+      toolbarSelection = nativeTextSelection();
       event.preventDefault();
     });
     button.addEventListener("click", () => {

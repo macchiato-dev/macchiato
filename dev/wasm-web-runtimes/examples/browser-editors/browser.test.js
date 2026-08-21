@@ -107,6 +107,20 @@ test("ProseMirror preserves macOS Emacs keys", async () => {
     await page.waitForTimeout(100);
     assert.match(await editor.textContent(), /\.Y$/);
     assert.equal(await editor.locator("strong").count(), 0);
+
+    const word = await editor.evaluate(root => {
+      const text = root.querySelector("p").firstChild;
+      const start = text.data.indexOf("executing");
+      const range = document.createRange();
+      range.setStart(text, start);
+      range.setEnd(text, start + "executing".length);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    });
+    await page.mouse.dblclick(word.x, word.y);
+    await page.keyboard.press("Meta+i");
+    await page.waitForTimeout(100);
+    assert.equal(await editor.locator("em").textContent(), "executing");
     assert.deepEqual(errors, []);
   } finally {
     await context.close();
