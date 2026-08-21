@@ -11,6 +11,7 @@ import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.
 import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
 import { microQuickjsCodeMirrorHandler, quickjsCodeMirrorHandler } from "../../../dev/wasm-web-runtimes/examples/codemirror/handler.js";
+import { prosemirrorQuickjsHandler, wordgardQuickjsHandler, xtermQuickjsHandler } from "../../../dev/wasm-web-runtimes/examples/browser-editors/handler.js";
 import { instrumentedCodeMirrorHandler } from "./instrumented-codemirror.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
@@ -25,6 +26,57 @@ const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "ProseMirror in QuickJS",
+    pluginId: "quickjs-prosemirror",
+    subdomain: "prosemirror-quickjs",
+    kind: "full-engine sandbox component",
+    description: "ProseMirror executing in QuickJS Wasm through wasm-web-machine.",
+    handler: prosemirrorQuickjsHandler,
+    sourceFiles: [
+      "dev/wasm-web-runtimes/examples/browser-editors/src/prosemirror.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/host.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/build.js",
+    ],
+    sandbox: {
+      runtime: "Bellard QuickJS compiled to WebAssembly",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS"],
+    },
+  },
+  {
+    name: "Wordgard in QuickJS",
+    pluginId: "quickjs-wordgard",
+    subdomain: "wordgard-quickjs",
+    kind: "full-engine sandbox component",
+    description: "Wordgard executing in QuickJS Wasm through wasm-web-machine.",
+    handler: wordgardQuickjsHandler,
+    sourceFiles: [
+      "dev/wasm-web-runtimes/examples/browser-editors/src/wordgard.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/host.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/build.js",
+    ],
+    sandbox: {
+      runtime: "Bellard QuickJS compiled to WebAssembly",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS"],
+    },
+  },
+  {
+    name: "xterm.js Pong in QuickJS",
+    pluginId: "quickjs-xterm",
+    subdomain: "xterm-quickjs",
+    kind: "full-engine sandbox component",
+    description: "A playable xterm.js Pong running inside QuickJS Wasm through wasm-web-machine.",
+    handler: xtermQuickjsHandler,
+    sourceFiles: [
+      "dev/wasm-web-runtimes/examples/browser-editors/src/xterm.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/host.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/build.js",
+    ],
+    sandbox: {
+      runtime: "Bellard QuickJS compiled to WebAssembly",
+      hostCapabilities: ["allowlisted DOM projection", "sanitized inline CSS", "keyboard events"],
+    },
+  },
   {
     name: "MicroQuickJS CodeMirror",
     pluginId: "microquickjs-codemirror",

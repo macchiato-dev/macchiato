@@ -11,6 +11,7 @@ var callbacks = [];
 var callbackStates = [];
 var freeCallbacks = [];
 var wireBuffer = new Uint8Array(2 * 1024 * 1024);
+var constructingHostReference = null;
 
 function allocateCallback(callback, once) {
   var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
@@ -121,7 +122,8 @@ function writeValue(writer, value) {
     for (var index = 0; index < value.length; index++) writer.byte(value[index]);
     return;
   }
-  throw new TypeError("unsupported wire value");
+  throw new TypeError("unsupported wire value: " + typeof value + " " +
+    Object.prototype.toString.call(value));
 }
 
 function Reader(bytes, length) {
@@ -235,10 +237,24 @@ function immediate(operation) {
 }
 
 function GuestObject(reference) {
+  var directCustomElement = false;
+  if (reference === undefined && constructingHostReference !== null) {
+    reference = constructingHostReference;
+  }
+  if (reference === undefined && typeof customElementNames !== "undefined" &&
+      customElementNames.has(this.constructor)) {
+    var customTag = customElementNames.get(this.constructor);
+    var created = immediate([3, document.reference, stringIndex("createElement"), [
+      encode(customTag)
+    ]]);
+    reference = created[1];
+    directCustomElement = true;
+  }
   this.reference = reference;
   /* This native token has no methods. MicroQuickJS releases the host lease when
      the token is collected along with this browser-shaped wrapper. */
   this._hostReference = new HostReference(reference);
+  if (directCustomElement) this._guestCustomElement = true;
 }
 
 function GuestStyle(reference) {
@@ -246,8 +262,13 @@ function GuestStyle(reference) {
 }
 GuestStyle.prototype = Object.create(GuestObject.prototype);
 
-["display", "flexBasis", "height", "inset", "left", "marginTop", "minHeight", "objectFit",
-  "position", "top", "width", "zIndex"].forEach(
+["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis",
+  "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle",
+  "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing",
+  "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow",
+  "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right",
+  "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
+  "width", "zIndex"].forEach(
   function (name) {
     Object.defineProperty(GuestStyle.prototype, name, {
       set: function (value) {
@@ -587,6 +608,9 @@ function cssBorderSide(property, value) {
   if (value === "0") return [[property + "-width", "0"]];
   if (value === "none") return [[property + "-style", "none"]];
   var parts = cssParts(value);
+  if (parts.length === 2 && /^\d/.test(parts[0])) {
+    return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
+  }
   if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
       !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
     throw new SyntaxError(property + " shorthand is not understood: " + value);
@@ -663,12 +687,15 @@ function cssTokens(value) {
       tokens.push([3, match[1]]); at += match[0].length;
     } else if ((match = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[a-z]+|%)?/i.exec(rest))) {
       tokens.push([2, match[0]]); at += match[0].length;
-    } else if ((match = /^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)/i.exec(rest))) {
+    } else if ((match = /^(--?[a-z_][a-z0-9_-]*|[a-z_][a-z0-9_-]*)/i.exec(rest))) {
       at += match[0].length;
       if (value[at] === "(") { tokens.push([7, match[0]]); at++; }
       else tokens.push([1, match[0]]);
     } else if (value[at] === ",") { tokens.push([5]); at++; }
     else if (value[at] === "/") { tokens.push([6]); at++; }
+    else if (value[at] === "+" || value[at] === "-" || value[at] === "*") {
+      tokens.push([11, value[at++]]);
+    }
     else if (value[at] === ")") { tokens.push([8]); at++; }
     else throw new SyntaxError("CSS value token is not understood at " + at);
   }
