@@ -1,6 +1,6 @@
 globalThis.__CODE_EDITOR_DEFER_START__=true;
 (() => {
-  // ../../node_modules/@marijn/find-cluster-break/src/index.js
+  // node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -74,7 +74,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return code2 < 65536 ? 1 : 2;
   }
 
-  // ../../node_modules/@codemirror/state/dist/index.js
+  // node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -3448,7 +3448,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return strict === true ? -1 : string2.length;
   }
 
-  // ../../node_modules/style-mod/src/style-mod.js
+  // node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3579,7 +3579,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   };
 
-  // ../../node_modules/w3c-keyname/index.js
+  // node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -3685,7 +3685,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return name2;
   }
 
-  // ../../node_modules/crelt/index.js
+  // node_modules/crelt/index.js
   function crelt() {
     var elt2 = arguments[0];
     if (typeof elt2 == "string") elt2 = document.createElement(elt2);
@@ -3714,7 +3714,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   }
 
-  // ../../node_modules/@codemirror/view/dist/index.js
+  // node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -14301,7 +14301,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return activeLineGutterHighlighter;
   }
 
-  // ../../node_modules/@lezer/common/dist/index.js
+  // node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range2 = class {
@@ -16352,7 +16352,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return result2;
   }
 
-  // ../../node_modules/@lezer/highlight/dist/index.js
+  // node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -17076,7 +17076,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // ../../node_modules/@codemirror/language/dist/index.js
+  // node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -18720,7 +18720,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // ../../node_modules/@codemirror/commands/dist/index.js
+  // node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config2 = getConfig(target.state, line.from);
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -19814,7 +19814,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // ../../node_modules/@codemirror/search/dist/index.js
+  // node_modules/@codemirror/search/dist/index.js
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
   var SearchCursor = class {
     /**
@@ -20896,7 +20896,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     baseTheme3
   ];
 
-  // ../../node_modules/@codemirror/autocomplete/dist/index.js
+  // node_modules/@codemirror/autocomplete/dist/index.js
   var CompletionContext = class {
     /**
     Create a new completion context. (Mostly useful for testing
@@ -22713,7 +22713,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   ];
   var completionKeymapExt = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ keymap.computeN([completionConfig], (state) => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
-  // ../../node_modules/@codemirror/lint/dist/index.js
+  // node_modules/@codemirror/lint/dist/index.js
   var SelectedDiagnostic = class {
     constructor(from, to, diagnostic) {
       this.from = from;
@@ -23322,7 +23322,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     baseTheme5
   ];
 
-  // ../../node_modules/codemirror/dist/index.js
+  // node_modules/codemirror/dist/index.js
   var basicSetup = /* @__PURE__ */ (() => [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -23352,7 +23352,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     ])
   ])();
 
-  // ../../node_modules/@lezer/lr/dist/index.js
+  // node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -25114,7 +25114,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return spec.get;
   }
 
-  // ../../node_modules/@lezer/javascript/dist/index.js
+  // node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -25326,7 +25326,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 15201
   });
 
-  // ../../node_modules/@codemirror/lang-javascript/dist/index.js
+  // node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -25638,7 +25638,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return true;
   });
 
-  // ../../node_modules/@lezer/css/dist/index.js
+  // node_modules/@lezer/css/dist/index.js
   var descendantOp = 145;
   var Unit = 1;
   var identifier = 146;
@@ -25813,7 +25813,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 2405
   });
 
-  // ../../node_modules/@codemirror/lang-css/dist/index.js
+  // node_modules/@codemirror/lang-css/dist/index.js
   var _properties = null;
   function properties() {
     if (!_properties && typeof document == "object" && document.body) {
@@ -26674,7 +26674,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
   }
 
-  // ../../node_modules/@lezer/html/dist/index.js
+  // node_modules/@lezer/html/dist/index.js
   var scriptText = 55;
   var StartCloseScriptTag = 1;
   var styleText = 56;
@@ -27018,7 +27018,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     });
   }
 
-  // ../../node_modules/@codemirror/lang-html/dist/index.js
+  // node_modules/@codemirror/lang-html/dist/index.js
   var Targets = ["_blank", "_self", "_top", "_parent"];
   var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
   var Methods = ["get", "post", "put", "delete"];
@@ -27747,7 +27747,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return true;
   });
 
-  // ../../node_modules/@lezer/json/dist/index.js
+  // node_modules/@lezer/json/dist/index.js
   var jsonHighlighting = styleTags({
     String: tags.string,
     Number: tags.number,
@@ -27779,7 +27779,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 0
   });
 
-  // ../../node_modules/@codemirror/lang-json/dist/index.js
+  // node_modules/@codemirror/lang-json/dist/index.js
   var jsonLanguage = /* @__PURE__ */ LRLanguage.define({
     name: "json",
     parser: /* @__PURE__ */ parser4.configure({
@@ -27802,7 +27802,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return new LanguageSupport(jsonLanguage);
   }
 
-  // ../../node_modules/@lezer/markdown/dist/index.js
+  // node_modules/@lezer/markdown/dist/index.js
   var CompositeBlock = class _CompositeBlock {
     static create(type, value, from, parentHash, end) {
       let hash2 = parentHash + (parentHash << 8) + type + (value << 4) | 0;
@@ -29866,7 +29866,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }]
   };
 
-  // ../../node_modules/@codemirror/lang-markdown/dist/index.js
+  // node_modules/@codemirror/lang-markdown/dist/index.js
   var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
   var headingProp = /* @__PURE__ */ new NodeProp();
   var commonmark = /* @__PURE__ */ parser5.configure({
@@ -30285,7 +30285,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   });
 
-  // ../../node_modules/@codemirror/theme-one-dark/dist/index.js
+  // node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -30429,7 +30429,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // ../project-editor/src/syntax.js
+  // packages/project-editor/src/syntax.js
   function hasSyntaxErrors(state, language3) {
     const source = state.doc.toString();
     if (language3 === "javascript") {
@@ -30451,7 +30451,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return false;
   }
 
-  // ../project-editor/src/guest.js
+  // packages/project-editor/src/guest.js
   if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
     globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
   }
@@ -30869,7 +30869,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
   };
 
-  // ../hub/src/project-history.js
+  // packages/hub/src/project-history.js
   var PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
   var MAX_FILES = 64;
   var MAX_FILE_BYTES = 70 * 1024 * 1024;
@@ -30958,7 +30958,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return patch?.version === 1 && patch.files?.length === 0 && patch.config?.length === 0;
   }
 
-  // project-editor-guest.js
+  // packages/website/project-editor-guest.js
   if (!globalThis.TextEncoder) {
     globalThis.TextEncoder = class TextEncoder {
       encode(value) {

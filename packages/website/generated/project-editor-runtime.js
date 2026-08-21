@@ -1,4 +1,4 @@
-// ../../dev/wasm-web-machine/dist/module/wasm-web-machine.js
+// dev/wasm-web-machine/dist/module/wasm-web-machine.js
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var encoder = new TextEncoder();
 var CHUNK_SIZE = 8192;
@@ -1966,7 +1966,7 @@ var WasmWebMachine = class {
   };
 };
 
-// project-machines.js
+// packages/website/project-machines.js
 var encoder2 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
@@ -2192,7 +2192,7 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
   });
 }
 
-// project-editor-runtime.js
+// packages/website/project-editor-runtime.js
 var projectApps = /* @__PURE__ */ new WeakMap();
 async function mountResourcesProjectEditor(options) {
   if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
