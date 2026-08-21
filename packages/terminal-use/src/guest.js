@@ -151,6 +151,7 @@ globalThis.__terminalInspect = () => JSON.stringify({
   columns: terminal.cols, rows: terminal.rows,
   cursorX: terminal.buffer.active.cursorX, cursorY: terminal.buffer.active.cursorY,
   lines: terminal.buffer.active.length,
+  selection: terminal.getSelection(),
   pong: pong ? {
     playerY: pong.playerY, ballX: pong.ballX, ballY: pong.ballY,
     playerScore: pong.playerScore, computerScore: pong.computerScore,

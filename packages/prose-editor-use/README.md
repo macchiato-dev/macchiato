@@ -16,6 +16,12 @@ example uses separate QuickJS controller modules to select between them while
 keeping the page, browser client, host bundle, operations, and submission
 contract unchanged.
 
+The browser suite drives the visible formatting and history controls instead
+of calling editor internals. Toolbar pointer-down preserves the native editor
+selection, and the Wordgard boundary flushes pending DOM input before a command
+then restores focus. This keeps both engines' ordinary selection and command
+semantics intact behind the same constrained surface.
+
 Both engines now build their policies from one message-editor surface schema:
 paragraphs and marks, common contenteditable attributes, text/shape limits,
 per-tag bookkeeping, and operation gas are shared. Engine variants only add

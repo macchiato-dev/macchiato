@@ -44,12 +44,24 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await page.getByText("Bounded terminal stream").waitFor();
   await page.keyboard.type("status");
   assert.equal(await page.evaluate(() => globalThis.__terminalBridge.input()), "status");
+  await page.evaluate(() => globalThis.__terminalBridge.write("\u001b[2J\u001b[Hfirst selection line\r\nsecond selection line"));
+  const rows = page.locator("#terminal .xterm-rows > div");
+  const firstRow = await rows.nth(0).boundingBox();
+  const secondRow = await rows.nth(1).boundingBox();
+  assert.ok(firstRow && secondRow);
+  await page.mouse.move(firstRow.x + 3, firstRow.y + firstRow.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(secondRow.x + 120, secondRow.y + secondRow.height / 2, { steps: 5 });
+  await page.mouse.up();
+  assert.match(await page.evaluate(() => globalThis.__terminalBridge.inspect().selection), /^first selection line\nsecond/);
   const streamInspection = await page.evaluate(() => globalThis.__terminalBridge.inspect());
   assert.equal(streamInspection.pong, null);
   assert.equal(streamInspection.columns, inspection.columns);
   assert.equal(streamInspection.rows, 24);
   assert.ok(inspection.surface.elements <= inspection.surface.limits.elements);
   assert.ok(inspection.surface.operations.peakWindow < inspection.surface.limits.operations);
+  assert.equal(streamInspection.surface.eventListeners.mousemove, 2, "temporary drag listeners should be released");
+  assert.equal(streamInspection.surface.eventListeners.mouseup, 1, "temporary drag listeners should be released");
   assert.deepEqual(errors, []);
 
   const macContext = await browser.newContext({

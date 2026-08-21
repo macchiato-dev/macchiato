@@ -1,5 +1,6 @@
 (() => {
   const callbacks = new Map();
+  const listeners = [];
   let callbackId = 0;
   function host(message) {
     const result = JSON.parse(globalThis.__browserUseHost(JSON.stringify(message)));
@@ -48,10 +49,26 @@
       },
     });
   }
-  function listen(id, type, callback) {
+  function eventCapture(options) {
+    return options === true || Boolean(options && typeof options === "object" && options.capture);
+  }
+  function listen(id, type, callback, options) {
+    type = String(type).toLowerCase();
+    const capture = eventCapture(options);
+    if (listeners.some((entry) => entry.id === id && entry.type === type && entry.callback === callback && entry.capture === capture)) return;
     const listenerId = String(++callbackId);
     callbacks.set(listenerId, callback);
-    host({ op: "listen", id, type, listenerId });
+    listeners.push({ id, type, callback, capture, listenerId });
+    host({ op: "listen", id, type, listenerId, capture });
+  }
+  function unlisten(id, type, callback, options) {
+    type = String(type).toLowerCase();
+    const capture = eventCapture(options);
+    const index = listeners.findIndex((entry) => entry.id === id && entry.type === type && entry.callback === callback && entry.capture === capture);
+    if (index < 0) return;
+    const [entry] = listeners.splice(index, 1);
+    callbacks.delete(entry.listenerId);
+    host({ op: "unlisten", id, type, listenerId: entry.listenerId, capture });
   }
   function node(id) {
     id = String(id);
@@ -74,8 +91,8 @@
         if (id === "document" && property === "head") return document.head;
         if (property === "style") return style(id);
         if (property === "getContext") return (contextType) => canvasContext(id, String(contextType));
-        if (property === "addEventListener") return (type, callback) => listen(id, type, callback);
-        if (property === "removeEventListener") return () => {};
+        if (property === "addEventListener") return (type, callback, options) => listen(id, type, callback, options);
+        if (property === "removeEventListener") return (type, callback, options) => unlisten(id, type, callback, options);
         if (property === "classList") return {
           add: (...names) => {
             const current = rpc("get", { id, property: "className" }) || "";
@@ -95,7 +112,7 @@
         };
         const methods = new Set(["appendChild", "blur", "contains", "focus", "getAttribute", "getBoundingClientRect",
           "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",
-          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",
+          "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView", "select",
           "setAttribute", "setSelectionRange", "addRange", "collapse", "collapseToEnd", "collapseToStart",
           "extend", "getRangeAt", "removeAllRanges", "setBaseAndExtent", "selectNode", "selectNodeContents", "setEnd", "setEndAfter",
           "setEndBefore", "setStart", "setStartAfter", "setStartBefore"]);
@@ -130,8 +147,8 @@
     createEvent: (type) => ({ type: String(type || "Event") }),
     getSelection: () => rpc("getSelection"),
     hasFocus: () => true,
-    addEventListener: (type, callback) => listen("document", type, callback),
-    removeEventListener() {},
+    addEventListener: (type, callback, options) => listen("document", type, callback, options),
+    removeEventListener: (type, callback, options) => unlisten("document", type, callback, options),
     get defaultView() { return window; },
     get activeElement() { return rpc("get", { id: "document", property: "activeElement" }); },
   };
@@ -210,6 +227,7 @@
     if (!callback) return JSON.stringify({});
     let prevented = false;
     let stopped = false;
+    let immediatelyStopped = false;
     const target = node(envelope.event.target);
     const event = {
       ...envelope.event,
@@ -227,7 +245,7 @@
       },
       preventDefault() { prevented = true; },
       stopPropagation() { stopped = true; },
-      stopImmediatePropagation() { stopped = true; },
+      stopImmediatePropagation() { stopped = true; immediatelyStopped = true; },
       get defaultPrevented() { return prevented; },
     };
     callback(event);
@@ -237,7 +255,7 @@
         pending(Date.now());
       }
     }
-    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped });
+    return JSON.stringify({ preventDefault: prevented, stopPropagation: stopped, stopImmediatePropagation: immediatelyStopped });
   };
   globalThis.__browserUseConfigureEnvironment = (json) => {
     const environment = JSON.parse(json);

@@ -11,8 +11,8 @@ and projects its browser operations through `browser-use`. The basic app is an
 in-memory Pong game that exercises ANSI cursor movement, color, screen
 clearing, animation, and xterm keyboard sequences. Its browser test then
 disposes the game loop and exercises the same surface as an ordinary bounded
-input/output byte stream. It deliberately does not emulate a shell or grant
-access to a process.
+input/output byte stream, including multiline mouse selection. It deliberately
+does not emulate a shell or grant access to a process.
 
 ## Run the rough example
 
@@ -35,9 +35,11 @@ The example is intentionally split at the trust boundary:
   output size, and renewable operation budget; and
 - `examples/basic/client.js` supplies the unprivileged in-memory echo behavior.
 
-This is an alpha compatibility pass. Typing, composition, selection, resize,
-scrollback, accessibility, sustained output, and tighter gas measurements still
-need broader Playwright coverage before the package is suitable for publishing.
+This is an alpha compatibility pass. Keyboard input, ANSI output, multiline
+selection, temporary document-listener cleanup, narrow-surface fitting, and
+bounded DOM/gas use have Playwright coverage. Composition, paste, accessibility,
+sustained output, scrollback churn, and tighter gas measurements still need
+broader coverage before the package is suitable for publishing.
 
 ## Intended boundary
 
@@ -70,8 +72,9 @@ the terminal's declared byte-stream interface without gaining DOM authority.
 
 1. Finish recording the minimal DOM shape produced by the fixed xterm.js 6
    configuration and reduce the provisional limits.
-2. Exercise typing, paste, selection, resize, scrollback, accessibility, and
-   output churn in Playwright while measuring peak surface and gas use.
+2. Extend the existing typing, selection, and resize coverage to paste,
+   composition, scrollback, accessibility, and output churn while measuring
+   peak surface and gas use.
 3. Add optional, separately declared process or remote-stream adapters only
    after the display/input contract is stable.
 

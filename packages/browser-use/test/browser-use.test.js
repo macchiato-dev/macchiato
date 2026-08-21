@@ -102,25 +102,28 @@ test("browser-use exhausts and renews operation gas", () => {
 test("browser-use filters guest event subscriptions through policy", () => {
   const registrations = [];
   const ownerDocument = {
-    addEventListener(type) { registrations.push(["document", type]); },
-    removeEventListener() {},
+    addEventListener(type, listener, capture) { registrations.push(["document", "add", type, capture]); },
+    removeEventListener(type, listener, capture) { registrations.push(["document", "remove", type, capture]); },
   };
   const root = {
     ownerDocument,
     querySelectorAll() { return []; },
     contains(node) { return node === root; },
-    addEventListener(type) { registrations.push(["root", type]); },
-    removeEventListener() {},
+    addEventListener(type, listener, capture) { registrations.push(["root", "add", type, capture]); },
+    removeEventListener(type, listener, capture) { registrations.push(["root", "remove", type, capture]); },
   };
   const host = new BrowserDomHost(root, {
     tags: ["div"],
     events: ["keydown"],
   });
   assert.doesNotThrow(() => host.listen("root", "keydown", "allowed"));
-  assert.doesNotThrow(() => host.listen("document", "keydown", "document-allowed"));
+  assert.doesNotThrow(() => host.listen("document", "keydown", "document-allowed", true));
   assert.throws(() => host.listen("root", "message", "denied"), /subscription is not allowed: message/);
-  assert.deepEqual(registrations, [["root", "keydown"], ["document", "keydown"]]);
+  assert.deepEqual(registrations, [["root", "add", "keydown", false], ["document", "add", "keydown", true]]);
   assert.deepEqual(host.surface.eventListeners, { keydown: 2 });
+  host.unlisten("document", "keydown", "document-allowed", true);
+  assert.deepEqual(registrations.at(-1), ["document", "remove", "keydown", true]);
+  assert.deepEqual(host.surface.eventListeners, { keydown: 1 });
 });
 
 test("browser-use recognizes DOM handles from another realm by shape", () => {
@@ -212,10 +215,12 @@ test("generated QuickJS environment matches its directly runnable source", async
     calls.push(JSON.parse(json));
     return "{}";
   };
-  vm.runInNewContext("globalThis.mouseDetails = []; document.addEventListener('mousemove', event => mouseDetails.push([event.detail, event.timeStamp]));", context);
-  assert.deepEqual(calls[0], { op: "listen", id: "document", type: "mousemove", listenerId: "2" });
-  context.__browserUseDispatchEvent(JSON.stringify({ listenerId: "2", event: { target: "root", detail: 1, timeStamp: 42 } }));
+  vm.runInNewContext("globalThis.mouseDetails = []; globalThis.onMouseMove = event => mouseDetails.push([event.detail, event.timeStamp]); document.addEventListener('mousemove', onMouseMove);", context);
+  assert.deepEqual(calls[0], { op: "listen", id: "document", type: "mousemove", listenerId: "2", capture: false });
+  context.__browserUseDispatchEvent(JSON.stringify({ listenerId: "2", event: { target: "root", currentTarget: "document", detail: 1, timeStamp: 42 } }));
   assert.deepEqual(Array.from(context.mouseDetails[0]), [1, 42]);
+  vm.runInNewContext("document.removeEventListener('mousemove', onMouseMove);", context);
+  assert.deepEqual(calls[1], { op: "unlisten", id: "document", type: "mousemove", listenerId: "2", capture: false });
 });
 
 test("QuickJS guest timers honor their requested delay", () => {

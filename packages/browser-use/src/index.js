@@ -268,12 +268,14 @@ export class BrowserDomHost {
     return {};
   }
 
-  listen(id, type, listenerId) {
+  listen(id, type, listenerId, capture = false) {
     const node = this.node(id);
     type = String(type).toLowerCase();
     if (!this.policy.events.has(type)) throw new Error(`DOM event subscription is not allowed: ${type}`);
-    const key = `${id}:${type}:${listenerId}`;
+    capture = Boolean(capture);
+    const key = `${id}:${type}:${capture ? 1 : 0}:${listenerId}`;
     if (this.listeners.has(key)) return {};
+    const eventHandle = (value) => this.ids.get(value) || (this.canExpose(value) ? this.registerRemote(value) : "root");
     const listener = (event) => this.onEvent(String(listenerId), {
       type: event.type,
       key: event.key,
@@ -295,10 +297,22 @@ export class BrowserDomHost {
       data: event.data,
       isComposing: event.isComposing,
       repeat: event.repeat,
-      target: this.register(event.target),
+      target: eventHandle(event.target),
+      currentTarget: eventHandle(node),
     }, event);
-    node.addEventListener(type, listener);
-    this.listeners.set(key, { node, type, listener });
+    node.addEventListener(type, listener, capture);
+    this.listeners.set(key, { node, type, listener, capture });
+    return {};
+  }
+
+  unlisten(id, type, listenerId, capture = false) {
+    type = String(type).toLowerCase();
+    capture = Boolean(capture);
+    const key = `${id}:${type}:${capture ? 1 : 0}:${listenerId}`;
+    const registration = this.listeners.get(key);
+    if (!registration) return {};
+    registration.node.removeEventListener(registration.type, registration.listener, registration.capture);
+    this.listeners.delete(key);
     return {};
   }
 
@@ -317,6 +331,7 @@ export class BrowserDomHost {
       "getClientRects", "hasAttribute", "insertBefore", "matches", "querySelector", "querySelectorAll",
       "remove", "removeAttribute", "removeChild", "replaceChild", "replaceChildren", "scrollIntoView",
       "setAttribute", "setSelectionRange",
+      "select",
       "addRange", "collapse", "collapseToEnd", "collapseToStart", "extend", "getRangeAt", "removeAllRanges",
       "setBaseAndExtent",
       "selectNode", "selectNodeContents", "setEnd", "setEndAfter", "setEndBefore", "setStart",
@@ -435,7 +450,7 @@ export class BrowserDomHost {
   stop() {
     this.observer?.disconnect();
     this.observer = null;
-    for (const { node, type, listener } of this.listeners.values()) node.removeEventListener(type, listener);
+    for (const { node, type, listener, capture } of this.listeners.values()) node.removeEventListener(type, listener, capture);
     this.listeners.clear();
   }
 
@@ -464,7 +479,8 @@ export class BrowserDomHost {
       case "inspect": return this.inspect();
       case "create": return this.create(message.tag);
       case "mutate": return this.mutate(message);
-      case "listen": return this.listen(message.id, message.type, message.listenerId);
+      case "listen": return this.listen(message.id, message.type, message.listenerId, message.capture);
+      case "unlisten": return this.unlisten(message.id, message.type, message.listenerId, message.capture);
       case "remote": return this.remote(message);
       default: throw new Error(`Unsupported browser DOM operation: ${message.op}`);
     }

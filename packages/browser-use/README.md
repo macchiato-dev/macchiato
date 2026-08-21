@@ -33,6 +33,16 @@ types, size, and depth. Guest DOM handles are opaque. Reads, writes, methods,
 and listener registration cross the JSON host function and fail closed when
 the operation is outside that policy.
 
+Event listeners retain browser identity across the boundary. Duplicate
+registrations are ignored, `removeEventListener` releases the matching guest
+callback and native listener, capture is preserved, and the envelope reports
+both the constrained target and actual registered `currentTarget`.
+`preventDefault`, propagation stops, and immediate propagation stops are
+applied back to the same native event. A document listener may observe events
+from the granted subtree (including a drag that leaves it), but any native
+target outside that subtree is represented by the granted root rather than
+exposed to the guest.
+
 Native object identity is bidirectional and bounded to one host generation. A
 strong `Map` resolves opaque string handles to native objects while a
 `WeakMap` reuses a handle when the same native object is encountered again.

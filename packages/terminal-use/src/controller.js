@@ -17,7 +17,8 @@ export async function mountQuickJsTerminal({ root, guestSource, limits = {}, onD
       try {
         const result = sandbox.callJsonFunction("__browserUseDispatchEvent", { listenerId, event });
         if (result.preventDefault) nativeEvent.preventDefault();
-        if (result.stopPropagation) nativeEvent.stopPropagation();
+        if (result.stopImmediatePropagation) nativeEvent.stopImmediatePropagation();
+        else if (result.stopPropagation) nativeEvent.stopPropagation();
       } catch (error) { violate(error); }
     },
   });
