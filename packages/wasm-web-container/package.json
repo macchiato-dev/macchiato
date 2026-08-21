@@ -6,6 +6,10 @@
   "private": true,
   "scripts": {
     "build:sqlite-book": "node examples/sqlite-book/build.js",
-    "test": "npm run build:sqlite-book && node --test test/*.test.js"
+    "test": "node --test test/*.test.js"
+  },
+  "exports": {
+    ".": "./src/wasm-web-container.js",
+    "./resource-bundle": "./src/resource-bundle.js"
   }
 }

@@ -5,9 +5,31 @@ capabilities. The container owns module validation, instantiation, memory
 limits, the message ABI, host references, and guest lifecycle. DOM access is a
 capability within the container rather than the package's whole identity.
 
-The package is reserved for a later composition layer. Current examples
-integrate the lower-level `WasmWebMachine` directly and keep their loading,
-services, and policy in readable inline JavaScript.
+The container is the composition layer above `WasmWebMachine`. JavaScript
+runtime implementations live separately in `wwm-js-runtimes`; that package is
+planned to contain MicroQuickJS, QuickJS, QuickJS-NG, Porffor, and
+AssemblyScript. Keeping those modules separate allows interpreted source,
+bytecode, and ahead-of-time Wasm to share the container without pretending
+that they have identical startup behavior.
+
+## Applications and resource bundles
+
+`WasmWebContainer` accepts an explicit runtime and loads either JavaScript text
+or a `.bin` resource bundle. A runtime may implement one or both input methods.
+Fetching and bundle validation belong to the container; evaluation belongs to
+the selected runtime.
+
+The `.bin` header uses the same bounded reader/writer style as the machine ABI:
+
+- unsigned format version;
+- unsigned file count;
+- for each file, length-prefixed UTF-8 name and unsigned byte length;
+- file bodies concatenated in header order.
+
+There is no delimiter parsing, JSON envelope, or redundant header-length
+field. Reading the fixed schema leaves the reader at the first file byte.
+Names are relative canonical paths, duplicates are rejected, and decoded file
+contents are zero-copy views of the supplied bundle.
 
 ## Virtual paths and links
 
