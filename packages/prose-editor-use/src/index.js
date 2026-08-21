@@ -83,6 +83,9 @@ export const PROSE_EDITOR_DOM_POLICY = createMessageEditorSurfacePolicy({
   attributes: {
     class: "^(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak)(?:\\s+(?:ProseMirror|ProseMirror-focused|ProseMirror-hideselection|ProseMirror-separator|ProseMirror-trailingBreak))*$",
     "data-pm-slice": "^[0-9]+ [0-9]+(?: -?[0-9]+)?(?: \\[[^<>]{0,200}\\])?$",
+    // Browsers and screenshot tooling temporarily hide a contenteditable caret
+    // this way. No other inline style is part of the ProseMirror surface.
+    style: "^(?:|caret-color:\\s*transparent(?:\\s*!important)?;?)$",
   },
   classNames: [
     "^ProseMirror$",

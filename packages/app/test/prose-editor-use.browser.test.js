@@ -75,6 +75,9 @@ test("prose-editor-use runs a constrained ProseMirror composer with a QuickJS co
   assert.match(response.headers()["content-security-policy"], /wasm-unsafe-eval/);
   assert.equal(await page.locator(".ProseMirror").count(), 1);
   assert.match(await page.locator("#status").textContent(), /QuickJS observed \d+ characters across 1 paragraph/);
+  await page.screenshot();
+  assert.equal(await page.locator(".ProseMirror").count(), 1, "visual capture must not violate the editor surface");
+  assert.doesNotMatch(await page.locator("#status").textContent(), /stopped/i);
 
   const editor = page.locator(".ProseMirror");
   await editor.click();
