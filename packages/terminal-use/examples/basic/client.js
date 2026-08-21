@@ -17,12 +17,14 @@ const manifest = await (await fetch("/-/app-manifest.json")).json();
 const guestSource = (await Promise.all(manifest.scripts.map(async (script) => `${await (await fetch(script.url)).text()}\n//# sourceURL=${script.source}`))).join("\n");
 let controller;
 controller = await mountQuickJsTerminal({
-  root, guestSource,
+  root,
+  guestSource,
   onReady() { if (!blocked) { status.textContent = "QuickJS terminal ready; starting Pong…"; status.dataset.state = "ready"; } },
   onData(data) { input.push(data); },
   onViolation: showError,
 });
 try {
+  controller.fit();
   controller.startPong();
   controller.focus();
   status.textContent = "Pong running · Click the terminal, then use W/S or ↑/↓";

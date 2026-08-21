@@ -30,7 +30,7 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await page.keyboard.press("ArrowUp");
   await page.waitForTimeout(1_400);
   const inspection = await page.evaluate(() => globalThis.__terminalBridge.inspect());
-  assert.equal(inspection.columns, 80);
+  assert.ok(inspection.columns >= 54 && inspection.columns <= 80);
   assert.equal(inspection.rows, 24);
   assert.ok(inspection.pong.frames > initial.pong.frames, "the QuickJS game loop should advance");
   assert.ok(inspection.pong.playerY < initial.pong.playerY, "xterm should deliver the arrow escape sequence to Pong");
@@ -46,7 +46,7 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   assert.equal(await page.evaluate(() => globalThis.__terminalBridge.input()), "status");
   const streamInspection = await page.evaluate(() => globalThis.__terminalBridge.inspect());
   assert.equal(streamInspection.pong, null);
-  assert.equal(streamInspection.columns, 80);
+  assert.equal(streamInspection.columns, inspection.columns);
   assert.equal(streamInspection.rows, 24);
   assert.ok(inspection.surface.elements <= inspection.surface.limits.elements);
   assert.ok(inspection.surface.operations.peakWindow < inspection.surface.limits.operations);
@@ -68,6 +68,24 @@ test("xterm Pong runs ANSI output and keyboard input inside QuickJS", async (t) 
   await macPage.waitForTimeout(50);
   assert.equal(await macPage.evaluate(() => globalThis.__terminalBridge.inspect().pong.playerY), macBefore - 1);
   assert.deepEqual(macErrors, []);
+
+  const mobilePage = await browser.newPage({ viewport: { width: 390, height: 760 } });
+  const mobileErrors = [];
+  mobilePage.on("pageerror", (error) => mobileErrors.push(error.message));
+  await mobilePage.goto(url, { waitUntil: "networkidle" });
+  await mobilePage.getByText(/Pong running/).waitFor();
+  const mobile = await mobilePage.evaluate(() => ({
+    ...globalThis.__terminalBridge.inspect(),
+    rootWidth: document.querySelector("#terminal").clientWidth,
+    terminalWidth: document.querySelector("#terminal .xterm").scrollWidth,
+  }));
+  assert.ok(mobile.columns >= 20 && mobile.columns < 80);
+  assert.ok(mobile.terminalWidth <= mobile.rootWidth, JSON.stringify(mobile));
+  await mobilePage.locator(".terminal-shell").click({ position: { x: 150, y: 180 } });
+  const mobileBefore = await mobilePage.evaluate(() => globalThis.__terminalBridge.inspect().pong.playerY);
+  await mobilePage.keyboard.press("ArrowDown");
+  assert.equal(await mobilePage.evaluate(() => globalThis.__terminalBridge.inspect().pong.playerY), mobileBefore + 1);
+  assert.deepEqual(mobileErrors, []);
 
   const violationPage = await browser.newPage();
   await violationPage.goto(url, { waitUntil: "networkidle" });

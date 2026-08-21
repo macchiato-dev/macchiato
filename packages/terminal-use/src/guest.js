@@ -33,7 +33,10 @@ function renderPong(previous = null) {
     return;
   }
   const rows = [];
-  rows.push(`\x1b[1;36m terminal-use pong\x1b[0m   ${playerScore} : ${computerScore}   \x1b[2mW/S or ↑/↓ · Space pause · R reset\x1b[0m`);
+  const heading = terminal.cols < 64
+    ? ` pong ${playerScore}:${computerScore}  ↑/↓  Space `
+    : ` terminal-use pong   ${playerScore} : ${computerScore}   W/S or ↑/↓ · Space pause · R reset`;
+  rows.push(`\x1b[1;36m${heading}\x1b[0m`);
   rows.push(`\x1b[38;5;39m+${"-".repeat(width)}+\x1b[0m`);
   for (let y = 0; y < height; y += 1) {
     const cells = Array(width).fill(" ");
@@ -106,6 +109,11 @@ globalThis.__terminalConfigure = (json) => {
   const limits = JSON.parse(json);
   terminal.options.scrollback = limits.scrollback;
   terminal.resize(limits.columns, limits.rows);
+  return JSON.stringify({ columns: terminal.cols, rows: terminal.rows });
+};
+globalThis.__terminalResize = (json) => {
+  const { columns, rows } = JSON.parse(json);
+  terminal.resize(columns, rows);
   return JSON.stringify({ columns: terminal.cols, rows: terminal.rows });
 };
 globalThis.__terminalWrite = (json) => {

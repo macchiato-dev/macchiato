@@ -59,6 +59,21 @@ export async function mountQuickJsTerminal({ root, guestSource, limits = {}, onD
       sandbox.callJsonFunction("__browserUseFlush", {});
       return result;
     },
+    fit() {
+      if (stopped || !sandbox) throw new Error("Terminal sandbox is not running");
+      const screen = root.querySelector(".xterm-screen");
+      const renderedWidth = screen?.getBoundingClientRect().width || 0;
+      const availableWidth = root.getBoundingClientRect().width || 0;
+      if (!renderedWidth || !availableWidth || renderedWidth <= availableWidth) {
+        return { columns: terminalLimits.columns, rows: terminalLimits.rows };
+      }
+      const columns = Math.max(20, Math.min(terminalLimits.columns,
+        Math.floor(terminalLimits.columns * availableWidth / renderedWidth)));
+      host.renewOperationBudget();
+      const result = sandbox.callJsonFunction("__terminalResize", { columns, rows: terminalLimits.rows });
+      sandbox.callJsonFunction("__browserUseFlush", {});
+      return result;
+    },
     inspect() { return { ...sandbox.callJsonFunction("__terminalInspect", {}), surface: host.inspectSurface() }; },
     focus() { root.querySelector("textarea")?.focus(); },
     destroy() { clearInterval(tickTimer); clearInterval(refillTimer); host.destroy(); root.replaceChildren(); sandbox?.dispose(); sandbox = null; },
