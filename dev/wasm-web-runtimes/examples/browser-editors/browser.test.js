@@ -137,6 +137,11 @@ test("xterm Pong renders, moves, pauses, and resets", async () => {
       [...document.querySelectorAll(".xterm-rows > div")].map(row => row.textContent));
     await page.waitForTimeout(500);
     const before = await rows();
+    for (let sample = 0; sample < 12; sample += 1) {
+      assert.equal((await rows()).join("").split("#").length - 1, 6,
+        "both Pong paddles remain three cells tall");
+      await page.waitForTimeout(60);
+    }
     const paddleRow = values => values.findIndex(value => value.includes("#"));
     await input.press("ArrowUp");
     await page.waitForTimeout(150);

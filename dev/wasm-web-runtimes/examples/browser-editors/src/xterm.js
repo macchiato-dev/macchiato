@@ -41,10 +41,11 @@ function resetBall(direction = Math.random() < .5 ? -1 : 1) {
 function render() {
   const rows = [`\x1b[1;36m PONG   ${pong.playerScore} : ${pong.computerScore}   W/S or ↑/↓ · Space pause · R reset\x1b[0m`,
     `\x1b[38;5;39m+${"-".repeat(pong.width)}+\x1b[0m`];
+  const computerRow = Math.round(pong.computerY);
   for (let y = 0; y < pong.height; y += 1) {
     const cells = Array(pong.width).fill(" ");
     if (Math.abs(y - pong.playerY) <= 1) cells[1] = "#";
-    if (Math.abs(y - pong.computerY) <= 1) cells[pong.width - 2] = "#";
+    if (Math.abs(y - computerRow) <= 1) cells[pong.width - 2] = "#";
     cells[Math.max(2, Math.min(pong.width - 3, Math.round(pong.ballX)))] =
       Math.round(pong.ballY) === y ? "o" : cells[Math.max(2, Math.min(pong.width - 3, Math.round(pong.ballX)))];
     if (pong.paused && y === Math.floor(pong.height / 2)) {
