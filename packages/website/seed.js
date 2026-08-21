@@ -1192,8 +1192,13 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .field-help__trigger { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; border: 1px solid var(--muted); border-radius: 999px; color: var(--muted); font-size: 11px; }
 .field-help__text { position: absolute; top: 23px; right: 0; z-index: 20; display: none; width: min(300px, 75vw); padding: 9px 11px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); font-size: 12px; font-weight: 400; line-height: 1.4; }
 .field-help:hover .field-help__text, .field-help:focus-within .field-help__text { display: block; }
-.create-form textarea[data-autogrow] { min-height: 0; resize: none; }
+.create-form textarea[data-autogrow] { min-height: 34px; resize: none; }
 .project-create__fields .create-form textarea[data-autogrow] { min-height: 34px; }
+.autogrow-textarea { display: grid; grid-template-areas: "grow"; min-width: 0; }
+.autogrow-textarea__measure, .autogrow-textarea > textarea { grid-area: grow; min-width: 0; width: 100%; }
+.autogrow-textarea__measure { box-sizing: border-box; visibility: hidden; min-height: 34px; padding: 7px 9px; border: 1px solid transparent; font: inherit; line-height: normal; overflow-wrap: anywhere; white-space: pre-wrap; }
+.autogrow-textarea > textarea { height: 100%; overflow: hidden; }
+.focused-view .autogrow-textarea { font-size: 13px; }
 .project-create-layout .content-root { width: 100%; }
 .project-create-layout .content-block { width: 100%; }
 .layout:has(.project-workspace) > .main { max-width: none; }

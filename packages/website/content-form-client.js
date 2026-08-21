@@ -1664,6 +1664,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
   function growTextarea(textarea) {
     if (!textarea) return;
+    const replica = textarea.closest("[data-autogrow-replica]");
+    if (replica) {
+      const measure = replica.querySelector("[data-autogrow-measure]");
+      if (measure) measure.textContent = `${textarea.value} `;
+      textarea.style.removeProperty("height");
+      return;
+    }
     textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight + 2}px`;
   }

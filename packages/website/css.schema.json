@@ -719,7 +719,8 @@
         },
         "white-space": {
           "enum": [
-            "nowrap"
+            "nowrap",
+            "pre-wrap"
           ]
         },
         "text-overflow": {
