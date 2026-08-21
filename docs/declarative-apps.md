@@ -17,13 +17,6 @@ bootstrap. `macchiato-detect-app` reports whether this configuration is present
 and complete so other programs—and eventually a skill—can use one stable
 detection contract.
 
-`packages/code-editor-use/examples/basic` is an independent nested npm project demonstrating
-both modes. `npm start` uses its minimal server and `PORT` (or a system-selected
-free port). `app install code-editor-use` records an optional main-server
-subdomain mapping. In that second mode SQLite is only the operator's catalog;
-the same declaration, layout, code-editor block, and handler remain imported
-modules. Its README has the complete commands.
-
 `app_configs` is the only app routing registry. Files, route rows, imported
 handlers, and plugin code are inert until an app declaration maps them to a
 subdomain.
@@ -118,33 +111,12 @@ should leave the property out.
 
 ### Load an example into Macchiato
 
-Repository examples are ordinary declarative apps with a small installer entry.
-For example, persist the Code Editor Use example in the default local catalog:
-
-```bash
-node packages/macchiato/src/macchiato.js app install code-editor-use
-node packages/app/src/index.js --host 127.0.0.1 --port 8765
-```
-
-It is then listed at `http://apps.localhost:8765` and runs at
-`http://code-editor-use.localhost:8765`. The declaration is stored in
-`~/.macchiato/default/macchiato.sqlite3`; source code and assets remain in the
-project rather than being copied into the database. Use `--data-dir` on both
-commands to keep a different catalog.
-
-For a disposable run, install the plugin at server startup:
-
-```bash
-node packages/app/src/index.js --host 127.0.0.1 --port 8765 \
-  --app-plugin code-editor-use
-```
-
-Application authors do not need to copy or depend on this exact example. They
-can import `@macchiato-dev/declarative-app-server` and whichever `*-use`
-packages their app needs, keep normal HTML, CSS, and guest JavaScript files,
-and provide their own `macchiato.app.json`, schemas, trusted bootstrap, and
-handler. `packages/code-editor-use/examples/basic` is a complete reference for
-that composition and can also be run independently with `npm start`.
+Repository examples can provide ordinary declarative app declarations and a
+small installer entry. Installed declarations live in the selected Macchiato
+catalog while source and assets remain in their projects. Application authors
+can combine the declarative server with machine/container guests and their own
+HTML, CSS, schemas, bootstrap, and handler; no retired editor-specific adapter
+is required.
 
 Dependencies and subdomains
 

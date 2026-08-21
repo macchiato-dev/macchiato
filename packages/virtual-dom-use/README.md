@@ -5,8 +5,8 @@ WebAssembly guest and in the browser host. The guest owns application logic;
 the host owns the real DOM. After one initial snapshot, only bounded atomic
 patch batches cross the boundary.
 
-This package is an experiment toward an editor surface with a simpler hot path
-than `code-editor-use`. It deliberately has no UI-framework dependency.
+This package is an experiment toward an editor surface with a simple hot path.
+It deliberately has no UI-framework dependency.
 
 ## Synchronization invariant
 
@@ -77,7 +77,7 @@ semantic reducer → atomic virtual DOM batch
 same applyBatch() in guest and host → digest equality → real DOM sync
 ```
 
-## Compared with `code-editor-use`
+## Compared with the full project editor
 
 This prototype is already narrower in several useful ways:
 

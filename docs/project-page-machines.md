@@ -18,7 +18,7 @@ machine must not reset the site menu or other app-wide state.
 
 ### Project editor
 
-The editor machine owns `code-editor-use`, the editor-facing DOM surface, and
+The editor machine owns the `project-editor` guest, its DOM surface, and
 the in-browser draft/version model. The host gives it one editor mount and a
 narrow JSON bridge. It does not receive the project preview DOM.
 

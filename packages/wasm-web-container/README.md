@@ -12,6 +12,14 @@ AssemblyScript. Keeping those modules separate allows interpreted source,
 bytecode, and ahead-of-time Wasm to share the container without pretending
 that they have identical startup behavior.
 
+`wasm-web-container` is closer to a small host application or runner than to a
+library embedded by each guest. Its integration script interprets a container
+declaration, creates and coordinates the required `wasm-web-machine`
+instances, grants each machine its capabilities, selects its entry point, and
+connects explicit message paths between them. Application files remain guest
+inputs. They neither construct the surrounding container nor gain ambient
+access to its other machines.
+
 ## Applications and resource bundles
 
 `WasmWebContainer` accepts an explicit runtime and loads either JavaScript text

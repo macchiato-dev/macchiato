@@ -100,7 +100,7 @@ time. Totals stay observable for auditing and later tuning.
 
 ## Editor guidance
 
-`code-editor-use` defaults to 5,000 lines and supports tested 100-, 1,000-, and
+The project editor guest defaults to 5,000 lines and supports tested 100-, 1,000-, and
 5,000-line configurations. Its guest helps bound the line-number surface even
 when virtual DOM geometry is conservative. A production-quality editor should
 also install a CodeMirror extension that displays remaining capacity before a

@@ -2,8 +2,8 @@
 
 Allowing a DOM element or attribute does not implicitly allow its network
 effect. `dom-use` owns the shared schema and delegates parsing and CSS checks to
-`html-use` and `style-use`. Specialized adapters such as `code-editor-use` do
-not have to pay for that general runtime on every operation, but must be audited
+`html-use` and `style-use`. Specialized machine guests do not have to pay for
+that general runtime on every operation, but must be audited
 against this inventory and prove their narrower policy cannot construct an
 ungranted network surface.
 

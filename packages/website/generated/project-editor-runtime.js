@@ -14,6 +14,7 @@ var ELEMENTS = /* @__PURE__ */ new Set([
   "code",
   "dialog",
   "div",
+  "em",
   "footer",
   "form",
   "h1",
@@ -272,6 +273,7 @@ var CSS_PROPERTIES = /* @__PURE__ */ new Set([
   "text-overflow",
   "text-transform",
   "transform",
+  "transform-origin",
   "transform-style",
   "perspective",
   "transition",
@@ -296,6 +298,7 @@ var CSS_PROPERTIES = /* @__PURE__ */ new Set([
 var CSS_VALUE_FUNCTIONS = /* @__PURE__ */ new Set([
   "blur",
   "brightness",
+  "calc",
   "clamp",
   "cubic-bezier",
   "drop-shadow",
@@ -304,9 +307,19 @@ var CSS_VALUE_FUNCTIONS = /* @__PURE__ */ new Set([
   "radial-gradient",
   "repeat",
   "rgba",
+  "rotate",
+  "rotateX",
   "rotateY",
+  "rotateZ",
   "saturate",
+  "scale",
+  "scaleX",
+  "scaleY",
   "steps",
+  "translate",
+  "translate3d",
+  "translateX",
+  "translateY",
   "var"
 ]);
 var SAFE_SELECTOR = /^[#.a-z0-9_[\]="' >-]+$/i;
@@ -533,11 +546,14 @@ var WasmWebBridge = class {
       if (object === hostDocument && (name === "documentElement" || name === "head" || name === "body")) {
         return reference(name === "head" ? logicalHead : primaryRoot);
       }
+      if (object === hostDocument && name === "navigator")
+        return reference(navigator);
       if (object === hostDocument && name === "activeElement") {
         return object.activeElement && insideDocument(object.activeElement) ? reference(object.activeElement) : null;
       }
-      if (object === hostDocument && name === "platform")
-        return navigator.platform;
+      if (object === navigator && ["language", "languages", "maxTouchPoints", "platform", "userAgent", "vendor"].includes(name)) {
+        return navigator[name];
+      }
       if (object === hostDocument && name === "hidden")
         return hostDocument.hidden;
       if (object === hostDocument && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
@@ -626,6 +642,12 @@ var WasmWebBridge = class {
       if (object instanceof KeyboardEvent && name === "repeat")
         return object.repeat;
       if (object instanceof InputEvent && ["data", "inputType", "isComposing"].includes(name)) {
+        return object[name];
+      }
+      if (["startContainer", "endContainer"].includes(name) && object?.[name] instanceof Node) {
+        return reference(object[name]);
+      }
+      if (["startOffset", "endOffset"].includes(name) && Number.isInteger(object?.[name])) {
         return object[name];
       }
       if (object instanceof Event && ["clipboardData", "dataTransfer"].includes(name)) {
@@ -946,6 +968,9 @@ var WasmWebBridge = class {
       if (Array.isArray(object) && name === "item" && args.length === 1 && Number.isInteger(args[0]) && args[0] >= 0 && args[0] < object.length) {
         return reference(object[args[0]]);
       }
+      if (object instanceof InputEvent && name === "getTargetRanges" && args.length === 0) {
+        return reference(Array.from(object.getTargetRanges()));
+      }
       if (object instanceof MutationRecord && ["addedNodeAt", "removedNodeAt"].includes(name) && args.length === 1 && Number.isInteger(args[0])) {
         const nodes = object[name === "addedNodeAt" ? "addedNodes" : "removedNodes"];
         if (args[0] < 0 || args[0] >= nodes.length)
@@ -1032,7 +1057,8 @@ var WasmWebBridge = class {
       }
       if (object === hostDocument && name === "createElement") {
         const tag = args[0];
-        if (!ELEMENTS.has(tag))
+        const inertCustomElement = typeof tag === "string" && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag) && !customElements.get(tag);
+        if (!ELEMENTS.has(tag) && !inertCustomElement)
           fail(`element ${tag} is not allowed`);
         return reference(ownNode(hostDocument.createElement(tag)));
       }
@@ -1055,10 +1081,20 @@ var WasmWebBridge = class {
         }
         return reference(ownNode(hostDocument.createTextNode(args[0])));
       }
+      if (object === hostDocument && name === "createDocumentFragment" && args.length === 0) {
+        return reference(ownNode(hostDocument.createDocumentFragment()));
+      }
       if (object === hostDocument && name === "getElementById") {
         if (typeof args[0] !== "string")
           fail("element id must be a string");
         const found = documentTarget ? hostDocument.getElementById(args[0]) : roots.map((root) => root.id === args[0] ? root : root.querySelector(`#${CSS.escape(args[0])}`)).find(Boolean);
+        return found && insideDocument(found) ? reference(found) : null;
+      }
+      if (object === hostDocument && name === "elementFromPoint") {
+        if (args.length !== 2 || !args.every(Number.isFinite)) {
+          fail("point coordinates must be finite numbers");
+        }
+        const found = hostDocument.elementFromPoint(args[0], args[1]);
         return found && insideDocument(found) ? reference(found) : null;
       }
       if (object instanceof Element && name === "setAttribute") {
@@ -1203,6 +1239,7 @@ var WasmWebBridge = class {
     }
     function listen(object, type, callback, capture = false) {
       const elementEvent = object instanceof Element && [
+        "auxclick",
         "beforeinput",
         "blur",
         "change",
@@ -1223,10 +1260,13 @@ var WasmWebBridge = class {
         "focusout",
         "input",
         "keydown",
+        "keypress",
         "keyup",
         "mousedown",
         "mouseleave",
         "mousemove",
+        "mouseout",
+        "mouseover",
         "mouseup",
         "mousewheel",
         "paste",
@@ -1409,7 +1449,7 @@ var WasmWebBridge = class {
       if (reader.uint() !== 4)
         fail("stylesheet operation version is not supported");
       const itemCount = reader.uint();
-      if (itemCount > 512)
+      if (itemCount > 2048)
         fail("stylesheet has too many items");
       if (targetStyle && itemCount !== 1)
         fail("inline style must contain one rule");
@@ -1558,7 +1598,7 @@ var WasmWebBridge = class {
               value2 += " ";
             else if (kind === 1) {
               const identifier = reader.text();
-              if (!/^--?[a-z][a-z0-9-]*$|^[a-z][a-z0-9-]*$/i.test(identifier)) {
+              if (!/^--?[a-z_][a-z0-9_-]*$|^[a-z_][a-z0-9_-]*$/i.test(identifier)) {
                 fail("stylesheet identifier is not representable");
               }
               value2 += identifier;
@@ -1594,6 +1634,11 @@ var WasmWebBridge = class {
                 fail("stylesheet value comment is not representable");
               }
               value2 += `/*${comment}*/`;
+            } else if (kind === 11) {
+              const operator = reader.text();
+              if (!/^[+*-]$/.test(operator))
+                fail("stylesheet operator is not representable");
+              value2 += operator;
             } else
               fail("stylesheet token is not representable");
           }
@@ -1777,8 +1822,6 @@ ${declarations.join("\n")}
       for (let index = 0; index < operationCount; index++) {
         writer.value(operation(readOperation(reader)));
       }
-      for (const observer of mutationObservers)
-        observer.takeRecords();
       if (reader.at !== reader.bytes.length)
         fail("trailing wire data");
       return write(memory, offset, capacity, Uint8Array.from(writer.bytes));

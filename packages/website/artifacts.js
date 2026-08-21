@@ -70,9 +70,15 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     .replaceAll("/-/resources-site/project-quickjs-runtime.wasm", `/-/resources-site/project-quickjs-runtime.wasm?v=${version(projectRuntime)}`)
     .replace("/-/resources-site/project-editor-quickjs-runtime.wasm", `/-/resources-site/project-editor-quickjs-runtime.wasm?v=${version(editorMachine)}`));
   const containerElements = bytes(readFileSync(join(hubSourceDirectory, "container-elements.js")));
+  const projectArchive = bytes(readFileSync(join(hubSourceDirectory, "project-archive.js")));
+  const projectHistory = bytes(readFileSync(join(hubSourceDirectory, "project-history.js")));
+  const urlPattern = bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js")));
   const contentForm = bytes(readFileSync(join(directory, "content-form-client.js"), "utf8")
     .replace("/-/resources-site/project-editor-runtime.js", `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`)
-    .replace("/-/resources-site/container-elements.js", `/-/resources-site/container-elements.js?v=${version(containerElements)}`));
+    .replace("/-/resources-site/container-elements.js", `/-/resources-site/container-elements.js?v=${version(containerElements)}`)
+    .replace("/-/resources-site/project-archive.js", `/-/resources-site/project-archive.js?v=${version(projectArchive)}`)
+    .replace("/-/resources-site/project-history.js", `/-/resources-site/project-history.js?v=${version(projectHistory)}`)
+    .replace("/-/resources-site/url-pattern.js", `/-/resources-site/url-pattern.js?v=${version(urlPattern)}`));
   files.set("/-/resources-site/content-form.js", contentForm);
   files.set("/-/resources-site/project-output-frame.html", bytes(readFileSync(join(directory, "project-output-frame.html"))));
   files.set("/-/resources-site/project-output-frame.js", bytes(readFileSync(join(directory, "project-output-frame.js"))));
@@ -80,10 +86,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-editor-guest.js", editorGuest);
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);
-  files.set("/-/resources-site/project-history.js", bytes(readFileSync(join(hubSourceDirectory, "project-history.js"))));
-  files.set("/-/resources-site/url-pattern.js", bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js"))));
+  files.set("/-/resources-site/project-history.js", projectHistory);
+  files.set("/-/resources-site/url-pattern.js", urlPattern);
   files.set("/-/resources-site/container-elements.js", containerElements);
-  files.set("/-/resources-site/project-archive.js", bytes(readFileSync(join(hubSourceDirectory, "project-archive.js"))));
+  files.set("/-/resources-site/project-archive.js", projectArchive);
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));

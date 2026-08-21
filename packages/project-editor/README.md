@@ -4,11 +4,10 @@
 navigation, reading and editing files, Output View, details, versions, drafts,
 and the independently disposable editor and project runtimes.
 
-This package is at the design stage. It is distinct from
-`@macchiato-dev/code-editor-use`: `code-editor-use` provides a constrained code
-editing surface, while `project-editor` decides which project material is open,
-whether it is being read or edited, and how that work participates in project
-history.
+This package owns the constrained editor guest as well as the project workspace
+that decides which material is open, whether it is being read or edited, and
+how that work participates in project history. The retired `code-editor-use`
+prototype is not part of the runtime path.
 
 ## Project Home tab
 
@@ -127,7 +126,7 @@ the full-screen close control from being reached.
 ## Relationship to other modules
 
 - `project-details-use` owns the modular, read-first Details pane.
-- `code-editor-use` owns the constrained CodeMirror editing surface.
+- `project-editor` owns the constrained CodeMirror guest and editing surface.
 - container and preview runtimes own execution of the project itself.
 - the host application owns authorization, persistence, drafts, and routing.
 - `project-editor` coordinates those pieces without merging their authority.

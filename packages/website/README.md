@@ -52,7 +52,7 @@ may continue using full-document navigation.
 
 ### Project editor environment
 
-The focused project view mounts `code-editor-use` directly into a bounded page
+The focused project view mounts the `project-editor` guest directly into a bounded page
 subtree; it does not use an iframe. CodeMirror state, extensions, and commands
 run in a dedicated QuickJS WebAssembly runtime with declared heap and stack
 limits. The host owns only the constrained DOM renderer and filtered input
@@ -374,7 +374,7 @@ the allowed DOM rules are derived from the container registry.
 
 The next design slices include richer template-specific creation and moving
 the embedded editor from the isolated reference bundle to the complete
-QuickJS-backed `code-editor-use` deployment artifact.
+QuickJS-backed `project-editor` deployment artifact.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.

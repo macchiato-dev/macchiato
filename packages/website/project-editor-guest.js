@@ -1,4 +1,4 @@
-import "../code-editor-use/src/guest.js";
+import "../project-editor/src/guest.js";
 import {
   diffProjectSnapshots,
   normalizeProjectSnapshot,

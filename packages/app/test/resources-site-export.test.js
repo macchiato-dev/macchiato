@@ -52,6 +52,9 @@ test("exports resources site as static files", async (t) => {
   assert.match(fastHome, /href="\/signup"/);
   assert.doesNotMatch(fastClosedHome, /href="\/signup"/);
   assert.match(contentForm, /project-editor-runtime\.js\?v=[a-f0-9]{12}/);
+  assert.match(contentForm, /project-archive\.js\?v=[a-f0-9]{12}/);
+  assert.match(contentForm, /project-history\.js\?v=[a-f0-9]{12}/);
+  assert.match(contentForm, /url-pattern\.js\?v=[a-f0-9]{12}/);
   assert.match(editorRuntime, /project-editor-quickjs-runtime\.wasm\?v=[a-f0-9]{12}/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);

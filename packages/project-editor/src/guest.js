@@ -5,7 +5,7 @@ import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
-import { EditorView, lineNumbers } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -23,14 +23,14 @@ const editorSetup = new Compartment();
 const language = new Compartment();
 const editability = new Compartment();
 const appearance = new Compartment();
-const nativeSelectionTheme = EditorView.theme({
+const darkNativeSelectionTheme = EditorView.theme({
   ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" },
 });
 const lightEditorTheme = EditorView.theme({
   "&": { color: "#263338", backgroundColor: "#d9e1e3" },
   ".cm-content": { caretColor: "#1f5268" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#1f5268" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#9fbfcd" },
+  ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#d7d4f0 !important" },
   ".cm-activeLine": { backgroundColor: "#cedadd" },
   ".cm-gutters": { color: "#66777e", backgroundColor: "#cbd6d9", borderRightColor: "#aebec3" },
   ".cm-activeLineGutter": { color: "#25363d", backgroundColor: "#becdd1" },
@@ -52,7 +52,7 @@ let currentTheme = "dark";
 function appearanceExtension() {
   return currentTheme === "light"
     ? [lightEditorTheme, syntaxHighlighting(lightHighlightStyle)]
-    : oneDark;
+    : [oneDark, darkNativeSelectionTheme];
 }
 let applyingHostContent = false;
 let resetHistoryOnNextEdit = false;
@@ -87,7 +87,6 @@ function languageExtension(name) {
 function editorExtensions() {
   return [
     editorSetup.of(basicSetup),
-    lineNumbers(),
     language.of(languageExtension(currentLanguage)),
     editability.of([
       EditorState.readOnly.of(currentReadOnly),
@@ -95,7 +94,6 @@ function editorExtensions() {
     ]),
     appearance.of(appearanceExtension()),
     EditorView.lineWrapping,
-    nativeSelectionTheme,
     documentLimitFilter,
     EditorView.updateListener.of((update) => {
       if (update.docChanged && !applyingHostContent) {

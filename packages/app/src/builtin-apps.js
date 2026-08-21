@@ -8,7 +8,6 @@ import { todoMatrixHandler } from "../../../examples/todo-matrix/handler.js";
 import { todoHistoryHandler } from "../../../examples/todo-history/handler.js";
 import { httpSqliteCrudHandler, setupHttpSqliteCrud } from "../../../examples/http-sqlite-crud/handler.js";
 import { codeAnnotatorFileAccess, codeAnnotatorHandler } from "./code-annotator.js";
-import { codeEditorUseHandler } from "../../code-editor-use/examples/basic/handler.js";
 import { virtualDomEditorHandler } from "../../virtual-dom-use/examples/basic/handler.js";
 import { microQuickjsCodeMirrorHandler, quickjsCodeMirrorHandler } from "../../../dev/wasm-web-runtimes/examples/codemirror/handler.js";
 import { prosemirrorQuickjsHandler, wordgardQuickjsHandler, xtermQuickjsHandler } from "../../../dev/wasm-web-runtimes/examples/browser-editors/handler.js";
@@ -16,7 +15,6 @@ import { instrumentedCodeMirrorHandler } from "./instrumented-codemirror.js";
 import { wasmWebContainerExampleHandler } from "../../wasm-web-container/examples/handler.js";
 import { elementUseExampleHandler } from "../../element-use/example/handler.js";
 import { elementUseExampleSources } from "../../element-use/example/manifest.js";
-import { terminalUseHandler } from "../../terminal-use/examples/basic/handler.js";
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
@@ -221,26 +219,6 @@ export const BUILTIN_APPS = [
     },
   },
   {
-    name: "Constrained CodeMirror",
-    subdomain: "code-editor-use",
-    kind: "sandboxed browser component",
-    description: "CodeMirror 6 behind a shape-checked browser-use adapter and QuickJS controller.",
-    handler: codeEditorUseHandler,
-    sourceFiles: [
-      "packages/code-editor-use/examples/basic/handler.js",
-      "packages/code-editor-use/examples/basic/client.js",
-      "packages/code-editor-use/examples/basic/controller.js",
-      "packages/code-editor-use/examples/basic/style.css",
-      "packages/browser-use/src/index.js",
-      "packages/browser-use/src/quickjs-guest.js",
-      "packages/code-editor-use/src/index.js",
-    ],
-    sandbox: {
-      runtime: "QuickJS WASM controller + native constrained adapter",
-      hostCapabilities: ["browser-use scoped DOM", "code-editor-use CodeMirror 6 subtree"],
-    },
-  },
-  {
     name: "Virtual DOM Editor Experiment",
     pluginId: "virtual-dom-editor",
     replaces: ["vue-dom-editor"],
@@ -259,27 +237,6 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "QuickJS WASM guest + synchronized virtual DOM host",
       hostCapabilities: ["bounded textarea DOM", "atomic path batches", "digest-checked synchronization"],
-    },
-  },
-  {
-    name: "Constrained xterm.js",
-    pluginId: "terminal-use",
-    subdomain: "terminal-use",
-    kind: "sandboxed browser component",
-    description: "xterm.js in a dedicated QuickJS guest behind a bounded terminal surface.",
-    handler: terminalUseHandler,
-    sourceFiles: [
-      "packages/terminal-use/examples/basic/handler.js",
-      "packages/terminal-use/examples/basic/client.js",
-      "packages/terminal-use/examples/basic/style.css",
-      "packages/terminal-use/examples/basic/xterm.css",
-      "packages/terminal-use/src/controller.js",
-      "packages/terminal-use/src/guest.js",
-      "packages/terminal-use/src/policy.js",
-    ],
-    sandbox: {
-      runtime: "QuickJS WASM",
-      hostCapabilities: ["browser-use scoped DOM", "terminal-use in-memory byte stream"],
     },
   },
   {

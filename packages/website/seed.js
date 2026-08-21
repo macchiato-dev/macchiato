@@ -1095,8 +1095,7 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__view-controls .project-close { order: 3; display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: var(--project-toolbar-fg); background: transparent; font-size: 20px; line-height: 1; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor__pane-loading { display: none; }
-.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: rgba(13, 16, 16, .78); }
-html[data-theme="light"] .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { background: rgba(231, 236, 255, .82); }
+.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: var(--project-toolbar-bg); }
 .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[hidden] { display: none; }
@@ -1172,7 +1171,7 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .project-embed .project-editor__workspace { display: block; height: 100%; }
 .project-embed .project-editor__preview { display: block; width: 100%; height: 100%; overflow: hidden; }
 .focused-view .account-dashboard.project-create, .focused-view .project-create .create-form { height: 100%; min-height: 0; }
-.focused-view .project-create__fields { gap: 9px; padding: 10px 12px; border: none; border-radius: 0; box-shadow: inset 1px 0 var(--project-edge-dark), inset 2px 0 var(--project-edge-light); }
+.focused-view .project-create__fields { gap: 9px; padding: 10px 12px; border: none; border-radius: 0; background: var(--project-toolbar-bg); box-shadow: inset 1px 0 var(--project-edge-dark), inset 2px 0 var(--project-edge-light); }
 .focused-view .project-create__fields .create-form__field { gap: 4px; }
 .focused-view .project-create__fields .create-form__field label,
 .focused-view .project-create__fields legend { font-size: 11px; letter-spacing: 0.02em; }

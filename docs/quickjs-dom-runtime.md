@@ -9,7 +9,7 @@ properties, and writable properties; native node references never cross into
 QuickJS. It also detects the subtree's actual tag, attribute, class, depth,
 element-count, and text shape at mount time and after each mutation.
 
-`@macchiato-dev/code-editor-use` is the first specialized adapter. CodeMirror 6
+The Resources.co `project-editor` guest is the first demanding editor client. CodeMirror 6
 runs in QuickJS, including its state, commands, syntax parser, extensions, and
 view. The page realm only starts the sandbox, applies synchronous DOM operations
 to one granted root, and forwards events. Native `beforeinput` is prevented and
@@ -19,7 +19,7 @@ The adapter fixes the CodeMirror extensions and continuously checks the
 resulting subtree. Shape violations destroy and clear the editor. This does not
 make arbitrary browser libraries compatible: each guest still needs an
 explicit, auditable subset of browser APIs. See
-`packages/code-editor-use/examples/basic/`.
+`packages/project-editor/src/guest.js`.
 
 ### Container isolation profiles
 

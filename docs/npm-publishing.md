@@ -28,7 +28,7 @@ URL, tree, content, and gas policy belongs to `dom-use`.
 | Data boundaries | `http-use`, `sqlite-use` | Request-size/error policy and database-adapter compatibility are documented and tested. |
 | Live browser capabilities | `browser-use`, `canvas-use` | The guest timer/event ABI and renewable resource-budget semantics settle. |
 | Sandbox runtime | `quickjs-emscripten-sandbox` | Interrupt/time limits and production diagnostics are explicit. |
-| Editors | `code-editor-use`, then `prose-editor-use` | Their browser/runtime peers, guest build artifacts, IME, selection, and teardown contracts stabilize. |
+| Editors | `project-editor` and later editor packages | Their machine boundary, guest artifacts, IME, selection, and teardown contracts stabilize. |
 | App composition | `declarative-app-server`, `site`, menus, themes | The declarative application and asset protocol is versioned. |
 | Product/runtime | `app-db-sqlite`, `app`, `macchiato` | Deployment adapters and migrations are treated as supported public APIs. |
 
