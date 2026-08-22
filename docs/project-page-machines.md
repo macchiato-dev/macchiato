@@ -345,6 +345,21 @@ independently publishable npm or Cargo package. Consumers do not need the whole
 workspace, while integration builds can prove that the published sources
 produce the same single-file runner and stamped artifacts.
 
+The public Pages deployment has two deliberately different release surfaces:
+
+- `machines` is the complete monorepo, documentation, conformance fixtures,
+  and demos, published at `https://macchiato-dev.github.io/machines/`.
+- `machine-runner` is a separate, much smaller repository and Pages artifact,
+  also mountable at `/machines/machine-runner/`. It contains no demos or
+  authoring workspace: only minimal HTML, a tiny inline controller bootstrap,
+  the readable machine JavaScript file, and the selected `.bin` or `.wasm`.
+
+All runner URLs and imports are relative so the same files work at a repository
+Pages root or at the nested path. The HTML supplies charset, viewport, title,
+an empty mount point, and a concise inline module that imports the machine file
+and starts the artifact. Capability policy remains explicit in that controller;
+moving the runner to a smaller repository must not add ambient authority.
+
 ## Lifetime and recovery
 
 Machine identity is inspectable in development through a generated machine ID,
