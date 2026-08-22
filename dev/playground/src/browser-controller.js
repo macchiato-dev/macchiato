@@ -27,14 +27,81 @@ document.getElementById("hello").addEventListener("click", function () {
 </body>
 </html>`;
 
-const root = document.getElementById("playground");
-root.innerHTML = `<header><strong>Playground</strong><span>index.html</span></header><main><section aria-label="Editor"><div id="editor"></div></section><section aria-label="Output"><div id="output"></div></section></main><footer role="status" hidden></footer>`;
-const editorRoot = root.querySelector("section[aria-label=Editor]");
-const outputRoot = root.querySelector("#output");
-const status = root.querySelector("footer");
+class StatusDevice {
+  constructor(element) { this.element = element; }
+  show(message = "") {
+    this.element.textContent = message;
+    this.element.hidden = !message;
+  }
+}
 
-const sheet = new CSSStyleSheet();
-sheet.replaceSync(`
+class SessionDevice {
+  constructor(storage, key) { this.storage = storage; this.key = key; }
+  load() { return this.storage.getItem(this.key); }
+  clear() { this.storage.removeItem(this.key); }
+  store(state) { this.storage.setItem(this.key, JSON.stringify(state)); }
+}
+
+class CompilerDevice {
+  constructor({ local = false } = {}) { this.local = local; }
+  async compile(source) {
+    if (this.local) return compileSingleFileProject(source);
+    const response = await fetch("/editor/compile", {
+      method: "POST",
+      headers: { "content-type": "text/html; charset=utf-8" },
+      body: source,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Compiler response ${response.status}`);
+    return result;
+  }
+}
+
+class OutputDevice {
+  constructor(root, compiler, status) {
+    this.root = root;
+    this.compiler = compiler;
+    this.status = status;
+    this.preview = null;
+    this.timer = null;
+    this.generation = 0;
+  }
+
+  schedule(source) {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.render(source), 350);
+  }
+
+  async render(source) {
+    const generation = ++this.generation;
+    try {
+      const program = await this.compiler.compile(source);
+      if (generation !== this.generation) return;
+      this.preview?.destroy();
+      this.root.replaceChildren();
+      this.preview = await mountResourcesProjectPreview({
+        root: this.root,
+        scripts: [],
+        onViolation: (error) => this.status.show(`Blocked: ${error.message}`),
+      });
+      if (generation !== this.generation) { this.preview.destroy(); return; }
+      this.preview.setContent(program.tree);
+      await this.preview.run(program.scripts);
+      if (generation === this.generation) this.status.show();
+    } catch (error) {
+      if (generation === this.generation) this.status.show(`Blocked: ${error.message}`);
+    }
+  }
+
+  destroy() {
+    clearTimeout(this.timer);
+    this.generation++;
+    this.preview?.destroy();
+  }
+}
+
+class PlaygroundController {
+  static styles = `
 :root{color-scheme:dark;--bar:#17226e;--edge:#2d3d91;--ground:#202524;--text:#edf3f2}
 *{box-sizing:border-box}html,body,#playground{width:100%;height:100%;margin:0;overflow:hidden}
 body{color:var(--text);background:var(--ground);font:14px/1.4 system-ui,sans-serif}
@@ -50,84 +117,71 @@ body{color:var(--text);background:var(--ground);font:14px/1.4 system-ui,sans-ser
 #playground>footer[hidden]{display:none}
 @media(max-width:700px){#playground>main{grid-template-columns:1fr;grid-template-rows:1fr 1fr;gap:2px}#playground>main>section+section{grid-column:1;grid-row:2}}
 @media(prefers-color-scheme:light){:root{color-scheme:light;--bar:#dbe4ff;--edge:#aebce6;--ground:#d9e1e3;--text:#263338}}
-`);
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+`;
 
-let preview = null;
-let previewTimer = null;
-let editor = null;
-let source = DEFAULT_SOURCE;
-
-function showStatus(message) {
-  status.textContent = message;
-  status.hidden = !message;
-}
-
-async function outputProgram(value) {
-  if (new URLSearchParams(location.search).get("compile") === "client") {
-    return compileSingleFileProject(value);
+  constructor(root) {
+    this.root = root;
+    this.editor = null;
+    this.source = DEFAULT_SOURCE;
+    this.colorScheme = matchMedia("(prefers-color-scheme: light)");
+    this.session = new SessionDevice(sessionStorage, SESSION_KEY);
   }
-  const response = await fetch("/editor/compile", {
-    method: "POST",
-    headers: { "content-type": "text/html; charset=utf-8" },
-    body: value,
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || `Compiler response ${response.status}`);
-  return result;
-}
 
-async function renderOutput() {
-  try {
-    const program = await outputProgram(source);
-    preview?.destroy();
-    outputRoot.replaceChildren();
-    preview = await mountResourcesProjectPreview({ root: outputRoot, scripts: [], onViolation: (error) => showStatus(`Blocked: ${error.message}`) });
-    preview.setContent(program.tree);
-    await preview.run(program.scripts);
-    showStatus("");
-  } catch (error) {
-    showStatus(`Blocked: ${error.message}`);
+  async start() {
+    this.root.innerHTML = `<header><strong>Playground</strong><span>index.html</span></header><main><section aria-label="Editor"><div id="editor"></div></section><section aria-label="Output"><div id="output"></div></section></main><footer role="status" hidden></footer>`;
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(PlaygroundController.styles);
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    this.status = new StatusDevice(this.root.querySelector("footer"));
+    this.output = new OutputDevice(
+      this.root.querySelector("#output"),
+      new CompilerDevice({ local: new URLSearchParams(location.search).get("compile") === "client" }),
+      this.status,
+    );
+    const saved = this.session.load();
+    this.editor = await mountResourcesProjectEditor({
+      root: this.root.querySelector("section[aria-label=Editor]"),
+      limits: { maxLines: 500, maxCharacters: 160_000, maxCodePoints: 80_000, maxLineCodePoints: 256 },
+      onReady() {},
+      onLimit: (usage) => {
+        const reason = usage.input === "paste" ? "Paste refused" : "Change refused";
+        this.status.show(`${reason}: use at most 500 lines, 80,000 code points, and 256 code points per pasted line.`);
+      },
+      onChange: (value) => this.change(value),
+    });
+    const applyTheme = () => this.editor.setTheme(this.colorScheme.matches ? "light" : "dark");
+    applyTheme();
+    this.colorScheme.addEventListener("change", applyTheme);
+    this.editor.setContent(DEFAULT_SOURCE, "html");
+    if (saved) this.restore(saved);
+    await this.output.render(this.source);
+    this.editor.focus();
   }
-}
 
-function scheduleOutput() {
-  clearTimeout(previewTimer);
-  previewTimer = setTimeout(renderOutput, 350);
-}
-
-const saved = sessionStorage.getItem(SESSION_KEY);
-editor = await mountResourcesProjectEditor({
-  root: editorRoot,
-  limits: { maxLines: 500, maxCharacters: 160_000, maxCodePoints: 80_000, maxLineCodePoints: 256 },
-  onReady() {},
-  onLimit(usage) {
-    const reason = usage.input === "paste" ? "Paste refused" : "Change refused";
-    showStatus(`${reason}: use at most 500 lines, 80,000 code points, and 256 code points per pasted line.`);
-  },
-  onChange(value) {
-    source = value;
+  change(value) {
+    this.source = value;
     try {
-      const state = editor.callGuest("__codeEditorSerialize", { maxUndo: 200, maxRedo: 50, maxBytes: 2 * 1024 * 1024 });
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
-    } catch (error) { showStatus(`Session state was not stored: ${error.message}`); }
-    scheduleOutput();
-  },
-});
-const colorScheme = matchMedia("(prefers-color-scheme: light)");
-const applyTheme = () => editor.setTheme(colorScheme.matches ? "light" : "dark");
-applyTheme();
-colorScheme.addEventListener("change", applyTheme);
-editor.setContent(DEFAULT_SOURCE, "html");
-if (saved) {
-  try {
-    const state = JSON.parse(saved);
-    editor.callGuest("__codeEditorRestore", state);
-    source = state.doc;
-  } catch (error) {
-    sessionStorage.removeItem(SESSION_KEY);
-    showStatus(`Saved session was discarded: ${error.message}`);
+      this.session.store(this.editor.callGuest("__codeEditorSerialize", {
+        maxUndo: 200,
+        maxRedo: 50,
+        maxBytes: 2 * 1024 * 1024,
+      }));
+    } catch (error) {
+      this.status.show(`Session state was not stored: ${error.message}`);
+    }
+    this.output.schedule(value);
+  }
+
+  restore(saved) {
+    try {
+      const state = JSON.parse(saved);
+      this.editor.callGuest("__codeEditorRestore", state);
+      this.source = state.doc;
+    } catch (error) {
+      this.session.clear();
+      this.status.show(`Saved session was discarded: ${error.message}`);
+    }
   }
 }
-await renderOutput();
-editor.focus();
+
+await new PlaygroundController(document.getElementById("playground")).start();
