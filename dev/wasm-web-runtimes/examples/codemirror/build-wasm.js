@@ -13,8 +13,8 @@ for (const name of ["simple", "full", "large"]) {
   const application = resolve(example, `generated/codemirror-${name}.js`);
   execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
     cwd: runtime,
-    env: { ...process.env, WWC_GUEST_ENVIRONMENT: environment,
-      WWC_APPLICATION_SOURCE: application },
+    env: { ...process.env, WWC_GUEST_ENVIRONMENT: canonicalEnvironment,
+      WWC_APPLICATION_SOURCE: application, WWC_CANONICAL_HOST: "1" },
     stdio: "inherit",
   });
   const destination = resolve(example, `generated/codemirror-${name}.wasm`);

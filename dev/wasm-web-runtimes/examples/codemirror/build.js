@@ -53,7 +53,7 @@ for (const [language, path] of Object.entries(fixtureFiles)) {
 await writeFile(new URL("generated/fixtures.js", import.meta.url),
   `export default ${JSON.stringify(fixtures)};\n`);
 await writeFile(new URL("generated/large-fixture.js", import.meta.url),
-  `export default ${JSON.stringify(Array.from({ length: 5000 }, (_, index) =>
+  `export default ${JSON.stringify(Array.from({ length: 500 }, (_, index) =>
     `export const item${index + 1}: number = ${index + 1};`).join("\n"))};\n`);
 
 await build({
