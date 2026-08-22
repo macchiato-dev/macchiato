@@ -14,6 +14,14 @@ The package will own the standalone runner, temporary single-file project
 editor, and the example route index while consuming the reusable machine,
 runtime, controller, bridge, and device packages.
 
+The deployable runner should remain one medium-sized, readable JavaScript file
+that starts one `.bin` or `.wasm` artifact. Its build may inline or vendor the
+exact implementations of controller, bridge, and device modules that are also
+published independently on npm. Those packages remain the canonical sources:
+the runner build does not fork, patch, or maintain parallel implementations.
+It records module versions and source hashes so the convenient single-file
+artifact remains reproducible and straightforward to audit.
+
 The temporary editor supports one HTML file with inline CSS and JavaScript. It
 does not save projects to a server or durable browser storage. Its current
 source, selection of example, and editor UI state are stored in namespaced
@@ -53,12 +61,22 @@ playground never minifies the source.
 
 The single-file compiler has one shared implementation. The normal editor
 posts source to the supervised Deno controller, whose bundled build performs
-the inert HTML parse and constrained CSS/HTML compilation. Adding
+the inert HTML parse and constrained HTML compilation. Adding
 `?compile=client` runs that same compiler in the browser for parity testing.
-Both paths return only a data tree and guest scripts for the output machine;
-neither inserts project HTML or CSS directly into the host page. External
-scripts, stylesheet imports, remote CSS URLs, active HTML elements, and
-non-fragment links are rejected before execution, while the machine remains
-the final enforcement boundary.
+Both paths return only a data tree, stylesheet input, and guest scripts for the
+output machine. External scripts, active HTML elements, and non-fragment links
+are rejected before execution. CSS has no second schema here: the DOM display
+device accepts and renders exactly the language implemented by the machine.
+Matching pre-rendered nodes are adopted through their containing DOM root and
+are not replaced before guest scripts hydrate them.
+
+The display device may receive focused CSS and SVG renderer packages rather
+than implementing those languages itself. It owns installation and the granted
+DOM surface; the renderers own parsing, semantic representation, and
+serialization. A server-side display machine uses the same packages for
+pre-rendering, and the browser display device enforces the result again before
+hydration. Project application code cannot substitute a trusted renderer. The
+one-file runner build vendors these exact package sources into its readable
+JavaScript artifact; it does not fetch renderer modules at runtime.
 
 Local URL: `http://playground.localhost:3030/`

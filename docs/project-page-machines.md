@@ -318,6 +318,33 @@ local storage only if the runner configuration grants it. Browser tests must
 attempt both fetch and navigation and prove that neither reaches the network or
 changes the runner location.
 
+The runner distribution is intentionally smaller than the module graph used
+to author it: one readable, medium-sized JavaScript file starts one `.bin` or
+`.wasm` artifact. A release build may inline the same controller, bridge, and
+device implementations that are published as individual npm modules. It must
+not introduce a second implementation or silently patch vendored code; a
+manifest records the included package versions, source revisions, and hashes.
+This keeps deployment and auditing simple without giving up reusable modules.
+
+CSS and SVG rendering are capabilities supplied to the DOM display device,
+not necessarily implementations embedded in that device. Focused renderer
+packages own their parsers, semantic forms, and deterministic serialization;
+the display device owns the target root, installation, and reference policy.
+A distinct server-side display machine can use the same packages for
+pre-rendering, while the browser display device validates and installs the
+same representation before guest hydration. Project application code never
+becomes the trusted CSS or SVG renderer merely because it runs on the server.
+The audit-oriented runner vendors the exact renderer package sources into its
+single readable JavaScript file rather than loading extra modules at runtime.
+
+These packages are likely to graduate together into a machines monorepo. That
+repository can version the protocol, machine host, compact reader/writer,
+bridges, DOM display device, CSS and SVG renderers, runtime adapters, and build
+tools beside shared conformance fixtures. Each useful boundary remains an
+independently publishable npm or Cargo package. Consumers do not need the whole
+workspace, while integration builds can prove that the published sources
+produce the same single-file runner and stamped artifacts.
+
 ## Lifetime and recovery
 
 Machine identity is inspectable in development through a generated machine ID,

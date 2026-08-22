@@ -86,6 +86,9 @@ class OutputDevice {
       });
       if (generation !== this.generation) { this.preview.destroy(); return; }
       this.preview.setContent(program.tree);
+      await this.preview.run(program.styles || []);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (generation !== this.generation) return;
       await this.preview.run(program.scripts);
       if (generation === this.generation) this.status.show();
     } catch (error) {
