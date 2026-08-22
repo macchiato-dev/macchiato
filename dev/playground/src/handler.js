@@ -15,6 +15,7 @@ export async function machineControllerHandler(request, _app, context) {
   await supervisor.start();
   const headers = new Headers();
   for (const [name, value] of request.headers) if (!ignoredRequestHeaders.has(name.toLowerCase())) headers.set(name, value);
+  headers.set("x-macchiato-original-origin", url.origin);
   const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
   if (body && body.byteLength > 16 * 1024 * 1024) return new Response("Request too large", { status: 413 });
   const response = await fetch(`http://127.0.0.1:${supervisor.status().port}${url.pathname}${url.search}`, {

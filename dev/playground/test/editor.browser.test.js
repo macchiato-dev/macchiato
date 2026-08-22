@@ -60,3 +60,38 @@ test("machine editor renders, isolates CSS, preserves history, and refuses an ov
     await browser.close();
   }
 });
+
+test("the supervised controller serves every example route without browser failures", async () => {
+  const browser = await chromium.launch({ headless: true });
+  const examples = new Map([
+    ["cat-memory/", "Cat Memory Match"],
+    ["mahjong/", "Classic Mahjong Solitaire"],
+    ["sqlite-book/", "SQLite Documentation Reader"],
+    ["codemirror/", "CodeMirror in QuickJS"],
+    ["microquickjs/", "CodeMirror in MicroQuickJS"],
+    ["prosemirror/", "ProseMirror"],
+    ["quickjs/", "CodeMirror in QuickJS"],
+    ["wordgard/", "Wordgard"],
+    ["xterm/", "xterm.js in QuickJS"],
+    ["container/", "Wasm Web Container"],
+  ]);
+  try {
+    for (const [path, expected] of examples) {
+      const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+      const failures = [];
+      page.on("pageerror", (error) => failures.push(error.message));
+      page.on("requestfailed", (request) => failures.push(`${request.failure()?.errorText} ${request.url()}`));
+      const response = await page.goto(`${origin}/${path}`, {
+        timeout: 30_000,
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForTimeout(1_000);
+      assert.equal(response.status(), 200, path);
+      assert.match(await page.locator("body").innerText(), new RegExp(expected, "i"), path);
+      assert.deepEqual(failures, [], path);
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
+});
