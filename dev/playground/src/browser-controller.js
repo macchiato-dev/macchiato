@@ -1,5 +1,5 @@
 import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "../../../packages/website/project-editor-runtime.js";
-import { parseProjectHtml } from "../../../packages/website/project-html-parser.js";
+import { compileSingleFileProject } from "../../../packages/project-editor/src/single-file-compiler.js";
 
 const SESSION_KEY = "-playground--editor";
 const DEFAULT_SOURCE = `<!doctype html>
@@ -63,36 +63,23 @@ function showStatus(message) {
   status.hidden = !message;
 }
 
-function outputProgram(value) {
-  const parsed = parseProjectHtml(value);
-  const scripts = [];
-  const styles = parsed.querySelectorAll("style").map((node) => node.textContent).join("\n");
-  for (const node of parsed.querySelectorAll("script")) {
-    if (node.getAttribute("src")) throw new Error("External scripts are not available in the playground");
-    if (node.textContent.trim()) scripts.push({ source: "index.html", code: node.textContent });
+async function outputProgram(value) {
+  if (new URLSearchParams(location.search).get("compile") === "client") {
+    return compileSingleFileProject(value);
   }
-  const wrappers = new Set(["html", "head", "body"]);
-  const omitted = new Set(["meta", "title", "style", "script", "link"]);
-  const allowed = new Set(["a", "article", "aside", "b", "br", "button", "canvas", "code", "div", "em", "footer", "form", "h1", "h2", "h3", "h4", "header", "i", "img", "input", "label", "li", "main", "nav", "ol", "option", "p", "section", "small", "span", "strong", "textarea", "ul"]);
-  const attributes = new Set(["aria-label", "aria-live", "class", "contenteditable", "hidden", "id", "maxlength", "placeholder", "role", "tabindex", "type", "value"]);
-  function nodes(value) {
-    if (value.nodeType === 3) return [[0, value.textContent]];
-    if (value.nodeType !== 1) return [];
-    if (wrappers.has(value.localName)) return value.childNodes.flatMap(nodes);
-    if (omitted.has(value.localName)) return [];
-    if (!allowed.has(value.localName)) throw new Error(`<${value.localName}> is not available in the playground`);
-    const attrs = value.attributeEntries.filter(([name, data]) => attributes.has(name) && data.length <= 2_000);
-    if (value.localName === "a" && /^#[A-Za-z0-9_.:-]+$/.test(value.getAttribute("href") || "")) attrs.push(["href", value.getAttribute("href")]);
-    return [[1, value.localName, 0, attrs, value.childNodes.flatMap(nodes)]];
-  }
-  const tree = parsed.body.childNodes.flatMap(nodes);
-  if (styles) scripts.unshift({ source: "index.html#style", code: `var style=document.createElement("style");style.textContent=${JSON.stringify(styles)};document.head.appendChild(style);` });
-  return { tree, scripts };
+  const response = await fetch("/editor/compile", {
+    method: "POST",
+    headers: { "content-type": "text/html; charset=utf-8" },
+    body: value,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || `Compiler response ${response.status}`);
+  return result;
 }
 
 async function renderOutput() {
   try {
-    const program = outputProgram(source);
+    const program = await outputProgram(source);
     preview?.destroy();
     outputRoot.replaceChildren();
     preview = await mountResourcesProjectPreview({ root: outputRoot, scripts: [], onViolation: (error) => showStatus(`Blocked: ${error.message}`) });

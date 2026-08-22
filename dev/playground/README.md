@@ -51,4 +51,14 @@ Other transactions are likewise rejected if they exceed the document limits.
 CodeMirror also enables visual word wrapping, matching the project editor. The
 playground never minifies the source.
 
+The single-file compiler has one shared implementation. The normal editor
+posts source to the supervised Deno controller, whose bundled build performs
+the inert HTML parse and constrained CSS/HTML compilation. Adding
+`?compile=client` runs that same compiler in the browser for parity testing.
+Both paths return only a data tree and guest scripts for the output machine;
+neither inserts project HTML or CSS directly into the host page. External
+scripts, stylesheet imports, remote CSS URLs, active HTML elements, and
+non-fragment links are rejected before execution, while the machine remains
+the final enforcement boundary.
+
 Local URL: `http://playground.localhost:3030/`

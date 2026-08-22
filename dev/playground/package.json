@@ -6,7 +6,7 @@
   "description": "Standalone runner, temporary editor, and examples for Macchiato machines",
   "scripts": {
     "build": "node ../../packages/website/build-project-editor.js && node build.js",
-    "test": "node --test test/source-envelope.test.js",
+    "test": "node --test test/source-envelope.test.js test/compiler.test.js",
     "test:browser": "node --test test/editor.browser.test.js"
   },
   "dependencies": {

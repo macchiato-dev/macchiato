@@ -58,7 +58,7 @@ export function machineControllerSupervisor({ dataDir, upstreamPort = 3030, port
     child = spawn(deno, ["run", "--no-prompt", `--allow-net=${allowedHosts}`,
       `--allow-read=${join(directory, "..", "dist")}`,
       "--allow-env=MACHINE_CONTROLLER_PORT,MACCHIATO_UPSTREAM_PORT",
-      join(directory, "controller.ts")], {
+      join(directory, "..", "dist", "controller.js")], {
       cwd: directory,
       env: { MACHINE_CONTROLLER_PORT: String(port), MACCHIATO_UPSTREAM_PORT: String(upstreamPort) },
       stdio: ["ignore", "pipe", "pipe"],

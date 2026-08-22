@@ -1,3 +1,5 @@
+import { SingleFileProjectCompiler } from "../../../packages/project-editor/src/single-file-compiler.js";
+
 const port = Number(Deno.env.get("MACHINE_CONTROLLER_PORT") || "3041");
 const upstreamPort = Number(Deno.env.get("MACCHIATO_UPSTREAM_PORT") || "3030");
 
@@ -13,6 +15,7 @@ const routes = new Map([
   ["xterm", { hostname: "xterm-quickjs.localhost", base: "" }],
   ["container", { hostname: "wasm-web-container.localhost", base: "" }],
 ]);
+const projectCompiler = new SingleFileProjectCompiler();
 
 function page() {
   const links = ["editor", ...routes.keys()].map((name) => `<li><a href="/${name}/">${name}</a></li>`).join("");
@@ -73,6 +76,15 @@ Deno.serve({ hostname: "127.0.0.1", port }, async (request) => {
   }
   if (url.pathname === "/editor/browser-controller.js") return asset("browser-controller.js", "text/javascript; charset=utf-8");
   if (url.pathname === "/editor/browser-controller.js.map") return asset("browser-controller.js.map", "application/json");
+  if (url.pathname === "/editor/compile" && request.method === "POST") {
+    try {
+      const length = Number(request.headers.get("content-length") || 0);
+      if (length > 320_000) return Response.json({ error: "Project source is too large" }, { status: 413 });
+      return Response.json(projectCompiler.compile(await request.text()));
+    } catch (error) {
+      return Response.json({ error: error.message }, { status: 422 });
+    }
+  }
   if (url.pathname === "/-/resources-site/project-editor-quickjs-runtime.wasm") return asset("project-editor-quickjs-runtime.wasm", "application/wasm");
   if (url.pathname === "/-/resources-site/project-quickjs-runtime.wasm") return asset("project-quickjs-runtime.wasm", "application/wasm");
   const destination = request.headers.get("sec-fetch-dest") || "";
