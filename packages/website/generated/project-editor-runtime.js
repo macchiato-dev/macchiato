@@ -1,4 +1,4 @@
-// dev/wasm-web-machine/dist/module/wasm-web-machine.js
+// ../wasm-web-machine/dist/module/wasm-web-machine.js
 var decoder = new TextDecoder("utf-8", { fatal: true });
 var encoder = new TextEncoder();
 var CHUNK_SIZE = 8192;
@@ -31,6 +31,7 @@ var ELEMENTS = /* @__PURE__ */ new Set([
   "meta",
   "nav",
   "ol",
+  "option",
   "p",
   "section",
   "small",
@@ -322,7 +323,7 @@ var CSS_VALUE_FUNCTIONS = /* @__PURE__ */ new Set([
   "translateY",
   "var"
 ]);
-var SAFE_SELECTOR = /^[#.a-z0-9_[\]="' >-]+$/i;
+var SAFE_SELECTOR = /^[#.a-z0-9_[\]="' >,():-]+$/i;
 function fail(message) {
   throw new Error(`wasm-web-machine: ${message}`);
 }
@@ -341,7 +342,7 @@ function svgImageAttributeAllowed(name, value) {
   if (["cx", "cy", "height", "r", "rx", "ry", "stroke-width", "width", "x", "x1", "x2", "y", "y1", "y2"].includes(name))
     return /^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value);
   if (["fill", "stop-color", "stroke"].includes(name)) {
-    return /^(?:none|white|#[0-9a-f]{3,8}|url\(#[a-z][a-z0-9_.:-]{0,127}\))$/i.test(value);
+    return /^(?:currentColor|none|white|#[0-9a-f]{3,8}|url\(#[a-z][a-z0-9_.:-]{0,127}\))$/i.test(value);
   }
   if (name === "opacity")
     return /^(?:0|1|\.\d+|0?\.\d+)$/.test(value) && Number(value) <= 1;
@@ -416,7 +417,7 @@ var WasmWebBridge = class {
     const roots = [.../* @__PURE__ */ new Set([...targetRoots, ...portalRoots])];
     const hostDocument = documentTarget ? document : targetRoots[0].ownerDocument;
     const realm = hostDocument.defaultView || globalThis;
-    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLDialogElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
+    const { CanvasRenderingContext2D, Comment, CSSStyleDeclaration, DataTransfer, DOMRectReadOnly, Element, Event, FocusEvent, HTMLAnchorElement, HTMLButtonElement, HTMLCanvasElement, HTMLDialogElement, HTMLElement, HTMLImageElement, HTMLInputElement, HTMLMetaElement, HTMLSelectElement, HTMLTextAreaElement, HTMLTitleElement, InputEvent, KeyboardEvent, MouseEvent, MutationObserver, MutationRecord, Node, Range, Selection, SVGElement, Text } = realm;
     const primaryRoot = documentTarget ? hostDocument.body : targetRoots[0];
     const logicalHead = documentTarget ? hostDocument.head : portalRoots[0] || primaryRoot;
     const chunks = [];
@@ -544,7 +545,7 @@ var WasmWebBridge = class {
         return options.profiling === true;
       }
       if (object === hostDocument && (name === "documentElement" || name === "head" || name === "body")) {
-        return reference(name === "head" ? logicalHead : primaryRoot);
+        return reference(name === "head" ? logicalHead : name === "documentElement" && documentTarget ? hostDocument.documentElement : primaryRoot);
       }
       if (object === hostDocument && name === "navigator")
         return reference(navigator);
@@ -616,10 +617,12 @@ var WasmWebBridge = class {
       }
       if (object instanceof HTMLTextAreaElement && (name === "selectionStart" || name === "selectionEnd"))
         return object[name];
-      if ((object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) && name === "value")
+      if ((object instanceof HTMLInputElement || object instanceof HTMLSelectElement || object instanceof HTMLTextAreaElement) && name === "value")
         return object.value;
       if (object instanceof HTMLInputElement && name === "checked")
         return object.checked;
+      if (object instanceof HTMLDialogElement && name === "open")
+        return object.open;
       if (object instanceof HTMLCanvasElement && ["height", "width"].includes(name)) {
         return object[name];
       }
@@ -726,7 +729,11 @@ var WasmWebBridge = class {
         object.value = next;
         return null;
       }
-      if (object instanceof HTMLTextAreaElement && name === "value" && typeof next === "string" && next.length <= 2048) {
+      if (object instanceof HTMLTextAreaElement && name === "value" && typeof next === "string" && next.length <= 2 * 1024 * 1024) {
+        object.value = next;
+        return null;
+      }
+      if (object instanceof HTMLSelectElement && name === "value" && typeof next === "string" && next.length <= 2048) {
         object.value = next;
         return null;
       }
@@ -760,6 +767,9 @@ var WasmWebBridge = class {
       if (object instanceof HTMLDialogElement && name === "close" && args.length <= 1 && (args.length === 0 || typeof args[0] === "string")) {
         object.close(args[0]);
         return null;
+      }
+      if (object instanceof Element && name === "dispatchEvent" && args.length === 1 && (args[0] === "change" || args[0] === "input")) {
+        return object.dispatchEvent(new Event(args[0], { bubbles: true, cancelable: true }));
       }
       if (object instanceof HTMLCanvasElement && name === "getContext" && args.length === 1 && args[0] === "2d") {
         const context = object.getContext("2d");
@@ -800,6 +810,15 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "postMessage" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 2 * 1024 * 1024) {
         options.onMessage?.(args[0]);
         return null;
+      }
+      if (object === hostDocument && name === "serviceCall" && args.length === 2 && typeof args[0] === "string" && args[0].length <= 128 && typeof args[1] === "string" && args[1].length <= 2 * 1024 * 1024) {
+        if (typeof options.services?.call !== "function")
+          fail("application services are not available");
+        const result = options.services.call(args[0], args[1]);
+        if (typeof result !== "string" || result.length > 2 * 1024 * 1024) {
+          fail("application service result is not bounded text");
+        }
+        return result;
       }
       if (object === hostDocument && name === "installStylesheet") {
         installStylesheet(args[0]);
@@ -926,7 +945,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object === hostDocument && name === "windowListen") {
-        if (!["beforeprint", "blur", "focus", "hashchange", "keydown", "pagehide", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
+        if (!["beforeprint", "blur", "focus", "hashchange", "keydown", "message", "pagehide", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
           fail("window event listener is not allowed");
         }
         hostDocument.defaultView.addEventListener(args[0], (event) => deliver(args[1], event));
@@ -1131,7 +1150,7 @@ var WasmWebBridge = class {
         if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
           fail("tabindex must use normal or programmatic focus order");
         }
-        if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement) || args[1].length > 2048)) {
+        if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object.tagName === "OPTION") || args[1].length > 2048)) {
           fail("value attribute is not allowed on this element");
         }
         if (args[0] === "placeholder" && (!(object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) || args[1].length > 512)) {
@@ -1161,11 +1180,17 @@ var WasmWebBridge = class {
       }
       if (object instanceof Node && name === "closest") {
         if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 128 || !SAFE_SELECTOR.test(args[0])) {
-          fail("closest selector is not allowed");
+          fail(`closest selector is not allowed: ${JSON.stringify(args[0])}`);
         }
         const element = object instanceof Element ? object : object.parentElement;
         const found = element?.closest(args[0]);
         return found && insideDocument(found) ? reference(found) : null;
+      }
+      if (object instanceof Element && name === "matches") {
+        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 128 || !SAFE_SELECTOR.test(args[0])) {
+          fail("matches selector is not allowed");
+        }
+        return object.matches(args[0]);
       }
       if (object instanceof Element && name === "childAt") {
         const index = args[0];
@@ -1189,7 +1214,10 @@ var WasmWebBridge = class {
       if (object instanceof Element && name === "getBoundingClientRect" && args.length === 0) {
         return reference(object.getBoundingClientRect());
       }
-      if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name) && args.length === 1 && typeof args[0] === "string" && args[0].length <= 128 && SAFE_SELECTOR.test(args[0])) {
+      if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name)) {
+        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 512 || !SAFE_SELECTOR.test(args[0])) {
+          fail(`query selector is not allowed: ${JSON.stringify(args[0])}`);
+        }
         if (name === "querySelector") {
           const found2 = object.querySelector(args[0]);
           return found2 ? reference(found2) : null;
@@ -1238,7 +1266,7 @@ var WasmWebBridge = class {
       fail(`method ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function listen(object, type, callback, capture = false) {
-      const elementEvent = object instanceof Element && [
+      const elementEventName = [
         "auxclick",
         "beforeinput",
         "blur",
@@ -1282,7 +1310,8 @@ var WasmWebBridge = class {
         "touchstart",
         "wheel"
       ].includes(type);
-      const documentEvent = object === hostDocument && ["click", "keydown", "mousemove", "mouseup", "selectionchange", "visibilitychange"].includes(type);
+      const elementEvent = object instanceof Element && elementEventName;
+      const documentEvent = object === hostDocument && (elementEventName || ["instanttooltiphide", "selectionchange", "themechange", "visibilitychange"].includes(type));
       if (!elementEvent && !documentEvent || !Number.isInteger(callback))
         fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
@@ -1966,7 +1995,7 @@ var WasmWebMachine = class {
   };
 };
 
-// packages/website/project-machines.js
+// ../../packages/website/project-machines.js
 var encoder2 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
@@ -2139,7 +2168,7 @@ async function createProjectAppMachine(root) {
     machine.destroy();
   } });
 }
-async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) {
+async function createProjectEditorMachine({ root, onChange, onReady, onLimit, limits }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, outputRequest = 0;
@@ -2170,7 +2199,7 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
     if (response === void 0) throw new Error(`Guest function ${name} did not respond`);
     return JSON.parse(response);
   }
-  call("__codeEditorConfigureLimits", { maxLines: 5e3, maxCharacters: 1e6 });
+  call("__codeEditorConfigureLimits", limits || { maxLines: 5e3, maxCharacters: 1e6 });
   return Object.freeze({
     setContent: (content, language = "plain", options = {}) => call("__codeEditorSetContent", { content, language, ...options }),
     command: (payload) => call("__codeEditorCommand", payload),
@@ -2192,7 +2221,7 @@ async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) 
   });
 }
 
-// packages/website/project-editor-runtime.js
+// ../../packages/website/project-editor-runtime.js
 var projectApps = /* @__PURE__ */ new WeakMap();
 async function mountResourcesProjectEditor(options) {
   if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
@@ -2203,7 +2232,8 @@ async function mountResourcesProjectEditor(options) {
     root: options.root,
     onChange: options.onChange,
     onReady: options.onReady,
-    onLimit: options.onLimit
+    onLimit: options.onLimit,
+    limits: options.limits
   });
   return Object.freeze({
     ...controller,

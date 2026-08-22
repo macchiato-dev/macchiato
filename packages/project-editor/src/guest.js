@@ -9,10 +9,11 @@ import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { redo, undo } from "@codemirror/commands";
+import { historyField, redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { hasSyntaxErrors } from "./syntax.js";
+import { createSourceEnvelopeExtension, sourceUsage } from "./source-envelope.js";
 
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -58,23 +59,33 @@ let applyingHostContent = false;
 let resetHistoryOnNextEdit = false;
 let currentLanguage = "javascript";
 let currentReadOnly = false;
-let documentLimits = { maxLines: 5_000, maxCharacters: 1_000_000 };
+let documentLimits = {
+  maxLines: 5_000,
+  maxCharacters: 1_000_000,
+  maxCodePoints: 1_000_000,
+  maxLineCodePoints: null,
+};
 function documentUsage(doc) {
+  const usage = sourceUsage(doc.toString());
   return {
     characters: doc.length,
     lines: doc.lines,
+    codePoints: usage.codePoints,
+    longestLineCodePoints: usage.longestLineCodePoints,
     remainingCharacters: documentLimits.maxCharacters - doc.length,
     remainingLines: documentLimits.maxLines - doc.lines,
+    remainingCodePoints: documentLimits.maxCodePoints - usage.codePoints,
   };
 }
-const documentLimitFilter = EditorState.transactionFilter.of((transaction) => {
-  if (transaction.newDoc.length <= documentLimits.maxCharacters && transaction.newDoc.lines <= documentLimits.maxLines) return transaction;
+const sourceEnvelope = createSourceEnvelopeExtension({
+  limits: () => documentLimits,
+  onLimit(usage) {
   globalThis.__browserUseNotify(JSON.stringify({
     type: "limit",
-    ...documentUsage(transaction.newDoc),
+    ...usage,
     limits: documentLimits,
   }));
-  return [];
+  },
 });
 function languageExtension(name) {
   if (name === "javascript") return javascript();
@@ -94,7 +105,7 @@ function editorExtensions() {
     ]),
     appearance.of(appearanceExtension()),
     EditorView.lineWrapping,
-    documentLimitFilter,
+    sourceEnvelope,
     EditorView.updateListener.of((update) => {
       if (update.docChanged && !applyingHostContent) {
         globalThis.__browserUseNotify(JSON.stringify({
@@ -215,12 +226,55 @@ globalThis.__codeEditorInspect = () => {
     limits: documentLimits,
   });
 };
+globalThis.__codeEditorSerialize = (json) => {
+  const request = JSON.parse(json);
+  const maxUndo = Math.max(0, Math.min(200, Number(request.maxUndo) || 200));
+  const maxRedo = Math.max(0, Math.min(50, Number(request.maxRedo) || 50));
+  const maxBytes = Math.max(1, Math.min(2 * 1024 * 1024, Number(request.maxBytes) || 2 * 1024 * 1024));
+  const state = globalThis.__codeEditorView.state.toJSON({ history: historyField });
+  state.history.done = state.history.done.slice(-maxUndo);
+  state.history.undone = state.history.undone.slice(-maxRedo);
+  let result = JSON.stringify(state);
+  while (new TextEncoder().encode(result).byteLength > maxBytes &&
+      (state.history.done.length || state.history.undone.length)) {
+    if (state.history.done.length) state.history.done.shift();
+    else state.history.undone.shift();
+    result = JSON.stringify(state);
+  }
+  if (new TextEncoder().encode(result).byteLength > maxBytes) {
+    throw new RangeError("Editor source and selection exceed the session record budget");
+  }
+  return result;
+};
+globalThis.__codeEditorRestore = (json) => {
+  const state = JSON.parse(json);
+  if (!state || typeof state.doc !== "string") throw new TypeError("Serialized editor state is invalid");
+  const usage = sourceUsage(state.doc);
+  if (usage.lines > documentLimits.maxLines || usage.codePoints > documentLimits.maxCodePoints ||
+      documentLimits.maxLineCodePoints !== null && usage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
+    throw new RangeError("Serialized editor state exceeds the document budget");
+  }
+  const restored = EditorState.fromJSON(state, { extensions: editorExtensions() }, { history: historyField });
+  globalThis.__codeEditorView.setState(restored);
+  return JSON.stringify(documentUsage(restored.doc));
+};
 globalThis.__codeEditorConfigureLimits = (json) => {
   const request = JSON.parse(json);
   for (const name of ["maxLines", "maxCharacters"]) {
     if (!Number.isSafeInteger(request[name]) || request[name] < 1) throw new TypeError(`${name} must be a positive integer`);
   }
-  documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
+  const maxCodePoints = request.maxCodePoints ?? request.maxCharacters;
+  const maxLineCodePoints = request.maxLineCodePoints ?? null;
+  if (!Number.isSafeInteger(maxCodePoints) || maxCodePoints < 1) throw new TypeError("maxCodePoints must be a positive integer");
+  if (maxLineCodePoints !== null && (!Number.isSafeInteger(maxLineCodePoints) || maxLineCodePoints < 1)) {
+    throw new TypeError("maxLineCodePoints must be null or a positive integer");
+  }
+  documentLimits = Object.freeze({
+    maxLines: request.maxLines,
+    maxCharacters: request.maxCharacters,
+    maxCodePoints,
+    maxLineCodePoints,
+  });
   const view = globalThis.__codeEditorView;
   return JSON.stringify({ limits: documentLimits, ...(view ? documentUsage(view.state.doc) : { characters: 0, lines: 0 }) });
 };
@@ -235,7 +289,10 @@ globalThis.__codeEditorSetContent = (json) => {
   const request = JSON.parse(json);
   if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
   const requestedLines = request.content.split("\n").length;
-  if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
+  const requestedUsage = sourceUsage(request.content);
+  if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines ||
+      requestedUsage.codePoints > documentLimits.maxCodePoints ||
+      documentLimits.maxLineCodePoints !== null && requestedUsage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
     throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
   const languageChanged = currentLanguage !== request.language;

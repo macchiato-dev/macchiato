@@ -18,12 +18,30 @@ import { elementUseExampleSources } from "../../element-use/example/manifest.js"
 import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../examples/prose-editor-use/handler.js";
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
+import { machineControllerHandler } from "../../../dev/playground/src/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "Macchiato Machine Controller",
+    pluginId: "playground",
+    subdomain: "playground",
+    kind: "supervised Deno reverse proxy",
+    description: "Unified machine examples served through a permission-bounded Deno controller.",
+    handler: machineControllerHandler,
+    sourceFiles: [
+      "dev/playground/src/controller.ts",
+      "dev/playground/src/handler.js",
+      "dev/playground/src/supervisor.js",
+    ],
+    sandbox: {
+      runtime: "Deno child process",
+      hostCapabilities: ["explicit localhost proxy targets", "dedicated SQLite process log"],
+    },
+  },
   {
     name: "ProseMirror in QuickJS",
     pluginId: "quickjs-prosemirror",
@@ -59,14 +77,15 @@ export const BUILTIN_APPS = [
     },
   },
   {
-    name: "xterm.js Pong in QuickJS",
+    name: "xterm.js in QuickJS",
     pluginId: "quickjs-xterm",
     subdomain: "xterm-quickjs",
     kind: "full-engine sandbox component",
-    description: "A playable xterm.js Pong running inside QuickJS Wasm through wasm-web-machine.",
+    description: "Interactive terminal and Pong examples running inside QuickJS Wasm through wasm-web-machine.",
     handler: xtermQuickjsHandler,
     sourceFiles: [
       "dev/wasm-web-runtimes/examples/browser-editors/src/xterm.js",
+      "dev/wasm-web-runtimes/examples/browser-editors/src/xterm-terminal.js",
       "dev/wasm-web-runtimes/examples/browser-editors/host.js",
       "dev/wasm-web-runtimes/examples/browser-editors/build.js",
     ],

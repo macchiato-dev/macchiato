@@ -130,7 +130,7 @@ export async function createProjectAppMachine(root) {
   if (!requested) throw new Error("Project app did not request its editor");
   return Object.freeze({ machineId, destroy() { machine.destroy(); } });
 }
-export async function createProjectEditorMachine({ root, onChange, onReady, onLimit }) {
+export async function createProjectEditorMachine({ root, onChange, onReady, onLimit, limits }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, outputRequest = 0;
@@ -151,7 +151,7 @@ export async function createProjectEditorMachine({ root, onChange, onReady, onLi
     if (machineError) throw new Error(machineError); if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
     return JSON.parse(response);
   }
-  call("__codeEditorConfigureLimits", { maxLines: 5_000, maxCharacters: 1_000_000 });
+  call("__codeEditorConfigureLimits", limits || { maxLines: 5_000, maxCharacters: 1_000_000 });
   return Object.freeze({ setContent: (content, language = "plain", options = {}) => call("__codeEditorSetContent", { content, language, ...options }),
     command: (payload) => call("__codeEditorCommand", payload), callGuest: call,
     requestOutput(generation) {

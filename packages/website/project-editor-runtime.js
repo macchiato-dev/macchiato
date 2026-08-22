@@ -14,6 +14,7 @@ export async function mountResourcesProjectEditor(options) {
     onChange: options.onChange,
     onReady: options.onReady,
     onLimit: options.onLimit,
+    limits: options.limits,
   });
   return Object.freeze({
     ...controller,

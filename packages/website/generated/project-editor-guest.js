@@ -1,6 +1,6 @@
 globalThis.__CODE_EDITOR_DEFER_START__=true;
 (() => {
-  // node_modules/@marijn/find-cluster-break/src/index.js
+  // ../../node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -74,7 +74,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return code2 < 65536 ? 1 : 2;
   }
 
-  // node_modules/@codemirror/state/dist/index.js
+  // ../../node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -3448,7 +3448,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return strict === true ? -1 : string2.length;
   }
 
-  // node_modules/style-mod/src/style-mod.js
+  // ../../node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3579,7 +3579,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   };
 
-  // node_modules/w3c-keyname/index.js
+  // ../../node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -3685,7 +3685,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return name2;
   }
 
-  // node_modules/crelt/index.js
+  // ../../node_modules/crelt/index.js
   function crelt() {
     var elt2 = arguments[0];
     if (typeof elt2 == "string") elt2 = document.createElement(elt2);
@@ -3714,7 +3714,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   }
 
-  // node_modules/@codemirror/view/dist/index.js
+  // ../../node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -14301,7 +14301,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return activeLineGutterHighlighter;
   }
 
-  // node_modules/@lezer/common/dist/index.js
+  // ../../node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range2 = class {
@@ -16352,7 +16352,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return result2;
   }
 
-  // node_modules/@lezer/highlight/dist/index.js
+  // ../../node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -17076,7 +17076,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // node_modules/@codemirror/language/dist/index.js
+  // ../../node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -18720,7 +18720,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // node_modules/@codemirror/commands/dist/index.js
+  // ../../node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config2 = getConfig(target.state, line.from);
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -18947,6 +18947,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
       })
     ];
   }
+  var historyField = historyField_;
   function cmd(side, selection2) {
     return function({ state, dispatch }) {
       if (!selection2 && state.readOnly)
@@ -19814,7 +19815,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // node_modules/@codemirror/search/dist/index.js
+  // ../../node_modules/@codemirror/search/dist/index.js
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
   var SearchCursor = class {
     /**
@@ -20896,7 +20897,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     baseTheme3
   ];
 
-  // node_modules/@codemirror/autocomplete/dist/index.js
+  // ../../node_modules/@codemirror/autocomplete/dist/index.js
   var CompletionContext = class {
     /**
     Create a new completion context. (Mostly useful for testing
@@ -22713,7 +22714,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   ];
   var completionKeymapExt = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ keymap.computeN([completionConfig], (state) => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
-  // node_modules/@codemirror/lint/dist/index.js
+  // ../../node_modules/@codemirror/lint/dist/index.js
   var SelectedDiagnostic = class {
     constructor(from, to, diagnostic) {
       this.from = from;
@@ -23322,7 +23323,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     baseTheme5
   ];
 
-  // node_modules/codemirror/dist/index.js
+  // ../../node_modules/codemirror/dist/index.js
   var basicSetup = /* @__PURE__ */ (() => [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -23352,7 +23353,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     ])
   ])();
 
-  // node_modules/@lezer/lr/dist/index.js
+  // ../../node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -25114,7 +25115,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return spec.get;
   }
 
-  // node_modules/@lezer/javascript/dist/index.js
+  // ../../node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -25326,7 +25327,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 15201
   });
 
-  // node_modules/@codemirror/lang-javascript/dist/index.js
+  // ../../node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -25638,7 +25639,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return true;
   });
 
-  // node_modules/@lezer/css/dist/index.js
+  // ../../node_modules/@lezer/css/dist/index.js
   var descendantOp = 145;
   var Unit = 1;
   var identifier = 146;
@@ -25813,7 +25814,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 2405
   });
 
-  // node_modules/@codemirror/lang-css/dist/index.js
+  // ../../node_modules/@codemirror/lang-css/dist/index.js
   var _properties = null;
   function properties() {
     if (!_properties && typeof document == "object" && document.body) {
@@ -26674,7 +26675,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
   }
 
-  // node_modules/@lezer/html/dist/index.js
+  // ../../node_modules/@lezer/html/dist/index.js
   var scriptText = 55;
   var StartCloseScriptTag = 1;
   var styleText = 56;
@@ -27018,7 +27019,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     });
   }
 
-  // node_modules/@codemirror/lang-html/dist/index.js
+  // ../../node_modules/@codemirror/lang-html/dist/index.js
   var Targets = ["_blank", "_self", "_top", "_parent"];
   var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
   var Methods = ["get", "post", "put", "delete"];
@@ -27747,7 +27748,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return true;
   });
 
-  // node_modules/@lezer/json/dist/index.js
+  // ../../node_modules/@lezer/json/dist/index.js
   var jsonHighlighting = styleTags({
     String: tags.string,
     Number: tags.number,
@@ -27779,7 +27780,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     tokenPrec: 0
   });
 
-  // node_modules/@codemirror/lang-json/dist/index.js
+  // ../../node_modules/@codemirror/lang-json/dist/index.js
   var jsonLanguage = /* @__PURE__ */ LRLanguage.define({
     name: "json",
     parser: /* @__PURE__ */ parser4.configure({
@@ -27802,7 +27803,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return new LanguageSupport(jsonLanguage);
   }
 
-  // node_modules/@lezer/markdown/dist/index.js
+  // ../../node_modules/@lezer/markdown/dist/index.js
   var CompositeBlock = class _CompositeBlock {
     static create(type, value, from, parentHash, end) {
       let hash2 = parentHash + (parentHash << 8) + type + (value << 4) | 0;
@@ -29866,7 +29867,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }]
   };
 
-  // node_modules/@codemirror/lang-markdown/dist/index.js
+  // ../../node_modules/@codemirror/lang-markdown/dist/index.js
   var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
   var headingProp = /* @__PURE__ */ new NodeProp();
   var commonmark = /* @__PURE__ */ parser5.configure({
@@ -30285,7 +30286,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     }
   });
 
-  // node_modules/@codemirror/theme-one-dark/dist/index.js
+  // ../../node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -30429,7 +30430,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // packages/project-editor/src/syntax.js
+  // ../../packages/project-editor/src/syntax.js
   function hasSyntaxErrors(state, language3) {
     const source = state.doc.toString();
     if (language3 === "javascript") {
@@ -30451,7 +30452,70 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return false;
   }
 
-  // packages/project-editor/src/guest.js
+  // ../../packages/project-editor/src/source-envelope.js
+  var SOURCE_LIMITS = Object.freeze({
+    maxCodePoints: 500 * 80 * 2,
+    maxLineCodePoints: 256,
+    maxLines: 500
+  });
+  function countCodePoints(value) {
+    return [...value].length;
+  }
+  function hardBreakChanges(value, width) {
+    const changes = [];
+    let column = 0;
+    let offset = 0;
+    for (const character of value) {
+      if (character === "\n") {
+        column = 0;
+      } else {
+        if (column === width) {
+          changes.push({ from: offset, insert: "\n" });
+          column = 0;
+        }
+        column++;
+      }
+      offset += character.length;
+    }
+    return changes;
+  }
+  function sourceUsage(value) {
+    const lines = value.split("\n");
+    return {
+      codePoints: countCodePoints(value),
+      lines: lines.length,
+      longestLineCodePoints: Math.max(...lines.map(countCodePoints))
+    };
+  }
+  function createSourceEnvelopeExtension(options = {}) {
+    if (typeof options === "function") options = { onLimit: options };
+    const limitsForTransaction = typeof options.limits === "function" ? options.limits : () => options.limits || SOURCE_LIMITS;
+    const onLimit = options.onLimit || (() => {
+    });
+    const hardWrap = EditorState.transactionFilter.of((transaction) => {
+      if (!transaction.docChanged || transaction.isUserEvent("input.paste") || transaction.isUserEvent("input.drop")) return transaction;
+      const width = limitsForTransaction().maxLineCodePoints;
+      if (!Number.isSafeInteger(width)) return transaction;
+      const changes = hardBreakChanges(transaction.newDoc.toString(), width);
+      return changes.length ? [transaction, { changes, sequential: true }] : transaction;
+    });
+    const limits = EditorState.changeFilter.of((transaction) => {
+      if (!transaction.docChanged) return true;
+      const usage = sourceUsage(transaction.newDoc.toString());
+      const budget = limitsForTransaction();
+      const atomicInput = transaction.isUserEvent("input.paste") || transaction.isUserEvent("input.drop");
+      const accepted = usage.lines <= budget.maxLines && usage.codePoints <= budget.maxCodePoints && (!atomicInput || !Number.isSafeInteger(budget.maxLineCodePoints) || usage.longestLineCodePoints <= budget.maxLineCodePoints);
+      if (!accepted) onLimit({
+        ...usage,
+        input: atomicInput ? transaction.isUserEvent("input.paste") ? "paste" : "drop" : "change",
+        limits: budget
+      });
+      return accepted;
+    });
+    return [hardWrap, limits];
+  }
+
+  // ../../packages/project-editor/src/guest.js
   if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
     globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
   }
@@ -30493,23 +30557,33 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
   var resetHistoryOnNextEdit = false;
   var currentLanguage = "javascript";
   var currentReadOnly = false;
-  var documentLimits = { maxLines: 5e3, maxCharacters: 1e6 };
+  var documentLimits = {
+    maxLines: 5e3,
+    maxCharacters: 1e6,
+    maxCodePoints: 1e6,
+    maxLineCodePoints: null
+  };
   function documentUsage(doc2) {
+    const usage = sourceUsage(doc2.toString());
     return {
       characters: doc2.length,
       lines: doc2.lines,
+      codePoints: usage.codePoints,
+      longestLineCodePoints: usage.longestLineCodePoints,
       remainingCharacters: documentLimits.maxCharacters - doc2.length,
-      remainingLines: documentLimits.maxLines - doc2.lines
+      remainingLines: documentLimits.maxLines - doc2.lines,
+      remainingCodePoints: documentLimits.maxCodePoints - usage.codePoints
     };
   }
-  var documentLimitFilter = EditorState.transactionFilter.of((transaction) => {
-    if (transaction.newDoc.length <= documentLimits.maxCharacters && transaction.newDoc.lines <= documentLimits.maxLines) return transaction;
-    globalThis.__browserUseNotify(JSON.stringify({
-      type: "limit",
-      ...documentUsage(transaction.newDoc),
-      limits: documentLimits
-    }));
-    return [];
+  var sourceEnvelope = createSourceEnvelopeExtension({
+    limits: () => documentLimits,
+    onLimit(usage) {
+      globalThis.__browserUseNotify(JSON.stringify({
+        type: "limit",
+        ...usage,
+        limits: documentLimits
+      }));
+    }
   });
   function languageExtension(name2) {
     if (name2 === "javascript") return javascript();
@@ -30529,7 +30603,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
       ]),
       appearance.of(appearanceExtension()),
       EditorView.lineWrapping,
-      documentLimitFilter,
+      sourceEnvelope,
       EditorView.updateListener.of((update) => {
         if (update.docChanged && !applyingHostContent) {
           globalThis.__browserUseNotify(JSON.stringify({
@@ -30648,12 +30722,53 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
       limits: documentLimits
     });
   };
+  globalThis.__codeEditorSerialize = (json2) => {
+    const request = JSON.parse(json2);
+    const maxUndo = Math.max(0, Math.min(200, Number(request.maxUndo) || 200));
+    const maxRedo = Math.max(0, Math.min(50, Number(request.maxRedo) || 50));
+    const maxBytes = Math.max(1, Math.min(2 * 1024 * 1024, Number(request.maxBytes) || 2 * 1024 * 1024));
+    const state = globalThis.__codeEditorView.state.toJSON({ history: historyField });
+    state.history.done = state.history.done.slice(-maxUndo);
+    state.history.undone = state.history.undone.slice(-maxRedo);
+    let result2 = JSON.stringify(state);
+    while (new TextEncoder().encode(result2).byteLength > maxBytes && (state.history.done.length || state.history.undone.length)) {
+      if (state.history.done.length) state.history.done.shift();
+      else state.history.undone.shift();
+      result2 = JSON.stringify(state);
+    }
+    if (new TextEncoder().encode(result2).byteLength > maxBytes) {
+      throw new RangeError("Editor source and selection exceed the session record budget");
+    }
+    return result2;
+  };
+  globalThis.__codeEditorRestore = (json2) => {
+    const state = JSON.parse(json2);
+    if (!state || typeof state.doc !== "string") throw new TypeError("Serialized editor state is invalid");
+    const usage = sourceUsage(state.doc);
+    if (usage.lines > documentLimits.maxLines || usage.codePoints > documentLimits.maxCodePoints || documentLimits.maxLineCodePoints !== null && usage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
+      throw new RangeError("Serialized editor state exceeds the document budget");
+    }
+    const restored = EditorState.fromJSON(state, { extensions: editorExtensions() }, { history: historyField });
+    globalThis.__codeEditorView.setState(restored);
+    return JSON.stringify(documentUsage(restored.doc));
+  };
   globalThis.__codeEditorConfigureLimits = (json2) => {
     const request = JSON.parse(json2);
     for (const name2 of ["maxLines", "maxCharacters"]) {
       if (!Number.isSafeInteger(request[name2]) || request[name2] < 1) throw new TypeError(`${name2} must be a positive integer`);
     }
-    documentLimits = Object.freeze({ maxLines: request.maxLines, maxCharacters: request.maxCharacters });
+    const maxCodePoints = request.maxCodePoints ?? request.maxCharacters;
+    const maxLineCodePoints = request.maxLineCodePoints ?? null;
+    if (!Number.isSafeInteger(maxCodePoints) || maxCodePoints < 1) throw new TypeError("maxCodePoints must be a positive integer");
+    if (maxLineCodePoints !== null && (!Number.isSafeInteger(maxLineCodePoints) || maxLineCodePoints < 1)) {
+      throw new TypeError("maxLineCodePoints must be null or a positive integer");
+    }
+    documentLimits = Object.freeze({
+      maxLines: request.maxLines,
+      maxCharacters: request.maxCharacters,
+      maxCodePoints,
+      maxLineCodePoints
+    });
     const view = globalThis.__codeEditorView;
     return JSON.stringify({ limits: documentLimits, ...view ? documentUsage(view.state.doc) : { characters: 0, lines: 0 } });
   };
@@ -30668,7 +30783,8 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     const request = JSON.parse(json2);
     if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
     const requestedLines = request.content.split("\n").length;
-    if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines) {
+    const requestedUsage = sourceUsage(request.content);
+    if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines || requestedUsage.codePoints > documentLimits.maxCodePoints || documentLimits.maxLineCodePoints !== null && requestedUsage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
       throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
     }
     const languageChanged = currentLanguage !== request.language;
@@ -30869,7 +30985,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
   };
 
-  // packages/hub/src/project-history.js
+  // ../../packages/hub/src/project-history.js
   var PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
   var MAX_FILES = 64;
   var MAX_FILE_BYTES = 70 * 1024 * 1024;
@@ -30958,7 +31074,7 @@ globalThis.__CODE_EDITOR_DEFER_START__=true;
     return patch?.version === 1 && patch.files?.length === 0 && patch.config?.length === 0;
   }
 
-  // packages/website/project-editor-guest.js
+  // ../../packages/website/project-editor-guest.js
   if (!globalThis.TextEncoder) {
     globalThis.TextEncoder = class TextEncoder {
       encode(value) {
