@@ -24,6 +24,7 @@ await build({
   platform: "neutral",
   target: "esnext",
 });
-for (const name of ["project-editor-quickjs-runtime.wasm", "project-quickjs-runtime.wasm"]) {
+for (const name of ["project-builder-quickjs-runtime.wasm", "project-editor-quickjs-runtime.wasm",
+  "project-quickjs-runtime.wasm"]) {
   await copyFile(join(workspace, "packages", "website", "generated", name), join(dist, name));
 }

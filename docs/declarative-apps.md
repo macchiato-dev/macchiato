@@ -88,6 +88,27 @@ Or install/update plugins while starting a development server:
 node packages/app/src/index.js --data-dir ./data --app-plugin development
 ```
 
+## Development authentication
+
+Set `options.developmentAuth` to `true` on any declarative app that should be
+private during development. The gateway applies this before dispatch, so it
+works equally for static directories, files, SQLite-backed sites, and code
+handlers. Each subdomain receives an independent mode-`0600`
+`.<subdomain>-auth.json` file in the app data directory.
+
+Get or rotate a fragment bootstrap link locally:
+
+```bash
+macchiato-dev-link get machines-dev
+macchiato-dev-link reset machines-dev
+```
+
+The fragment key is exchanged for an HttpOnly cookie and then removed with
+`replaceState`. The bootstrap retains it in local storage only after a
+successful exchange, allowing authentication to recover after browser or
+cookie loss. Resetting a key invalidates existing links and cookies for only
+that subdomain.
+
 `development` is the full repository demo set; `core` is the one-app default.
 Run `macchiato app plugins` to list individual plugin IDs.
 

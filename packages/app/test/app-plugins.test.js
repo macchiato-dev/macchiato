@@ -47,6 +47,23 @@ test("plugins persist inspectable CLI contracts without executable functions", (
   assert.equal(JSON.stringify(app.options).includes("exportFocusedApp"), false);
 });
 
+test("development authentication is a declarative gateway option", () => {
+  const db = new DatabaseSync(":memory:");
+  initSqliteStore(db);
+  installAppPlugins(db, ["playground"]);
+  assert.equal(getDeclarativeApp(db, "machines-dev").options.developmentAuth, true);
+
+  upsertAppConfig(db, {
+    subdomain: "static-dev",
+    name: "Protected static app",
+    kind: "directory",
+    description: "Static gateway authentication test",
+    handler: "directory",
+    options: { developmentAuth: true },
+  });
+  assert.equal(getDeclarativeApp(db, "static-dev").options.developmentAuth, true);
+});
+
 test("the todo source hostname resolves through the declarative DOM Use Todos app", () => {
   const db = new DatabaseSync(":memory:");
   initSqliteStore(db);

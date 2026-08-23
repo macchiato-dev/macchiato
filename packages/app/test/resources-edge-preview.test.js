@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 import { createResourcesEdgePreviewRouter, resourcesEdgePreviewHandler } from "../../../packages/website/preview-handler.js";
 
 test("local edge preview preserves the bootstrap and retryable deferred-load boundary", async () => {
@@ -51,7 +52,7 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(text, /Sign up/);
   assert.doesNotMatch(text, /Edge safe/);
   assert.match(home.headers.get("content-security-policy"), /script-src 'self'/);
-  assert.match(text, /type="module".*command-palette-use\/client\.js/);
+  assert.match(text, /type="module".*resources-site\/controller\.js/);
 
   const project = await resourcesEdgePreviewHandler(new Request("http://resources-edge.localhost/macchiato/app"), app);
   assert.equal(project.status, 200);
@@ -69,6 +70,21 @@ test("local edge adapter serves the Bunny profile from memory", async () => {
   assert.match(loginHtml, /secured by OAuth/);
   assert.match(loginHtml, /href="\/signup"/);
   assert.match(loginHtml, /class="box footer"/);
+});
+
+test("local edge health runs through MicroQuickJS and named sql-use", async () => {
+  const db = new DatabaseSync(":memory:");
+  const response = await resourcesEdgePreviewHandler(
+    new Request("http://resources-edge.localhost/health"), {}, { db });
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "OK");
+  assert.equal(response.headers.get("cache-control"), "no-store");
+});
+
+test("the private server machine is absent from public publication authority", async () => {
+  const response = await resourcesEdgePreviewHandler(new Request(
+    "http://resources-edge.localhost/machines/resources-server-microquickjs.wasm"));
+  assert.equal(response.status, 404);
 });
 
 test("local edge adapter consumes its declarative app-scoped OAuth environment", async () => {

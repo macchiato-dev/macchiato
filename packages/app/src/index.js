@@ -2,7 +2,7 @@
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { chmodSync, mkdirSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { dirname, extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { domUseBrowserAssets } from "@macchiato-dev/dom-use/browser-assets";
@@ -17,11 +17,12 @@ import { getSiteRoute, hasSiteRoutes, renderSiteRoute } from "@macchiato-dev/sit
 import { StyleUse } from "@macchiato-dev/style-use";
 import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 import { appDirectoryHandler } from "./app-directory.js";
-import { getDeclarativeApp } from "./declarative-apps.js";
+import { declarativeApps, getDeclarativeApp } from "./declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
 import { fileAppHandler } from "./file-app.js";
 import { directoryWritableFileResponse } from "./directory-file-access.js";
 import { nodeResponseHeaders } from "./node-response.js";
+import { createDevelopmentAuth } from "./development-auth.js";
 import { createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
 const args = "Deno" in globalThis
@@ -105,6 +106,25 @@ if (appPlugins.length > 0) installAppPlugins(db, appPlugins, { mappings: appMapp
 else if (appInit) initializeAppsIfEmpty(db, ["core"], { mappings: appMappings });
 
 const store = createSqliteStore(db);
+const developmentAuthBySubdomain = new Map();
+
+function developmentAuthFor(request, subdomain) {
+  if (developmentAuthBySubdomain.has(subdomain)) return developmentAuthBySubdomain.get(subdomain);
+  const url = new URL(request.url);
+  const auth = createDevelopmentAuth({
+    dataDir: dataDir || dirname(dbPath),
+    hostname: subdomain,
+    port: url.port || (url.protocol === "https:" ? 443 : 80),
+  });
+  developmentAuthBySubdomain.set(subdomain, auth);
+  console.log(`${subdomain} development bootstrap: ${auth.bootstrapUrl}`);
+  return auth;
+}
+
+for (const app of declarativeApps(db)) {
+  if (app.options.developmentAuth !== true) continue;
+  developmentAuthFor(new Request(`http://${app.subdomain}.localhost:${port}/`), app.subdomain);
+}
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -423,6 +443,10 @@ async function route(request) {
   const url = new URL(request.url);
   const app = getDeclarativeApp(db, subdomain);
   if (!app) return new Response("App not configured", { status: 404 });
+  if (app.options.developmentAuth === true) {
+    const auth = developmentAuthFor(request, subdomain);
+    if (!auth.isAuthenticated(request)) return auth.handle(request);
+  }
   if (app.options.sharedAssets === true) {
     const cachedFont = serveCachedFont(url.pathname);
     if (cachedFont) return cachedFont;

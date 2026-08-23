@@ -12,6 +12,10 @@ target/
 /dev/codemirror-runtime-example/interaction-trace.ndjson
 /packages/dom-use/lib/
 packages/website/exported/
+/packages/website/backend/machine.js
+/packages/website/backend/controller.js
+/packages/website/frontend/controller.js
+/packages/website/frontend/machine.js
 *.egg-info/
 
 # Environment

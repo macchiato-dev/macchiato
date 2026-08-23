@@ -18,10 +18,12 @@ function lines(stream, write) {
   stream.on("end", () => { if (pending) write(pending); });
 }
 
-export function machineControllerSupervisor({ dataDir, upstreamPort = 3030, port = 3041 }) {
-  const key = `${dataDir}\0${port}\0${upstreamPort}`;
+export function machineControllerSupervisor({ dataDir, port = 3041 }) {
+  const key = `${dataDir}\0${port}`;
   if (supervisors.has(key)) return supervisors.get(key);
   mkdirSync(dataDir, { recursive: true });
+  const buildDirectory = join(dataDir, "machine-builds");
+  mkdirSync(buildDirectory, { recursive: true });
   const databasePath = join(dataDir, "machine-controller-logs.sqlite");
   const db = new DatabaseSync(databasePath);
   db.exec(`PRAGMA journal_mode = WAL;
@@ -47,20 +49,20 @@ export function machineControllerSupervisor({ dataDir, upstreamPort = 3030, port
   function start() {
     if (child && child.exitCode === null) return starting || Promise.resolve();
     runId = Number(insertRun.run(Date.now()).lastInsertRowid);
-    const allowedHosts = [
-      `127.0.0.1:${port}`, `codemirror-quickjs.localhost:${upstreamPort}`,
-      `codemirror-microquickjs.localhost:${upstreamPort}`,
-      `prosemirror-quickjs.localhost:${upstreamPort}`, `wordgard-quickjs.localhost:${upstreamPort}`,
-      `xterm-quickjs.localhost:${upstreamPort}`, `wasm-web-container.localhost:${upstreamPort}`,
-      `resources-edge.localhost:${upstreamPort}`,
-    ].join(",");
     const deno = process.env.DENO_BIN || join(process.env.HOME || "/root", ".deno", "bin", "deno");
-    child = spawn(deno, ["run", "--no-prompt", `--allow-net=${allowedHosts}`,
-      `--allow-read=${join(directory, "..", "dist")}`,
-      "--allow-env=MACHINE_CONTROLLER_PORT,MACCHIATO_UPSTREAM_PORT",
+    const cargo = join(process.env.HOME || "/root", ".cargo", "bin", "cargo");
+    child = spawn(deno, ["run", "--no-prompt", `--allow-net=127.0.0.1:${port}`,
+      `--allow-read=${resolve(directory, "../../..")},${join(process.env.HOME || "/root", ".cargo")},${join(process.env.HOME || "/root", ".rustup")},/usr/lib,/usr/include`,
+      `--allow-write=${buildDirectory}`,
+      `--allow-run=${cargo}`,
+      "--allow-env=MACHINE_CONTROLLER_PORT,MACHINE_BUILD_DIRECTORY,CARGO_TARGET_DIR,HOME,PATH",
       join(directory, "..", "dist", "controller.js")], {
       cwd: directory,
-      env: { MACHINE_CONTROLLER_PORT: String(port), MACCHIATO_UPSTREAM_PORT: String(upstreamPort) },
+      env: {
+        MACHINE_CONTROLLER_PORT: String(port),
+        MACHINE_BUILD_DIRECTORY: buildDirectory, CARGO_TARGET_DIR: join(buildDirectory, "cargo-target"),
+        HOME: process.env.HOME || "/root", PATH: process.env.PATH || "",
+      },
       stdio: ["ignore", "pipe", "pipe"],
     });
     setPid.run(child.pid, runId);

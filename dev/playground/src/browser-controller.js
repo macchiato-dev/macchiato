@@ -1,5 +1,5 @@
-import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "../../../packages/website/project-editor-runtime.js";
-import { compileSingleFileProject } from "../../../packages/project-editor/src/single-file-compiler.js";
+import { createProjectBuildMachine, mountResourcesProjectEditor, mountResourcesProjectPreview } from "../../../packages/website/project-editor-runtime.js";
+import { gzipResourceBundle } from "../../../packages/wasm-web-container/src/resource-bundle.js";
 
 const SESSION_KEY = "-playground--editor";
 const DEFAULT_SOURCE = `<!doctype html>
@@ -43,9 +43,9 @@ class SessionDevice {
 }
 
 class CompilerDevice {
-  constructor({ local = false } = {}) { this.local = local; }
+  constructor(machine = null) { this.machine = machine; }
   async compile(source) {
-    if (this.local) return compileSingleFileProject(source);
+    if (this.machine) return this.machine.compile(source);
     const response = await fetch("/editor/compile", {
       method: "POST",
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -54,6 +54,26 @@ class CompilerDevice {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || `Compiler response ${response.status}`);
     return result;
+  }
+
+  async exportBin(source) {
+    if (this.machine) {
+      this.machine.compile(source);
+      const bundle = await gzipResourceBundle(new Map([
+        ["index.html", new TextEncoder().encode(source)],
+      ]));
+      return new Blob([bundle], { type: "application/gzip" });
+    }
+    const response = await fetch("/editor/export.bin.gz", {
+      method: "POST",
+      headers: { "content-type": "text/html; charset=utf-8" },
+      body: source,
+    });
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || `Export response ${response.status}`);
+    }
+    return response.blob();
   }
 }
 
@@ -85,11 +105,7 @@ class OutputDevice {
         onViolation: (error) => this.status.show(`Blocked: ${error.message}`),
       });
       if (generation !== this.generation) { this.preview.destroy(); return; }
-      this.preview.setContent(program.tree);
-      await this.preview.run(program.styles || []);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      if (generation !== this.generation) return;
-      await this.preview.run(program.scripts);
+      await this.preview.load(program);
       if (generation === this.generation) this.status.show();
     } catch (error) {
       if (generation === this.generation) this.status.show(`Blocked: ${error.message}`);
@@ -111,6 +127,8 @@ body{color:var(--text);background:var(--ground);font:14px/1.4 system-ui,sans-ser
 #playground{display:grid;grid-template-rows:42px minmax(0,1fr) auto}
 #playground>header{display:flex;align-items:center;gap:18px;padding:0 12px;border-bottom:2px solid var(--edge);background:var(--bar)}
 #playground>header span{color:#cbd4ff;font-size:12px}
+#playground>header button{margin-left:auto;border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:5px;padding:4px 9px;color:inherit;background:transparent;font:inherit;cursor:pointer}
+#playground>header button:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
 #playground>main{display:grid;grid-template-columns:minmax(0,1fr) 2px minmax(0,1fr);min-height:0;background:#454b4a}
 #playground>main>section{min-width:0;min-height:0;overflow:hidden;background:var(--ground)}
 #playground>main>section+section{grid-column:3}
@@ -131,16 +149,20 @@ body{color:var(--text);background:var(--ground);font:14px/1.4 system-ui,sans-ser
   }
 
   async start() {
-    this.root.innerHTML = `<header><strong>Playground</strong><span>index.html</span></header><main><section aria-label="Editor"><div id="editor"></div></section><section aria-label="Output"><div id="output"></div></section></main><footer role="status" hidden></footer>`;
+    this.root.innerHTML = `<header><strong>Playground</strong><span>index.html</span><button type="button" data-export-bin>Export .bin.gz</button></header><main><section aria-label="Editor"><div id="editor"></div></section><section aria-label="Output"><div id="output"></div></section></main><footer role="status" hidden></footer>`;
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(PlaygroundController.styles);
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
     this.status = new StatusDevice(this.root.querySelector("footer"));
+    const clientBuild = new URLSearchParams(location.search).get("build") === "client";
+    this.buildMachine = clientBuild ? await createProjectBuildMachine() : null;
+    this.compiler = new CompilerDevice(this.buildMachine);
     this.output = new OutputDevice(
       this.root.querySelector("#output"),
-      new CompilerDevice({ local: new URLSearchParams(location.search).get("compile") === "client" }),
+      this.compiler,
       this.status,
     );
+    this.root.querySelector("[data-export-bin]").addEventListener("click", () => this.exportBin());
     const saved = this.session.load();
     this.editor = await mountResourcesProjectEditor({
       root: this.root.querySelector("section[aria-label=Editor]"),
@@ -173,6 +195,21 @@ body{color:var(--text);background:var(--ground);font:14px/1.4 system-ui,sans-ser
       this.status.show(`Session state was not stored: ${error.message}`);
     }
     this.output.schedule(value);
+  }
+
+  async exportBin() {
+    try {
+      const blob = await this.compiler.exportBin(this.source);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "untitled-project.bin.gz";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      this.status.show();
+    } catch (error) {
+      this.status.show(`Export failed: ${error.message}`);
+    }
   }
 
   restore(saved) {

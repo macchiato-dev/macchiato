@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { DomUse } from "@macchiato-dev/dom-use";
-import { encodeProjectArchive } from "@macchiato-dev/hub/project-archive";
+import { decodeProjectArchive, encodeProjectArchive } from "@macchiato-dev/hub/project-archive";
 import { chromium } from "playwright";
 
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
@@ -162,7 +162,8 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   assert.match(text, /Log in/);
   assert.doesNotMatch(text, /Edge safe/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
-  assert.match(text, /command-palette-use\/client\.js/);
+  assert.match(text, /resources-machine-controller\.js/);
+  assert.doesNotMatch(text, /command-palette-use\/client\.js/);
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Edge Preview/);
   assert.match(configText, /in-memory export manifest/);
@@ -395,7 +396,7 @@ test("apps directory renders in a real browser", async (t) => {
   assert.deepEqual(badResponses, []);
 });
 
-test("Resources.co edge preview limits browser code to host-owned UI modules", async (t) => {
+test("Resources.co edge preview limits browser code to its host-owned machine controller", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
   const app = startApp(port, dataDir);
@@ -434,10 +435,10 @@ test("Resources.co edge preview limits browser code to host-owned UI modules", a
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
   });
   assert.equal(response.status(), 200);
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
+  assert.equal(await page.locator("script:not([type='application/json'])").count(), 1);
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
-  assert.deepEqual(edgeTheme, ["#1233f0", "#1233f0"]);
+  assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
   assert.equal(await page.locator("html").getAttribute("data-theme-choice"), "system");
   await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
   const accountTrigger = page.getByLabel("Account menu");
@@ -649,6 +650,223 @@ test("Resources project ZIP import accepts legacy container metadata", async (t)
   assert.deepEqual(errors, []);
 });
 
+test("every Resources starting point exports and imports without losing files or configuration", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => {
+    await stopChild(app.child);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  const templateOptions = await page.getByLabel("Template").locator("option").evaluateAll((options) =>
+    options.map((option) => option.value).filter(Boolean));
+
+  for (const template of templateOptions) {
+    await page.getByLabel("Template").selectOption(template);
+    await page.waitForFunction((value) => {
+      const snapshot = document.querySelector("[data-project-snapshot]")?.value;
+      return snapshot && JSON.parse(snapshot).config.template === value;
+    }, template);
+    const expected = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
+    await page.getByRole("button", { name: "Editor menu" }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+    const download = await downloadPromise;
+    const bytes = await readFile(await download.path());
+    const decoded = await decodeProjectArchive(bytes);
+    assert.deepEqual(decoded, expected, `${template} must survive archive encoding`);
+
+    await page.getByLabel("Template").selectOption("blank");
+    await page.locator("[data-project-archive-file]").setInputFiles({
+      name: `${template}.zip`, mimeType: "application/zip", buffer: bytes,
+    });
+    await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+    assert.deepEqual(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()), expected,
+      `${template} must survive browser import`);
+  }
+  assert.deepEqual(errors, []);
+});
+
+test("a project build script runs with separate runtime and application inputs", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  const archive = encodeProjectArchive({
+    files: [
+      { path: "component.txt", content: "Built in an isolated JavaScript context" },
+      { path: "build-runtime.js", content: "module.exports = { escape: function (value) { return value.replace(/&/g, '&amp;').replace(/</g, '&lt;'); } };" },
+      { path: "build.js", content: "module.exports = function (input) { var text = input.runtime.escape(input.application); return { files: [{ path: 'index.html', content: '<!doctype html><title>Built project</title><main><h1>' + text + '</h1></main>' }], config: { entry: 'index.html', template: 'blank' } }; };" },
+    ],
+    config: { entry: "component.txt", template: "blank", build: {
+      runtime: "build-runtime.js", script: "build.js", application: "component.txt",
+    } },
+  });
+  await page.locator("[data-project-archive-file]").setInputFiles({
+    name: "built.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
+  });
+  await page.getByRole("heading", { name: "Built in an isolated JavaScript context" }).waitFor();
+  assert.equal(await page.locator("[data-project-output-mount] h1").textContent(),
+    "Built in an isolated JavaScript context");
+  assert.deepEqual(errors, []);
+});
+
+test("Vue and Svelte starting points build and remain interactive in the output machine", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+
+  for (const framework of ["vue", "svelte"]) {
+    await page.getByLabel("Template").selectOption(framework);
+    await page.locator(".cm-content span").first().waitFor({ timeout: 10_000 });
+    const button = page.locator("[data-project-output-mount] button", { hasText: "Count 0" });
+    await button.waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
+      `${framework} did not render: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
+    await button.click();
+    await page.locator("[data-project-output-mount] button", { hasText: "Count 1" })
+      .waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
+        `${framework} did not react: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
+  }
+  assert.deepEqual(errors, []);
+});
+
+test("Markdown fenced code loads its matching CodeMirror language", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  const archive = encodeProjectArchive({
+    files: [{ path: "README.md", content: "# Mixed languages\n\n```javascript\nconst answer = 42;\n```\n\n```vue\n<template><strong>{{ answer }}</strong></template>\n```\n" }],
+    config: { entry: "README.md", template: "blank" },
+  });
+  await page.locator("[data-project-archive-file]").setInputFiles({
+    name: "markdown-languages.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
+  });
+  await page.waitForFunction(() => [...document.querySelectorAll(".cm-content span")]
+    .some((node) => node.textContent === "const"), null, { timeout: 10_000 }).catch(async () => assert.fail(
+      `fenced JavaScript did not load:\n${await page.locator(".cm-content").innerHTML()}`));
+  assert.ok(await page.locator(".cm-content span", { hasText: "answer" }).count() > 0);
+});
+
+test("Resources editor does not enforce the example line or line-length conventions", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  const source = [`const wide = "${"x".repeat(1_024)}";`,
+    ...Array.from({ length: 600 }, (_, index) => `const line${index + 1} = ${index + 1};`)].join("\n");
+  const archive = encodeProjectArchive({
+    files: [{ path: "large.js", content: source }],
+    config: { entry: "large.js", template: "blank" },
+  });
+  await page.locator("[data-project-archive-file]").setInputFiles({
+    name: "large.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
+  });
+  const editor = page.locator(".project-editor .cm-content");
+  await editor.waitFor();
+  assert.equal(await page.locator(".project-editor__asset-view").count(), 0);
+  await editor.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("\nconst accepted = true;");
+  await page.waitForFunction(() => JSON.parse(document.querySelector("[data-project-snapshot]").value)
+    .files[0].content.endsWith("const accepted = true;"));
+});
+
+test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the project machine", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch({ args: ["--enable-unsafe-webgpu", "--use-angle=swiftshader"] });
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+
+  await page.getByLabel("Template").selectOption("paint");
+  let canvas = page.locator('[data-project-output-mount] canvas[aria-label="Click to paint colorful squares"]');
+  await canvas.waitFor();
+  await canvas.click({ position: { x: 100, y: 100 } });
+  const painted = await canvas.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const x = Math.round(100 * element.width / box.width);
+    const y = Math.round(100 * element.height / box.height);
+    return [...element.getContext("2d").getImageData(x, y, 1, 1).data];
+  });
+  assert.ok(painted[1] > painted[0], `painted pixel should be teal: ${painted}`);
+
+  await page.getByLabel("Template").selectOption("webgl");
+  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle drawn with WebGL"]');
+  await canvas.waitFor();
+  const pixel = await canvas.evaluate((element) => {
+    const gl = element.getContext("webgl");
+    const value = new Uint8Array(4);
+    gl.readPixels(element.width / 2, element.height / 2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, value);
+    return [...value];
+  });
+  assert.ok(pixel[1] > pixel[0] && pixel[3] === 255,
+    `WebGL center pixel should be teal: ${pixel}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
+
+  await page.getByLabel("Template").selectOption("three");
+  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle built with Three.js"]');
+  await canvas.waitFor();
+  const threePixel = await canvas.evaluate((element) => {
+    const gl = element.getContext("webgl");
+    const value = new Uint8Array(4);
+    gl.readPixels(element.width / 2, element.height / 2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, value);
+    return [...value];
+  });
+  assert.ok(threePixel[0] > threePixel[1] && threePixel[3] === 255,
+    `Three.js center pixel should be coral: ${threePixel}\n${errors.join("\n")}`);
+
+  await page.getByLabel("Template").selectOption("webgpu");
+  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle drawn with WebGPU"]');
+  await canvas.waitFor();
+  await page.waitForFunction(() => document.querySelector('canvas[aria-label="A triangle drawn with WebGPU"]')
+    ?.dataset.webgpuStatus === "ready", null, { timeout: 15_000 }).catch(async () => assert.fail(
+      `WebGPU did not render: ${await canvas.getAttribute("data-webgpu-status")}\n${errors.join("\n")}`));
+});
+
 test("Resources project CodeMirror follows repeated explicit and system theme changes", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
@@ -815,17 +1033,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
   const template = page.getByLabel("Template");
-  const container = page.getByLabel("Container");
   assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "Hello, HTML", "Single-file document", "Digital clock", "Logo mark", "Bar chart", "Bouncing ball", "Starfield", "Blank project", "Presentation"]);
   assert.equal(await template.inputValue(), "article");
-  assert.equal(await container.inputValue(), "article");
-  const elementTags = page.locator("[data-container-outline] [data-element-tag]");
-  assert.deepEqual(await elementTags.allTextContents(), ["html", "head", "meta", "title", "link", "body", "article", "header", "h1", "p", "a", "strong", "em", "ul", "li", "code"]);
-  assert.equal(await page.locator("[data-element-tag='html']").getAttribute("title"), "Parents: document. Attributes: lang.");
-  assert.equal(await page.locator("[data-element-tag='title']").getAttribute("title"), "Parents: head. Attributes: none.");
-  await page.locator("[data-element-tag='a']").hover();
-  assert.equal(await page.locator("[data-element-tag='a']").getAttribute("title"), "Parents: p, li. Attributes: href, title, target.");
-  await page.screenshot({ path: "/tmp/resources-element-tags.png" });
+  assert.equal(await page.getByLabel("Container").count(), 0);
+  assert.equal(await page.locator("[data-container-outline]").count(), 0);
   const linkPatterns = page.getByLabel("Allowed Link URL Patterns");
   assert.equal(await linkPatterns.inputValue(), "*.wikipedia.org");
   const linkPatternsHeight = await linkPatterns.evaluate((element) => element.getBoundingClientRect().height);
@@ -840,7 +1051,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
   assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
   assert.equal(await page.locator(".project-editor iframe").count(), 0);
-  assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 1);
+  assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 0);
+  assert.equal(await page.locator("script[src^='/\-/resources-site/controller.js?v=']").count(), 1);
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
   assert.ok(await newEditor.locator(".cm-content span").count() > 10, "HTML syntax should be tokenized");
   const selectionStart = await newEditor.locator(".cm-line").nth(1).boundingBox();
@@ -854,6 +1066,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.ok(selectionLayers >= 2 || nativeSelection.includes("\n"), "multiline selection should remain visible after mouseup");
   assert.notEqual(await newEditor.locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
   await assert.doesNotReject(newEditor.getByRole("button", { name: "Split view" }).waitFor());
+  await page.waitForTimeout(500);
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "WebAssembly" }).waitFor());
   await assert.doesNotReject(newEditor.getByRole("link", { name: "Capability-based security" }).waitFor());
@@ -870,7 +1083,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
     project: document.querySelector("[data-project-preview]").dataset.projectMachineId,
     editorReason: document.querySelector("[data-project-editor]").dataset.editorMachineReason,
   }));
-  assert.equal(initialMachines.frontendState, "quickjs");
+  assert.equal(initialMachines.frontendState, "microquickjs");
   assert.ok(initialMachines.frontend, "site frontend machine should publish its diagnostic identity");
   assert.equal(new Set([initialMachines.frontend, initialMachines.editor, initialMachines.project]).size, 3);
   assert.equal(initialMachines.editorReason, "project-open");
@@ -930,26 +1143,19 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await templateNotice.isHidden(), true);
   await template.selectOption("ball");
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
-  assert.equal(await container.inputValue(), "canvas");
-  await page.waitForFunction((previousEditor) => {
-    const root = document.querySelector("[data-project-editor]");
+  await page.waitForFunction((previousProject) => {
     const preview = document.querySelector("[data-project-preview]");
-    return root?.dataset.editorMachineState === "ready"
-      && root.dataset.editorMachineId !== previousEditor
-      && preview?.dataset.projectMachineId;
-  }, initialMachines.editor);
+    return preview?.dataset.projectMachineId && preview.dataset.projectMachineId !== previousProject;
+  }, initialMachines.project);
   const rotatedMachines = await page.evaluate(() => ({
     frontend: document.documentElement.dataset.resourcesFrontendMachineId,
     editor: document.querySelector("[data-project-editor]").dataset.editorMachineId,
     project: document.querySelector("[data-project-preview]").dataset.projectMachineId,
-    editorReason: document.querySelector("[data-project-editor]").dataset.editorMachineReason,
   }));
   assert.equal(rotatedMachines.frontend, initialMachines.frontend);
-  assert.notEqual(rotatedMachines.editor, initialMachines.editor);
+  assert.equal(rotatedMachines.editor, initialMachines.editor);
   assert.notEqual(rotatedMachines.project, initialMachines.project);
   assert.equal(new Set([rotatedMachines.frontend, rotatedMachines.editor, rotatedMachines.project]).size, 3);
-  assert.equal(rotatedMachines.editorReason, "template-container-change");
-  assert.deepEqual(await page.locator("[data-container-outline] [data-element-tag]").allTextContents(), ["html", "head", "meta", "title", "body", "canvas", "script"]);
   assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
   await selectProjectFile("script.js");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
@@ -1114,14 +1320,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.goto(`http://resources-edge.localhost:${port}/projects`, { waitUntil: "networkidle" });
-  await page.route(`http://resources-edge.localhost:${port}/tiny-tools/digital-clock`, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 180));
-    await route.continue();
-  }, { times: 1 });
   const openProject = page.getByRole("link", { name: /Digital Clock/ }).click({ noWaitAfter: true });
-  await assert.doesNotReject(page.getByLabel("Loading project").waitFor());
-  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
   await page.waitForFunction(() => location.pathname === "/tiny-tools/digital-clock");
+  await assert.doesNotReject(page.locator("[data-project-editor][data-editor-machine-state='starting']").waitFor());
+  assert.equal(await page.locator(".project-route-loading").count(), 0);
+  assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   await openProject;
   await assert.doesNotReject(page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor());
@@ -1442,13 +1645,18 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   await ownerPage.context().addCookies([{ name: "resources_session", value: await sessionFor(owner), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await ownerPage.goto(`http://resources-edge.localhost:${port}/organizations/new`);
   await ownerPage.getByLabel("Title", { exact: true }).fill("Browser Team");
-  await ownerPage.getByLabel("Description (optional)").fill("A browser-tested organization.");
+  await ownerPage.getByLabel("Description (optional)").fill("A browser-tested café organization.");
   await ownerPage.getByRole("button", { name: "Create organization" }).click();
   await ownerPage.getByRole("link", { name: /Browser Team/ }).click();
   await ownerPage.getByRole("heading", { name: "Invite an existing user" }).waitFor();
   await ownerPage.getByLabel("Username").fill("invited-user");
   await ownerPage.getByLabel("Role").selectOption("admin");
+  const inviteResponsePromise = ownerPage.waitForResponse((response) =>
+    response.request().method() === "POST" && response.url().includes("/invitations"));
   await ownerPage.getByRole("button", { name: "Send invitation" }).click();
+  const inviteResponse = await inviteResponsePromise;
+  assert.equal(inviteResponse.status(), 303,
+    inviteResponse.status() === 303 ? undefined : await inviteResponse.text());
   await ownerPage.waitForTimeout(300);
   await ownerPage.screenshot({ path: "/tmp/resources-organization-admin.png", fullPage: true });
 
@@ -1457,7 +1665,13 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   await invitedPage.goto(`http://resources-edge.localhost:${port}/`);
   await invitedPage.getByLabel("Notifications").click();
   await invitedPage.getByText(/invited you to join Browser Team as admin/).waitFor();
+  const markResponsePromise = invitedPage.waitForResponse((response) =>
+    response.request().method() === "POST" && response.url().includes("/notifications/"));
   await invitedPage.getByRole("button", { name: "Mark read" }).click();
+  const markResponse = await markResponsePromise;
+  assert.equal(markResponse.status(), 303,
+    markResponse.status() === 303 ? undefined : await markResponse.text());
+  await invitedPage.waitForLoadState("domcontentloaded");
   await invitedPage.getByLabel("Notifications").click();
   await invitedPage.getByRole("button", { name: "Accept" }).click();
   await invitedPage.getByRole("heading", { name: "Browser Team" }).waitFor();

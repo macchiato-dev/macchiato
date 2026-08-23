@@ -2,10 +2,9 @@ import { machineControllerSupervisor } from "./supervisor.js";
 
 const ignoredRequestHeaders = new Set(["connection", "host", "transfer-encoding"]);
 const ignoredResponseHeaders = new Set(["connection", "content-encoding", "content-length", "transfer-encoding"]);
-
 export async function machineControllerHandler(request, _app, context) {
-  const supervisor = machineControllerSupervisor({ dataDir: context.dataDir });
   const url = new URL(request.url);
+  const supervisor = machineControllerSupervisor({ dataDir: context.dataDir });
   if (url.pathname === "/-/controller/status") return Response.json(supervisor.status());
   if (url.pathname === "/-/controller/logs") return Response.json({ logs: supervisor.logs(url.searchParams.get("limit")) });
   if (url.pathname === "/-/controller/stop" && request.method === "POST") {

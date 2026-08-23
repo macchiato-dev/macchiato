@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { addFileSite, listAppConfigRows, removeAppConfig, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
+import { addDirectorySite, addFileSite, listAppConfigRows, removeAppConfig, upsertAppConfig } from "@macchiato-dev/app-db-sqlite";
 import { seedResourcesSite } from "../../../packages/website/seed.js";
 import { BUILTIN_APPS } from "./builtin-apps.js";
 import { packageBrowserHandler } from "./package-browser.js";
@@ -26,7 +26,7 @@ function declarationForBuiltin(app) {
       ? "sqlite-routes"
       : handlerNames.get(app.subdomain);
   const { aliases, pluginId, replaces, setup, seededRoute, fileAccess, writableFiles, sourceFiles,
-    schemas, sandbox, sharedAssets, site, adapter, environment, commands, ...base } = app;
+    schemas, sandbox, sharedAssets, developmentAuth, site, adapter, environment, commands, ...base } = app;
   return {
     ...base,
     handler,
@@ -46,6 +46,7 @@ function declarationForBuiltin(app) {
       sourceFiles: sourceFiles || [],
       schemas: schemas || [],
       sharedAssets: sharedAssets === true,
+      developmentAuth: developmentAuth === true,
       site,
       adapter,
       environment,
@@ -103,6 +104,28 @@ apps["resources-design"] = {
   },
   dependencies: [],
 };
+
+for (const [id, description] of [
+  ["machines", "Static preview of the machines documentation and demo Pages project."],
+  ["machine-runner", "Static preview of the dependency-free machine runner Pages project."],
+]) {
+  apps[id] = {
+    declaration: {
+      name: id === "machines" ? "Macchiato Machines" : "Macchiato Machine Runner",
+      subdomain: id,
+      kind: "static Pages preview",
+      description,
+      handler: "directory",
+      permissions: {},
+      access: {},
+      options: { sourceFiles: [`dev/machines-pages/${id}`] },
+    },
+    setup(db, { subdomain }) {
+      addDirectorySite(db, subdomain, join(repoRoot, "dev", "machines-pages", id));
+    },
+    dependencies: [],
+  };
+}
 
 export const APP_PLUGIN_PRESETS = {
   core: ["apps"],

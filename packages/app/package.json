@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./src/index.js",
   "bin": {
-    "macchiato-app": "./src/index.js"
+    "macchiato-app": "./src/index.js",
+    "macchiato-dev-link": "./src/print-development-url.js"
   },
   "dependencies": {
     "@macchiato-dev/app-db-sqlite": "0.1.0",

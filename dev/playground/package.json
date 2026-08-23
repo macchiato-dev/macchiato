@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Standalone runner, temporary editor, and examples for Macchiato machines",
   "scripts": {
-    "build": "node ../../packages/website/build-project-editor.js && node build.js",
-    "test": "node --test test/source-envelope.test.js test/compiler.test.js",
-    "test:browser": "node --test test/editor.browser.test.js"
+    "build": "node ../wasm-web-runtimes/examples/codemirror/build.js && node ../../packages/website/build-project-editor.js && node build.js",
+    "test": "node --test test/source-envelope.test.js test/compiler.test.js test/architecture.test.js",
+    "test:browser": "node --test test/development-auth.browser.test.js test/editor.browser.test.js"
   },
   "dependencies": {
     "@codemirror/state": "^6.7.1",

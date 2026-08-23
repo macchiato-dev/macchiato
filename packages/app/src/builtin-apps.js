@@ -28,9 +28,11 @@ export const BUILTIN_APPS = [
   {
     name: "Macchiato Machine Controller",
     pluginId: "playground",
-    subdomain: "playground",
+    subdomain: "machines-dev",
+    replaces: ["playground", "code-editor-use", "terminal-use"],
     kind: "supervised Deno reverse proxy",
     description: "Unified machine examples served through a permission-bounded Deno controller.",
+    developmentAuth: true,
     handler: machineControllerHandler,
     sourceFiles: [
       "dev/playground/src/controller.ts",
