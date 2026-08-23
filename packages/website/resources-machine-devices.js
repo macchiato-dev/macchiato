@@ -1,5 +1,4 @@
-import { createProjectBuildMachine, createProjectEditorMachine, createProjectFetch, createProjectImageResolver,
-  createProjectOutputMachine } from "./project-machines.js";
+import { createProjectBuildMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
 
@@ -286,12 +285,14 @@ export class ResourcesOutputDevice {
     const mount = [...this.document.querySelectorAll("[data-project-output-mount]")]
       .find((element) => element.dataset.projectOutputMount === payload.rootKey);
     if (!mount) throw new Error("Project output mount is unavailable");
-    let root = mount;
     let frame = null;
     if (payload.iframe !== false) {
       frame = this.document.createElement("iframe");
       frame.className = "project-editor__output-frame";
       frame.title = "Project output";
+      frame.sandbox = "allow-scripts allow-same-origin";
+      frame.allow = "fullscreen";
+      frame.allowFullscreen = true;
       frame.src = "/-/resources-site/project-output-frame.html";
       frame.style.cssText = "display:block;width:100%;height:100%;border:0";
       await new Promise((resolve, reject) => {
@@ -299,38 +300,61 @@ export class ResourcesOutputDevice {
         frame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
         mount.replaceChildren(frame);
       });
-      root = frame.contentDocument?.getElementById("project-output-a");
-      if (!root) throw new Error("Project output frame root is unavailable");
     }
     const id = this.nextId++;
     const files = this.projectResources.hydrateFiles(payload.files);
-    const output = await createProjectOutputMachine({
-      root,
+    let output;
+    if (frame) output = await this.connectFrame(frame, {
+      files,
       scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
-      options: {
-        frameInterval: () => this.document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
-        fetchResource: createProjectFetch(files,
-          Array.isArray(payload.allowedFetchOrigins) ? payload.allowedFetchOrigins : []),
-        resolveImage: createProjectImageResolver(files),
-        allowNavigate: (url) => urlMatchesAllowedPatterns(url,
-          Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : []),
-        environment: payload.environment || {},
-        services: {
-          route: { get: () => location.hash.slice(1) || "/", search: () => "", listen() {} },
-          storage: { get: () => null, set() {}, delete() {}, listen() {} },
-        },
-      },
-      onError: (error) => this.deliver({ type: "output-error", id,
-        message: error?.message || String(error) }),
+      allowedFetchOrigins: Array.isArray(payload.allowedFetchOrigins) ? payload.allowedFetchOrigins : [],
+      allowedLinkPatterns: Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : [],
+      environment: payload.environment || {},
+    }, id);
+    else output = await createProjectOutputMachine({
+      root: mount,
+      scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
+      options: { environment: payload.environment || {} },
+      onError: (error) => this.deliver({ type: "output-error", id, message: error?.message || String(error) }),
     });
-    this.outputs.set(id, frame ? Object.freeze({
-      destroy() { output.destroy(); frame.remove(); },
-      inspect: () => output.inspect(),
-      setContent: (tree) => output.setContent(tree),
-      run: (scripts) => output.run(scripts),
-      load: (project) => output.load(project),
-    }) : output);
+    this.outputs.set(id, output);
     return id;
+  }
+  connectFrame(frame, payload, outputId) {
+    const protocol = "resources-project-output-machine-v1";
+    const channel = new MessageChannel();
+    const pending = new Map();
+    let nextRequest = 1;
+    return new Promise((resolve, reject) => {
+      const fail = (message) => {
+        reject(new Error(message));
+        this.deliver({ type: "output-error", id: outputId, message });
+      };
+      channel.port1.onmessage = ({ data }) => {
+        if (data?.protocol !== protocol) return;
+        if (data.type === "failed") return fail(data.error || "Project output frame failed");
+        if (data.type === "ready") return resolve(Object.freeze({
+          destroy() { request("destroy", {}).catch(() => {}); channel.port1.close(); frame.remove(); },
+          inspect: () => request("inspect", {}),
+          setContent: (tree) => request("setContent", { tree }),
+          run: (scripts) => request("run", { scripts }),
+          load: (project) => request("load", { project }),
+        }));
+        if (data.type !== "response") return;
+        const operation = pending.get(data.id);
+        if (!operation) return;
+        pending.delete(data.id);
+        if (data.error) operation.reject(new Error(data.error));
+        else operation.resolve(data.value);
+      };
+      channel.port1.start();
+      const request = (name, operationPayload) => new Promise((requestResolve, requestReject) => {
+        const id = nextRequest++;
+        pending.set(id, { resolve: requestResolve, reject: requestReject });
+        channel.port1.postMessage({ protocol, type: "request", id, name, payload: operationPayload });
+      });
+      frame.contentWindow.postMessage({ protocol, type: "connect", payload }, location.origin, [channel.port2]);
+    });
   }
   async run(payload) {
     const output = this.require(payload.id);

@@ -1046,7 +1046,7 @@ html[data-theme="light"] .project-editor__preview,
 html[data-theme="light"] .project-editor__preview > [data-project-preview] { background: #e7ecff; }
 .project-editor__present-close { display: none; }
 body.project-presenting { overflow: hidden; }
-body.project-presenting .content-block:has(.project-editor__preview--presenting) { animation: blockIn 0s linear both; transform: none; }
+body.project-presenting .content-block:has(.project-editor__preview--presenting) { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1000; width: 100vw; height: 100vh; margin: 0; padding: 0; border-radius: 0; }
 .project-editor__preview--presenting { position: fixed; top: 0; left: 0; z-index: 1000; display: block; width: 100vw; height: 100vh; overflow: hidden; color: var(--text); background: #151717; }
 .project-editor__preview--presenting > [data-project-preview] { width: 100%; height: 100%; overflow: auto; }
 .project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 5px; right: 5px; z-index: 1001; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
