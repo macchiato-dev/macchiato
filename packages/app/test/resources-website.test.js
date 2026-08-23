@@ -1288,6 +1288,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(projectEditor.locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
   await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.projectMachineId);
   const projectMachineBeforeEdit = await page.locator("[data-project-preview]").getAttribute("data-project-machine-id");
+  const outputFrame = projectEditor.locator("iframe.project-editor__output-frame");
+  assert.equal(await outputFrame.getAttribute("allow"), "fullscreen");
+  assert.equal(await outputFrame.getAttribute("allowfullscreen"), "");
+  await outputFrame.evaluate((frame) => { frame.contentWindow.__projectOutputIdentity = "preserved"; });
   await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
   await page.waitForTimeout(250);
   assert.equal(
@@ -1299,8 +1303,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.waitForTimeout(2_000);
-  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor();
-  assert.notEqual(await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"), projectMachineBeforeEdit);
+  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor();
+  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"), projectMachineBeforeEdit);
+  assert.equal(await outputFrame.evaluate((frame) => frame.contentWindow.__projectOutputIdentity), "preserved");
   const versionsButton = page.locator("[data-project-versions-proxy]");
   assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
   await versionsButton.click();
@@ -1310,11 +1315,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent.endsWith("ago"));
-  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
+  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
   await page.locator("[data-project-version-list] [aria-current='true']").click();
-  await projectEditor.frameLocator("iframe.project-editor__preview-surface").getByText("Updated.", { exact: true }).waitFor();
+  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
