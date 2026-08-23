@@ -162,7 +162,7 @@ export class ResourcesEditorDevice {
     this.request = request;
     this.hostCall = call;
     this.editor = null;
-    this.initialSnapshot = "";
+    this.initialSnapshot = null;
     this.outputIds = new Set();
     this.operations = Object.freeze({
       "editor.command": (payload) => this.editor.command(payload),
@@ -185,13 +185,26 @@ export class ResourcesEditorDevice {
     });
   }
   async mount() {
-    this.editor?.destroy();
+    if (this.editor) return { machineId: this.editor.machineId };
     const root = this.document.querySelector("[data-project-editor]")?.closest(".project-workspace");
     if (!root) throw new Error("Project editor mount is unavailable");
     const snapshotField = root.querySelector("[data-project-snapshot]");
     if (!snapshotField) throw new Error("Project snapshot field is unavailable");
-    this.initialSnapshot = JSON.stringify(this.projectResources.compactSnapshot(
-      JSON.parse(snapshotField.value)));
+    const snapshotUrl = root.querySelector("[data-project-snapshot-url]")?.dataset.projectSnapshotUrl;
+    if (snapshotUrl) {
+      const response = await this.request("fetch", {
+        url: snapshotUrl, method: "GET", headers: { Accept: "application/json" },
+      });
+      if (response.status < 200 || response.status >= 300) {
+        throw new Error(`Project workspace response: ${response.status}`);
+      }
+      const workspace = JSON.parse(response.body);
+      if (!workspace?.snapshot || !Array.isArray(workspace.snapshot.files)) {
+        throw new Error("Project workspace snapshot is invalid");
+      }
+      snapshotField.value = JSON.stringify(workspace.snapshot);
+    }
+    this.initialSnapshot = this.projectResources.compactSnapshot(JSON.parse(snapshotField.value));
     // The snapshot may contain large embedded resources. Keep that opaque
     // payload out of the DOM tree mirrored into the editor guest; the guest
     // requests it explicitly after its browser facade has started.
@@ -243,7 +256,7 @@ export class ResourcesEditorDevice {
     this.outputIds.clear();
     this.editor?.destroy();
     this.editor = null;
-    this.initialSnapshot = "";
+    this.initialSnapshot = null;
   }
 }
 
