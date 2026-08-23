@@ -756,6 +756,9 @@ function fail(message) {
 function isAllowedAttribute(name) {
   return ATTRIBUTES.has(name) || /^(?:aria|data)-[a-z][a-z0-9-]{0,63}$/.test(name);
 }
+function isRemovableAttribute(name) {
+  return isAllowedAttribute(name) || name === "open" || name === "style";
+}
 async function sha256(bytes) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -1760,7 +1763,7 @@ var WasmWebBridge = class {
         if (args.length !== 1 || typeof args[0] !== "string") {
           fail(`attribute removal is not allowed: ${String(args[0])}`);
         }
-        if (!(isAllowedAttribute(args[0]) || args[0] === "style") && object.hasAttribute(args[0])) fail(`attribute removal is not allowed: ${args[0]}`);
+        if (!isRemovableAttribute(args[0]) && object.hasAttribute(args[0])) fail(`attribute removal is not allowed: ${args[0]}`);
         object.removeAttribute(args[0]);
         return null;
       }
