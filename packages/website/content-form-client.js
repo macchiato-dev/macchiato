@@ -1,44 +1,27 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames } from "/-/resources-site/container-elements.js";
-import { decodeProjectArchive, encodeProjectArchive, isProjectImage, projectArchiveFilename } from "/-/resources-site/project-archive.js";
-import { mountResourcesProjectEditor, mountResourcesProjectPreview } from "/-/resources-site/project-editor-runtime.js";
+import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
+import { parseProjectHtml } from "./project-html-parser.js";
 
-const editorAnimationStyles = document.createElement("style");
-editorAnimationStyles.textContent = "@keyframes cm-blink{0%,49%{opacity:1}50%,100%{opacity:0}}";
-document.head.append(editorAnimationStyles);
-import { StyleUse } from "/-/style-use/index.js";
-
-function enterProjectLoadingView(href) {
-  const content = document.getElementById("content");
-  const layout = document.querySelector("main.layout");
-  if (!content) return;
-  layout?.classList.add("focused-view");
-  if (layout) layout.dataset.view = "focused";
-  content.dataset.loading = "true";
-  content.setAttribute("aria-busy", "true");
-  const loading = document.createElement("section");
-  loading.className = "project-route-loading";
-  loading.setAttribute("aria-label", "Loading project");
-  const spinner = document.createElement("span");
-  spinner.className = "project-route-loading__spinner";
-  spinner.setAttribute("aria-hidden", "true");
-  const label = document.createElement("p");
-  label.textContent = "Loading project…";
-  loading.append(spinner, label);
-  content.replaceChildren(loading);
-  // Leave the focused shell on screen long enough for the browser to paint it
-  // before a native navigation makes the old document unavailable.
-  setTimeout(() => location.assign(href), 80);
+const PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+function isProjectImage(file) {
+  const extension = String(file?.path || "").split(".").at(-1).toLowerCase();
+  return PROJECT_IMAGE_TYPES.has(extension) && /^data:image\//.test(file?.content || "");
 }
 
-document.addEventListener("click", (event) => {
-  if (event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  const link = event.target.closest("a[data-project-link][href]");
-  if (!link || link.target || new URL(link.href, location.href).origin !== location.origin) return;
-  event.preventDefault();
-  enterProjectLoadingView(link.href);
-});
+function buildProject(files, config) { return buildProjectInMachine(files, config); }
+
+function queryParameter(name) {
+  const match = new RegExp("(?:^|&)" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^&]*)")
+    .exec(String(location.search || "").replace(/^\?/, ""));
+  return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : null;
+}
+
+function internalHref(link) {
+  const href = link?.getAttribute?.("href") || "";
+  return href.startsWith("/") && !href.startsWith("//") ? href : null;
+}
 
 for (const split of document.querySelectorAll("[data-save-split]")) {
   const trigger = split.querySelector("[data-save-menu-trigger]");
@@ -56,8 +39,8 @@ for (const split of document.querySelectorAll("[data-save-split]")) {
 document.addEventListener("click", (event) => {
   const link = event.target.closest?.("a[href]");
   if (!link || link.classList.contains("project-close")) return;
-  const target = new URL(link.href, location.href);
-  if (target.origin === location.origin && /^\/[^/]+\/[^/]+$/.test(target.pathname)) {
+  const target = internalHref(link);
+  if (target && /^\/[^/?#]+\/[^/?#]+(?:[?#].*)?$/.test(target)) {
     let stack = [];
     try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
     const current = location.pathname + location.search;
@@ -113,7 +96,9 @@ for (const fields of document.querySelectorAll("[data-project-fields]")) {
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function slugify(value) {
-  return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+  const text = String(value || "");
+  const normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
+  return normalized.replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
 }
@@ -134,6 +119,10 @@ const STARTING_POINTS = Object.freeze({
       { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
     ],
     config: { entry: "index.html", template: "hello", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+  },
+  html: {
+    files: [{ path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Single-file document</title>\n  <style>body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 18px system-ui; color: #eef2ff; background: #171a1a; }</style>\n</head>\n<body><main><h1>Single-file document</h1><p>HTML, CSS, and JavaScript can live together here.</p></main></body>\n</html>" }],
+    config: { entry: "index.html", template: "html", sandbox: { network: false, storage: "session" } },
   },
   clock: {
     files: [
@@ -165,6 +154,51 @@ const STARTING_POINTS = Object.freeze({
     ],
     config: { entry: "index.html", template: "stars", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
   },
+  paint: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Canvas paint</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Click to paint colorful squares\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#111827\";\ncontext.fillRect(0, 0, canvas.width, canvas.height);\nlet color = 0;\ncanvas.addEventListener(\"click\", (event) => {\n  const box = canvas.getBoundingClientRect();\n  const x = (event.clientX - box.left) * canvas.width / box.width;\n  const y = (event.clientY - box.top) * canvas.height / box.height;\n  const colors = [\"#30d5c8\", \"#ae79ff\", \"#ff8f6b\", \"#facc15\"];\n  context.fillStyle = colors[color++ % colors.length];\n  context.fillRect(x - 18, y - 18, 36, 36);\n});" },
+    ],
+    config: { entry: "index.html", template: "paint", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  webgl: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>WebGL triangle</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"A triangle drawn with WebGL\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst gl = canvas.getContext(\"webgl\", { preserveDrawingBuffer: true });\nif (!gl) throw new Error(\"WebGL is unavailable\");\nfunction shader(type, source) {\n  const value = gl.createShader(type);\n  gl.shaderSource(value, source);\n  gl.compileShader(value);\n  if (!gl.getShaderParameter(value, gl.COMPILE_STATUS)) throw new Error(\"Shader compilation failed\");\n  return value;\n}\nconst program = gl.createProgram();\ngl.attachShader(program, shader(gl.VERTEX_SHADER, \"attribute vec2 point; void main(){ gl_Position=vec4(point,0.0,1.0); }\"));\ngl.attachShader(program, shader(gl.FRAGMENT_SHADER, \"precision mediump float; void main(){ gl_FragColor=vec4(0.19,0.84,0.78,1.0); }\"));\ngl.linkProgram(program);\nif (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(\"Program linking failed\");\ngl.useProgram(program);\nconst buffer = gl.createBuffer();\ngl.bindBuffer(gl.ARRAY_BUFFER, buffer);\ngl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-0.75,-0.65, 0.75,-0.65, 0,0.75]), gl.STATIC_DRAW);\nconst point = gl.getAttribLocation(program, \"point\");\ngl.enableVertexAttribArray(point);\ngl.vertexAttribPointer(point, 2, gl.FLOAT, false, 0, 0);\ngl.viewport(0, 0, canvas.width, canvas.height);\ngl.clearColor(0.06, 0.09, 0.16, 1);\ngl.clear(gl.COLOR_BUFFER_BIT);\ngl.drawArrays(gl.TRIANGLES, 0, 3);" },
+    ],
+    config: { entry: "index.html", template: "webgl", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  webgpu: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>WebGPU triangle</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"A triangle drawn with WebGPU\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst gpu = canvas.getContext(\"webgpu\");\nif (!gpu) throw new Error(\"WebGPU is unavailable\");\ngpu.renderTriangle();" },
+    ],
+    config: { entry: "index.html", template: "webgpu", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  three: {
+    files: [
+      { path: "scene.js", content: "const canvas = document.querySelector(\"canvas\");\nconst geometry = new THREE.BufferGeometry();\ngeometry.setAttribute(\"position\", new THREE.Float32BufferAttribute([-0.72,-0.62,0, 0.72,-0.62,0, 0,0.72,0], 3));\nconst points = geometry.getAttribute(\"position\").array;\nconst gl = canvas.getContext(\"webgl\", { preserveDrawingBuffer: true });\nfunction shader(type, source) { const item = gl.createShader(type); gl.shaderSource(item, source); gl.compileShader(item); return item; }\nconst program = gl.createProgram();\ngl.attachShader(program, shader(gl.VERTEX_SHADER, \"attribute vec3 point; void main(){ gl_Position=vec4(point,1.0); }\"));\ngl.attachShader(program, shader(gl.FRAGMENT_SHADER, \"precision mediump float; void main(){ gl_FragColor=vec4(1.0,0.56,0.42,1.0); }\"));\ngl.linkProgram(program); gl.useProgram(program);\nconst buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, points, gl.STATIC_DRAW);\nconst point = gl.getAttribLocation(program, \"point\"); gl.enableVertexAttribArray(point); gl.vertexAttribPointer(point, 3, gl.FLOAT, false, 0, 0);\ngl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0.06,0.09,0.16,1); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,3);" },
+      { path: "three-build-runtime.js", content: "module.exports = { build: function (source, config) { return { files: [\n  { path: 'index.html', content: '<!doctype html><meta charset=\\\"utf-8\\\"><title>Three.js triangle</title><canvas width=\\\"720\\\" height=\\\"440\\\" aria-label=\\\"A triangle built with Three.js\\\"></canvas><script src=\\\"./three-runtime.js\\\"><\\/script><script src=\\\"./scene.js\\\"><\\/script>' },\n  { path: 'three-runtime.js', content: BUILD_API.runtime('three') },\n  { path: 'scene.js', content: source }\n], config: { entry: 'index.html', template: config.template } }; } };" },
+      { path: "build.js", content: "module.exports = function (input) { return input.runtime.build(input.application, input.config); };" },
+    ],
+    config: { entry: "scene.js", template: "three", build: { runtime: "three-build-runtime.js", script: "build.js", application: "scene.js" }, sandbox: { network: false, storage: "memory" } },
+  },
+  vue: {
+    files: [
+      { path: "App.vue", content: "<template>\n  <main>\n    <h1>Vue SFC</h1>\n    <button @click=\"count++\">Count {{ count }}</button>\n  </main>\n</template>\n\n<script>\nexport default {\n  data() { return { count: 0 }; }\n};\n</script>\n\n<style>\nbody { margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; font: 16px system-ui; background: #182120; color: #edf7f5; }\nmain { text-align: center; }\nbutton { padding: 0.6rem 1rem; border: 0; border-radius: 0.5rem; color: #102523; background: #55d8c9; cursor: pointer; }\n</style>" },
+      { path: "vue-build-runtime.js", content: "module.exports = {\n  build: function (source, path, config) {\n    var compiled = BUILD_API.compileVue(source, path);\n    var component = compiled.script.replace(/export\\s+default/, 'var component =');\n    var render = 'var render = (new Function(\\\"Vue\\\", ' + JSON.stringify(compiled.render) + '))(Vue);\\ncomponent.render = render;\\nVue.createApp(component).mount(\\\"#app\\\");';\n    return {\n      files: [\n        { path: 'index.html', content: '<!doctype html><html><head><meta charset=\\\"utf-8\\\"><title>Vue SFC</title><link rel=\\\"stylesheet\\\" href=\\\"./style.css\\\"></head><body><div id=\\\"app\\\"></div><script src=\\\"./vue-runtime.js\\\"><\\/script><script src=\\\"./app.js\\\"><\\/script></body></html>' },\n        { path: 'style.css', content: compiled.styles },\n        { path: 'vue-runtime.js', content: BUILD_API.runtime('vue') },\n        { path: 'app.js', content: component + '\\n' + render }\n      ],\n      config: { entry: 'index.html', template: config.template, stylesheets: ['style.css'] }\n    };\n  }\n};" },
+      { path: "build.js", content: "module.exports = function (input) {\n  return input.runtime.build(input.application, input.applicationPath, input.config);\n};" },
+    ],
+    config: { entry: "App.vue", template: "vue", build: { runtime: "vue-build-runtime.js", script: "build.js", application: "App.vue" }, sandbox: { network: false, storage: "memory" } },
+  },
+  svelte: {
+    files: [
+      { path: "App.svelte", content: "<script>\n  let count = 0;\n</script>\n\n<main>\n  <h1>Svelte</h1>\n  <button onclick={() => count++}>Count {count}</button>\n</main>\n\n<style>\n  :global(body) { margin: 0; display: grid; min-height: 100vh; place-items: center; font: 16px system-ui; background: #221b1b; color: #fff3ed; }\n  main { text-align: center; }\n  button { padding: 0.6rem 1rem; border: 0; border-radius: 0.5rem; color: #32170f; background: #ff8f6b; cursor: pointer; }\n</style>" },
+      { path: "svelte-build-runtime.js", content: "module.exports = {\n  build: function (source, path, config) {\n    var compiled = BUILD_API.compileSvelte(source, path).code\n      .replace(/^import ['\"]svelte\\/internal\\/(?:disclose-version|flags\\/legacy)['\"];?\\s*$/gm, '')\n      .replace(/^import \\* as \\$ from ['\"]svelte\\/internal\\/client['\"];?\\s*$/m, 'var $ = SvelteInternal;')\n      .replace('export default function App', 'function App');\n    compiled += '\\nSvelte.mount(App, { target: document.getElementById(\\\"app\\\") });';\n    return {\n      files: [\n        { path: 'index.html', content: '<!doctype html><html><head><meta charset=\\\"utf-8\\\"><title>Svelte</title></head><body><div id=\\\"app\\\"></div><script src=\\\"./svelte-runtime.js\\\"><\\/script><script src=\\\"./app.js\\\"><\\/script></body></html>' },\n        { path: 'svelte-runtime.js', content: BUILD_API.runtime('svelte') },\n        { path: 'app.js', content: compiled }\n      ],\n      config: { entry: 'index.html', template: config.template }\n    };\n  }\n};" },
+      { path: "build.js", content: "module.exports = function (input) {\n  return input.runtime.build(input.application, input.applicationPath, input.config);\n};" },
+    ],
+    config: { entry: "App.svelte", template: "svelte", build: { runtime: "svelte-build-runtime.js", script: "build.js", application: "App.svelte" }, sandbox: { network: false, storage: "memory" } },
+  },
   blank: {
     files: [{ path: "index.html", content: "" }],
     config: { entry: "index.html", template: "blank", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
@@ -174,6 +208,17 @@ const STARTING_POINTS = Object.freeze({
     config: { entry: "index.html", template: "slides", container: "single-file-web-app", sandbox: { network: false, storage: "session" } },
   },
 });
+
+for (const select of document.querySelectorAll("[data-project-template]")) {
+  const before = select.querySelector('option[value="vue"]');
+  for (const [value, label] of [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]) {
+    if (select.querySelector(`option[value="${value}"]`)) continue;
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.insertBefore(option, before);
+  }
+}
 
 const generatedSlugs = new WeakMap();
 function slugPair(source) {
@@ -243,6 +288,7 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     tooltip?.remove();
     tooltip = null;
   };
+  button._hideInstantTooltip = hide;
   button.addEventListener("pointerenter", () => {
     if (!shouldShow(button)) return;
     clearTimeout(showTimer);
@@ -359,7 +405,7 @@ function versionChoice(label, timestamp, { current = false, sequence = 0, title 
   return button;
 }
 
-for (const root of document.querySelectorAll("[data-project-editor]")) {
+async function mountProjectRoot(root) {
   const editorMount = root.querySelector("[data-project-editor-mount]");
   const preview = root.querySelector("[data-project-preview]");
   const snapshotField = root.querySelector("[data-project-snapshot]");
@@ -406,10 +452,19 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       status.hidden = false;
       statusError.hidden = false;
       statusError.textContent = `Project failed to load: ${error.message}`;
-      continue;
+      return;
     }
   }
-  let state = normalizeProjectSnapshot(JSON.parse(snapshotField.value));
+  if (typeof snapshotField?.value !== "string") {
+    throw new Error("Project snapshot field is unavailable");
+  }
+  let parsedSnapshot;
+  try {
+    parsedSnapshot = JSON.parse(snapshotField.value);
+  } catch (error) {
+    throw new Error(`Project snapshot JSON is invalid: ${error?.message || error}`);
+  }
+  let state = normalizeProjectSnapshot(parsedSnapshot);
   // Keep very large project history on the host. Mirroring multi-megabyte
   // snapshots into the editor VM delays (and can prevent) the first render,
   // while the existing host history path has the same observable behavior.
@@ -441,7 +496,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   }
   const requestedTemplate = memoryOnly
     ? /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(location.pathname)?.[1]
-      || new URL(location.href).searchParams.get("template")
+      || queryParameter("template")
     : null;
   if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
     state = normalizeProjectSnapshot(STARTING_POINTS[requestedTemplate]);
@@ -475,15 +530,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   let outputFrameReady = null;
   let outputFrameRequested = true;
   const syncOutputTheme = () => {
-    const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    const theme = frontendTheme();
     if (outputFrame) {
       outputFrame.style.colorScheme = theme;
       outputFrame.style.backgroundColor = theme === "light" ? "#e7ecff" : "#151717";
     }
     outputFramePort?.postMessage({ type: "theme", colorScheme: theme });
-    editorController?.setTheme(theme);
   };
-  document.addEventListener("themechange", syncOutputTheme);
   let activeError = "";
   let activeErrorAction = null;
   let activeStatusSurface = "output";
@@ -515,7 +568,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   if (draft || memoryOnly) {
     if (draft) {
-      const navigationType = performance.getEntriesByType("navigation")[0]?.type;
+      const navigationEntries = typeof performance.getEntriesByType === "function" ?
+        performance.getEntriesByType("navigation") : [];
+      const navigationType = navigationEntries[0]?.type;
       if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
       try {
         const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
@@ -550,7 +605,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
 
   function language() {
     if (selected === "config") return "json";
-    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".ts")) return "javascript";
+    if (selected.endsWith(".ts") || selected.endsWith(".tsx") || selected.endsWith(".mts") || selected.endsWith(".cts")) return "typescript";
+    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".cjs") || selected.endsWith(".jsx")) return "javascript";
+    if (selected.endsWith(".vue")) return "vue";
+    if (selected.endsWith(".svelte")) return "svelte";
     if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
     if (selected.endsWith(".css")) return "css";
     if (selected.endsWith(".md")) return "markdown";
@@ -563,8 +621,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const selectedFile = state.files.find((file) => file.path === selected);
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
-    const largeFile = selectedFile && new TextEncoder().encode(selectedFile.content).byteLength > 500_000;
-    editorMount.hidden = isProjectImage(selectedFile) || largeFile;
+    editorMount.hidden = isProjectImage(selectedFile);
     if (isProjectImage(selectedFile)) {
       const image = document.createElement("img");
       image.className = "project-editor__image-view";
@@ -574,40 +631,18 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       delete root.dataset.editorLoading;
       return;
     }
-    if (largeFile) {
-      const view = document.createElement("div");
-      view.className = "project-editor__asset-view";
-      const size = new TextEncoder().encode(selectedFile.content).byteLength;
-      view.innerHTML = `<strong>${selectedFile.path}</strong><span>${(size / 1_048_576).toFixed(2)} MB · too large for the constrained code editor</span>`;
-      const sourceView = document.createElement("textarea");
-      sourceView.className = "project-editor__large-source";
-      sourceView.value = selectedFile.content;
-      sourceView.readOnly = true;
-      sourceView.wrap = "off";
-      sourceView.setAttribute("aria-label", `${selectedFile.path} read-only source`);
-      const download = document.createElement("button");
-      download.type = "button";
-      download.textContent = "Download file";
-      download.addEventListener("click", () => {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([selectedFile.content], { type: selectedFile.path.endsWith(".html") ? "text/html" : "text/plain" }));
-        link.download = selectedFile.path.split("/").at(-1);
-        link.click();
-        URL.revokeObjectURL(link.href);
-      });
-      view.append(download, sourceView);
-      editorMount.parentElement.append(view);
-      delete root.dataset.editorLoading;
-      return;
-    }
-    editorController.setContent(selectedContent(), language(), { readOnly: readOnly || selected === "config", resetHistoryOnEdit });
+    editorController.setContent(selectedContent(), language(), {
+      path: selected, readOnly: readOnly || selected === "config", resetHistoryOnEdit,
+    });
     delete root.dataset.editorLoading;
   }
 
   async function renderPreview() {
+    if (root.dataset.outputOwner === "editor") return;
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
     const generation = ++previewGeneration;
+    root.dataset.outputMachineState = "starting";
     activeError = "";
     renderStatusState();
     try {
@@ -615,12 +650,27 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } catch (error) {
       setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
     }
-    const entry = state.config?.entry || "index.html";
-    const source = state.files.find((file) => file.path === entry)?.content || "";
+    let previewState = state;
+    if (state.config?.build) {
+      try { previewState = normalizeProjectSnapshot(await buildProject(state.files, state.config)); }
+      catch (error) {
+        if (generation === previewGeneration) {
+          root.dataset.outputMachineState = "failed";
+          setStatus(`Build blocked: ${error.message}`, "error", null, "output");
+        }
+        return;
+      }
+      if (generation !== previewGeneration) return;
+    }
+    const entry = previewState.config?.entry || "index.html";
+    const source = previewState.files.find((file) => file.path === entry)?.content || "";
     const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
     root.querySelector("[data-preview-title]").textContent = title;
-    const outputOptions = state.config?.output || {};
-    const useOutputFrame = outputOptions.iframe !== false && outputFrameRequested;
+    const outputOptions = previewState.config?.output || {};
+    // The Machine Controller will own the optional iframe transport. Until
+    // that transport is selected, keep the frontend guest on a plain element
+    // and give only that element to the disposable output machine.
+    const useOutputFrame = false;
     let surfaceHost, surfaceRoot, surfaceBody;
     if (useOutputFrame) {
       if (!outputFrame) {
@@ -652,20 +702,20 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     } else {
       surfaceHost = document.createElement("div");
       surfaceHost.className = "project-editor__preview-surface";
-      surfaceRoot = surfaceHost.attachShadow({ mode: "open" });
-      surfaceBody = document.createElement("body");
+      surfaceRoot = surfaceHost;
+      surfaceBody = document.createElement("div");
       surfaceRoot.append(surfaceBody);
       preview.replaceChildren(surfaceHost);
       preview.dataset.outputSurface = "direct";
     }
-    const parsed = new DOMParser().parseFromString(source, "text/html");
+    surfaceBody.dataset.projectOutputMount = String(generation);
+    const parsed = parseProjectHtml(source);
     // Projects share one web-page container. A project may narrow or extend
     // its authored surface through its generated DOM schema, but choosing a
     // separate built-in container is no longer part of the editing model.
-    const allowed = new Set([
-      ...containerElementNames("web-page"),
-      ...Object.keys(state.config?.domSchema?.nodes || {}),
-    ]);
+    const allowed = new Set();
+    containerElementNames("web-page").forEach((name) => allowed.add(name));
+    for (const name of Object.keys(previewState.config?.domSchema?.nodes || {})) allowed.add(name);
     const scripts = [];
     const violations = [];
     const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName)
@@ -673,7 +723,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const reject = (message) => {
       if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
     };
-    const projectFile = (path) => state.files.find((candidate) => candidate.path === path);
+    const projectFile = (path) => previewState.files.find((candidate) => candidate.path === path);
     const resolveModulePath = (from, specifier) => {
       const parts = from.split("/");
       parts.pop();
@@ -721,6 +771,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         : script.textContent });
     }
     const fragment = document.createDocumentFragment();
+    const projectedAttributes = new WeakMap();
     function copy(node, parent) {
       if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -728,7 +779,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       const structural = structuralElement(node);
       if (!allowed.has(name) || structural) {
         if (!structural) {
-          reject(`<${name}> was omitted because the ${state.config?.container || "selected"} container schema does not allow it.`);
+          reject(`<${name}> was omitted because the ${previewState.config?.container || "selected"} container schema does not allow it.`);
           return;
         }
         if (["html", "body"].includes(name)) {
@@ -749,12 +800,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       }
       if (name === "a" && node.getAttribute("href")) {
         const href = node.getAttribute("href");
-        const patterns = state.config?.containerOptions?.allowedLinkPatterns || state.config?.container?.allowedLinkPatterns || [];
+        const patterns = previewState.config?.containerOptions?.allowedLinkPatterns || previewState.config?.container?.allowedLinkPatterns || [];
         if (urlMatchesAllowedPatterns(href, patterns)) {
-          element.setAttribute("href", href);
+          const attributes = [["href", href]];
           const authoredTarget = node.getAttribute("target");
-          if (authoredTarget) element.setAttribute("target", authoredTarget);
-          else if ((state.config?.containerOptions?.links || state.config?.container?.links)?.addTargetBlank !== false) element.setAttribute("target", "_blank");
+          if (authoredTarget) attributes.push(["target", authoredTarget]);
+          else if ((previewState.config?.containerOptions?.links || previewState.config?.container?.links)?.addTargetBlank !== false) attributes.push(["target", "_blank"]);
+          projectedAttributes.set(element, attributes);
         } else {
           reject(`The href for ${href} was omitted because it is outside the allowed URL patterns.`);
         }
@@ -771,32 +823,43 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     for (const child of parsed.body.childNodes) copy(child, fragment);
     const staging = document.createElement("div");
     staging.append(fragment);
-    const serializeOutputNode = (node) => node.nodeType === Node.TEXT_NODE ? [0, node.textContent] : [
-      1, node.localName, node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
-      [...node.attributes].map((attribute) => [attribute.name, attribute.value]),
-      [...node.childNodes].map(serializeOutputNode),
-    ];
-    const outputTree = [...staging.childNodes].map(serializeOutputNode);
-    const stylesheetPaths = state.config?.stylesheets || [...parsed.querySelectorAll('link[rel="stylesheet"][href]')]
-      .map((link) => link.getAttribute("href").replace(/^\.\//, ""));
-    const css = [
-      ...parsed.querySelectorAll("style"),
-      ...stylesheetPaths.map((path) => state.files.find((file) => file.path === path)).filter(Boolean),
-    ].map((item) => item.content ?? item.textContent ?? "").join("\n");
-    let renderedCss = "";
-    if (css) {
-      try {
-        new StyleUse(state.config?.cssSchema || { imports: false, urls: false }).validateStylesheet(css);
-        renderedCss = css;
-        if (!useOutputFrame) {
-          const style = document.createElement("style");
-          style.textContent = `:host { display: block; min-height: 100%; }\n${css}`;
-          surfaceRoot.append(style);
-        }
-      } catch (error) {
-        reject(`Stylesheet was omitted: ${error.message}`);
+    const serializeOutputNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) return [0, node.textContent];
+      const attributes = [];
+      for (let index = 0; index < node.attributes.length; index++) {
+        const attribute = node.attributes[index];
+        attributes.push([attribute.name, attribute.value]);
+      }
+      for (const attribute of projectedAttributes.get(node) || []) attributes.push(attribute);
+      const children = [];
+      for (let index = 0; index < node.childNodes.length; index++) {
+        children.push(serializeOutputNode(node.childNodes[index]));
+      }
+      return [1, node.localName, node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
+        attributes, children];
+    };
+    const outputTree = [];
+    for (let index = 0; index < staging.childNodes.length; index++) {
+      outputTree.push(serializeOutputNode(staging.childNodes[index]));
+    }
+    let stylesheetPaths = previewState.config?.stylesheets;
+    if (!stylesheetPaths) {
+      stylesheetPaths = [];
+      const links = parsed.querySelectorAll('link[rel="stylesheet"][href]');
+      for (let index = 0; index < links.length; index++) {
+        stylesheetPaths.push(links[index].getAttribute("href").replace(/^\.\//, ""));
       }
     }
+    const styles = parsed.querySelectorAll("style");
+    const cssParts = [];
+    for (let index = 0; index < styles.length; index++) cssParts.push(styles[index].textContent || "");
+    for (const path of stylesheetPaths) {
+      const file = previewState.files.find((candidate) => candidate.path === path);
+      if (file) cssParts.push(file.content || "");
+    }
+    const css = cssParts.join("\n");
+    let renderedCss = "";
+    if (css) renderedCss = css;
     let stagedRoot = "";
     if (useOutputFrame) {
       await new Promise((resolve) => {
@@ -817,21 +880,25 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       if (generation !== previewGeneration) return;
       surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
       if (!surfaceBody) throw new Error("Project output frame root is unavailable");
-    } else {
-      surfaceBody.append(...staging.childNodes);
     }
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
       if (generation !== previewGeneration) return;
       try {
-        editorController?.projectOutput.request(generation);
+        const allowedTags = [];
+        allowed.forEach((tag) => {
+          if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
+        });
         const controller = await mountResourcesProjectPreview({
-          root: surfaceBody, statusRoot: preview, scripts: useOutputFrame ? [] : scripts, violations, tags: [...allowed].filter((tag) => !["html", "head", "body", "meta", "link", "script", "style"].includes(tag)),
-          files: state.files,
-          allowedFetchOrigins: state.config?.containerOptions?.allowedFetchOrigins
-            || state.config?.capabilities?.fetch?.resources || [],
+          rootKey: String(generation),
+          root: surfaceBody, statusRoot: preview, scripts: [], violations,
+          tags: allowedTags,
+          files: previewState.files,
+          allowedFetchOrigins: previewState.config?.containerOptions?.allowedFetchOrigins
+            || previewState.config?.capabilities?.fetch?.resources || [],
+          allowedLinkPatterns: previewState.config?.containerOptions?.allowedLinkPatterns || [],
           allowNavigate: (value) => urlMatchesAllowedPatterns(value,
-            state.config?.containerOptions?.allowedLinkPatterns || []),
+            previewState.config?.containerOptions?.allowedLinkPatterns || []),
           environment: { language: document.documentElement.lang || "en" },
           onViolation(error) {
             if (generation !== previewGeneration) return;
@@ -844,6 +911,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           if (useOutputFrame) {
             controller.setContent(outputTree);
             await controller.run(scripts);
+          } else {
+            await controller.load({ tree: outputTree,
+              stylesheets: renderedCss ? [renderedCss] : [], scripts });
+          }
+          if (useOutputFrame) {
             await new Promise((resolve) => {
               const receive = (event) => {
                 if (event.data?.type !== "committed" || event.data.generation !== generation) return;
@@ -859,6 +931,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           }
           previewController?.destroy();
           previewController = controller;
+          root.dataset.outputMachineState = "ready";
           delete preview.dataset.previewViolations;
           delete preview.dataset.canvasCommands;
           const inspection = controller.inspect?.();
@@ -867,6 +940,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
           preview.dataset.projectPrograms = String(inspection?.programs || 0);
         }
       } catch (error) {
+        if (generation === previewGeneration) root.dataset.outputMachineState = "failed";
         setStatus(`Blocked: ${error.message}`, true, null, "output");
         queueMicrotask(() => {
           if (generation === previewGeneration) routeProjectStatus(generation, { type: "blocked", message: error.message });
@@ -910,6 +984,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     try {
       const controller = await mountResourcesProjectEditor({
         root: editorMount,
+        limits: false,
         onChange: receiveEditorChange,
         onViolation(error) {
           setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
@@ -920,17 +995,23 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         return;
       }
       editorController = controller;
-      editorController.setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
-      root.dataset.editorMachineId = controller.inspect().machine.machineId;
+      root.dataset.editorMachineStage = "theme";
+      syncOutputTheme();
+      root.dataset.editorMachineStage = "snapshot";
+      editorController.setSnapshot(state);
+      root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
       root.dataset.editorMachineState = "ready";
+      root.dataset.editorMachineStage = "history";
       if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);
       ready = true;
+      root.dataset.editorMachineStage = "content";
       sendContent();
+      root.dataset.editorMachineStage = "ready";
       if (!previewController) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
-      root.dataset.editorMachineError = error.message;
+      root.dataset.editorMachineError = error.stack || error.message;
       setStatus(`Editor failed to start: ${error.message}`, true, null, "editor");
     }
   }
@@ -944,9 +1025,10 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const menu = root.querySelector("[data-project-file-options]");
     const tabs = root.querySelector("[data-project-tabs]");
     const available = new Set([...state.files.map((file) => file.path), "config"]);
+    const selectedAvailable = typeof selected === "string" && available.has(selected);
     openTabs = openTabs.filter((path, index) => available.has(path) && openTabs.indexOf(path) === index);
-    if (!openTabs.length) openTabs.push(available.has(selected) ? selected : [...available][0]);
-    if (!openTabs.includes(selected)) openTabs.push(selected);
+    if (!openTabs.length) openTabs.push(selectedAvailable ? selected : state.files[0]?.path || "config");
+    if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
     sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
     tabs.replaceChildren();
@@ -1071,8 +1153,8 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     undo.type = "button";
     undo.textContent = root.dataset.undoLabel || "Undo";
     undo.addEventListener("click", () => {
-      clearNotice();
       applyTemplateSnapshot(previousSnapshot, { notice: false });
+      clearNotice();
     }, { once: true });
     statusNotice.append(undo);
     renderStatusState();
@@ -1106,6 +1188,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     showCurrentVersion();
     viewingHistorical = false;
     state = normalized;
+    editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
     currentSnapshot = state;
     snapshotField.value = JSON.stringify(state);
@@ -1328,15 +1411,27 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
         // Keep the current output alive while the user is typing. Rebuilding
         // its DOM and QuickJS machine is intentionally a trailing-edge task.
         const debounceMs = Math.min(5_000, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
-        editorPreviewTimer = setTimeout(renderPreview, debounceMs);
+        if (root.dataset.outputOwner !== "editor") editorPreviewTimer = setTimeout(renderPreview, debounceMs);
       }
     } catch {}
   }
   function selectProjectFile(event) {
-    const file = event.target.closest("[data-project-file]");
-    if (file) selected = file.dataset.projectFile;
-    else if (event.target.closest("[data-project-config]")) selected = "config";
-    else return;
+    let target = event.target;
+    let next = "";
+    while (target && target !== fileMenu) {
+      const path = target.getAttribute?.("data-project-file");
+      if (path !== null && path !== undefined) {
+        next = path;
+        break;
+      }
+      if (target.hasAttribute?.("data-project-config")) {
+        next = "config";
+        break;
+      }
+      target = target.parentElement;
+    }
+    if (!next) return;
+    selected = next;
     if (!openTabs.includes(selected)) openTabs.push(selected);
     renderTabs();
     sendContent();
@@ -1408,7 +1503,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
   const fileTriggerIcon = fileTrigger.querySelector("svg");
   fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
-  fileTriggerIcon.innerHTML = '<path d="M7 4h12v14H7zM4 7v14h12"/><path d="M10 8h6M10 11h6M10 14h4"/>';
+  for (const d of ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    fileTriggerIcon.append(path);
+  }
   const fileTriggerArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   fileTriggerArrow.classList.add("project-editor__file-arrow");
   fileTriggerArrow.setAttribute("viewBox", "0 0 12 12");
@@ -1416,7 +1515,9 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   fileTriggerArrow.setAttribute("stroke", "currentColor");
   fileTriggerArrow.setAttribute("stroke-width", "1.5");
   fileTriggerArrow.setAttribute("aria-hidden", "true");
-  fileTriggerArrow.innerHTML = '<path d="m2 4 4 4 4-4"/>';
+  const fileTriggerArrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  fileTriggerArrowPath.setAttribute("d", "m2 4 4 4 4-4");
+  fileTriggerArrow.append(fileTriggerArrowPath);
   fileTrigger.append(fileTriggerArrow);
   const fileMenu = root.querySelector("[data-project-file-menu]");
   const fileFilter = root.querySelector("[data-project-file-filter]");
@@ -1424,11 +1525,11 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   fileFilter.setAttribute("aria-label", "Filter files");
   const fileEmpty = root.querySelector("[data-project-file-empty]");
   function filterProjectFiles() {
-    const query = fileFilter.value.trim().toLocaleLowerCase();
+    const query = fileFilter.value.trim().toLowerCase();
     let visible = 0;
     for (const option of fileMenu.querySelectorAll('[role="menuitemradio"]')) {
       const row = option.closest(".project-editor__file-option-row");
-      row.hidden = Boolean(query && !option.textContent.toLocaleLowerCase().includes(query));
+      row.hidden = Boolean(query && !option.textContent.toLowerCase().includes(query));
       if (!row.hidden) visible += 1;
     }
     for (const group of fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")) {
@@ -1512,21 +1613,13 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   root.querySelector("[data-project-export]").addEventListener("click", () => {
     closeEditorOverflow();
     try {
-      const bytes = encodeProjectArchive(state);
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
       const projectName = String(root.closest("form")?.elements?.namedItem("slug")?.value || root.dataset.projectSlug || "").trim();
-      link.download = projectArchiveFilename(projectName);
-      link.click();
-      URL.revokeObjectURL(link.href);
+      downloadProjectArchive(state, projectName);
     } catch (error) { setStatus(error.message, "error"); }
   });
   archiveInput.addEventListener("change", async () => {
     try {
-      const file = archiveInput.files[0];
-      if (!file) return;
-      if (file.size > 50 * 1024 * 1024) throw new Error("Archive exceeds 50 MB");
-      const imported = normalizeProjectSnapshot(await decodeProjectArchive(await file.arrayBuffer()));
+      const imported = normalizeProjectSnapshot(await importProjectArchive());
       selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
       updateSnapshot(imported, { destructive: true });
       if (template) template.value = imported.config.template || "blank";
@@ -1661,7 +1754,12 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   const form = root.closest("form") || document.querySelector("[data-project-fields]");
   const template = form?.querySelector("[data-project-template]");
   const linkPatterns = form?.querySelector("#project-link-patterns");
-  if (template && !template.querySelector('option[value="slides"]')) template.add(new Option("Presentation", "slides", false, false));
+  if (template && !template.querySelector('option[value="slides"]')) {
+    const option = document.createElement("option");
+    option.setAttribute("value", "slides");
+    option.textContent = "Presentation";
+    template.append(option);
+  }
   function growTextarea(textarea) {
     if (!textarea) return;
     const replica = textarea.closest("[data-autogrow-replica]");
@@ -1713,7 +1811,7 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
     const next = STARTING_POINTS[template.value];
     if (!next) return;
     if (memoryOnly && (location.pathname === "/try" || location.pathname.startsWith("/try/"))) {
-      history.replaceState(history.state, "", `/try/${encodeURIComponent(template.value)}`);
+      replaceFrontendPath(`/try/${encodeURIComponent(template.value)}`);
     }
     if (pending) {
       if (templateOnlyPending) {
@@ -1758,21 +1856,32 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
       : `${buttonRect.bottom + gap}px`;
     historyPanel.style.maxHeight = `${availableHeight}px`;
   }
-  versionButton.addEventListener("click", async () => {
+  const openVersionHistory = () => {
     if (!historyPanel.hidden) {
       closeHistory();
       return;
     }
-    versionButton.dispatchEvent(new Event("instanttooltiphide"));
+    versionButton._hideInstantTooltip?.();
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
     if (readOnly) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
+      positionHistory();
+    } else if (draft || memoryOnly) {
+      renderDraftVersions();
+      positionHistory();
     } else {
-      await ((draft || memoryOnly) ? renderDraftVersions() : renderStoredVersions());
+      renderStoredVersions().then(positionHistory).catch((error) => {
+        versionList.textContent = `Version history unavailable: ${error.message}`;
+        positionHistory();
+      });
     }
-    positionHistory();
-  });
+  };
+  versionButton.addEventListener("click", openVersionHistory);
+  // This listener is registered after asynchronous project initialization.
+  // A synchronous read provides the bridge boundary that publishes it before
+  // control returns to the browser.
+  versionButton.getBoundingClientRect();
   historyPanel.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
   document.addEventListener("pointerdown", (event) => {
     if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
@@ -1790,11 +1899,15 @@ for (const root of document.querySelectorAll("[data-project-editor]")) {
   if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
   addEventListener("pagehide", () => {
     historyPanel.remove();
-    document.removeEventListener("themechange", syncOutputTheme);
     editorGeneration += 1;
     editorController?.destroy();
     disposeProjectMachine();
   }, { once: true });
+}
+
+for (const root of document.querySelectorAll("[data-project-editor]")) {
+  mountProjectRoot(root).catch((error) => globalThis.__wwcReportError?.(
+    error?.stack || error?.message || String(error)));
 }
 
 for (const figure of document.querySelectorAll(".blog-example-block")) {
