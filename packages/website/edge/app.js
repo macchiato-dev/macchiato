@@ -156,8 +156,8 @@ function applySignupPolicy(html, pathname, messages, signupsEnabled) {
   return html;
 }
 
-function renderSessionHtml(html, session, messages, options, contentFormVersion = "") {
-  const controllerSrc = `/-/resources-site/controller.js${contentFormVersion ? `?v=${contentFormVersion}` : ""}`;
+function renderSessionHtml(html, session, messages, options, controllerVersion = "") {
+  const controllerSrc = `/-/resources-site/controller.js${controllerVersion ? `?v=${controllerVersion}` : ""}`;
   return html
     .replace(/<aside class="box userbar edge-status(?: toolbar--cardless)?"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
     .replace("</body>", `<script type="module" src="${controllerSrc}"></script></body>`);
@@ -343,8 +343,7 @@ function publicProjectsHtml(projects, messages) {
 export function renderFastAnonymousHome(html, messages, {
   locale = "en",
   signupsEnabled = true,
-  contentFormVersion = "",
-  publicProjectsVersion = "",
+  controllerVersion = "",
 } = {}) {
   if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error("Fast home public-project marker is missing");
   const withProjects = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml([], messages));
@@ -354,7 +353,7 @@ export function renderFastAnonymousHome(html, messages, {
     pathname: "/",
     focused: false,
     signupsEnabled,
-  }, contentFormVersion);
+  }, controllerVersion);
 }
 
 function namespaceProjectsHtml(namespace, messages) {
@@ -516,7 +515,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       }
       if (key.startsWith("locales/") && key.endsWith(".html")) headers.set("content-language", locale);
       let body = request.method === "HEAD" ? null : upstream.body;
-      const contentFormVersion = manifest.artifacts.get("-/resources-site/content-form.js")?.sha256.slice(0, 12) || "";
+      const controllerVersion = manifest.artifacts.get("-/resources-site/controller.js")?.sha256.slice(0, 12) || "";
       const editorVersion = manifest.artifacts.get("-/blog-examples/markdown-editor/app.js")?.sha256.slice(0, 12) || "";
       if (key === "-/blog-examples/markdown-editor/index.html" && request.method !== "HEAD") {
         const editorHtml = await upstream.text();
@@ -568,7 +567,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
         const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
         const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, contentFormVersion);
+        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

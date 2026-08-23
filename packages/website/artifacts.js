@@ -12,7 +12,6 @@ import { styleUseBrowserAssets } from "@macchiato-dev/style-use/browser-assets";
 import { renderFastAnonymousHome } from "./edge/app.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
-const hubSourceDirectory = join(directory, "..", "hub", "src");
 const fontDirectory = join(directory, "..", "..", "examples", "resources-website", "assets", "fonts");
 const vtvExampleDirectory = join(directory, "blog-examples", "vtv", "dist");
 const markdownEditorExampleDirectory = join(directory, "blog-examples", "markdown-editor", "dist");
@@ -66,18 +65,9 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
       files.set(`/-/${set.namespace}/${asset.publicPath}`, bytes(readFileSync(asset.filePath)));
     }
   }
-  const editorGuest = bytes(readFileSync(join(generatedDirectory, "project-editor-guest.js")));
   const projectRuntime = bytes(readFileSync(join(generatedDirectory, "project-quickjs-runtime.wasm")));
   const projectBuilder = bytes(readFileSync(join(generatedDirectory, "project-builder-quickjs-runtime.wasm")));
   const editorMachine = bytes(readFileSync(join(generatedDirectory, "project-editor-quickjs-runtime.wasm")));
-  const editorRuntime = bytes(readFileSync(join(generatedDirectory, "project-editor-runtime.js"), "utf8")
-    .replaceAll("/-/resources-site/project-quickjs-runtime.wasm", `/-/resources-site/project-quickjs-runtime.wasm?v=${version(projectRuntime)}`)
-    .replace("/-/resources-site/project-builder-quickjs-runtime.wasm", `/-/resources-site/project-builder-quickjs-runtime.wasm?v=${version(projectBuilder)}`)
-    .replace("/-/resources-site/project-editor-quickjs-runtime.wasm", `/-/resources-site/project-editor-quickjs-runtime.wasm?v=${version(editorMachine)}`));
-  const containerElements = bytes(readFileSync(join(hubSourceDirectory, "container-elements.js")));
-  const projectArchive = bytes(readFileSync(join(hubSourceDirectory, "project-archive.js")));
-  const projectHistory = bytes(readFileSync(join(hubSourceDirectory, "project-history.js")));
-  const urlPattern = bytes(readFileSync(join(hubSourceDirectory, "url-pattern.js")));
   const frontendMachine = bytes(readFileSync(join(generatedDirectory, "resources-frontend-microquickjs.wasm")));
   const browserMachine = bytes(readFileSync(join(directory, "frontend", "machine.js")));
   files.set("/-/resources-site/machine.js", browserMachine);
@@ -85,39 +75,17 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     .replace("/-/resources-site/resources-frontend-microquickjs.wasm",
       `/-/resources-site/resources-frontend-microquickjs.wasm?v=${version(frontendMachine)}`));
   files.set("/-/resources-site/controller.js", machineController);
-  const projectHtmlParser = bytes(readFileSync(join(directory, "project-html-parser.js")));
-  const contentForm = bytes(readFileSync(join(directory, "content-form-client.js"), "utf8")
-    .replace("/-/resources-site/project-editor-runtime.js",
-      `/-/resources-site/project-editor-runtime.js?v=${version(editorRuntime)}`)
-    .replace("./project-html-parser.js", `./project-html-parser.js?v=${version(projectHtmlParser)}`)
-    .replace("/-/resources-site/project-history.js", `/-/resources-site/project-history.js?v=${version(projectHistory)}`)
-    .replace("/-/resources-site/url-pattern.js", `/-/resources-site/url-pattern.js?v=${version(urlPattern)}`)
-    .replace("/-/resources-site/container-elements.js", `/-/resources-site/container-elements.js?v=${version(containerElements)}`)
-    .replace("/-/resources-site/project-archive.js", `/-/resources-site/project-archive.js?v=${version(projectArchive)}`)
-    + `\n// Resources controller ${version(machineController)}\n`);
-  files.set("/-/resources-site/content-form.js", contentForm);
-  files.set("/-/resources-site/project-html-parser.js", projectHtmlParser);
   files.set("/-/resources-site/resources-frontend-microquickjs.wasm", frontendMachine);
   files.set("/-/resources-site/project-output-frame.html", bytes(readFileSync(join(directory, "project-output-frame.html"))));
-  files.set("/-/resources-site/project-output-frame.js", bytes(readFileSync(join(directory, "project-output-frame.js"))));
-  files.set("/-/resources-site/project-editor-runtime.js", editorRuntime);
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-builder-quickjs-runtime.wasm", projectBuilder);
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);
-  files.set("/-/resources-site/project-history.js", projectHistory);
-  files.set("/-/resources-site/url-pattern.js", urlPattern);
-  files.set("/-/resources-site/container-elements.js", containerElements);
-  files.set("/-/resources-site/project-archive.js", projectArchive);
-  files.set("/-/resources-site/public-projects.js", bytes(readFileSync(join(directory, "public-projects-client.js"))));
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));
     }
   }
-  // One page generation selects a matching controller and project workspace
-  // graph. The content-form digest includes the controller digest above.
-  const contentFormVersion = version(files.get("/-/resources-site/content-form.js"));
-  const publicProjectsVersion = version(files.get("/-/resources-site/public-projects.js"));
+  const controllerVersion = version(files.get("/-/resources-site/controller.js"));
   for (const locale of RESOURCE_LOCALES) {
     const home = new TextDecoder().decode(files.get(`/locales/${locale}/index.html`));
     for (const signupsEnabled of [true, false]) {
@@ -125,7 +93,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
       files.set(`/fast/locales/${locale}/home-${state}.html`, bytes(renderFastAnonymousHome(
         home,
         messages[locale],
-        { locale, signupsEnabled, contentFormVersion, publicProjectsVersion },
+        { locale, signupsEnabled, controllerVersion },
       )));
     }
   }

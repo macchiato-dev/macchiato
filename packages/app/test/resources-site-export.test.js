@@ -25,10 +25,9 @@ test("exports resources site as static files", async (t) => {
   const archivedPost = await readFile(join(out, "locales", "en", "blog", "a-markdown-based-code-playground", "index.html"), "utf8");
   const visualEditorPost = await readFile(join(out, "locales", "en", "blog", "building-a-visual-json-editor-part-3", "index.html"), "utf8");
   const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8"));
-  const contentForm = await readFile(join(out, "-", "resources-site", "controller.js"), "utf8");
+  const controller = await readFile(join(out, "-", "resources-site", "controller.js"), "utf8");
   const browserMachine = await stat(join(out, "-", "resources-site", "machine.js"));
-  const editorRuntime = await readFile(join(out, "-", "resources-site", "project-editor-runtime.js"), "utf8");
-  const font = await stat(join(out, "-", "fonts", "resourcesco-space-grotesk", "space-grotesk-latin.woff2"));
+  const outputFrame = await readFile(join(out, "-", "resources-site", "project-output-frame.html"), "utf8");
   const fastHome = await readFile(join(out, "fast", "locales", "en", "home-open.html"), "utf8");
   const fastClosedHome = await readFile(join(out, "fast", "locales", "en", "home-closed.html"), "utf8");
 
@@ -53,8 +52,13 @@ test("exports resources site as static files", async (t) => {
   assert.doesNotMatch(fastHome, /__RESOURCES_PUBLIC_PROJECTS__/);
   assert.match(fastHome, /href="\/signup"/);
   assert.doesNotMatch(fastClosedHome, /href="\/signup"/);
-  assert.match(contentForm, /import WasmWebMachine\w* from "\.\/machine\.js"/);
-  assert.match(editorRuntime, /project-editor-quickjs-runtime\.wasm\?v=[a-f0-9]{12}/);
+  assert.match(controller, /import WasmWebMachine\w* from "\.\/machine\.js"/);
+  assert.deepEqual(
+    manifest.files.filter((path) => /^\/-\/resources-site\/.*\.js$/.test(path)),
+    ["/-/resources-site/machine.js", "/-/resources-site/controller.js"],
+  );
+  assert.doesNotMatch(outputFrame, /<script[^>]+src=/);
+  assert.match(outputFrame, /resources-project-output-frame-v1/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);
@@ -82,6 +86,5 @@ test("exports resources site as static files", async (t) => {
   assert.doesNotMatch(home, /class="box userbar"|class="box menu"/);
   assert.match(home, /"mode":"document"/);
   assert.equal(manifest.routes.includes("/macchiato/app"), true);
-  assert.equal(font.isFile(), true);
   assert.equal(browserMachine.isFile(), true);
 });
