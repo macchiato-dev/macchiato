@@ -1,19 +1,23 @@
 import { basicSetup } from "codemirror";
-import { javascript } from "@codemirror/lang-javascript";
-import { css } from "@codemirror/lang-css";
-import { html } from "@codemirror/lang-html";
-import { json } from "@codemirror/lang-json";
-import { markdown } from "@codemirror/lang-markdown";
+import * as autocompleteModule from "@codemirror/autocomplete";
+import * as languageModule from "@codemirror/language";
+import * as stateModule from "@codemirror/state";
+import * as viewModule from "@codemirror/view";
+import * as lezerCommonModule from "@lezer/common";
+import * as lezerHighlightModule from "@lezer/highlight";
+import * as lezerLrModule from "@lezer/lr";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { historyField, redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { hasSyntaxErrors } from "./syntax.js";
 import { createSourceEnvelopeExtension, sourceUsage } from "./source-envelope.js";
+
+const isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 &&
+  value <= 2147483647 && (value | 0) === value;
 
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -23,38 +27,35 @@ const parent = document.getElementById("editor");
 const editorSetup = new Compartment();
 const language = new Compartment();
 const editability = new Compartment();
-const appearance = new Compartment();
-const darkNativeSelectionTheme = EditorView.theme({
-  ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#3e526f !important" },
+const editorTheme = EditorView.theme({
+  "&": { color: "var(--resources-editor-fg)",
+    backgroundColor: "var(--resources-editor-bg)" },
+  ".cm-content": { caretColor: "var(--resources-editor-caret)" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--resources-editor-caret)" },
+  ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": {
+    backgroundColor: "var(--resources-editor-selection) !important" },
+  ".cm-activeLine": { backgroundColor: "var(--resources-editor-active)" },
+  ".cm-gutters": { color: "var(--resources-editor-gutter-fg)",
+    backgroundColor: "var(--resources-editor-gutter-bg)",
+    borderRightColor: "var(--resources-editor-border)" },
+  ".cm-activeLineGutter": { color: "var(--resources-editor-fg)",
+    backgroundColor: "var(--resources-editor-active)" },
+  ".cm-panels, .cm-tooltip": { color: "var(--resources-editor-fg)",
+    backgroundColor: "var(--resources-editor-panel)" },
 });
-const lightEditorTheme = EditorView.theme({
-  "&": { color: "#263338", backgroundColor: "#d9e1e3" },
-  ".cm-content": { caretColor: "#1f5268" },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#1f5268" },
-  ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": { backgroundColor: "#d7d4f0 !important" },
-  ".cm-activeLine": { backgroundColor: "#cedadd" },
-  ".cm-gutters": { color: "#66777e", backgroundColor: "#cbd6d9", borderRightColor: "#aebec3" },
-  ".cm-activeLineGutter": { color: "#25363d", backgroundColor: "#becdd1" },
-  ".cm-panels, .cm-tooltip": { color: "#263338", backgroundColor: "#d2dcdf" },
-}, { dark: false });
-const lightHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: "#6c3d82" },
-  { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "#265d73" },
-  { tag: [tags.function(tags.variableName), tags.labelName], color: "#7a4b22" },
-  { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: "#765b12" },
-  { tag: [tags.definition(tags.name), tags.separator], color: "#304f66" },
-  { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: "#875025" },
-  { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: "#3b6b64" },
-  { tag: [tags.meta, tags.comment], color: "#63747a", fontStyle: "italic" },
-  { tag: tags.string, color: "#43682e" },
-  { tag: tags.invalid, color: "#a12c36" },
+const editorHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: "var(--resources-editor-keyword)" },
+  { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "var(--resources-editor-name)" },
+  { tag: [tags.function(tags.variableName), tags.labelName], color: "var(--resources-editor-function)" },
+  { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: "var(--resources-editor-constant)" },
+  { tag: [tags.definition(tags.name), tags.separator], color: "var(--resources-editor-definition)" },
+  { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: "var(--resources-editor-type)" },
+  { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: "var(--resources-editor-operator)" },
+  { tag: [tags.meta, tags.comment], color: "var(--resources-editor-comment)", fontStyle: "italic" },
+  { tag: tags.string, color: "var(--resources-editor-string)" },
+  { tag: tags.invalid, color: "var(--resources-editor-invalid)" },
 ]);
 let currentTheme = "dark";
-function appearanceExtension() {
-  return currentTheme === "light"
-    ? [lightEditorTheme, syntaxHighlighting(lightHighlightStyle)]
-    : [oneDark, darkNativeSelectionTheme];
-}
 let applyingHostContent = false;
 let resetHistoryOnNextEdit = false;
 let currentLanguage = "javascript";
@@ -67,6 +68,12 @@ let documentLimits = {
 };
 function documentUsage(doc) {
   const usage = sourceUsage(doc.toString());
+  if (!documentLimits) return {
+    characters: doc.length,
+    lines: doc.lines,
+    codePoints: usage.codePoints,
+    longestLineCodePoints: usage.longestLineCodePoints,
+  };
   return {
     characters: doc.length,
     lines: doc.lines,
@@ -87,13 +94,34 @@ const sourceEnvelope = createSourceEnvelopeExtension({
   }));
   },
 });
+const dynamicLanguageFactories = Object.create(null);
+const codeMirrorModules = Object.freeze({
+  "@codemirror/autocomplete": autocompleteModule,
+  "@codemirror/language": languageModule,
+  "@codemirror/state": stateModule,
+  "@codemirror/view": viewModule,
+  "@lezer/common": lezerCommonModule,
+  "@lezer/highlight": lezerHighlightModule,
+  "@lezer/lr": lezerLrModule,
+});
+globalThis.__codeMirrorRequire = (name) => {
+  if (!Object.hasOwn(codeMirrorModules, name)) throw new Error(`CodeMirror language dependency is unavailable: ${name}`);
+  return codeMirrorModules[name];
+};
+globalThis.__codeEditorRegisterLanguage = (name, factory) => {
+  if (typeof name !== "string" || typeof factory !== "function") throw new TypeError("Invalid CodeMirror language module");
+  dynamicLanguageFactories[name] = factory;
+};
+const languageCache = new Map();
+function loadedLanguage(name) {
+  const factory = dynamicLanguageFactories[name];
+  if (!factory) return [];
+  if (!languageCache.has(name)) languageCache.set(name, factory());
+  return languageCache.get(name);
+}
+globalThis.__codeEditorLoadedLanguage = loadedLanguage;
 function languageExtension(name) {
-  if (name === "javascript") return javascript();
-  if (name === "html") return html();
-  if (name === "css") return css();
-  if (name === "json") return json();
-  if (name === "markdown") return markdown();
-  return [];
+  return loadedLanguage(name);
 }
 function editorExtensions() {
   return [
@@ -103,7 +131,8 @@ function editorExtensions() {
       EditorState.readOnly.of(currentReadOnly),
       EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
     ]),
-    appearance.of(appearanceExtension()),
+    editorTheme,
+    syntaxHighlighting(editorHighlightStyle),
     EditorView.lineWrapping,
     sourceEnvelope,
     EditorView.updateListener.of((update) => {
@@ -224,6 +253,7 @@ globalThis.__codeEditorInspect = () => {
     viewport: { from: view.viewport.from, to: view.viewport.to },
     usage: documentUsage(view.state.doc),
     limits: documentLimits,
+    language: currentLanguage,
   });
 };
 globalThis.__codeEditorSerialize = (json) => {
@@ -250,8 +280,8 @@ globalThis.__codeEditorRestore = (json) => {
   const state = JSON.parse(json);
   if (!state || typeof state.doc !== "string") throw new TypeError("Serialized editor state is invalid");
   const usage = sourceUsage(state.doc);
-  if (usage.lines > documentLimits.maxLines || usage.codePoints > documentLimits.maxCodePoints ||
-      documentLimits.maxLineCodePoints !== null && usage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
+  if (documentLimits && (usage.lines > documentLimits.maxLines || usage.codePoints > documentLimits.maxCodePoints ||
+      documentLimits.maxLineCodePoints !== null && usage.longestLineCodePoints > documentLimits.maxLineCodePoints)) {
     throw new RangeError("Serialized editor state exceeds the document budget");
   }
   const restored = EditorState.fromJSON(state, { extensions: editorExtensions() }, { history: historyField });
@@ -260,13 +290,18 @@ globalThis.__codeEditorRestore = (json) => {
 };
 globalThis.__codeEditorConfigureLimits = (json) => {
   const request = JSON.parse(json);
+  if (request === null) {
+    documentLimits = null;
+    const view = globalThis.__codeEditorView;
+    return JSON.stringify({ limits: null, ...(view ? documentUsage(view.state.doc) : { characters: 0, lines: 0 }) });
+  }
   for (const name of ["maxLines", "maxCharacters"]) {
-    if (!Number.isSafeInteger(request[name]) || request[name] < 1) throw new TypeError(`${name} must be a positive integer`);
+    if (!isSafeInteger(request[name]) || request[name] < 1) throw new TypeError(`${name} must be a positive integer`);
   }
   const maxCodePoints = request.maxCodePoints ?? request.maxCharacters;
   const maxLineCodePoints = request.maxLineCodePoints ?? null;
-  if (!Number.isSafeInteger(maxCodePoints) || maxCodePoints < 1) throw new TypeError("maxCodePoints must be a positive integer");
-  if (maxLineCodePoints !== null && (!Number.isSafeInteger(maxLineCodePoints) || maxLineCodePoints < 1)) {
+  if (!isSafeInteger(maxCodePoints) || maxCodePoints < 1) throw new TypeError("maxCodePoints must be a positive integer");
+  if (maxLineCodePoints !== null && (!isSafeInteger(maxLineCodePoints) || maxLineCodePoints < 1)) {
     throw new TypeError("maxLineCodePoints must be null or a positive integer");
   }
   documentLimits = Object.freeze({
@@ -281,8 +316,9 @@ globalThis.__codeEditorConfigureLimits = (json) => {
 globalThis.__codeEditorSetTheme = (json) => {
   const requested = JSON.parse(json).theme;
   if (!["dark", "light"].includes(requested)) throw new TypeError("Editor theme must be dark or light");
+  const view = globalThis.__codeEditorView;
+  if (requested === currentTheme) return JSON.stringify({ theme: currentTheme });
   currentTheme = requested;
-  globalThis.__codeEditorView?.dispatch({ effects: appearance.reconfigure(appearanceExtension()) });
   return JSON.stringify({ theme: currentTheme });
 };
 globalThis.__codeEditorSetContent = (json) => {
@@ -290,12 +326,13 @@ globalThis.__codeEditorSetContent = (json) => {
   if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
   const requestedLines = request.content.split("\n").length;
   const requestedUsage = sourceUsage(request.content);
-  if (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines ||
+  if (documentLimits && (request.content.length > documentLimits.maxCharacters || requestedLines > documentLimits.maxLines ||
       requestedUsage.codePoints > documentLimits.maxCodePoints ||
-      documentLimits.maxLineCodePoints !== null && requestedUsage.longestLineCodePoints > documentLimits.maxLineCodePoints) {
+      documentLimits.maxLineCodePoints !== null && requestedUsage.longestLineCodePoints > documentLimits.maxLineCodePoints)) {
     throw new RangeError(`Editor content exceeds its document budget (${requestedLines}/${documentLimits.maxLines} lines, ${request.content.length}/${documentLimits.maxCharacters} characters)`);
   }
   const languageChanged = currentLanguage !== request.language;
+  const readOnlyChanged = currentReadOnly !== (request.readOnly === true);
   currentLanguage = request.language;
   currentReadOnly = request.readOnly === true;
   if (!globalThis.__codeEditorView || languageChanged) {
@@ -305,18 +342,17 @@ globalThis.__codeEditorSetContent = (json) => {
     return JSON.stringify(documentUsage(view.state.doc));
   }
   const view = globalThis.__codeEditorView;
+  const effects = [];
+  if (readOnlyChanged) effects.push(editability.reconfigure([
+    EditorState.readOnly.of(currentReadOnly),
+    EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
+  ]));
   applyingHostContent = true;
   try {
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: request.content },
       selection: { anchor: 0 },
-      effects: [
-        language.reconfigure(languageExtension(request.language)),
-        editability.reconfigure([
-          EditorState.readOnly.of(request.readOnly === true),
-          EditorView.contentAttributes.of({ "aria-readonly": request.readOnly === true ? "true" : "false" }),
-        ]),
-      ],
+      effects,
     });
   } finally {
     applyingHostContent = false;

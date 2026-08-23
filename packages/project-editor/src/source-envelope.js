@@ -1,5 +1,8 @@
 import { EditorState } from "@codemirror/state";
 
+const isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 &&
+  value <= 2147483647 && (value | 0) === value;
+
 export const SOURCE_LIMITS = Object.freeze({
   maxCodePoints: 500 * 80 * 2,
   maxLineCodePoints: 256,
@@ -11,7 +14,7 @@ export function countCodePoints(value) {
 }
 
 export function hardWrapSource(value, width = SOURCE_LIMITS.maxLineCodePoints) {
-  if (!Number.isSafeInteger(width) || width < 1) throw new RangeError("width must be a positive integer");
+  if (!isSafeInteger(width) || width < 1) throw new RangeError("width must be a positive integer");
   let output = "";
   let column = 0;
   for (const character of value) {
@@ -66,8 +69,10 @@ export function createSourceEnvelopeExtension(options = {}) {
   const hardWrap = EditorState.transactionFilter.of((transaction) => {
     if (!transaction.docChanged || transaction.isUserEvent("input.paste") ||
         transaction.isUserEvent("input.drop")) return transaction;
-    const width = limitsForTransaction().maxLineCodePoints;
-    if (!Number.isSafeInteger(width)) return transaction;
+    const budget = limitsForTransaction();
+    if (!budget) return transaction;
+    const width = budget.maxLineCodePoints;
+    if (!isSafeInteger(width)) return transaction;
     const changes = hardBreakChanges(transaction.newDoc.toString(), width);
     return changes.length ? [transaction, { changes, sequential: true }] : transaction;
   });
@@ -75,10 +80,11 @@ export function createSourceEnvelopeExtension(options = {}) {
     if (!transaction.docChanged) return true;
     const usage = sourceUsage(transaction.newDoc.toString());
     const budget = limitsForTransaction();
+    if (!budget) return true;
     const atomicInput = transaction.isUserEvent("input.paste") || transaction.isUserEvent("input.drop");
     const accepted = usage.lines <= budget.maxLines &&
       usage.codePoints <= budget.maxCodePoints &&
-      (!atomicInput || !Number.isSafeInteger(budget.maxLineCodePoints) ||
+      (!atomicInput || !isSafeInteger(budget.maxLineCodePoints) ||
         usage.longestLineCodePoints <= budget.maxLineCodePoints);
     if (!accepted) onLimit({
       ...usage,
