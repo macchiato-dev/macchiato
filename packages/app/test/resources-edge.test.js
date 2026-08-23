@@ -29,6 +29,12 @@ test("standalone blog examples receive an opaque script-only document policy", (
   assert.equal(scriptHeaders.get("content-type"), "application/javascript; charset=utf-8");
 });
 
+test("Resources runtime assets are not cached while their protocol is changing", () => {
+  for (const path of ["controller.js", "machine.js", "project-editor-quickjs-runtime.wasm"]) {
+    assert.equal(publicResponseHeaders(`-/resources-site/${path}`).get("cache-control"), "no-store");
+  }
+});
+
 const manifest = {
   subdomain: "resources-co",
   generatedAt: "2026-07-21T00:00:00.000Z",
