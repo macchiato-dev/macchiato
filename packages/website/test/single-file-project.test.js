@@ -38,9 +38,12 @@ test("records exact constrained CDN fetch grants for the QuickJS runtime", () =>
 test("Mahjong keeps its improved game and artwork in portable project files", () => {
   const example = new URL("../../../examples/mahjong/", import.meta.url);
   const html = readFileSync(new URL("index.html", example), "utf8");
-  const source = readFileSync(new URL("mahjong.js", example), "utf8");
+  const model = readFileSync(new URL("game-model.js", example), "utf8");
+  const application = readFileSync(new URL("application.js", example), "utf8");
+  const source = `${model}\n${application}`;
   const css = readFileSync(new URL("style.css", example), "utf8");
-  assert.match(html, /src="\.\/mahjong\.js"/);
+  assert.match(html, /src="\.\/game-model\.js"/);
+  assert.match(html, /src="\.\/application\.js"/);
   assert.match(html, /href="\.\/style\.css"/);
   assert.match(source, /document\.createElement\(["']img["']\)/);
   assert.match(source, /response\.resourceUrl\(\)/);

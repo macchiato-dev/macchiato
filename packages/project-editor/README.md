@@ -135,3 +135,20 @@ The project editor should receive narrow capabilities for each responsibility.
 In particular, reading a file, editing a file, rendering a project, and changing
 project metadata are separate operations even when the interface presents them
 in one focused workspace.
+
+## Editor and output lifetimes
+
+Each open code editor should be able to run in its own JavaScript context with
+its own DOM device. This is the next architecture to test, rather than placing
+every tab's CodeMirror instance and references in one long-lived context. It
+makes an editor independently disposable, keeps its document and undo state
+local, and gives inactive tabs a clear suspension boundary. Multiple contexts
+may share a runtime machine where doing so reduces memory without coupling
+their globals or devices.
+
+Output runs in a separate project machine and is displayed in an iframe by
+default. The iframe is configurable: it is a presentation and browser-isolation
+boundary, while the machine and its granted devices remain the security
+boundary. The project editor owns the output lifecycle and can replace or
+refresh its context without disposing an editor context. A future non-iframe
+surface must be an explicit configuration, not an accidental fallback.

@@ -15,6 +15,16 @@ npm -v
 node -p "process.versions.sqlite"
 ```
 
+## JavaScript Modules and Working Files
+
+Use JavaScript modules throughout this repository. Use the `.js` extension,
+not `.mjs`; place standalone scripts beneath a directory whose `package.json`
+sets `"type": "module"`.
+
+Avoid using `/tmp` for working files and reusable diagnostics. Prefer a clearly
+named sibling directory beside the repository, such as `/root/macchiato-work`,
+with its own `package.json` when it contains standalone module scripts.
+
 ## Development History
 
 Commit at useful, coherent checkpoints often enough that meaningful
