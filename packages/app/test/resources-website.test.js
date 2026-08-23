@@ -585,7 +585,9 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   await page.getByRole("button", { name: "Output View" }).click();
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   assert.equal(await page.locator(".project-editor__source").isHidden(), true);
-  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.previewRuntime === "quickjs");
+  await page.waitForFunction(() =>
+    document.querySelector("[data-project-editor]")?.dataset.outputMachineState === "ready" &&
+    document.querySelector("[data-project-output-mount] iframe")?.contentDocument?.getElementById("project-output-a"));
   await page.getByRole("button", { name: "Details" }).click();
   assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), "details");
   assert.equal(await page.locator(".project-editor__workspace").isHidden(), true);

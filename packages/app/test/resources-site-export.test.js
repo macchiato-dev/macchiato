@@ -58,7 +58,8 @@ test("exports resources site as static files", async (t) => {
     ["/-/resources-site/machine.js", "/-/resources-site/controller.js"],
   );
   assert.doesNotMatch(outputFrame, /<script[^>]+src=/);
-  assert.match(outputFrame, /resources-project-output-frame-v1/);
+  assert.match(outputFrame, /id="project-output-a"/);
+  assert.doesNotMatch(outputFrame, /<script\b/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);

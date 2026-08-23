@@ -332,6 +332,12 @@ globalThis.__codeEditorSetTheme = (json) => {
   currentTheme = requested;
   return JSON.stringify({ theme: currentTheme });
 };
+globalThis.__codeEditorFocus = () => {
+  const view = globalThis.__codeEditorView;
+  if (!view) return JSON.stringify({ focused: false });
+  view.focus();
+  return JSON.stringify({ focused: true });
+};
 globalThis.__codeEditorSetContent = (json) => {
   const request = JSON.parse(json);
   if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
