@@ -151,4 +151,36 @@ default. The iframe is configurable: it is a presentation and browser-isolation
 boundary, while the machine and its granted devices remain the security
 boundary. The project editor owns the output lifecycle and can replace or
 refresh its context without disposing an editor context. A future non-iframe
-surface must be an explicit configuration, not an accidental fallback.
+surface must be an explicit configuration, not an accidental fallback. A
+project may request it with `config.output.iframe: false`; omission means the
+iframe-backed surface.
+
+## Guest-owned language loading
+
+CodeMirror language support belongs to the editor guest, not to the frontend
+controller. When a language is first needed, the guest should ask its runtime
+environment for an opaque resource, read the corresponding bytecode through a
+`Blob`- or `File`-like capability, and load it into its own JavaScript context.
+The controller only decides whether that resource capability is granted and
+passes it along; it does not select languages or interpret editor modules.
+
+The same environment lookup can return opaque references to sibling machines
+that the guest did not create. Those references convey only explicitly granted
+operations. They are preferable to ambient globals and keep machine ownership,
+resource access, and editor policy independently auditable. An environment hash
+can identify the exact resource/capability set used by a context without
+exposing its implementation.
+
+The current stamped runtime eagerly loads the language chunks needed by the
+project snapshot because MicroQuickJS closes its bytecode-loading gate after
+bootstrap. Replacing that temporary constraint with guest-initiated resource
+loading is the intended design.
+
+## Runtime build transformations
+
+Multi-memory WebAssembly is worth testing for runtime builds: interpreter state,
+guest resources or bytecode, and shared device buffers need not compete in one
+linear memory. A post-link transformation tool such as Walrus may be useful for
+adding or rewriting memories, imports, exports, data segments, and the custom
+sections used for stamped resources. This belongs in reproducible runtime build
+tooling and must not add corresponding logic to the browser controller.

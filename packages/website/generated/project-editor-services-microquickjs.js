@@ -2565,6 +2565,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       ready = true;
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "content");
                       sendContent();
+                      __resourcesDatasetSet(root, "data-editor-languages", editorController.inspect().registeredLanguages.join(","));
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "ready");
                       if (!previewController) renderPreview();
                       _context8.n = 6;
@@ -3172,6 +3173,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 readOnly: readOnly || selected === "config",
                 resetHistoryOnEdit: resetHistoryOnEdit
               });
+              var editorInspection = editorController.inspect();
+              __resourcesDatasetSet(root, "data-editor-language", editorInspection.language);
+              __resourcesDatasetSet(root, "data-editor-language-loaded", String(editorInspection.languageLoaded));
+              __resourcesDatasetSet(root, "data-editor-syntax-tree", editorInspection.syntaxTree);
               __resourcesDatasetDelete(root, "data-editor-loading");
             };
             language = function _language() {
@@ -3207,7 +3212,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               button.textContent = __resourcesDatasetGet(button, "data-default-label");
               var disabled = unsavedChangeCount === 0 && ((_workspacePayload2 = workspacePayload) == null ? void 0 : _workspacePayload2.hasUnpublishedChanges) !== true && !recoveredPendingSnapshot;
               button.disabled = disabled;
-              (_root$closest5 = root.closest("form")) == null || (_root$closest5 = _root$closest5.querySelector("[data-save-menu-trigger]")) == null || _root$closest5.toggleAttribute("disabled", disabled);
+              var menuTrigger = (_root$closest5 = root.closest("form")) == null ? void 0 : _root$closest5.querySelector("[data-save-menu-trigger]");
+              if (disabled) menuTrigger == null || menuTrigger.setAttribute("disabled", "");else menuTrigger == null || menuTrigger.removeAttribute("disabled");
             };
             showCurrentVersion = function _showCurrentVersion() {
               currentVersion.textContent = relativeVersionTime(currentUpdatedAt);

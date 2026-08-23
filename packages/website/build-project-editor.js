@@ -38,8 +38,10 @@ await writeFile(join(outputDirectory, "framework-runtimes.js"),
   `export const FRAMEWORK_RUNTIMES = ${JSON.stringify({ vue: vueRuntime, svelte: svelteRuntime, three: threeRuntime })};\n`);
 const languageSources = {
   javascript: `import { javascript } from "@codemirror/lang-javascript";
-    globalThis.__codeEditorRegisterLanguage("javascript", function () { return javascript({ typescript: false }); });
-    globalThis.__codeEditorRegisterLanguage("typescript", function () { return javascript({ typescript: true }); });`,
+    var javascriptSupport = javascript({ typescript: false });
+    var typescriptSupport = javascript({ typescript: true });
+    globalThis.__codeEditorRegisterLanguage("javascript", function () { return javascriptSupport; });
+    globalThis.__codeEditorRegisterLanguage("typescript", function () { return typescriptSupport; });`,
   html: `import { html } from "@codemirror/lang-html";
     globalThis.__codeEditorRegisterLanguage("html", html);`,
   css: `import { css } from "@codemirror/lang-css";
@@ -177,6 +179,16 @@ const editorBytecode = join(outputDirectory, "project-editor-core.bin");
 await writeFile(loweredEditorSource, loweredEditor);
 execFileSync(join(microRuntime, "microquickjs", "mqjs"),
   ["-m32", "-o", editorBytecode, loweredEditorSource], { stdio: "inherit" });
+const languageBytecodes = [];
+for (const [name, source] of Object.entries(languageChunks)) {
+  if (name === "typescript") continue;
+  const sourceFile = join(outputDirectory, `project-editor-language-${name}.js`);
+  const bytecodeFile = join(outputDirectory, `project-editor-language-${name}.bin`);
+  await writeFile(sourceFile, source);
+  execFileSync(join(microRuntime, "microquickjs", "mqjs"),
+    ["-m32", "-o", bytecodeFile, sourceFile], { stdio: "inherit" });
+  languageBytecodes.push([name, bytecodeFile]);
+}
 const projectServicesSource = await build({
   entryPoints: [join(directory, "project-editor-ui.js")],
   bundle: true, format: "iife", platform: "neutral",
@@ -201,7 +213,7 @@ execFileSync(join(microRuntime, "microquickjs", "mqjs"),
   ["-m32", "-o", projectServicesBytecode, projectServicesFile], { stdio: "inherit" });
 const controllerBytecode = join(outputDirectory, "project-editor-application.bin");
 execFileSync(join(microRuntime, "microquickjs", "mqjs"), ["-m32", "-o", controllerBytecode,
-  join(directory, "project-editor-controller.es5.js")], { stdio: "inherit" });
+  join(directory, "project-editor-bootstrap.es5.js")], { stdio: "inherit" });
 execFileSync(process.execPath, [
   join(workspace, "dev", "wasm-web-runtimes", "examples", "microquickjs-suite", "scripts", "stamp-wasm.js"),
   join(microRuntime, "target", "wasm32-unknown-unknown", "release", "wasm_web_container_example_runtime.wasm"),
@@ -210,4 +222,5 @@ execFileSync(process.execPath, [
   `application.bin=${controllerBytecode}`,
   `editor.bin=${editorBytecode}`,
   `project.bin=${projectServicesBytecode}`,
+  ...languageBytecodes.map(([name, file]) => `language-${name}.bin=${file}`),
 ], { stdio: "inherit" });

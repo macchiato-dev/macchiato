@@ -283,9 +283,25 @@ export class ResourcesOutputDevice {
   async mount(payload) {
     if (typeof payload.rootKey !== "string" || !/^[1-9][0-9]{0,9}$/.test(payload.rootKey))
       throw new Error("Project output mount identity is invalid");
-    const root = [...this.document.querySelectorAll("[data-project-output-mount]")]
+    const mount = [...this.document.querySelectorAll("[data-project-output-mount]")]
       .find((element) => element.dataset.projectOutputMount === payload.rootKey);
-    if (!root) throw new Error("Project output mount is unavailable");
+    if (!mount) throw new Error("Project output mount is unavailable");
+    let root = mount;
+    let frame = null;
+    if (payload.iframe !== false) {
+      frame = this.document.createElement("iframe");
+      frame.className = "project-editor__output-frame";
+      frame.title = "Project output";
+      frame.src = "/-/resources-site/project-output-frame.html";
+      frame.style.cssText = "display:block;width:100%;height:100%;border:0";
+      await new Promise((resolve, reject) => {
+        frame.addEventListener("load", resolve, { once: true });
+        frame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
+        mount.replaceChildren(frame);
+      });
+      root = frame.contentDocument?.getElementById("project-output-a");
+      if (!root) throw new Error("Project output frame root is unavailable");
+    }
     const id = this.nextId++;
     const files = this.projectResources.hydrateFiles(payload.files);
     const output = await createProjectOutputMachine({
@@ -307,7 +323,13 @@ export class ResourcesOutputDevice {
       onError: (error) => this.deliver({ type: "output-error", id,
         message: error?.message || String(error) }),
     });
-    this.outputs.set(id, output);
+    this.outputs.set(id, frame ? Object.freeze({
+      destroy() { output.destroy(); frame.remove(); },
+      inspect: () => output.inspect(),
+      setContent: (tree) => output.setContent(tree),
+      run: (scripts) => output.run(scripts),
+      load: (project) => output.load(project),
+    }) : output);
     return id;
   }
   async run(payload) {

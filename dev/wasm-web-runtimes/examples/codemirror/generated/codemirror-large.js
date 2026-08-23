@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@marijn/find-cluster-break/src/index.js
+  // node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -73,7 +73,7 @@
     return code2 < 65536 ? 1 : 2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/state/dist/index.js
+  // node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -3447,7 +3447,7 @@
     return strict === true ? -1 : string2.length;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/style-mod/src/style-mod.js
+  // node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3578,7 +3578,7 @@
     }
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/w3c-keyname/index.js
+  // node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -3684,7 +3684,7 @@
     return name2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/crelt/index.js
+  // node_modules/crelt/index.js
   function crelt() {
     var elt = arguments[0];
     if (typeof elt == "string") elt = document.createElement(elt);
@@ -3713,7 +3713,7 @@
     }
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/view/dist/index.js
+  // node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -14309,7 +14309,7 @@
     return activeLineGutterHighlighter;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/common/dist/index.js
+  // node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range2 = class {
@@ -15979,7 +15979,7 @@
   };
   var stoppedInner = new NodeProp({ perNode: true });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/highlight/dist/index.js
+  // node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -16703,7 +16703,7 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/language/dist/index.js
+  // node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -18273,7 +18273,7 @@
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/commands/dist/index.js
+  // node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config2 = getConfig(target.state, line.from);
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -19367,7 +19367,7 @@
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/search/dist/index.js
+  // node_modules/@codemirror/search/dist/index.js
   var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
   var SearchCursor = class {
     /**
@@ -20449,7 +20449,7 @@
     baseTheme3
   ];
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/autocomplete/dist/index.js
+  // node_modules/@codemirror/autocomplete/dist/index.js
   var CompletionContext = class {
     /**
     Create a new completion context. (Mostly useful for testing
@@ -22266,7 +22266,7 @@
   ];
   var completionKeymapExt = /* @__PURE__ */ Prec.highest(/* @__PURE__ */ keymap.computeN([completionConfig], (state) => state.facet(completionConfig).defaultKeymap ? [completionKeymap] : []));
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lint/dist/index.js
+  // node_modules/@codemirror/lint/dist/index.js
   var SelectedDiagnostic = class {
     constructor(from, to, diagnostic) {
       this.from = from;
@@ -22875,7 +22875,7 @@
     baseTheme5
   ];
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/codemirror/dist/index.js
+  // node_modules/codemirror/dist/index.js
   var basicSetup = /* @__PURE__ */ (() => [
     lineNumbers(),
     highlightActiveLineGutter(),
@@ -22905,7 +22905,7 @@
     ])
   ])();
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/lr/dist/index.js
+  // node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -24667,7 +24667,7 @@
     return spec.get;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/javascript/dist/index.js
+  // node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -24879,7 +24879,7 @@
     tokenPrec: 15201
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-javascript/dist/index.js
+  // node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -25191,7 +25191,7 @@
     return true;
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/theme-one-dark/dist/index.js
+  // node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -25335,10 +25335,10 @@
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // dev/wasm-web-runtimes/examples/codemirror/generated/large-fixture.js
+  // generated/large-fixture.js
   var large_fixture_default = "export const item1: number = 1;\nexport const item2: number = 2;\nexport const item3: number = 3;\nexport const item4: number = 4;\nexport const item5: number = 5;\nexport const item6: number = 6;\nexport const item7: number = 7;\nexport const item8: number = 8;\nexport const item9: number = 9;\nexport const item10: number = 10;\nexport const item11: number = 11;\nexport const item12: number = 12;\nexport const item13: number = 13;\nexport const item14: number = 14;\nexport const item15: number = 15;\nexport const item16: number = 16;\nexport const item17: number = 17;\nexport const item18: number = 18;\nexport const item19: number = 19;\nexport const item20: number = 20;\nexport const item21: number = 21;\nexport const item22: number = 22;\nexport const item23: number = 23;\nexport const item24: number = 24;\nexport const item25: number = 25;\nexport const item26: number = 26;\nexport const item27: number = 27;\nexport const item28: number = 28;\nexport const item29: number = 29;\nexport const item30: number = 30;\nexport const item31: number = 31;\nexport const item32: number = 32;\nexport const item33: number = 33;\nexport const item34: number = 34;\nexport const item35: number = 35;\nexport const item36: number = 36;\nexport const item37: number = 37;\nexport const item38: number = 38;\nexport const item39: number = 39;\nexport const item40: number = 40;\nexport const item41: number = 41;\nexport const item42: number = 42;\nexport const item43: number = 43;\nexport const item44: number = 44;\nexport const item45: number = 45;\nexport const item46: number = 46;\nexport const item47: number = 47;\nexport const item48: number = 48;\nexport const item49: number = 49;\nexport const item50: number = 50;\nexport const item51: number = 51;\nexport const item52: number = 52;\nexport const item53: number = 53;\nexport const item54: number = 54;\nexport const item55: number = 55;\nexport const item56: number = 56;\nexport const item57: number = 57;\nexport const item58: number = 58;\nexport const item59: number = 59;\nexport const item60: number = 60;\nexport const item61: number = 61;\nexport const item62: number = 62;\nexport const item63: number = 63;\nexport const item64: number = 64;\nexport const item65: number = 65;\nexport const item66: number = 66;\nexport const item67: number = 67;\nexport const item68: number = 68;\nexport const item69: number = 69;\nexport const item70: number = 70;\nexport const item71: number = 71;\nexport const item72: number = 72;\nexport const item73: number = 73;\nexport const item74: number = 74;\nexport const item75: number = 75;\nexport const item76: number = 76;\nexport const item77: number = 77;\nexport const item78: number = 78;\nexport const item79: number = 79;\nexport const item80: number = 80;\nexport const item81: number = 81;\nexport const item82: number = 82;\nexport const item83: number = 83;\nexport const item84: number = 84;\nexport const item85: number = 85;\nexport const item86: number = 86;\nexport const item87: number = 87;\nexport const item88: number = 88;\nexport const item89: number = 89;\nexport const item90: number = 90;\nexport const item91: number = 91;\nexport const item92: number = 92;\nexport const item93: number = 93;\nexport const item94: number = 94;\nexport const item95: number = 95;\nexport const item96: number = 96;\nexport const item97: number = 97;\nexport const item98: number = 98;\nexport const item99: number = 99;\nexport const item100: number = 100;\nexport const item101: number = 101;\nexport const item102: number = 102;\nexport const item103: number = 103;\nexport const item104: number = 104;\nexport const item105: number = 105;\nexport const item106: number = 106;\nexport const item107: number = 107;\nexport const item108: number = 108;\nexport const item109: number = 109;\nexport const item110: number = 110;\nexport const item111: number = 111;\nexport const item112: number = 112;\nexport const item113: number = 113;\nexport const item114: number = 114;\nexport const item115: number = 115;\nexport const item116: number = 116;\nexport const item117: number = 117;\nexport const item118: number = 118;\nexport const item119: number = 119;\nexport const item120: number = 120;\nexport const item121: number = 121;\nexport const item122: number = 122;\nexport const item123: number = 123;\nexport const item124: number = 124;\nexport const item125: number = 125;\nexport const item126: number = 126;\nexport const item127: number = 127;\nexport const item128: number = 128;\nexport const item129: number = 129;\nexport const item130: number = 130;\nexport const item131: number = 131;\nexport const item132: number = 132;\nexport const item133: number = 133;\nexport const item134: number = 134;\nexport const item135: number = 135;\nexport const item136: number = 136;\nexport const item137: number = 137;\nexport const item138: number = 138;\nexport const item139: number = 139;\nexport const item140: number = 140;\nexport const item141: number = 141;\nexport const item142: number = 142;\nexport const item143: number = 143;\nexport const item144: number = 144;\nexport const item145: number = 145;\nexport const item146: number = 146;\nexport const item147: number = 147;\nexport const item148: number = 148;\nexport const item149: number = 149;\nexport const item150: number = 150;\nexport const item151: number = 151;\nexport const item152: number = 152;\nexport const item153: number = 153;\nexport const item154: number = 154;\nexport const item155: number = 155;\nexport const item156: number = 156;\nexport const item157: number = 157;\nexport const item158: number = 158;\nexport const item159: number = 159;\nexport const item160: number = 160;\nexport const item161: number = 161;\nexport const item162: number = 162;\nexport const item163: number = 163;\nexport const item164: number = 164;\nexport const item165: number = 165;\nexport const item166: number = 166;\nexport const item167: number = 167;\nexport const item168: number = 168;\nexport const item169: number = 169;\nexport const item170: number = 170;\nexport const item171: number = 171;\nexport const item172: number = 172;\nexport const item173: number = 173;\nexport const item174: number = 174;\nexport const item175: number = 175;\nexport const item176: number = 176;\nexport const item177: number = 177;\nexport const item178: number = 178;\nexport const item179: number = 179;\nexport const item180: number = 180;\nexport const item181: number = 181;\nexport const item182: number = 182;\nexport const item183: number = 183;\nexport const item184: number = 184;\nexport const item185: number = 185;\nexport const item186: number = 186;\nexport const item187: number = 187;\nexport const item188: number = 188;\nexport const item189: number = 189;\nexport const item190: number = 190;\nexport const item191: number = 191;\nexport const item192: number = 192;\nexport const item193: number = 193;\nexport const item194: number = 194;\nexport const item195: number = 195;\nexport const item196: number = 196;\nexport const item197: number = 197;\nexport const item198: number = 198;\nexport const item199: number = 199;\nexport const item200: number = 200;\nexport const item201: number = 201;\nexport const item202: number = 202;\nexport const item203: number = 203;\nexport const item204: number = 204;\nexport const item205: number = 205;\nexport const item206: number = 206;\nexport const item207: number = 207;\nexport const item208: number = 208;\nexport const item209: number = 209;\nexport const item210: number = 210;\nexport const item211: number = 211;\nexport const item212: number = 212;\nexport const item213: number = 213;\nexport const item214: number = 214;\nexport const item215: number = 215;\nexport const item216: number = 216;\nexport const item217: number = 217;\nexport const item218: number = 218;\nexport const item219: number = 219;\nexport const item220: number = 220;\nexport const item221: number = 221;\nexport const item222: number = 222;\nexport const item223: number = 223;\nexport const item224: number = 224;\nexport const item225: number = 225;\nexport const item226: number = 226;\nexport const item227: number = 227;\nexport const item228: number = 228;\nexport const item229: number = 229;\nexport const item230: number = 230;\nexport const item231: number = 231;\nexport const item232: number = 232;\nexport const item233: number = 233;\nexport const item234: number = 234;\nexport const item235: number = 235;\nexport const item236: number = 236;\nexport const item237: number = 237;\nexport const item238: number = 238;\nexport const item239: number = 239;\nexport const item240: number = 240;\nexport const item241: number = 241;\nexport const item242: number = 242;\nexport const item243: number = 243;\nexport const item244: number = 244;\nexport const item245: number = 245;\nexport const item246: number = 246;\nexport const item247: number = 247;\nexport const item248: number = 248;\nexport const item249: number = 249;\nexport const item250: number = 250;\nexport const item251: number = 251;\nexport const item252: number = 252;\nexport const item253: number = 253;\nexport const item254: number = 254;\nexport const item255: number = 255;\nexport const item256: number = 256;\nexport const item257: number = 257;\nexport const item258: number = 258;\nexport const item259: number = 259;\nexport const item260: number = 260;\nexport const item261: number = 261;\nexport const item262: number = 262;\nexport const item263: number = 263;\nexport const item264: number = 264;\nexport const item265: number = 265;\nexport const item266: number = 266;\nexport const item267: number = 267;\nexport const item268: number = 268;\nexport const item269: number = 269;\nexport const item270: number = 270;\nexport const item271: number = 271;\nexport const item272: number = 272;\nexport const item273: number = 273;\nexport const item274: number = 274;\nexport const item275: number = 275;\nexport const item276: number = 276;\nexport const item277: number = 277;\nexport const item278: number = 278;\nexport const item279: number = 279;\nexport const item280: number = 280;\nexport const item281: number = 281;\nexport const item282: number = 282;\nexport const item283: number = 283;\nexport const item284: number = 284;\nexport const item285: number = 285;\nexport const item286: number = 286;\nexport const item287: number = 287;\nexport const item288: number = 288;\nexport const item289: number = 289;\nexport const item290: number = 290;\nexport const item291: number = 291;\nexport const item292: number = 292;\nexport const item293: number = 293;\nexport const item294: number = 294;\nexport const item295: number = 295;\nexport const item296: number = 296;\nexport const item297: number = 297;\nexport const item298: number = 298;\nexport const item299: number = 299;\nexport const item300: number = 300;\nexport const item301: number = 301;\nexport const item302: number = 302;\nexport const item303: number = 303;\nexport const item304: number = 304;\nexport const item305: number = 305;\nexport const item306: number = 306;\nexport const item307: number = 307;\nexport const item308: number = 308;\nexport const item309: number = 309;\nexport const item310: number = 310;\nexport const item311: number = 311;\nexport const item312: number = 312;\nexport const item313: number = 313;\nexport const item314: number = 314;\nexport const item315: number = 315;\nexport const item316: number = 316;\nexport const item317: number = 317;\nexport const item318: number = 318;\nexport const item319: number = 319;\nexport const item320: number = 320;\nexport const item321: number = 321;\nexport const item322: number = 322;\nexport const item323: number = 323;\nexport const item324: number = 324;\nexport const item325: number = 325;\nexport const item326: number = 326;\nexport const item327: number = 327;\nexport const item328: number = 328;\nexport const item329: number = 329;\nexport const item330: number = 330;\nexport const item331: number = 331;\nexport const item332: number = 332;\nexport const item333: number = 333;\nexport const item334: number = 334;\nexport const item335: number = 335;\nexport const item336: number = 336;\nexport const item337: number = 337;\nexport const item338: number = 338;\nexport const item339: number = 339;\nexport const item340: number = 340;\nexport const item341: number = 341;\nexport const item342: number = 342;\nexport const item343: number = 343;\nexport const item344: number = 344;\nexport const item345: number = 345;\nexport const item346: number = 346;\nexport const item347: number = 347;\nexport const item348: number = 348;\nexport const item349: number = 349;\nexport const item350: number = 350;\nexport const item351: number = 351;\nexport const item352: number = 352;\nexport const item353: number = 353;\nexport const item354: number = 354;\nexport const item355: number = 355;\nexport const item356: number = 356;\nexport const item357: number = 357;\nexport const item358: number = 358;\nexport const item359: number = 359;\nexport const item360: number = 360;\nexport const item361: number = 361;\nexport const item362: number = 362;\nexport const item363: number = 363;\nexport const item364: number = 364;\nexport const item365: number = 365;\nexport const item366: number = 366;\nexport const item367: number = 367;\nexport const item368: number = 368;\nexport const item369: number = 369;\nexport const item370: number = 370;\nexport const item371: number = 371;\nexport const item372: number = 372;\nexport const item373: number = 373;\nexport const item374: number = 374;\nexport const item375: number = 375;\nexport const item376: number = 376;\nexport const item377: number = 377;\nexport const item378: number = 378;\nexport const item379: number = 379;\nexport const item380: number = 380;\nexport const item381: number = 381;\nexport const item382: number = 382;\nexport const item383: number = 383;\nexport const item384: number = 384;\nexport const item385: number = 385;\nexport const item386: number = 386;\nexport const item387: number = 387;\nexport const item388: number = 388;\nexport const item389: number = 389;\nexport const item390: number = 390;\nexport const item391: number = 391;\nexport const item392: number = 392;\nexport const item393: number = 393;\nexport const item394: number = 394;\nexport const item395: number = 395;\nexport const item396: number = 396;\nexport const item397: number = 397;\nexport const item398: number = 398;\nexport const item399: number = 399;\nexport const item400: number = 400;\nexport const item401: number = 401;\nexport const item402: number = 402;\nexport const item403: number = 403;\nexport const item404: number = 404;\nexport const item405: number = 405;\nexport const item406: number = 406;\nexport const item407: number = 407;\nexport const item408: number = 408;\nexport const item409: number = 409;\nexport const item410: number = 410;\nexport const item411: number = 411;\nexport const item412: number = 412;\nexport const item413: number = 413;\nexport const item414: number = 414;\nexport const item415: number = 415;\nexport const item416: number = 416;\nexport const item417: number = 417;\nexport const item418: number = 418;\nexport const item419: number = 419;\nexport const item420: number = 420;\nexport const item421: number = 421;\nexport const item422: number = 422;\nexport const item423: number = 423;\nexport const item424: number = 424;\nexport const item425: number = 425;\nexport const item426: number = 426;\nexport const item427: number = 427;\nexport const item428: number = 428;\nexport const item429: number = 429;\nexport const item430: number = 430;\nexport const item431: number = 431;\nexport const item432: number = 432;\nexport const item433: number = 433;\nexport const item434: number = 434;\nexport const item435: number = 435;\nexport const item436: number = 436;\nexport const item437: number = 437;\nexport const item438: number = 438;\nexport const item439: number = 439;\nexport const item440: number = 440;\nexport const item441: number = 441;\nexport const item442: number = 442;\nexport const item443: number = 443;\nexport const item444: number = 444;\nexport const item445: number = 445;\nexport const item446: number = 446;\nexport const item447: number = 447;\nexport const item448: number = 448;\nexport const item449: number = 449;\nexport const item450: number = 450;\nexport const item451: number = 451;\nexport const item452: number = 452;\nexport const item453: number = 453;\nexport const item454: number = 454;\nexport const item455: number = 455;\nexport const item456: number = 456;\nexport const item457: number = 457;\nexport const item458: number = 458;\nexport const item459: number = 459;\nexport const item460: number = 460;\nexport const item461: number = 461;\nexport const item462: number = 462;\nexport const item463: number = 463;\nexport const item464: number = 464;\nexport const item465: number = 465;\nexport const item466: number = 466;\nexport const item467: number = 467;\nexport const item468: number = 468;\nexport const item469: number = 469;\nexport const item470: number = 470;\nexport const item471: number = 471;\nexport const item472: number = 472;\nexport const item473: number = 473;\nexport const item474: number = 474;\nexport const item475: number = 475;\nexport const item476: number = 476;\nexport const item477: number = 477;\nexport const item478: number = 478;\nexport const item479: number = 479;\nexport const item480: number = 480;\nexport const item481: number = 481;\nexport const item482: number = 482;\nexport const item483: number = 483;\nexport const item484: number = 484;\nexport const item485: number = 485;\nexport const item486: number = 486;\nexport const item487: number = 487;\nexport const item488: number = 488;\nexport const item489: number = 489;\nexport const item490: number = 490;\nexport const item491: number = 491;\nexport const item492: number = 492;\nexport const item493: number = 493;\nexport const item494: number = 494;\nexport const item495: number = 495;\nexport const item496: number = 496;\nexport const item497: number = 497;\nexport const item498: number = 498;\nexport const item499: number = 499;\nexport const item500: number = 500;";
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/native-caret.js
+  // src/native-caret.js
   var nativeCaret = EditorView.theme({
     "&.cm-focused .cm-content, &.cm-focused .cm-line": {
       caretColor: "#528bff !important"
@@ -25346,7 +25346,7 @@
     ".cm-cursorLayer": { display: "none" }
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/large-entry.js
+  // src/large-entry.js
   var view = new EditorView({
     doc: large_fixture_default,
     extensions: [

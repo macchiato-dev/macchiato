@@ -1694,6 +1694,9 @@ GuestWebGPUContext.prototype.renderTriangle = function () {
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
 };
+GuestElement.prototype.blur = function () {
+  hostCall(this.reference, "blur", []);
+};
 GuestElement.prototype.select = function () {
   hostCall(this.reference, "select", []);
 };
@@ -2201,11 +2204,39 @@ globalThis.clearInterval = function (handle) {
   delete intervalCallbacks[handle];
   hostCall(document.reference, "timerCancel", [handle]);
 };
-globalThis.matchMedia = function () {
-  return { matches: false, media: "", onchange: null,
-    addListener: function () {}, removeListener: function () {},
-    addEventListener: function () {}, removeEventListener: function () {},
-    dispatchEvent: function () { return true; } };
+globalThis.matchMedia = function (query) {
+  query = String(query);
+  var listeners = [];
+  var result = {
+    matches: hostCall(document.reference, "mediaMatches", [query]),
+    media: query,
+    onchange: null,
+    addListener: function (callback) { result.addEventListener("change", callback); },
+    removeListener: function (callback) { result.removeEventListener("change", callback); },
+    addEventListener: function (type, callback) {
+      if (type === "change" && typeof callback === "function" && listeners.indexOf(callback) < 0) {
+        listeners.push(callback);
+      }
+    },
+    removeEventListener: function (type, callback) {
+      if (type !== "change") return;
+      var index = listeners.indexOf(callback);
+      if (index >= 0) listeners.splice(index, 1);
+    },
+    dispatchEvent: function (event) {
+      listeners.slice().forEach(function (callback) { callback.call(result, event); });
+      return true;
+    }
+  };
+  globalThis.addEventListener("resize", function () {
+    var matches = hostCall(document.reference, "mediaMatches", [query]);
+    if (matches === result.matches) return;
+    result.matches = matches;
+    var event = { matches: matches, media: query };
+    if (typeof result.onchange === "function") result.onchange.call(result, event);
+    result.dispatchEvent(event);
+  });
+  return result;
 };
 globalThis.clearTimeout = function (handle) {
   if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;

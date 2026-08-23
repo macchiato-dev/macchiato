@@ -13,6 +13,23 @@
   mount.replaceChildren(editor);
   globalThis.__CODE_EDITOR_DEFER_START__ = true;
   load("editor.bin");
+  var initialSnapshot = JSON.parse(globalThis.__wwcServiceCall(
+    "editor.workspace.initial", "{}"));
+  var neededLanguages = { json: true };
+  initialSnapshot.files.forEach(function (file) {
+    var path = String(file.path || "").toLowerCase();
+    if (/\.(?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$/.test(path)) neededLanguages.javascript = true;
+    else if (/\.(?:html|htm|svg)$/.test(path)) neededLanguages.html = true;
+    else if (/\.css$/.test(path)) neededLanguages.css = true;
+    else if (/\.vue$/.test(path)) neededLanguages.vue = true;
+    else if (/\.svelte$/.test(path)) neededLanguages.svelte = true;
+    else if (/\.md$/.test(path)) {
+      ["javascript", "html", "css", "json", "vue", "svelte", "markdown"].forEach(function (name) {
+        neededLanguages[name] = true;
+      });
+    }
+  });
+  Object.keys(neededLanguages).forEach(function (name) { load("language-" + name + ".bin"); });
   var projectUiLoaded = false;
   function loadProjectUi() {
     if (projectUiLoaded) return;
@@ -134,6 +151,7 @@
         }) : new Promise(function (resolve) { resolve(); });
         var mounted = reset.then(function () { return requestStage("output.mount", {
             rootKey: "1", scripts: [], violations: [], tags: [],
+            iframe: !(config.output && config.output.iframe === false),
             files: project.files,
             allowedFetchOrigins: project.config.containerOptions &&
               project.config.containerOptions.allowedFetchOrigins || [],
@@ -223,10 +241,12 @@
 
   try {
     root.setAttribute("data-output-machine-stage", "snapshot");
-    var initialSnapshot = JSON.parse(globalThis.__wwcServiceCall(
-      "editor.workspace.initial", "{}"));
     root.setAttribute("data-output-machine-stage", "editor");
     start({ snapshot: initialSnapshot });
+    // MicroQuickJS closes its bytecode-loading gate when this initial program
+    // returns. Load the project UI now; its asynchronous setup may continue
+    // while the output machine starts.
+    loadProjectUi();
   } catch (error) {
     root.setAttribute("data-editor-machine-state", "failed");
     root.setAttribute("data-editor-machine-error", error && error.message || String(error));

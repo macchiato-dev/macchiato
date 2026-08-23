@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/map.js
+  // vendor/ungap/map.js
   function sameValueZero(left, right) {
     return left === right || left !== left && right !== right;
   }
@@ -71,7 +71,7 @@
     return iterator(this.entries());
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/set.js
+  // vendor/ungap/set.js
   function sameValueZero2(left, right) {
     return left === right || left !== left && right !== right;
   }
@@ -130,7 +130,7 @@
     return iterator2(this.values());
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/weakmap.js
+  // vendor/ungap/weakmap.js
   var nextWeakMap = 0;
   var hasOwn = Object.prototype.hasOwnProperty;
   function WeakMapPonyfill(iterable) {
@@ -159,7 +159,7 @@
     return this;
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/weakset.js
+  // vendor/ungap/weakset.js
   var members = new WeakMapPonyfill();
   function WeakSetPonyfill(iterable) {
     members.set(this, new WeakMapPonyfill());
@@ -176,7 +176,7 @@
     return members.get(this).has(value);
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/finally.js
+  // node_modules/promise-polyfill/src/finally.js
   function finallyConstructor(callback) {
     var constructor = this.constructor;
     return this.then(
@@ -194,7 +194,7 @@
   }
   var finally_default = finallyConstructor;
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/allSettled.js
+  // node_modules/promise-polyfill/src/allSettled.js
   function allSettled(arr) {
     var P = this;
     return new P(function(resolve2, reject2) {
@@ -239,7 +239,7 @@
   }
   var allSettled_default = allSettled;
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/any.js
+  // node_modules/promise-polyfill/src/any.js
   function AggregateError(errors, message) {
     this.name = "AggregateError", this.errors = errors;
     this.message = message || "";
@@ -275,7 +275,7 @@
   }
   var any_default = any;
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/index.js
+  // node_modules/promise-polyfill/src/index.js
   var setTimeoutFunc = setTimeout;
   function isArray(x) {
     return Boolean(x && typeof x.length !== "undefined");
@@ -472,7 +472,7 @@
   };
   var src_default = Promise2;
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-platform.js
+  // src/microquickjs-platform.js
   globalThis.__microQuickJS = true;
   if (typeof TextEncoder === "undefined") {
     globalThis.TextEncoder = function TextEncoder2() {
@@ -705,7 +705,7 @@
     }
   );
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-ponyfills.js
+  // src/microquickjs-ponyfills.js
   if (typeof globalThis.Map !== "function") globalThis.Map = MapPonyfill;
   if (typeof globalThis.Set !== "function") globalThis.Set = SetPonyfill;
   if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfill;

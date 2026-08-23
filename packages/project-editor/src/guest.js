@@ -8,7 +8,7 @@ import * as lezerHighlightModule from "@lezer/highlight";
 import * as lezerLrModule from "@lezer/lr";
 import { Compartment, EditorSelection, EditorState, findClusterBreak } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { forceParsing, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { historyField, redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
@@ -105,8 +105,11 @@ const codeMirrorModules = Object.freeze({
   "@lezer/lr": lezerLrModule,
 });
 globalThis.__codeMirrorRequire = (name) => {
-  if (!Object.hasOwn(codeMirrorModules, name)) throw new Error(`CodeMirror language dependency is unavailable: ${name}`);
-  return codeMirrorModules[name];
+  const module = codeMirrorModules[name];
+  if (!module) {
+    throw new Error(`CodeMirror language dependency is unavailable: ${name}`);
+  }
+  return module;
 };
 globalThis.__codeEditorRegisterLanguage = (name, factory) => {
   if (typeof name !== "string" || typeof factory !== "function") throw new TypeError("Invalid CodeMirror language module");
@@ -151,6 +154,10 @@ function editorExtensions() {
 function mountEditor(content = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
   const state = EditorState.create({ doc: content, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent });
+  // A separately loaded grammar may exceed CodeMirror's first synchronous
+  // parse slice. Finish the visible document now so its initial paint does not
+  // wait for a guest timer round trip.
+  forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
   globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", (event) => {
     const handle = globalThis.__codeEditorBeforeInput;
     if (typeof handle !== "function") return;
@@ -247,6 +254,7 @@ globalThis.__codeEditorInspect = () => {
   const view = globalThis.__codeEditorView;
   if (!view) return JSON.stringify({ document: "", selection: null, viewport: null, usage: { characters: 0, lines: 0 }, limits: documentLimits });
   const selection = view.state.selection.main;
+  const activeLanguage = languageExtension(currentLanguage);
   return JSON.stringify({
     document: view.state.doc.toString(),
     selection: { anchor: selection.anchor, head: selection.head, from: selection.from, to: selection.to },
@@ -254,6 +262,9 @@ globalThis.__codeEditorInspect = () => {
     usage: documentUsage(view.state.doc),
     limits: documentLimits,
     language: currentLanguage,
+    languageLoaded: !Array.isArray(activeLanguage),
+    syntaxTree: languageModule.syntaxTree(view.state).topNode.name,
+    registeredLanguages: Object.keys(dynamicLanguageFactories),
   });
 };
 globalThis.__codeEditorSerialize = (json) => {

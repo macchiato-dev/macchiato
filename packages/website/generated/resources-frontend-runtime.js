@@ -2429,6 +2429,9 @@ GuestWebGPUContext.prototype.renderTriangle = function () {
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
 };
+GuestElement.prototype.blur = function () {
+  hostCall(this.reference, "blur", []);
+};
 GuestElement.prototype.select = function () {
   hostCall(this.reference, "select", []);
 };
@@ -2936,19 +2939,48 @@ globalThis.clearInterval = function (handle) {
   delete intervalCallbacks[handle];
   hostCall(document.reference, "timerCancel", [handle]);
 };
-globalThis.matchMedia = function () {
-  return {
-    matches: false,
-    media: "",
+globalThis.matchMedia = function (query) {
+  query = String(query);
+  var listeners = [];
+  var result = {
+    matches: hostCall(document.reference, "mediaMatches", [query]),
+    media: query,
     onchange: null,
-    addListener: function addListener() {},
-    removeListener: function removeListener() {},
-    addEventListener: function addEventListener() {},
-    removeEventListener: function removeEventListener() {},
-    dispatchEvent: function dispatchEvent() {
+    addListener: function addListener(callback) {
+      result.addEventListener("change", callback);
+    },
+    removeListener: function removeListener(callback) {
+      result.removeEventListener("change", callback);
+    },
+    addEventListener: function addEventListener(type, callback) {
+      if (type === "change" && typeof callback === "function" && listeners.indexOf(callback) < 0) {
+        listeners.push(callback);
+      }
+    },
+    removeEventListener: function removeEventListener(type, callback) {
+      if (type !== "change") return;
+      var index = listeners.indexOf(callback);
+      if (index >= 0) listeners.splice(index, 1);
+    },
+    dispatchEvent: function dispatchEvent(event) {
+      listeners.slice().forEach(function (callback) {
+        callback.call(result, event);
+      });
       return true;
     }
   };
+  globalThis.addEventListener("resize", function () {
+    var matches = hostCall(document.reference, "mediaMatches", [query]);
+    if (matches === result.matches) return;
+    result.matches = matches;
+    var event = {
+      matches: matches,
+      media: query
+    };
+    if (typeof result.onchange === "function") result.onchange.call(result, event);
+    result.dispatchEvent(event);
+  });
+  return result;
 };
 globalThis.clearTimeout = function (handle) {
   if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;

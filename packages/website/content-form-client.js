@@ -556,7 +556,9 @@ async function mountProjectRoot(root) {
       && workspacePayload?.hasUnpublishedChanges !== true
       && !recoveredPendingSnapshot;
     button.disabled = disabled;
-    root.closest("form")?.querySelector("[data-save-menu-trigger]")?.toggleAttribute("disabled", disabled);
+    const menuTrigger = root.closest("form")?.querySelector("[data-save-menu-trigger]");
+    if (disabled) menuTrigger?.setAttribute("disabled", "");
+    else menuTrigger?.removeAttribute("disabled");
   }
   refreshSubmitLabel();
 

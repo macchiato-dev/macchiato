@@ -27373,8 +27373,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     "@lezer/lr": dist_exports7
   });
   globalThis.__codeMirrorRequire = function (name2) {
-    if (!Object.hasOwn(codeMirrorModules, name2)) throw new Error("CodeMirror language dependency is unavailable: " + name2);
-    return codeMirrorModules[name2];
+    var module = codeMirrorModules[name2];
+    if (!module) {
+      throw new Error("CodeMirror language dependency is unavailable: " + name2);
+    }
+    return module;
   };
   globalThis.__codeEditorRegisterLanguage = function (name2, factory) {
     if (typeof name2 !== "string" || typeof factory !== "function") throw new TypeError("Invalid CodeMirror language module");
@@ -27418,6 +27421,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       state: state,
       parent: parent
     });
+    _forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
     globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", function (event) {
       var handle = globalThis.__codeEditorBeforeInput;
       if (typeof handle !== "function") return;
@@ -27545,6 +27549,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       limits: documentLimits
     });
     var selection = view.state.selection.main;
+    var activeLanguage = languageExtension(currentLanguage);
     return JSON.stringify({
       document: view.state.doc.toString(),
       selection: {
@@ -27559,7 +27564,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       },
       usage: documentUsage(view.state.doc),
       limits: documentLimits,
-      language: currentLanguage
+      language: currentLanguage,
+      languageLoaded: !Array.isArray(activeLanguage),
+      syntaxTree: _syntaxTree(view.state).topNode.name,
+      registeredLanguages: Object.keys(dynamicLanguageFactories)
     });
   };
   globalThis.__codeEditorSerialize = function (json) {

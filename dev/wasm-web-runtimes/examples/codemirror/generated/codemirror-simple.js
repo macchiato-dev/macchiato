@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@marijn/find-cluster-break/src/index.js
+  // node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -73,7 +73,7 @@
     return code2 < 65536 ? 1 : 2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/state/dist/index.js
+  // node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -3441,7 +3441,7 @@
     return strict === true ? -1 : string2.length;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/style-mod/src/style-mod.js
+  // node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3572,7 +3572,7 @@
     }
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/w3c-keyname/index.js
+  // node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -3678,7 +3678,7 @@
     return name2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/view/dist/index.js
+  // node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -12555,7 +12555,7 @@
     return last;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/common/dist/index.js
+  // node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range2 = class {
@@ -14225,7 +14225,7 @@
   };
   var stoppedInner = new NodeProp({ perNode: true });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/highlight/dist/index.js
+  // node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -14949,7 +14949,7 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/language/dist/index.js
+  // node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -16088,7 +16088,7 @@
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/commands/dist/index.js
+  // node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config = getConfig(target.state, line.from);
     return config.line ? toggleLineComment(target) : config.block ? toggleBlockCommentByLine(target) : false;
@@ -17182,7 +17182,7 @@
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/lr/dist/index.js
+  // node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -18944,7 +18944,7 @@
     return spec.get;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/javascript/dist/index.js
+  // node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -19156,7 +19156,7 @@
     tokenPrec: 15201
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/autocomplete/dist/index.js
+  // node_modules/@codemirror/autocomplete/dist/index.js
   function toSet(chars) {
     let flat = Object.keys(chars).join("");
     let words = /\w/.test(flat);
@@ -19545,7 +19545,7 @@
   closedBracket.endSide = -1;
   var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-javascript/dist/index.js
+  // node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -19857,7 +19857,7 @@
     return true;
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/theme-one-dark/dist/index.js
+  // node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -20001,7 +20001,7 @@
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/native-caret.js
+  // src/native-caret.js
   var nativeCaret = EditorView.theme({
     "&.cm-focused .cm-content, &.cm-focused .cm-line": {
       caretColor: "#528bff !important"
@@ -20009,7 +20009,7 @@
     ".cm-cursorLayer": { display: "none" }
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/simple-entry.js
+  // src/simple-entry.js
   var documentText = `function greet(name) {
   return \`Hello, \${name}!\`;
 }

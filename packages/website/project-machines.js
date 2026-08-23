@@ -1,6 +1,8 @@
 import WasmWebMachine from "../../dev/wasm-web-machine/dist/module/wasm-web-machine.js";
-import { PROJECT_EDITOR_LANGUAGES } from "./generated/project-editor-languages.js";
 const encoder = new TextEncoder(), decoder = new TextDecoder(), runtimeModules = new Map();
+const EDITOR_LANGUAGES = new Set([
+  "plain", "javascript", "typescript", "html", "css", "json", "vue", "svelte", "markdown",
+]);
 let nextMachine = 1;
 async function moduleFor(url) {
   if (!runtimeModules.has(url)) runtimeModules.set(url, fetch(url, { credentials: "same-origin" }).then((response) => {
@@ -228,20 +230,9 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
   });
   await machine.onmsg(0); if (machineError) throw new Error(machineError);
   starting = false; machineStage = "idle";
-  const loadedLanguages = new Set();
+  const loadedLanguages = new Set([...EDITOR_LANGUAGES].filter((name) => name !== "plain"));
   function ensureLanguage(name) {
-    const requested = name === "markdown"
-      ? ["javascript", "html", "css", "json", "vue", "svelte", "markdown"] : [name];
-    for (const language of requested) {
-      if (loadedLanguages.has(language) || !PROJECT_EDITOR_LANGUAGES[language]) continue;
-      machineError = undefined;
-      machineStage = `language ${language}`;
-      machine.onmsg(taggedMessage(1, PROJECT_EDITOR_LANGUAGES[language]));
-      if (machineError) throw new Error(machineError);
-      machineStage = "idle";
-      loadedLanguages.add(language);
-      if (language === "javascript") loadedLanguages.add("typescript");
-    }
+    if (!EDITOR_LANGUAGES.has(name)) throw new Error(`Unsupported editor language: ${name}`);
   }
   function call(name, payload) {
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
