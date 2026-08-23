@@ -1,14 +1,8 @@
-import { createConstrainedFetch, createProjectAppMachine, createProjectEditorMachine, createProjectFetch, createProjectImageResolver, createProjectOutputMachine } from "./project-machines.js";
+import { createConstrainedFetch, createProjectBuildMachine, createProjectEditorMachine, createProjectFetch, createProjectImageResolver, createProjectOutputMachine } from "./project-machines.js";
 
-export { createConstrainedFetch, createProjectOutputMachine };
-
-const projectApps = new WeakMap();
+export { createConstrainedFetch, createProjectBuildMachine, createProjectOutputMachine };
 
 export async function mountResourcesProjectEditor(options) {
-  if (!projectApps.has(options.root)) projectApps.set(options.root, createProjectAppMachine(options.root));
-  const frontend = await projectApps.get(options.root);
-  document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
-  document.documentElement.dataset.resourcesFrontendMachineId = frontend.machineId;
   const controller = await createProjectEditorMachine({
     root: options.root,
     onChange: options.onChange,
@@ -78,6 +72,7 @@ export async function mountResourcesProjectPreview({ root, statusRoot = root, sc
   statusRoot.dataset.previewRuntime = scripts.length ? "quickjs" : "quickjs-static";
   return {
     inspect: () => ({ ...controller.inspect(), violations: violations.length }),
+    load(project) { return controller.load(project); },
     setContent(tree) { return controller.setContent(tree); },
     run(scripts) { return controller.run(scripts); },
     destroy() { controller.destroy(); },

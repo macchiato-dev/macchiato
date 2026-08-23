@@ -11,10 +11,46 @@ function outputNode(value) {
   return node;
 }
 
+function outputNodeMatches(node, value) {
+  if (!Array.isArray(value) || (value[0] !== 0 && value[0] !== 1)) return false;
+  if (value[0] === 0) return node.nodeType === 3 && node.nodeValue === String(value[1]);
+  if (node.nodeType !== 1 || node.localName !== value[1]) return false;
+  const attributes = value[3] || [];
+  if (node.attributes.length !== attributes.length) return false;
+  for (const attribute of attributes) {
+    if (node.getAttribute(attribute[0]) !== String(attribute[1])) return false;
+  }
+  const children = value[4] || [];
+  if (node.childNodes.length !== children.length) return false;
+  for (let index = 0; index < children.length; index++) {
+    if (!outputNodeMatches(node.childNodes[index], children[index])) return false;
+  }
+  return true;
+}
+
 globalThis.__resourcesOutputSetContent = (json) => {
   const nodes = JSON.parse(json);
+  const existing = document.body.childNodes;
+  if (existing.length === nodes.length &&
+      nodes.every((node, index) => outputNodeMatches(existing[index], node))) {
+    return JSON.stringify({ mounted: nodes.length, hydrated: true });
+  }
   document.body.replaceChildren(...nodes.map(outputNode));
-  return JSON.stringify({ mounted: nodes.length });
+  return JSON.stringify({ mounted: nodes.length, hydrated: false });
+};
+
+globalThis.__resourcesOutputLoad = (json) => {
+  const project = JSON.parse(json);
+  const mounted = JSON.parse(globalThis.__resourcesOutputSetContent(JSON.stringify(project.tree || [])));
+  for (const stylesheet of project.stylesheets || []) {
+    if (stylesheet && Array.isArray(stylesheet.operations)) {
+      document.installStylesheetOperations(new Uint8Array(stylesheet.operations));
+    } else {
+      document.installStylesheetSource(String(stylesheet && stylesheet.source !== undefined
+        ? stylesheet.source : stylesheet));
+    }
+  }
+  return JSON.stringify(mounted);
 };
 
 globalThis.__wwcFetchMissing = (url) => new Promise((resolve, reject) => {
