@@ -10,7 +10,7 @@ const types = { ".css": "text/css", ".html": "text/html", ".js": "text/javascrip
   ".wasm": "application/wasm" };
 
 test("the index and portable examples work", async (context) => {
-  const mahjongSource = await readFile(new URL("../mahjong/application.js", import.meta.url), "utf8");
+  const mahjongSource = await readFile(new URL("../mahjong/game-model.js", import.meta.url), "utf8");
   const solution = JSON.parse(/var solution = (\[[\s\S]*?\]);/.exec(mahjongSource)[1]);
   const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://example.test");

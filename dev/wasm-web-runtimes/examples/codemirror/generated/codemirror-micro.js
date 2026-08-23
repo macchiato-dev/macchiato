@@ -6465,7 +6465,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           break;
         }
       }
-      if (insert2.length) phrase2 = phrase2.replace(/\$(\$|\d*)/g, function (m, i2) {
+      if (insert2.length) phrase2 = phrase2.replace(new RegExp("\\$(\\$|\\d*)", "g"), function (m, i2) {
         if (i2 == "$") return "$";
         var n = +(i2 || 1);
         return !n || n > insert2.length ? m : insert2[n - 1];
@@ -7350,7 +7350,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
             if (!isAt) throw new RangeError("The value of a property (" + prop + ") should be a primitive value.");
             render(splitSelector(prop), value, local, keyframes);
           } else if (value != null) {
-            local.push(prop.replace(/_.*/, "").replace(/[A-Z]/g, function (l) {
+            local.push(prop.replace(/_.*/, "").replace(new RegExp("[A-Z]", "g"), function (l) {
               return "-" + l.toLowerCase();
             }) + ": " + value + ";");
           }
@@ -7576,7 +7576,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var ie_upto10 = /MSIE \d/.test(nav.userAgent);
   var ie_11up = /Trident\/(?:[7-9]|\d{2,})\..*rv:(\d+)/.exec(nav.userAgent);
   var ie2 = !!(ie_upto10 || ie_11up || ie_edge);
-  var gecko = !ie2 && /gecko\/(\d+)/i.test(nav.userAgent);
+  var gecko = !ie2 && new RegExp("gecko\\/(\\d+)", "i").test(nav.userAgent);
   var chrome = !ie2 && /Chrome\/(\d+)/.exec(nav.userAgent);
   var webkit = "webkitFontSmoothing" in doc.documentElement.style;
   var safari = !ie2 && /Apple Computer/.test(nav.vendor);
@@ -11276,7 +11276,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         var _point = _step79.value;
         if (_point.node == node) _point.pos = this.text.length + Math.min(_point.offset, text.length);
       }
-      for (var off = 0, re = this.lineSeparator ? null : /\r\n?|\n/g;;) {
+      for (var off = 0, re = this.lineSeparator ? null : new RegExp("\\r\\n?|\\n", "g");;) {
         var nextBreak = -1,
           breakSize = 1,
           m = void 0;
@@ -14784,11 +14784,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           var format = _step108.value;
           var lineStyle = format.underlineStyle,
             thickness = format.underlineThickness;
-          if (!/none/i.test(lineStyle) && !/none/i.test(thickness)) {
+          if (!new RegExp("none", "i").test(lineStyle) && !new RegExp("none", "i").test(thickness)) {
             var from = _this55.toEditorPos(format.rangeStart),
               to = _this55.toEditorPos(format.rangeEnd);
             if (from < to) {
-              var style = "text-decoration: underline " + (/^[a-z]/.test(lineStyle) ? lineStyle + " " : lineStyle == "Dashed" ? "dashed " : lineStyle == "Squiggle" ? "wavy " : "") + (/thin/i.test(thickness) ? 1 : 2) + "px";
+              var style = "text-decoration: underline " + (/^[a-z]/.test(lineStyle) ? lineStyle + " " : lineStyle == "Dashed" ? "dashed " : lineStyle == "Squiggle" ? "wavy " : "") + (new RegExp("thin", "i").test(thickness) ? 1 : 2) + "px";
               deco.push(Decoration.mark({
                 attributes: {
                   style: style
@@ -15075,7 +15075,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           try {
             listener(update);
           } catch (_e8) {
-            logException(this.state, _e7, "update listener");
+            logException(this.state, _e8, "update listener");
           }
         }
       }
@@ -15713,7 +15713,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     var alt, ctrl, shift2, meta2;
     for (var _i54 = 0; _i54 < parts.length - 1; ++_i54) {
       var mod = parts[_i54];
-      if (/^(cmd|meta|m)$/i.test(mod)) meta2 = true;else if (/^a(lt)?$/i.test(mod)) alt = true;else if (/^(c|ctrl|control)$/i.test(mod)) ctrl = true;else if (/^s(hift)?$/i.test(mod)) shift2 = true;else if (/^mod$/i.test(mod)) {
+      if (new RegExp("^(cmd|meta|m)$", "i").test(mod)) meta2 = true;else if (new RegExp("^a(lt)?$", "i").test(mod)) alt = true;else if (new RegExp("^(c|ctrl|control)$", "i").test(mod)) ctrl = true;else if (new RegExp("^s(hift)?$", "i").test(mod)) shift2 = true;else if (new RegExp("^mod$", "i").test(mod)) {
         if (platform == "mac") meta2 = true;else ctrl = true;
       } else throw new Error("Unrecognized modifier name: " + mod);
     }
@@ -19534,7 +19534,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }
     }
     if (!tags$1.length) return 0;
-    var name2 = tagStr.replace(/ /g, "_"),
+    var name2 = tagStr.replace(new RegExp(" ", "g"), "_"),
       key = name2 + " " + tags$1.map(function (t2) {
         return t2.id;
       });
@@ -19621,8 +19621,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   function toSet(chars) {
     var flat = Object.keys(chars).join("");
     var words = /\w/.test(flat);
-    if (words) flat = flat.replace(/\w/g, "");
-    return "[" + (words ? "\\w" : "") + flat.replace(/[^\w\s]/g, "\\$&") + "]";
+    if (words) flat = flat.replace(new RegExp("\\w", "g"), "");
+    return "[" + (words ? "\\w" : "") + flat.replace(new RegExp("[^\\w\\s]", "g"), "\\$&") + "]";
   }
   function prefixMatch(options) {
     var first = Object.create(null),
@@ -19940,7 +19940,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         var _icon$classList;
         var icon = document.createElement("div");
         icon.classList.add("cm-completionIcon");
-        if (completion.type) (_icon$classList = icon.classList).add.apply(_icon$classList, completion.type.split(/\s+/g).map(function (cls) {
+        if (completion.type) (_icon$classList = icon.classList).add.apply(_icon$classList, completion.type.split(new RegExp("\\s+", "g")).map(function (cls) {
           return "cm-completionIcon-" + cls;
         }));
         icon.setAttribute("aria-hidden", "true");
@@ -21095,7 +21095,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
             rawName = m[2] || m[3] || "",
             found = -1;
           if (seq === 0) seq = 1e9;
-          var _name1 = rawName.replace(/\\[{}]/g, function (m2) {
+          var _name1 = rawName.replace(new RegExp("\\\\[{}]", "g"), function (m2) {
             return m2[1];
           });
           for (var _i81 = 0; _i81 < fields.length; _i81++) {
@@ -21125,7 +21125,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           positions.push(new FieldPos(found, lines.length, m.index, m.index + _name1.length));
           line = line.slice(0, m.index) + rawName + line.slice(m.index + m[0].length);
         }
-        line = line.replace(/\\([{}])/g, function (_, brace, index) {
+        line = line.replace(new RegExp("\\\\([{}])", "g"), function (_, brace, index) {
           for (var _iterator219 = _createForOfIteratorHelperLoose(positions), _step219; !(_step219 = _iterator219()).done;) {
             var _pos3 = _step219.value;
             if (_pos3.line == lines.length && _pos3.from > index) {
@@ -22611,7 +22611,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         seen = new Set();
       for (var prop in style) if (prop != "cssText" && prop != "cssFloat") {
         if (typeof style[prop] == "string") {
-          if (/[A-Z]/.test(prop)) prop = prop.replace(/[A-Z]/g, function (ch) {
+          if (/[A-Z]/.test(prop)) prop = prop.replace(new RegExp("[A-Z]", "g"), function (ch) {
             return "-" + ch.toLowerCase();
           });
           if (!seen.has(prop)) {
@@ -23599,19 +23599,19 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   }, {
     tag: "script",
     attrs: function attrs(_attrs4) {
-      return /^(importmap|speculationrules|application\/(.+\+)?json)$/i.test(_attrs4.type);
+      return new RegExp("^(importmap|speculationrules|application\\/(.+\\+)?json)$", "i").test(_attrs4.type);
     },
     parser: jsonParser
   }, {
     tag: "script",
     attrs: function attrs(_attrs5) {
-      return !_attrs5.type || /^(?:text|application)\/(?:x-)?(?:java|ecma)script$|^module$|^$/i.test(_attrs5.type);
+      return !_attrs5.type || new RegExp("^(?:text|application)\\/(?:x-)?(?:java|ecma)script$|^module$|^$", "i").test(_attrs5.type);
     },
     parser: javascriptLanguage.parser
   }, {
     tag: "style",
     attrs: function attrs(_attrs6) {
-      return (!_attrs6.lang || _attrs6.lang == "css") && (!_attrs6.type || /^(text\/)?(x-)?(stylesheet|css)$/i.test(_attrs6.type));
+      return (!_attrs6.lang || _attrs6.lang == "css") && (!_attrs6.type || new RegExp("^(text\\/)?(x-)?(stylesheet|css)$", "i").test(_attrs6.type));
     },
     parser: cssLanguage.parser
   }];
@@ -24058,7 +24058,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var EmptyLine = /^[ \t]*$/;
   var CommentEnd = /-->/;
   var ProcessingEnd = /\?>/;
-  var HTMLBlockStyle = [[/^<(?:script|pre|style)(?:\s|>|$)/i, /<\/(?:script|pre|style)>/i], [/^\s*<!--/, CommentEnd], [/^\s*<\?/, ProcessingEnd], [/^\s*<![A-Z]/, />/], [/^\s*<!\[CDATA\[/, /\]\]>/], [/^\s*<\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\s|\/?>|$)/i, EmptyLine], [/^\s*(?:<\/[a-z][\w-]*\s*>|<[a-z][\w-]*(\s+[a-z:_][\w.\-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*\s*>)\s*$/i, EmptyLine]];
+  var HTMLBlockStyle = [[new RegExp("^<(?:script|pre|style)(?:\\s|>|$)", "i"), new RegExp("<\\/(?:script|pre|style)>", "i")], [/^\s*<!--/, CommentEnd], [/^\s*<\?/, ProcessingEnd], [/^\s*<![A-Z]/, />/], [/^\s*<!\[CDATA\[/, /\]\]>/], [new RegExp("^\\s*<\\/?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\\s|\\/?>|$)", "i"), EmptyLine], [new RegExp("^\\s*(?:<\\/[a-z][\\w-]*\\s*>|<[a-z][\\w-]*(\\s+[a-z:_][\\w.\\-]*(?:\\s*=\\s*(?:[^\\s\"'=<>`]+|'[^']*'|\"[^\"]*\"))?)*\\s*>)\\s*$", "i"), EmptyLine]];
   function isHTMLBlock(line, _cx, breaking) {
     if (line.next != 60) return -1;
     var rest = line.text.slice(line.pos);
@@ -24952,7 +24952,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     },
     Entity: function Entity(cx, next, start2) {
       if (next != 38) return -1;
-      var m = /^(?:#\d+|#x[a-f\d]+|\w+);/i.exec(cx.slice(start2 + 1, start2 + 31));
+      var m = new RegExp("^(?:#\\d+|#x[a-f\\d]+|\\w+);", "i").exec(cx.slice(start2 + 1, start2 + 31));
       return m ? cx.append(_elt(Type.Entity, start2, start2 + 1 + m[0].length)) : -1;
     },
     InlineCode: function InlineCode(cx, next, start2) {
@@ -24974,11 +24974,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     HTMLTag: function HTMLTag(cx, next, start2) {
       if (next != 60 || start2 == cx.end - 1) return -1;
       var after = cx.slice(start2 + 1, cx.end);
-      var url = /^(?:[a-z][-\w+.]+:[^\s>]+|[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*)>/i.exec(after);
+      var url = new RegExp("^(?:[a-z][-\\w+.]+:[^\\s>]+|[a-z\\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\\d](?:[a-z\\d-]{0,61}[a-z\\d])?(?:\\.[a-z\\d](?:[a-z\\d-]{0,61}[a-z\\d])?)*)>", "i").exec(after);
       if (url) {
         return cx.append(_elt(Type.Autolink, start2, start2 + 1 + url[0].length, [_elt(Type.LinkMark, start2, start2 + 1), _elt(Type.URL, start2 + 1, start2 + url[0].length), _elt(Type.LinkMark, start2 + url[0].length, start2 + 1 + url[0].length)]));
       }
-      var comment2 = /^!--[^>](?:-[^-]|[^-])*?-->/i.exec(after);
+      var comment2 = new RegExp("^!--[^>](?:-[^-]|[^-])*?-->", "i").exec(after);
       if (comment2) return cx.append(_elt(Type.Comment, start2, start2 + 1 + comment2[0].length));
       var procInst = /^\?[^]*?\?>/.exec(after);
       if (procInst) return cx.append(_elt(Type.ProcessingInstruction, start2, start2 + 1 + procInst[0].length));
@@ -26166,7 +26166,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }), 0, true));
     return _tagCompletions = result ? result.options : [];
   }
-  var nonPlainText = /code|horizontalrule|html|link|comment|processing|escape|entity|image|mark|url/i;
+  var nonPlainText = new RegExp("code|horizontalrule|html|link|comment|processing|escape|entity|image|mark|url", "i");
   var pasteURLAsLink = EditorView.domEventHandlers({
     paste: function paste(event, view) {
       var _a2;
@@ -29267,7 +29267,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }
     var _proto176 = SearchQuery.prototype;
     _proto176.unquote = function unquote(text) {
-      return this.literal ? text : text.replace(/\\([nrt\\])/g, function (_, ch) {
+      return this.literal ? text : text.replace(new RegExp("\\\\([nrt\\\\])", "g"), function (_, ch) {
         return ch == "n" ? "\n" : ch == "r" ? "\r" : ch == "t" ? "	" : "\\";
       });
     };
@@ -29414,7 +29414,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return this.prevMatchInRange(state, 0, curFrom) || this.prevMatchInRange(state, curTo, state.doc.length);
     };
     _proto178.getReplacement = function getReplacement(result) {
-      return this.spec.unquote(this.spec.replace).replace(/\$([$&]|\d+)/g, function (m, i2) {
+      return this.spec.unquote(this.spec.replace).replace(new RegExp("\\$([$&]|\\d+)", "g"), function (m, i2) {
         if (i2 == "&") return result.match[0];
         if (i2 == "$") return "$";
         for (var _l2 = i2.length; _l2 > 0; _l2--) {
@@ -29648,7 +29648,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (fallback && !selText) return fallback;
     var config2 = state.facet(searchConfigFacet);
     return new SearchQuery({
-      search: ((_a2 = fallback === null || fallback === void 0 ? void 0 : fallback.literal) !== null && _a2 !== void 0 ? _a2 : config2.literal) ? selText : selText.replace(/\n/g, "\\n"),
+      search: ((_a2 = fallback === null || fallback === void 0 ? void 0 : fallback.literal) !== null && _a2 !== void 0 ? _a2 : config2.literal) ? selText : selText.replace(new RegExp("\\n", "g"), "\\n"),
       caseSensitive: (_b = fallback === null || fallback === void 0 ? void 0 : fallback.caseSensitive) !== null && _b !== void 0 ? _b : config2.caseSensitive,
       literal: (_c = fallback === null || fallback === void 0 ? void 0 : fallback.literal) !== null && _c !== void 0 ? _c : config2.literal,
       regexp: (_d = fallback === null || fallback === void 0 ? void 0 : fallback.regexp) !== null && _d !== void 0 ? _d : config2.regexp,

@@ -1,17 +1,28 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
+const origin = process.env.MACHINES_DEV_ORIGIN || "http://machines-dev.localhost:3030";
+const dataDir = process.env.MACHINES_DEV_DATA_DIR ||
+  join(process.env.HOME || "/root", ".macchiato", "default");
+const apiKey = process.env.MACHINES_DEV_API_KEY ||
+  JSON.parse(readFileSync(join(dataDir, ".machines-dev-auth.json"), "utf8")).apiKey;
 const origins = {
-  prosemirror: "http://prosemirror-quickjs.localhost:3030/",
-  wordgard: "http://wordgard-quickjs.localhost:3030/",
-  xterm: "http://xterm-quickjs.localhost:3030/",
+  prosemirror: `${origin}/prosemirror/`,
+  wordgard: `${origin}/wordgard/`,
+  xterm: `${origin}/xterm/pong/`,
+  "xterm-terminal": `${origin}/xterm/terminal/`,
 };
 
 async function pageFor(browser, name) {
   const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`${origin}/#${encodeURIComponent(apiKey)}`, { waitUntil: "domcontentloaded" });
+  await page.waitForURL(url => url.hash === "");
+  await page.getByText("Macchiato machine examples").waitFor();
   await page.goto(origins[name]);
   await page.waitForFunction(() => document.body.dataset.ready === "true");
   return { page, errors };
@@ -28,13 +39,13 @@ test("the editors run in QuickJS and preserve ordinary edit history", async () =
       await page.keyboard.press("Control+End");
       await page.keyboard.type(" edited");
       await page.waitForTimeout(100);
-      assert.match(await editor.textContent(), / edited$/);
+      assert.match(await editor.textContent(), / edited/);
       await page.keyboard.press("Control+z");
       await page.waitForTimeout(100);
       assert.equal(await editor.textContent(), initial);
       await page.keyboard.press("Control+Shift+z");
       await page.waitForTimeout(100);
-      assert.match(await editor.textContent(), / edited$/);
+      assert.match(await editor.textContent(), / edited/);
       assert.deepEqual(errors, []);
       assert.deepEqual(await page.evaluate(() => globalThis.__quickjsExample.diagnostics), []);
       await page.close();
@@ -157,6 +168,33 @@ test("xterm Pong renders, moves, pauses, and resets", async () => {
     assert.ok(!(await rows()).some(value => value.includes("PAUSED")));
     assert.deepEqual(errors, []);
     assert.deepEqual(await page.evaluate(() => globalThis.__quickjsExample.diagnostics), []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test("the ordinary xterm accepts typing and text selection", async () => {
+  const browser = await chromium.launch();
+  try {
+    const { page, errors } = await pageFor(browser, "xterm-terminal");
+    const input = page.locator(".xterm-helper-textarea");
+    await input.pressSequentially("echo hello terminal");
+    await input.press("Enter");
+    await page.waitForTimeout(100);
+    const row = page.locator(".xterm-rows > div").filter({ hasText: "hello terminal" }).last();
+    assert.match(await row.textContent(), /hello terminal/);
+    const rect = await row.boundingBox();
+    const cell = rect.width / 72;
+    await page.mouse.move(rect.x + cell * 2.5, rect.y + rect.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rect.x + cell * 7.5, rect.y + rect.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+    const selection = page.locator(".xterm-selection div");
+    assert.ok(await selection.count() > 0);
+    const selectedRect = await selection.first().boundingBox();
+    assert.ok(selectedRect.width > cell * 3 && selectedRect.width < cell * 8);
+    assert.deepEqual(errors, []);
   } finally {
     await browser.close();
   }

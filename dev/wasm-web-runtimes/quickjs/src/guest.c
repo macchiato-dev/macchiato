@@ -31,8 +31,15 @@ static void flush_pending_releases(void)
 static void report_stage(const char *stage)
 {
 #ifdef WWC_CANONICAL_HOST
-    (void)stage;
-    return;
+    uint32_t length = 0;
+    transfer[0] = 'D'; transfer[1] = 'U'; transfer[2] = 'L'; transfer[3] = 'E';
+    transfer[4] = 1;
+    while (stage[length] != '\0' && length + 6 < sizeof(transfer)) {
+        transfer[length + 5] = stage[length];
+        length++;
+    }
+    transfer[length + 5] = '\0';
+    msg((uint32_t)(uintptr_t)transfer, length + 6);
 #else
     uint32_t length = 0;
     while (stage[length] != '\0') length++;
@@ -59,6 +66,28 @@ static JSValue guest_print(JSContext *ctx, JSValueConst this_value,
     }
     return JS_UNDEFINED;
 }
+
+#ifdef WWC_CANONICAL_HOST
+static JSValue guest_report_error(JSContext *ctx, JSValueConst this_value,
+                                  int argc, JSValueConst *argv)
+{
+    const char *text;
+    uint32_t length = 0;
+    (void)this_value;
+    if (argc < 1 || (text = JS_ToCString(ctx, argv[0])) == NULL)
+        return JS_UNDEFINED;
+    transfer[0] = 'D'; transfer[1] = 'U'; transfer[2] = 'L'; transfer[3] = 'E';
+    transfer[4] = 2;
+    while (text[length] != '\0' && length + 6 < sizeof(transfer)) {
+        transfer[length + 5] = text[length];
+        length++;
+    }
+    transfer[length + 5] = '\0';
+    msg((uint32_t)(uintptr_t)transfer, length + 6);
+    JS_FreeCString(ctx, text);
+    return JS_UNDEFINED;
+}
+#endif
 
 /* Exchange one bounded wire buffer with the canonical wasm-web-container
    host. The JavaScript guest owns the codec and reuses the same Uint8Array. */
@@ -191,6 +220,11 @@ static int install_host_references(void)
                       JS_NewCFunction(context, guest_bridge, "bridge", 1));
     JS_SetPropertyStr(context, global, "hostNow",
                       JS_NewCFunction(context, guest_now, "hostNow", 0));
+#ifdef WWC_CANONICAL_HOST
+    JS_SetPropertyStr(context, global, "__wwcReportError",
+                      JS_NewCFunction(context, guest_report_error,
+                                      "__wwcReportError", 1));
+#endif
     JS_FreeValue(context, global);
     return 0;
 }
@@ -373,6 +407,7 @@ static void receive_host_message(uint32_t minimum_length)
     result = JS_Call(context, receiver, global, 1, &bytes);
     if (JS_IsException(result)) {
 #ifdef WWC_CANONICAL_HOST
+        report(result);
         report_stage("event");
 #else
         report(result);
@@ -445,8 +480,8 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
                          guest_environment_length, "guest-environment.js",
                          JS_EVAL_TYPE_GLOBAL);
         if (JS_IsException(result)) {
-            report_stage("guest-environment-error");
             report(result);
+            report_stage("guest-environment-error");
             JS_FreeValue(context, result);
             return;
         }

@@ -1,5 +1,295 @@
 var FONT_RESOURCES = {};
 var RUNTIME_RESOURCES = { files: {} };
+// Canonical constrained CSS parser shared by server, browser, and guest builds.
+// Keep this source ES5-compatible so MicroQuickJS builds can concatenate it.
+function cssSpace(source, at) {
+  while (at < source.length && /\s/.test(source[at])) at++;
+  return at;
+}
+
+function cssTrivia(source, at) {
+  var comments = [];
+  while (at < source.length) {
+    if (/\s/.test(source[at])) { at = cssSpace(source, at); continue; }
+    if (source.slice(at, at + 2) !== "/*") break;
+    var end = source.indexOf("*/", at + 2);
+    if (end < 0) throw new SyntaxError("CSS comment is incomplete at " + at);
+    comments.push(source.slice(at + 2, end));
+    at = end + 2;
+  }
+  return { at: at, comments: comments };
+}
+
+function cssParts(value) {
+  var result = [], start = 0, depth = 0, quote = "";
+  for (var index = 0; index <= value.length; index++) {
+    var character = value[index] || " ";
+    if (quote) {
+      if (character === "\\") index++;
+      else if (character === quote) quote = "";
+    } else if (character === "\"" || character === "'") quote = character;
+    else if (character === "(") depth++;
+    else if (character === ")") {
+      if (!depth) throw new SyntaxError("CSS function syntax does not balance");
+      depth--;
+    } else if (/\s/.test(character) && depth === 0) {
+      if (index > start) result.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+  if (quote || depth) throw new SyntaxError("CSS value does not balance");
+  return result;
+}
+
+function cssEdges(property, value) {
+  var parts = cssParts(value);
+  if (!parts.length || parts.length > 4) throw new SyntaxError(property + " shorthand is not understood");
+  var top = parts[0], right = parts[1] || top;
+  var bottom = parts[2] || top, left = parts[3] || right;
+  return [
+    [property + "-top", top], [property + "-right", right],
+    [property + "-bottom", bottom], [property + "-left", left]
+  ];
+}
+
+function cssBorder(value) {
+  if (value === "0" || value === "none") {
+    return ["top", "right", "bottom", "left"].map(function (side) {
+      return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
+    });
+  }
+  var parts = cssParts(value);
+  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
+      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
+    throw new SyntaxError("border shorthand is not understood: " + value);
+  }
+  var result = [];
+  ["top", "right", "bottom", "left"].forEach(function (side) {
+    result.push(["border-" + side + "-width", parts[0]]);
+    result.push(["border-" + side + "-style", parts[1]]);
+    result.push(["border-" + side + "-color", parts[2]]);
+  });
+  return result;
+}
+
+function cssBorderSide(property, value) {
+  var side = property.slice("border-".length);
+  if (value === "0") return [[property + "-width", "0"]];
+  if (value === "none") return [[property + "-style", "none"]];
+  var parts = cssParts(value);
+  if (parts.length === 2 && /^\d/.test(parts[0])) {
+    return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
+  }
+  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
+      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
+    throw new SyntaxError(property + " shorthand is not understood: " + value);
+  }
+  return [
+    ["border-" + side + "-width", parts[0]],
+    ["border-" + side + "-style", parts[1]],
+    ["border-" + side + "-color", parts[2]]
+  ];
+}
+
+function cssRadius(value) {
+  var parts = cssParts(value);
+  if (!parts.length || parts.length > 4) throw new SyntaxError("border radius is not understood");
+  return [
+    ["border-top-left-radius", parts[0]],
+    ["border-top-right-radius", parts[1] || parts[0]],
+    ["border-bottom-right-radius", parts[2] || parts[0]],
+    ["border-bottom-left-radius", parts[3] || parts[1] || parts[0]]
+  ];
+}
+
+function canonicalCss(property, value) {
+  if (property === "-moz-tab-size") return [];
+  if (property === "padding" || property === "margin") return cssEdges(property, value);
+  if (property === "border") return cssBorder(value);
+  if (/^border-(?:top|right|bottom|left)$/.test(property)) {
+    return cssBorderSide(property, value);
+  }
+  if (property === "border-radius") return cssRadius(value);
+  if (property === "gap") return [["row-gap", value], ["column-gap", value]];
+  if (property === "overflow") {
+    var overflow = cssParts(value);
+    if (!overflow.length || overflow.length > 2) {
+      throw new SyntaxError("overflow shorthand is not understood: " + value);
+    }
+    return [["overflow-x", overflow[0]], ["overflow-y", overflow[1] || overflow[0]]];
+  }
+  if (property === "border-color") return ["top", "right", "bottom", "left"].map(
+    function (side) { return ["border-" + side + "-color", value]; }
+  );
+  if (property === "inset") return cssEdges("", value).map(function (entry) {
+    return [entry[0].slice(1), entry[1]];
+  });
+  return [[property, value]];
+}
+
+function cssTokens(value) {
+  var tokens = [], at = 0;
+  while (at < value.length) {
+    if (/\s/.test(value[at])) {
+      at = cssSpace(value, at);
+      if (tokens.length && tokens[tokens.length - 1][0] !== 0) tokens.push([0]);
+      continue;
+    }
+    var rest = value.slice(at), match;
+    if (value.slice(at, at + 2) === "/*") {
+      var commentEnd = value.indexOf("*/", at + 2);
+      if (commentEnd < 0) throw new SyntaxError("CSS value comment is incomplete at " + at);
+      tokens.push([9, value.slice(at + 2, commentEnd)]);
+      at = commentEnd + 2;
+    } else
+    if (value[at] === "\"" || value[at] === "'") {
+      var quote = value[at++], text = "";
+      while (at < value.length && value[at] !== quote) {
+        if (value[at] === "\\") {
+          if (++at >= value.length) throw new SyntaxError("CSS string escape is incomplete");
+        }
+        text += value[at++];
+      }
+      if (value[at++] !== quote) throw new SyntaxError("CSS string is incomplete");
+      tokens.push([4, text]);
+    } else if ((match = /^#([0-9a-f]{3,8})\b/i.exec(rest))) {
+      tokens.push([3, match[1]]); at += match[0].length;
+    } else if ((match = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[a-z]+|%)?/i.exec(rest))) {
+      tokens.push([2, match[0]]); at += match[0].length;
+    } else if ((match = /^(--?[a-z_][a-z0-9_-]*|[a-z_][a-z0-9_-]*)/i.exec(rest))) {
+      at += match[0].length;
+      if (value[at] === "(") { tokens.push([7, match[0]]); at++; }
+      else tokens.push([1, match[0]]);
+    } else if (value[at] === ",") { tokens.push([5]); at++; }
+    else if (value[at] === "/") { tokens.push([6]); at++; }
+    else if (value[at] === "+" || value[at] === "-" || value[at] === "*") {
+      tokens.push([11, value[at++]]);
+    }
+    else if (value[at] === ")") { tokens.push([8]); at++; }
+    else throw new SyntaxError("CSS value token is not understood at " + at);
+  }
+  if (tokens.length && tokens[tokens.length - 1][0] === 0) tokens.pop();
+  return tokens;
+}
+
+function cssValueTree(value) {
+  var tokens = cssTokens(value), at = 0;
+
+  function grouped(items, separator, code) {
+    var groups = [], group = [];
+    items.forEach(function (item) {
+      if (item.separator === separator) { groups.push(group); group = []; }
+      else group.push(item);
+    });
+    groups.push(group);
+    if (groups.length === 1) return null;
+    return [10, code, groups.map(valueList)];
+  }
+
+  function valueList(items) {
+    while (items.length && items[0].separator === " ") items.shift();
+    while (items.length && items[items.length - 1].separator === " ") items.pop();
+    var result = grouped(items, ",", 1) || grouped(items, "/", 2) ||
+      grouped(items, " ", 0);
+    if (result) return result;
+    if (items.length !== 1 || items[0].separator) {
+      throw new SyntaxError("CSS value list is not understood");
+    }
+    return items[0];
+  }
+
+  function read(end) {
+    var items = [];
+    while (at < tokens.length) {
+      var token = tokens[at++];
+      if (token[0] === 8) {
+        if (!end) throw new SyntaxError("CSS function closes without opening");
+        return valueList(items);
+      }
+      if (token[0] === 7) items.push([7, token[1], read(true)]);
+      else if (token[0] === 0) {
+        if (items.length && !items[items.length - 1].separator) items.push({ separator: " " });
+      } else if (token[0] === 5) {
+        while (items.length && items[items.length - 1].separator === " ") items.pop();
+        items.push({ separator: "," });
+      } else if (token[0] === 6) {
+        while (items.length && items[items.length - 1].separator === " ") items.pop();
+        items.push({ separator: "/" });
+      } else items.push(token);
+    }
+    if (end) throw new SyntaxError("CSS function is incomplete");
+    return valueList(items);
+  }
+
+  return read(false);
+}
+
+function parseCss(source) {
+  var rules = [], at = 0;
+  while (at < source.length) {
+    var trivia = cssTrivia(source, at);
+    at = trivia.at;
+    trivia.comments.forEach(function (comment) { rules.push({ comment: comment }); });
+    if (at >= source.length) break;
+    var brace = source.indexOf("{", at);
+    if (brace < 0) throw new SyntaxError("CSS rule is missing an opening brace");
+    var selector = source.slice(at, brace).trim();
+    if (!selector || selector.indexOf("@") >= 0 || selector.indexOf("}") >= 0) {
+      throw new SyntaxError("CSS selector is not understood: " + selector.slice(0, 120));
+    }
+    at = brace + 1;
+    var declarations = [];
+    while (true) {
+      var declarationTrivia = cssTrivia(source, at);
+      at = declarationTrivia.at;
+      declarationTrivia.comments.forEach(function (comment) {
+        declarations.push({ comment: comment });
+      });
+      if (source[at] === "}") { at++; break; }
+      var propertyMatch = /^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)\s*:/i.exec(source.slice(at));
+      if (!propertyMatch) throw new SyntaxError("CSS declaration is not understood at " + at);
+      var property = propertyMatch[1];
+      at += propertyMatch[0].length;
+      var start = at, depth = 0, quote = "";
+      while (at < source.length) {
+        var character = source[at];
+        if (quote) {
+          if (character === "\\") at++;
+          else if (character === quote) quote = "";
+        } else if (character === "\"" || character === "'") quote = character;
+        else if (character === "(") depth++;
+        else if (character === ")") {
+          if (!depth) throw new SyntaxError("CSS function closes without opening");
+          depth--;
+        } else if (!depth && (character === ";" || character === "}")) break;
+        at++;
+      }
+      if (quote || depth || at >= source.length) throw new SyntaxError("CSS declaration is incomplete");
+      var value = source.slice(start, at).trim(), important = false;
+      if (/\s*!important$/i.test(value)) {
+        important = true; value = value.replace(/\s*!important$/i, "").trim();
+      }
+      if (!value) throw new SyntaxError("CSS declaration value is empty");
+      try {
+        canonicalCss(property, value).forEach(function (entry) {
+          var structured = entry[0] === "background" || entry[0] === "background-image";
+          declarations.push({ property: entry[0], tokens: structured ? null : cssTokens(entry[1]),
+            value: structured ? cssValueTree(entry[1]) : null,
+            important: important });
+        });
+      } catch (error) {
+        throw new SyntaxError(property + ": " + value + ": " + error.message);
+      }
+      if (source[at] === ";") at++;
+      else { at++; break; }
+    }
+    rules.push({ selector: selector, declarations: declarations });
+  }
+  if (cssSpace(source, at) !== source.length) throw new SyntaxError("CSS input was not consumed");
+  return rules;
+}
+
+
 /* `print` is the unchanged MicroQuickJS native slot used by this build. */
 var bridge = globalThis.bridge;
 
@@ -304,8 +594,10 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
     set: function (value) {
       if (name === "textContent" && globalThis.__wwcSetElementTextContent &&
           globalThis.__wwcSetElementTextContent(this, String(value))) return;
-      var projected = name === "className" && globalThis.__wwcProjectClassName ?
-        globalThis.__wwcProjectClassName(String(value)) : value;
+      var projected = name === "hidden" ? Boolean(value) : String(value);
+      if (name === "className" && globalThis.__wwcProjectClassName) {
+        projected = globalThis.__wwcProjectClassName(projected);
+      }
       pendingOperations.push([2, this.reference, stringIndex(name), encode(projected)]);
     }
   });
@@ -535,292 +827,7 @@ function fetch(url) {
   });
 }
 
-function cssSpace(source, at) {
-  while (at < source.length && /\s/.test(source[at])) at++;
-  return at;
-}
-
-function cssTrivia(source, at) {
-  var comments = [];
-  while (at < source.length) {
-    if (/\s/.test(source[at])) { at = cssSpace(source, at); continue; }
-    if (source.slice(at, at + 2) !== "/*") break;
-    var end = source.indexOf("*/", at + 2);
-    if (end < 0) throw new SyntaxError("CSS comment is incomplete at " + at);
-    comments.push(source.slice(at + 2, end));
-    at = end + 2;
-  }
-  return { at: at, comments: comments };
-}
-
-function cssParts(value) {
-  var result = [], start = 0, depth = 0, quote = "";
-  for (var index = 0; index <= value.length; index++) {
-    var character = value[index] || " ";
-    if (quote) {
-      if (character === "\\") index++;
-      else if (character === quote) quote = "";
-    } else if (character === "\"" || character === "'") quote = character;
-    else if (character === "(") depth++;
-    else if (character === ")") {
-      if (!depth) throw new SyntaxError("CSS function syntax does not balance");
-      depth--;
-    } else if (/\s/.test(character) && depth === 0) {
-      if (index > start) result.push(value.slice(start, index));
-      start = index + 1;
-    }
-  }
-  if (quote || depth) throw new SyntaxError("CSS value does not balance");
-  return result;
-}
-
-function cssEdges(property, value) {
-  var parts = cssParts(value);
-  if (!parts.length || parts.length > 4) throw new SyntaxError(property + " shorthand is not understood");
-  var top = parts[0], right = parts[1] || top;
-  var bottom = parts[2] || top, left = parts[3] || right;
-  return [
-    [property + "-top", top], [property + "-right", right],
-    [property + "-bottom", bottom], [property + "-left", left]
-  ];
-}
-
-function cssBorder(value) {
-  if (value === "0" || value === "none") {
-    return ["top", "right", "bottom", "left"].map(function (side) {
-      return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
-    });
-  }
-  var parts = cssParts(value);
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
-      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError("border shorthand is not understood: " + value);
-  }
-  var result = [];
-  ["top", "right", "bottom", "left"].forEach(function (side) {
-    result.push(["border-" + side + "-width", parts[0]]);
-    result.push(["border-" + side + "-style", parts[1]]);
-    result.push(["border-" + side + "-color", parts[2]]);
-  });
-  return result;
-}
-
-function cssBorderSide(property, value) {
-  var side = property.slice("border-".length);
-  if (value === "0") return [[property + "-width", "0"]];
-  if (value === "none") return [[property + "-style", "none"]];
-  var parts = cssParts(value);
-  if (parts.length === 2 && /^\d/.test(parts[0])) {
-    return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
-  }
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
-      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError(property + " shorthand is not understood: " + value);
-  }
-  return [
-    ["border-" + side + "-width", parts[0]],
-    ["border-" + side + "-style", parts[1]],
-    ["border-" + side + "-color", parts[2]]
-  ];
-}
-
-function cssRadius(value) {
-  var parts = cssParts(value);
-  if (!parts.length || parts.length > 4) throw new SyntaxError("border radius is not understood");
-  return [
-    ["border-top-left-radius", parts[0]],
-    ["border-top-right-radius", parts[1] || parts[0]],
-    ["border-bottom-right-radius", parts[2] || parts[0]],
-    ["border-bottom-left-radius", parts[3] || parts[1] || parts[0]]
-  ];
-}
-
-function canonicalCss(property, value) {
-  if (property === "-moz-tab-size") return [];
-  if (property === "padding" || property === "margin") return cssEdges(property, value);
-  if (property === "border") return cssBorder(value);
-  if (/^border-(?:top|right|bottom|left)$/.test(property)) {
-    return cssBorderSide(property, value);
-  }
-  if (property === "border-radius") return cssRadius(value);
-  if (property === "gap") return [["row-gap", value], ["column-gap", value]];
-  if (property === "overflow") {
-    var overflow = cssParts(value);
-    if (!overflow.length || overflow.length > 2) {
-      throw new SyntaxError("overflow shorthand is not understood: " + value);
-    }
-    return [["overflow-x", overflow[0]], ["overflow-y", overflow[1] || overflow[0]]];
-  }
-  if (property === "border-color") return ["top", "right", "bottom", "left"].map(
-    function (side) { return ["border-" + side + "-color", value]; }
-  );
-  if (property === "inset") return cssEdges("", value).map(function (entry) {
-    return [entry[0].slice(1), entry[1]];
-  });
-  return [[property, value]];
-}
-
-function cssTokens(value) {
-  var tokens = [], at = 0;
-  while (at < value.length) {
-    if (/\s/.test(value[at])) {
-      at = cssSpace(value, at);
-      if (tokens.length && tokens[tokens.length - 1][0] !== 0) tokens.push([0]);
-      continue;
-    }
-    var rest = value.slice(at), match;
-    if (value.slice(at, at + 2) === "/*") {
-      var commentEnd = value.indexOf("*/", at + 2);
-      if (commentEnd < 0) throw new SyntaxError("CSS value comment is incomplete at " + at);
-      tokens.push([9, value.slice(at + 2, commentEnd)]);
-      at = commentEnd + 2;
-    } else
-    if (value[at] === "\"" || value[at] === "'") {
-      var quote = value[at++], text = "";
-      while (at < value.length && value[at] !== quote) {
-        if (value[at] === "\\") {
-          if (++at >= value.length) throw new SyntaxError("CSS string escape is incomplete");
-        }
-        text += value[at++];
-      }
-      if (value[at++] !== quote) throw new SyntaxError("CSS string is incomplete");
-      tokens.push([4, text]);
-    } else if ((match = /^#([0-9a-f]{3,8})\b/i.exec(rest))) {
-      tokens.push([3, match[1]]); at += match[0].length;
-    } else if ((match = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[a-z]+|%)?/i.exec(rest))) {
-      tokens.push([2, match[0]]); at += match[0].length;
-    } else if ((match = /^(--?[a-z_][a-z0-9_-]*|[a-z_][a-z0-9_-]*)/i.exec(rest))) {
-      at += match[0].length;
-      if (value[at] === "(") { tokens.push([7, match[0]]); at++; }
-      else tokens.push([1, match[0]]);
-    } else if (value[at] === ",") { tokens.push([5]); at++; }
-    else if (value[at] === "/") { tokens.push([6]); at++; }
-    else if (value[at] === "+" || value[at] === "-" || value[at] === "*") {
-      tokens.push([11, value[at++]]);
-    }
-    else if (value[at] === ")") { tokens.push([8]); at++; }
-    else throw new SyntaxError("CSS value token is not understood at " + at);
-  }
-  if (tokens.length && tokens[tokens.length - 1][0] === 0) tokens.pop();
-  return tokens;
-}
-
-function cssValueTree(value) {
-  var tokens = cssTokens(value), at = 0;
-
-  function grouped(items, separator, code) {
-    var groups = [], group = [];
-    items.forEach(function (item) {
-      if (item.separator === separator) { groups.push(group); group = []; }
-      else group.push(item);
-    });
-    groups.push(group);
-    if (groups.length === 1) return null;
-    return [10, code, groups.map(valueList)];
-  }
-
-  function valueList(items) {
-    while (items.length && items[0].separator === " ") items.shift();
-    while (items.length && items[items.length - 1].separator === " ") items.pop();
-    var result = grouped(items, ",", 1) || grouped(items, "/", 2) ||
-      grouped(items, " ", 0);
-    if (result) return result;
-    if (items.length !== 1 || items[0].separator) {
-      throw new SyntaxError("CSS value list is not understood");
-    }
-    return items[0];
-  }
-
-  function read(end) {
-    var items = [];
-    while (at < tokens.length) {
-      var token = tokens[at++];
-      if (token[0] === 8) {
-        if (!end) throw new SyntaxError("CSS function closes without opening");
-        return valueList(items);
-      }
-      if (token[0] === 7) items.push([7, token[1], read(true)]);
-      else if (token[0] === 0) {
-        if (items.length && !items[items.length - 1].separator) items.push({ separator: " " });
-      } else if (token[0] === 5) {
-        while (items.length && items[items.length - 1].separator === " ") items.pop();
-        items.push({ separator: "," });
-      } else if (token[0] === 6) {
-        while (items.length && items[items.length - 1].separator === " ") items.pop();
-        items.push({ separator: "/" });
-      } else items.push(token);
-    }
-    if (end) throw new SyntaxError("CSS function is incomplete");
-    return valueList(items);
-  }
-
-  return read(false);
-}
-
-function parseCss(source) {
-  var rules = [], at = 0;
-  while (at < source.length) {
-    var trivia = cssTrivia(source, at);
-    at = trivia.at;
-    trivia.comments.forEach(function (comment) { rules.push({ comment: comment }); });
-    if (at >= source.length) break;
-    var brace = source.indexOf("{", at);
-    if (brace < 0) throw new SyntaxError("CSS rule is missing an opening brace");
-    var selector = source.slice(at, brace).trim();
-    if (!selector || selector.indexOf("@") >= 0 || selector.indexOf("}") >= 0) {
-      throw new SyntaxError("CSS selector is not understood: " + selector.slice(0, 120));
-    }
-    at = brace + 1;
-    var declarations = [];
-    while (true) {
-      var declarationTrivia = cssTrivia(source, at);
-      at = declarationTrivia.at;
-      declarationTrivia.comments.forEach(function (comment) {
-        declarations.push({ comment: comment });
-      });
-      if (source[at] === "}") { at++; break; }
-      var propertyMatch = /^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)\s*:/i.exec(source.slice(at));
-      if (!propertyMatch) throw new SyntaxError("CSS declaration is not understood at " + at);
-      var property = propertyMatch[1];
-      at += propertyMatch[0].length;
-      var start = at, depth = 0, quote = "";
-      while (at < source.length) {
-        var character = source[at];
-        if (quote) {
-          if (character === "\\") at++;
-          else if (character === quote) quote = "";
-        } else if (character === "\"" || character === "'") quote = character;
-        else if (character === "(") depth++;
-        else if (character === ")") {
-          if (!depth) throw new SyntaxError("CSS function closes without opening");
-          depth--;
-        } else if (!depth && (character === ";" || character === "}")) break;
-        at++;
-      }
-      if (quote || depth || at >= source.length) throw new SyntaxError("CSS declaration is incomplete");
-      var value = source.slice(start, at).trim(), important = false;
-      if (/\s*!important$/i.test(value)) {
-        important = true; value = value.replace(/\s*!important$/i, "").trim();
-      }
-      if (!value) throw new SyntaxError("CSS declaration value is empty");
-      try {
-        canonicalCss(property, value).forEach(function (entry) {
-          var structured = entry[0] === "background" || entry[0] === "background-image";
-          declarations.push({ property: entry[0], tokens: structured ? null : cssTokens(entry[1]),
-            value: structured ? cssValueTree(entry[1]) : null,
-            important: important });
-        });
-      } catch (error) {
-        throw new SyntaxError(property + ": " + value + ": " + error.message);
-      }
-      if (source[at] === ";") at++;
-      else { at++; break; }
-    }
-    rules.push({ selector: selector, declarations: declarations });
-  }
-  if (cssSpace(source, at) !== source.length) throw new SyntaxError("CSS input was not consumed");
-  return rules;
-}
+// The build prepends packages/project-editor/src/constrained-css.js here.
 
 function encodeCss(source, includeFonts) {
   var phase = "parse";
@@ -889,6 +896,10 @@ function encodeCss(source, includeFonts) {
 GuestDocument.prototype.installStylesheet = function (source) {
   immediate([3, this.reference, stringIndex("installStylesheet"), [encode(encodeCss(source, true))]]);
 };
+GuestDocument.prototype.installStylesheetOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("stylesheet operations must be bytes");
+  immediate([3, this.reference, stringIndex("installStylesheet"), [encode(bytes)]]);
+};
 
 function encodeSvg(root) {
   var writer = new Writer(new Uint8Array(128 * 1024));
@@ -940,7 +951,6 @@ Object.defineProperty(GuestDocument.prototype, "hidden", {
 
 var documentReference = immediate([0, null, null]);
 var document = new GuestDocument(documentReference[1]);
-globalThis.__wwcReportError = function() {};
 function GuestNavigator(reference) {
   GuestObject.call(this, reference);
 }
@@ -963,6 +973,11 @@ var location = {};
 Object.defineProperty(location, "pathname", {
   get: function () {
     return immediate([3, document.reference, stringIndex("routeGet"), []]);
+  }
+});
+Object.defineProperty(location, "search", {
+  get: function () {
+    return immediate([3, document.reference, stringIndex("routeSearch"), []]);
   }
 });
 
@@ -999,10 +1014,15 @@ function dispatch(message) {
 // Full-engine additions layered over the canonical wasm-web-container guest
 // runtime. These are browser-shaped guest objects, never browser-realm objects.
 globalThis.document = document;
-globalThis.window = globalThis.self = globalThis;
+globalThis.window = globalThis.self = globalThis.parent = globalThis;
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [
     encode(String(message))
+  ]]);
+};
+globalThis.__wwcServiceCall = function (name, payload) {
+  return immediate([3, document.reference, stringIndex("serviceCall"), [
+    encode(String(name)), encode(String(payload))
   ]]);
 };
 globalThis.__wwcReportError = function (message) {
@@ -1039,6 +1059,50 @@ globalThis.customElements = {
 globalThis.Node = GuestObject;
 globalThis.Element = globalThis.HTMLElement = GuestElement;
 globalThis.Document = GuestDocument;
+Object.defineProperties(GuestObject, {
+  ELEMENT_NODE: { value: 1 },
+  ATTRIBUTE_NODE: { value: 2 },
+  TEXT_NODE: { value: 3 },
+  CDATA_SECTION_NODE: { value: 4 },
+  PROCESSING_INSTRUCTION_NODE: { value: 7 },
+  COMMENT_NODE: { value: 8 },
+  DOCUMENT_NODE: { value: 9 },
+  DOCUMENT_TYPE_NODE: { value: 10 },
+  DOCUMENT_FRAGMENT_NODE: { value: 11 },
+});
+var syntheticDocumentListeners = Object.create(null);
+function GuestCustomEvent(type, options) {
+  this.type = String(type);
+  this.detail = options && options.detail;
+  this.defaultPrevented = false;
+}
+GuestCustomEvent.prototype.preventDefault = function () { this.defaultPrevented = true; };
+globalThis.CustomEvent = GuestCustomEvent;
+globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
+  var listeners = (syntheticDocumentListeners[event.type] || []).slice();
+  for (var index = 0; index < listeners.length; index++) listeners[index].call(this, event);
+  return !event.defaultPrevented;
+};
+GuestElement.prototype.showModal = function () {
+  immediate([3, this.reference, stringIndex("showModal"), []]);
+};
+GuestElement.prototype.close = function (value) {
+  immediate([3, this.reference, stringIndex("close"),
+    value === undefined ? [] : [encode(String(value))]]);
+};
+GuestElement.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest events can be dispatched");
+  if (event.type === "instanttooltiphide" || event.type === "themechange") {
+    var records = (this._eventListeners || []).slice();
+    for (var index = 0; index < records.length; index++) {
+      if (records[index].type === event.type) records[index].callback.call(this, event);
+    }
+    return !event.defaultPrevented;
+  }
+  return immediate([3, this.reference, stringIndex("dispatchEvent"), [encode(event.type)]]);
+};
 Object.defineProperty(GuestDocument.prototype, "documentElement", {
   get: function () {
     if (!this._documentElement) {
@@ -1146,6 +1210,22 @@ Object.defineProperty(GuestObject.prototype, "nodeName", {
     return this._nodeName;
   }
 });
+Object.defineProperty(GuestElement.prototype, "localName", {
+  get: function () {
+    if (this._localName === undefined) {
+      this._localName = immediate([1, this.reference, stringIndex("localName")]);
+    }
+    return this._localName;
+  }
+});
+Object.defineProperty(GuestElement.prototype, "namespaceURI", {
+  get: function () {
+    if (this._namespaceURI === undefined) {
+      this._namespaceURI = immediate([1, this.reference, stringIndex("namespaceURI")]);
+    }
+    return this._namespaceURI;
+  }
+});
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
@@ -1154,6 +1234,11 @@ GuestObject.prototype.closest = function (selector) {
     encode(String(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
+};
+GuestElement.prototype.matches = function (selector) {
+  return immediate([3, this.reference, stringIndex("matches"), [
+    encode(String(selector))
+  ]]);
 };
 Object.defineProperty(GuestObject.prototype, "nodeValue", {
   get: function () {
@@ -1305,6 +1390,7 @@ function GuestSelection(reference) {
   GuestObject.call(this, reference);
 }
 GuestSelection.prototype = Object.create(GuestObject.prototype);
+globalThis.Selection = GuestSelection;
 ["anchorOffset", "focusOffset", "isCollapsed", "rangeCount"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function () { return immediate([1, this.reference, stringIndex(name)]); }
@@ -1329,6 +1415,7 @@ function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
+globalThis.Range = GuestRange;
 var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
@@ -1439,6 +1526,9 @@ GuestRange.prototype.getBoundingClientRect = function () {
 GuestRange.prototype.collapse = function (toStart) {
   hostCall(this.reference, "collapse", [Boolean(toStart)]);
 };
+GuestRange.prototype.detach = function () {
+  hostCall(this.reference, "detach", []);
+};
 ["startContainer", "endContainer"].forEach(function (name) {
   Object.defineProperty(GuestRange.prototype, name, {
     get: function () {
@@ -1545,6 +1635,13 @@ function projectStylesheet(source) {
     at = cursor;
   }
 }
+
+// A build machine may perform the CSS parse ahead of time. The guest still
+// owns the DOM capability and explicitly forwards those semantic operations.
+GuestDocument.prototype.installStylesheetOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("stylesheet operations must be bytes");
+  immediate([3, this.reference, stringIndex("installStylesheet"), [encode(bytes)]]);
+};
 function omitCssUrls(source) {
   var output = "", at = 0, pattern = /url\s*\(/ig;
   while (true) {
@@ -1591,6 +1688,21 @@ GuestDocument.prototype.createElement = function (tag) {
   node._guestCustomElement = Boolean(constructor);
   node._nodeType = 1;
   node._nodeName = tag.toUpperCase();
+  node._localName = tag;
+  node._namespaceURI = "http://www.w3.org/1999/xhtml";
+  return node;
+};
+GuestDocument.prototype.createElementNS = function (namespace, tag) {
+  namespace = String(namespace);
+  tag = String(tag).toLowerCase();
+  var result = immediate([3, this.reference, stringIndex("createElementNS"), [
+    encode(namespace), encode(tag)
+  ]]);
+  var node = rememberNode(new GuestElement(result[1]));
+  node._nodeType = 1;
+  node._nodeName = tag;
+  node._localName = tag;
+  node._namespaceURI = namespace;
   return node;
 };
 GuestDocument.prototype.createDocumentFragment = function () {
@@ -1783,8 +1895,20 @@ GuestIntersectionObserver.prototype.takeRecords = function () { return []; };
 globalThis.MutationObserver = GuestMutationObserver;
 globalThis.ResizeObserver = EmptyObserver;
 globalThis.IntersectionObserver = GuestIntersectionObserver;
-globalThis.getComputedStyle = function () {
-  return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
+function GuestComputedStyle(reference) { GuestObject.call(this, reference); }
+GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
+["direction", "height", "overflow", "paddingBottom", "paddingLeft", "paddingRight",
+  "paddingTop", "position", "whiteSpace", "width"].forEach(function (name) {
+  Object.defineProperty(GuestComputedStyle.prototype, name, {
+    get: function () { return hostGet(this.reference, name); }
+  });
+});
+GuestComputedStyle.prototype.getPropertyValue = function (name) {
+  return hostCall(this.reference, "getPropertyValue", [String(name)]);
+};
+globalThis.getComputedStyle = function (element) {
+  var result = hostCall(document.reference, "getComputedStyle", [element]);
+  return new GuestComputedStyle(result[1]);
 };
 var animationCallbacks = Object.create(null);
 globalThis.requestAnimationFrame = function (callback) {
@@ -1931,6 +2055,20 @@ GuestEvent.prototype.getTargetRanges = function () {
   }
   return ranges;
 };
+GuestEvent.prototype.getModifierState = function (key) {
+  return immediate([3, this.reference, stringIndex("getModifierState"), [encode(String(key))]]);
+};
+GuestEvent.prototype.composedPath = function () {
+  var bytes = hostCall(this.reference, "composedPathReferences", []);
+  var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
+  var path = [];
+  for (var index = 0; index < length; index++) {
+    var at = 4 + index * 4;
+    path.push(nodeForReference(bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24));
+  }
+  return path;
+};
 
 // Window events are represented by the canonical document service. Keep
 // listener identity and removal in the guest so the host only needs to emit a
@@ -1978,10 +2116,11 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (records.some(function (record) {
     return record.type === type && record.callback === callback;
   })) return;
-  var index = allocateElementCallback(callback);
+  var local = type === "instanttooltiphide" || type === "themechange";
+  var index = local ? -1 : allocateElementCallback(callback);
   var capture = options === true || Boolean(options && options.capture);
-  records.push({ type: type, callback: callback, index: index, capture: capture });
-  pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+  records.push({ type: type, callback: callback, index: index, capture: capture, local: local });
+  if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
 };
 GuestElement.prototype.removeEventListener = function (type, callback) {
   var records = this._eventListeners || [];
@@ -1989,8 +2128,10 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     var record = records[index];
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
-      releaseCallback(record.index);
-      pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      if (!record.local) {
+        releaseCallback(record.index);
+        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      }
       return;
     }
   }
@@ -2000,6 +2141,15 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
 // mouseup, just as they are in a browser DOM.
 GuestDocument.prototype.addEventListener = GuestElement.prototype.addEventListener;
 GuestDocument.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
+var addDocumentEventListener = GuestDocument.prototype.addEventListener;
+GuestDocument.prototype.addEventListener = function (type, callback, options) {
+  if (type === "themechange" || type === "instanttooltiphide") {
+    if (typeof callback !== "function") throw new TypeError("callback required");
+    (syntheticDocumentListeners[type] || (syntheticDocumentListeners[type] = [])).push(callback);
+    return;
+  }
+  return addDocumentEventListener.call(this, type, callback, options);
+};
 
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function (value) {
@@ -2035,6 +2185,18 @@ GuestElement.prototype.appendChild = function (child) {
     document.installStylesheet(projectStylesheet(child.textContent));
     return child;
   }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      childrenOf(this).push(fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+    return child;
+  }
   detachGuestNode(child);
   childrenOf(this).push(child);
   setParent(child, this);
@@ -2046,6 +2208,23 @@ GuestElement.prototype.insertBefore = function (child, next) {
   if (child instanceof GuestStylesheetNode) {
     child.parentNode = this;
     document.installStylesheet(projectStylesheet(child.textContent));
+    return child;
+  }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    var destination = childrenOf(this);
+    var destinationIndex = next === null ? destination.length : destination.indexOf(next);
+    if (destinationIndex < 0) throw new TypeError("reference node is not a child");
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      destination.splice(destinationIndex++, 0, fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [
+      encode(child), encode(next)
+    ]]);
     return child;
   }
   detachGuestNode(child);
@@ -2069,6 +2248,19 @@ GuestElement.prototype.removeChild = function (child) {
 GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+};
+GuestObject.prototype.before = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  parent.insertBefore(node, this);
+};
+GuestObject.prototype.after = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  var siblings = childrenOf(parent);
+  parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {
@@ -2107,19 +2299,33 @@ Object.defineProperty(GuestElement.prototype, "attributes", {
 });
 GuestElement.prototype.getAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : null;
+  if (Object.prototype.hasOwnProperty.call(values, name)) return values[name];
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  if (known[name]) return null;
+  var value = hostCall(this.reference, "getAttribute", [String(name)]);
+  known[name] = true;
+  if (value !== null) values[name] = value;
+  return value;
 };
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
   if (name === "class") text = projectClassName(text);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   values[name] = text;
+  if (String(name).toLowerCase() === "style") {
+    this.style.cssText = text;
+    return;
+  }
   pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [
     encode(String(name)), encode(text)
   ]]);
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   delete values[name];
   pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [
     encode(String(name))

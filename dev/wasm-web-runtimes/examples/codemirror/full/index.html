@@ -13,7 +13,7 @@
     const response = await fetch("../generated/codemirror-canonical.wasm");
     if (!response.ok) throw new Error(`Wasm response ${response.status}`);
     const module = await WebAssembly.compileStreaming(response);
-    const sections = WebAssembly.Module.customSections(module, "wasm-web-container");
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
     const machine = new WasmWebMachine(module, document, {
       stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
       services: {

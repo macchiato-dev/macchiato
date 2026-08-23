@@ -1,13 +1,20 @@
-export default function microQuickJSSyntax() {
+export default function microQuickJSSyntax({ types }) {
   return {
     name: "microquickjs-syntax",
     visitor: {
       RegExpLiteral(path) {
         // MicroQuickJS treats this web-compatible character class as an
         // invalid range. Escaping the hyphen preserves the intended set.
-        path.node.pattern = path.node.pattern
+        const pattern = path.node.pattern
           .replaceAll("[\\w-.]", "[\\w.\\-]")
           .replaceAll("[\\w-.:]", "[\\w.:\\-]");
+        if (path.node.flags) {
+          path.replaceWith(types.newExpression(types.identifier("RegExp"), [
+            types.stringLiteral(pattern), types.stringLiteral(path.node.flags),
+          ]));
+        } else {
+          path.node.pattern = pattern;
+        }
       },
       CatchClause(path) {
         const name = path.node.param?.name;
@@ -16,11 +23,7 @@ export default function microQuickJSSyntax() {
         // MicroQuickJS rejects reused or shadowing catch bindings within a
         // function. Give every catch and only its bound references a unique name.
         const replacement = path.scope.generateUidIdentifier(name).name;
-        const binding = path.scope.getBinding(name);
-        path.node.param.name = replacement;
-        for (const reference of binding?.referencePaths ?? []) {
-          reference.node.name = replacement;
-        }
+        path.scope.rename(name, replacement);
       },
     },
   };

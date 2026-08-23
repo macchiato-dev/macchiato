@@ -13,10 +13,10 @@ try {
   const name = document.body.dataset.example;
   const trace = location.search === "?instrument" ? [] : null;
   if (trace) globalThis.__quickjsExample.trace = trace;
-  const response = await fetch(`./${name}.wasm`, { credentials: "same-origin" });
+  const response = await fetch(`/${name}.wasm`, { credentials: "same-origin" });
   if (!response.ok) throw new Error(`Wasm response ${response.status}`);
   const module = await WebAssembly.compileStreaming(response);
-  const sections = WebAssembly.Module.customSections(module, "wasm-web-container");
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machine = new WasmWebMachine(module, document, {
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services,

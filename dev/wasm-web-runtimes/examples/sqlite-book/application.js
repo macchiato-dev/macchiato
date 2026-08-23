@@ -46,10 +46,11 @@
     field.addEventListener("beforeinput", function (event) { event.preventDefault(); });
     field.addEventListener("copy", function () {
       if (!lastKeyPress) return;
-      var apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
       var copy = lastKeyPress.key === "c" || lastKeyPress.key === "C";
-      copyWasConfirmed = copy && (apple ? lastKeyPress.metaKey : lastKeyPress.ctrlKey) &&
-        field.selectionStart !== field.selectionEnd;
+      /* The browser emits `copy` only for its platform's copy command. Keeping
+         the key event proves that command selected this field without needing
+         ambient platform detection or clipboard authority. */
+      copyWasConfirmed = copy && field.selectionStart !== field.selectionEnd;
     });
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", function () { closeModal(modal); });

@@ -1,10 +1,42 @@
 // Full-engine additions layered over the canonical wasm-web-container guest
 // runtime. These are browser-shaped guest objects, never browser-realm objects.
 globalThis.document = document;
-globalThis.window = globalThis.self = globalThis;
+globalThis.window = globalThis.self = globalThis.parent = globalThis;
+if (typeof globalThis.URL !== "function") {
+  globalThis.URL = function GuestURL(value) {
+    var text = String(value);
+    var match = /^(https?):\/\/([^/?#]+)([^?#]*)(\?[^#]*)?(#.*)?$/i.exec(text);
+    if (!match || match[2].indexOf("@") >= 0) throw new TypeError("URL is not absolute HTTP(S)");
+    var host = match[2].toLowerCase();
+    var colon = host.lastIndexOf(":");
+    this.protocol = match[1].toLowerCase() + ":";
+    this.host = host;
+    this.hostname = colon > 0 ? host.slice(0, colon) : host;
+    this.pathname = match[3] || "/";
+    this.search = match[4] || "";
+    this.hash = match[5] || "";
+    this.origin = this.protocol + "//" + this.host;
+    this.href = text;
+  };
+  globalThis.URL.prototype.toString = function () { return this.href; };
+}
+if (!String.prototype.padStart) {
+  String.prototype.padStart = function (length, fill) {
+    var text = String(this);
+    var padding = fill === undefined ? " " : String(fill);
+    if (!padding || text.length >= length) return text;
+    while (padding.length < length - text.length) padding += padding;
+    return padding.slice(0, length - text.length) + text;
+  };
+}
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [
     encode(String(message))
+  ]]);
+};
+globalThis.__wwcServiceCall = function (name, payload) {
+  return immediate([3, document.reference, stringIndex("serviceCall"), [
+    encode(String(name)), encode(String(payload))
   ]]);
 };
 globalThis.__wwcReportError = function (message) {
@@ -40,7 +72,59 @@ globalThis.customElements = {
 };
 globalThis.Node = GuestObject;
 globalThis.Element = globalThis.HTMLElement = GuestElement;
+function GuestSVGElement() {}
+Object.defineProperty(GuestSVGElement, Symbol.hasInstance, {
+  value: function (candidate) {
+    return candidate instanceof GuestElement &&
+      candidate.namespaceURI === "http://www.w3.org/2000/svg";
+  }
+});
+globalThis.SVGElement = GuestSVGElement;
 globalThis.Document = GuestDocument;
+Object.defineProperties(GuestObject, {
+  ELEMENT_NODE: { value: 1 },
+  ATTRIBUTE_NODE: { value: 2 },
+  TEXT_NODE: { value: 3 },
+  CDATA_SECTION_NODE: { value: 4 },
+  PROCESSING_INSTRUCTION_NODE: { value: 7 },
+  COMMENT_NODE: { value: 8 },
+  DOCUMENT_NODE: { value: 9 },
+  DOCUMENT_TYPE_NODE: { value: 10 },
+  DOCUMENT_FRAGMENT_NODE: { value: 11 },
+});
+var syntheticDocumentListeners = Object.create(null);
+function GuestCustomEvent(type, options) {
+  this.type = String(type);
+  this.detail = options && options.detail;
+  this.defaultPrevented = false;
+}
+GuestCustomEvent.prototype.preventDefault = function () { this.defaultPrevented = true; };
+globalThis.CustomEvent = GuestCustomEvent;
+globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
+  var listeners = (syntheticDocumentListeners[event.type] || []).slice();
+  for (var index = 0; index < listeners.length; index++) listeners[index].call(this, event);
+  return !event.defaultPrevented;
+};
+GuestElement.prototype.showModal = function () {
+  immediate([3, this.reference, stringIndex("showModal"), []]);
+};
+GuestElement.prototype.close = function (value) {
+  immediate([3, this.reference, stringIndex("close"),
+    value === undefined ? [] : [encode(String(value))]]);
+};
+GuestElement.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest events can be dispatched");
+  if (event.type === "instanttooltiphide" || event.type === "themechange") {
+    var records = (this._eventListeners || []).slice();
+    for (var index = 0; index < records.length; index++) {
+      if (records[index].type === event.type) records[index].callback.call(this, event);
+    }
+    return !event.defaultPrevented;
+  }
+  return immediate([3, this.reference, stringIndex("dispatchEvent"), [encode(event.type)]]);
+};
 Object.defineProperty(GuestDocument.prototype, "documentElement", {
   get: function () {
     if (!this._documentElement) {
@@ -71,11 +155,27 @@ var runtimePerformanceNow = typeof hostNow === "function" ? hostNow :
   globalThis.__microQuickJS && globalThis.performance && globalThis.performance.now;
 var runtimePerformanceOrigin = runtimePerformanceNow ? runtimePerformanceNow() : 0;
 var runtimeEpochOrigin = hostCall(document.reference, "dateNow", []);
-Date.now = function () {
-  return runtimePerformanceNow ? runtimeEpochOrigin +
-    runtimePerformanceNow() - runtimePerformanceOrigin :
+var NativeDate = Date;
+var runtimeDateNow = function () {
+  return runtimePerformanceNow ? Math.round(runtimeEpochOrigin +
+    runtimePerformanceNow() - runtimePerformanceOrigin) :
     hostCall(document.reference, "dateNow", []);
 };
+function GuestDate(value) {
+  return new NativeDate(arguments.length ? Number(value) : runtimeDateNow());
+}
+GuestDate.prototype = NativeDate.prototype;
+GuestDate.now = runtimeDateNow;
+[
+  ["getFullYear", 0], ["getMonth", 1], ["getDate", 2], ["getDay", 3],
+  ["getHours", 4], ["getMinutes", 5], ["getSeconds", 6],
+  ["getTimezoneOffset", 7]
+].forEach(function (entry) {
+  NativeDate.prototype[entry[0]] = function () {
+    return hostCall(document.reference, "datePart", [this.valueOf(), entry[1]]);
+  };
+});
+globalThis.Date = GuestDate;
 globalThis.performance = {
   now: runtimePerformanceNow ||
     function () { return hostCall(document.reference, "performanceNow", []); }
@@ -148,6 +248,22 @@ Object.defineProperty(GuestObject.prototype, "nodeName", {
     return this._nodeName;
   }
 });
+Object.defineProperty(GuestElement.prototype, "localName", {
+  get: function () {
+    if (this._localName === undefined) {
+      this._localName = immediate([1, this.reference, stringIndex("localName")]);
+    }
+    return this._localName;
+  }
+});
+Object.defineProperty(GuestElement.prototype, "namespaceURI", {
+  get: function () {
+    if (this._namespaceURI === undefined) {
+      this._namespaceURI = immediate([1, this.reference, stringIndex("namespaceURI")]);
+    }
+    return this._namespaceURI;
+  }
+});
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
@@ -156,6 +272,11 @@ GuestObject.prototype.closest = function (selector) {
     encode(String(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
+};
+GuestElement.prototype.matches = function (selector) {
+  return immediate([3, this.reference, stringIndex("matches"), [
+    encode(String(selector))
+  ]]);
 };
 Object.defineProperty(GuestObject.prototype, "nodeValue", {
   get: function () {
@@ -307,6 +428,7 @@ function GuestSelection(reference) {
   GuestObject.call(this, reference);
 }
 GuestSelection.prototype = Object.create(GuestObject.prototype);
+globalThis.Selection = GuestSelection;
 ["anchorOffset", "focusOffset", "isCollapsed", "rangeCount"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function () { return immediate([1, this.reference, stringIndex(name)]); }
@@ -331,6 +453,7 @@ function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
+globalThis.Range = GuestRange;
 var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
@@ -354,9 +477,20 @@ function clientRectsFor(object) { return measuredRects(object, "measureClientRec
 GuestElement.prototype.getClientRects = function () { return clientRectsFor(this); };
 function GuestCanvasContext(reference) { GuestObject.call(this, reference); }
 GuestCanvasContext.prototype = Object.create(GuestObject.prototype);
-GuestElement.prototype.getContext = function (type) {
-  var result = immediate([3, this.reference, stringIndex("getContext"), [encode(type)]]);
-  return result === null ? null : new GuestCanvasContext(result[1]);
+function GuestWebGLObject(reference) { GuestObject.call(this, reference); }
+GuestWebGLObject.prototype = Object.create(GuestObject.prototype);
+function GuestWebGLContext(reference) { GuestObject.call(this, reference); }
+GuestWebGLContext.prototype = Object.create(GuestObject.prototype);
+function GuestWebGPUContext(reference) { GuestObject.call(this, reference); }
+GuestWebGPUContext.prototype = Object.create(GuestObject.prototype);
+GuestElement.prototype.getContext = function (type, options) {
+  var args = [encode(type)];
+  if (options !== undefined) args.push(encode(Boolean(options && options.preserveDrawingBuffer)));
+  var result = immediate([3, this.reference, stringIndex("getContext"), args]);
+  if (result === null) return null;
+  if (type === "webgl") return new GuestWebGLContext(result[1]);
+  if (type === "webgpu") return new GuestWebGPUContext(result[1]);
+  return new GuestCanvasContext(result[1]);
 };
 ["height", "width"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
@@ -387,11 +521,78 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
     pendingOperations.push([3, this.reference, stringIndex(name), args]);
   };
 });
+var webGLConstants = {
+  ARRAY_BUFFER: 34962, COLOR_BUFFER_BIT: 16384, COMPILE_STATUS: 35713,
+  FLOAT: 5126, FRAGMENT_SHADER: 35632, LINK_STATUS: 35714,
+  STATIC_DRAW: 35044, TRIANGLES: 4, VERTEX_SHADER: 35633
+};
+Object.keys(webGLConstants).forEach(function (name) {
+  Object.defineProperty(GuestWebGLContext.prototype, name, { value: webGLConstants[name] });
+});
+["createBuffer", "createProgram"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function () {
+    var result = hostCall(this.reference, name, []);
+    return result === null ? null : new GuestWebGLObject(result[1]);
+  };
+});
+GuestWebGLContext.prototype.createShader = function (type) {
+  var result = hostCall(this.reference, "createShader", [Number(type)]);
+  return result === null ? null : new GuestWebGLObject(result[1]);
+};
+GuestWebGLContext.prototype.shaderSource = function (shader, source) {
+  hostCall(this.reference, "shaderSource", [shader, String(source)]);
+};
+["compileShader", "linkProgram", "useProgram"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (object) { hostCall(this.reference, name, [object]); };
+});
+GuestWebGLContext.prototype.attachShader = function (program, shader) {
+  hostCall(this.reference, "attachShader", [program, shader]);
+};
+GuestWebGLContext.prototype.bindBuffer = function (target, buffer) {
+  hostCall(this.reference, "bindBuffer", [Number(target), buffer]);
+};
+["getShaderParameter", "getProgramParameter"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (object, parameter) {
+    return hostCall(this.reference, name, [object, Number(parameter)]);
+  };
+});
+GuestWebGLContext.prototype.getAttribLocation = function (program, name) {
+  return hostCall(this.reference, "getAttribLocation", [program, String(name)]);
+};
+GuestWebGLContext.prototype.bufferData = function (target, values, usage) {
+  if (!values || !values.buffer) throw new TypeError("WebGL buffer data must be a typed array");
+  var bytes = new Uint8Array(values.buffer, values.byteOffset || 0, values.byteLength);
+  hostCall(this.reference, "bufferData", [Number(target), bytes, Number(usage)]);
+};
+GuestWebGLContext.prototype.clearColor = function (red, green, blue, alpha) {
+  hostCall(this.reference, "clearColor", [red, green, blue, alpha].map(function (value) {
+    return Math.round(Number(value) * 1000000);
+  }));
+};
+["clear", "enableVertexAttribArray"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (value) { hostCall(this.reference, name, [Number(value)]); };
+});
+GuestWebGLContext.prototype.vertexAttribPointer = function (index, size, type, normalized, stride, offset) {
+  hostCall(this.reference, "vertexAttribPointer", [Number(index), Number(size), Number(type),
+    Boolean(normalized), Number(stride), Number(offset)]);
+};
+GuestWebGLContext.prototype.viewport = function (x, y, width, height) {
+  hostCall(this.reference, "viewport", [x, y, width, height].map(Number));
+};
+GuestWebGLContext.prototype.drawArrays = function (mode, first, count) {
+  hostCall(this.reference, "drawArrays", [Number(mode), Number(first), Number(count)]);
+};
+GuestWebGPUContext.prototype.renderTriangle = function () {
+  hostCall(this.reference, "renderTriangle", []);
+};
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
 };
 GuestElement.prototype.select = function () {
   hostCall(this.reference, "select", []);
+};
+GuestElement.prototype.setCustomValidity = function (message) {
+  hostCall(this.reference, "setCustomValidity", [String(message)]);
 };
 GuestElement.prototype.querySelector = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelector"), [
@@ -440,6 +641,9 @@ GuestRange.prototype.getBoundingClientRect = function () {
 });
 GuestRange.prototype.collapse = function (toStart) {
   hostCall(this.reference, "collapse", [Boolean(toStart)]);
+};
+GuestRange.prototype.detach = function () {
+  hostCall(this.reference, "detach", []);
 };
 ["startContainer", "endContainer"].forEach(function (name) {
   Object.defineProperty(GuestRange.prototype, name, {
@@ -491,22 +695,6 @@ Object.defineProperty(GuestDocument.prototype, "activeElement", {
   }
 });
 globalThis.getSelection = function () { return document.getSelection(); };
-function GuestComputedStyle(reference) {
-  GuestObject.call(this, reference);
-}
-GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
-["direction", "height", "overflow", "paddingBottom", "paddingTop", "position", "whiteSpace",
-  "width"].forEach(function (name) {
-  Object.defineProperty(GuestComputedStyle.prototype, name, {
-    get: function () { return immediate([1, this.reference, stringIndex(name)]); }
-  });
-});
-globalThis.getComputedStyle = function (element) {
-  var result = immediate([3, document.reference, stringIndex("getComputedStyle"), [
-    encode(element)
-  ]]);
-  return new GuestComputedStyle(result[1]);
-};
 
 function GuestStylesheetNode() {
   this.parentNode = null;
@@ -514,9 +702,9 @@ function GuestStylesheetNode() {
 }
 function projectStylesheet(source) {
   var output = "", at = 0;
-  // Synthetic cursor animation and print-only UI are supplied by the host
-  // surface rather than represented in the compact stylesheet protocol.
-  var pattern = /(?:@(?:-webkit-)?keyframes\s+[-_a-z0-9]+|@media\s+print)\s*\{/ig;
+  // Print-only UI is omitted. Keyframes cross the semantic CSS wire and are
+  // scoped by the host like every other named resource.
+  var pattern = /@media\s+print\s*\{/ig;
   while (true) {
     pattern.lastIndex = at;
     var match = pattern.exec(source);
@@ -547,6 +735,16 @@ function projectStylesheet(source) {
     at = cursor;
   }
 }
+
+// A build machine may perform the CSS parse ahead of time. The guest still
+// owns the DOM capability and explicitly forwards those semantic operations.
+GuestDocument.prototype.installStylesheetOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("stylesheet operations must be bytes");
+  immediate([3, this.reference, stringIndex("installStylesheet"), [encode(bytes)]]);
+};
+GuestDocument.prototype.installStylesheetSource = function (source) {
+  document.installStylesheet(projectStylesheet(String(source)));
+};
 function omitCssUrls(source) {
   var output = "", at = 0, pattern = /url\s*\(/ig;
   while (true) {
@@ -593,6 +791,21 @@ GuestDocument.prototype.createElement = function (tag) {
   node._guestCustomElement = Boolean(constructor);
   node._nodeType = 1;
   node._nodeName = tag.toUpperCase();
+  node._localName = tag;
+  node._namespaceURI = "http://www.w3.org/1999/xhtml";
+  return node;
+};
+GuestDocument.prototype.createElementNS = function (namespace, tag) {
+  namespace = String(namespace);
+  tag = String(tag).toLowerCase();
+  var result = immediate([3, this.reference, stringIndex("createElementNS"), [
+    encode(namespace), encode(tag)
+  ]]);
+  var node = rememberNode(new GuestElement(result[1]));
+  node._nodeType = 1;
+  node._nodeName = tag;
+  node._localName = tag;
+  node._namespaceURI = namespace;
   return node;
 };
 GuestDocument.prototype.createDocumentFragment = function () {
@@ -602,6 +815,15 @@ GuestDocument.prototype.createDocumentFragment = function () {
   node._nodeName = "#document-fragment";
   return node;
 };
+Object.defineProperty(GuestElement.prototype, "content", {
+  get: function () {
+    var result = immediate([1, this.reference, stringIndex("content")]);
+    if (result === null) return null;
+    var content = nodeForReference(result[1]);
+    synchronizeGuestChildren(content);
+    return content;
+  }
+});
 GuestDocument.prototype.getElementById = function (id) {
   var result = immediate([3, this.reference, stringIndex("getElementById"), [encode(String(id))]]);
   return result === null ? null : nodeForReference(result[1]);
@@ -672,6 +894,21 @@ function synchronizeGuestChildren(target) {
   }
   target._guestChildren = next;
 }
+function synchronizeGuestSubtree(target) {
+  synchronizeGuestChildren(target);
+  var children = childrenOf(target);
+  for (var index = 0; index < children.length; index++) {
+    if (children[index].nodeType === 1 || children[index].nodeType === 11) {
+      synchronizeGuestSubtree(children[index]);
+    }
+  }
+}
+GuestObject.prototype.cloneNode = function (deep) {
+  var result = hostCall(this.reference, "cloneNode", [Boolean(deep)]);
+  var clone = nodeForReference(result[1]);
+  if (deep) synchronizeGuestSubtree(clone);
+  return clone;
+};
 function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"), records = [], changedParents = [];
   for (var index = 0; index < length; index++) {
@@ -785,8 +1022,20 @@ GuestIntersectionObserver.prototype.takeRecords = function () { return []; };
 globalThis.MutationObserver = GuestMutationObserver;
 globalThis.ResizeObserver = EmptyObserver;
 globalThis.IntersectionObserver = GuestIntersectionObserver;
-globalThis.getComputedStyle = function () {
-  return { direction: "ltr", whiteSpace: "pre", getPropertyValue: function () { return ""; } };
+function GuestComputedStyle(reference) { GuestObject.call(this, reference); }
+GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
+["direction", "height", "overflow", "paddingBottom", "paddingLeft", "paddingRight",
+  "paddingTop", "position", "whiteSpace", "width"].forEach(function (name) {
+  Object.defineProperty(GuestComputedStyle.prototype, name, {
+    get: function () { return hostGet(this.reference, name); }
+  });
+});
+GuestComputedStyle.prototype.getPropertyValue = function (name) {
+  return hostCall(this.reference, "getPropertyValue", [String(name)]);
+};
+globalThis.getComputedStyle = function (element) {
+  var result = hostCall(document.reference, "getComputedStyle", [element]);
+  return new GuestComputedStyle(result[1]);
 };
 var animationCallbacks = Object.create(null);
 globalThis.requestAnimationFrame = function (callback) {
@@ -933,6 +1182,20 @@ GuestEvent.prototype.getTargetRanges = function () {
   }
   return ranges;
 };
+GuestEvent.prototype.getModifierState = function (key) {
+  return immediate([3, this.reference, stringIndex("getModifierState"), [encode(String(key))]]);
+};
+GuestEvent.prototype.composedPath = function () {
+  var bytes = hostCall(this.reference, "composedPathReferences", []);
+  var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
+  var path = [];
+  for (var index = 0; index < length; index++) {
+    var at = 4 + index * 4;
+    path.push(nodeForReference(bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24));
+  }
+  return path;
+};
 
 // Window events are represented by the canonical document service. Keep
 // listener identity and removal in the guest so the host only needs to emit a
@@ -961,15 +1224,24 @@ globalThis.removeEventListener = function (type, callback) {
 };
 
 function allocateElementCallback(callback) {
-  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
+  // A DOM EventTarget may retain this listener for the life of the surface.
+  // Do not reuse callback slots that can still be named by a host listener.
+  var index = callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
   // A browser EventTarget strongly retains its listeners until removal.
   var state = { active: true, callback: callback };
   callbackStates[index] = state;
   callbacks[index] = function (event) {
     var current = state.callback;
-    if (state.active && current) current(event);
-    else releaseCallback(index);
+    if (!state.active || !current) return releaseCallback(index);
+    try {
+      current(event);
+    } catch (error) {
+      var message = String(error), stack = error && error.stack;
+      globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ?
+        message + "\n" + stack : stack || message);
+      throw error;
+    }
   };
   return index;
 }
@@ -980,10 +1252,11 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (records.some(function (record) {
     return record.type === type && record.callback === callback;
   })) return;
-  var index = allocateElementCallback(callback);
+  var local = type === "instanttooltiphide" || type === "themechange";
+  var index = local ? -1 : allocateElementCallback(callback);
   var capture = options === true || Boolean(options && options.capture);
-  records.push({ type: type, callback: callback, index: index, capture: capture });
-  pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+  records.push({ type: type, callback: callback, index: index, capture: capture, local: local });
+  if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
 };
 GuestElement.prototype.removeEventListener = function (type, callback) {
   var records = this._eventListeners || [];
@@ -991,8 +1264,10 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     var record = records[index];
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
-      releaseCallback(record.index);
-      pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      if (!record.local) {
+        releaseCallback(record.index);
+        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      }
       return;
     }
   }
@@ -1002,10 +1277,25 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
 // mouseup, just as they are in a browser DOM.
 GuestDocument.prototype.addEventListener = GuestElement.prototype.addEventListener;
 GuestDocument.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
+var addDocumentEventListener = GuestDocument.prototype.addEventListener;
+GuestDocument.prototype.addEventListener = function (type, callback, options) {
+  if (type === "themechange" || type === "instanttooltiphide") {
+    if (typeof callback !== "function") throw new TypeError("callback required");
+    (syntheticDocumentListeners[type] || (syntheticDocumentListeners[type] = [])).push(callback);
+    return;
+  }
+  return addDocumentEventListener.call(this, type, callback, options);
+};
 
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function (value) {
     pendingOperations.push([2, this.reference, stringIndex("tabIndex"), encode(value)]);
+  }
+});
+Object.defineProperty(GuestElement.prototype, "hidden", {
+  get: function () { return immediate([1, this.reference, stringIndex("hidden")]); },
+  set: function (value) {
+    immediate([2, this.reference, stringIndex("hidden"), encode(Boolean(value))]);
   }
 });
 ["value", "checked"].forEach(function (name) {
@@ -1037,6 +1327,18 @@ GuestElement.prototype.appendChild = function (child) {
     document.installStylesheet(projectStylesheet(child.textContent));
     return child;
   }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      childrenOf(this).push(fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+    return child;
+  }
   detachGuestNode(child);
   childrenOf(this).push(child);
   setParent(child, this);
@@ -1048,6 +1350,23 @@ GuestElement.prototype.insertBefore = function (child, next) {
   if (child instanceof GuestStylesheetNode) {
     child.parentNode = this;
     document.installStylesheet(projectStylesheet(child.textContent));
+    return child;
+  }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    var destination = childrenOf(this);
+    var destinationIndex = next === null ? destination.length : destination.indexOf(next);
+    if (destinationIndex < 0) throw new TypeError("reference node is not a child");
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      destination.splice(destinationIndex++, 0, fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [
+      encode(child), encode(next)
+    ]]);
     return child;
   }
   detachGuestNode(child);
@@ -1071,6 +1390,19 @@ GuestElement.prototype.removeChild = function (child) {
 GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+};
+GuestObject.prototype.before = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  parent.insertBefore(node, this);
+};
+GuestObject.prototype.after = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  var siblings = childrenOf(parent);
+  parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {
@@ -1109,19 +1441,33 @@ Object.defineProperty(GuestElement.prototype, "attributes", {
 });
 GuestElement.prototype.getAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : null;
+  if (Object.prototype.hasOwnProperty.call(values, name)) return values[name];
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  if (known[name]) return null;
+  var value = hostCall(this.reference, "getAttribute", [String(name)]);
+  known[name] = true;
+  if (value !== null) values[name] = value;
+  return value;
 };
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
   if (name === "class") text = projectClassName(text);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   values[name] = text;
+  if (String(name).toLowerCase() === "style") {
+    this.style.cssText = text;
+    return;
+  }
   pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [
     encode(String(name)), encode(text)
   ]]);
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   delete values[name];
   pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [
     encode(String(name))

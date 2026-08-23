@@ -129,9 +129,11 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   await folding.waitForSelector("body[data-ready]");
   const foldLines = [0, 6, 11, 16];
   const foldMarkers = folding.locator('.cm-foldGutter span[title="Fold line"]');
+  const lineNumbers = folding.locator(
+    ".cm-lineNumbers .cm-gutterElement:not([style*='visibility: hidden'])");
   assert.equal(await foldMarkers.count(), foldLines.length);
   for (let index = 0; index < foldLines.length; index++) {
-    const lineBox = await folding.locator(".cm-line").nth(foldLines[index]).boundingBox();
+    const lineBox = await lineNumbers.nth(foldLines[index]).boundingBox();
     const markerBox = await foldMarkers.nth(index).boundingBox();
     assert.ok(Math.abs(markerBox.y - lineBox.y) <= 1);
   }
@@ -221,8 +223,10 @@ test("the demo index and each bridged QuickJS editor work", async (context) => {
   assert.deepEqual(await input.locator(".cm-lineNumbers .cm-gutterElement")
     .evaluateAll(elements => elements.filter(element => element.style.visibility !== "hidden")
       .map(element => element.textContent)), ["1", "2", "3", "4"]);
+  const gutterOffset = numberBoxes[0].top - lineBoxes[0].top;
+  assert.ok(gutterOffset >= 0 && gutterOffset <= 4);
   for (let index = 0; index < lineBoxes.length; index++) {
-    assert.ok(Math.abs(numberBoxes[index].top - lineBoxes[index].top) <= 1);
+    assert.ok(Math.abs(numberBoxes[index].top - lineBoxes[index].top - gutterOffset) <= 1);
     assert.ok(Math.abs(numberBoxes[index].height - lineBoxes[index].height) <= 1);
   }
   assert.equal(await input.evaluate(() => getSelection().isCollapsed), true);

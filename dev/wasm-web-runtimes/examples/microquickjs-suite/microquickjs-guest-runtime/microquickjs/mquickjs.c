@@ -193,8 +193,8 @@ typedef struct JSROMClass {
 } JSROMClass;
 
 // CUSTOMIZATION: 2 lines below replace one line: allow stdlib, runtime, and application bytecode.
-//#define N_ROM_ATOM_TABLES_MAX 2
-#define N_ROM_ATOM_TABLES_MAX 3
+// CUSTOMIZATION: 1 line below changed: bound staged guest bytecode atom tables.
+#define N_ROM_ATOM_TABLES_MAX 18
 
 /* must be large enough to have a negligible runtime cost and small
    enough to call the interrupt callback often. */

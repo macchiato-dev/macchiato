@@ -1,0 +1,21 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates clang curl lld wasi-libc \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV CARGO_HOME=/opt/cargo
+ENV RUSTUP_HOME=/opt/rustup
+ENV PATH=/opt/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --profile minimal \
+ && rustup target add wasm32-unknown-unknown
+
+WORKDIR /workspace
+COPY . .
+WORKDIR /workspace/dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime
+RUN cargo build --release --target wasm32-unknown-unknown
+
+CMD ["sh", "-lc", "cp target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm /output/"]

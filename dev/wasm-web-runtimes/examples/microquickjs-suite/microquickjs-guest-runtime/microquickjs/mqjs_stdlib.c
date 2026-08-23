@@ -408,8 +408,8 @@ static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("Array", &js_array_class),
     JS_PROP_CLASS_DEF("Math", &js_math_obj),
     JS_PROP_CLASS_DEF("Date", &js_date_class),
-    // CUSTOMIZATION: 1 line below commented out: omit JSON from the byte-only guest.
-    // JS_PROP_CLASS_DEF("JSON", &js_json_obj),
+    // CUSTOMIZATION: 1 line below retained: general application guests need JSON.
+    JS_PROP_CLASS_DEF("JSON", &js_json_obj),
     JS_PROP_CLASS_DEF("RegExp", &js_regexp_class),
 
     JS_PROP_CLASS_DEF("Error", &js_error_class),

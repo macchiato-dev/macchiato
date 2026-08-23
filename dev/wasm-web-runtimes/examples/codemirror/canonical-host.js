@@ -10,7 +10,7 @@ class CodeMirrorExampleController {
       { credentials: "same-origin" });
     if (!response.ok) throw new Error(`Wasm response ${response.status}`);
     const module = await WebAssembly.compileStreaming(response);
-    const sections = WebAssembly.Module.customSections(module, "wasm-web-container");
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
     this.machine = new WasmWebMachine(module, this.document, {
       stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
       services: {

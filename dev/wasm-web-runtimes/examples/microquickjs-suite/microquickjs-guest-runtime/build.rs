@@ -37,6 +37,13 @@ fn resource_pack(files: &[(String, Vec<u8>)]) -> Vec<u8> {
     packed
 }
 
+fn guest_runtime_source(root: &PathBuf) -> String {
+    let css_path = root.join("../../../../../packages/project-editor/src/constrained-css.js");
+    let css = fs::read_to_string(&css_path).expect("read constrained CSS runtime")
+        .replace("\nexport { parseCss as parseConstrainedCss };\n", "\n");
+    css + &fs::read_to_string(root.join("guest-runtime.js")).expect("read guest runtime")
+}
+
 fn main() {
     println!("cargo:rerun-if-env-changed=WWC_REBUILD_EXAMPLES");
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -100,10 +107,12 @@ fn main() {
         js_string(&fs::read_to_string(mahjong.join("style.css")).expect("read style")),
         js_string("resources.bin"), js_string(&STANDARD.encode(&packed_resources)),
     );
-    let runtime_source = runtime_resources +
-        &fs::read_to_string(root.join("guest-runtime.js")).expect("read guest runtime");
-    let application_source = fs::read_to_string(mahjong.join("application.js"))
-        .expect("read Mahjong application");
+    let guest_runtime = guest_runtime_source(&root);
+    let runtime_source = runtime_resources + &guest_runtime;
+    let application_source = ["game-model.js", "application.js"].map(|name|
+        fs::read_to_string(mahjong.join(name))
+            .unwrap_or_else(|_| panic!("read Mahjong {name}"))
+    ).join("\n");
     let runtime_bytecode = compile_bytecode(&mqjs, &out, "mahjong-runtime", &runtime_source);
     let application_bytecode = compile_bytecode(&mqjs, &out, "mahjong-application", &application_source);
 
@@ -141,7 +150,7 @@ fn main() {
         js_string("Cat Memory Match"), js_string("cat-memory.js"),
         js_string("index.html"), js_string(&cat_index),
         js_string("style.css"), js_string(&cat_style),
-    ) + &fs::read_to_string(root.join("guest-runtime.js")).expect("read guest runtime");
+    ) + &guest_runtime;
     let cat_runtime = compile_bytecode(&mqjs, &out, "cat-memory-runtime", &cat_runtime_source);
     let cat_application = compile_bytecode(
         &mqjs, &out, "cat-memory-application", &cat_application,
@@ -185,7 +194,10 @@ fn main() {
 
 
     println!("cargo:rerun-if-changed=src/guest.c");
+    println!("cargo:rerun-if-changed=microquickjs/mquickjs.c");
+    println!("cargo:rerun-if-changed=microquickjs/mquickjs.h");
     println!("cargo:rerun-if-changed=guest-runtime.js");
+    println!("cargo:rerun-if-changed=../../../../../packages/project-editor/src/constrained-css.js");
     println!("cargo:rerun-if-changed=../mahjong");
     println!("cargo:rerun-if-changed=../cat-memory");
     println!("cargo:rerun-if-changed=../vendor/mahjong-tiles");

@@ -450,6 +450,37 @@
   };
   var src_default = Promise2;
   globalThis.__microQuickJS = true;
+  if (typeof TextEncoder === "undefined") {
+    globalThis.TextEncoder = function TextEncoder2() {};
+    TextEncoder.prototype.encode = function (text) {
+      text = String(text);
+      var values = [];
+      for (var index = 0; index < text.length; index++) {
+        var scalar = text.charCodeAt(index);
+        if (scalar >= 55296 && scalar <= 56319 && index + 1 < text.length) {
+          scalar = 65536 + (scalar - 55296 << 10) + (text.charCodeAt(++index) - 56320);
+        }
+        if (scalar < 128) values.push(scalar);else if (scalar < 2048) values.push(192 | scalar >> 6, 128 | scalar & 63);else if (scalar < 65536) values.push(224 | scalar >> 12, 128 | scalar >> 6 & 63, 128 | scalar & 63);else values.push(240 | scalar >> 18, 128 | scalar >> 12 & 63, 128 | scalar >> 6 & 63, 128 | scalar & 63);
+      }
+      return new Uint8Array(values);
+    };
+  }
+  if (typeof TextDecoder === "undefined") {
+    globalThis.TextDecoder = function TextDecoder2() {};
+    TextDecoder.prototype.decode = function (bytes) {
+      var text = "";
+      for (var index = 0; index < bytes.length;) {
+        var first = bytes[index++],
+          scalar;
+        if (first < 128) scalar = first;else if (first < 224) scalar = (first & 31) << 6 | bytes[index++] & 63;else if (first < 240) scalar = (first & 15) << 12 | (bytes[index++] & 63) << 6 | bytes[index++] & 63;else scalar = (first & 7) << 18 | (bytes[index++] & 63) << 12 | (bytes[index++] & 63) << 6 | bytes[index++] & 63;
+        if (scalar <= 65535) text += String.fromCharCode(scalar);else {
+          scalar -= 65536;
+          text += String.fromCharCode(55296 | scalar >> 10, 56320 | scalar & 1023);
+        }
+      }
+      return text;
+    };
+  }
   if (typeof Symbol === "undefined") {
     nextSymbol = 0;
     symbolRegistry = Object.create(null);
@@ -482,6 +513,16 @@
       }
     };
   }
+  if (!Array.prototype.includes) {
+    Array.prototype.includes = function (value, start) {
+      var index = Number(start) || 0;
+      if (index < 0) index = Math.max(0, this.length + index);
+      for (; index < this.length; index++) {
+        if (this[index] === value || this[index] !== this[index] && value !== value) return true;
+      }
+      return false;
+    };
+  }
   if (!Object.assign) {
     Object.assign = function (target) {
       if (target == null) throw new TypeError("Cannot convert null to object");
@@ -497,6 +538,7 @@
   }
   if (typeof encodeURIComponent === "undefined") {
     globalThis.encodeURIComponent = function (text) {
+      text = String(text);
       var output = "";
       for (var index = 0; index < text.length; index++) {
         var scalar = text.charCodeAt(index);
@@ -523,9 +565,75 @@
       return target;
     };
   }
+  if (!Object.freeze) Object.freeze = function (value) {
+    return value;
+  };
+  if (!Object.values) {
+    Object.values = function (value) {
+      return Object.keys(value).map(function (key) {
+        return value[key];
+      });
+    };
+  }
+  if (!Object.entries) {
+    Object.entries = function (value) {
+      return Object.keys(value).map(function (key) {
+        return [key, value[key]];
+      });
+    };
+  }
+  if (!Object.fromEntries) {
+    Object.fromEntries = function (entries) {
+      var result = {};
+      entries.forEach(function (entry) {
+        result[entry[0]] = entry[1];
+      });
+      return result;
+    };
+  }
+  if (!Object.getPrototypeOf) {
+    Object.getPrototypeOf = function (value) {
+      if (value == null) throw new TypeError("Object.getPrototypeOf requires an object");
+      return value.__proto__ || value.constructor && value.constructor.prototype || null;
+    };
+  }
+  if (!String.prototype.localeCompare) {
+    String.prototype.localeCompare = function (other) {
+      var left = String(this),
+        right = String(other);
+      return left < right ? -1 : left > right ? 1 : 0;
+    };
+  }
+  if (!Array.prototype.flatMap) {
+    Array.prototype.flatMap = function (callback, receiver) {
+      var result = [];
+      for (var index = 0; index < this.length; index++) {
+        var value = callback.call(receiver, this[index], index, this);
+        result = result.concat(value);
+      }
+      return result;
+    };
+  }
+  if (!Array.prototype.at) {
+    Array.prototype.at = function (index) {
+      var offset = Number(index) || 0;
+      if (offset < 0) offset += this.length;
+      return offset < 0 || offset >= this.length ? void 0 : this[offset];
+    };
+  }
   if (!Number.isInteger) {
     Number.isInteger = function (value) {
       return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
+    };
+  }
+  if (!Number.isFinite) {
+    Number.isFinite = function (value) {
+      return typeof value === "number" && isFinite(value);
+    };
+  }
+  if (!Number.isSafeInteger) {
+    Number.isSafeInteger = function (value) {
+      return Number.isInteger(value) && Math.abs(value) <= 9007199254740991;
     };
   }
   if (!String.prototype.localeCompare) {
@@ -535,20 +643,43 @@
       return left < right ? -1 : left > right ? 1 : 0;
     };
   }
+  var NativeRegExp = RegExp;
+  RegExp = function RegExp2(pattern, flags) {
+    var value = new NativeRegExp(pattern, flags);
+    value.__microquickjsFlags = String(flags || "");
+    return value;
+  };
+  RegExp.prototype = NativeRegExp.prototype;
   [["global", "g"], ["ignoreCase", "i"], ["multiline", "m"]].forEach(function (entry) {
-    if (!(entry[0] in RegExp.prototype)) {
-      Object.defineProperty(RegExp.prototype, entry[0], {
-        get: function get() {
-          return this.toString().slice(this.toString().lastIndexOf("/") + 1).indexOf(entry[1]) >= 0;
-        }
-      });
-    }
+    Object.defineProperty(RegExp.prototype, entry[0], {
+      get: function get() {
+        return (this.__microquickjsFlags || "").indexOf(entry[1]) >= 0;
+      }
+    });
   });
   if (typeof globalThis.Map !== "function") globalThis.Map = MapPonyfill;
   if (typeof globalThis.Set !== "function") globalThis.Set = SetPonyfill;
   if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfill;
   if (typeof globalThis.WeakSet !== "function") globalThis.WeakSet = WeakSetPonyfill;
   globalThis.Promise = src_default;
+  if (!String.prototype.includes) {
+    String.prototype.includes = function (value, start) {
+      return String(this).indexOf(String(value), start || 0) !== -1;
+    };
+  }
+  if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function (value, start) {
+      var at = start || 0;
+      return String(this).slice(at, at + String(value).length) === String(value);
+    };
+  }
+  if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function (value, end) {
+      var text = String(this);
+      var stop = end === void 0 ? text.length : Math.min(Number(end), text.length);
+      return text.slice(stop - String(value).length, stop) === String(value);
+    };
+  }
   if (globalThis.__microQuickJS) {
     var orderedMap = new Map([["first", 1], [NaN, 2]]);
     var orderedSet = new Set(["first", NaN]);
@@ -597,6 +728,372 @@ var FONT_RESOURCES = {};
 var RUNTIME_RESOURCES = {
   files: {}
 };
+function cssSpace(source, at) {
+  while (at < source.length && /\s/.test(source[at])) at++;
+  return at;
+}
+function cssTrivia(source, at) {
+  var comments = [];
+  while (at < source.length) {
+    if (/\s/.test(source[at])) {
+      at = cssSpace(source, at);
+      continue;
+    }
+    if (source.slice(at, at + 2) !== "/*") break;
+    var end = source.indexOf("*/", at + 2);
+    if (end < 0) throw new SyntaxError("CSS comment is incomplete at " + at);
+    comments.push(source.slice(at + 2, end));
+    at = end + 2;
+  }
+  return {
+    at: at,
+    comments: comments
+  };
+}
+function cssParts(value) {
+  var result = [],
+    start = 0,
+    depth = 0,
+    quote = "";
+  for (var index = 0; index <= value.length; index++) {
+    var character = value[index] || " ";
+    if (quote) {
+      if (character === "\\") index++;else if (character === quote) quote = "";
+    } else if (character === "\"" || character === "'") quote = character;else if (character === "(") depth++;else if (character === ")") {
+      if (!depth) throw new SyntaxError("CSS function syntax does not balance");
+      depth--;
+    } else if (/\s/.test(character) && depth === 0) {
+      if (index > start) result.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+  if (quote || depth) throw new SyntaxError("CSS value does not balance");
+  return result;
+}
+function cssEdges(property, value) {
+  var parts = cssParts(value);
+  if (!parts.length || parts.length > 4) throw new SyntaxError(property + " shorthand is not understood");
+  var top = parts[0],
+    right = parts[1] || top;
+  var bottom = parts[2] || top,
+    left = parts[3] || right;
+  return [[property + "-top", top], [property + "-right", right], [property + "-bottom", bottom], [property + "-left", left]];
+}
+function cssBorder(value) {
+  if (value === "0" || value === "none") {
+    return ["top", "right", "bottom", "left"].map(function (side) {
+      return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
+    });
+  }
+  var parts = cssParts(value);
+  if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
+    throw new SyntaxError("border shorthand is not understood: " + value);
+  }
+  var result = [];
+  ["top", "right", "bottom", "left"].forEach(function (side) {
+    result.push(["border-" + side + "-width", parts[0]]);
+    result.push(["border-" + side + "-style", parts[1]]);
+    result.push(["border-" + side + "-color", parts[2]]);
+  });
+  return result;
+}
+function cssBorderSide(property, value) {
+  var side = property.slice("border-".length);
+  if (value === "0") return [[property + "-width", "0"]];
+  if (value === "none") return [[property + "-style", "none"]];
+  var parts = cssParts(value);
+  if (parts.length === 2 && /^\d/.test(parts[0])) {
+    return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
+  }
+  if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
+    throw new SyntaxError(property + " shorthand is not understood: " + value);
+  }
+  return [["border-" + side + "-width", parts[0]], ["border-" + side + "-style", parts[1]], ["border-" + side + "-color", parts[2]]];
+}
+function cssRadius(value) {
+  var halves = value.split("/");
+  if (halves.length > 2) throw new SyntaxError("border radius is not understood");
+  var horizontal = cssParts(halves[0].trim());
+  var vertical = halves.length === 2 ? cssParts(halves[1].trim()) : horizontal;
+  if (!horizontal.length || horizontal.length > 4 || !vertical.length || vertical.length > 4) {
+    throw new SyntaxError("border radius is not understood");
+  }
+  function corners(parts) {
+    return [parts[0], parts[1] || parts[0], parts[2] || parts[0], parts[3] || parts[1] || parts[0]];
+  }
+  var x = corners(horizontal),
+    y = corners(vertical);
+  return [["border-top-left-radius", x[0] + (x[0] === y[0] ? "" : " / " + y[0])], ["border-top-right-radius", x[1] + (x[1] === y[1] ? "" : " / " + y[1])], ["border-bottom-right-radius", x[2] + (x[2] === y[2] ? "" : " / " + y[2])], ["border-bottom-left-radius", x[3] + (x[3] === y[3] ? "" : " / " + y[3])]];
+}
+function canonicalCss(property, value) {
+  if (property === "-moz-tab-size") return [];
+  if (property === "padding" || property === "margin") return cssEdges(property, value);
+  if (property === "border") return cssBorder(value);
+  if (/^border-(?:top|right|bottom|left)$/.test(property)) {
+    return cssBorderSide(property, value);
+  }
+  if (property === "border-radius") return cssRadius(value);
+  if (property === "gap") return [["row-gap", value], ["column-gap", value]];
+  if (property === "overflow") {
+    var overflow = cssParts(value);
+    if (!overflow.length || overflow.length > 2) {
+      throw new SyntaxError("overflow shorthand is not understood: " + value);
+    }
+    return [["overflow-x", overflow[0]], ["overflow-y", overflow[1] || overflow[0]]];
+  }
+  if (property === "border-color") return ["top", "right", "bottom", "left"].map(function (side) {
+    return ["border-" + side + "-color", value];
+  });
+  if (property === "inset") return cssEdges("", value).map(function (entry) {
+    return [entry[0].slice(1), entry[1]];
+  });
+  return [[property, value]];
+}
+function cssTokens(value) {
+  var tokens = [],
+    at = 0;
+  while (at < value.length) {
+    if (/\s/.test(value[at])) {
+      at = cssSpace(value, at);
+      if (tokens.length && tokens[tokens.length - 1][0] !== 0) tokens.push([0]);
+      continue;
+    }
+    var rest = value.slice(at),
+      match;
+    if (value.slice(at, at + 2) === "/*") {
+      var commentEnd = value.indexOf("*/", at + 2);
+      if (commentEnd < 0) throw new SyntaxError("CSS value comment is incomplete at " + at);
+      tokens.push([9, value.slice(at + 2, commentEnd)]);
+      at = commentEnd + 2;
+    } else if (value[at] === "\"" || value[at] === "'") {
+      var quote = value[at++],
+        text = "";
+      while (at < value.length && value[at] !== quote) {
+        if (value[at] === "\\") {
+          if (++at >= value.length) throw new SyntaxError("CSS string escape is incomplete");
+        }
+        text += value[at++];
+      }
+      if (value[at++] !== quote) throw new SyntaxError("CSS string is incomplete");
+      tokens.push([4, text]);
+    } else if (match = new RegExp("^#([0-9a-f]{3,8})\\b", "i").exec(rest)) {
+      tokens.push([3, match[1]]);
+      at += match[0].length;
+    } else if (match = new RegExp("^-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[a-z]+|%)?", "i").exec(rest)) {
+      tokens.push([2, match[0]]);
+      at += match[0].length;
+    } else if (match = new RegExp("^(--?[a-z_][a-z0-9_-]*|[a-z_][a-z0-9_-]*)", "i").exec(rest)) {
+      at += match[0].length;
+      if (value[at] === "(") {
+        tokens.push([7, match[0]]);
+        at++;
+      } else tokens.push([1, match[0]]);
+    } else if (value[at] === ",") {
+      tokens.push([5]);
+      at++;
+    } else if (value[at] === "/") {
+      tokens.push([6]);
+      at++;
+    } else if (value[at] === "+" || value[at] === "-" || value[at] === "*") {
+      tokens.push([11, value[at++]]);
+    } else if (value[at] === ")") {
+      tokens.push([8]);
+      at++;
+    } else throw new SyntaxError("CSS value token is not understood at " + at);
+  }
+  if (tokens.length && tokens[tokens.length - 1][0] === 0) tokens.pop();
+  return tokens;
+}
+function cssValueTree(value) {
+  var tokens = cssTokens(value),
+    at = 0;
+  function grouped(items, separator, code) {
+    var groups = [],
+      group = [];
+    items.forEach(function (item) {
+      if (item.separator === separator) {
+        groups.push(group);
+        group = [];
+      } else group.push(item);
+    });
+    groups.push(group);
+    if (groups.length === 1) return null;
+    return [10, code, groups.map(valueList)];
+  }
+  function valueList(items) {
+    while (items.length && items[0].separator === " ") items.shift();
+    while (items.length && items[items.length - 1].separator === " ") items.pop();
+    var result = grouped(items, ",", 1) || grouped(items, "/", 2) || grouped(items, " ", 0);
+    if (result) return result;
+    if (items.length !== 1 || items[0].separator) {
+      throw new SyntaxError("CSS value list is not understood");
+    }
+    return items[0];
+  }
+  function read(end) {
+    var items = [];
+    while (at < tokens.length) {
+      var token = tokens[at++];
+      if (token[0] === 8) {
+        if (!end) throw new SyntaxError("CSS function closes without opening");
+        return valueList(items);
+      }
+      if (token[0] === 7) items.push([7, token[1], read(true)]);else if (token[0] === 0) {
+        if (items.length && !items[items.length - 1].separator) items.push({
+          separator: " "
+        });
+      } else if (token[0] === 5) {
+        while (items.length && items[items.length - 1].separator === " ") items.pop();
+        items.push({
+          separator: ","
+        });
+      } else if (token[0] === 6) {
+        while (items.length && items[items.length - 1].separator === " ") items.pop();
+        items.push({
+          separator: "/"
+        });
+      } else items.push(token);
+    }
+    if (end) throw new SyntaxError("CSS function is incomplete");
+    return valueList(items);
+  }
+  return read(false);
+}
+function parseCss(source) {
+  var at = 0;
+  function readDeclarations() {
+    var declarations = [];
+    while (true) {
+      var declarationTrivia = cssTrivia(source, at);
+      at = declarationTrivia.at;
+      declarationTrivia.comments.forEach(function (comment) {
+        declarations.push({
+          comment: comment
+        });
+      });
+      if (source[at] === "}") {
+        at++;
+        return declarations;
+      }
+      var propertyMatch = new RegExp("^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)\\s*:", "i").exec(source.slice(at));
+      if (!propertyMatch) throw new SyntaxError("CSS declaration is not understood at " + at);
+      var property = propertyMatch[1];
+      at += propertyMatch[0].length;
+      var start = at,
+        depth = 0,
+        quote = "";
+      while (at < source.length) {
+        var character = source[at];
+        if (quote) {
+          if (character === "\\") at++;else if (character === quote) quote = "";
+        } else if (character === "\"" || character === "'") quote = character;else if (character === "(") depth++;else if (character === ")") {
+          if (!depth) throw new SyntaxError("CSS function closes without opening");
+          depth--;
+        } else if (!depth && (character === ";" || character === "}")) break;
+        at++;
+      }
+      if (quote || depth || at >= source.length) throw new SyntaxError("CSS declaration is incomplete");
+      var value = source.slice(start, at).trim(),
+        important = false;
+      if (new RegExp("\\s*!important$", "i").test(value)) {
+        important = true;
+        value = value.replace(new RegExp("\\s*!important$", "i"), "").trim();
+      }
+      if (!value) throw new SyntaxError("CSS declaration value is empty");
+      try {
+        canonicalCss(property, value).forEach(function (entry) {
+          var structured = entry[0] === "background" || entry[0] === "background-image";
+          declarations.push({
+            property: entry[0],
+            tokens: structured ? null : cssTokens(entry[1]),
+            value: structured ? cssValueTree(entry[1]) : null,
+            important: important
+          });
+        });
+      } catch (_error) {
+        throw new SyntaxError(property + ": " + value + ": " + _error.message);
+      }
+      if (source[at] === ";") at++;else {
+        at++;
+        return declarations;
+      }
+    }
+  }
+  function readRules(nested) {
+    var rules = [];
+    while (at < source.length) {
+      var trivia = cssTrivia(source, at);
+      at = trivia.at;
+      trivia.comments.forEach(function (comment) {
+        rules.push({
+          comment: comment
+        });
+      });
+      if (nested && source[at] === "}") {
+        at++;
+        return rules;
+      }
+      if (at >= source.length) {
+        if (nested) throw new SyntaxError("CSS media rule is incomplete");
+        break;
+      }
+      var brace = source.indexOf("{", at);
+      if (brace < 0) throw new SyntaxError("CSS rule is missing an opening brace");
+      var selector = source.slice(at, brace).trim();
+      var keyframes = new RegExp("^@keyframes\\s+([a-z_][a-z0-9_-]*)$", "i").exec(selector);
+      if (keyframes) {
+        at = brace + 1;
+        var frames = [];
+        while (true) {
+          at = cssTrivia(source, at).at;
+          if (source[at] === "}") {
+            at++;
+            break;
+          }
+          var frameBrace = source.indexOf("{", at);
+          if (frameBrace < 0) throw new SyntaxError("CSS keyframes rule is incomplete");
+          var frameSelector = source.slice(at, frameBrace).trim().toLowerCase();
+          if (!frameSelector.split(/\s*,\s*/).every(function (part) {
+            return part === "from" || part === "to" || /^(?:100|\d{1,2})(?:\.\d+)?%$/.test(part);
+          })) throw new SyntaxError("CSS keyframe selector is not understood: " + frameSelector);
+          at = frameBrace + 1;
+          frames.push({
+            selector: frameSelector,
+            declarations: readDeclarations()
+          });
+        }
+        rules.push({
+          keyframes: keyframes[1],
+          frames: frames
+        });
+        continue;
+      }
+      var media = new RegExp("^@media\\s+(\\([^{}]+\\)(?:\\s+(?:and|or)\\s+\\([^{}]+\\)|\\s*,\\s*\\([^{}]+\\))*)$", "i").exec(selector);
+      if (media) {
+        at = brace + 1;
+        rules.push({
+          media: media[1].toLowerCase().replace(new RegExp(":\\s*", "g"), ": ").replace(new RegExp("\\s*,\\s*", "g"), ", ").replace(new RegExp("\\s+(and|or)\\s+", "g"), " $1 "),
+          rules: readRules(true)
+        });
+        continue;
+      }
+      if (!selector || selector.indexOf("@") >= 0 || selector.indexOf("}") >= 0) {
+        throw new SyntaxError("CSS selector is not understood: " + selector.slice(0, 120));
+      }
+      at = brace + 1;
+      var declarations = readDeclarations();
+      rules.push({
+        selector: selector,
+        declarations: declarations
+      });
+    }
+    if (nested) throw new SyntaxError("CSS media rule is incomplete");
+    return rules;
+  }
+  var rules = readRules(false);
+  if (cssSpace(source, at) !== source.length) throw new SyntaxError("CSS input was not consumed");
+  return rules;
+}
 var bridge = print;
 var wireStrings = [];
 var wireIndexes = Object.create(null);
@@ -606,6 +1103,7 @@ var callbacks = [];
 var callbackStates = [];
 var freeCallbacks = [];
 var wireBuffer = new Uint8Array(2 * 1024 * 1024);
+var constructingHostReference = null;
 function allocateCallback(callback, once) {
   var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
@@ -721,7 +1219,7 @@ function writeValue(writer, value) {
     for (var index = 0; index < value.length; index++) writer.byte(value[index]);
     return;
   }
-  throw new TypeError("unsupported wire value");
+  throw new TypeError("unsupported wire value: " + typeof value + " " + Object.prototype.toString.call(value));
 }
 function Reader(bytes, length) {
   this.bytes = bytes;
@@ -831,17 +1329,28 @@ function immediate(operation) {
   return exchange([operation])[0];
 }
 function GuestObject(reference) {
+  var directCustomElement = false;
+  if (reference === undefined && constructingHostReference !== null) {
+    reference = constructingHostReference;
+  }
+  if (reference === undefined && typeof customElementNames !== "undefined" && customElementNames.has(this.constructor)) {
+    var customTag = customElementNames.get(this.constructor);
+    var created = immediate([3, document.reference, stringIndex("createElement"), [encode(customTag)]]);
+    reference = created[1];
+    directCustomElement = true;
+  }
   this.reference = reference;
   this._hostReference = new HostReference(reference);
+  if (directCustomElement) this._guestCustomElement = true;
 }
 function GuestStyle(reference) {
   GuestObject.call(this, reference);
 }
 GuestStyle.prototype = Object.create(GuestObject.prototype);
-["display", "flexBasis", "height", "inset", "left", "marginTop", "minHeight", "objectFit", "position", "top", "width", "zIndex"].forEach(function (name) {
+["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis", "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle", "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing", "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow", "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace", "width", "zIndex"].forEach(function (name) {
   Object.defineProperty(GuestStyle.prototype, name, {
     set: function set(value) {
-      var property = name.replace(/[A-Z]/g, function (letter) {
+      var property = name.replace(new RegExp("[A-Z]", "g"), function (letter) {
         return "-" + letter.toLowerCase();
       });
       if (value === "") {
@@ -865,7 +1374,10 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
     } : undefined,
     set: function set(value) {
       if (name === "textContent" && globalThis.__wwcSetElementTextContent && globalThis.__wwcSetElementTextContent(this, String(value))) return;
-      var projected = name === "className" && globalThis.__wwcProjectClassName ? globalThis.__wwcProjectClassName(String(value)) : value;
+      var projected = name === "hidden" ? Boolean(value) : String(value);
+      if (name === "className" && globalThis.__wwcProjectClassName) {
+        projected = globalThis.__wwcProjectClassName(projected);
+      }
       pendingOperations.push([2, this.reference, stringIndex(name), encode(projected)]);
     }
   });
@@ -1045,305 +1557,6 @@ function fetch(url) {
     }
   });
 }
-function cssSpace(source, at) {
-  while (at < source.length && /\s/.test(source[at])) at++;
-  return at;
-}
-function cssTrivia(source, at) {
-  var comments = [];
-  while (at < source.length) {
-    if (/\s/.test(source[at])) {
-      at = cssSpace(source, at);
-      continue;
-    }
-    if (source.slice(at, at + 2) !== "/*") break;
-    var end = source.indexOf("*/", at + 2);
-    if (end < 0) throw new SyntaxError("CSS comment is incomplete at " + at);
-    comments.push(source.slice(at + 2, end));
-    at = end + 2;
-  }
-  return {
-    at: at,
-    comments: comments
-  };
-}
-function cssParts(value) {
-  var result = [],
-    start = 0,
-    depth = 0,
-    quote = "";
-  for (var index = 0; index <= value.length; index++) {
-    var character = value[index] || " ";
-    if (quote) {
-      if (character === "\\") index++;else if (character === quote) quote = "";
-    } else if (character === "\"" || character === "'") quote = character;else if (character === "(") depth++;else if (character === ")") {
-      if (!depth) throw new SyntaxError("CSS function syntax does not balance");
-      depth--;
-    } else if (/\s/.test(character) && depth === 0) {
-      if (index > start) result.push(value.slice(start, index));
-      start = index + 1;
-    }
-  }
-  if (quote || depth) throw new SyntaxError("CSS value does not balance");
-  return result;
-}
-function cssEdges(property, value) {
-  var parts = cssParts(value);
-  if (!parts.length || parts.length > 4) throw new SyntaxError(property + " shorthand is not understood");
-  var top = parts[0],
-    right = parts[1] || top;
-  var bottom = parts[2] || top,
-    left = parts[3] || right;
-  return [[property + "-top", top], [property + "-right", right], [property + "-bottom", bottom], [property + "-left", left]];
-}
-function cssBorder(value) {
-  if (value === "0" || value === "none") {
-    return ["top", "right", "bottom", "left"].map(function (side) {
-      return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
-    });
-  }
-  var parts = cssParts(value);
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError("border shorthand is not understood: " + value);
-  }
-  var result = [];
-  ["top", "right", "bottom", "left"].forEach(function (side) {
-    result.push(["border-" + side + "-width", parts[0]]);
-    result.push(["border-" + side + "-style", parts[1]]);
-    result.push(["border-" + side + "-color", parts[2]]);
-  });
-  return result;
-}
-function cssBorderSide(property, value) {
-  var side = property.slice("border-".length);
-  if (value === "0") return [[property + "-width", "0"]];
-  if (value === "none") return [[property + "-style", "none"]];
-  var parts = cssParts(value);
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError(property + " shorthand is not understood: " + value);
-  }
-  return [["border-" + side + "-width", parts[0]], ["border-" + side + "-style", parts[1]], ["border-" + side + "-color", parts[2]]];
-}
-function cssRadius(value) {
-  var parts = cssParts(value);
-  if (!parts.length || parts.length > 4) throw new SyntaxError("border radius is not understood");
-  return [["border-top-left-radius", parts[0]], ["border-top-right-radius", parts[1] || parts[0]], ["border-bottom-right-radius", parts[2] || parts[0]], ["border-bottom-left-radius", parts[3] || parts[1] || parts[0]]];
-}
-function canonicalCss(property, value) {
-  if (property === "-moz-tab-size") return [];
-  if (property === "padding" || property === "margin") return cssEdges(property, value);
-  if (property === "border") return cssBorder(value);
-  if (/^border-(?:top|right|bottom|left)$/.test(property)) {
-    return cssBorderSide(property, value);
-  }
-  if (property === "border-radius") return cssRadius(value);
-  if (property === "gap") return [["row-gap", value], ["column-gap", value]];
-  if (property === "overflow") {
-    var overflow = cssParts(value);
-    if (!overflow.length || overflow.length > 2) {
-      throw new SyntaxError("overflow shorthand is not understood: " + value);
-    }
-    return [["overflow-x", overflow[0]], ["overflow-y", overflow[1] || overflow[0]]];
-  }
-  if (property === "border-color") return ["top", "right", "bottom", "left"].map(function (side) {
-    return ["border-" + side + "-color", value];
-  });
-  if (property === "inset") return cssEdges("", value).map(function (entry) {
-    return [entry[0].slice(1), entry[1]];
-  });
-  return [[property, value]];
-}
-function cssTokens(value) {
-  var tokens = [],
-    at = 0;
-  while (at < value.length) {
-    if (/\s/.test(value[at])) {
-      at = cssSpace(value, at);
-      if (tokens.length && tokens[tokens.length - 1][0] !== 0) tokens.push([0]);
-      continue;
-    }
-    var rest = value.slice(at),
-      match;
-    if (value.slice(at, at + 2) === "/*") {
-      var commentEnd = value.indexOf("*/", at + 2);
-      if (commentEnd < 0) throw new SyntaxError("CSS value comment is incomplete at " + at);
-      tokens.push([9, value.slice(at + 2, commentEnd)]);
-      at = commentEnd + 2;
-    } else if (value[at] === "\"" || value[at] === "'") {
-      var quote = value[at++],
-        text = "";
-      while (at < value.length && value[at] !== quote) {
-        if (value[at] === "\\") {
-          if (++at >= value.length) throw new SyntaxError("CSS string escape is incomplete");
-        }
-        text += value[at++];
-      }
-      if (value[at++] !== quote) throw new SyntaxError("CSS string is incomplete");
-      tokens.push([4, text]);
-    } else if (match = /^#([0-9a-f]{3,8})\b/i.exec(rest)) {
-      tokens.push([3, match[1]]);
-      at += match[0].length;
-    } else if (match = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[a-z]+|%)?/i.exec(rest)) {
-      tokens.push([2, match[0]]);
-      at += match[0].length;
-    } else if (match = /^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)/i.exec(rest)) {
-      at += match[0].length;
-      if (value[at] === "(") {
-        tokens.push([7, match[0]]);
-        at++;
-      } else tokens.push([1, match[0]]);
-    } else if (value[at] === ",") {
-      tokens.push([5]);
-      at++;
-    } else if (value[at] === "/") {
-      tokens.push([6]);
-      at++;
-    } else if (value[at] === ")") {
-      tokens.push([8]);
-      at++;
-    } else throw new SyntaxError("CSS value token is not understood at " + at);
-  }
-  if (tokens.length && tokens[tokens.length - 1][0] === 0) tokens.pop();
-  return tokens;
-}
-function cssValueTree(value) {
-  var tokens = cssTokens(value),
-    at = 0;
-  function grouped(items, separator, code) {
-    var groups = [],
-      group = [];
-    items.forEach(function (item) {
-      if (item.separator === separator) {
-        groups.push(group);
-        group = [];
-      } else group.push(item);
-    });
-    groups.push(group);
-    if (groups.length === 1) return null;
-    return [10, code, groups.map(valueList)];
-  }
-  function valueList(items) {
-    while (items.length && items[0].separator === " ") items.shift();
-    while (items.length && items[items.length - 1].separator === " ") items.pop();
-    var result = grouped(items, ",", 1) || grouped(items, "/", 2) || grouped(items, " ", 0);
-    if (result) return result;
-    if (items.length !== 1 || items[0].separator) {
-      throw new SyntaxError("CSS value list is not understood");
-    }
-    return items[0];
-  }
-  function read(end) {
-    var items = [];
-    while (at < tokens.length) {
-      var token = tokens[at++];
-      if (token[0] === 8) {
-        if (!end) throw new SyntaxError("CSS function closes without opening");
-        return valueList(items);
-      }
-      if (token[0] === 7) items.push([7, token[1], read(true)]);else if (token[0] === 0) {
-        if (items.length && !items[items.length - 1].separator) items.push({
-          separator: " "
-        });
-      } else if (token[0] === 5) {
-        while (items.length && items[items.length - 1].separator === " ") items.pop();
-        items.push({
-          separator: ","
-        });
-      } else if (token[0] === 6) {
-        while (items.length && items[items.length - 1].separator === " ") items.pop();
-        items.push({
-          separator: "/"
-        });
-      } else items.push(token);
-    }
-    if (end) throw new SyntaxError("CSS function is incomplete");
-    return valueList(items);
-  }
-  return read(false);
-}
-function parseCss(source) {
-  var rules = [],
-    at = 0;
-  while (at < source.length) {
-    var trivia = cssTrivia(source, at);
-    at = trivia.at;
-    trivia.comments.forEach(function (comment) {
-      rules.push({
-        comment: comment
-      });
-    });
-    if (at >= source.length) break;
-    var brace = source.indexOf("{", at);
-    if (brace < 0) throw new SyntaxError("CSS rule is missing an opening brace");
-    var selector = source.slice(at, brace).trim();
-    if (!selector || selector.indexOf("@") >= 0 || selector.indexOf("}") >= 0) {
-      throw new SyntaxError("CSS selector is not understood: " + selector.slice(0, 120));
-    }
-    at = brace + 1;
-    var declarations = [];
-    while (true) {
-      var declarationTrivia = cssTrivia(source, at);
-      at = declarationTrivia.at;
-      declarationTrivia.comments.forEach(function (comment) {
-        declarations.push({
-          comment: comment
-        });
-      });
-      if (source[at] === "}") {
-        at++;
-        break;
-      }
-      var propertyMatch = /^(--?[a-z][a-z0-9-]*|[a-z][a-z0-9-]*)\s*:/i.exec(source.slice(at));
-      if (!propertyMatch) throw new SyntaxError("CSS declaration is not understood at " + at);
-      var property = propertyMatch[1];
-      at += propertyMatch[0].length;
-      var start = at,
-        depth = 0,
-        quote = "";
-      while (at < source.length) {
-        var character = source[at];
-        if (quote) {
-          if (character === "\\") at++;else if (character === quote) quote = "";
-        } else if (character === "\"" || character === "'") quote = character;else if (character === "(") depth++;else if (character === ")") {
-          if (!depth) throw new SyntaxError("CSS function closes without opening");
-          depth--;
-        } else if (!depth && (character === ";" || character === "}")) break;
-        at++;
-      }
-      if (quote || depth || at >= source.length) throw new SyntaxError("CSS declaration is incomplete");
-      var value = source.slice(start, at).trim(),
-        important = false;
-      if (/\s*!important$/i.test(value)) {
-        important = true;
-        value = value.replace(/\s*!important$/i, "").trim();
-      }
-      if (!value) throw new SyntaxError("CSS declaration value is empty");
-      try {
-        canonicalCss(property, value).forEach(function (entry) {
-          var structured = entry[0] === "background" || entry[0] === "background-image";
-          declarations.push({
-            property: entry[0],
-            tokens: structured ? null : cssTokens(entry[1]),
-            value: structured ? cssValueTree(entry[1]) : null,
-            important: important
-          });
-        });
-      } catch (_error) {
-        throw new SyntaxError(property + ": " + value + ": " + _error.message);
-      }
-      if (source[at] === ";") at++;else {
-        at++;
-        break;
-      }
-    }
-    rules.push({
-      selector: selector,
-      declarations: declarations
-    });
-  }
-  if (cssSpace(source, at) !== source.length) throw new SyntaxError("CSS input was not consumed");
-  return rules;
-}
 function encodeCss(source, includeFonts) {
   var phase = "parse";
   try {
@@ -1367,16 +1580,9 @@ function encodeCss(source, includeFonts) {
       writer.uint(bytes.length);
       for (var byte = 0; byte < bytes.length; byte++) writer.byte(bytes[byte]);
     });
-    rules.forEach(function (rule) {
-      if (rule.comment !== undefined) {
-        writer.byte(0);
-        writer.text(rule.comment);
-        return;
-      }
-      writer.byte(1);
-      writer.text(rule.selector);
-      writer.uint(rule.declarations.length);
-      rule.declarations.forEach(function (declaration) {
+    var writeDeclarations;
+    writeDeclarations = function writeDeclarations(declarations) {
+      declarations.forEach(function (declaration) {
         if (declaration.comment !== undefined) {
           writer.byte(0);
           writer.text(declaration.comment);
@@ -1405,7 +1611,45 @@ function encodeCss(source, includeFonts) {
           if (token.length > 1) writer.text(token[1]);
         });
       });
-    });
+    };
+    var _writeRules;
+    _writeRules = function writeRules(items) {
+      var ordered = items.filter(function (rule) {
+        return rule.keyframes !== undefined;
+      }).concat(items.filter(function (rule) {
+        return rule.keyframes === undefined;
+      }));
+      ordered.forEach(function (rule) {
+        if (rule.comment !== undefined) {
+          writer.byte(0);
+          writer.text(rule.comment);
+          return;
+        }
+        if (rule.media !== undefined) {
+          writer.byte(3);
+          writer.text(rule.media);
+          writer.uint(rule.rules.length);
+          _writeRules(rule.rules);
+          return;
+        }
+        if (rule.keyframes !== undefined) {
+          writer.byte(4);
+          writer.text(rule.keyframes);
+          writer.uint(rule.frames.length);
+          rule.frames.forEach(function (frame) {
+            writer.text(frame.selector);
+            writer.uint(frame.declarations.length);
+            writeDeclarations(frame.declarations);
+          });
+          return;
+        }
+        writer.byte(1);
+        writer.text(rule.selector);
+        writer.uint(rule.declarations.length);
+        writeDeclarations(rule.declarations);
+      });
+    };
+    _writeRules(rules);
     var result = new Uint8Array(writer.at - 4);
     for (var index = 4; index < writer.at; index++) result[index - 4] = writer.bytes[index];
     return result;
@@ -1415,6 +1659,10 @@ function encodeCss(source, includeFonts) {
 }
 GuestDocument.prototype.installStylesheet = function (source) {
   immediate([3, this.reference, stringIndex("installStylesheet"), [encode(encodeCss(source, true))]]);
+};
+GuestDocument.prototype.installStylesheetOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("stylesheet operations must be bytes");
+  immediate([3, this.reference, stringIndex("installStylesheet"), [encode(bytes)]]);
 };
 function encodeSvg(root) {
   var writer = new Writer(new Uint8Array(128 * 1024));
@@ -1465,12 +1713,21 @@ Object.defineProperty(GuestDocument.prototype, "hidden", {
 });
 var documentReference = immediate([0, null, null]);
 var document = new GuestDocument(documentReference[1]);
-globalThis.__wwcReportError = function () {};
-var navigator = {};
-Object.defineProperty(navigator, "platform", {
-  get: function get() {
-    return immediate([1, document.reference, stringIndex("platform")]);
-  }
+globalThis.__wwcReportError = function (message) {
+  immediate([3, document.reference, stringIndex("postMessage"), [encode("__wwcError:" + String(message))]]);
+};
+function GuestNavigator(reference) {
+  GuestObject.call(this, reference);
+}
+GuestNavigator.prototype = Object.create(GuestObject.prototype);
+var navigatorReference = immediate([1, document.reference, stringIndex("navigator")]);
+var navigator = new GuestNavigator(navigatorReference[1]);
+["language", "languages", "maxTouchPoints", "platform", "userAgent", "vendor"].forEach(function (name) {
+  Object.defineProperty(GuestNavigator.prototype, name, {
+    get: function get() {
+      return immediate([1, this.reference, stringIndex(name)]);
+    }
+  });
 });
 var localStorage = new GuestStorage("local");
 var sessionStorage = new GuestStorage("session");
@@ -1479,6 +1736,11 @@ var location = {};
 Object.defineProperty(location, "pathname", {
   get: function get() {
     return immediate([3, document.reference, stringIndex("routeGet"), []]);
+  }
+});
+Object.defineProperty(location, "search", {
+  get: function get() {
+    return immediate([3, document.reference, stringIndex("routeSearch"), []]);
   }
 });
 function addEventListener(type, callback) {
@@ -1501,20 +1763,67 @@ function addEventListener(type, callback) {
     immediate([3, document.reference, stringIndex("routeListen"), [encode(index)]]);
   }
 }
+var deliveredEvents = Object.create(null);
+function eventForDelivery(reference) {
+  var event = deliveredEvents[reference];
+  if (event) return event;
+  event = deliveredEvents[reference] = new GuestEvent(reference);
+  setTimeout(function () {
+    if (deliveredEvents[reference] === event) delete deliveredEvents[reference];
+  }, 0);
+  return event;
+}
 function dispatch(message) {
+  if (message === -1) {
+    flush();
+    return;
+  }
   var callbackIndex = Math.floor(message / 1048576);
   var eventReference = message % 1048576 - 1;
   var callback = callbacks[callbackIndex];
-  if (callback) callback(eventReference < 0 ? undefined : new GuestEvent(eventReference));
+  if (!callback) throw new Error("event callback " + callbackIndex + " is unavailable");
+  callback(eventReference < 0 ? undefined : eventForDelivery(eventReference));
   flush();
 }
 globalThis.document = document;
-globalThis.window = globalThis.self = globalThis;
+globalThis.window = globalThis.self = globalThis.parent = globalThis;
+if (typeof globalThis.URL !== "function") {
+  globalThis.URL = function GuestURL(value) {
+    var text = String(value);
+    var match = new RegExp("^(https?):\\/\\/([^/?#]+)([^?#]*)(\\?[^#]*)?(#.*)?$", "i").exec(text);
+    if (!match || match[2].indexOf("@") >= 0) throw new TypeError("URL is not absolute HTTP(S)");
+    var host = match[2].toLowerCase();
+    var colon = host.lastIndexOf(":");
+    this.protocol = match[1].toLowerCase() + ":";
+    this.host = host;
+    this.hostname = colon > 0 ? host.slice(0, colon) : host;
+    this.pathname = match[3] || "/";
+    this.search = match[4] || "";
+    this.hash = match[5] || "";
+    this.origin = this.protocol + "//" + this.host;
+    this.href = text;
+  };
+  globalThis.URL.prototype.toString = function () {
+    return this.href;
+  };
+}
+if (!String.prototype.padStart) {
+  String.prototype.padStart = function (length, fill) {
+    var text = String(this);
+    var padding = fill === undefined ? " " : String(fill);
+    if (!padding || text.length >= length) return text;
+    while (padding.length < length - text.length) padding += padding;
+    return padding.slice(0, length - text.length) + text;
+  };
+}
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [encode(String(message))]]);
 };
+globalThis.__wwcServiceCall = function (name, payload) {
+  return immediate([3, document.reference, stringIndex("serviceCall"), [encode(String(name)), encode(String(payload))]]);
+};
 globalThis.__wwcReportError = function (message) {
-  globalThis.__wwcPostMessage("__wwcError:" + String(message));
+  immediate([3, document.reference, stringIndex("postMessage"), [encode("__wwcError:" + String(message))]]);
 };
 document.defaultView = globalThis;
 function HostWindow() {}
@@ -1524,9 +1833,98 @@ Object.defineProperty(HostWindow, Symbol.hasInstance, {
   }
 });
 globalThis.Window = HostWindow;
+var customElementDefinitions = Object.create(null);
+var customElementNames = new WeakMap();
+globalThis.customElements = {
+  define: function define(name, constructor) {
+    name = String(name).toLowerCase();
+    if (name.indexOf("-") < 1 || typeof constructor !== "function") {
+      throw new TypeError("invalid custom element definition");
+    }
+    if (customElementDefinitions[name]) throw new TypeError("custom element is already defined");
+    customElementDefinitions[name] = constructor;
+    customElementNames.set(constructor, name);
+  },
+  get: function get(name) {
+    return customElementDefinitions[String(name).toLowerCase()];
+  },
+  whenDefined: function whenDefined(name) {
+    return customElementDefinitions[String(name).toLowerCase()] ? Promise.resolve() : Promise.reject(new TypeError("custom element is not defined"));
+  }
+};
 globalThis.Node = GuestObject;
 globalThis.Element = globalThis.HTMLElement = GuestElement;
+function GuestSVGElement() {}
+Object.defineProperty(GuestSVGElement, Symbol.hasInstance, {
+  value: function value(candidate) {
+    return candidate instanceof GuestElement && candidate.namespaceURI === "http://www.w3.org/2000/svg";
+  }
+});
+globalThis.SVGElement = GuestSVGElement;
 globalThis.Document = GuestDocument;
+Object.defineProperties(GuestObject, {
+  ELEMENT_NODE: {
+    value: 1
+  },
+  ATTRIBUTE_NODE: {
+    value: 2
+  },
+  TEXT_NODE: {
+    value: 3
+  },
+  CDATA_SECTION_NODE: {
+    value: 4
+  },
+  PROCESSING_INSTRUCTION_NODE: {
+    value: 7
+  },
+  COMMENT_NODE: {
+    value: 8
+  },
+  DOCUMENT_NODE: {
+    value: 9
+  },
+  DOCUMENT_TYPE_NODE: {
+    value: 10
+  },
+  DOCUMENT_FRAGMENT_NODE: {
+    value: 11
+  }
+});
+var syntheticDocumentListeners = Object.create(null);
+function GuestCustomEvent(type, options) {
+  this.type = String(type);
+  this.detail = options && options.detail;
+  this.defaultPrevented = false;
+}
+GuestCustomEvent.prototype.preventDefault = function () {
+  this.defaultPrevented = true;
+};
+globalThis.CustomEvent = GuestCustomEvent;
+globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
+  var listeners = (syntheticDocumentListeners[event.type] || []).slice();
+  for (var index = 0; index < listeners.length; index++) listeners[index].call(this, event);
+  return !event.defaultPrevented;
+};
+GuestElement.prototype.showModal = function () {
+  immediate([3, this.reference, stringIndex("showModal"), []]);
+};
+GuestElement.prototype.close = function (value) {
+  immediate([3, this.reference, stringIndex("close"), value === undefined ? [] : [encode(String(value))]]);
+};
+GuestElement.prototype.dispatchEvent = function (event) {
+  if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest events can be dispatched");
+  if (event.type === "instanttooltiphide" || event.type === "themechange") {
+    var records = (this._eventListeners || []).slice();
+    for (var index = 0; index < records.length; index++) {
+      if (records[index].type === event.type) records[index].callback.call(this, event);
+    }
+    return !event.defaultPrevented;
+  }
+  return immediate([3, this.reference, stringIndex("dispatchEvent"), [encode(event.type)]]);
+};
 Object.defineProperty(GuestDocument.prototype, "documentElement", {
   get: function get() {
     if (!this._documentElement) {
@@ -1536,12 +1934,6 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
     return this._documentElement;
   }
 });
-globalThis.navigator = {
-  userAgent: "QuickJS",
-  platform: "Linux",
-  vendor: "",
-  maxTouchPoints: 0
-};
 ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(function (name) {
   if (globalThis.__microQuickJS) {
     globalThis[name] = immediate([1, document.reference, stringIndex(name)]);
@@ -1560,18 +1952,39 @@ globalThis.scrollBy = function (x, y) {
 var runtimePerformanceNow = typeof hostNow === "function" ? hostNow : globalThis.__microQuickJS && globalThis.performance && globalThis.performance.now;
 var runtimePerformanceOrigin = runtimePerformanceNow ? runtimePerformanceNow() : 0;
 var runtimeEpochOrigin = hostCall(document.reference, "dateNow", []);
-Date.now = function () {
-  return runtimePerformanceNow ? runtimeEpochOrigin + runtimePerformanceNow() - runtimePerformanceOrigin : hostCall(document.reference, "dateNow", []);
+var NativeDate = Date;
+var runtimeDateNow = function runtimeDateNow() {
+  return runtimePerformanceNow ? Math.round(runtimeEpochOrigin + runtimePerformanceNow() - runtimePerformanceOrigin) : hostCall(document.reference, "dateNow", []);
 };
+function GuestDate(value) {
+  return new NativeDate(arguments.length ? Number(value) : runtimeDateNow());
+}
+GuestDate.prototype = NativeDate.prototype;
+GuestDate.now = runtimeDateNow;
+[["getFullYear", 0], ["getMonth", 1], ["getDate", 2], ["getDay", 3], ["getHours", 4], ["getMinutes", 5], ["getSeconds", 6], ["getTimezoneOffset", 7]].forEach(function (entry) {
+  NativeDate.prototype[entry[0]] = function () {
+    return hostCall(document.reference, "datePart", [this.valueOf(), entry[1]]);
+  };
+});
+globalThis.Date = GuestDate;
 globalThis.performance = {
   now: runtimePerformanceNow || function () {
     return hostCall(document.reference, "performanceNow", []);
   }
 };
+globalThis.DOMRect = function DOMRect(x, y, width, height) {
+  this.x = this.left = Number(x) || 0;
+  this.y = this.top = Number(y) || 0;
+  this.width = Number(width) || 0;
+  this.height = Number(height) || 0;
+  this.right = this.left + this.width;
+  this.bottom = this.top + this.height;
+};
+globalThis.DOMRectReadOnly = globalThis.DOMRect;
 var projectedClasses = Object.create(null),
   projectedClassCount = 0;
 function projectClassToken(token) {
-  if (/^[a-z_][a-z0-9_-]*$/i.test(token)) return token;
+  if (new RegExp("^[a-z_][a-z0-9_-]*$", "i").test(token)) return token;
   return projectedClasses[token] || (projectedClasses[token] = "wwc-c" + ++projectedClassCount);
 }
 function projectClassName(value) {
@@ -1622,12 +2035,31 @@ Object.defineProperty(GuestObject.prototype, "nodeName", {
     return this._nodeName;
   }
 });
+Object.defineProperty(GuestElement.prototype, "localName", {
+  get: function get() {
+    if (this._localName === undefined) {
+      this._localName = immediate([1, this.reference, stringIndex("localName")]);
+    }
+    return this._localName;
+  }
+});
+Object.defineProperty(GuestElement.prototype, "namespaceURI", {
+  get: function get() {
+    if (this._namespaceURI === undefined) {
+      this._namespaceURI = immediate([1, this.reference, stringIndex("namespaceURI")]);
+    }
+    return this._namespaceURI;
+  }
+});
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
 GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [encode(String(selector))]]);
   return result === null ? null : nodeForReference(result[1]);
+};
+GuestElement.prototype.matches = function (selector) {
+  return immediate([3, this.reference, stringIndex("matches"), [encode(String(selector))]]);
 };
 Object.defineProperty(GuestObject.prototype, "nodeValue", {
   get: function get() {
@@ -1661,7 +2093,27 @@ function parentOf(node) {
 function setParent(node, parent) {
   node._guestParent = parent || null;
 }
+function guestNodeIsConnected(node) {
+  var current = node,
+    guard = 0;
+  while (current && guard++ < 4096) {
+    if (current === document.body || current === document.head || current === document.documentElement) return true;
+    current = parentOf(current);
+  }
+  return false;
+}
+function notifyGuestConnection(node, connected) {
+  if (node._guestCustomElement) {
+    var callback = node[connected ? "connectedCallback" : "disconnectedCallback"];
+    if (typeof callback === "function") callback.call(node);
+  }
+  var children = childrenOf(node);
+  for (var index = 0; index < children.length; index++) {
+    notifyGuestConnection(children[index], connected);
+  }
+}
 function detachGuestNode(node) {
+  var wasConnected = guestNodeIsConnected(node);
   var parent = parentOf(node);
   if (parent) {
     var siblings = childrenOf(parent);
@@ -1669,6 +2121,7 @@ function detachGuestNode(node) {
     if (index > -1) siblings.splice(index, 1);
   }
   setParent(node, null);
+  if (wasConnected) notifyGuestConnection(node, false);
 }
 var guestCollectionPending = false,
   guestCleanupPressure = 0;
@@ -1793,6 +2246,7 @@ function GuestSelection(reference) {
   GuestObject.call(this, reference);
 }
 GuestSelection.prototype = Object.create(GuestObject.prototype);
+globalThis.Selection = GuestSelection;
 ["anchorOffset", "focusOffset", "isCollapsed", "rangeCount"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function get() {
@@ -1819,6 +2273,7 @@ function GuestRange(reference) {
   GuestObject.call(this, reference);
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
+globalThis.Range = GuestRange;
 var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
@@ -1847,9 +2302,26 @@ function GuestCanvasContext(reference) {
   GuestObject.call(this, reference);
 }
 GuestCanvasContext.prototype = Object.create(GuestObject.prototype);
-GuestElement.prototype.getContext = function (type) {
-  var result = immediate([3, this.reference, stringIndex("getContext"), [encode(type)]]);
-  return result === null ? null : new GuestCanvasContext(result[1]);
+function GuestWebGLObject(reference) {
+  GuestObject.call(this, reference);
+}
+GuestWebGLObject.prototype = Object.create(GuestObject.prototype);
+function GuestWebGLContext(reference) {
+  GuestObject.call(this, reference);
+}
+GuestWebGLContext.prototype = Object.create(GuestObject.prototype);
+function GuestWebGPUContext(reference) {
+  GuestObject.call(this, reference);
+}
+GuestWebGPUContext.prototype = Object.create(GuestObject.prototype);
+GuestElement.prototype.getContext = function (type, options) {
+  var args = [encode(type)];
+  if (options !== undefined) args.push(encode(Boolean(options && options.preserveDrawingBuffer)));
+  var result = immediate([3, this.reference, stringIndex("getContext"), args]);
+  if (result === null) return null;
+  if (type === "webgl") return new GuestWebGLContext(result[1]);
+  if (type === "webgpu") return new GuestWebGPUContext(result[1]);
+  return new GuestCanvasContext(result[1]);
 };
 ["height", "width"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
@@ -1879,11 +2351,89 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
     pendingOperations.push([3, this.reference, stringIndex(name), args]);
   };
 });
+var webGLConstants = {
+  ARRAY_BUFFER: 34962,
+  COLOR_BUFFER_BIT: 16384,
+  COMPILE_STATUS: 35713,
+  FLOAT: 5126,
+  FRAGMENT_SHADER: 35632,
+  LINK_STATUS: 35714,
+  STATIC_DRAW: 35044,
+  TRIANGLES: 4,
+  VERTEX_SHADER: 35633
+};
+Object.keys(webGLConstants).forEach(function (name) {
+  Object.defineProperty(GuestWebGLContext.prototype, name, {
+    value: webGLConstants[name]
+  });
+});
+["createBuffer", "createProgram"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function () {
+    var result = hostCall(this.reference, name, []);
+    return result === null ? null : new GuestWebGLObject(result[1]);
+  };
+});
+GuestWebGLContext.prototype.createShader = function (type) {
+  var result = hostCall(this.reference, "createShader", [Number(type)]);
+  return result === null ? null : new GuestWebGLObject(result[1]);
+};
+GuestWebGLContext.prototype.shaderSource = function (shader, source) {
+  hostCall(this.reference, "shaderSource", [shader, String(source)]);
+};
+["compileShader", "linkProgram", "useProgram"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (object) {
+    hostCall(this.reference, name, [object]);
+  };
+});
+GuestWebGLContext.prototype.attachShader = function (program, shader) {
+  hostCall(this.reference, "attachShader", [program, shader]);
+};
+GuestWebGLContext.prototype.bindBuffer = function (target, buffer) {
+  hostCall(this.reference, "bindBuffer", [Number(target), buffer]);
+};
+["getShaderParameter", "getProgramParameter"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (object, parameter) {
+    return hostCall(this.reference, name, [object, Number(parameter)]);
+  };
+});
+GuestWebGLContext.prototype.getAttribLocation = function (program, name) {
+  return hostCall(this.reference, "getAttribLocation", [program, String(name)]);
+};
+GuestWebGLContext.prototype.bufferData = function (target, values, usage) {
+  if (!values || !values.buffer) throw new TypeError("WebGL buffer data must be a typed array");
+  var bytes = new Uint8Array(values.buffer, values.byteOffset || 0, values.byteLength);
+  hostCall(this.reference, "bufferData", [Number(target), bytes, Number(usage)]);
+};
+GuestWebGLContext.prototype.clearColor = function (red, green, blue, alpha) {
+  hostCall(this.reference, "clearColor", [red, green, blue, alpha].map(function (value) {
+    return Math.round(Number(value) * 1000000);
+  }));
+};
+["clear", "enableVertexAttribArray"].forEach(function (name) {
+  GuestWebGLContext.prototype[name] = function (value) {
+    hostCall(this.reference, name, [Number(value)]);
+  };
+});
+GuestWebGLContext.prototype.vertexAttribPointer = function (index, size, type, normalized, stride, offset) {
+  hostCall(this.reference, "vertexAttribPointer", [Number(index), Number(size), Number(type), Boolean(normalized), Number(stride), Number(offset)]);
+};
+GuestWebGLContext.prototype.viewport = function (x, y, width, height) {
+  hostCall(this.reference, "viewport", [x, y, width, height].map(Number));
+};
+GuestWebGLContext.prototype.drawArrays = function (mode, first, count) {
+  hostCall(this.reference, "drawArrays", [Number(mode), Number(first), Number(count)]);
+};
+GuestWebGPUContext.prototype.renderTriangle = function () {
+  hostCall(this.reference, "renderTriangle", []);
+};
 GuestElement.prototype.focus = function () {
   hostCall(this.reference, "focus", []);
 };
 GuestElement.prototype.select = function () {
   hostCall(this.reference, "select", []);
+};
+GuestElement.prototype.setCustomValidity = function (message) {
+  hostCall(this.reference, "setCustomValidity", [String(message)]);
 };
 GuestElement.prototype.querySelector = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelector"), [encode(String(selector))]]);
@@ -1933,6 +2483,24 @@ GuestRange.prototype.getBoundingClientRect = function () {
 GuestRange.prototype.collapse = function (toStart) {
   hostCall(this.reference, "collapse", [Boolean(toStart)]);
 };
+GuestRange.prototype.detach = function () {
+  hostCall(this.reference, "detach", []);
+};
+["startContainer", "endContainer"].forEach(function (name) {
+  Object.defineProperty(GuestRange.prototype, name, {
+    get: function get() {
+      var result = hostGet(this.reference, name);
+      return nodeForReference(result[1]);
+    }
+  });
+});
+["startOffset", "endOffset"].forEach(function (name) {
+  Object.defineProperty(GuestRange.prototype, name, {
+    get: function get() {
+      return hostGet(this.reference, name);
+    }
+  });
+});
 ["anchorNode", "focusNode"].forEach(function (name) {
   Object.defineProperty(GuestSelection.prototype, name, {
     get: function get() {
@@ -1972,21 +2540,6 @@ Object.defineProperty(GuestDocument.prototype, "activeElement", {
 globalThis.getSelection = function () {
   return document.getSelection();
 };
-function GuestComputedStyle(reference) {
-  GuestObject.call(this, reference);
-}
-GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
-["direction", "height", "overflow", "paddingBottom", "paddingTop", "position", "whiteSpace", "width"].forEach(function (name) {
-  Object.defineProperty(GuestComputedStyle.prototype, name, {
-    get: function get() {
-      return immediate([1, this.reference, stringIndex(name)]);
-    }
-  });
-});
-globalThis.getComputedStyle = function (element) {
-  var result = immediate([3, document.reference, stringIndex("getComputedStyle"), [encode(element)]]);
-  return new GuestComputedStyle(result[1]);
-};
 function GuestStylesheetNode() {
   this.parentNode = null;
   this._text = "";
@@ -1994,13 +2547,13 @@ function GuestStylesheetNode() {
 function projectStylesheet(source) {
   var output = "",
     at = 0;
-  var pattern = /(?:@(?:-webkit-)?keyframes\s+[-_a-z0-9]+|@media\s+print)\s*\{/ig;
+  var pattern = new RegExp("@media\\s+print\\s*\\{", "ig");
   while (true) {
     pattern.lastIndex = at;
     var match = pattern.exec(source);
     if (!match) {
       output += source.slice(at);
-      output = output.replace(/\.([^\d\s.#:\[\]{};>+~(),][^\s.#:\[\]{};>+~(),]*)/g, function (_, token) {
+      output = output.replace(new RegExp("\\.([^\\d\\s.#:\\[\\]{};>+~(),][^\\s.#:\\[\\]{};>+~(),]*)", "g"), function (_, token) {
         return "." + projectClassToken(token);
       });
       return omitCssUrls(output);
@@ -2023,10 +2576,17 @@ function projectStylesheet(source) {
     at = cursor;
   }
 }
+GuestDocument.prototype.installStylesheetOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("stylesheet operations must be bytes");
+  immediate([3, this.reference, stringIndex("installStylesheet"), [encode(bytes)]]);
+};
+GuestDocument.prototype.installStylesheetSource = function (source) {
+  document.installStylesheet(projectStylesheet(String(source)));
+};
 function omitCssUrls(source) {
   var output = "",
     at = 0,
-    pattern = /url\s*\(/ig;
+    pattern = new RegExp("url\\s*\\(", "ig");
   while (true) {
     pattern.lastIndex = at;
     var match = pattern.exec(source);
@@ -2059,15 +2619,59 @@ GuestStylesheetNode.prototype.setAttribute = function () {
 };
 GuestDocument.prototype.createElement = function (tag) {
   if (String(tag).toLowerCase() === "style") return new GuestStylesheetNode();
-  tag = String(tag);
+  tag = String(tag).toLowerCase();
   var result = immediate([3, this.reference, stringIndex("createElement"), [encode(tag)]]);
-  var node = rememberNode(new GuestElement(result[1]));
+  var constructor = customElementDefinitions[tag];
+  var node;
+  if (constructor) {
+    constructingHostReference = result[1];
+    try {
+      node = new constructor();
+    } finally {
+      constructingHostReference = null;
+    }
+  } else node = new GuestElement(result[1]);
+  node = rememberNode(node);
+  node._guestCustomElement = Boolean(constructor);
   node._nodeType = 1;
   node._nodeName = tag.toUpperCase();
+  node._localName = tag;
+  node._namespaceURI = "http://www.w3.org/1999/xhtml";
   return node;
 };
+GuestDocument.prototype.createElementNS = function (namespace, tag) {
+  namespace = String(namespace);
+  tag = String(tag).toLowerCase();
+  var result = immediate([3, this.reference, stringIndex("createElementNS"), [encode(namespace), encode(tag)]]);
+  var node = rememberNode(new GuestElement(result[1]));
+  node._nodeType = 1;
+  node._nodeName = tag;
+  node._localName = tag;
+  node._namespaceURI = namespace;
+  return node;
+};
+GuestDocument.prototype.createDocumentFragment = function () {
+  var result = immediate([3, this.reference, stringIndex("createDocumentFragment"), []]);
+  var node = rememberNode(new GuestElement(result[1]));
+  node._nodeType = 11;
+  node._nodeName = "#document-fragment";
+  return node;
+};
+Object.defineProperty(GuestElement.prototype, "content", {
+  get: function get() {
+    var result = immediate([1, this.reference, stringIndex("content")]);
+    if (result === null) return null;
+    var content = nodeForReference(result[1]);
+    synchronizeGuestChildren(content);
+    return content;
+  }
+});
 GuestDocument.prototype.getElementById = function (id) {
   var result = immediate([3, this.reference, stringIndex("getElementById"), [encode(String(id))]]);
+  return result === null ? null : nodeForReference(result[1]);
+};
+GuestDocument.prototype.elementFromPoint = function (x, y) {
+  var result = immediate([3, this.reference, stringIndex("elementFromPoint"), [encode(Math.round(Number(x))), encode(Math.round(Number(y)))]]);
   return result === null ? null : nodeForReference(result[1]);
 };
 function inlineCssBytes(source) {
@@ -2123,6 +2727,21 @@ function synchronizeGuestChildren(target) {
   }
   target._guestChildren = next;
 }
+function synchronizeGuestSubtree(target) {
+  synchronizeGuestChildren(target);
+  var children = childrenOf(target);
+  for (var index = 0; index < children.length; index++) {
+    if (children[index].nodeType === 1 || children[index].nodeType === 11) {
+      synchronizeGuestSubtree(children[index]);
+    }
+  }
+}
+GuestObject.prototype.cloneNode = function (deep) {
+  var result = hostCall(this.reference, "cloneNode", [Boolean(deep)]);
+  var clone = nodeForReference(result[1]);
+  if (deep) synchronizeGuestSubtree(clone);
+  return clone;
+};
 function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"),
     records = [],
@@ -2156,6 +2775,7 @@ function readMutationBatch(batchReference, batchToken) {
       if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
     } else if (type === "characterData") {
       record.oldValue = hostGet(reference, "oldValue");
+      record.target._nodeValue = undefined;
     } else if (type === "attributes") {
       record.attributeName = hostGet(reference, "attributeName");
       record.oldValue = hostGet(reference, "oldValue");
@@ -2234,14 +2854,23 @@ GuestIntersectionObserver.prototype.takeRecords = function () {
 globalThis.MutationObserver = GuestMutationObserver;
 globalThis.ResizeObserver = EmptyObserver;
 globalThis.IntersectionObserver = GuestIntersectionObserver;
-globalThis.getComputedStyle = function () {
-  return {
-    direction: "ltr",
-    whiteSpace: "pre",
-    getPropertyValue: function getPropertyValue() {
-      return "";
+function GuestComputedStyle(reference) {
+  GuestObject.call(this, reference);
+}
+GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
+["direction", "height", "overflow", "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "whiteSpace", "width"].forEach(function (name) {
+  Object.defineProperty(GuestComputedStyle.prototype, name, {
+    get: function get() {
+      return hostGet(this.reference, name);
     }
-  };
+  });
+});
+GuestComputedStyle.prototype.getPropertyValue = function (name) {
+  return hostCall(this.reference, "getPropertyValue", [String(name)]);
+};
+globalThis.getComputedStyle = function (element) {
+  var result = hostCall(document.reference, "getComputedStyle", [element]);
+  return new GuestComputedStyle(result[1]);
 };
 var animationCallbacks = Object.create(null);
 globalThis.requestAnimationFrame = function (callback) {
@@ -2278,6 +2907,7 @@ globalThis.setImmediate = function (callback) {
 };
 globalThis.setTimeout = function (callback, delay) {
   if (typeof callback !== "function") throw new TypeError("callback required");
+  delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
   var token = {
     active: true,
     index: -1
@@ -2287,14 +2917,15 @@ globalThis.setTimeout = function (callback, delay) {
     callback();
   }, true);
   token.index = index;
-  hostCall(document.reference, "timerOnce", [Math.round(delay), index]);
+  hostCall(document.reference, "timerOnce", [delay, index]);
   return token;
 };
 var intervalCallbacks = Object.create(null);
 globalThis.setInterval = function (callback, delay) {
   if (typeof callback !== "function") throw new TypeError("callback required");
+  delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
   var index = allocateCallback(callback, false);
-  var handle = hostCall(document.reference, "timer", [Math.round(delay), index]);
+  var handle = hostCall(document.reference, "timer", [delay, index]);
   intervalCallbacks[handle] = index;
   return handle;
 };
@@ -2308,8 +2939,15 @@ globalThis.clearInterval = function (handle) {
 globalThis.matchMedia = function () {
   return {
     matches: false,
+    media: "",
+    onchange: null,
     addListener: function addListener() {},
-    removeListener: function removeListener() {}
+    removeListener: function removeListener() {},
+    addEventListener: function addEventListener() {},
+    removeEventListener: function removeEventListener() {},
+    dispatchEvent: function dispatchEvent() {
+      return true;
+    }
   };
 };
 globalThis.clearTimeout = function (handle) {
@@ -2318,6 +2956,10 @@ globalThis.clearTimeout = function (handle) {
   retireOneShotCallback(handle.index);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
+globalThis.queueMicrotask = function (callback) {
+  if (typeof callback !== "function") throw new TypeError("callback required");
+  Promise.resolve().then(callback);
+};
 globalThis.requestIdleCallback = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var started = Date.now();
@@ -2382,6 +3024,30 @@ Object.defineProperty(GuestEvent.prototype, "relatedTarget", {
     return result === null ? null : nodeForReference(result[1]);
   }
 });
+GuestEvent.prototype.getTargetRanges = function () {
+  var result = hostCall(this.reference, "getTargetRanges", []);
+  var list = new GuestObject(result[1]),
+    ranges = [];
+  var length = hostGet(list.reference, "length");
+  for (var index = 0; index < length; index++) {
+    var item = hostCall(list.reference, "item", [index]);
+    ranges.push(new GuestRange(item[1]));
+  }
+  return ranges;
+};
+GuestEvent.prototype.getModifierState = function (key) {
+  return immediate([3, this.reference, stringIndex("getModifierState"), [encode(String(key))]]);
+};
+GuestEvent.prototype.composedPath = function () {
+  var bytes = hostCall(this.reference, "composedPathReferences", []);
+  var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
+  var path = [];
+  for (var index = 0; index < length; index++) {
+    var at = 4 + index * 4;
+    path.push(nodeForReference(bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24));
+  }
+  return path;
+};
 var windowListeners = [];
 globalThis.addEventListener = function (type, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
@@ -2409,7 +3075,7 @@ globalThis.removeEventListener = function (type, callback) {
   }
 };
 function allocateElementCallback(callback) {
-  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
+  var index = callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
   var state = {
     active: true,
@@ -2418,7 +3084,15 @@ function allocateElementCallback(callback) {
   callbackStates[index] = state;
   callbacks[index] = function (event) {
     var current = state.callback;
-    if (state.active && current) current(event);else releaseCallback(index);
+    if (!state.active || !current) return releaseCallback(index);
+    try {
+      current(event);
+    } catch (_error3) {
+      var message = String(_error3),
+        stack = _error3 && _error3.stack;
+      globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ? message + "\n" + stack : stack || message);
+      throw _error3;
+    }
   };
   return index;
 }
@@ -2428,15 +3102,17 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
   if (records.some(function (record) {
     return record.type === type && record.callback === callback;
   })) return;
-  var index = allocateElementCallback(callback);
+  var local = type === "instanttooltiphide" || type === "themechange";
+  var index = local ? -1 : allocateElementCallback(callback);
   var capture = options === true || Boolean(options && options.capture);
   records.push({
     type: type,
     callback: callback,
     index: index,
-    capture: capture
+    capture: capture,
+    local: local
   });
-  pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+  if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
 };
 GuestElement.prototype.removeEventListener = function (type, callback) {
   var records = this._eventListeners || [];
@@ -2444,17 +3120,36 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     var record = records[index];
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
-      releaseCallback(record.index);
-      pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      if (!record.local) {
+        releaseCallback(record.index);
+        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
+      }
       return;
     }
   }
 };
 GuestDocument.prototype.addEventListener = GuestElement.prototype.addEventListener;
 GuestDocument.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
+var addDocumentEventListener = GuestDocument.prototype.addEventListener;
+GuestDocument.prototype.addEventListener = function (type, callback, options) {
+  if (type === "themechange" || type === "instanttooltiphide") {
+    if (typeof callback !== "function") throw new TypeError("callback required");
+    (syntheticDocumentListeners[type] || (syntheticDocumentListeners[type] = [])).push(callback);
+    return;
+  }
+  return addDocumentEventListener.call(this, type, callback, options);
+};
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function set(value) {
     pendingOperations.push([2, this.reference, stringIndex("tabIndex"), encode(value)]);
+  }
+});
+Object.defineProperty(GuestElement.prototype, "hidden", {
+  get: function get() {
+    return immediate([1, this.reference, stringIndex("hidden")]);
+  },
+  set: function set(value) {
+    immediate([2, this.reference, stringIndex("hidden"), encode(Boolean(value))]);
   }
 });
 ["value", "checked"].forEach(function (name) {
@@ -2486,17 +3181,49 @@ Object.defineProperty(GuestElement.prototype, "ownerDocument", {
   }
 });
 GuestElement.prototype.appendChild = function (child) {
+  if (child instanceof GuestStylesheetNode) {
+    child.parentNode = this;
+    document.installStylesheet(projectStylesheet(child.textContent));
+    return child;
+  }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      childrenOf(this).push(fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+    return child;
+  }
   detachGuestNode(child);
   childrenOf(this).push(child);
   setParent(child, this);
+  if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
   pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
   return child;
 };
 GuestElement.prototype.insertBefore = function (child, next) {
   if (child instanceof GuestStylesheetNode) {
-    if (this !== document.head) throw new TypeError("stylesheet must enter the logical head");
     child.parentNode = this;
     document.installStylesheet(projectStylesheet(child.textContent));
+    return child;
+  }
+  if (child.nodeType === 11) {
+    var fragmentChildren = childrenOf(child).slice();
+    var destination = childrenOf(this);
+    var destinationIndex = next === null ? destination.length : destination.indexOf(next);
+    if (destinationIndex < 0) throw new TypeError("reference node is not a child");
+    for (var fragmentIndex = 0; fragmentIndex < fragmentChildren.length; fragmentIndex++) {
+      var fragmentChild = fragmentChildren[fragmentIndex];
+      detachGuestNode(fragmentChild);
+      destination.splice(destinationIndex++, 0, fragmentChild);
+      setParent(fragmentChild, this);
+      if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
+    }
+    pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [encode(child), encode(next)]]);
     return child;
   }
   detachGuestNode(child);
@@ -2505,6 +3232,7 @@ GuestElement.prototype.insertBefore = function (child, next) {
   if (index < 0) throw new TypeError("reference node is not a child");
   children.splice(index, 0, child);
   setParent(child, this);
+  if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
   pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [encode(child), encode(next)]]);
   return child;
 };
@@ -2517,6 +3245,19 @@ GuestElement.prototype.removeChild = function (child) {
 GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+};
+GuestObject.prototype.before = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  parent.insertBefore(node, this);
+};
+GuestObject.prototype.after = function (node) {
+  var parent = parentOf(this);
+  if (!parent) return;
+  if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
+  var siblings = childrenOf(parent);
+  parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {
@@ -2537,6 +3278,7 @@ GuestElement.prototype.replaceChildren = function () {
     detachGuestNode(child);
     childrenOf(this).push(child);
     setParent(child, this);
+    if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
     args.push(encode(child));
   }
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
@@ -2554,17 +3296,31 @@ Object.defineProperty(GuestElement.prototype, "attributes", {
 });
 GuestElement.prototype.getAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : null;
+  if (Object.prototype.hasOwnProperty.call(values, name)) return values[name];
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  if (known[name]) return null;
+  var value = hostCall(this.reference, "getAttribute", [String(name)]);
+  known[name] = true;
+  if (value !== null) values[name] = value;
+  return value;
 };
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
   if (name === "class") text = projectClassName(text);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   values[name] = text;
+  if (String(name).toLowerCase() === "style") {
+    this.style.cssText = text;
+    return;
+  }
   pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [encode(String(name)), encode(text)]]);
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
+  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
+  known[name] = true;
   delete values[name];
   pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [encode(String(name))]]);
 };
@@ -2607,7 +3363,7 @@ Object.defineProperty(GuestElement.prototype, "classList", {
   }
 });
 function datasetAttribute(name) {
-  return "data-" + String(name).replace(/[A-Z]/g, function (letter) {
+  return "data-" + String(name).replace(new RegExp("[A-Z]", "g"), function (letter) {
     return "-" + letter.toLowerCase();
   });
 }

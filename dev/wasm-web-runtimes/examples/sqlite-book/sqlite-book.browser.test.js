@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { chromium } from "@playwright/test";
-import { wasmWebContainerExampleHandler } from "../examples/handler.js";
+import { wasmWebContainerExampleHandler } from
+  "../microquickjs-suite/handler.js";
 
 test("SQLite reader routes inside its Wasm artifact", async (context) => {
   const server = createServer(async (request, response) => {

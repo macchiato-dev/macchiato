@@ -15,12 +15,15 @@ The declarative development app exposes each guest on its own subdomain:
 
 - `http://prosemirror-quickjs.localhost:3030/`
 - `http://wordgard-quickjs.localhost:3030/`
-- `http://xterm-quickjs.localhost:3030/`
+- `http://xterm-quickjs.localhost:3030/` (example index)
+- `http://xterm-quickjs.localhost:3030/terminal/`
+- `http://xterm-quickjs.localhost:3030/pong/`
 
 The ProseMirror and Wordgard pages exercise native contenteditable mutation,
-formatting, and editor history. The xterm.js page contains a playable Pong game
-whose keyboard input, timers, ANSI rendering, and 256-color stylesheet all
-cross the same machine boundary.
+formatting, and editor history. The xterm.js pages contain an ordinary terminal
+for typing and selection plus a playable Pong game. Keyboard input, selection,
+timers, ANSI rendering, and the 256-color stylesheet all cross the same machine
+boundary.
 
 With the development server running on port 3030, run the interaction tests
 with:

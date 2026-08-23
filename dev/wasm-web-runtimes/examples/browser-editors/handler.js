@@ -33,6 +33,28 @@ function handlerFor(example) {
   };
 }
 
+async function xtermHandler(request) {
+  const pathname = new URL(request.url).pathname;
+  const files = new Map([
+    ["/", "xterm/index.html"], ["/pong", "xterm/pong/index.html"],
+    ["/pong/", "xterm/pong/index.html"], ["/terminal", "xterm/terminal/index.html"],
+    ["/terminal/", "xterm/terminal/index.html"], ["/host.js", "host.js"],
+    ["/loading.css", "loading.css"], ["/xterm.wasm", "generated/xterm.wasm"],
+    ["/xterm-terminal.wasm", "generated/xterm-terminal.wasm"],
+  ]);
+  if (pathname === "/wasm-web-machine.js") {
+    return new Response(await readFile(machine), {
+      headers: { "content-type": "text/javascript; charset=utf-8" },
+    });
+  }
+  const relative = files.get(pathname);
+  if (!relative) return new Response("Not found", { status: 404 });
+  const path = resolve(root, relative);
+  return new Response(await readFile(path), {
+    headers: { "content-type": types.get(extname(path)) || "application/octet-stream" },
+  });
+}
+
 export const prosemirrorQuickjsHandler = handlerFor("prosemirror");
 export const wordgardQuickjsHandler = handlerFor("wordgard");
-export const xtermQuickjsHandler = handlerFor("xterm");
+export const xtermQuickjsHandler = xtermHandler;

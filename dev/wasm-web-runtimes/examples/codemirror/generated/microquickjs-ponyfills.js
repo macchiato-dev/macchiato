@@ -474,6 +474,54 @@
 
   // dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-platform.js
   globalThis.__microQuickJS = true;
+  if (typeof TextEncoder === "undefined") {
+    globalThis.TextEncoder = function TextEncoder2() {
+    };
+    TextEncoder.prototype.encode = function(text) {
+      text = String(text);
+      var values = [];
+      for (var index = 0; index < text.length; index++) {
+        var scalar = text.charCodeAt(index);
+        if (scalar >= 55296 && scalar <= 56319 && index + 1 < text.length) {
+          scalar = 65536 + (scalar - 55296 << 10) + (text.charCodeAt(++index) - 56320);
+        }
+        if (scalar < 128) values.push(scalar);
+        else if (scalar < 2048) values.push(192 | scalar >> 6, 128 | scalar & 63);
+        else if (scalar < 65536) values.push(
+          224 | scalar >> 12,
+          128 | scalar >> 6 & 63,
+          128 | scalar & 63
+        );
+        else values.push(
+          240 | scalar >> 18,
+          128 | scalar >> 12 & 63,
+          128 | scalar >> 6 & 63,
+          128 | scalar & 63
+        );
+      }
+      return new Uint8Array(values);
+    };
+  }
+  if (typeof TextDecoder === "undefined") {
+    globalThis.TextDecoder = function TextDecoder2() {
+    };
+    TextDecoder.prototype.decode = function(bytes) {
+      var text = "";
+      for (var index = 0; index < bytes.length; ) {
+        var first = bytes[index++], scalar;
+        if (first < 128) scalar = first;
+        else if (first < 224) scalar = (first & 31) << 6 | bytes[index++] & 63;
+        else if (first < 240) scalar = (first & 15) << 12 | (bytes[index++] & 63) << 6 | bytes[index++] & 63;
+        else scalar = (first & 7) << 18 | (bytes[index++] & 63) << 12 | (bytes[index++] & 63) << 6 | bytes[index++] & 63;
+        if (scalar <= 65535) text += String.fromCharCode(scalar);
+        else {
+          scalar -= 65536;
+          text += String.fromCharCode(55296 | scalar >> 10, 56320 | scalar & 1023);
+        }
+      }
+      return text;
+    };
+  }
   if (typeof Symbol === "undefined") {
     nextSymbol = 0;
     symbolRegistry = /* @__PURE__ */ Object.create(null);
@@ -506,6 +554,16 @@
       }
     };
   }
+  if (!Array.prototype.includes) {
+    Array.prototype.includes = function(value, start) {
+      var index = Number(start) || 0;
+      if (index < 0) index = Math.max(0, this.length + index);
+      for (; index < this.length; index++) {
+        if (this[index] === value || this[index] !== this[index] && value !== value) return true;
+      }
+      return false;
+    };
+  }
   if (!Object.assign) {
     Object.assign = function(target) {
       if (target == null) throw new TypeError("Cannot convert null to object");
@@ -521,6 +579,7 @@
   }
   if (typeof encodeURIComponent === "undefined") {
     globalThis.encodeURIComponent = function(text) {
+      text = String(text);
       var output = "";
       for (var index = 0; index < text.length; index++) {
         var scalar = text.charCodeAt(index);
@@ -552,9 +611,74 @@
       return target;
     };
   }
+  if (!Object.freeze) Object.freeze = function(value) {
+    return value;
+  };
+  if (!Object.values) {
+    Object.values = function(value) {
+      return Object.keys(value).map(function(key) {
+        return value[key];
+      });
+    };
+  }
+  if (!Object.entries) {
+    Object.entries = function(value) {
+      return Object.keys(value).map(function(key) {
+        return [key, value[key]];
+      });
+    };
+  }
+  if (!Object.fromEntries) {
+    Object.fromEntries = function(entries) {
+      var result = {};
+      entries.forEach(function(entry) {
+        result[entry[0]] = entry[1];
+      });
+      return result;
+    };
+  }
+  if (!Object.getPrototypeOf) {
+    Object.getPrototypeOf = function(value) {
+      if (value == null) throw new TypeError("Object.getPrototypeOf requires an object");
+      return value.__proto__ || value.constructor && value.constructor.prototype || null;
+    };
+  }
+  if (!String.prototype.localeCompare) {
+    String.prototype.localeCompare = function(other) {
+      var left = String(this), right = String(other);
+      return left < right ? -1 : left > right ? 1 : 0;
+    };
+  }
+  if (!Array.prototype.flatMap) {
+    Array.prototype.flatMap = function(callback, receiver) {
+      var result = [];
+      for (var index = 0; index < this.length; index++) {
+        var value = callback.call(receiver, this[index], index, this);
+        result = result.concat(value);
+      }
+      return result;
+    };
+  }
+  if (!Array.prototype.at) {
+    Array.prototype.at = function(index) {
+      var offset = Number(index) || 0;
+      if (offset < 0) offset += this.length;
+      return offset < 0 || offset >= this.length ? void 0 : this[offset];
+    };
+  }
   if (!Number.isInteger) {
     Number.isInteger = function(value) {
       return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
+    };
+  }
+  if (!Number.isFinite) {
+    Number.isFinite = function(value) {
+      return typeof value === "number" && isFinite(value);
+    };
+  }
+  if (!Number.isSafeInteger) {
+    Number.isSafeInteger = function(value) {
+      return Number.isInteger(value) && Math.abs(value) <= 9007199254740991;
     };
   }
   if (!String.prototype.localeCompare) {
@@ -564,15 +688,20 @@
       return left < right ? -1 : left > right ? 1 : 0;
     };
   }
+  var NativeRegExp = RegExp;
+  RegExp = function RegExp2(pattern, flags) {
+    var value = new NativeRegExp(pattern, flags);
+    value.__microquickjsFlags = String(flags || "");
+    return value;
+  };
+  RegExp.prototype = NativeRegExp.prototype;
   [["global", "g"], ["ignoreCase", "i"], ["multiline", "m"]].forEach(
     function(entry) {
-      if (!(entry[0] in RegExp.prototype)) {
-        Object.defineProperty(RegExp.prototype, entry[0], {
-          get: function() {
-            return this.toString().slice(this.toString().lastIndexOf("/") + 1).indexOf(entry[1]) >= 0;
-          }
-        });
-      }
+      Object.defineProperty(RegExp.prototype, entry[0], {
+        get: function() {
+          return (this.__microquickjsFlags || "").indexOf(entry[1]) >= 0;
+        }
+      });
     }
   );
 
@@ -582,6 +711,24 @@
   if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfill;
   if (typeof globalThis.WeakSet !== "function") globalThis.WeakSet = WeakSetPonyfill;
   globalThis.Promise = src_default;
+  if (!String.prototype.includes) {
+    String.prototype.includes = function(value, start) {
+      return String(this).indexOf(String(value), start || 0) !== -1;
+    };
+  }
+  if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function(value, start) {
+      const at = start || 0;
+      return String(this).slice(at, at + String(value).length) === String(value);
+    };
+  }
+  if (!String.prototype.endsWith) {
+    String.prototype.endsWith = function(value, end) {
+      const text = String(this);
+      const stop = end === void 0 ? text.length : Math.min(Number(end), text.length);
+      return text.slice(stop - String(value).length, stop) === String(value);
+    };
+  }
   if (globalThis.__microQuickJS) {
     const orderedMap = /* @__PURE__ */ new Map([["first", 1], [NaN, 2]]);
     const orderedSet = /* @__PURE__ */ new Set(["first", NaN]);

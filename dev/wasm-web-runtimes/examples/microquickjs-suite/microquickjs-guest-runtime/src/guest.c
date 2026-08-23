@@ -90,28 +90,45 @@ void __assert_fail(const char *condition, const char *file,
 
 /* MicroQuickJS owns this fixed arena. The app embeds large images, while the
    arena holds its live JavaScript values and guest-side DOM bookkeeping. */
-static uint8_t runtime_memory[16 * 1024 * 1024];
+static uint8_t runtime_memory[32 * 1024 * 1024];
 static uint8_t transfer[2 * 1024 * 1024];
-static uint8_t stamp_memory[2 * 1024 * 1024];
+static uint8_t stamp_memory[4 * 1024 * 1024];
 static JSContext *context;
-static JSValue application_program;
-static uint8_t *application_bytecode;
-static uint32_t application_bytecode_length;
 static int bytecode_loading_open = 1;
-static int application_loaded;
+
+#define MAX_PROGRAMS 16
+typedef struct {
+    const uint8_t *name;
+    uint32_t name_length;
+    uint8_t *bytecode;
+    uint32_t bytecode_length;
+    JSValue program;
+    int loaded;
+} GuestProgram;
+static GuestProgram programs[MAX_PROGRAMS];
+static uint32_t program_count;
 
 static void report_guest_error(JSContext *ctx, uint32_t stage)
 {
     JSCStringBuf buffer;
+    JSCStringBuf message_buffer;
     JSCStringBuf stack_buffer;
     JSValue exception = JS_GetException(ctx);
+    JSValue message = JS_GetPropertyStr(ctx, exception, "message");
     JSValue stack = JS_GetPropertyStr(ctx, exception, "stack");
     const char *text = JS_ToCString(ctx, exception, &buffer);
+    const char *message_text = JS_ToCString(ctx, message, &message_buffer);
     const char *stack_text = JS_ToCString(ctx, stack, &stack_buffer);
     uint32_t length = 0;
     transfer[0] = 'D'; transfer[1] = 'U'; transfer[2] = 'L'; transfer[3] = 'E';
     transfer[4] = (uint8_t)stage;
-    if (text != NULL) {
+    if (message_text != NULL && message_text[0] != '\0') {
+        while (message_text[length] != '\0' && length < sizeof(transfer) - 6) {
+            transfer[5 + length] = (uint8_t)message_text[length];
+            length++;
+        }
+    }
+    if (length == 0 && text != NULL) {
         while (text[length] != '\0' && length < sizeof(transfer) - 6) {
             transfer[5 + length] = (uint8_t)text[length];
             length++;
@@ -137,9 +154,17 @@ static int same_bytes(const uint8_t *bytes, uint32_t length, const char *text)
     return index == length && text[index] == '\0';
 }
 
+static int ends_with(const uint8_t *bytes, uint32_t length, const char *suffix)
+{
+    uint32_t suffix_length = 0;
+    while (suffix[suffix_length] != '\0') suffix_length++;
+    return length >= suffix_length &&
+        same_bytes(bytes + length - suffix_length, suffix_length, suffix);
+}
+
 static int unpack_stamp(uint32_t total, uint8_t **runtime, uint32_t *runtime_length)
 {
-    uint32_t separator = 0, cursor = 0, data, entry = 0;
+    uint32_t separator = 0, cursor = 0, data;
     while (separator < total && stamp_memory[separator] != '|') separator++;
     if (separator == total) return -1;
     data = separator + 1;
@@ -156,19 +181,24 @@ static int unpack_stamp(uint32_t total, uint8_t **runtime, uint32_t *runtime_len
         }
         if (length > total - data) return -1;
         if (same_bytes(stamp_memory + name, name_length, "runtime.bin")) {
-            *runtime = stamp_memory + data; *runtime_length = length; entry |= 1;
-        } else if (same_bytes(stamp_memory + name, name_length, "application.bin")) {
-            application_bytecode = stamp_memory + data;
-            application_bytecode_length = length; entry |= 2;
+            if (*runtime != NULL) return -1;
+            *runtime = stamp_memory + data; *runtime_length = length;
+        } else if (ends_with(stamp_memory + name, name_length, ".bin")) {
+            if (program_count == MAX_PROGRAMS) return -1;
+            programs[program_count++] = (GuestProgram) {
+                stamp_memory + name, name_length, stamp_memory + data, length,
+                JS_UNDEFINED, 0
+            };
         } else if (!same_bytes(stamp_memory + name, name_length, "padding")) return -1;
         data += length;
         if (cursor < separator) cursor++;
     }
-    return entry == 3 && data == total ? 0 : -1;
+    return *runtime != NULL && program_count > 0 && data == total ? 0 : -1;
 }
 
 static int request_stamp(uint8_t **runtime, uint32_t *runtime_length)
 {
+    *runtime = NULL; *runtime_length = 0;
     stamp_memory[0] = 'D'; stamp_memory[1] = 'U';
     stamp_memory[2] = 'L'; stamp_memory[3] = 'S';
     uint32_t actual = msg((uint32_t)(uintptr_t)stamp_memory, sizeof(stamp_memory));
@@ -189,7 +219,14 @@ static JSValue unavailable(JSContext *ctx, JSValue *this_value,
 static JSValue js_date_constructor(JSContext *ctx, JSValue *this_value,
                                    int argc, JSValue *argv)
 {
-    return unavailable(ctx, this_value, argc, argv);
+    double value;
+    UNUSED(this_value);
+    argc &= ~FRAME_CF_CTOR;
+    if (argc != 1 || !JS_IsNumber(ctx, argv[0]) ||
+        JS_ToNumber(ctx, &value, argv[0])) {
+        return JS_ThrowTypeError(ctx, "Date requires one numeric epoch value");
+    }
+    return JS_NewDate(ctx, value);
 }
 
 static JSValue js_date_now(JSContext *ctx, JSValue *this_value,
@@ -221,17 +258,24 @@ static JSValue js_gc(JSContext *ctx, JSValue *this_value,
 static JSValue js_load(JSContext *ctx, JSValue *this_value,
                        int argc, JSValue *argv)
 {
-    UNUSED(this_value); UNUSED(argv);
-    if (!bytecode_loading_open || application_loaded || argc < 1) {
+    JSCStringBuf buffer;
+    const char *name;
+    UNUSED(this_value);
+    if (!bytecode_loading_open || argc < 1) {
         return JS_ThrowTypeError(ctx, "bytecode loading is closed");
     }
-    /* The runtime validates the script resource name. The immutable stamp
-       contains exactly one application program, so this layer only enforces
-       the one-shot execution boundary. */
-    application_loaded = 1;
-    JSValue result = JS_Run(ctx, application_program);
-    if (JS_IsException(result)) report_guest_error(ctx, 1);
-    return JS_IsException(result) ? result : JS_UNDEFINED;
+    name = JS_ToCString(ctx, argv[0], &buffer);
+    if (name == NULL) return JS_EXCEPTION;
+    for (uint32_t index = 0; index < program_count; index++) {
+        GuestProgram *program = &programs[index];
+        if (!same_bytes(program->name, program->name_length, name)) continue;
+        if (program->loaded) return JS_ThrowTypeError(ctx, "bytecode program was already loaded");
+        program->loaded = 1;
+        JSValue result = JS_Run(ctx, program->program);
+        if (JS_IsException(result)) report_guest_error(ctx, 1);
+        return JS_IsException(result) ? result : JS_UNDEFINED;
+    }
+    return JS_ThrowTypeError(ctx, "bytecode program is unavailable");
 }
 
 static JSValue js_close_guest(JSContext *ctx, JSValue *this_value,
@@ -578,6 +622,26 @@ static void dispatch(uint32_t callback)
     if (JS_IsException(result)) report_guest_error(context, 3);
 }
 
+/* Tag 2 mirrors the full QuickJS runtime's named-call packet: one tag byte,
+   a UTF-8 function name, a NUL separator, and one UTF-8 string argument. This
+   is the return path for asynchronous host-controller services such as fetch. */
+static void call_named(const uint8_t *bytes, uint32_t length)
+{
+    uint32_t separator = 1;
+    JSValue global, handler, argument, result;
+    while (separator < length && bytes[separator] != 0) separator++;
+    if (separator == 1 || separator >= length) return;
+    global = JS_GetGlobalObject(context);
+    handler = JS_GetPropertyStr(context, global, (const char *)(bytes + 1));
+    argument = JS_NewStringLen(context, (const char *)(bytes + separator + 1),
+                               length - separator - 1);
+    JS_PushArg(context, argument);
+    JS_PushArg(context, handler);
+    JS_PushArg(context, global);
+    result = JS_Call(context, 1);
+    if (JS_IsException(result)) report_guest_error(context, 4);
+}
+
 void guest_onmsg(uint32_t minimum_length)
 {
     if (context == NULL) {
@@ -587,13 +651,24 @@ void guest_onmsg(uint32_t minimum_length)
         if (request_stamp(&runtime_bytecode, &runtime_bytecode_length) != 0) return;
         context = JS_NewContext(runtime_memory, sizeof(runtime_memory), &js_stdlib);
         if (JS_RelocateBytecode(context, runtime_bytecode,
-                                runtime_bytecode_length) != 0) return;
+                                runtime_bytecode_length) != 0) {
+            JS_ThrowTypeError(context, "runtime bytecode relocation failed");
+            report_guest_error(context, 5); return;
+        }
         runtime_program = JS_LoadBytecode(context, runtime_bytecode);
-        if (JS_IsException(runtime_program)) return;
-        if (JS_RelocateBytecode(context, application_bytecode,
-                                application_bytecode_length) != 0) return;
-        application_program = JS_LoadBytecode(context, application_bytecode);
-        if (JS_IsException(application_program)) return;
+        if (JS_IsException(runtime_program)) { report_guest_error(context, 5); return; }
+        for (uint32_t index = 0; index < program_count; index++) {
+            GuestProgram *program = &programs[index];
+            if (JS_RelocateBytecode(context, program->bytecode,
+                                    program->bytecode_length) != 0) {
+                JS_ThrowTypeError(context, "guest bytecode relocation failed");
+                report_guest_error(context, 6); return;
+            }
+            program->program = JS_LoadBytecode(context, program->bytecode);
+            if (JS_IsException(program->program)) {
+                report_guest_error(context, 6); return;
+            }
+        }
         result = JS_Run(context, runtime_program);
         if (JS_IsException(result)) { report_guest_error(context, 2); return; }
         dispatch(UINT32_MAX); /* Commit document and application DOM operations. */
@@ -610,5 +685,7 @@ void guest_onmsg(uint32_t minimum_length)
     if (actual == 4) {
         dispatch((uint32_t)transfer[0] | ((uint32_t)transfer[1] << 8) |
                  ((uint32_t)transfer[2] << 16) | ((uint32_t)transfer[3] << 24));
+    } else if (actual > 2 && transfer[0] == 2) {
+        call_named(transfer, actual);
     }
 }

@@ -17,26 +17,26 @@ await mkdir(generated, { recursive: true });
 // none of the editor-specific *-use adapters are present in these guests.
 const basePath = resolve(root,
   "../microquickjs-suite/microquickjs-guest-runtime/guest-runtime.js");
+const cssPath = resolve(root, "../../../../packages/project-editor/src/constrained-css.js");
 const surfacePath = resolve(root, "../codemirror/src/canonical-codemirror-dom.js");
-const base = await readFile(basePath, "utf8");
+const css = (await readFile(cssPath, "utf8"))
+  .replace(/\nexport \{ parseCss as parseConstrainedCss \};\s*$/, "\n");
+const base = css + await readFile(basePath, "utf8");
 const boundary = base.indexOf("function attributes(source)");
 if (boundary < 0) throw new Error("browser runtime boundary was not found");
 const environment = "var FONT_RESOURCES = {};\nvar RUNTIME_RESOURCES = { files: {} };\n" +
   base.slice(0, boundary)
     .replace("var bridge = print;", "var bridge = globalThis.bridge;")
     .replaceAll("new HostReference(reference)", "hostReference(reference)")
-    .replace("var document = new GuestDocument(documentReference[1]);",
-      "var document = new GuestDocument(documentReference[1]);\n" +
-      "globalThis.__wwcReportError = function() {};")
     .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
   "\n" + await readFile(surfacePath, "utf8");
 const environmentPath = resolve(generated, "browser-environment.js");
 await writeFile(environmentPath, environment);
 
 const requested = process.argv.slice(2);
-const examples = requested.length ? requested : ["prosemirror", "wordgard", "xterm"];
+const examples = requested.length ? requested : ["prosemirror", "wordgard", "xterm", "xterm-terminal"];
 for (const name of examples) {
-  if (!["prosemirror", "wordgard", "xterm"].includes(name)) {
+  if (!["prosemirror", "wordgard", "xterm", "xterm-terminal"].includes(name)) {
     throw new Error(`Unknown browser editor example: ${name}`);
   }
   const application = resolve(generated, `${name}.js`);

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "../..");
 const workspace = resolve(packageRoot, "../..");
-const prototype = join(workspace, "dev/wasm-web-container/examples");
+const prototype = join(workspace, "dev/wasm-web-runtimes/examples/microquickjs-suite");
 const configuration = JSON.parse(await readFile(join(here, "reproducibility.json"), "utf8"));
 const archive = join(packageRoot, "vendor/sqlite-doc-3530400.zip");
 const build = join(packageRoot, "dist/build/sqlite-book");
@@ -98,13 +98,13 @@ const target = join(runtime,
 if (!await readFile(target).catch(() => null)) {
   execFileSync("sh", [join(prototype, "scripts/build.sh")], { stdio: "inherit" });
 }
-execFileSync("npm", ["run", "build:machine"], {
-  cwd: join(prototype, ".."), stdio: "inherit"
+execFileSync(process.execPath, [join(workspace, "dev/wasm-web-machine/build.js")], {
+  cwd: workspace, stdio: "inherit"
 });
 const outputRoot = dirname(dirname(output));
-await copyFile(join(prototype, "../dist/module/wasm-web-machine.js"),
+await copyFile(join(workspace, "dev/wasm-web-machine/dist/module/wasm-web-machine.js"),
   join(outputRoot, "wasm-web-machine.js"));
-await copyFile(join(prototype, "../dist/module/wasm-web-machine.js.map"),
+await copyFile(join(workspace, "dev/wasm-web-machine/dist/module/wasm-web-machine.js.map"),
   join(outputRoot, "wasm-web-machine.js.map"));
 const runtimeSource = [
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
@@ -113,6 +113,8 @@ const runtimeSource = [
   `var RUNTIME_RESOURCES={files:{"index.html":${JSON.stringify(await readFile(join(here,
     "index.html"), "utf8"))},"style.css":${JSON.stringify(await readFile(join(here,
     "style.css"), "utf8"))}}};\n`,
+  (await readFile(join(workspace, "packages/project-editor/src/constrained-css.js"), "utf8"))
+    .replace(/\nexport \{ parseCss as parseConstrainedCss \};\s*$/, "\n"),
   await readFile(join(runtime, "guest-runtime.js"), "utf8")
 ].join("");
 const applicationSource = `var BOOK_PAGES=${JSON.stringify(book)};\n` +

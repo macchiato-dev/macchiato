@@ -19,7 +19,11 @@ await mkdir(generated, { recursive: true });
 const canonicalRuntimePath = new URL(
   "../microquickjs-suite/microquickjs-guest-runtime/guest-runtime.js",
   import.meta.url);
-const canonicalRuntime = await readFile(canonicalRuntimePath, "utf8");
+const cssRuntimePath = new URL(
+  "../../../../packages/project-editor/src/constrained-css.js", import.meta.url);
+const cssRuntime = (await readFile(cssRuntimePath, "utf8"))
+  .replace(/\nexport \{ parseCss as parseConstrainedCss \};\s*$/, "\n");
+const canonicalRuntime = cssRuntime + await readFile(canonicalRuntimePath, "utf8");
 const runtimeEnd = canonicalRuntime.indexOf("function attributes(source)");
 if (runtimeEnd < 0) throw new Error("canonical guest runtime boundary was not found");
 const fullEngineSurface = await readFile(
@@ -31,7 +35,11 @@ await writeFile(canonicalEnvironment,
     .replaceAll("new HostReference(reference)", "hostReference(reference)")
     .replace("var document = new GuestDocument(documentReference[1]);",
       "var document = new GuestDocument(documentReference[1]);\n" +
-      "globalThis.__wwcReportError = function() {};")
+      "globalThis.__wwcReportError = function(message) {\n" +
+      "  immediate([3, document.reference, stringIndex(\"postMessage\"), [\n" +
+      "    encode(\"__wwcError:\" + String(message))\n" +
+      "  ]]);\n" +
+      "};")
     .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
   "\n" + fullEngineSurface);
 

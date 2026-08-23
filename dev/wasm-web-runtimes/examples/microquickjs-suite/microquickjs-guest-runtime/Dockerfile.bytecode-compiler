@@ -1,0 +1,19 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+COPY . .
+WORKDIR /workspace/dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime/microquickjs
+
+# The executable is native to the build machine. The emitted bytecode targets
+# the 32-bit MicroQuickJS runtime used by the WebAssembly machine.
+RUN ./mqjs_stdlib -m64 > mqjs_stdlib.h \
+ && ./mqjs_stdlib -m64 -a > mquickjs_atom.h \
+ && make mqjs \
+ && ./mqjs_stdlib -m32 > mqjs_stdlib.wasm32.h \
+ && ./mqjs_stdlib -m32 -a > mquickjs_atom.wasm32.h
+
+CMD ["sh", "-lc", "cp mqjs mqjs_stdlib.wasm32.h mquickjs_atom.wasm32.h /output/"]
