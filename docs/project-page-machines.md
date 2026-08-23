@@ -33,9 +33,11 @@ machine must not reset the site menu or other app-wide state.
 
 ### Project editor
 
-The editor machine owns the `project-editor` guest, its DOM surface, and
-the in-browser draft/version model. The host gives it one editor mount and a
-narrow JSON bridge. It does not receive the project preview DOM.
+The editor machine owns the complete project workspace: its layout and details
+form, files and tabs, the `project-editor` guest, drafts and version history,
+save/build/export orchestration, and output lifecycle. The host gives it the
+server-rendered project workspace root and a narrow device bridge. It does not
+receive the surrounding Resources navigation or account DOM.
 
 The machine is scoped to a live project workspace. With the current single
 workspace UI, opening another project navigates away, disposes the old editor,
@@ -90,10 +92,19 @@ Resources page host
 └── project mount         → project machine
 ```
 
-The editor may provide a DOM element to the project container, but it does not
-delegate its own editor authority. The host creates a new capability for the
-project root. Messages between roles cross explicit JSON or event protocols;
-one guest cannot obtain another guest's node handles.
+The editor identifies an output element within its workspace, but it does not
+delegate the rest of its workspace authority. The host creates a new capability
+for that output root. Messages between roles cross explicit JSON or event
+protocols; one guest cannot obtain another guest's node handles.
+
+Creation follows the same hierarchy as authority. The outer Resources machine
+asks the Machine Controller for an editor child and hands that child the editor
+mount capability—not the page document. The editor machine may then ask for an
+output child for its current generation; the controller hands that child only
+the output mount capability. The controller performs the WebAssembly
+instantiation, but the parent guest owns the lifecycle decision and receives
+the resulting opaque child handle. A hidden fourth “project app” machine that
+merely duplicates either parent is not part of this model.
 
 Project status follows the same boundary. The project machine reports a typed
 event such as `blocked`, `mounted`, or `storage` through its container
@@ -320,8 +331,10 @@ changes the runner location.
 
 The runner distribution is intentionally smaller than the module graph used
 to author it: one readable, medium-sized JavaScript file starts one `.bin` or
-`.wasm` artifact. A release build may inline the same controller, bridge, and
-device implementations that are published as individual npm modules. It must
+`.wasm` artifact. A release build literally concatenates the selected
+controller, bridge, and device sources in a declared order. It does not use a
+module bundler to discover, rewrite, tree-shake, or wrap their relationships.
+Those same sources may also be published as individual npm modules. The build must
 not introduce a second implementation or silently patch vendored code; a
 manifest records the included package versions, source revisions, and hashes.
 This keeps deployment and auditing simple without giving up reusable modules.
@@ -334,8 +347,11 @@ A distinct server-side display machine can use the same packages for
 pre-rendering, while the browser display device validates and installs the
 same representation before guest hydration. Project application code never
 becomes the trusted CSS or SVG renderer merely because it runs on the server.
-The audit-oriented runner vendors the exact renderer package sources into its
-single readable JavaScript file rather than loading extra modules at runtime.
+The audit-oriented runner concatenates the exact renderer package sources into
+its single readable JavaScript file rather than loading extra modules at
+runtime. A surface that does not need CSS or SVG omits those source segments.
+The small, hand-written integration at the end constructs the bridge and
+devices explicitly.
 
 These packages are likely to graduate together into a machines monorepo. That
 repository can version the protocol, machine host, compact reader/writer,
@@ -350,15 +366,65 @@ The public Pages deployment has two deliberately different release surfaces:
 - `machines` is the complete monorepo, documentation, conformance fixtures,
   and demos, published at `https://macchiato-dev.github.io/machines/`.
 - `machine-runner` is a separate, much smaller repository and Pages artifact,
-  also mountable at `/machines/machine-runner/`. It contains no demos or
-  authoring workspace: only minimal HTML, a tiny inline controller bootstrap,
+  published at `https://macchiato-dev.github.io/machine-runner/`. It contains no demos or
+  authoring workspace: only minimal HTML, a tiny inline module bootstrap,
   the readable machine JavaScript file, and the selected `.bin` or `.wasm`.
 
-All runner URLs and imports are relative so the same files work at a repository
-Pages root or at the nested path. The HTML supplies charset, viewport, title,
-an empty mount point, and a concise inline module that imports the machine file
-and starts the artifact. Capability policy remains explicit in that controller;
+The second repository is intentional: GitHub Pages assigns each project its
+own stable top-level path, so the small runner can have an independent release
+and cache lifecycle without inheriting the machines monorepo's demo payload.
+
+All runner URLs and imports are relative so the same files work at the
+repository Pages path or another static mount. The HTML supplies charset, viewport, title,
+an empty mount point, and a concise inline module that imports one entry point
+and starts it. The repository publishes two readable JavaScript distributions:
+Each surface may have its own `machine.js`, containing only its selected,
+literally concatenated machine, bridge, and device sources plus a hand-written
+integration. `machine-runner.js` concatenates the standard
+runner controller, capability policy, and vendored renderers. The runner page
+loads only `machine-runner.js` and its artifact rather than fetching both files;
+source is shared by the build, not duplicated as competing implementations.
 moving the runner to a smaller repository must not add ambient authority.
+
+The release JavaScript is compiled from TypeScript into paired artifacts:
+`machine.js` and `machine-runner.js` are readable, while `machine.min.js` and
+`machine-runner.min.js` are their esbuild-minified equivalents. Each file has
+an external source map with embedded `sourcesContent`, an esbuild metafile, and
+a content hash. Conformance tests run against readable and minified builds and
+require equivalent behavior. The tiny Pages bootstrap loads the minified
+runner by default, while the readable build remains directly available for
+auditing and debugging. The source packages and machines monorepo retain the
+TypeScript. The release build does not inject remote dependencies or eval-based
+loaders.
+
+Stamped `.bin` artifacts support whole-file gzip. HTTP servers may expose the
+same bytes transparently with `Content-Encoding: gzip`; files intended for
+download, drag-and-drop, or static hosting use the explicit `.bin.gz` suffix.
+The reader checks gzip magic bytes before reading the WIT-style resource index.
+Browser, Deno, and Node builds all use their built-in `CompressionStream` and
+`DecompressionStream`, so this adds no compression dependency and does not
+invent per-resource archive semantics.
+
+Esbuild performs the TypeScript stripping and JavaScript generation directly.
+`tsc --noEmit` is a separate required type-check gate; it does not produce an
+intermediate distribution that could drift from the esbuild output.
+
+Combined distributions vendor their selected package sources into one
+dependency-free TypeScript file per entry point: `machine.ts` and
+`machine-runner.ts`, not a directory of compiled JavaScript. Deterministic
+source-boundary comments and a manifest map each generated line range to its
+package file, revision, and hash. `tsc --noEmit` checks each combined file and
+esbuild generates its readable and minified JavaScript outputs from that exact
+single-file input.
+
+The JavaScript source maps resolve to that combined TypeScript file. Mapping
+from its documented ranges back to canonical package sources belongs to the
+provenance manifest rather than a second browser source-map stage.
+
+At that stage the vendored source graph is runtime-dependency-free. Its build
+toolchain is only the pinned TypeScript checker and esbuild; the emitted runner
+does not resolve npm packages or CDN modules and imports only its own relative
+`.bin` or `.wasm` artifact.
 
 ## Lifetime and recovery
 
@@ -420,18 +486,23 @@ Browser coverage checks behavior and ownership, not IDs alone:
 
 The temporary playground keeps its page integration behind a controller and a
 small set of related devices. A session device owns namespaced ephemeral state,
-an editor device owns the editor machine, a compiler device selects a local or
-supervised-server build, and an output device owns the disposable output
+an editor device owns the editor machine, a compiler device selects a
+client-side Wasm or supervised-server build, and an output device owns the disposable output
 machine. The document module may construct the controller, but it must not
 contain a second body of application behavior beside those objects.
 
 The single-file compiler is shared source, not two implementations expected to
-converge. Its browser build and its Deno build inertly parse the same HTML,
+converge. Its client Wasm build and its Deno build inertly parse the same HTML,
 apply the same source envelope, reject network-capable markup and CSS, and emit
 the same tree and guest program. Automated parity tests compare their complete
 serialized output. The Machine Host remains the final enforcement boundary;
 successful compilation never grants a host DOM node, stylesheet, navigation,
-or fetch capability.
+or fetch capability. The page controller never parses project CSS. A server
+build may give the output guest WIT-encoded stylesheet operations, while raw
+dynamic CSS may instead be sent as inert guest input for the guest to encode.
+Only semantic operations cross from that guest into the DOM display device.
+CSS already active in the initial document was checked before the document was
+sent and is inherited directly.
 
 Container-mode stylesheets are scoped to a unique machine-owned root class.
 Selectors that name `html`, `body`, or `:root` map to that root instead of the

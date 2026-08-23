@@ -1,4 +1,4 @@
-import { decodeResourceBundle } from "./resource-bundle.js";
+import { decodeResourceArtifact } from "./resource-bundle.js";
 
 export class WasmWebContainer {
   #runtime;
@@ -30,7 +30,7 @@ export class WasmWebContainer {
       throw new TypeError("selected runtime does not load resource bundles");
     }
     const bytes = input.bytes ?? await this.#read(input.url, "bytes");
-    return this.#runtime.loadBundle(decodeResourceBundle(bytes), { url: input.url || null });
+    return this.#runtime.loadBundle(await decodeResourceArtifact(bytes), { url: input.url || null });
   }
 
   async #read(url, kind) {

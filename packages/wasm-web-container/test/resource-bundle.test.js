@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import WasmWebContainer from "../src/wasm-web-container.js";
-import { decodeResourceBundle, encodeResourceBundle } from "../src/resource-bundle.js";
+import { decodeResourceArtifact, decodeResourceBundle, encodeResourceBundle,
+  gzipResourceBundle } from "../src/resource-bundle.js";
 
 test("resource bundles use a bounded filename and length header", () => {
   const encoded = encodeResourceBundle(new Map([
@@ -12,6 +13,15 @@ test("resource bundles use a bounded filename and length header", () => {
   assert.equal(new TextDecoder().decode(files.get("index.js")), "print('hello')");
   assert.deepEqual([...files.get("images/tile.bin")], [3, 1, 4, 1, 5]);
   assert.throws(() => decodeResourceBundle(encoded.subarray(0, -1)), /truncated/);
+});
+
+test("whole resource artifacts use built-in gzip in Node, browsers, and Deno", async () => {
+  const compressed = await gzipResourceBundle({
+    "index.html": new TextEncoder().encode("<h1>Compressed</h1>"),
+  });
+  assert.deepEqual([...compressed.slice(0, 2)], [0x1f, 0x8b]);
+  const files = await decodeResourceArtifact(compressed);
+  assert.equal(new TextDecoder().decode(files.get("index.html")), "<h1>Compressed</h1>");
 });
 
 test("the container loads source or a binary file set into a selected runtime", async () => {

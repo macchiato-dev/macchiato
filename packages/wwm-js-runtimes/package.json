@@ -3,5 +3,9 @@
   "version": "0.0.0",
   "description": "JavaScript and JavaScript-like runtimes for Wasm Web Machine.",
   "type": "module",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build:server": "node microquickjs-server/build.js",
+    "test": "node --test microquickjs-server/server.test.js"
+  }
 }

@@ -97,3 +97,19 @@ export function decodeResourceBundle(bytes) {
   if (offset !== bytes.length) throw new Error("resource bundle has trailing bytes");
   return files;
 }
+
+async function streamBytes(bytes, transform) {
+  const stream = new Blob([bytes]).stream().pipeThrough(transform);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+export async function gzipResourceBundle(input) {
+  return streamBytes(encodeResourceBundle(input), new CompressionStream("gzip"));
+}
+
+export async function decodeResourceArtifact(bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("resource artifact must be bytes");
+  const gzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  const bundle = gzip ? await streamBytes(bytes, new DecompressionStream("gzip")) : bytes;
+  return decodeResourceBundle(bundle);
+}
