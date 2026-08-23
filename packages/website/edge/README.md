@@ -2,12 +2,21 @@
 
 ## Runtime tiers
 
-- `../bunny-server.js`: minified monolithic composition root and HTTP server.
+- `../backend/controller.ts`: small TypeScript composition root and HTTP server;
+  it imports the prebuilt sibling `machine.js` in the multi-file build.
 - `bootstrap.js`: anonymous fast-home selection before database readiness.
-- `../bunny-application.js`: application factory with lazy database readiness.
+- `../backend/machine.ts`: prebuilt application machine with lazy database readiness.
+- `../resources-server-machine.js`: `server-use` controller for the separately
+  loaded MicroQuickJS/Wasm server guest and its named `sql-use` device.
+- `../project-version-machine.js`: disposable MicroQuickJS policy worker for
+  checkpoint and project-version boundary planning. The compiled module is
+  cached, but every write receives a fresh interpreter instance.
 - `models.js`: pure validation and policy models with no SDK dependency.
-- `app.js`: Fetch API orchestration with injected configuration, clock, fetch,
-  and logger.
+- `app.js`: published-document reads, OAuth entry/callback routes, and HTML
+  composition. Account and project mutations are intentionally absent; the
+  application wrapper sends every supported HTTP method through the server
+  machine before this handler. GET/HEAD documents return through a bounded,
+  request-scoped document device so large HTML never enters the guest arena.
 - `../auth/`: signed cookie, PKCE, GitHub/GitLab exchange, and identity validation.
 - `@macchiato-dev/hub/accounts`: provider-neutral SQLite identity model behind a
   libSQL-compatible client boundary.
@@ -40,7 +49,8 @@ repository route/view models
   -> dom-use + html-use strictly sanitize document-profile markup
   -> exporter writes immutable objects and manifest evidence
   -> operator uploads one export prefix to private Bunny Storage
-  -> build emits one minified Edge Script with no runtime code loading
+  -> build emits a minified Edge entry plus revisioned server and disposable
+     project-version MicroQuickJS/Wasm machines
   -> edge validates manifest structure and security profile
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request
@@ -51,10 +61,58 @@ repository route/view models
 The generated manifest is publication authority, not user input. Anyone able to
 write both the export objects and manifest can publish content; protect that
 credential separately from the read-only credential used by the edge script.
+The server-machine Wasm shares the revisioned Storage directory for atomic
+deployment but is deliberately absent from this public manifest. Only the Edge
+controller knows its fixed key, and the public object router cannot serve it.
 
 ## What is intentionally absent
 
-- No QuickJS or other nested JavaScript sandbox at the edge.
+- No host Request, database client, or arbitrary SQL authority is exposed to
+  the MicroQuickJS guest. `/health`, `GET /api/projects/:id/versions`, and
+  `GET /api/projects/:id/versions/:sequence` are complete machine-owned routes.
+  The latter two ask host devices only to validate the signed session and
+  execute fixed content queries; patch-chain reconstruction stays in the guest.
+- `POST /notifications/:id` is machine-owned for read, delete, and acceptance.
+  Its MicroQuickJS guest owns form parsing, origin and CSRF decisions,
+  invitation-state handling, redirects, and atomic batch composition.
+- `POST /organizations/:slug/invitations` and
+  `POST /organizations/:slug/members/:user-id` are machine-owned. The guest
+  validates the bounded form, session, CSRF token, namespace and role; checks
+  management and membership through named reads; and composes invitation,
+  notification, and role writes without receiving raw SQL authority.
+- `POST /profile` is machine-owned. Username validation, organization-name
+  collision checks, account and project-namespace updates, and the refreshed
+  signed-session response are sequenced by the guest through named SQL and
+  session devices.
+- `POST /logout` is machine-owned; its only host capability is the narrowly
+  named session-cookie invalidation operation.
+- `POST /organizations` is machine-owned. Its guest performs strict UTF-8
+  form decoding, field and namespace validation, CSRF checks, collision reads,
+  UUID acquisition, and the fixed organization insert. Database limits remain
+  authoritative and map back to the existing form errors.
+- `POST /projects` and `POST /projects/:id` are machine-owned. The guest owns
+  the session/origin/content-type checks, obtains the bounded form only after
+  authentication, verifies the action-specific CSRF token, selects create,
+  update, save, titled publish, revert, or delete, and owns every redirect.
+  The request-scoped project device retains the potentially large snapshot;
+  only bounded metadata crosses the server ABI. Those operations remain
+  separate capability calls, so the guest—not an opaque host helper—controls
+  their ordering.
+- Account, organization, and project stores use build-time named `sql-use`
+  policies. The trusted compatibility adapter accepts only exact statements in
+  those policies, separates read-only and write credentials, and rejects SQL
+  drift before a database request is sent.
+- `server-use` supports request-scoped streaming body devices for the 72 MiB
+  project-update contract. The guest receives bounded sequential chunks rather
+  than a copied host `Request` or one oversized ABI message. `POST
+  /api/projects/:id/snapshot` and `POST
+  /api/projects/:id/restore/:sequence` are machine-owned: MicroQuickJS checks
+  encoding, origin, session, and project-scoped CSRF before granting body and
+  store access. A disposable MicroQuickJS worker validates snapshot metadata,
+  generates configuration and streaming file-splice patches, and plans version
+  boundaries. The host only supplies exact WTF-8 text slices, materializes the
+  guest-selected range, and executes named SQL; the full response contract does
+  not pass through the small server guest arena.
 - No edge-side HTML templating or interpretation of arbitrary route data.
 - No public Storage proxy and no prefix-only authorization.
 - No provider token in cookies, Storage, logs, or browser responses.
@@ -62,8 +120,8 @@ credential separately from the read-only credential used by the edge script.
   authentication and account content use separate, narrowly modeled database
   boundaries. Names, slugs, and descriptions are always escaped.
 - No app-authored JavaScript in the document-profile export. The only browser
-  code is the fixed, host-owned command-palette, appearance, and native-menu
-  dismissal modules.
+  module is the fixed, host-owned machine controller; Resources frontend
+  behavior runs as a MicroQuickJS guest behind its explicit devices.
 - No passthrough of upstream response headers except ETag and Last-Modified.
 
 ## Accounts and linked OAuth identities

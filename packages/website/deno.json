@@ -1,5 +1,4 @@
 {
-  "nodeModulesDir": "auto",
   "imports": {
     "@bunny.net/edgescript-sdk": "npm:@bunny.net/edgescript-sdk@0.12.1",
     "@libsql/client/web": "npm:@libsql/client@0.17.4/web",
@@ -8,8 +7,13 @@
     "@macchiato-dev/hub/content": "../hub/src/content.js",
     "@macchiato-dev/hub/migrations": "../hub/src/migrations.js",
     "@macchiato-dev/hub/organizations": "../hub/src/organizations.js",
+    "@macchiato-dev/hub/project-history": "../hub/src/project-history.js",
     "@macchiato-dev/hub/container-elements": "../hub/src/container-elements.js",
     "@macchiato-dev/hub/url-pattern": "../hub/src/url-pattern.js",
+    "@macchiato-dev/server-use": "../server-use/src/index.js",
+    "@macchiato-dev/server-use/machine-controller": "../server-use/src/machine-controller.js",
+    "@macchiato-dev/sql-use": "../sql-use/src/index.js",
+    "@macchiato-dev/sql-use/client": "../sql-use/src/client.js",
     "@macchiato-dev/command-palette-use": "../../packages/command-palette-use/src/index.js",
     "@macchiato-dev/theme-use": "../../packages/theme-use/src/index.js",
     "@macchiato-dev/user-menu-use": "../../packages/user-menu-use/src/index.js"

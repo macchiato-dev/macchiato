@@ -7,7 +7,7 @@ fork of the application.
 | Profile | Runtime | Validation and navigation |
 | --- | --- | --- |
 | Local Macchiato | Node + SQLite | Rich browser transitions sanitized by `dom-use`; optional browser QuickJS for the userbar state machine |
-| Bunny edge | Bunny V8 isolate + Storage | Strict build-time `style-use` and `dom-use`; two fixed host-owned UI modules; full-document navigation |
+| Bunny edge | Bunny V8 isolate + Storage | Strict build-time validation; one host-owned machine controller with a MicroQuickJS frontend guest; full-document navigation |
 
 The generic `@macchiato-dev/theme-use` module owns safe CSS-token definition,
 merging, and rendering. [`theme.js`](theme.js) is the Resources.co-specific
@@ -501,8 +501,8 @@ node --test \
 
 deno check \
   --config packages/website/deno.json \
-  packages/website/bunny-server.js \
-  packages/website/bunny-application.js
+  packages/website/backend/controller.ts \
+  packages/website/backend/machine.ts
 ```
 
 To inspect only the generated documents without emulating Bunny Storage:
@@ -528,21 +528,83 @@ The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for
 another environment, such as staging.
 
-This produces one minified, copy-and-paste Edge Script and the validated
-Storage objects:
+This produces a reviewed Edge entry, a separately loadable server machine,
+and the validated Storage objects:
 
 ```text
 dist/resources-bunny/
-  resources-bunny.js                 complete Edge application
+  deployment.json                    hashes and roles for every build artifact
+  edge/script.ts                     conventional Bunny upload entry
+  edge/backend/controller.ts         small TypeScript controller source
+  edge/backend/controller.js         directly runnable compiled controller
+  edge/backend/machine.js            prebuilt server application machine
+  edge/backend/deno.json             Bunny SDK mapping for the source pair
   site/resources-co-<sha>/
     manifest.json
+    machines/resources-server-microquickjs.wasm  private, not in the public manifest
+    machines/resources-project-version-microquickjs.wasm  private, disposable worker
     ...published site objects
 ```
 
-The bundle embeds the seven-character Git revision used by the Storage prefix.
-It contains the complete server application, is minified to reduce parse and
-startup work, and performs no runtime code loading. Database migration and
-store initialization remain lazy and shared across requests.
+The browser and server sources use the same scoped names:
+`frontend/controller.ts` builds `frontend/controller.js`, and
+`backend/controller.ts` builds `backend/controller.js`. Each controller imports
+the `machine.js` beside it; publication maps those files to the appropriate
+browser or Edge artifact location.
+
+Both runnable Edge forms embed the seven-character Git revision used by the
+Storage prefix. Bunny's current Set Code API accepts one code string, so
+`script.ts` is the reproducible bundle used by the official deployment action.
+The adjacent controller/machine pair preserves the authored multi-file build
+and is the entry structure for repository-driven tooling. Server application
+request policy runs in the separately fetched MicroQuickJS/Wasm artifact. The
+Resources guest is an explicit concatenation of its selected runtime and
+application slices, compiled directly to MicroQuickJS bytecode. Its TypeScript
+host controller only instantiates the machine, grants bounded `server-use`
+messages and named `sql-use` operations rather than Requests or raw database
+authority. Database migration and store initialization remain lazy and shared
+across requests. `/health` and the authenticated project-version list/read APIs
+execute their route decisions and version reconstruction inside that guest.
+Account, organization, and project stores are also constrained by exact named
+SQL policies.
+Schema migration now uses the same fixed-operation `sql-use` adapter. The
+migration runner can select only the ledger reads/writes and schema statements
+enumerated from the checked-in migration set; arbitrary runtime SQL is rejected.
+All supported HTTP methods enter `server-use`. The guest performs method and
+protected-document routing—including provider-link authorization—before
+delegating GET/HEAD rendering through a request-scoped document device, while
+response bodies remain outside its arena.
+Notification read, delete, and invitation acceptance writes also run there;
+the guest validates form encoding, origin, session, and CSRF state before
+requesting fixed writes or atomic named batches.
+Organization invitation and member-role POSTs follow the same boundary: the
+guest owns their validation, authorization state machine, redirects, UUID
+requests, and atomic write composition while the controller exposes only the
+named organization operations.
+Profile username changes now use that controller as well, including the
+project-namespace update and refreshed session cookie.
+Project snapshot saves and restores now enter through the same guest. The guest
+owns content-type, origin, session, and project-scoped CSRF decisions before it
+invokes a request-scoped project capability. That capability consumes the body
+as bounded 64 KiB chunks and preserves the existing 72 MiB request and response
+contract without copying a project-sized value into the server guest's 4 MiB
+arena. Snapshot validation and history semantics remain identical while their
+processing is moved into a separate short-lived Wasm worker.
+Project form mutations use the controller too. `POST /projects` and
+`POST /projects/:id` are intercepted before the published-document handler.
+The MicroQuickJS guest owns authentication, same-origin and form-encoding
+policy, CSRF sequencing, intent selection, create/update/save/publish/revert/
+delete ordering, and redirects. A request-scoped device keeps the large
+URL-encoded snapshot outside the guest arena and exposes only bounded fields;
+it does not collapse the workflow into one host-side application operation.
+Each project-history operation instantiates a fresh MicroQuickJS context from a
+cached compiled module. The worker validates normalized snapshot metadata,
+generates configuration patches, computes changed-file splice coordinates, and
+returns the exact checkpoint/version plan. Large strings remain host-owned:
+the worker requests paired 32 Ki-code-unit WTF-8 slices and returns only the
+common-prefix/suffix coordinates, so even a 70 MiB file does not require a
+large interpreter arena. The host materializes the selected slices and retains
+SQL authority; the worker receives neither raw SQL nor a database client.
 
 ### Update an existing staging deployment manually
 
@@ -552,7 +614,7 @@ store initialization remain lazy and shared across requests.
    function. Upload its `manifest.json` last, then keep older revisioned
    directories until the new function is deployed and verified.
 3. Replace the staging Edge Script contents with
-   `dist/resources-bunny/resources-bunny.js`, then save and deploy it.
+   `dist/resources-bunny/edge/script.ts`, then save and deploy it.
 4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
    and both locale choices before testing OAuth.
 
@@ -567,9 +629,11 @@ assets may retain their long public lifetime.
 1. Build the deployment and upload the *contents* of
    `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
    The build-created revision directory is part of every uploaded object key.
-2. Create one Bunny standalone Edge Script. Its build entrypoint is
-   `packages/website/bunny-server.js`; deployment normally pastes
-   `dist/resources-bunny/resources-bunny.js`.
+2. Create one Bunny standalone Edge Script. Its TypeScript controller is
+   `packages/website/backend/controller.ts`; it imports the prebuilt
+   `backend/machine.js`. Their deployment copies are under
+   `dist/resources-bunny/edge/backend/`. The conventional Bunny Set Code
+   artifact is `dist/resources-bunny/edge/script.ts`.
 3. Configure the main Resources.co script with:
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
@@ -588,9 +652,8 @@ assets may retain their long public lifetime.
      `false` to prevent unknown OAuth identities from creating accounts.
    - `BUNNY_DATABASE_URL`, `BUNNY_DATABASE_AUTH_TOKEN`, and
      `BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN`: added by connecting the staging
-     Bunny Database to the script. The read-only token is retained for the
-     planned query/mutation capability split; it is not used by the current
-     adapter yet.
+     Bunny Database to the script. Named `sql-use` reads use the read-only
+     client; named writes and migration operations use the write client.
 
 4. Preview `/`, `/about`, a project route, a font URL, an unknown route, and a
    non-GET request before publishing.
@@ -612,8 +675,8 @@ separate authorities. See [Bunny Database operations](../../docs/bunny-database-
 for the difference between Bunny's internal durability snapshots and an
 operator-controlled backup.
 
-The single minified bundle registers its HTTP server without network or
-database work. An anonymous `GET /` with no query or session cookie reads a
+The minified Edge entry registers its HTTP server without network or database
+work. An anonymous `GET /` with no query or session cookie reads a
 pre-rendered localized home document directly from the revisioned Storage
 prefix and identifies itself with `X-Resources-Edge-Tier: bootstrap`. The fast
 document intentionally uses the valid empty state for live project discovery;
@@ -655,8 +718,15 @@ work, and account project lists remain complete.
 
 The manual GitHub Actions workflow
 `.github/workflows/deploy-resources-bunny.yml` takes a `staging` (default) or
-`production` target, builds both artifacts, uploads the site, deploys the
-matching standalone script, and smoke-tests English and Spanish pages. Create
+`production` target, builds the Edge entry, server machine, and site; uploads
+the revisioned Storage artifacts with the manifest last; deploys the
+matching standalone script, and smoke-tests English and Spanish pages. Before
+uploading, `scripts/verify-resources-bunny-build.js` re-hashes the complete
+deployment inventory, verifies the revision embedded in the Edge controller,
+requires both private machines, and proves that neither machine entered the
+public site manifest. The official Bunny deploy action is pinned to the
+reviewed `deploy-script@0.5.1` commit rather than following its mutable branch.
+Create
 separate `resources-staging` and `resources-production` GitHub environments;
 give each environment its own values for:
 

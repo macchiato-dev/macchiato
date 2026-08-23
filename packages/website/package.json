@@ -5,10 +5,18 @@
   "type": "module",
   "scripts": {
     "build:editor": "node build-project-editor.js",
+    "build:frontend": "node build-resources-frontend.js",
+    "build:server": "node build-resources-server.js",
     "export": "node export-static.js",
-    "check": "deno check --config deno.json bunny-bootstrap.js bunny-application.js"
+    "check": "deno check --config deno.json edge/bootstrap.js backend/controller.ts backend/machine.ts"
   },
   "dependencies": {
-    "@macchiato-dev/hub": "0.0.0"
+    "@macchiato-dev/hub": "0.0.0",
+    "@macchiato-dev/server-use": "0.1.0",
+    "@macchiato-dev/sql-use": "0.1.0",
+    "@vue/compiler-sfc": "^3.5.41",
+    "svelte": "^5.56.10",
+    "three": "^0.185.1",
+    "vue": "^3.5.41"
   }
 }

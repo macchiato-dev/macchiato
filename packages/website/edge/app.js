@@ -5,13 +5,9 @@ import {
   storageRequest,
 } from "./models.js";
 import { localeCookie, localizedObjectKey, negotiateLocale, parseLanguageRoute, parseLanguageSelection } from "./i18n.js";
-import { finishGithubAuth, readSession, refreshedSessionCookie, signOut, startGithubAuth } from "../auth/github.js";
+import { finishGithubAuth, readSession, startGithubAuth } from "../auth/github.js";
 import { finishGitlabAuth, startGitlabAuth } from "../auth/gitlab.js";
-import { seal, unseal } from "../auth/session.js";
-import { ContentConflictError, ContentValidationError } from "@macchiato-dev/hub/content";
-import { AccountConflictError, AccountValidationError } from "@macchiato-dev/hub/accounts";
-import { OrganizationAccessError, OrganizationInputError } from "@macchiato-dev/hub/organizations";
-import { validateAllowedUrlPatterns } from "@macchiato-dev/hub/url-pattern";
+import { seal } from "../auth/session.js";
 import {
   renderResourcesCommandPalette,
   resourcesAppearanceHtml,
@@ -19,15 +15,11 @@ import {
   resourcesBlankAvatarHtml,
   resourcesCreateIconHtml,
 } from "../components/user-menu.js";
-import { commandPaletteClientPath } from "@macchiato-dev/command-palette-use";
-import { themeUseClientPath } from "@macchiato-dev/theme-use";
-import { userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
 const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
 const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new", "/profile"]);
-const PROTECTED_ACCOUNT_PATHS = new Set(["/projects", "/projects/new", "/organizations/new", "/profile"]);
 const DISCOVERABLE_PROJECT_NAMESPACES = Object.freeze(["benatkin", "resources", "macchiato"]);
 const TRY_TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "slides"]);
 
@@ -165,10 +157,10 @@ function applySignupPolicy(html, pathname, messages, signupsEnabled) {
 }
 
 function renderSessionHtml(html, session, messages, options, contentFormVersion = "") {
-  const contentFormSrc = `/-/resources-site/content-form.js${contentFormVersion ? `?v=${contentFormVersion}` : ""}`;
+  const controllerSrc = `/-/resources-site/controller.js${contentFormVersion ? `?v=${contentFormVersion}` : ""}`;
   return html
     .replace(/<aside class="box userbar edge-status(?: toolbar--cardless)?"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
-    .replace("</body>", `<script type="module" src="${commandPaletteClientPath}"></script><script type="module" src="${themeUseClientPath}"></script><script type="module" src="${userMenuUseClientPath}"></script><script type="module" src="${contentFormSrc}"></script></body>`);
+    .replace("</body>", `<script type="module" src="${controllerSrc}"></script></body>`);
 }
 
 function checked(value, expected) {
@@ -189,21 +181,10 @@ function initialProjectSnapshot() {
   };
 }
 
-function validateProjectUrlPatterns(snapshot) {
-  const patterns = snapshot?.config?.containerOptions?.allowedLinkPatterns || snapshot?.config?.container?.allowedLinkPatterns;
-  if (patterns === undefined) return;
-  if (!Array.isArray(patterns) || patterns.some((pattern) => typeof pattern !== "string")) throw new ContentValidationError("snapshot", "allowed link URL patterns must be strings");
-  try {
-    validateAllowedUrlPatterns(patterns);
-  } catch (error) {
-    throw new ContentValidationError("snapshot", error.message);
-  }
-}
-
 function projectEditorHtml({ snapshot, snapshotUrl = "", versionCount = 1, projectId = "", projectSlug = "", csrf = "", messages, persistence = "stored", readOnly = false, blogExamplesOrigin = "" }) {
   const initialSaveState = readOnly ? message(messages, "projectEditor.readOnly", "Read only") : "";
   const initialStatusState = "normal";
-  return `<section class="project-editor" data-project-editor data-editor-machine-state="starting" data-project-id="${escapeHtml(projectId)}" data-project-slug="${escapeHtml(projectSlug)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
+  return `<section class="project-editor" data-project-editor data-editor-machine-state="starting" data-output-machine-state="starting" data-project-id="${escapeHtml(projectId)}" data-project-slug="${escapeHtml(projectSlug)}" data-persistence="${escapeHtml(persistence)}" data-read-only="${readOnly}" data-csrf="${escapeHtml(csrf)}" data-config-label="${message(messages, "projectEditor.configuration", "Configuration")}" data-current-version-label="${message(messages, "projectEditor.currentVersion", "Current Version")}" data-template-replaced-label="${message(messages, "projectEditor.templateReplaced", "Template replaced the project.")}" data-undo-label="${message(messages, "common.undo", "Undo")}">
     <span hidden data-blog-examples-origin="${escapeHtml(blogExamplesOrigin)}"></span><span hidden data-project-snapshot-url="${escapeHtml(snapshotUrl)}"></span>
     <div class="project-editor__toolbar">
       <div class="project-editor__source-toolbar"><div class="project-editor__tabs" data-project-tabs role="tablist" aria-label="Open project files"></div><div class="project-editor__file-picker" data-project-file-picker><button type="button" data-project-file-trigger data-instant-tooltip="${message(messages, "projectEditor.selectFile", "Select a file")}" aria-label="${message(messages, "projectEditor.selectFile", "Select a file")}" aria-haspopup="menu" aria-expanded="false"><span data-project-file-current></span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg></button><div class="project-editor__file-menu" data-project-file-menu role="menu" hidden><label><span>${message(messages, "projectEditor.filterFiles", "Filter files")}</span><input type="search" data-project-file-filter autocomplete="off" placeholder="${message(messages, "projectEditor.filterFiles", "Filter files")}"></label><div data-project-file-options data-open-files-label="${message(messages, "projectEditor.openFiles", "Open files")}"></div><p data-project-file-empty hidden>${message(messages, "projectEditor.noMatchingFiles", "No matching files")}</p></div></div><div class="project-editor__source-actions"><button class="project-editor__versions" type="button" data-project-versions-proxy data-instant-tooltip="${message(messages, "projectEditor.history", "Version history")}" aria-label="${message(messages, "projectEditor.history", "Version history")}" aria-haspopup="dialog" aria-expanded="false">${projectHistoryIcon}<svg class="project-editor__history-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4"></path></svg><span data-current-version hidden>${message(messages, "projectEditor.currentVersion", "Current Version")}</span><span class="project-editor__version-count" hidden>${versionCount}</span></button><div class="project-overflow" data-editor-overflow><button type="button" data-editor-overflow-trigger aria-label="Editor menu" aria-haspopup="menu" aria-expanded="false">•••</button><div class="project-overflow__menu" data-editor-overflow-menu role="menu" hidden><button type="button" role="menuitem" data-save-tab-configuration>Save tab configuration</button><button type="button" role="menuitem" data-project-import>Import ZIP</button><button type="button" role="menuitem" data-project-export>Export ZIP</button></div></div><input type="file" data-project-archive-file accept="application/zip,.zip" hidden></div></div>
@@ -229,15 +210,6 @@ function projectRoute(pathname) {
   }
 }
 
-function projectWorkspaceRoute(pathname) {
-  try {
-    const match = /^\/-\/projects\/([^/]+)\/([^/]+)\/workspace$/.exec(decodeURIComponent(pathname));
-    return match ? { namespace: match[1], slug: match[2] } : null;
-  } catch {
-    return null;
-  }
-}
-
 function namespaceRoute(pathname) {
   try {
     const match = /^\/([^/]+)$/.exec(decodeURIComponent(pathname));
@@ -253,11 +225,6 @@ async function csrfToken(session, action, authConfig, now) {
   // save, while the token is already signed and bound to the session user and
   // exact action.
   return seal({ v: 1, sub: session.sub, action, exp: session.exp }, authConfig.sessionSecret);
-}
-
-async function validCsrf(value, session, action, authConfig, now) {
-  const token = await unseal(value, authConfig.sessionSecret);
-  return token?.v === 1 && token.sub === session.sub && token.action === action && token.exp >= now();
 }
 
 function dashboardHtml(content, messages) {
@@ -314,7 +281,7 @@ function projectFieldsHtml({ session, content, project = null, snapshot, message
   ].join("") : `<option>${escapeHtml(project?.namespace || "")}</option>`;
   return `<div class="project-create__fields" data-project-fields>
     <div class="project-fields__toolbar">${editable ? `<div class="project-fields__toolbar-actions"><div class="project-overflow" data-project-overflow><button type="button" data-project-overflow-trigger aria-label="Project menu" aria-haspopup="menu" aria-expanded="false">•••</button><div class="project-overflow__menu" data-project-overflow-menu role="menu" hidden><button type="button" role="menuitem" ${draft ? "data-open-draft-delete" : "data-open-project-delete"}>${draft ? message(messages, "projectCreate.discardDraft", "Discard draft") : message(messages, "projectView.delete", "Delete project")}</button></div></div><a class="project-close" href="/projects" aria-label="Close project">${projectCloseIcon}</a></div>` : `<a class="project-close" href="/projects" aria-label="Close project">${projectCloseIcon}</a>`}</div>
-    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template${disabled}><option value="article"${selected(templateName, "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="hello"${selected(templateName, "hello")}>${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="html"${selected(templateName, "html")}>Single-file document</option><option value="clock"${selected(templateName, "clock")}>${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark"${selected(templateName, "mark")}>${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart"${selected(templateName, "chart")}>${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball"${selected(templateName, "ball")}>${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars"${selected(templateName, "stars")}>${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank"${selected(templateName, "blank")}>${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
+    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template${disabled}><option value="article"${selected(templateName, "article")}>${message(messages, "projectCreate.article", "Article")}</option><option value="hello"${selected(templateName, "hello")}>${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="html"${selected(templateName, "html")}>Single-file document</option><option value="clock"${selected(templateName, "clock")}>${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark"${selected(templateName, "mark")}>${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart"${selected(templateName, "chart")}>${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball"${selected(templateName, "ball")}>${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars"${selected(templateName, "stars")}>${message(messages, "projectCreate.stars", "Starfield")}</option><option value="paint"${selected(templateName, "paint")}>Canvas paint</option><option value="webgl"${selected(templateName, "webgl")}>WebGL triangle</option><option value="webgpu"${selected(templateName, "webgpu")}>WebGPU triangle</option><option value="three"${selected(templateName, "three")}>Three.js triangle</option><option value="slides"${selected(templateName, "slides")}>Presentation</option><option value="vue"${selected(templateName, "vue")}>Vue SFC</option><option value="svelte"${selected(templateName, "svelte")}>Svelte</option><option value="blank"${selected(templateName, "blank")}>${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
     <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label><span class="field-help"><span class="field-help__trigger" tabindex="0" aria-label="${message(messages, "projectCreate.allowedLinksHelp", "URL pattern syntax")}">?</span><span class="field-help__text" role="tooltip">${message(messages, "projectCreate.allowedLinksHelp", "Use a hostname with wildcards, optionally followed by a path. Surround a specific URL with backquotes or a JavaScript regular expression with forward slashes.")}</span></span></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow${disabled}>${escapeHtml(patterns.join("\n"))}</textarea></div>
     <div class="create-form__field"><label for="project-name">${message(messages, "projectCreate.name", "Title")}</label><input id="project-name" name="name" maxlength="80" value="${escapeHtml(project?.name || "")}" data-slug-source="project-slug" required${disabled}></div>
     <div class="create-form__field"><label for="project-slug">${message(messages, "projectCreate.slug", "Name")}</label><input id="project-slug" name="slug" maxlength="63" value="${escapeHtml(project?.slug || "")}" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" aria-describedby="project-slug-error" autocapitalize="none" autocomplete="off" spellcheck="false" required${disabled}><p id="project-slug-error" class="form-field-error" data-message="${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}" hidden>${message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.")}</p></div>
@@ -353,7 +320,7 @@ function projectFormHtml(session, content, token, messages, url) {
 function tryFieldsHtml(messages) {
   return `<aside class="project-create__fields try-fields" data-project-fields aria-label="${message(messages, "try.settings", "Playground settings")}">
     <div class="project-fields__toolbar"><a class="project-close" href="/" aria-label="Close project">${projectCloseIcon}</a></div>
-    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article">${message(messages, "projectCreate.article", "Article")}</option><option value="hello">${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="html">Single-file document</option><option value="clock">${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark">${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart">${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball">${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars">${message(messages, "projectCreate.stars", "Starfield")}</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
+    <div class="create-form__field"><label for="project-template">${message(messages, "projectCreate.template", "Template")}</label><select id="project-template" name="template" data-project-template><option value="article">${message(messages, "projectCreate.article", "Article")}</option><option value="hello">${message(messages, "projectCreate.hello", "Hello, HTML")}</option><option value="html">Single-file document</option><option value="clock">${message(messages, "projectCreate.clock", "Digital clock")}</option><option value="mark">${message(messages, "projectCreate.mark", "Logo mark")}</option><option value="chart">${message(messages, "projectCreate.chart", "Bar chart")}</option><option value="ball">${message(messages, "projectCreate.ball", "Bouncing ball")}</option><option value="stars">${message(messages, "projectCreate.stars", "Starfield")}</option><option value="paint">Canvas paint</option><option value="webgl">WebGL triangle</option><option value="webgpu">WebGPU triangle</option><option value="three">Three.js triangle</option><option value="slides">Presentation</option><option value="vue">Vue SFC</option><option value="svelte">Svelte</option><option value="blank">${message(messages, "projectCreate.blank", "Blank project")}</option></select></div>
     <div class="create-form__field"><div class="field-label-with-help"><label for="project-link-patterns">${message(messages, "projectCreate.allowedLinks", "Allowed Link URL Patterns")}</label></div><textarea id="project-link-patterns" name="allowedLinkPatterns" rows="1" wrap="off" data-autogrow>*.wikipedia.org</textarea></div>
   </aside>`;
 }
@@ -363,8 +330,10 @@ function tryProjectHtml(messages) {
 }
 
 function publicProjectsHtml(projects, messages) {
-  if (!projects.length) return `<div class="account-empty">${message(messages, "publicProjects.empty", "No public projects have been published yet.")}</div>`;
-  return `<div class="account-grid">${projects.map((item) => `<a class="account-card" data-project-link href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
+  const content = !projects.length
+    ? `<div class="account-empty">${message(messages, "publicProjects.empty", "No public projects have been published yet.")}</div>`
+    : `<div class="account-grid">${projects.map((item) => `<a class="account-card" data-project-link href="/${encodeURIComponent(item.namespace)}/${encodeURIComponent(item.slug)}"><h3>${escapeHtml(item.name)}</h3><span class="account-card__namespace">${escapeHtml(item.namespace)}/${escapeHtml(item.slug)}</span><p>${escapeHtml(item.description || `${item.template.toUpperCase()} project`)}</p></a>`).join("")}</div>`;
+  return `<div data-public-projects>${content}</div>`;
 }
 
 // The publication build uses this to produce an anonymous home document that
@@ -375,6 +344,7 @@ export function renderFastAnonymousHome(html, messages, {
   locale = "en",
   signupsEnabled = true,
   contentFormVersion = "",
+  publicProjectsVersion = "",
 } = {}) {
   if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error("Fast home public-project marker is missing");
   const withProjects = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml([], messages));
@@ -414,43 +384,6 @@ function organizationFormHtml(token, messages, url) {
       <div class="create-actions"><button class="account-action" type="submit">${message(messages, "organizationCreate.submit", "Create organization")}</button></div>
     </form>
   </div>`;
-}
-
-async function readCreateForm(request, session, action, authConfig, now) {
-  if (request.headers.get("content-type")?.split(";")[0] !== "application/x-www-form-urlencoded") {
-    throw new ContentValidationError("form", "unsupported form encoding");
-  }
-  if (Number(request.headers.get("content-length") || 0) > 70 * 1024 * 1024) {
-    throw new ContentValidationError("form", "form is too large");
-  }
-  if (request.headers.get("origin") !== new URL(request.url).origin) {
-    throw new ContentValidationError("form", "invalid form origin");
-  }
-  const form = await request.formData();
-  if (!await validCsrf(form.get("csrf"), session, action, authConfig, now)) {
-    throw new ContentValidationError("form", "invalid form token");
-  }
-  return form;
-}
-
-async function readProjectJson(request, session, action, authConfig, now) {
-  if (request.headers.get("content-type")?.split(";")[0] !== "application/json") throw new ContentValidationError("request_encoding", "JSON is required");
-  if (Number(request.headers.get("content-length") || 0) > 72 * 1024 * 1024) throw new ContentValidationError("request_size", "project update is too large");
-  if (request.headers.get("origin") !== new URL(request.url).origin) throw new ContentValidationError("request_origin", "invalid request origin");
-  if (!await validCsrf(request.headers.get("x-resources-csrf"), session, action, authConfig, now)) throw new ContentValidationError("request_token", "save authorization expired; reload the page and try again");
-  try {
-    return await request.json();
-  } catch {
-    throw new ContentValidationError("request_json", "request body is not valid JSON");
-  }
-}
-
-function projectValidationStatus(field) {
-  if (field === "snapshot") return 422;
-  if (field === "request_size") return 413;
-  if (field === "request_encoding") return 415;
-  if (field === "request_origin" || field === "request_token") return 403;
-  return 400;
 }
 
 export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
@@ -524,166 +457,17 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
     if (gitlabAuthConfig && request.method === "GET" && pathname === "/auth/gitlab/callback") {
       return finishGitlabAuth(request, gitlabAuthConfig, { fetchImpl, now, accountStore });
     }
-    if (authConfig && request.method === "POST" && pathname === "/logout") return signOut(authConfig);
-    if (authConfig && request.method === "POST" && pathname === "/profile") {
-      const session = await readSession(request, authConfig, now);
-      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
-      try {
-        const form = await readCreateForm(request, session, "profile", authConfig, now);
-        const account = await accountStore.updateUsername(session.sub, form.get("username"));
-        if (!account) return new Response("Not found", { status: 404 });
-        return new Response(null, { status: 303, headers: { location: "/profile", "set-cookie": await refreshedSessionCookie(account, session, authConfig, now), "cache-control": "no-store" } });
-      } catch (error) {
-        if (!(error instanceof AccountValidationError) && !(error instanceof AccountConflictError)) throw error;
-        return new Response(null, { status: 303, headers: { location: `/profile?error=${encodeURIComponent(error.field || error.code)}`, "cache-control": "no-store" } });
-      }
-    }
-    const notificationAction = authConfig && request.method === "POST" && /^\/notifications\/([A-Za-z0-9-]+)$/.exec(pathname);
-    if (notificationAction) {
-      const session = await readSession(request, authConfig, now);
-      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
-      const form = await readCreateForm(request, session, "notifications", authConfig, now);
-      const id = notificationAction[1];
-      let location = "/";
-      if (form.get("intent") === "accept") location = `/${encodeURIComponent(await organizationStore.acceptInvitation(session.sub, id) || "")}`;
-      else if (form.get("intent") === "read") await organizationStore.markNotificationRead(session.sub, id);
-      else if (form.get("intent") === "delete") await organizationStore.deleteNotification(session.sub, id);
-      else return new Response("Invalid notification action", { status: 400 });
-      return new Response(null, { status: 303, headers: { location, "cache-control": "no-store" } });
-    }
-    const invitationAction = authConfig && request.method === "POST" && /^\/organizations\/([a-z0-9-]+)\/invitations$/.exec(pathname);
-    const memberAction = authConfig && request.method === "POST" && /^\/organizations\/([a-z0-9-]+)\/members\/([A-Za-z0-9-]+)$/.exec(pathname);
-    if (invitationAction || memberAction) {
-      const session = await readSession(request, authConfig, now);
-      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
-      const slug = (invitationAction || memberAction)[1];
-      try {
-        const form = await readCreateForm(request, session, `organization:${slug}`, authConfig, now);
-        if (invitationAction) await organizationStore.invite(slug, session.sub, { username: form.get("username"), role: form.get("role") });
-        else await organizationStore.changeRole(slug, session.sub, memberAction[2], form.get("role"));
-        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(slug)}`, "cache-control": "no-store" } });
-      } catch (error) {
-        if (!(error instanceof OrganizationInputError) && !(error instanceof OrganizationAccessError)) throw error;
-        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(slug)}?error=${encodeURIComponent(error.field || "access")}`, "cache-control": "no-store" } });
-      }
-    }
-    const projectApi = /^\/api\/projects\/([A-Za-z0-9-]+)\/(snapshot|versions|restore)(?:\/(\d+))?$/.exec(pathname);
-    if (projectApi) {
-      const session = authConfig && await readSession(request, authConfig, now);
-      if (!session) return Response.json({ error: "authentication_required" }, { status: 401, headers: { "cache-control": "no-store" } });
-      if (!contentStore) return Response.json({ error: "content_unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
-      const [, projectId, operation, sequence] = projectApi;
-      try {
-        if (request.method === "GET" && operation === "versions" && sequence) {
-          const snapshot = await contentStore.getProjectVersion(projectId, Number(sequence), session.sub);
-          return snapshot ? Response.json({ snapshot }, { headers: { "cache-control": "private, no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
-        }
-        if (request.method === "GET" && operation === "versions" && !sequence) {
-          return Response.json({ versions: await contentStore.listProjectVersions(projectId, session.sub) }, { headers: { "cache-control": "private, no-store" } });
-        }
-        if (request.method === "POST" && operation === "snapshot" && !sequence) {
-          const value = await readProjectJson(request, session, `project:${projectId}`, authConfig, now);
-          validateProjectUrlPatterns(value.snapshot);
-          const saved = await contentStore.saveProjectSnapshot(session.sub, projectId, value.snapshot, { reason: value.manual ? "manual" : "periodic", destructive: value.destructive === true });
-          return saved ? Response.json(saved, { headers: { "cache-control": "no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
-        }
-        if (request.method === "POST" && operation === "restore" && sequence) {
-          await readProjectJson(request, session, `project:${projectId}`, authConfig, now);
-          const restored = await contentStore.restoreProjectVersion(session.sub, projectId, Number(sequence));
-          return restored ? Response.json(restored, { headers: { "cache-control": "no-store" } }) : Response.json({ error: "not_found" }, { status: 404, headers: { "cache-control": "no-store" } });
-        }
-        return Response.json({ error: "method_not_allowed" }, { status: 405, headers: { allow: operation === "versions" ? "GET" : "POST", "cache-control": "no-store" } });
-      } catch (error) {
-        if (!(error instanceof ContentValidationError)) throw error;
-        return Response.json({ error: error.field || "invalid", message: error.message }, {
-          status: projectValidationStatus(error.field), headers: { "cache-control": "no-store" },
-        });
-      }
-    }
-    const createAction = request.method === "POST" && (pathname === "/projects" || pathname === "/organizations");
-    if (createAction) {
-      const session = authConfig && await readSession(request, authConfig, now);
-      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
-      if (!contentStore) return new Response("Account content unavailable", { status: 503 });
-      try {
-        const form = await readCreateForm(request, session, pathname, authConfig, now);
-        if (pathname === "/organizations") {
-          await contentStore.createOrganization(session.sub, {
-            name: form.get("name"), slug: form.get("slug"), description: form.get("description"),
-          });
-        } else {
-          let snapshot;
-          try {
-            snapshot = JSON.parse(String(form.get("snapshot") || "{}"));
-          } catch {
-            throw new ContentValidationError("snapshot", "project snapshot is invalid");
-          }
-          validateProjectUrlPatterns(snapshot);
-          const created = await contentStore.createProject(session.sub, {
-            userSlug: session.login,
-            name: form.get("name"),
-            slug: form.get("slug"),
-            description: form.get("description"),
-            namespace: form.get("namespace"),
-            template: form.get("template"),
-            visibility: form.get("visibility"),
-            snapshot,
-          });
-          return new Response(null, {
-            status: 303,
-            headers: {
-              location: `/${encodeURIComponent(created.namespace)}/${encodeURIComponent(created.slug)}`,
-              "cache-control": "no-store",
-            },
-          });
-        }
-        return new Response(null, { status: 303, headers: { location: "/", "cache-control": "no-store" } });
-      } catch (error) {
-        if (!(error instanceof ContentValidationError) && !(error instanceof ContentConflictError)) throw error;
-        const target = pathname === "/projects" ? "/projects/new" : "/organizations/new";
-        return new Response(null, { status: 303, headers: { location: `${target}?error=${encodeURIComponent(error.code || error.field || "form")}`, "cache-control": "no-store" } });
-      }
-    }
-    const updateProjectAction = request.method === "POST" && /^\/projects\/([A-Za-z0-9-]+)$/.exec(pathname);
-    if (updateProjectAction) {
-      const session = authConfig && await readSession(request, authConfig, now);
-      if (!session) return new Response(null, { status: 303, headers: { location: "/login", "cache-control": "no-store" } });
-      if (!contentStore) return new Response("Account content unavailable", { status: 503 });
-      const projectId = updateProjectAction[1];
-      try {
-        const form = await readCreateForm(request, session, `project:${projectId}`, authConfig, now);
-        if (form.get("intent") === "delete") {
-          const deleted = await contentStore.deleteProject(session.sub, projectId);
-          return deleted
-            ? new Response(null, { status: 303, headers: { location: "/projects", "cache-control": "no-store" } })
-            : new Response("Not found", { status: 404 });
-        }
-        if (form.get("intent") === "revert") {
-          const reverted = await contentStore.revertProjectToPublished(session.sub, projectId);
-          if (!reverted) return new Response("Not found", { status: 404 });
-          const referer = new URL(request.headers.get("referer") || "/projects", request.url);
-          return new Response(null, { status: 303, headers: { location: referer.pathname, "cache-control": "no-store" } });
-        }
-        let snapshot;
-        try {
-          snapshot = JSON.parse(String(form.get("snapshot") || "{}"));
-        } catch {
-          throw new ContentValidationError("snapshot", "project snapshot is invalid");
-        }
-        validateProjectUrlPatterns(snapshot);
-        const updated = await contentStore.updateProject(session.sub, projectId, {
-          userSlug: session.login, name: form.get("name"), slug: form.get("slug"),
-          description: form.get("description"), namespace: form.get("namespace"),
-          template: form.get("template"), visibility: form.get("visibility"),
-        });
-        if (!updated) return new Response("Not found", { status: 404 });
-        await contentStore.saveProjectSnapshot(session.sub, projectId, snapshot, { reason: "manual" });
-        await contentStore.publishProject(session.sub, projectId, { title: form.get("versionTitle") });
-        return new Response(null, { status: 303, headers: { location: `/${encodeURIComponent(updated.namespace)}/${encodeURIComponent(updated.slug)}`, "cache-control": "no-store" } });
-      } catch (error) {
-        if (!(error instanceof ContentValidationError) && !(error instanceof ContentConflictError)) throw error;
-        return new Response(null, { status: 303, headers: { location: `${request.headers.get("referer") || "/projects"}?error=${encodeURIComponent(error.code || error.field || "form")}`, "cache-control": "no-store" } });
-      }
+    if (request.method === "GET" && pathname === "/api/public-projects") {
+      const projects = contentStore?.listPublicProjects
+        ? await contentStore.listPublicProjects({ limit: 6, namespaces: DISCOVERABLE_PROJECT_NAMESPACES })
+        : [];
+      return new Response(JSON.stringify(projects), {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "public, max-age=30, stale-while-revalidate=60",
+        },
+      });
     }
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
@@ -695,20 +479,6 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const manifest = await loadManifest();
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
-      const requestedWorkspace = projectWorkspaceRoute(pathname);
-      if (requestedWorkspace) {
-        if (!contentStore) return new Response("Project workspace unavailable", { status: 503 });
-        const project = await contentStore.getProject(requestedWorkspace.namespace, requestedWorkspace.slug, session?.sub);
-        if (!project) return new Response("Not found", { status: 404 });
-        const owner = Boolean(session && project.ownerUserId === session.sub);
-        const workspace = owner
-          ? await contentStore.getProjectWorkspace(requestedWorkspace.namespace, requestedWorkspace.slug, session.sub)
-          : project.visibility === "public" ? await contentStore.getPublicProjectWorkspace(requestedWorkspace.namespace, requestedWorkspace.slug) : null;
-        if (!workspace) return new Response("Not found", { status: 404 });
-        return Response.json({ snapshot: workspace.snapshot, versionCount: workspace.versionCount, updatedAt: workspace.updatedAt, hasUnpublishedChanges: Boolean(workspace.hasUnpublishedChanges) }, {
-          headers: { "cache-control": owner ? "private, no-store" : "public, max-age=30", "content-language": locale },
-        });
-      }
       const requestedProject = projectRoute(pathname);
       const requestedNamespace = !requestedProject ? namespaceRoute(pathname) : null;
       const dynamicProject = requestedProject && contentStore?.getProject
@@ -720,12 +490,6 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         versionCount: 0,
         hasUnpublishedChanges: false,
       } : null;
-      if (pathname === "/dashboard") {
-        return new Response(null, { status: 302, headers: { location: "/", "cache-control": session ? "private, no-store" : "no-store" } });
-      }
-      if (PROTECTED_ACCOUNT_PATHS.has(pathname) && !session) {
-        return new Response(null, { status: 302, headers: { location: "/login", "cache-control": "private, no-store" } });
-      }
       const accountShellPath = directTryTemplate
         ? "/try"
         : ((pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname);
