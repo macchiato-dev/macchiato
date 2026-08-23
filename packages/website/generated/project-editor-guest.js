@@ -28126,6 +28126,9 @@ async function mountProjectRoot(root) {
   let outputFramePort = null;
   let outputFrameReady = null;
   let outputFrameRequested = true;
+  let outputSurfaceHost = null;
+  let outputSurfaceBody = null;
+  let outputRootKey = "";
   const syncOutputTheme = () => {
     const theme2 = frontendTheme();
     if (outputFrame) {
@@ -28291,15 +28294,24 @@ async function mountProjectRoot(root) {
       if (generation !== previewGeneration) return;
       preview.dataset.outputSurface = "iframe";
     } else {
-      surfaceHost = document.createElement("div");
-      surfaceHost.className = "project-editor__preview-surface";
-      surfaceRoot = surfaceHost;
-      surfaceBody = document.createElement("div");
-      surfaceRoot.append(surfaceBody);
-      preview.replaceChildren(surfaceHost);
+      if (!outputSurfaceHost) {
+        outputSurfaceHost = document.createElement("div");
+        outputSurfaceHost.className = "project-editor__preview-surface";
+        outputSurfaceBody = document.createElement("div");
+        outputSurfaceHost.append(outputSurfaceBody);
+        outputRootKey = String(generation);
+        outputSurfaceBody.dataset.projectOutputMount = outputRootKey;
+        preview.replaceChildren(outputSurfaceHost);
+      }
+      surfaceHost = outputSurfaceHost;
+      surfaceRoot = outputSurfaceHost;
+      surfaceBody = outputSurfaceBody;
       preview.dataset.outputSurface = "direct";
     }
-    surfaceBody.dataset.projectOutputMount = String(generation);
+    if (!outputRootKey) {
+      outputRootKey = String(generation);
+      surfaceBody.dataset.projectOutputMount = outputRootKey;
+    }
     const parsed = parseProjectHtml(source);
     const allowed = /* @__PURE__ */ new Set();
     containerElementNames("web-page").forEach((name2) => allowed.add(name2));
@@ -28502,8 +28514,9 @@ ${bundleProjectModule(entry, script.textContent)}
         allowed.forEach((tag) => {
           if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
         });
-        const controller = await mountResourcesProjectPreview({
-          rootKey: String(generation),
+        const existingController = previewController;
+        const controller = existingController || await mountResourcesProjectPreview({
+          rootKey: outputRootKey,
           root: surfaceBody,
           statusRoot: preview,
           scripts: [],
@@ -28523,8 +28536,9 @@ ${bundleProjectModule(entry, script.textContent)}
             if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
           }
         });
-        if (generation !== previewGeneration) controller.destroy();
-        else {
+        if (generation !== previewGeneration) {
+          if (!existingController) controller.destroy();
+        } else {
           if (useOutputFrame) {
             controller.setContent(outputTree);
             await controller.run(scripts);
@@ -28552,7 +28566,6 @@ ${bundleProjectModule(entry, script.textContent)}
             outputFrame.hidden = false;
             for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
           }
-          previewController?.destroy();
           previewController = controller;
           root.dataset.outputMachineState = "ready";
           delete preview.dataset.previewViolations;
@@ -28587,6 +28600,8 @@ ${bundleProjectModule(entry, script.textContent)}
     outputFramePort?.close();
     outputFrame?.remove();
     outputFrame = outputFramePort = outputFrameReady = null;
+    outputSurfaceHost = outputSurfaceBody = null;
+    outputRootKey = "";
     outputFrameRequested = true;
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;

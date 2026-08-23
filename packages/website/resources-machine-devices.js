@@ -369,6 +369,10 @@ export class ResourcesOutputDevice {
       tree: project.tree,
       stylesheets: Array.isArray(project.stylesheets) ? project.stylesheets : [],
       scripts: Array.isArray(project.scripts) ? project.scripts : [],
+      files: this.projectResources.hydrateFiles(project.files),
+      allowedFetchOrigins: Array.isArray(project.allowedFetchOrigins) ? project.allowedFetchOrigins : [],
+      allowedLinkPatterns: Array.isArray(project.allowedLinkPatterns) ? project.allowedLinkPatterns : [],
+      environment: project.environment || {},
     });
     return null;
   }

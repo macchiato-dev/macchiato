@@ -146,10 +146,8 @@
       root.setAttribute("data-output-machine-stage", "compile");
       return requestStage("build.compile", { files: project.files, config: project.config }).then(function (compiled) {
         if (generation !== outputGeneration) return null;
-        var reset = outputId ? requestStage("output.destroy", { id: outputId }).then(function () {
-          outputId = null;
-        }) : new Promise(function (resolve) { resolve(); });
-        var mounted = reset.then(function () { return requestStage("output.mount", {
+        var mounted = outputId ? new Promise(function (resolve) { resolve(outputId); }) :
+          requestStage("output.mount", {
             rootKey: "1", scripts: [], violations: [], tags: [],
             iframe: !(config.output && config.output.iframe === false),
             files: project.files,
@@ -158,12 +156,22 @@
             allowedLinkPatterns: project.config.containerOptions &&
               project.config.containerOptions.allowedLinkPatterns || [],
             environment: config.environment || {}
-          }); });
+          });
         return mounted.then(function (id) {
           root.setAttribute("data-output-machine-stage", "load");
           outputId = id;
           if (generation !== outputGeneration) return null;
-          return requestStage("output.load", { id: id, project: compiled });
+          return requestStage("output.load", { id: id, project: {
+            tree: compiled.tree,
+            stylesheets: compiled.stylesheets,
+            scripts: compiled.scripts,
+            files: project.files,
+            allowedFetchOrigins: project.config.containerOptions &&
+              project.config.containerOptions.allowedFetchOrigins || [],
+            allowedLinkPatterns: project.config.containerOptions &&
+              project.config.containerOptions.allowedLinkPatterns || [],
+            environment: config.environment || {}
+          } });
         });
       });
     }).then(function () {

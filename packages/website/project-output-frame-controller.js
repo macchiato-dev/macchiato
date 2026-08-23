@@ -7,6 +7,9 @@ let machine = null;
 let response;
 let reportedError;
 let programs = 0;
+let fetchResourceImpl = null;
+let imageResolverImpl = (value) => value;
+let navigationPatterns = [];
 
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
@@ -108,13 +111,15 @@ function call(name, payload) {
 
 async function start(payload, port) {
   const runtime = await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
-  const fetchResource = projectFetch(payload.files || [], payload.allowedFetchOrigins || []);
+  fetchResourceImpl = projectFetch(payload.files || [], payload.allowedFetchOrigins || []);
+  imageResolverImpl = imageResolver(payload.files || []);
+  navigationPatterns = payload.allowedLinkPatterns || [];
   machine = new WasmWebMachine(runtime, document.getElementById("project-output-a"), {
     environment: payload.environment || {},
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
-    fetchResource,
-    resolveImage: imageResolver(payload.files || []),
-    allowNavigate: (url) => allowsNavigation(url, payload.allowedLinkPatterns || []),
+    fetchResource: (value) => fetchResourceImpl(value),
+    resolveImage: (value) => imageResolverImpl(value),
+    allowNavigate: (url) => allowsNavigation(url, navigationPatterns),
     services: {
       route: { get: () => location.hash.slice(1) || "/", search: () => "", listen() {} },
       storage: { get: () => null, set() {}, delete() {}, listen() {} },
@@ -125,7 +130,7 @@ async function start(payload, port) {
       else {
         try {
           const request = JSON.parse(text);
-          if (request.type === "fetch" && Number.isSafeInteger(request.id)) void fetchResource(request.url)
+          if (request.type === "fetch" && Number.isSafeInteger(request.id)) void fetchResourceImpl(request.url)
             .then((result) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, ...result })))
             .catch((error) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })));
         } catch {}
@@ -141,6 +146,9 @@ async function start(payload, port) {
 async function operation(name, payload) {
   if (name === "setContent") { const value = call("__resourcesOutputSetContent", payload.tree); machine.onmsg(0); return value; }
   if (name === "load") {
+    fetchResourceImpl = projectFetch(payload.project.files || [], payload.project.allowedFetchOrigins || []);
+    imageResolverImpl = imageResolver(payload.project.files || []);
+    navigationPatterns = payload.project.allowedLinkPatterns || [];
     const value = call("__resourcesOutputLoad", { tree: payload.project.tree || [], stylesheets: payload.project.stylesheets || [] });
     machine.onmsg(0);
     for (let index = 0; index < (payload.project.scripts || []).length; index++) await evaluate(payload.project.scripts[index], index);
