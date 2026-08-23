@@ -15,6 +15,13 @@ npm -v
 node -p "process.versions.sqlite"
 ```
 
+## Development History
+
+Commit at useful, coherent checkpoints often enough that meaningful
+work-in-progress remains visible. There is no need to commit every tiny edit.
+Experimental commits are welcome: it is fine to backtrack when an approach does
+not work, and seeing that evolution is useful when reviewing the project.
+
 ## Running the Server
 
 For local development, pick a port that is free on your machine. The examples
