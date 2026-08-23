@@ -33,7 +33,14 @@ export const CONTAINER_ELEMENT_RULES = Object.freeze({
 
 export function containerElementNames(container) {
   if (container === "web-page") {
-    return [...new Set(Object.values(CONTAINER_ELEMENT_RULES).flatMap((rules) => Object.keys(rules)))];
+    const names = [];
+    const seen = new Set();
+    for (const rules of Object.values(CONTAINER_ELEMENT_RULES)) {
+      for (const name of Object.keys(rules)) {
+        if (!seen.has(name)) { seen.add(name); names.push(name); }
+      }
+    }
+    return names;
   }
   return Object.keys(CONTAINER_ELEMENT_RULES[container] || {});
 }

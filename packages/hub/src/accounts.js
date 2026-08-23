@@ -32,6 +32,35 @@ export const ACCOUNT_SCHEMA = Object.freeze([
     ON users(username COLLATE NOCASE)`,
 ]);
 
+export const ACCOUNT_QUERIES = Object.freeze({
+  providersForUser: "SELECT provider FROM user_identities WHERE user_id = ? ORDER BY provider",
+  accountById: "SELECT id, display_name, username FROM users WHERE id = ?",
+  organizationSlugExists: "SELECT 1 FROM resource_organizations WHERE slug = ? COLLATE NOCASE LIMIT 1",
+  updateUsername: "UPDATE users SET username = ?, updated_at = ? WHERE id = ?",
+  updateUserProjectNamespace: `UPDATE resource_projects SET namespace_slug = ?, updated_at = ?
+                WHERE namespace_kind = 'user' AND namespace_id = ?`,
+  identityByProvider: `SELECT users.id, users.display_name, users.username
+              FROM user_identities
+              JOIN users ON users.id = user_identities.user_id
+              WHERE provider = ? AND provider_user_id = ?`,
+  updateDisplayName: `UPDATE users SET display_name = ?, updated_at = ?
+                  WHERE id = ?`,
+  updateProviderUsername: `UPDATE user_identities SET provider_username = ?, updated_at = ?
+                  WHERE provider = ? AND provider_user_id = ?`,
+  accountByEmail: `SELECT users.id, users.display_name, users.username
+              FROM user_emails
+              JOIN users ON users.id = user_emails.user_id
+              WHERE normalized_email = ?`,
+  insertUser: `INSERT INTO users (id, display_name, username, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)`,
+  insertEmail: `INSERT INTO user_emails
+                  (normalized_email, email, user_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)`,
+  insertIdentity: `INSERT INTO user_identities
+                (provider, provider_user_id, user_id, provider_username, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+});
+
 export class AccountConflictError extends Error {
   constructor(code, providers = []) {
     super(code === "email_taken" ? "An account already uses this email address"
@@ -100,7 +129,7 @@ export function createAccountStore(client, {
 
   async function providersForUser(userId) {
     const result = await client.execute({
-      sql: "SELECT provider FROM user_identities WHERE user_id = ? ORDER BY provider",
+      sql: ACCOUNT_QUERIES.providersForUser,
       args: [userId],
     });
     return result.rows.map((row) => String(row.provider));
@@ -109,7 +138,7 @@ export function createAccountStore(client, {
   async function getAccount(userId) {
     await initialize();
     return accountFromRow(firstRow(await client.execute({
-      sql: "SELECT id, display_name, username FROM users WHERE id = ?",
+      sql: ACCOUNT_QUERIES.accountById,
       args: [String(userId)],
     })));
   }
@@ -128,16 +157,15 @@ export function createAccountStore(client, {
       const timestamp = now();
       try {
         const occupied = await client.execute({
-          sql: "SELECT 1 FROM resource_organizations WHERE slug = ? COLLATE NOCASE LIMIT 1",
+          sql: ACCOUNT_QUERIES.organizationSlugExists,
           args: [username],
         });
         if (occupied.rows[0]) throw new AccountConflictError("username_taken");
         const changed = await client.batch([{
-          sql: "UPDATE users SET username = ?, updated_at = ? WHERE id = ?",
+          sql: ACCOUNT_QUERIES.updateUsername,
           args: [username, timestamp, String(userId)],
         }, {
-          sql: `UPDATE resource_projects SET namespace_slug = ?, updated_at = ?
-                WHERE namespace_kind = 'user' AND namespace_id = ?`,
+          sql: ACCOUNT_QUERIES.updateUserProjectNamespace,
           args: [username, timestamp, String(userId)],
         }]);
         if (!changed[0]?.rowsAffected) return null;
@@ -156,10 +184,7 @@ export function createAccountStore(client, {
       const timestamp = now();
 
       const identityResult = await client.execute({
-        sql: `SELECT users.id, users.display_name, users.username
-              FROM user_identities
-              JOIN users ON users.id = user_identities.user_id
-              WHERE provider = ? AND provider_user_id = ?`,
+        sql: ACCOUNT_QUERIES.identityByProvider,
         args: [identity.provider, providerUserId],
       });
       const existingIdentity = firstRow(identityResult);
@@ -169,13 +194,11 @@ export function createAccountStore(client, {
         }
         await client.batch([
           {
-            sql: `UPDATE users SET display_name = ?, updated_at = ?
-                  WHERE id = ?`,
+            sql: ACCOUNT_QUERIES.updateDisplayName,
             args: [identity.name, timestamp, existingIdentity.id],
           },
           {
-            sql: `UPDATE user_identities SET provider_username = ?, updated_at = ?
-                  WHERE provider = ? AND provider_user_id = ?`,
+            sql: ACCOUNT_QUERIES.updateProviderUsername,
             args: [identity.login, timestamp, identity.provider, providerUserId],
           },
         ]);
@@ -189,10 +212,7 @@ export function createAccountStore(client, {
       if (!linkToUserId && !allowCreate) throw new AccountSignupDisabledError();
 
       const emailResult = await client.execute({
-        sql: `SELECT users.id, users.display_name, users.username
-              FROM user_emails
-              JOIN users ON users.id = user_emails.user_id
-              WHERE normalized_email = ?`,
+        sql: ACCOUNT_QUERIES.accountByEmail,
         args: [normalized],
       });
       const emailOwner = firstRow(emailResult);
@@ -208,23 +228,18 @@ export function createAccountStore(client, {
       const statements = [];
       if (!linkToUserId) {
         statements.push({
-          sql: `INSERT INTO users (id, display_name, username, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)`,
+          sql: ACCOUNT_QUERIES.insertUser,
           args: [userId, identity.name, identity.login, timestamp, timestamp],
         });
       }
       if (!emailOwner) {
         statements.push({
-          sql: `INSERT INTO user_emails
-                  (normalized_email, email, user_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)`,
+          sql: ACCOUNT_QUERIES.insertEmail,
           args: [normalized, email, userId, timestamp, timestamp],
         });
       }
       statements.push({
-        sql: `INSERT INTO user_identities
-                (provider, provider_user_id, user_id, provider_username, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?)`,
+        sql: ACCOUNT_QUERIES.insertIdentity,
         args: [identity.provider, providerUserId, userId, identity.login, timestamp, timestamp],
       });
       await client.batch(statements);

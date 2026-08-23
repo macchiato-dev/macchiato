@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@bunny.net/edgescript-sdk": "npm:@bunny.net/edgescript-sdk@0.12.1"
+  }
+}

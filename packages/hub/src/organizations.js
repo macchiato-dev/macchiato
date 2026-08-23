@@ -37,6 +37,52 @@ export const ORGANIZATION_SCHEMA = Object.freeze([
     ON resource_notifications(user_id, created_at DESC)`,
 ]);
 
+export const ORGANIZATION_QUERIES = Object.freeze({
+  managedOrganization: `SELECT o.id, o.slug, o.name, o.description, o.owner_user_id,
+                   CASE WHEN o.owner_user_id = ? THEN 'owner' ELSE m.role END AS viewer_role
+            FROM resource_organizations o
+            LEFT JOIN resource_organization_members m
+              ON m.organization_id = o.id AND m.user_id = ?
+            WHERE o.slug = ? COLLATE NOCASE
+              AND (o.owner_user_id = ? OR m.role = 'admin')`,
+  members: `SELECT m.user_id, u.username, u.display_name, m.role, m.created_at
+              FROM resource_organization_members m JOIN users u ON u.id = m.user_id
+              WHERE m.organization_id = ? ORDER BY m.role, u.username COLLATE NOCASE`,
+  userByUsername: "SELECT id, username FROM users WHERE username = ? COLLATE NOCASE",
+  existingMember: "SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND user_id = ?",
+  existingAdmin: "SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND role = 'admin' LIMIT 1",
+  insertInvitation: `INSERT INTO resource_organization_invitations
+                  (id, organization_id, inviter_user_id, invitee_user_id, role, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+  insertNotification: `INSERT INTO resource_notifications (id, user_id, kind, invitation_id, read_at, created_at)
+                VALUES (?, ?, 'organization_invitation', ?, NULL, ?)`,
+  notifications: `SELECT n.id, n.kind, n.invitation_id, n.read_at, n.created_at,
+                     i.organization_id, i.role, i.status,
+                     o.slug AS organization_slug, o.name AS organization_name,
+                     inviter.username AS inviter_username
+              FROM resource_notifications n
+              JOIN resource_organization_invitations i ON i.id = n.invitation_id
+              JOIN resource_organizations o ON o.id = i.organization_id
+              JOIN users inviter ON inviter.id = i.inviter_user_id
+              WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT 100`,
+  markNotificationRead: "UPDATE resource_notifications SET read_at = ? WHERE id = ? AND user_id = ?",
+  deletePendingInvitation: `DELETE FROM resource_organization_invitations
+              WHERE status = 'pending' AND id = (
+                SELECT invitation_id FROM resource_notifications WHERE id = ? AND user_id = ?
+              )`,
+  deleteNotification: "DELETE FROM resource_notifications WHERE id = ? AND user_id = ?",
+  invitation: `SELECT n.id, i.id AS invitation_id, i.organization_id, i.role, i.status, o.slug
+              FROM resource_notifications n
+              JOIN resource_organization_invitations i ON i.id = n.invitation_id
+              JOIN resource_organizations o ON o.id = i.organization_id
+              WHERE n.id = ? AND n.user_id = ?`,
+  insertMember: `INSERT INTO resource_organization_members (organization_id, user_id, role, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)`,
+  acceptInvitation: "UPDATE resource_organization_invitations SET status = 'accepted', updated_at = ? WHERE id = ? AND status = 'pending'",
+  changeRole: `UPDATE resource_organization_members SET role = ?, updated_at = ?
+                WHERE organization_id = ? AND user_id = ?`,
+});
+
 export class OrganizationAccessError extends Error {
   constructor(message = "Organization administration is not available") {
     super(message);
@@ -84,13 +130,7 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
   async function managedOrganization(slugValue, userId) {
     const slug = namespaceName(slugValue, { field: "organization name" });
     const result = await client.execute({
-      sql: `SELECT o.id, o.slug, o.name, o.description, o.owner_user_id,
-                   CASE WHEN o.owner_user_id = ? THEN 'owner' ELSE m.role END AS viewer_role
-            FROM resource_organizations o
-            LEFT JOIN resource_organization_members m
-              ON m.organization_id = o.id AND m.user_id = ?
-            WHERE o.slug = ? COLLATE NOCASE
-              AND (o.owner_user_id = ? OR m.role = 'admin')`,
+      sql: ORGANIZATION_QUERIES.managedOrganization,
       args: [String(userId), String(userId), slug, String(userId)],
     });
     return result.rows[0] || null;
@@ -103,9 +143,7 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
       const org = await managedOrganization(slugValue, userId);
       if (!org) return null;
       const members = await client.execute({
-        sql: `SELECT m.user_id, u.username, u.display_name, m.role, m.created_at
-              FROM resource_organization_members m JOIN users u ON u.id = m.user_id
-              WHERE m.organization_id = ? ORDER BY m.role, u.username COLLATE NOCASE`,
+        sql: ORGANIZATION_QUERIES.members,
         args: [org.id],
       });
       return Object.freeze({
@@ -123,20 +161,20 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
       if (!org) throw new OrganizationAccessError();
       const targetName = namespaceName(username, { field: "username" });
       const target = (await client.execute({
-        sql: "SELECT id, username FROM users WHERE username = ? COLLATE NOCASE",
+        sql: ORGANIZATION_QUERIES.userByUsername,
         args: [targetName],
       })).rows[0];
       if (!target) throw new OrganizationInputError("username", "No existing user has that username");
       if (String(target.id) === String(org.owner_user_id)) throw new OrganizationInputError("username", "The organization owner is already part of the organization");
       const existing = await client.execute({
-        sql: "SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND user_id = ?",
+        sql: ORGANIZATION_QUERIES.existingMember,
         args: [org.id, target.id],
       });
       if (existing.rows[0]) throw new OrganizationInputError("username", "That user is already a member");
       const invitationRole = role(requestedRole);
       if (invitationRole === "admin") {
         const admin = await client.execute({
-          sql: "SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND role = 'admin' LIMIT 1",
+          sql: ORGANIZATION_QUERIES.existingAdmin,
           args: [org.id],
         });
         if (admin.rows[0]) throw new OrganizationInputError("role", "This organization already has or is inviting an admin");
@@ -146,13 +184,10 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
       const notificationId = randomId();
       try {
         await client.batch([{
-          sql: `INSERT INTO resource_organization_invitations
-                  (id, organization_id, inviter_user_id, invitee_user_id, role, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+          sql: ORGANIZATION_QUERIES.insertInvitation,
           args: [invitationId, org.id, String(actorUserId), target.id, invitationRole, timestamp, timestamp],
         }, {
-          sql: `INSERT INTO resource_notifications (id, user_id, kind, invitation_id, read_at, created_at)
-                VALUES (?, ?, 'organization_invitation', ?, NULL, ?)`,
+          sql: ORGANIZATION_QUERIES.insertNotification,
           args: [notificationId, target.id, invitationId, timestamp],
         }]);
       } catch (error) {
@@ -163,34 +198,23 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
     async listNotifications(userId) {
       await initialize();
       const result = await client.execute({
-        sql: `SELECT n.id, n.kind, n.invitation_id, n.read_at, n.created_at,
-                     i.organization_id, i.role, i.status,
-                     o.slug AS organization_slug, o.name AS organization_name,
-                     inviter.username AS inviter_username
-              FROM resource_notifications n
-              JOIN resource_organization_invitations i ON i.id = n.invitation_id
-              JOIN resource_organizations o ON o.id = i.organization_id
-              JOIN users inviter ON inviter.id = i.inviter_user_id
-              WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT 100`,
+        sql: ORGANIZATION_QUERIES.notifications,
         args: [String(userId)],
       });
       return Object.freeze(result.rows.map(notification));
     },
     async markNotificationRead(userId, notificationId) {
       await initialize();
-      const result = await client.execute({ sql: "UPDATE resource_notifications SET read_at = ? WHERE id = ? AND user_id = ?", args: [now(), String(notificationId), String(userId)] });
+      const result = await client.execute({ sql: ORGANIZATION_QUERIES.markNotificationRead, args: [now(), String(notificationId), String(userId)] });
       return Boolean(result.rowsAffected);
     },
     async deleteNotification(userId, notificationId) {
       await initialize();
       const results = await client.batch([{
-        sql: `DELETE FROM resource_organization_invitations
-              WHERE status = 'pending' AND id = (
-                SELECT invitation_id FROM resource_notifications WHERE id = ? AND user_id = ?
-              )`,
+        sql: ORGANIZATION_QUERIES.deletePendingInvitation,
         args: [String(notificationId), String(userId)],
       }, {
-        sql: "DELETE FROM resource_notifications WHERE id = ? AND user_id = ?",
+        sql: ORGANIZATION_QUERIES.deleteNotification,
         args: [String(notificationId), String(userId)],
       }]);
       return Boolean(results[0]?.rowsAffected || results[1]?.rowsAffected);
@@ -198,11 +222,7 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
     async acceptInvitation(userId, notificationId) {
       await initialize();
       const found = await client.execute({
-        sql: `SELECT n.id, i.id AS invitation_id, i.organization_id, i.role, i.status, o.slug
-              FROM resource_notifications n
-              JOIN resource_organization_invitations i ON i.id = n.invitation_id
-              JOIN resource_organizations o ON o.id = i.organization_id
-              WHERE n.id = ? AND n.user_id = ?`,
+        sql: ORGANIZATION_QUERIES.invitation,
         args: [String(notificationId), String(userId)],
       });
       const invite = found.rows[0];
@@ -210,14 +230,13 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
       const timestamp = now();
       try {
         await client.batch([{
-          sql: `INSERT INTO resource_organization_members (organization_id, user_id, role, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)`,
+          sql: ORGANIZATION_QUERIES.insertMember,
           args: [invite.organization_id, String(userId), invite.role, timestamp, timestamp],
         }, {
-          sql: "UPDATE resource_organization_invitations SET status = 'accepted', updated_at = ? WHERE id = ? AND status = 'pending'",
+          sql: ORGANIZATION_QUERIES.acceptInvitation,
           args: [timestamp, invite.invitation_id],
         }, {
-          sql: "UPDATE resource_notifications SET read_at = ? WHERE id = ? AND user_id = ?",
+          sql: ORGANIZATION_QUERIES.markNotificationRead,
           args: [timestamp, String(notificationId), String(userId)],
         }]);
       } catch (error) {
@@ -231,8 +250,7 @@ export function createOrganizationStore(client, { now = Date.now, randomId = () 
       if (!org) throw new OrganizationAccessError();
       try {
         const result = await client.execute({
-          sql: `UPDATE resource_organization_members SET role = ?, updated_at = ?
-                WHERE organization_id = ? AND user_id = ?`,
+          sql: ORGANIZATION_QUERIES.changeRole,
           args: [role(requestedRole), now(), org.id, String(memberUserId)],
         });
         return Boolean(result.rowsAffected);

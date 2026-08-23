@@ -1,0 +1,14 @@
+{
+  "name": "@macchiato-dev/sql-use",
+  "version": "0.1.0",
+  "description": "Named, policy-bound SQL capabilities for machine guests.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js"
+  },
+  "files": ["README.md", "src"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

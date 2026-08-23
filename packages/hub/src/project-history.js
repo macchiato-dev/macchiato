@@ -76,6 +76,51 @@ function configDiff(before, after, path, operations) {
   }
 }
 
+export function diffProjectConfiguration(beforeValue, afterValue) {
+  const before = normalizeProjectSnapshot(beforeValue);
+  const after = normalizeProjectSnapshot(afterValue);
+  const config = [];
+  configDiff(before.config, after.config, [], config);
+  return Object.freeze(config);
+}
+
+export async function diffProjectSnapshotsWithSplice(beforeValue, afterValue,
+  splicePlanner, configurationPlanner = diffProjectConfiguration) {
+  if (typeof splicePlanner !== "function") throw new Error("Project splice planner is required");
+  if (typeof configurationPlanner !== "function") {
+    throw new Error("Project configuration planner is required");
+  }
+  const before = normalizeProjectSnapshot(beforeValue);
+  const after = normalizeProjectSnapshot(afterValue);
+  const beforeFiles = fileMap(before);
+  const afterFiles = fileMap(after);
+  const files = [];
+  for (const path of [...new Set([...beforeFiles.keys(), ...afterFiles.keys()])].sort()) {
+    if (!afterFiles.has(path)) {
+      files.push(Object.freeze({ op: "delete", path, before: beforeFiles.get(path) }));
+    } else if (!beforeFiles.has(path)) {
+      files.push(Object.freeze({ op: "add", path, content: afterFiles.get(path) }));
+    } else if (beforeFiles.get(path) !== afterFiles.get(path)) {
+      const beforeContent = beforeFiles.get(path);
+      const afterContent = afterFiles.get(path);
+      const range = await splicePlanner(beforeContent, afterContent);
+      if (!range || !Number.isSafeInteger(range.start) ||
+          !Number.isSafeInteger(range.beforeEnd) || !Number.isSafeInteger(range.afterEnd) ||
+          range.start < 0 || range.beforeEnd < range.start || range.afterEnd < range.start ||
+          range.beforeEnd > beforeContent.length || range.afterEnd > afterContent.length) {
+        throw new Error("Project splice planner returned an invalid range");
+      }
+      files.push(Object.freeze({ op: "splice", path, start: range.start,
+        remove: beforeContent.slice(range.start, range.beforeEnd),
+        insert: afterContent.slice(range.start, range.afterEnd) }));
+    }
+  }
+  const config = await configurationPlanner(before.config, after.config);
+  if (!Array.isArray(config)) throw new Error("Project configuration planner returned no operations");
+  return Object.freeze({ version: 1, files: Object.freeze(files),
+    config: Object.freeze(config) });
+}
+
 export function diffProjectSnapshots(beforeValue, afterValue) {
   const before = normalizeProjectSnapshot(beforeValue);
   const after = normalizeProjectSnapshot(afterValue);
@@ -141,6 +186,53 @@ export function applyProjectPatch(snapshotValue, patch) {
 
 export function projectPatchIsEmpty(patch) {
   return patch?.version === 1 && patch.files?.length === 0 && patch.config?.length === 0;
+}
+
+/**
+ * Plans version boundaries without receiving snapshots, SQL, or clocks. Keeping
+ * this decision separate lets a disposable machine own policy while the caller
+ * streams and stores potentially much larger snapshot and patch payloads.
+ */
+export function planProjectVersionUpdate({ changeEmpty, pendingCheckpointEmpty,
+  destructive, reason, checkpointDue, lastVersionSequence }) {
+  if (typeof changeEmpty !== "boolean" || typeof pendingCheckpointEmpty !== "boolean" ||
+      typeof destructive !== "boolean" || typeof checkpointDue !== "boolean" ||
+      !Number.isSafeInteger(lastVersionSequence) || lastVersionSequence < 0 ||
+      !["periodic", "manual", "restore"].includes(reason)) {
+    throw new Error("Project version planning input is invalid");
+  }
+  if (changeEmpty) {
+    if (reason !== "manual" || pendingCheckpointEmpty) {
+      return Object.freeze({ state: "unchanged", sequence: lastVersionSequence,
+        checkpointVersionReason: null, nextVersionReason: null,
+        nextVersionBase: null, checkpointTarget: "unchanged" });
+    }
+    return Object.freeze({ state: "checkpoint", sequence: lastVersionSequence + 1,
+      checkpointVersionReason: "manual", nextVersionReason: null,
+      nextVersionBase: null, checkpointTarget: "current" });
+  }
+  let sequence = lastVersionSequence;
+  let checkpointVersionReason = null;
+  let nextVersionReason = null;
+  let nextVersionBase = null;
+  let checkpointTarget = "unchanged";
+  if (destructive || reason === "restore") {
+    if (!pendingCheckpointEmpty) {
+      checkpointVersionReason = "before_destructive";
+      sequence++;
+      nextVersionBase = "current";
+    } else nextVersionBase = "checkpoint";
+    nextVersionReason = reason === "restore" ? "restore" : "destructive";
+    checkpointTarget = "next";
+    sequence++;
+  } else if (checkpointDue || reason === "manual") {
+    nextVersionReason = reason === "manual" ? "manual" : "periodic";
+    nextVersionBase = "checkpoint";
+    checkpointTarget = "next";
+    sequence++;
+  }
+  return Object.freeze({ state: "update", sequence, checkpointVersionReason,
+    nextVersionReason, nextVersionBase, checkpointTarget });
 }
 
 export function emptyProjectSnapshot() {

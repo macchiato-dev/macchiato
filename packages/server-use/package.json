@@ -1,0 +1,15 @@
+{
+  "name": "@macchiato-dev/server-use",
+  "version": "0.1.0",
+  "description": "Bounded request and response capabilities for machine controllers.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./machine-controller": "./src/machine-controller.js",
+    "./wire": "./src/wire.js"
+  },
+  "files": ["README.md", "src"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

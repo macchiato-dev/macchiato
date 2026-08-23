@@ -13,8 +13,20 @@ function crc32(bytes) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function write16(view, offset, value) { view.setUint16(offset, value, true); }
-function write32(view, offset, value) { view.setUint32(offset, value, true); }
+function read16(bytes, offset) { return bytes[offset] | bytes[offset + 1] << 8; }
+function read32(bytes, offset) {
+  return (bytes[offset] | bytes[offset + 1] << 8 | bytes[offset + 2] << 16 | bytes[offset + 3] << 24) >>> 0;
+}
+function write16(bytes, offset, value) {
+  bytes[offset] = value;
+  bytes[offset + 1] = value >>> 8;
+}
+function write32(bytes, offset, value) {
+  bytes[offset] = value;
+  bytes[offset + 1] = value >>> 8;
+  bytes[offset + 2] = value >>> 16;
+  bytes[offset + 3] = value >>> 24;
+}
 function extension(path) { return path.split(".").at(-1).toLowerCase(); }
 function bytesToBase64(bytes) {
   let binary = "";
@@ -49,24 +61,23 @@ export function encodeProjectArchive(snapshot) {
   const centralSize = entries.reduce((sum, entry) => sum + 46 + entry.name.length, 0);
   if (localSize + centralSize + 22 > MAX_ARCHIVE_BYTES) throw new Error("Archive exceeds 50 MB");
   const output = new Uint8Array(localSize + centralSize + 22);
-  const view = new DataView(output.buffer);
   let offset = 0;
   const records = [];
   for (const entry of entries) {
     const start = offset;
-    write32(view, offset, 0x04034b50); write16(view, offset + 4, 20); write16(view, offset + 6, 0x800); write16(view, offset + 8, 0);
-    write32(view, offset + 14, entry.crc); write32(view, offset + 18, entry.bytes.length); write32(view, offset + 22, entry.bytes.length); write16(view, offset + 26, entry.name.length);
+    write32(output, offset, 0x04034b50); write16(output, offset + 4, 20); write16(output, offset + 6, 0x800); write16(output, offset + 8, 0);
+    write32(output, offset + 14, entry.crc); write32(output, offset + 18, entry.bytes.length); write32(output, offset + 22, entry.bytes.length); write16(output, offset + 26, entry.name.length);
     output.set(entry.name, offset + 30); output.set(entry.bytes, offset + 30 + entry.name.length);
     offset += 30 + entry.name.length + entry.bytes.length;
     records.push({ entry, start });
   }
   const centralStart = offset;
   for (const { entry, start } of records) {
-    write32(view, offset, 0x02014b50); write16(view, offset + 4, 20); write16(view, offset + 6, 20); write16(view, offset + 8, 0x800);
-    write32(view, offset + 16, entry.crc); write32(view, offset + 20, entry.bytes.length); write32(view, offset + 24, entry.bytes.length); write16(view, offset + 28, entry.name.length); write32(view, offset + 42, start);
+    write32(output, offset, 0x02014b50); write16(output, offset + 4, 20); write16(output, offset + 6, 20); write16(output, offset + 8, 0x800);
+    write32(output, offset + 16, entry.crc); write32(output, offset + 20, entry.bytes.length); write32(output, offset + 24, entry.bytes.length); write16(output, offset + 28, entry.name.length); write32(output, offset + 42, start);
     output.set(entry.name, offset + 46); offset += 46 + entry.name.length;
   }
-  write32(view, offset, 0x06054b50); write16(view, offset + 8, records.length); write16(view, offset + 10, records.length); write32(view, offset + 12, offset - centralStart); write32(view, offset + 16, centralStart);
+  write32(output, offset, 0x06054b50); write16(output, offset + 8, records.length); write16(output, offset + 10, records.length); write32(output, offset + 12, offset - centralStart); write32(output, offset + 16, centralStart);
   return output;
 }
 
@@ -79,27 +90,26 @@ async function inflate(bytes) {
 export async function decodeProjectArchive(input) {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
   if (bytes.length > MAX_ARCHIVE_BYTES) throw new Error("Archive exceeds 50 MB");
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = bytes.length - 22;
-  while (end >= Math.max(0, bytes.length - 65_557) && view.getUint32(end, true) !== 0x06054b50) end -= 1;
+  while (end >= Math.max(0, bytes.length - 65_557) && read32(bytes, end) !== 0x06054b50) end -= 1;
   if (end < 0) throw new Error("ZIP end record is missing");
-  const count = view.getUint16(end + 10, true);
+  const count = read16(bytes, end + 10);
   if (count > MAX_FILES + 1) throw new Error(`Archive exceeds ${MAX_FILES} project files`);
-  let offset = view.getUint32(end + 16, true);
+  let offset = read32(bytes, end + 16);
   const files = [];
   let config = { entry: "index.html", template: "blank", container: "presentation", sandbox: { network: false, storage: "session" } };
   for (let index = 0; index < count; index += 1) {
-    if (view.getUint32(offset, true) !== 0x02014b50) throw new Error("ZIP directory is invalid");
-    const method = view.getUint16(offset + 10, true);
-    const compressedSize = view.getUint32(offset + 20, true);
-    const nameLength = view.getUint16(offset + 28, true);
-    const extraLength = view.getUint16(offset + 30, true);
-    const commentLength = view.getUint16(offset + 32, true);
-    const localOffset = view.getUint32(offset + 42, true);
+    if (read32(bytes, offset) !== 0x02014b50) throw new Error("ZIP directory is invalid");
+    const method = read16(bytes, offset + 10);
+    const compressedSize = read32(bytes, offset + 20);
+    const nameLength = read16(bytes, offset + 28);
+    const extraLength = read16(bytes, offset + 30);
+    const commentLength = read16(bytes, offset + 32);
+    const localOffset = read32(bytes, offset + 42);
     const path = decoder.decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
     if (!path || path.endsWith("/") || path.startsWith("/") || path.includes("..") || path.includes("\\")) { offset += 46 + nameLength + extraLength + commentLength; continue; }
-    const localNameLength = view.getUint16(localOffset + 26, true);
-    const localExtraLength = view.getUint16(localOffset + 28, true);
+    const localNameLength = read16(bytes, localOffset + 26);
+    const localExtraLength = read16(bytes, localOffset + 28);
     const compressed = bytes.subarray(localOffset + 30 + localNameLength + localExtraLength, localOffset + 30 + localNameLength + localExtraLength + compressedSize);
     const contentBytes = method === 0 ? compressed : method === 8 ? await inflate(compressed) : (() => { throw new Error(`Unsupported ZIP compression method ${method}`); })();
     if (path === "macchiato.project.json") {
