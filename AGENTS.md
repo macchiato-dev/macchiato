@@ -21,6 +21,10 @@ Commit at useful, coherent checkpoints often enough that meaningful
 work-in-progress remains visible. There is no need to commit every tiny edit.
 Experimental commits are welcome: it is fine to backtrack when an approach does
 not work, and seeing that evolution is useful when reviewing the project.
+If substantial work has accumulated without a checkpoint, commit a coherent
+portion with `WIP` in the message even when it is not fully verified. Follow it
+with a correcting or completing commit after testing rather than hiding the
+intermediate state in a long-running worktree.
 
 ## Running the Server
 
