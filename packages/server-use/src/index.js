@@ -203,7 +203,12 @@ export class ServerUse {
     const bodyForbidden = status < 200 || status === 204 || status === 205 || status === 304;
     if (bodyForbidden && output.length) fail(`route ${selected.name} status ${status} cannot include a body`);
     const responseHeaders = new Headers();
-    for (const [rawName, value] of Object.entries(descriptor.headers || {})) {
+    const responseHeaderEntries = Array.isArray(descriptor.headers)
+      ? descriptor.headers
+      : Object.entries(descriptor.headers || {});
+    for (const entry of responseHeaderEntries) {
+      if (!Array.isArray(entry) || entry.length !== 2) fail("response header entry is invalid");
+      const [rawName, value] = entry;
       const name = rawName.toLowerCase();
       if (!selected.responseHeaders.has(name) || responseForbiddenHeaders.has(name)) {
         fail(`route ${selected.name} cannot return header ${rawName}`);

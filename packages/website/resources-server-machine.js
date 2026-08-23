@@ -494,7 +494,7 @@ export function createResourcesServerMachine(module, {
       ], { devices });
       if (body === projectResponseMarker) {
         if (projectResponse === null) throw new Error("project response body is not available");
-        return { status, headers: Object.fromEntries(headerEntries), body: projectResponse };
+        return { status, headers: headerEntries, body: projectResponse };
       }
       if (body === documentResponseMarker) {
         if (!(documentResponse instanceof Response)) {
@@ -503,9 +503,9 @@ export function createResourcesServerMachine(module, {
         const bytes = request.method === "HEAD" || documentResponse.body === null
           ? new Uint8Array()
           : new Uint8Array(await documentResponse.arrayBuffer());
-        return { status, headers: Object.fromEntries(headerEntries), body: bytes };
+        return { status, headers: headerEntries, body: bytes };
       }
-      return { status, headers: Object.fromEntries(headerEntries), body };
+      return { status, headers: headerEntries, body };
     },
   });
 }

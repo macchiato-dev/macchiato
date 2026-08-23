@@ -37,6 +37,24 @@ test("rejects oversized input and ungranted response headers", async () => {
   await assert.rejects(header.handle(new Request("https://example.test/")), /cannot return header/);
 });
 
+test("preserves repeated response headers from ordered entries", async () => {
+  const server = new ServerUse({
+    routes: [{ name: "callback", method: "GET", path: "/callback",
+      responseHeaders: ["set-cookie"] }],
+    dispatch() {
+      return { status: 302, headers: [
+        ["set-cookie", "session=active; Path=/; HttpOnly"],
+        ["set-cookie", "oauth=; Path=/; Max-Age=0"],
+      ] };
+    },
+  });
+  const response = await server.handle(new Request("https://example.test/callback"));
+  assert.deepEqual(response.headers.getSetCookie(), [
+    "session=active; Path=/; HttpOnly",
+    "oauth=; Path=/; Max-Age=0",
+  ]);
+});
+
 test("does not dispatch unmatched routes", async () => {
   const server = new ServerUse({
     routes: [{ name: "home", method: "GET", path: "/" }],

@@ -77,16 +77,21 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
     databaseClient: client, authConfig, contentStore: content, now: () => 3,
   });
   const document = await machine.handle(new Request("http://resources-edge.localhost/about"), {
-    documentHandler: () => new Response("machine-routed document", {
-      headers: {
+    documentHandler: () => {
+      const headers = new Headers({
         "cache-control": "public, max-age=30",
         "content-security-policy": "default-src 'none'",
         "content-type": "text/html; charset=utf-8",
-      },
-    }),
+      });
+      headers.append("set-cookie", "resources_session=active; Path=/; HttpOnly");
+      headers.append("set-cookie", "resources_oauth=; Path=/; Max-Age=0");
+      return new Response("machine-routed document", { headers });
+    },
   });
   assert.equal(document.status, 200);
   assert.equal(document.headers.get("content-security-policy"), "default-src 'none'");
+  assert.deepEqual(document.headers.getSetCookie(),
+    ["resources_session=active; Path=/; HttpOnly", "resources_oauth=; Path=/; Max-Age=0"]);
   assert.equal(await document.text(), "machine-routed document");
   const protectedDocument = await machine.handle(new Request(
     "http://resources-edge.localhost/projects"));
