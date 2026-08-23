@@ -3690,7 +3690,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 3:
                     _context4.p = 3;
                     _t3 = _context4.v;
-                    setStatus("Full screen failed: " + ((_t3 == null ? void 0 : _t3.message) || String(_t3)) + " (" + typeof frame.requestFullscreen + ")", "error");
+                    setStatus("Full screen failed: " + ((_t3 == null ? void 0 : _t3.message) || String(_t3)), "error");
                   case 4:
                     return _context4.a(2);
                 }

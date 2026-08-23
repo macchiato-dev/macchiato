@@ -59,7 +59,8 @@ test("exports resources site as static files", async (t) => {
   );
   assert.doesNotMatch(outputFrame, /<script[^>]+src=/);
   assert.match(outputFrame, /id="project-output-a"/);
-  assert.doesNotMatch(outputFrame, /<script\b/);
+  assert.match(outputFrame, /<script type="module">import WasmWebMachine from "\.\/machine\.js"/);
+  assert.match(outputFrame, /resources-project-output-machine-v1/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);

@@ -162,7 +162,7 @@ test("Resources.co edge profile is mounted locally through its storage adapter",
   assert.match(text, /Log in/);
   assert.doesNotMatch(text, /Edge safe/);
   assert.match(response.headers.get("content-security-policy"), /script-src 'self'/);
-  assert.match(text, /resources-machine-controller\.js/);
+  assert.match(text, /resources-site\/controller\.js/);
   assert.doesNotMatch(text, /command-palette-use\/client\.js/);
   assert.equal(config.status, 200);
   assert.match(configText, /Resources\.co Edge Preview/);

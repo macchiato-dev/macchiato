@@ -29280,7 +29280,7 @@ ${bundleProjectModule(entry, script.textContent)}
     try {
       await frame.requestFullscreen();
     } catch (error) {
-      setStatus(`Full screen failed: ${error?.message || String(error)} (${typeof frame.requestFullscreen})`, "error");
+      setStatus(`Full screen failed: ${error?.message || String(error)}`, "error");
     }
   });
   outputOverflowMenu.addEventListener("keydown", (event) => {
