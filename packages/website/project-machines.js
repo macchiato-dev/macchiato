@@ -1,4 +1,5 @@
 import WasmWebMachine from "../../dev/wasm-web-machine/dist/module/wasm-web-machine.js";
+import { PROJECT_EDITOR_LANGUAGES } from "./generated/project-editor-languages.js";
 const encoder = new TextEncoder(), decoder = new TextDecoder(), runtimeModules = new Map();
 let nextMachine = 1;
 async function moduleFor(url) {
@@ -96,68 +97,167 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
   } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
-  if (options.environment?.language) await machine.onmsg(taggedMessage(1,
-    `globalThis.navigator=Object.assign(globalThis.navigator||{},{language:${JSON.stringify(options.environment.language)}});`));
-  for (const script of scripts) { await machine.onmsg(taggedMessage(1, script.code));
-    if (reportedError) { machine.destroy(); throw reportedError; }
+  async function evaluate(script, index) {
+    reportedError = null;
+    await machine.onmsg(taggedMessage(1, script.code));
+    if (!reportedError) return;
+    const source = typeof script?.source === "string" && script.source ? script.source : `script ${index + 1}`;
+    throw new Error(`${source}: ${reportedError.message}`);
   }
+  try {
+    for (let index = 0; index < scripts.length; index++) await evaluate(scripts[index], index);
+  } catch (error) { machine.destroy(); throw error; }
   let programs = scripts.length;
   starting = false;
   function call(name, payload) {
     response = undefined;
-    machine.onmsg(callMessage(name, payload));
+    reportedError = null;
+    try { machine.onmsg(callMessage(name, payload)); }
+    catch (error) { throw new Error(`${name}: ${error?.message || String(error)}`); }
+    if (reportedError) throw new Error(`${name}: ${reportedError.message}`);
     if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
     return JSON.parse(response);
   }
   return Object.freeze({
-    setContent(tree) { return call("__resourcesOutputSetContent", tree); },
+    setContent(tree) {
+      const result = call("__resourcesOutputSetContent", tree);
+      machine.onmsg(0);
+      return result;
+    },
     async run(nextScripts) {
-      reportedError = null;
-      for (const script of nextScripts) await machine.onmsg(taggedMessage(1, script.code));
-      if (reportedError) throw reportedError;
+      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
       programs += nextScripts.length;
+    },
+    async load(project) {
+      const result = call("__resourcesOutputLoad", {
+        tree: project.tree || [],
+        stylesheets: project.stylesheets || [],
+      });
+      machine.onmsg(0);
+      const nextScripts = project.scripts || [];
+      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
+      programs += nextScripts.length;
+      return result;
     },
     destroy() { destroyed = true; machine.destroy(); },
     inspect() { return { runtime: "quickjs", programs, machine: { machineId } }; },
   });
 }
+export async function createProjectBuildMachine() {
+  const module = await moduleFor("/-/resources-site/project-builder-quickjs-runtime.wasm");
+  let response, machineError;
+  const machine = new WasmWebMachine(module, null, { onMessage(text) {
+    if (text.startsWith("__wwcResponse:")) response = text.slice(14);
+    else if (text.startsWith("__wwcError:")) machineError = text.slice(11);
+  } });
+  await machine.onmsg(0);
+  return Object.freeze({
+    compile(source) {
+      response = undefined;
+      machineError = undefined;
+      machine.onmsg(callMessage("__resourcesBuildProject", { source }));
+      if (machineError) throw new Error(machineError);
+      if (response === undefined) throw new Error("Project build machine did not respond");
+      return JSON.parse(response);
+    },
+    compileFiles(files, config) {
+      response = machineError = undefined;
+      machine.onmsg(callMessage("__resourcesCompileFiles", { files, config }));
+      if (machineError) throw new Error(machineError);
+      if (response === undefined) throw new Error("Project build machine did not respond");
+      const result = JSON.parse(response);
+      if (!result?.ok) throw new Error(result?.error || result?.stack || "Project compilation failed");
+      return result.value;
+    },
+    build(files, config) {
+      response = undefined;
+      machineError = undefined;
+      machine.onmsg(callMessage("__resourcesBuildFiles", { files, config }));
+      if (machineError) throw new Error(machineError);
+      if (response === undefined) throw new Error("Project build machine did not respond");
+      return JSON.parse(response);
+    },
+    destroy() { machine.destroy(); },
+  });
+}
 export async function createProjectAppMachine(root) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let requested = false;
-  const machine = new WasmWebMachine(module, root, { onMessage(text) { requested ||= text === "mount-project-editor"; } });
+  let requested = false, machineError = null;
+  const machine = new WasmWebMachine(module, root, { onMessage(text) {
+    requested ||= text === "mount-project-editor";
+    if (text.startsWith("__wwcError:")) machineError ||= text.slice(11);
+  } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0); await machine.onmsg(taggedMessage(1, "__wwcPostMessage('mount-project-editor')"));
-  if (!requested) throw new Error("Project app did not request its editor");
+  if (!requested) throw new Error(machineError || "Project app did not request its editor");
   return Object.freeze({ machineId, destroy() { machine.destroy(); } });
 }
-export async function createProjectEditorMachine({ root, onChange, onReady, onLimit, limits }) {
+export async function createProjectEditorMachine({ root, onChange, onReady,
+  onLimit, onError, onRequest, services, limits }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
-  let response, machineError, outputRequest = 0;
-  const machine = new WasmWebMachine(module, root, { onMessage(text) {
-    if (text.startsWith("__wwcError:")) { machineError = text.slice(11); return; }
+  let response, machineError, starting = true, machineStage = "startup";
+  const machine = new WasmWebMachine(module, root, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services,
+    onMessage(text) {
+    if (text.startsWith("__wwcError:")) {
+      machineError = `${machineStage}: ${text.slice(11)}`;
+      if (!starting) queueMicrotask(() => onError?.(new Error(machineError)));
+      return;
+    }
     if (text.startsWith("__wwcResponse:")) { response = text.slice(14); return; }
     const message = JSON.parse(text);
-    if (message.type === "mount-project-output") outputRequest = message.generation;
+    if (message.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
+    if (message.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
+      if (message.protocol === "resources-editor-v1") {
+        Promise.resolve().then(() => onRequest(message.name, message.payload || {})).then(
+        (value) => machine.onmsg(callMessage("__resourcesEditorReceive", { id: message.id, value })),
+        (error) => machine.onmsg(callMessage("__resourcesEditorReceive", {
+          id: message.id, error: error?.message || String(error),
+        })),
+      );
+      return;
+    }
     queueMicrotask(() => { if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
       else if (message.type === "ready") onReady?.(message);
       else if (message.type === "limit") onLimit?.(message);
     });
-  } });
+    },
+  });
   await machine.onmsg(0); if (machineError) throw new Error(machineError);
+  starting = false; machineStage = "idle";
+  const loadedLanguages = new Set();
+  function ensureLanguage(name) {
+    const requested = name === "markdown"
+      ? ["javascript", "html", "css", "json", "vue", "svelte", "markdown"] : [name];
+    for (const language of requested) {
+      if (loadedLanguages.has(language) || !PROJECT_EDITOR_LANGUAGES[language]) continue;
+      machineError = undefined;
+      machineStage = `language ${language}`;
+      machine.onmsg(taggedMessage(1, PROJECT_EDITOR_LANGUAGES[language]));
+      if (machineError) throw new Error(machineError);
+      machineStage = "idle";
+      loadedLanguages.add(language);
+      if (language === "javascript") loadedLanguages.add("typescript");
+    }
+  }
   function call(name, payload) {
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
-    response = machineError = undefined; machine.onmsg(callMessage(name, payload));
+    response = machineError = undefined; machineStage = `call ${name}`;
+    machine.onmsg(callMessage(name, payload));
     if (machineError) throw new Error(machineError); if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
+    machineStage = "idle";
     return JSON.parse(response);
   }
-  call("__codeEditorConfigureLimits", limits || { maxLines: 5_000, maxCharacters: 1_000_000 });
-  return Object.freeze({ setContent: (content, language = "plain", options = {}) => call("__codeEditorSetContent", { content, language, ...options }),
+  if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5_000, maxCharacters: 1_000_000 });
+  return Object.freeze({ machineId, setContent(content, language = "plain", options = {}) {
+      ensureLanguage(language);
+      return call("__codeEditorSetContent", { content, language, ...options });
+    },
     command: (payload) => call("__codeEditorCommand", payload), callGuest: call,
-    requestOutput(generation) {
-      outputRequest = 0; const result = call("__resourcesProjectRequestOutput", { generation });
-      if (!result.requested || outputRequest !== generation) throw new Error("Project editor did not request its output machine");
-      return result; },
-    inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
+    inspect: () => ({ ...call("__codeEditorInspect", {}),
+      machine: { machineId, languages: [...loadedLanguages] } }),
     focus() { root.querySelector(".cm-content")?.focus(); }, destroy() { machine.destroy(); root.replaceChildren(); } });
 }
