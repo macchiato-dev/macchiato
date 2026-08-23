@@ -694,6 +694,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   snapshot: snapshot
                 });
               },
+              renderSnapshot: function renderSnapshot() {
+                return callGuest("__resourcesProjectRenderSnapshot");
+              },
               command: function command(payload) {
                 return callGuest("__codeEditorCommand", payload);
               },
@@ -1932,7 +1935,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   var _state$config5;
                   outputFrameRequested = true;
                   var debounceMs = Math.min(5e3, Math.max(250, Number((_state$config5 = state.config) == null || (_state$config5 = _state$config5.output) == null ? void 0 : _state$config5.debounceMs) || 900));
-                  if (__resourcesDatasetGet(root, "data-output-owner") !== "editor") editorPreviewTimer = setTimeout(renderPreview, debounceMs);
+                  editorPreviewTimer = setTimeout(__resourcesDatasetGet(root, "data-output-owner") === "editor" ? function () {
+                    var _editorController3;
+                    return (_editorController3 = editorController) == null ? void 0 : _editorController3.renderSnapshot();
+                  } : renderPreview, debounceMs);
                 }
               } catch (_unused10) {}
             };
@@ -2510,7 +2516,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _mountEditorMachine = function _mountEditorMachine3() {
               _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee7(reason) {
-                var _editorController5;
+                var _editorController6;
                 var generation, _controller$inspect, controller, _t6;
                 return _regenerator().w(function (_context8) {
                   while (1) switch (_context8.p = _context8.n) {
@@ -2520,7 +2526,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       }
                       generation = ++editorGeneration;
                       ready = false;
-                      (_editorController5 = editorController) == null || _editorController5.destroy();
+                      (_editorController6 = editorController) == null || _editorController6.destroy();
                       editorController = null;
                       __resourcesDatasetDelete(root, "data-editor-machine-id");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "starting");
@@ -2612,7 +2618,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _renderPreview = function _renderPreview3() {
               _renderPreview = _asyncToGenerator(_regenerator().m(function _callee6() {
                 var _state$config8, _previewState$config, _previewState$files$f, _exec2, _previewState$config2, _previewState$config9;
-                var generation, _editorController4, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator27, _step27, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator31, _step31, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator33, _step33, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t4, _t5;
+                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator27, _step27, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator31, _step31, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator33, _step33, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t4, _t5;
                 return _regenerator().w(function (_context7) {
                   while (1) switch (_context7.p = _context7.n) {
                     case 0:
@@ -2689,7 +2695,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       activeError = "";
                       renderStatusState();
                       try {
-                        (_editorController4 = editorController) == null || _editorController4.projectStatus.begin(generation);
+                        (_editorController5 = editorController) == null || _editorController5.projectStatus.begin(generation);
                       } catch (_error16) {
                         setStatus("Editor status bridge failed: " + _error16.message, "error", null, "editor");
                       }
@@ -3677,7 +3683,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 0:
                     button = _step21.value;
                     button.addEventListener("click", function () {
-                      var _editorController6;
+                      var _editorController7;
                       var detailsButton = root.querySelector('[data-project-view="details"]');
                       if (__resourcesDatasetGet(button, "data-project-view") === "details") {
                         if (narrowWorkspace.matches) {
@@ -3701,7 +3707,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
                       }
                       renderStatusState();
-                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController6 = editorController) == null || _editorController6.focus();
+                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController7 = editorController) == null || _editorController7.focus();
                     });
                   case 1:
                     return _context11.a(2);
@@ -3891,10 +3897,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             mountEditorMachine();
             if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
             addEventListener("pagehide", function () {
-              var _editorController3;
+              var _editorController4;
               historyPanel.remove();
               editorGeneration += 1;
-              (_editorController3 = editorController) == null || _editorController3.destroy();
+              (_editorController4 = editorController) == null || _editorController4.destroy();
               disposeProjectMachine();
             }, {
               once: true

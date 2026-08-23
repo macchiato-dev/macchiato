@@ -216,6 +216,10 @@
     refreshTimer = setTimeout(function () { startOutput(activeSnapshot); }, 500);
     return JSON.stringify({ accepted: true });
   };
+  globalThis.__resourcesProjectRenderSnapshot = function () {
+    if (activeSnapshot) startOutput(activeSnapshot);
+    return JSON.stringify({ accepted: !!activeSnapshot });
+  };
 
   try {
     root.setAttribute("data-output-machine-stage", "snapshot");

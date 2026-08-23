@@ -1411,7 +1411,9 @@ async function mountProjectRoot(root) {
         // Keep the current output alive while the user is typing. Rebuilding
         // its DOM and QuickJS machine is intentionally a trailing-edge task.
         const debounceMs = Math.min(5_000, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
-        if (root.dataset.outputOwner !== "editor") editorPreviewTimer = setTimeout(renderPreview, debounceMs);
+        editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor"
+          ? () => editorController?.renderSnapshot()
+          : renderPreview, debounceMs);
       }
     } catch {}
   }

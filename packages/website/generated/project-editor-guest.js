@@ -27362,6 +27362,9 @@ async function mountResourcesProjectEditor(options) {
     setSnapshot(snapshot) {
       return callGuest("__resourcesProjectSetSnapshot", { snapshot });
     },
+    renderSnapshot() {
+      return callGuest("__resourcesProjectRenderSnapshot");
+    },
     command(payload) {
       return callGuest("__codeEditorCommand", payload);
     },
@@ -28991,7 +28994,7 @@ ${bundleProjectModule(entry, script.textContent)}
       } else {
         outputFrameRequested = true;
         const debounceMs = Math.min(5e3, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
-        if (root.dataset.outputOwner !== "editor") editorPreviewTimer = setTimeout(renderPreview, debounceMs);
+        editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor" ? () => editorController?.renderSnapshot() : renderPreview, debounceMs);
       }
     } catch {
     }

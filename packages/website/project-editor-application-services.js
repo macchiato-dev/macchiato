@@ -76,6 +76,7 @@ export async function mountResourcesProjectEditor(options) {
       return callGuest("__codeEditorSetContent", { content, language, ...settings });
     },
     setSnapshot(snapshot) { return callGuest("__resourcesProjectSetSnapshot", { snapshot }); },
+    renderSnapshot() { return callGuest("__resourcesProjectRenderSnapshot"); },
     command(payload) { return callGuest("__codeEditorCommand", payload); },
     inspect() { return callGuest("__codeEditorInspect"); },
     focus() { return callGuest("__codeEditorFocus"); },
