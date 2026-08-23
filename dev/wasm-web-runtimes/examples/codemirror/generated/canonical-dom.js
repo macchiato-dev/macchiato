@@ -690,6 +690,10 @@ GuestElement.prototype.scrollIntoView = function () {
   immediate([3, this.reference, stringIndex("scrollIntoView"), []]);
 };
 
+GuestElement.prototype.requestFullscreen = function () {
+  return immediate([3, this.reference, stringIndex("requestFullscreen"), []]);
+};
+
 GuestElement.prototype.focus = function () {
   immediate([3, this.reference, stringIndex("focus"), []]);
 };

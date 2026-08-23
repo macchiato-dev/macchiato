@@ -678,6 +678,7 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "contenteditable",
   "data-language",
   "disabled",
+  "draggable",
   "hidden",
   "maxlength",
   "cx",
@@ -1751,6 +1752,9 @@ var WasmWebBridge = class {
         if (["contenteditable", "spellcheck", "writingsuggestions"].includes(args[0]) && !["true", "false"].includes(args[1])) {
           fail(`${args[0]} value is not allowed`);
         }
+        if (args[0] === "draggable" && !["true", "false"].includes(args[1])) {
+          fail("draggable value is not allowed");
+        }
         if (args[0] === "aria-autocomplete" && !["both", "inline", "list", "none"].includes(args[1])) {
           fail("aria-autocomplete value is not allowed");
         }
@@ -1793,6 +1797,10 @@ var WasmWebBridge = class {
       }
       if (object instanceof Element && name === "scrollIntoView" && args.length === 0) {
         object.scrollIntoView();
+        return null;
+      }
+      if (object instanceof HTMLIFrameElement && name === "requestFullscreen" && args.length === 0) {
+        void object.requestFullscreen();
         return null;
       }
       if (object instanceof HTMLElement && name === "focus" && args.length === 0) {

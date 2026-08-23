@@ -1,4 +1,4 @@
-/* guest application: /root/macchiato/packages/website/resources-project-version-guest.js */
+/* guest application: resources-project-version-guest.js */
 var spliceState = null;
 
 function own(object, key) {
@@ -180,3 +180,4 @@ function serverResume(ok, result) {
   spliceState.afterEnd -= count;
   return nextSpliceChunk();
 }
+;

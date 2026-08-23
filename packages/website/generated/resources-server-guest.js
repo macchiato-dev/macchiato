@@ -1,4 +1,4 @@
-/* guest runtime: /root/macchiato/packages/website/guest-runtime/http.js */
+/* guest runtime: guest-runtime/http.js */
 // Response construction lives in the guest. The host only validates and
 // materializes the returned status, header entries, and body.
 function response(status, contentType, body) {
@@ -39,8 +39,9 @@ function jsonString(value) {
   }
   return output + '"';
 }
+;
 
-/* guest application: /root/macchiato/packages/website/resources-server-guest.js */
+/* guest application: resources-server-guest.js */
 var pending = null;
 
 function queryValue(value) {
@@ -786,3 +787,4 @@ function serverResume(ok, result) {
   pending = null;
   return text(500, "Server machine state error");
 }
+;

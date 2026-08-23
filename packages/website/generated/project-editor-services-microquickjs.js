@@ -1,5 +1,5 @@
 function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(typeof e + " is not iterable"); }
-function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (_t1) { i = e, c = 1, u = _t1; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (_t10) { i = e, c = 1, u = _t10; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (_e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
@@ -1557,6 +1557,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       showTimer = setTimeout(show, 600);
     });
     button.addEventListener("pointerleave", hide);
+    button.addEventListener("pointerdown", hide);
+    button.addEventListener("dragstart", hide);
     button.addEventListener("focus", show);
     button.addEventListener("blur", hide);
     button.addEventListener("instanttooltiphide", hide);
@@ -1691,11 +1693,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return _mountProjectRoot.apply(this, arguments);
   }
   function _mountProjectRoot() {
-    _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee1(root) {
+    _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee10(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, projectContentBlock, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, placeProjectClose, setSplit, _loop9, _iterator21, _step21, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator23, _step23, _iterator24, _step24, field, closeHistory, positionHistory, openVersionHistory, _t9, _t0;
-      return _regenerator().w(function (_context13) {
-        while (1) switch (_context13.p = _context13.n) {
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
+      return _regenerator().w(function (_context14) {
+        while (1) switch (_context14.p = _context14.n) {
           case 0:
             positionHistory = function _positionHistory() {
               var gap = 6;
@@ -1712,21 +1714,21 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               historyPanel.style.top = openAbove ? Math.max(edge, buttonRect.top - gap - Math.min(panelRect.height, availableHeight)) + "px" : buttonRect.bottom + gap + "px";
               historyPanel.style.maxHeight = availableHeight + "px";
             };
-            closeHistory = function _closeHistory(_temp1) {
-              var _ref20 = _temp1 === void 0 ? {} : _temp1,
-                _ref20$restoreFocus = _ref20.restoreFocus,
-                restoreFocus = _ref20$restoreFocus === void 0 ? false : _ref20$restoreFocus;
+            closeHistory = function _closeHistory(_temp10) {
+              var _ref22 = _temp10 === void 0 ? {} : _temp10,
+                _ref22$restoreFocus = _ref22.restoreFocus,
+                restoreFocus = _ref22$restoreFocus === void 0 ? false : _ref22$restoreFocus;
               historyPanel.hidden = true;
               versionButton.setAttribute("aria-expanded", "false");
               if (restoreFocus) versionButton.focus();
             };
-            applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp0) {
+            applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp1) {
               var _next$config$containe, _next$config;
-              var _ref18 = _temp0 === void 0 ? {} : _temp0,
-                _ref18$notice = _ref18.notice,
-                notice = _ref18$notice === void 0 ? true : _ref18$notice,
-                _ref18$previousSnapsh = _ref18.previousSnapshot,
-                previousSnapshot = _ref18$previousSnapsh === void 0 ? state : _ref18$previousSnapsh;
+              var _ref20 = _temp1 === void 0 ? {} : _temp1,
+                _ref20$notice = _ref20.notice,
+                notice = _ref20$notice === void 0 ? true : _ref20$notice,
+                _ref20$previousSnapsh = _ref20.previousSnapshot,
+                previousSnapshot = _ref20$previousSnapsh === void 0 ? state : _ref20$previousSnapsh;
               if (linkPatterns) linkPatterns.value = (((_next$config$containe = next.config.containerOptions) == null ? void 0 : _next$config$containe.allowedLinkPatterns) || []).join("\n");
               if (template) template.value = next.config.template || "blank";
               growTextarea(linkPatterns);
@@ -1751,8 +1753,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 validateAllowedUrlPatterns(allowedLinkPatterns);
                 linkPatterns == null || linkPatterns.setCustomValidity("");
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "false");
-              } catch (_error18) {
-                linkPatterns == null || linkPatterns.setCustomValidity(_error18.message);
+              } catch (_error19) {
+                linkPatterns == null || linkPatterns.setCustomValidity(_error19.message);
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "true");
                 return;
               }
@@ -1786,7 +1788,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             syncResponsiveWorkspace = function _syncResponsiveWorksp() {
               var view = narrowWorkspace.matches ? "preview" : "split";
               var selectedButton = root.querySelector("[data-project-view=\"" + view + "\"]");
-              var detailsButton = root.querySelector('[data-project-view="details"]');
+              var detailsButton = projectDetails;
               if (narrowWorkspace.matches) {
                 __resourcesDatasetSet(projectLayout, "data-details-visible", "false");
                 __resourcesDatasetDelete(projectLayout, "data-mobile-view");
@@ -1799,8 +1801,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 placeProjectClose(true);
               }
               __resourcesDatasetSet(workspace, "data-view", view);
-              for (var _iterator22 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step22; !(_step22 = _iterator22()).done;) {
-                var item = _step22.value;
+              for (var _iterator23 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step23; !(_step23 = _iterator23()).done;) {
+                var item = _step23.value;
                 item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
               }
               renderStatusState();
@@ -1813,12 +1815,18 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             placeProjectClose = function _placeProjectClose(detailsVisible) {
               if (!projectClose) return;
-              (detailsVisible ? projectCloseHome : projectViewControls).append(projectClose);
+              if (detailsVisible) {
+                projectCloseHome.insertBefore(projectDetails, projectClose);
+                projectCloseHome.append(projectClose);
+              } else {
+                projectViewControls.append(projectDetails);
+                projectViewControls.append(projectClose);
+              }
             };
-            openPresentation = function _openPresentation(_temp9) {
-              var _ref17 = _temp9 === void 0 ? {} : _temp9,
-                _ref17$keyboard = _ref17.keyboard,
-                keyboard = _ref17$keyboard === void 0 ? false : _ref17$keyboard;
+            openPresentation = function _openPresentation(_temp0) {
+              var _ref19 = _temp0 === void 0 ? {} : _temp0,
+                _ref19$keyboard = _ref19.keyboard,
+                keyboard = _ref19$keyboard === void 0 ? false : _ref19$keyboard;
               __resourcesDatasetSet(root, "data-presenting", "true");
               document.body.classList.add("project-presenting");
               previewSection.classList.add("project-editor__preview--presenting");
@@ -1841,6 +1849,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               projectContentBlock == null || projectContentBlock.style.removeProperty("transform");
               presentButton.setAttribute("aria-pressed", "false");
             };
+            closeOutputOverflow = function _closeOutputOverflow(_temp9) {
+              var _ref17 = _temp9 === void 0 ? {} : _temp9,
+                _ref17$focus = _ref17.focus,
+                focus = _ref17$focus === void 0 ? false : _ref17$focus;
+              outputOverflowMenu.hidden = true;
+              outputOverflowTrigger.setAttribute("aria-expanded", "false");
+              if (focus) outputOverflowTrigger.focus();
+            };
             closeEditorOverflow = function _closeEditorOverflow(_temp8) {
               var _ref15 = _temp8 === void 0 ? {} : _temp8,
                 _ref15$focus = _ref15.focus,
@@ -1860,14 +1876,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             filterProjectFiles = function _filterProjectFiles() {
               var query = fileFilter.value.trim().toLowerCase();
               var visible = 0;
-              for (var _iterator19 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll('[role="menuitemradio"]')), _step19; !(_step19 = _iterator19()).done;) {
-                var _option = _step19.value;
+              for (var _iterator20 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll('[role="menuitemradio"]')), _step20; !(_step20 = _iterator20()).done;) {
+                var _option = _step20.value;
                 var row = _option.closest(".project-editor__file-option-row");
                 row.hidden = Boolean(query && !_option.textContent.toLowerCase().includes(query));
                 if (!row.hidden) visible += 1;
               }
-              for (var _iterator20 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")), _step20; !(_step20 = _iterator20()).done;) {
-                var group = _step20.value;
+              for (var _iterator21 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")), _step21; !(_step21 = _iterator21()).done;) {
+                var group = _step21.value;
                 group.hidden = !group.querySelector(".project-editor__file-option-row:not([hidden])");
               }
               fileEmpty.hidden = visible !== 0;
@@ -1943,27 +1959,27 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               } catch (_unused10) {}
             };
             _renderStoredVersions = function _renderStoredVersions3() {
-              _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee0() {
-                var response, _yield$response$json, versions, current, _loop8, _iterator34, _step34;
-                return _regenerator().w(function (_context10) {
-                  while (1) switch (_context10.n) {
+              _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee1() {
+                var response, _yield$response$json, versions, current, _loop8, _iterator35, _step35;
+                return _regenerator().w(function (_context11) {
+                  while (1) switch (_context11.n) {
                     case 0:
                       versionList.textContent = "Loading\u2026";
-                      _context10.n = 1;
+                      _context11.n = 1;
                       return fetch("/api/projects/" + encodeURIComponent(projectId) + "/versions");
                     case 1:
-                      response = _context10.v;
+                      response = _context11.v;
                       if (response.ok) {
-                        _context10.n = 2;
+                        _context11.n = 2;
                         break;
                       }
                       versionList.textContent = "Version history unavailable.";
-                      return _context10.a(2);
+                      return _context11.a(2);
                     case 2:
-                      _context10.n = 3;
+                      _context11.n = 3;
                       return response.json();
                     case 3:
-                      _yield$response$json = _context10.v;
+                      _yield$response$json = _context11.v;
                       versions = _yield$response$json.versions;
                       versionList.replaceChildren();
                       showCurrentVersion();
@@ -1987,41 +2003,41 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       versionList.append(current);
                       _loop8 = _regenerator().m(function _loop8() {
                         var version, timestamp, button;
-                        return _regenerator().w(function (_context1) {
-                          while (1) switch (_context1.n) {
+                        return _regenerator().w(function (_context10) {
+                          while (1) switch (_context10.n) {
                             case 0:
-                              version = _step34.value;
+                              version = _step35.value;
                               timestamp = version.savedAt || version.createdAt;
                               button = versionChoice(relativeVersionTime(timestamp), timestamp, {
                                 sequence: version.sequence,
                                 title: version.title,
                                 latest: version.latest
                               });
-                              button.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee9() {
+                              button.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee0() {
                                 var response2, result2;
-                                return _regenerator().w(function (_context0) {
-                                  while (1) switch (_context0.n) {
+                                return _regenerator().w(function (_context1) {
+                                  while (1) switch (_context1.n) {
                                     case 0:
                                       clearNotice();
-                                      _context0.n = 1;
+                                      _context1.n = 1;
                                       return save();
                                     case 1:
                                       currentSnapshot = state;
-                                      _context0.n = 2;
+                                      _context1.n = 2;
                                       return fetch("/api/projects/" + encodeURIComponent(projectId) + "/versions/" + version.sequence);
                                     case 2:
-                                      response2 = _context0.v;
+                                      response2 = _context1.v;
                                       if (response2.ok) {
-                                        _context0.n = 3;
+                                        _context1.n = 3;
                                         break;
                                       }
                                       setStatus("Version unavailable", true);
-                                      return _context0.a(2);
+                                      return _context1.a(2);
                                     case 3:
-                                      _context0.n = 4;
+                                      _context1.n = 4;
                                       return response2.json();
                                     case 4:
-                                      result2 = _context0.v;
+                                      result2 = _context1.v;
                                       state = normalizeProjectSnapshot(result2.snapshot);
                                       viewingHistorical = true;
                                       snapshotField.value = JSON.stringify(state);
@@ -2033,30 +2049,30 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                       showSelectedVersion(relativeVersionTime(timestamp), timestamp);
                                       setStatus("Viewing " + button.textContent);
                                     case 5:
-                                      return _context0.a(2);
+                                      return _context1.a(2);
                                   }
-                                }, _callee9);
+                                }, _callee0);
                               })));
                               versionList.append(button);
                             case 1:
-                              return _context1.a(2);
+                              return _context10.a(2);
                           }
                         }, _loop8);
                       });
-                      _iterator34 = _createForOfIteratorHelperLoose(versions);
+                      _iterator35 = _createForOfIteratorHelperLoose(versions);
                     case 4:
-                      if ((_step34 = _iterator34()).done) {
-                        _context10.n = 6;
+                      if ((_step35 = _iterator35()).done) {
+                        _context11.n = 6;
                         break;
                       }
-                      return _context10.d(_regeneratorValues(_loop8()), 5);
+                      return _context11.d(_regeneratorValues(_loop8()), 5);
                     case 5:
-                      _context10.n = 4;
+                      _context11.n = 4;
                       break;
                     case 6:
-                      return _context10.a(2);
+                      return _context11.a(2);
                   }
-                }, _callee0);
+                }, _callee1);
               }));
               return _renderStoredVersions.apply(this, arguments);
             };
@@ -2112,19 +2128,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               });
             };
             _save = function _save3() {
-              _save = _asyncToGenerator(_regenerator().m(function _callee8() {
-                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure, result2, _t7, _t8;
-                return _regenerator().w(function (_context9) {
-                  while (1) switch (_context9.p = _context9.n) {
+              _save = _asyncToGenerator(_regenerator().m(function _callee9() {
+                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure, result2, _t8, _t9;
+                return _regenerator().w(function (_context0) {
+                  while (1) switch (_context0.p = _context0.n) {
                     case 0:
                       if (!(!pending2 || saving)) {
-                        _context9.n = 1;
+                        _context0.n = 1;
                         break;
                       }
-                      return _context9.a(2);
+                      return _context0.a(2);
                     case 1:
                       if (!(draft || memoryOnly)) {
-                        _context9.n = 2;
+                        _context0.n = 2;
                         break;
                       }
                       if (!templateOnlyPending) checkpointDraft({
@@ -2136,14 +2152,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       __resourcesDatasetDelete(root, "data-draft-dirty");
                       __resourcesDatasetSet(root, "data-draft-state", "saved");
                       setStatus(memoryOnly ? "" : "Draft saved in this session");
-                      return _context9.a(2);
+                      return _context0.a(2);
                     case 2:
                       savingGeneration = changeGeneration;
                       savingSnapshot = state;
                       savingDestructive = pendingDestructive && !templateOnlyPending;
                       saving = true;
                       setStatus("Saving\u2026");
-                      _context9.p = 3;
+                      _context0.p = 3;
                       requestSave = function requestSave() {
                         return fetch("/api/projects/" + encodeURIComponent(projectId) + "/snapshot", {
                           method: "POST",
@@ -2157,64 +2173,64 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           })
                         });
                       };
-                      _context9.n = 4;
+                      _context0.n = 4;
                       return requestSave();
                     case 4:
-                      _response = _context9.v;
+                      _response = _context0.v;
                       if (!(_response.status === 403)) {
-                        _context9.n = 9;
+                        _context0.n = 9;
                         break;
                       }
-                      _context9.n = 5;
+                      _context0.n = 5;
                       return _response.clone().json().catch(function () {
                         return null;
                       });
                     case 5:
-                      failure = _context9.v;
+                      failure = _context0.v;
                       if (!((failure == null ? void 0 : failure.error) === "request_token")) {
-                        _context9.n = 9;
+                        _context0.n = 9;
                         break;
                       }
-                      _context9.n = 6;
+                      _context0.n = 6;
                       return fetch(location.href, {
                         cache: "no-store"
                       });
                     case 6:
-                      page = _context9.v;
-                      _t7 = new DOMParser();
-                      _context9.n = 7;
+                      page = _context0.v;
+                      _t8 = new DOMParser();
+                      _context0.n = 7;
                       return page.text();
                     case 7:
-                      documentCopy = _t7.parseFromString.call(_t7, _context9.v, "text/html");
+                      documentCopy = _t8.parseFromString.call(_t8, _context0.v, "text/html");
                       fresh = (_find = [].concat(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
                         return __resourcesDatasetGet(editor, "data-project-id") === projectId;
                       })) == null ? void 0 : __resourcesDatasetGet(_find, "data-csrf");
                       if (!fresh) {
-                        _context9.n = 9;
+                        _context0.n = 9;
                         break;
                       }
                       __resourcesDatasetSet(root, "data-csrf", fresh);
-                      _context9.n = 8;
+                      _context0.n = 8;
                       return requestSave();
                     case 8:
-                      _response = _context9.v;
+                      _response = _context0.v;
                     case 9:
                       if (_response.ok) {
-                        _context9.n = 11;
+                        _context0.n = 11;
                         break;
                       }
-                      _context9.n = 10;
+                      _context0.n = 10;
                       return _response.json().catch(function () {
                         return null;
                       });
                     case 10:
-                      _failure = _context9.v;
+                      _failure = _context0.v;
                       throw new Error((_failure == null ? void 0 : _failure.message) || "Save failed (" + _response.status + ")");
                     case 11:
-                      _context9.n = 12;
+                      _context0.n = 12;
                       return _response.json();
                     case 12:
-                      result2 = _context9.v;
+                      result2 = _context0.v;
                       versionCount.textContent = String(result2.versionCount);
                       if (changeGeneration === savingGeneration) {
                         pending2 = false;
@@ -2227,24 +2243,24 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       } else {
                         setStatus("Saving\u2026");
                       }
-                      _context9.n = 14;
+                      _context0.n = 14;
                       break;
                     case 13:
-                      _context9.p = 13;
-                      _t8 = _context9.v;
-                      setStatus(_t8.message, true);
+                      _context0.p = 13;
+                      _t9 = _context0.v;
+                      setStatus(_t9.message, true);
                     case 14:
-                      _context9.p = 14;
+                      _context0.p = 14;
                       saving = false;
                       if (pending2 && changeGeneration !== savingGeneration) {
                         clearTimeout(saveTimer);
                         saveTimer = setTimeout(save, 250);
                       }
-                      return _context9.f(14);
+                      return _context0.f(14);
                     case 15:
-                      return _context9.a(2);
+                      return _context0.a(2);
                   }
-                }, _callee8, null, [[3, 13, 14, 15]]);
+                }, _callee9, null, [[3, 13, 14, 15]]);
               }));
               return _save.apply(this, arguments);
             };
@@ -2397,6 +2413,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
               sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
               menu.replaceChildren();
+              for (var _iterator16 = _createForOfIteratorHelperLoose(tabs.querySelectorAll("[data-instant-tooltip-attached='true']")), _step16; !(_step16 = _iterator16()).done;) {
+                var _button = _step16.value;
+                _button._hideInstantTooltip == null || _button._hideInstantTooltip();
+              }
               tabs.replaceChildren();
               var availableChoices = document.createElement("div");
               availableChoices.className = "project-editor__file-choices";
@@ -2447,8 +2467,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
                 (open ? openChoices : availableChoices).append(row);
               }
-              for (var _iterator16 = _createForOfIteratorHelperLoose(state.files), _step16; !(_step16 = _iterator16()).done;) {
-                var file = _step16.value;
+              for (var _iterator17 = _createForOfIteratorHelperLoose(state.files), _step17; !(_step17 = _iterator17()).done;) {
+                var file = _step17.value;
                 if (!openTabs.includes(file.path)) addChoice({
                   path: file.path,
                   label: file.path
@@ -2459,7 +2479,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 config: true
               });
               var _loop5 = function _loop5() {
-                var path = _step17.value;
+                var path = _step18.value;
                 var file = state.files.find(function (candidate) {
                   return candidate.path === path;
                 });
@@ -2470,15 +2490,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   open: true
                 });
               };
-              for (var _iterator17 = _createForOfIteratorHelperLoose(openTabs), _step17; !(_step17 = _iterator17()).done;) {
+              for (var _iterator18 = _createForOfIteratorHelperLoose(openTabs), _step18; !(_step18 = _iterator18()).done;) {
                 _loop5();
               }
               var _loop6 = function _loop6() {
-                var path = _step18.value;
+                var path = _step19.value;
                 var tab = document.createElement("div");
                 tab.className = "project-editor__open-tab";
                 __resourcesDatasetSet(tab, "data-tab-path", path);
-                tab.draggable = true;
+                tab.setAttribute("draggable", "true");
                 var select = document.createElement("button");
                 select.type = "button";
                 __resourcesDatasetSet(select, "data-open-tab", path);
@@ -2502,7 +2522,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
                 tabs.append(tab);
               };
-              for (var _iterator18 = _createForOfIteratorHelperLoose(openTabs), _step18; !(_step18 = _iterator18()).done;) {
+              for (var _iterator19 = _createForOfIteratorHelperLoose(openTabs), _step19; !(_step19 = _iterator19()).done;) {
                 _loop6();
               }
               root.querySelector("[data-project-file-current]").textContent = selected === "config" ? __resourcesDatasetGet(root, "data-config-label") || "Configuration" : selected;
@@ -2515,11 +2535,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               mountEditorMachine(reason);
             };
             _mountEditorMachine = function _mountEditorMachine3() {
-              _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee7(reason) {
+              _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee8(reason) {
                 var _editorController6;
-                var generation, _controller$inspect, controller, _t6;
-                return _regenerator().w(function (_context8) {
-                  while (1) switch (_context8.p = _context8.n) {
+                var generation, _controller$inspect, controller, _t7;
+                return _regenerator().w(function (_context9) {
+                  while (1) switch (_context9.p = _context9.n) {
                     case 0:
                       if (reason === void 0) {
                         reason = "project-open";
@@ -2531,8 +2551,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       __resourcesDatasetDelete(root, "data-editor-machine-id");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "starting");
                       __resourcesDatasetSet(root, "data-editor-machine-reason", reason);
-                      _context8.p = 1;
-                      _context8.n = 2;
+                      _context9.p = 1;
+                      _context9.n = 2;
                       return mountResourcesProjectEditor({
                         root: editorMount,
                         limits: false,
@@ -2545,13 +2565,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         }
                       });
                     case 2:
-                      controller = _context8.v;
+                      controller = _context9.v;
                       if (!(generation !== editorGeneration)) {
-                        _context8.n = 3;
+                        _context9.n = 3;
                         break;
                       }
                       controller.destroy();
-                      return _context8.a(2);
+                      return _context9.a(2);
                     case 3:
                       editorController = controller;
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "theme");
@@ -2565,27 +2585,26 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       ready = true;
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "content");
                       sendContent();
-                      __resourcesDatasetSet(root, "data-editor-languages", editorController.inspect().registeredLanguages.join(","));
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "ready");
                       if (!previewController) renderPreview();
-                      _context8.n = 6;
+                      _context9.n = 6;
                       break;
                     case 4:
-                      _context8.p = 4;
-                      _t6 = _context8.v;
+                      _context9.p = 4;
+                      _t7 = _context9.v;
                       if (!(generation !== editorGeneration)) {
-                        _context8.n = 5;
+                        _context9.n = 5;
                         break;
                       }
-                      return _context8.a(2);
+                      return _context9.a(2);
                     case 5:
                       __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
-                      __resourcesDatasetSet(root, "data-editor-machine-error", _t6.stack || _t6.message);
-                      setStatus("Editor failed to start: " + _t6.message, true, null, "editor");
+                      __resourcesDatasetSet(root, "data-editor-machine-error", _t7.stack || _t7.message);
+                      setStatus("Editor failed to start: " + _t7.message, true, null, "editor");
                     case 6:
-                      return _context8.a(2);
+                      return _context9.a(2);
                   }
-                }, _callee7, null, [[1, 4]]);
+                }, _callee8, null, [[1, 4]]);
               }));
               return _mountEditorMachine.apply(this, arguments);
             };
@@ -2611,17 +2630,17 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               try {
                 var _editorController;
                 return ((_editorController = editorController) == null ? void 0 : _editorController.projectStatus.report(generation, event)) || null;
-              } catch (_error17) {
-                setStatus("Editor status bridge failed: " + _error17.message, "error", null, "editor");
+              } catch (_error18) {
+                setStatus("Editor status bridge failed: " + _error18.message, "error", null, "editor");
                 return null;
               }
             };
             _renderPreview = function _renderPreview3() {
-              _renderPreview = _asyncToGenerator(_regenerator().m(function _callee6() {
+              _renderPreview = _asyncToGenerator(_regenerator().m(function _callee7() {
                 var _state$config8, _previewState$config, _previewState$files$f, _exec2, _previewState$config2, _previewState$config9;
-                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator27, _step27, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator31, _step31, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator33, _step33, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t4, _t5;
-                return _regenerator().w(function (_context7) {
-                  while (1) switch (_context7.p = _context7.n) {
+                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
+                return _regenerator().w(function (_context8) {
+                  while (1) switch (_context8.p = _context8.n) {
                     case 0:
                       copy = function _copy(node, parent2) {
                         if (node.nodeType === Node.TEXT_NODE) {
@@ -2638,8 +2657,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                             return;
                           }
                           if (["html", "body"].includes(name)) {
-                            for (var _iterator28 = _createForOfIteratorHelperLoose(node.childNodes), _step28; !(_step28 = _iterator28()).done;) {
-                              var child = _step28.value;
+                            for (var _iterator29 = _createForOfIteratorHelperLoose(node.childNodes), _step29; !(_step29 = _iterator29()).done;) {
+                              var child = _step29.value;
                               copy(child, parent2);
                             }
                           }
@@ -2661,10 +2680,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var href = node.getAttribute("href");
                           var patterns = ((_previewState$config5 = previewState.config) == null || (_previewState$config5 = _previewState$config5.containerOptions) == null ? void 0 : _previewState$config5.allowedLinkPatterns) || ((_previewState$config6 = previewState.config) == null || (_previewState$config6 = _previewState$config6.container) == null ? void 0 : _previewState$config6.allowedLinkPatterns) || [];
                           if (urlMatchesAllowedPatterns(href, patterns)) {
-                            var _ref21, _previewState$config7, _previewState$config8;
+                            var _ref23, _previewState$config7, _previewState$config8;
                             var attributes = [["href", href]];
                             var authoredTarget = node.getAttribute("target");
-                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref21 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref21.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
+                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref23 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref23.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
                             projectedAttributes.set(element, attributes);
                           } else {
                             reject("The href for " + href + " was omitted because it is outside the allowed URL patterns.");
@@ -2672,22 +2691,22 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         }
                         if (node.namespaceURI === "http://www.w3.org/2000/svg") {
                           var svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
-                          for (var _iterator29 = _createForOfIteratorHelperLoose(node.attributes), _step29; !(_step29 = _iterator29()).done;) {
-                            var _attribute2 = _step29.value;
+                          for (var _iterator30 = _createForOfIteratorHelperLoose(node.attributes), _step30; !(_step30 = _iterator30()).done;) {
+                            var _attribute2 = _step30.value;
                             if (svgAttributes.has(_attribute2.name) && /^[- A-Za-z0-9.,#()%]+$/.test(_attribute2.value)) element.setAttribute(_attribute2.name, _attribute2.value);
                           }
                         }
-                        for (var _iterator30 = _createForOfIteratorHelperLoose(node.childNodes), _step30; !(_step30 = _iterator30()).done;) {
-                          var _child = _step30.value;
+                        for (var _iterator31 = _createForOfIteratorHelperLoose(node.childNodes), _step31; !(_step31 = _iterator31()).done;) {
+                          var _child = _step31.value;
                           copy(_child, element);
                         }
                         parent2.append(element);
                       };
                       if (!(__resourcesDatasetGet(root, "data-output-owner") === "editor")) {
-                        _context7.n = 1;
+                        _context8.n = 1;
                         break;
                       }
-                      return _context7.a(2);
+                      return _context8.a(2);
                     case 1:
                       clearTimeout(editorPreviewTimer);
                       editorPreviewTimer = 0;
@@ -2697,36 +2716,36 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       renderStatusState();
                       try {
                         (_editorController5 = editorController) == null || _editorController5.projectStatus.begin(generation);
-                      } catch (_error16) {
-                        setStatus("Editor status bridge failed: " + _error16.message, "error", null, "editor");
+                      } catch (_error17) {
+                        setStatus("Editor status bridge failed: " + _error17.message, "error", null, "editor");
                       }
                       previewState = state;
                       if (!((_state$config8 = state.config) != null && _state$config8.build)) {
-                        _context7.n = 6;
+                        _context8.n = 6;
                         break;
                       }
-                      _context7.p = 2;
-                      _t4 = normalizeProjectSnapshot;
-                      _context7.n = 3;
+                      _context8.p = 2;
+                      _t5 = normalizeProjectSnapshot;
+                      _context8.n = 3;
                       return buildProject2(state.files, state.config);
                     case 3:
-                      previewState = _t4(_context7.v);
-                      _context7.n = 5;
+                      previewState = _t5(_context8.v);
+                      _context8.n = 5;
                       break;
                     case 4:
-                      _context7.p = 4;
-                      _t5 = _context7.v;
+                      _context8.p = 4;
+                      _t6 = _context8.v;
                       if (generation === previewGeneration) {
                         __resourcesDatasetSet(root, "data-output-machine-state", "failed");
-                        setStatus("Build blocked: " + _t5.message, "error", null, "output");
+                        setStatus("Build blocked: " + _t6.message, "error", null, "output");
                       }
-                      return _context7.a(2);
+                      return _context8.a(2);
                     case 5:
                       if (!(generation !== previewGeneration)) {
-                        _context7.n = 6;
+                        _context8.n = 6;
                         break;
                       }
-                      return _context7.a(2);
+                      return _context8.a(2);
                     case 6:
                       entry = ((_previewState$config = previewState.config) == null ? void 0 : _previewState$config.entry) || "index.html";
                       source = ((_previewState$files$f = previewState.files.find(function (file) {
@@ -2737,7 +2756,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       outputOptions = ((_previewState$config2 = previewState.config) == null ? void 0 : _previewState$config2.output) || {};
                       useOutputFrame = false;
                       if (!useOutputFrame) {
-                        _context7.n = 9;
+                        _context8.n = 9;
                         break;
                       }
                       if (!outputFrame) {
@@ -2776,17 +2795,17 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         preview.append(outputFrame);
                       }
                       surfaceHost = outputFrame;
-                      _context7.n = 7;
+                      _context8.n = 7;
                       return outputFrameReady;
                     case 7:
                       if (!(generation !== previewGeneration)) {
-                        _context7.n = 8;
+                        _context8.n = 8;
                         break;
                       }
-                      return _context7.a(2);
+                      return _context8.a(2);
                     case 8:
                       __resourcesDatasetSet(preview, "data-output-surface", "iframe");
-                      _context7.n = 10;
+                      _context8.n = 10;
                       break;
                     case 9:
                       surfaceHost = document.createElement("div");
@@ -2825,8 +2844,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       resolveModulePath = function resolveModulePath(from, specifier) {
                         var parts = from.split("/");
                         parts.pop();
-                        for (var _iterator26 = _createForOfIteratorHelperLoose(specifier.split("/")), _step26; !(_step26 = _iterator26()).done;) {
-                          var part = _step26.value;
+                        for (var _iterator27 = _createForOfIteratorHelperLoose(specifier.split("/")), _step27; !(_step27 = _iterator27()).done;) {
+                          var part = _step27.value;
                           if (!part || part === ".") continue;
                           if (part === "..") parts.pop();else parts.push(part);
                         }
@@ -2850,36 +2869,36 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         if (new RegExp("^\\s*export\\s", "m").test(body)) throw new Error("Unsupported module export in " + path);
                         return imports.join("\n") + "\n" + body;
                       };
-                      _iterator27 = _createForOfIteratorHelperLoose(parsed.querySelectorAll("script"));
+                      _iterator28 = _createForOfIteratorHelperLoose(parsed.querySelectorAll("script"));
                     case 11:
-                      if ((_step27 = _iterator27()).done) {
-                        _context7.n = 17;
+                      if ((_step28 = _iterator28()).done) {
+                        _context8.n = 17;
                         break;
                       }
-                      script = _step27.value;
+                      script = _step28.value;
                       ancestor = script.parentElement;
                       blocked = false;
                     case 12:
                       if (!(ancestor && ancestor !== parsed.body)) {
-                        _context7.n = 14;
+                        _context8.n = 14;
                         break;
                       }
                       if (!(!structuralElement(ancestor) && !allowed.has(ancestor.localName))) {
-                        _context7.n = 13;
+                        _context8.n = 13;
                         break;
                       }
                       blocked = true;
-                      return _context7.a(3, 14);
+                      return _context8.a(3, 14);
                     case 13:
                       ancestor = ancestor.parentElement;
-                      _context7.n = 12;
+                      _context8.n = 12;
                       break;
                     case 14:
                       if (!blocked) {
-                        _context7.n = 15;
+                        _context8.n = 15;
                         break;
                       }
-                      return _context7.a(3, 16);
+                      return _context8.a(3, 16);
                     case 15:
                       src = script.getAttribute("src");
                       module = script.getAttribute("type") === "module";
@@ -2895,13 +2914,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         code: module ? "(async function () {\n" + _bundleProjectModule(entry, script.textContent) + "\n})();" : script.textContent
                       });
                     case 16:
-                      _context7.n = 11;
+                      _context8.n = 11;
                       break;
                     case 17:
                       fragment = document.createDocumentFragment();
                       projectedAttributes = new WeakMap();
-                      for (_iterator31 = _createForOfIteratorHelperLoose(parsed.body.childNodes); !(_step31 = _iterator31()).done;) {
-                        child = _step31.value;
+                      for (_iterator32 = _createForOfIteratorHelperLoose(parsed.body.childNodes); !(_step32 = _iterator32()).done;) {
+                        child = _step32.value;
                         copy(child, fragment);
                       }
                       staging = document.createElement("div");
@@ -2913,8 +2932,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var attribute = node.attributes[index];
                           attributes.push([attribute.name, attribute.value]);
                         }
-                        for (var _iterator32 = _createForOfIteratorHelperLoose(projectedAttributes.get(node) || []), _step32; !(_step32 = _iterator32()).done;) {
-                          var _attribute3 = _step32.value;
+                        for (var _iterator33 = _createForOfIteratorHelperLoose(projectedAttributes.get(node) || []), _step33; !(_step33 = _iterator33()).done;) {
+                          var _attribute3 = _step33.value;
                           attributes.push(_attribute3);
                         }
                         var children = [];
@@ -2940,28 +2959,28 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       for (_index3 = 0; _index3 < styles.length; _index3++) cssParts.push(styles[_index3].textContent || "");
                       _loop7 = _regenerator().m(function _loop7() {
                         var path, file;
-                        return _regenerator().w(function (_context6) {
-                          while (1) switch (_context6.n) {
+                        return _regenerator().w(function (_context7) {
+                          while (1) switch (_context7.n) {
                             case 0:
-                              path = _step33.value;
+                              path = _step34.value;
                               file = previewState.files.find(function (candidate) {
                                 return candidate.path === path;
                               });
                               if (file) cssParts.push(file.content || "");
                             case 1:
-                              return _context6.a(2);
+                              return _context7.a(2);
                           }
                         }, _loop7);
                       });
-                      _iterator33 = _createForOfIteratorHelperLoose(stylesheetPaths);
+                      _iterator34 = _createForOfIteratorHelperLoose(stylesheetPaths);
                     case 18:
-                      if ((_step33 = _iterator33()).done) {
-                        _context7.n = 20;
+                      if ((_step34 = _iterator34()).done) {
+                        _context8.n = 20;
                         break;
                       }
-                      return _context7.d(_regeneratorValues(_loop7()), 19);
+                      return _context8.d(_regeneratorValues(_loop7()), 19);
                     case 19:
-                      _context7.n = 18;
+                      _context8.n = 18;
                       break;
                     case 20:
                       css = cssParts.join("\n");
@@ -2969,10 +2988,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       if (css) renderedCss = css;
                       stagedRoot = "";
                       if (!useOutputFrame) {
-                        _context7.n = 23;
+                        _context8.n = 23;
                         break;
                       }
-                      _context7.n = 21;
+                      _context8.n = 21;
                       return new Promise(function (resolve) {
                         var _receive = function receive(event) {
                           var _event$data3;
@@ -2991,36 +3010,36 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       });
                     case 21:
                       if (!(generation !== previewGeneration)) {
-                        _context7.n = 22;
+                        _context8.n = 22;
                         break;
                       }
-                      return _context7.a(2);
+                      return _context8.a(2);
                     case 22:
                       surfaceBody = (_surfaceHost$contentD = surfaceHost.contentDocument) == null ? void 0 : _surfaceHost$contentD.getElementById(stagedRoot);
                       if (surfaceBody) {
-                        _context7.n = 23;
+                        _context8.n = 23;
                         break;
                       }
                       throw new Error("Project output frame root is unavailable");
                     case 23:
                       clearTimeout(previewTimer);
-                      previewTimer = setTimeout(_asyncToGenerator(_regenerator().m(function _callee5() {
-                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, controller, _previewController4, _i9, _arr6, child, inspection, machine, _t3;
-                        return _regenerator().w(function (_context5) {
-                          while (1) switch (_context5.p = _context5.n) {
+                      previewTimer = setTimeout(_asyncToGenerator(_regenerator().m(function _callee6() {
+                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, controller, _previewController4, _i9, _arr6, child, inspection, machine, _t4;
+                        return _regenerator().w(function (_context6) {
+                          while (1) switch (_context6.p = _context6.n) {
                             case 0:
                               if (!(generation !== previewGeneration)) {
-                                _context5.n = 1;
+                                _context6.n = 1;
                                 break;
                               }
-                              return _context5.a(2);
+                              return _context6.a(2);
                             case 1:
-                              _context5.p = 1;
+                              _context6.p = 1;
                               allowedTags = [];
                               allowed.forEach(function (tag) {
                                 if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
                               });
-                              _context5.n = 2;
+                              _context6.n = 2;
                               return mountResourcesProjectPreview({
                                 rootKey: String(generation),
                                 root: surfaceBody,
@@ -3049,27 +3068,27 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                 }
                               });
                             case 2:
-                              controller = _context5.v;
+                              controller = _context6.v;
                               if (!(generation !== previewGeneration)) {
-                                _context5.n = 3;
+                                _context6.n = 3;
                                 break;
                               }
                               controller.destroy();
-                              _context5.n = 10;
+                              _context6.n = 10;
                               break;
                             case 3:
                               if (!useOutputFrame) {
-                                _context5.n = 5;
+                                _context6.n = 5;
                                 break;
                               }
                               controller.setContent(outputTree);
-                              _context5.n = 4;
+                              _context6.n = 4;
                               return controller.run(scripts);
                             case 4:
-                              _context5.n = 6;
+                              _context6.n = 6;
                               break;
                             case 5:
-                              _context5.n = 6;
+                              _context6.n = 6;
                               return controller.load({
                                 tree: outputTree,
                                 stylesheets: renderedCss ? [renderedCss] : [],
@@ -3077,10 +3096,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               });
                             case 6:
                               if (!useOutputFrame) {
-                                _context5.n = 9;
+                                _context6.n = 9;
                                 break;
                               }
-                              _context5.n = 7;
+                              _context6.n = 7;
                               return new Promise(function (resolve) {
                                 var _receive2 = function receive(event) {
                                   var _event$data4;
@@ -3096,11 +3115,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               });
                             case 7:
                               if (!(generation !== previewGeneration)) {
-                                _context5.n = 8;
+                                _context6.n = 8;
                                 break;
                               }
                               controller.destroy();
-                              return _context5.a(2);
+                              return _context6.a(2);
                             case 8:
                               outputFrame.hidden = false;
                               for (_i9 = 0, _arr6 = [].concat(preview.children); _i9 < _arr6.length; _i9++) {
@@ -3118,28 +3137,28 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               __resourcesDatasetSet(preview, "data-project-machine-id", (machine == null ? void 0 : machine.machineId) || "wasm-web-machine");
                               __resourcesDatasetSet(preview, "data-project-programs", String((inspection == null ? void 0 : inspection.programs) || 0));
                             case 10:
-                              _context5.n = 12;
+                              _context6.n = 12;
                               break;
                             case 11:
-                              _context5.p = 11;
-                              _t3 = _context5.v;
+                              _context6.p = 11;
+                              _t4 = _context6.v;
                               if (generation === previewGeneration) __resourcesDatasetSet(root, "data-output-machine-state", "failed");
-                              setStatus("Blocked: " + _t3.message, true, null, "output");
+                              setStatus("Blocked: " + _t4.message, true, null, "output");
                               queueMicrotask(function () {
                                 if (generation === previewGeneration) routeProjectStatus(generation, {
                                   type: "blocked",
-                                  message: _t3.message
+                                  message: _t4.message
                                 });
                               });
                             case 12:
-                              return _context5.a(2);
+                              return _context6.a(2);
                           }
-                        }, _callee5, null, [[1, 11]]);
+                        }, _callee6, null, [[1, 11]]);
                       })), 120);
                     case 24:
-                      return _context7.a(2);
+                      return _context8.a(2);
                   }
-                }, _callee6, null, [[2, 4]]);
+                }, _callee7, null, [[2, 4]]);
               }));
               return _renderPreview.apply(this, arguments);
             };
@@ -3173,10 +3192,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 readOnly: readOnly || selected === "config",
                 resetHistoryOnEdit: resetHistoryOnEdit
               });
-              var editorInspection = editorController.inspect();
-              __resourcesDatasetSet(root, "data-editor-language", editorInspection.language);
-              __resourcesDatasetSet(root, "data-editor-language-loaded", String(editorInspection.languageLoaded));
-              __resourcesDatasetSet(root, "data-editor-syntax-tree", editorInspection.syntaxTree);
               __resourcesDatasetDelete(root, "data-editor-loading");
             };
             language = function _language() {
@@ -3249,11 +3264,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             snapshotUrl = (_root$querySelector = root.querySelector("[data-project-snapshot-url]")) == null ? void 0 : __resourcesDatasetGet(_root$querySelector, "data-project-snapshot-url");
             workspacePayload = null;
             if (!snapshotUrl) {
-              _context13.n = 6;
+              _context14.n = 6;
               break;
             }
-            _context13.p = 1;
-            _context13.n = 2;
+            _context14.p = 1;
+            _context14.n = 2;
             return fetch(snapshotUrl, {
               headers: {
                 Accept: "application/json"
@@ -3261,47 +3276,47 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               cache: "no-store"
             });
           case 2:
-            response = _context13.v;
+            response = _context14.v;
             if (response.ok) {
-              _context13.n = 3;
+              _context14.n = 3;
               break;
             }
             throw new Error("Project workspace response: " + response.status);
           case 3:
-            _context13.n = 4;
+            _context14.n = 4;
             return response.json();
           case 4:
-            workspacePayload = _context13.v;
+            workspacePayload = _context14.v;
             snapshotField.value = JSON.stringify(workspacePayload.snapshot);
             versionCount.textContent = String(workspacePayload.versionCount || 1);
             draftFlash = (_root$closest2 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest2.querySelector("[data-draft-flash]");
             if (draftFlash && workspacePayload.hasUnpublishedChanges) draftFlash.hidden = false;else draftFlash == null || draftFlash.remove();
-            _context13.n = 6;
+            _context14.n = 6;
             break;
           case 5:
-            _context13.p = 5;
-            _t9 = _context13.v;
+            _context14.p = 5;
+            _t0 = _context14.v;
             __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
             __resourcesDatasetSet(status, "data-state", "error");
             status.hidden = false;
             statusError.hidden = false;
-            statusError.textContent = "Project failed to load: " + _t9.message;
-            return _context13.a(2);
+            statusError.textContent = "Project failed to load: " + _t0.message;
+            return _context14.a(2);
           case 6:
             if (!(typeof (snapshotField == null ? void 0 : snapshotField.value) !== "string")) {
-              _context13.n = 7;
+              _context14.n = 7;
               break;
             }
             throw new Error("Project snapshot field is unavailable");
           case 7:
-            _context13.p = 7;
+            _context14.p = 7;
             parsedSnapshot = JSON.parse(snapshotField.value);
-            _context13.n = 9;
+            _context14.n = 9;
             break;
           case 8:
-            _context13.p = 8;
-            _t0 = _context13.v;
-            throw new Error("Project snapshot JSON is invalid: " + ((_t0 == null ? void 0 : _t0.message) || _t0));
+            _context14.p = 8;
+            _t1 = _context14.v;
+            throw new Error("Project snapshot JSON is invalid: " + ((_t1 == null ? void 0 : _t1.message) || _t1));
           case 9:
             state = normalizeProjectSnapshot(parsedSnapshot);
             historyInEditorMachine = snapshotField.value.length <= 256e3;
@@ -3419,12 +3434,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");
             for (_i4 = 0, _arr2 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i4 < _arr2.length; _i4++) {
-              _arr2$_i = _arr2[_i4], _button = _arr2$_i[0], _label = _arr2$_i[1], text = _arr2$_i[2];
-              _button.type = "button";
-              _button.className = "project-editor__tab-scroll";
-              _button.setAttribute("aria-label", _label);
-              _button.textContent = text;
-              _button.hidden = true;
+              _arr2$_i = _arr2[_i4], _button2 = _arr2$_i[0], _label = _arr2$_i[1], text = _arr2$_i[2];
+              _button2.type = "button";
+              _button2.className = "project-editor__tab-scroll";
+              _button2.setAttribute("aria-label", _label);
+              _button2.textContent = text;
+              _button2.hidden = true;
             }
             openTabList.before(tabScrollBack);
             openTabList.after(tabScrollForward);
@@ -3459,7 +3474,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             openTabList.addEventListener("dragstart", function (event) {
               var _event$target$closest2;
               draggedTab = ((_event$target$closest2 = event.target.closest("[data-tab-path]")) == null ? void 0 : __resourcesDatasetGet(_event$target$closest2, "data-tab-path")) || "";
-              if (draggedTab) event.dataTransfer.effectAllowed = "move";
+              if (draggedTab) {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", draggedTab);
+              }
             });
             openTabList.addEventListener("dragover", function (event) {
               if (draggedTab) event.preventDefault();
@@ -3476,6 +3494,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               draggedTab = "";
               renderTabs();
               requestAnimationFrame(syncTabOverflow);
+            });
+            openTabList.addEventListener("dragend", function () {
+              draggedTab = "";
             });
             fileTrigger = root.querySelector("[data-project-file-trigger]");
             fileTriggerIcon = fileTrigger.querySelector("svg");
@@ -3587,8 +3608,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 var _root$closest9;
                 var projectName = String(((_root$closest9 = root.closest("form")) == null || (_root$closest9 = _root$closest9.elements) == null || (_root$closest9 = _root$closest9.namedItem("slug")) == null ? void 0 : _root$closest9.value) || __resourcesDatasetGet(root, "data-project-slug") || "").trim();
                 downloadProjectArchive(state, projectName);
-              } catch (_error15) {
-                setStatus(_error15.message, "error");
+              } catch (_error16) {
+                setStatus(_error16.message, "error");
               }
             });
             archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee3() {
@@ -3636,7 +3657,55 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             presentButton = root.querySelector("[data-project-present]");
             presentClose = root.querySelector("[data-project-present-close]");
             previewSection = root.querySelector(".project-editor__preview");
+            outputOverflow = root.querySelector("[data-output-overflow]");
+            outputOverflowTrigger = root.querySelector("[data-output-overflow-trigger]");
+            outputOverflowMenu = root.querySelector("[data-output-overflow-menu]");
+            fullscreenButton = root.querySelector("[data-project-fullscreen]");
             projectContentBlock = root.closest(".content-block");
+            outputOverflowTrigger.addEventListener("click", function () {
+              var opening = outputOverflowMenu.hidden;
+              outputOverflowMenu.hidden = !opening;
+              outputOverflowTrigger.setAttribute("aria-expanded", String(opening));
+              if (opening) fullscreenButton.focus();
+            });
+            fullscreenButton.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee4() {
+              var frame, _t3;
+              return _regenerator().w(function (_context4) {
+                while (1) switch (_context4.p = _context4.n) {
+                  case 0:
+                    closeOutputOverflow();
+                    frame = root.querySelector(".project-editor__output-frame");
+                    if (frame) {
+                      _context4.n = 1;
+                      break;
+                    }
+                    return _context4.a(2, setStatus("Output is not ready", "error"));
+                  case 1:
+                    _context4.p = 1;
+                    _context4.n = 2;
+                    return frame.requestFullscreen();
+                  case 2:
+                    _context4.n = 4;
+                    break;
+                  case 3:
+                    _context4.p = 3;
+                    _t3 = _context4.v;
+                    setStatus("Full screen failed: " + ((_t3 == null ? void 0 : _t3.message) || String(_t3)) + " (" + typeof frame.requestFullscreen + ")", "error");
+                  case 4:
+                    return _context4.a(2);
+                }
+              }, _callee4, null, [[1, 3]]);
+            })));
+            outputOverflowMenu.addEventListener("keydown", function (event) {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              closeOutputOverflow({
+                focus: true
+              });
+            });
+            document.addEventListener("pointerdown", function (event) {
+              if (!outputOverflow.contains(event.target)) closeOutputOverflow();
+            });
             presentButton.addEventListener("click", function (event) {
               return openPresentation({
                 keyboard: event.detail === 0
@@ -3668,6 +3737,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
             projectCloseHome = projectClose == null ? void 0 : projectClose.parentElement;
             projectViewControls = root.querySelector(".project-editor__view-controls");
+            projectDetails = root.querySelector('[data-project-view="details"]');
             splitter.addEventListener("pointerdown", function (event) {
               splitter.setPointerCapture(event.pointerId);
               setSplit(event.clientX);
@@ -3684,13 +3754,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             });
             _loop9 = _regenerator().m(function _loop9() {
               var button;
-              return _regenerator().w(function (_context11) {
-                while (1) switch (_context11.n) {
+              return _regenerator().w(function (_context12) {
+                while (1) switch (_context12.n) {
                   case 0:
-                    button = _step21.value;
+                    button = _step22.value;
                     button.addEventListener("click", function () {
                       var _editorController7;
-                      var detailsButton = root.querySelector('[data-project-view="details"]');
+                      var detailsButton = projectDetails;
                       if (__resourcesDatasetGet(button, "data-project-view") === "details") {
                         if (narrowWorkspace.matches) {
                           var showing = __resourcesDatasetGet(projectLayout, "data-mobile-view") === "details";
@@ -3706,8 +3776,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       } else {
                         __resourcesDatasetDelete(projectLayout, "data-mobile-view");
                         __resourcesDatasetSet(workspace, "data-view", __resourcesDatasetGet(button, "data-project-view"));
-                        for (var _iterator35 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step35; !(_step35 = _iterator35()).done;) {
-                          var item = _step35.value;
+                        for (var _iterator36 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step36; !(_step36 = _iterator36()).done;) {
+                          var item = _step36.value;
                           item.setAttribute("aria-pressed", item === button ? "true" : "false");
                         }
                         if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
@@ -3716,19 +3786,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController7 = editorController) == null || _editorController7.focus();
                     });
                   case 1:
-                    return _context11.a(2);
+                    return _context12.a(2);
                 }
               }, _loop9);
             });
-            _iterator21 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
+            _iterator22 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
           case 10:
-            if ((_step21 = _iterator21()).done) {
-              _context13.n = 12;
+            if ((_step22 = _iterator22()).done) {
+              _context14.n = 12;
               break;
             }
-            return _context13.d(_regeneratorValues(_loop9()), 11);
+            return _context14.d(_regeneratorValues(_loop9()), 11);
           case 11:
-            _context13.n = 10;
+            _context14.n = 10;
             break;
           case 12:
             narrowWorkspace = matchMedia("(max-width: 760px)");
@@ -3746,46 +3816,46 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             if (template && (_state$config6 = state.config) != null && _state$config6.template) template.value = state.config.template;
             if (linkPatterns) linkPatterns.value = (((_state$config7 = state.config) == null || (_state$config7 = _state$config7.containerOptions) == null ? void 0 : _state$config7.allowedLinkPatterns) || []).join("\n");
             growTextarea(linkPatterns);
-            template == null || template.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee4() {
+            template == null || template.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee5() {
               var next, previousSnapshot;
-              return _regenerator().w(function (_context4) {
-                while (1) switch (_context4.n) {
+              return _regenerator().w(function (_context5) {
+                while (1) switch (_context5.n) {
                   case 0:
                     next = STARTING_POINTS[template.value];
                     if (next) {
-                      _context4.n = 1;
+                      _context5.n = 1;
                       break;
                     }
-                    return _context4.a(2);
+                    return _context5.a(2);
                   case 1:
                     if (memoryOnly && (location.pathname === "/try" || location.pathname.startsWith("/try/"))) {
                       replaceFrontendPath("/try/" + encodeURIComponent(template.value));
                     }
                     if (!pending2) {
-                      _context4.n = 4;
+                      _context5.n = 4;
                       break;
                     }
                     if (!templateOnlyPending) {
-                      _context4.n = 2;
+                      _context5.n = 2;
                       break;
                     }
                     clearTimeout(saveTimer);
                     pending2 = false;
                     pendingDestructive = false;
-                    _context4.n = 4;
+                    _context5.n = 4;
                     break;
                   case 2:
                     if (!(draft || memoryOnly)) {
-                      _context4.n = 3;
+                      _context5.n = 3;
                       break;
                     }
                     checkpointDraft({
                       destructive: true
                     });
-                    _context4.n = 4;
+                    _context5.n = 4;
                     break;
                   case 3:
-                    _context4.n = 4;
+                    _context5.n = 4;
                     return save();
                   case 4:
                     previousSnapshot = state;
@@ -3793,49 +3863,49 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       previousSnapshot: previousSnapshot
                     });
                   case 5:
-                    return _context4.a(2);
+                    return _context5.a(2);
                 }
-              }, _callee4);
+              }, _callee5);
             })));
             _loop0 = _regenerator().m(function _loop0() {
               var textarea;
-              return _regenerator().w(function (_context12) {
-                while (1) switch (_context12.n) {
+              return _regenerator().w(function (_context13) {
+                while (1) switch (_context13.n) {
                   case 0:
-                    textarea = _step23.value;
+                    textarea = _step24.value;
                     textarea.addEventListener("input", function () {
                       return growTextarea(textarea);
                     });
                     growTextarea(textarea);
                   case 1:
-                    return _context12.a(2);
+                    return _context13.a(2);
                 }
               }, _loop0);
             });
-            _iterator23 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
+            _iterator24 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
           case 13:
-            if ((_step23 = _iterator23()).done) {
-              _context13.n = 15;
+            if ((_step24 = _iterator24()).done) {
+              _context14.n = 15;
               break;
             }
-            return _context13.d(_regeneratorValues(_loop0()), 14);
+            return _context14.d(_regeneratorValues(_loop0()), 14);
           case 14:
-            _context13.n = 13;
+            _context14.n = 13;
             break;
           case 15:
             linkPatterns == null || linkPatterns.addEventListener("input", updateContainer);
-            _iterator24 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select")) || []);
+            _iterator25 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select")) || []);
           case 16:
-            if ((_step24 = _iterator24()).done) {
-              _context13.n = 19;
+            if ((_step25 = _iterator25()).done) {
+              _context14.n = 19;
               break;
             }
-            field = _step24.value;
+            field = _step25.value;
             if (!field.matches("[data-project-template], #project-link-patterns, [data-version-title-input]")) {
-              _context13.n = 17;
+              _context14.n = 17;
               break;
             }
-            return _context13.a(3, 18);
+            return _context14.a(3, 18);
           case 17:
             field.addEventListener("input", function () {
               unsavedChangeCount += 1;
@@ -3850,7 +3920,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               }
             });
           case 18:
-            _context13.n = 16;
+            _context14.n = 16;
             break;
           case 19:
             openVersionHistory = function openVersionHistory() {
@@ -3892,9 +3962,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (draft || memoryOnly) checkpointDraft();else if (pending2) save();
             }, CHECKPOINT_MS);
             setInterval(function () {
-              for (var _iterator25 = _createForOfIteratorHelperLoose(((_root$closest0 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest0.querySelectorAll("[data-version-time]")) || []), _step25; !(_step25 = _iterator25()).done;) {
+              for (var _iterator26 = _createForOfIteratorHelperLoose(((_root$closest0 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest0.querySelectorAll("[data-version-time]")) || []), _step26; !(_step26 = _iterator26()).done;) {
                 var _root$closest0;
-                var _label2 = _step25.value;
+                var _label2 = _step26.value;
                 _label2.textContent = relativeVersionTime(__resourcesDatasetGet(_label2, "data-version-time"));
               }
             }, 3e4);
@@ -3912,9 +3982,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               once: true
             });
           case 20:
-            return _context13.a(2);
+            return _context14.a(2);
         }
-      }, _callee1, null, [[7, 8], [1, 5]]);
+      }, _callee10, null, [[7, 8], [1, 5]]);
     }));
     return _mountProjectRoot.apply(this, arguments);
   }
@@ -3937,10 +4007,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           type: "focus"
         }, "*");
       },
-      closeBlogPresentation = function closeBlogPresentation(_temp10) {
-        var _ref24 = _temp10 === void 0 ? {} : _temp10,
-          _ref24$focus = _ref24.focus,
-          focus = _ref24$focus === void 0 ? true : _ref24$focus;
+      closeBlogPresentation = function closeBlogPresentation(_temp11) {
+        var _ref26 = _temp11 === void 0 ? {} : _temp11,
+          _ref26$focus = _ref26.focus,
+          focus = _ref26$focus === void 0 ? true : _ref26$focus;
         if (!figure.classList.contains("blog-example-block--fullscreen")) return;
         figure.classList.remove("blog-example-block--fullscreen");
         blogContentBlock == null || blogContentBlock.style.removeProperty("animation");

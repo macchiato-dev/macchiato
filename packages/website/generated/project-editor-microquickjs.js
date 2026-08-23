@@ -27654,6 +27654,16 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       theme: currentTheme
     });
   };
+  globalThis.__codeEditorFocus = function () {
+    var view = globalThis.__codeEditorView;
+    if (!view) return JSON.stringify({
+      focused: false
+    });
+    view.focus();
+    return JSON.stringify({
+      focused: true
+    });
+  };
   globalThis.__codeEditorSetContent = function (json) {
     var request = JSON.parse(json);
     if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");

@@ -26696,6 +26696,12 @@ globalThis.__codeEditorSetTheme = (json) => {
   currentTheme = requested;
   return JSON.stringify({ theme: currentTheme });
 };
+globalThis.__codeEditorFocus = () => {
+  const view = globalThis.__codeEditorView;
+  if (!view) return JSON.stringify({ focused: false });
+  view.focus();
+  return JSON.stringify({ focused: true });
+};
 globalThis.__codeEditorSetContent = (json) => {
   const request = JSON.parse(json);
   if (typeof request.content !== "string") throw new TypeError("Editor content must be a string");
@@ -27902,6 +27908,8 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     showTimer = setTimeout(show, 600);
   });
   button.addEventListener("pointerleave", hide);
+  button.addEventListener("pointerdown", hide);
+  button.addEventListener("dragstart", hide);
   button.addEventListener("focus", show);
   button.addEventListener("blur", hide);
   button.addEventListener("instanttooltiphide", hide);
@@ -28217,10 +28225,6 @@ async function mountProjectRoot(root) {
       readOnly: readOnly2 || selected === "config",
       resetHistoryOnEdit
     });
-    const editorInspection = editorController.inspect();
-    root.dataset.editorLanguage = editorInspection.language;
-    root.dataset.editorLanguageLoaded = String(editorInspection.languageLoaded);
-    root.dataset.editorSyntaxTree = editorInspection.syntaxTree;
     delete root.dataset.editorLoading;
   }
   async function renderPreview() {
@@ -28622,7 +28626,6 @@ ${bundleProjectModule(entry, script.textContent)}
       ready = true;
       root.dataset.editorMachineStage = "content";
       sendContent();
-      root.dataset.editorLanguages = editorController.inspect().registeredLanguages.join(",");
       root.dataset.editorMachineStage = "ready";
       if (!previewController) renderPreview();
     } catch (error) {
@@ -28646,6 +28649,9 @@ ${bundleProjectModule(entry, script.textContent)}
     if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
     sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
+    for (const button of tabs.querySelectorAll("[data-instant-tooltip-attached='true']")) {
+      button._hideInstantTooltip?.();
+    }
     tabs.replaceChildren();
     const availableChoices = document.createElement("div");
     availableChoices.className = "project-editor__file-choices";
@@ -28703,7 +28709,7 @@ ${bundleProjectModule(entry, script.textContent)}
       const tab = document.createElement("div");
       tab.className = "project-editor__open-tab";
       tab.dataset.tabPath = path;
-      tab.draggable = true;
+      tab.setAttribute("draggable", "true");
       const select = document.createElement("button");
       select.type = "button";
       select.dataset.openTab = path;
@@ -29084,7 +29090,10 @@ ${bundleProjectModule(entry, script.textContent)}
   let draggedTab = "";
   openTabList.addEventListener("dragstart", (event) => {
     draggedTab = event.target.closest("[data-tab-path]")?.dataset.tabPath || "";
-    if (draggedTab) event.dataTransfer.effectAllowed = "move";
+    if (draggedTab) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedTab);
+    }
   });
   openTabList.addEventListener("dragover", (event) => {
     if (draggedTab) event.preventDefault();
@@ -29100,6 +29109,9 @@ ${bundleProjectModule(entry, script.textContent)}
     draggedTab = "";
     renderTabs();
     requestAnimationFrame(syncTabOverflow);
+  });
+  openTabList.addEventListener("dragend", () => {
+    draggedTab = "";
   });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
   const fileTriggerIcon = fileTrigger.querySelector("svg");
@@ -29245,7 +29257,40 @@ ${bundleProjectModule(entry, script.textContent)}
   const presentButton = root.querySelector("[data-project-present]");
   const presentClose = root.querySelector("[data-project-present-close]");
   const previewSection = root.querySelector(".project-editor__preview");
+  const outputOverflow = root.querySelector("[data-output-overflow]");
+  const outputOverflowTrigger = root.querySelector("[data-output-overflow-trigger]");
+  const outputOverflowMenu = root.querySelector("[data-output-overflow-menu]");
+  const fullscreenButton = root.querySelector("[data-project-fullscreen]");
   const projectContentBlock = root.closest(".content-block");
+  function closeOutputOverflow({ focus = false } = {}) {
+    outputOverflowMenu.hidden = true;
+    outputOverflowTrigger.setAttribute("aria-expanded", "false");
+    if (focus) outputOverflowTrigger.focus();
+  }
+  outputOverflowTrigger.addEventListener("click", () => {
+    const opening = outputOverflowMenu.hidden;
+    outputOverflowMenu.hidden = !opening;
+    outputOverflowTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) fullscreenButton.focus();
+  });
+  fullscreenButton.addEventListener("click", async () => {
+    closeOutputOverflow();
+    const frame = root.querySelector(".project-editor__output-frame");
+    if (!frame) return setStatus("Output is not ready", "error");
+    try {
+      await frame.requestFullscreen();
+    } catch (error) {
+      setStatus(`Full screen failed: ${error?.message || String(error)} (${typeof frame.requestFullscreen})`, "error");
+    }
+  });
+  outputOverflowMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeOutputOverflow({ focus: true });
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!outputOverflow.contains(event.target)) closeOutputOverflow();
+  });
   function closePresentation() {
     delete root.dataset.presenting;
     document.body.classList.remove("project-presenting");
@@ -29290,9 +29335,16 @@ ${bundleProjectModule(entry, script.textContent)}
   const projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
   const projectCloseHome = projectClose?.parentElement;
   const projectViewControls = root.querySelector(".project-editor__view-controls");
+  const projectDetails = root.querySelector('[data-project-view="details"]');
   function placeProjectClose(detailsVisible) {
     if (!projectClose) return;
-    (detailsVisible ? projectCloseHome : projectViewControls).append(projectClose);
+    if (detailsVisible) {
+      projectCloseHome.insertBefore(projectDetails, projectClose);
+      projectCloseHome.append(projectClose);
+    } else {
+      projectViewControls.append(projectDetails);
+      projectViewControls.append(projectClose);
+    }
   }
   function setSplit(clientX) {
     const rect = workspace.getBoundingClientRect();
@@ -29315,7 +29367,7 @@ ${bundleProjectModule(entry, script.textContent)}
     splitter.setAttribute("aria-valuenow", String(next));
   });
   for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
-    const detailsButton = root.querySelector('[data-project-view="details"]');
+    const detailsButton = projectDetails;
     if (button.dataset.projectView === "details") {
       if (narrowWorkspace.matches) {
         const showing = projectLayout.dataset.mobileView === "details";
@@ -29342,7 +29394,7 @@ ${bundleProjectModule(entry, script.textContent)}
   function syncResponsiveWorkspace() {
     const view = narrowWorkspace.matches ? "preview" : "split";
     const selectedButton = root.querySelector(`[data-project-view="${view}"]`);
-    const detailsButton = root.querySelector('[data-project-view="details"]');
+    const detailsButton = projectDetails;
     if (narrowWorkspace.matches) {
       projectLayout.dataset.detailsVisible = "false";
       delete projectLayout.dataset.mobileView;
