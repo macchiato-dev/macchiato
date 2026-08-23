@@ -184,3 +184,18 @@ linear memory. A post-link transformation tool such as Walrus may be useful for
 adding or rewriting memories, imports, exports, data segments, and the custom
 sections used for stamped resources. This belongs in reproducible runtime build
 tooling and must not add corresponding logic to the browser controller.
+
+A same-origin iframe can receive the parent's ordinary `WebAssembly.Memory`
+object directly and observe the same backing buffer without copying. That is a
+useful shared-buffer arrangement on the browser's single main thread, but it is
+not concurrent shared memory and needs no atomics. Actual concurrent access
+uses a shared memory backed by `SharedArrayBuffer`; on the web that requires a
+cross-origin-isolated deployment and atomic coordination. The controller may
+grant either memory as an opaque environment capability, while buffer layout
+and synchronization remain runtime concerns.
+
+Wasm GC is separate again. GC-managed structs and arrays can reduce runtime
+bookkeeping within one machine, but they do not replace a shared linear-memory
+protocol between page and iframe. Build experiments should measure multiple
+linear memories, shared memory, and Wasm GC independently before combining
+them.
