@@ -1050,6 +1050,8 @@ body.project-presenting .content-block:has(.project-editor__preview--presenting)
 .project-editor__preview--presenting > [data-project-preview] { width: 100%; height: 100%; overflow: auto; }
 .project-editor__preview--presenting .project-editor__present-close { position: fixed; top: 5px; right: 5px; z-index: 1001; display: flex; width: 24px; height: 24px; align-items: center; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: rgba(15,18,18,.4); font: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
 .project-editor__preview--presenting .project-editor__present-close:hover, .project-editor__preview--presenting .project-editor__present-close:focus-visible { background: rgba(15,18,18,.8); }
+.project-editor__mount { --resources-editor-fg: #abb2bf; --resources-editor-bg: #1d2020; --resources-editor-caret: #d8e0de; --resources-editor-selection: #3e526f; --resources-editor-active: #252a29; --resources-editor-gutter-fg: #7f908c; --resources-editor-gutter-bg: #191c1c; --resources-editor-border: #39413f; --resources-editor-panel: #252a29; --resources-editor-keyword: #c678dd; --resources-editor-name: #e06c75; --resources-editor-function: #61afef; --resources-editor-constant: #d19a66; --resources-editor-definition: #e5c07b; --resources-editor-type: #e5c07b; --resources-editor-operator: #56b6c2; --resources-editor-comment: #7f848e; --resources-editor-string: #98c379; --resources-editor-invalid: #f44747; }
+html[data-theme="light"] .project-editor__mount { --resources-editor-fg: #263338; --resources-editor-bg: #d9e1e3; --resources-editor-caret: #1f5268; --resources-editor-selection: #b9b4dc; --resources-editor-active: #cedadd; --resources-editor-gutter-fg: #66777e; --resources-editor-gutter-bg: #cbd6d9; --resources-editor-border: #aebec3; --resources-editor-panel: #d2dcdf; --resources-editor-keyword: #6c3d82; --resources-editor-name: #265d73; --resources-editor-function: #7a4b22; --resources-editor-constant: #765b12; --resources-editor-definition: #304f66; --resources-editor-type: #875025; --resources-editor-operator: #3b6b64; --resources-editor-comment: #63747a; --resources-editor-string: #43682e; --resources-editor-invalid: #a12c36; }
 .project-editor__mount, .project-editor__mount .cm-editor { height: 100%; min-height: 0; }
 .project-editor__mount[hidden] { display: none; }
 .project-editor__image-view { display: block; width: 100%; height: 100%; object-fit: contain; background: #101212; }
@@ -1095,8 +1097,9 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__view-controls .project-close { order: 3; display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 5px; color: var(--project-toolbar-fg); background: transparent; font-size: 20px; line-height: 1; }
 .project-editor[data-editor-loading="true"] .project-editor__mount { pointer-events: none; }
 .project-editor__pane-loading { display: none; }
-.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: var(--project-toolbar-bg); }
-.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after, .project-route-loading__spinner { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
+.project-editor[data-editor-machine-state="starting"] .project-editor__source > .project-editor__pane-loading,
+.project-editor[data-output-machine-state="starting"] .project-editor__preview > .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: var(--project-toolbar-bg); }
+.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[hidden] { display: none; }
 .project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
@@ -1206,10 +1209,6 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 .project-workspace .project-editor { min-height: calc(100vh - 190px); margin-top: 0; }
 .project-editor__preview .deck, .project-editor__preview .slide { height: 100%; }
 
-.project-route-loading { display: grid; width: 100%; min-height: calc(100vh - 96px); align-content: center; justify-content: center; justify-items: center; gap: 14px; color: var(--muted); background: #151717; }
-.project-route-loading p { margin: 0; font-size: 12px; }
-.focused-view .project-route-loading { min-height: calc(100vh - 48px); }
-
 .content-root[data-loading="true"] {
   width: 100%;
 }
@@ -1244,7 +1243,7 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 }
 @keyframes projectSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after, .project-route-loading__spinner { animation: projectSpin 1.8s linear infinite; }
+  .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after { animation: projectSpin 1.8s linear infinite; }
 }
 
 @media (max-width: 760px) {
@@ -1957,29 +1956,6 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     }));
   }
 
-  function showProjectLoading(url) {
-    const content = document.getElementById("content");
-    const layout = document.querySelector("main.layout");
-    if (!content) return;
-    if (layout) {
-      layout.dataset.view = "focused";
-      layout.classList.add("focused-view");
-    }
-    content.dataset.loading = "true";
-    content.setAttribute("aria-busy", "true");
-    const loading = document.createElement("section");
-    loading.className = "project-route-loading";
-    loading.setAttribute("aria-label", "Loading project");
-    const spinner = document.createElement("span");
-    spinner.className = "project-route-loading__spinner";
-    spinner.setAttribute("aria-hidden", "true");
-    const label = document.createElement("p");
-    label.textContent = "Loading project…";
-    loading.append(spinner, label);
-    content.replaceChildren(loading);
-    document.title = decodeURIComponent(url.pathname.split("/").filter(Boolean).at(-1) || "Project") + " · Resources.co";
-  }
-
   function clearSkeleton() {
     const content = document.getElementById("content");
     if (!content) return;
@@ -2055,20 +2031,20 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     if (!link || event.defaultPrevented || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const next = new URL(link.href, location.href);
     if (next.origin !== location.origin || next.hash || link.target) return;
+    // Project pages have their own controller and disposable editor/output
+    // machines. A normal navigation lets the server-rendered project shell
+    // paint before those pane-local machines finish starting.
+    if (link.hasAttribute("data-project-link")) return;
     event.preventDefault();
     setMenuOpen(false);
-    navigate(next, "push", { project: link.hasAttribute("data-project-link") });
+    navigate(next, "push");
   });
 
   addEventListener("popstate", () => navigate(new URL(location.href), "replace"));
 
-  async function navigate(url, historyMode, { project = false } = {}) {
+  async function navigate(url, historyMode) {
     const cached = routeCache.has(url.pathname);
-    const enteredProjectEarly = project && historyMode === "push";
-    if (enteredProjectEarly) {
-      history.pushState(null, "", url.pathname);
-      showProjectLoading(url);
-    } else if (!cached) showSkeleton();
+    if (!cached) showSkeleton();
     let nextDoc;
     try {
       nextDoc = await fetchRoute(url);
@@ -2104,7 +2080,7 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
     applyTheme(root.getAttribute("data-theme") || "dark");
     preparePrefetching(currentContent);
     prepareLocalExamples(currentContent);
-    if (historyMode === "push" && !enteredProjectEarly) history.pushState(null, "", url.pathname);
+    if (historyMode === "push") history.pushState(null, "", url.pathname);
     scrollTo({ top: 0, behavior: "auto" });
   }
 })();`;

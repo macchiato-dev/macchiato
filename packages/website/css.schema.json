@@ -233,7 +233,26 @@
         },
         "--project-toolbar-selected-border": {
           "$ref": "color"
-        }
+        },
+        "--resources-editor-fg": { "$ref": "color" },
+        "--resources-editor-bg": { "$ref": "color" },
+        "--resources-editor-caret": { "$ref": "color" },
+        "--resources-editor-selection": { "$ref": "color" },
+        "--resources-editor-active": { "$ref": "color" },
+        "--resources-editor-gutter-fg": { "$ref": "color" },
+        "--resources-editor-gutter-bg": { "$ref": "color" },
+        "--resources-editor-border": { "$ref": "color" },
+        "--resources-editor-panel": { "$ref": "color" },
+        "--resources-editor-keyword": { "$ref": "color" },
+        "--resources-editor-name": { "$ref": "color" },
+        "--resources-editor-function": { "$ref": "color" },
+        "--resources-editor-constant": { "$ref": "color" },
+        "--resources-editor-definition": { "$ref": "color" },
+        "--resources-editor-type": { "$ref": "color" },
+        "--resources-editor-operator": { "$ref": "color" },
+        "--resources-editor-comment": { "$ref": "color" },
+        "--resources-editor-string": { "$ref": "color" },
+        "--resources-editor-invalid": { "$ref": "color" }
       }
     },
     "font-assets": {
