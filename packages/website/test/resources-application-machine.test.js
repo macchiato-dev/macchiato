@@ -3,7 +3,6 @@ import { readFile, readdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
-import { createContentStore } from "../../hub/src/content.js";
 import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
 
 const generated = new URL("../generated/", import.meta.url);
@@ -47,6 +46,7 @@ test("the application machine initializes stores through the SQL policy machine"
   });
   const applicationModule = await WebAssembly.compile(await readFile(new URL(
     "resources-application-machine/quickjs-server.wasm", generated)));
+  const randomIds = ["user-1", "project-1"];
   const application = new ServerMachineController(applicationModule, {
     bytecodes: [await readFile(new URL(
       "resources-application-machine/application.bin", generated))],
@@ -59,7 +59,7 @@ test("the application machine initializes stores through the SQL policy machine"
         return result[1];
       },
       clock: async () => 123,
-      random: async () => "user-1",
+      random: async () => randomIds.shift() || "unused-id",
     },
   });
 
@@ -91,14 +91,24 @@ test("the application machine initializes stores through the SQL policy machine"
     "listPublicProjects", [{ limit: 6, namespaces: ["benatkin"] }]])),
     ["ok", []]);
 
-  const fixtureContent = createContentStore(database, {
-    now: () => 123, randomId: () => "project-1",
-  });
-  await fixtureContent.createProject("user-1", {
+  const created = await withTimeout(application.request(["store", "content",
+    "createProject", ["user-1", {
     namespace: "user", userSlug: "latte", slug: "first", name: "First",
     description: "", visibility: "private", template: "blank",
     snapshot: { files: [], config: {} },
-  });
+  }]]));
+  assert.equal(created[0], "ok", JSON.stringify(created));
+  assert.equal(created[1].id, "project-1");
+  const saved = await withTimeout(application.request(["store", "content",
+    "saveProjectSnapshot", ["user-1", "project-1", {
+      files: [{ path: "index.html", content: "<p>machine owned</p>" }], config: {},
+    }, { reason: "manual" }]]));
+  assert.equal(saved[0], "ok");
+  assert.equal(saved[1].changed, true);
+  const workspace = await withTimeout(application.request(["store", "content",
+    "getProjectWorkspace", ["latte", "first", "user-1"]]));
+  assert.equal(workspace[0], "ok");
+  assert.equal(workspace[1].snapshot.files[0].content, "<p>machine owned</p>");
   const updated = await withTimeout(application.request(["store", "content",
     "updateProject", ["user-1", "project-1", {
       namespace: "user", userSlug: "latte", slug: "renamed", name: "Renamed",

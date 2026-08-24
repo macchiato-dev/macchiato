@@ -8,7 +8,6 @@ import {
   ContentValidationError,
   createContentStore,
 } from "@macchiato-dev/hub/content";
-import { createProjectSnapshotStore } from "@macchiato-dev/hub/project-snapshot-store";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 async function stores({ now = () => 200 } = {}) {
@@ -25,7 +24,7 @@ async function stores({ now = () => 200 } = {}) {
     emailVerified: true,
   });
   let id = 0;
-  return { account, client,
+  return { account,
     content: createContentStore(client, { now, randomId: () => `content-${++id}` }), db };
 }
 
@@ -225,29 +224,4 @@ test("template replacement and undo keep project metadata aligned with the snaps
   assert.equal(restored.hasUnpublishedChanges, false);
   assert.equal(await content.deleteProject(account.id, created.id), true);
   assert.equal(await content.getProject("latte", "template-undo", account.id), null);
-});
-
-test("the controller snapshot capability preserves large-value history semantics", async () => {
-  let clock = 20_000;
-  const { account, client, content } = await stores({ now: () => ++clock });
-  await content.initialize();
-  const snapshots = createProjectSnapshotStore(client, {
-    now: () => ++clock, randomId: () => "snapshot-project",
-  });
-  const first = { files: [{ path: "index.html", content: "<h1>One</h1>" }],
-    config: { entry: "index.html", template: "html" } };
-  const second = { files: [{ path: "index.html", content: "<h1>Two</h1>" }],
-    config: first.config };
-  const project = await snapshots.createProject(account.id, {
-    namespace: "user", userSlug: account.login, slug: "snapshot-capability",
-    name: "Snapshot capability", description: "", visibility: "private",
-    template: "html", snapshot: first,
-  });
-  await snapshots.saveProjectSnapshot(account.id, project.id, second,
-    { reason: "manual", destructive: true });
-  assert.deepEqual((await snapshots.getProjectWorkspace("latte",
-    "snapshot-capability", account.id)).snapshot, second);
-  await snapshots.restoreProjectVersion(account.id, project.id, 1);
-  assert.deepEqual((await snapshots.getProjectWorkspace("latte",
-    "snapshot-capability", account.id)).snapshot, first);
 });

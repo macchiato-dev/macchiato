@@ -1,14 +1,11 @@
 // @ts-nocheck -- migrated machine composition; capability types follow separately.
 import { createClient } from "@libsql/client/http";
-import { createProjectSnapshotStore } from "@macchiato-dev/hub/project-snapshot-store";
 import { createAuthConfig } from "../auth/github.js";
 import { createGitlabAuthConfig } from "../auth/gitlab.js";
 import { createResourcesEdgeHandler } from "../edge/app.js";
 import { createResourcesBootstrapHandler } from "../edge/bootstrap.js";
 import { createEdgeConfig, storageRequest } from "../edge/models.js";
 import { createResourcesServerMachine } from "../resources-server-machine.js";
-import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
-  createProjectVersionPlanner } from "../project-version-machine.js";
 import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 
@@ -156,6 +153,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       }
       return new ServerMachineController(module, {
         bytecodes: [application],
+        maxMessageBytes: 128 * 1024 * 1024,
         devices: {
           sql: (operation, input) => policyRequest([
             "database-client", operation, input,
@@ -196,53 +194,12 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       columns.map((column, index) => [column, row[index]])));
     return { columns, rows, rowsAffected, lastInsertRowid: null };
   }
-  const policyDatabaseClient = Object.freeze({
-    async execute(query) {
-      return compatibleResult(await policyRequest([
-        "database-client", "execute", [query.sql, query.args || []],
-      ]));
-    },
-    async batch(queries) {
-      const affected = await policyRequest(["database-client", "batch",
-        queries.map(query => [query.sql, query.args || []])]);
-      return affected.map(rowsAffected => ({ columns: [], rows: [],
-        rowsAffected, lastInsertRowid: null }));
-    },
-  });
   const accountStore = Object.freeze({
     initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
     getAccount: userId => applicationStoreCall("account", "getAccount", [userId]),
     authenticateIdentity: (identity, options) => applicationStoreCall(
       "account", "authenticateIdentity", [identity, options]),
   });
-  let projectHistoryAssetsPromise;
-  function projectHistoryAssets() {
-    if (!projectHistoryAssetsPromise) {
-      projectHistoryAssetsPromise = Promise.all([
-        runtimeModule(),
-        bytecodeSet("resources-project-version"),
-      ]).then(([module, bytecodes]) => ({ module, bytecodes })).catch((error) => {
-        projectHistoryAssetsPromise = null;
-        throw error;
-      });
-    }
-    return projectHistoryAssetsPromise;
-  }
-  function projectVersionPlanner(input) {
-    return projectHistoryAssets().then(({ module, bytecodes }) =>
-      createProjectVersionPlanner(module, bytecodes)(input));
-  }
-  function projectSnapshotDiffer(before, after) {
-    return projectHistoryAssets().then(({ module, bytecodes }) =>
-      createProjectSnapshotDiffer(module, bytecodes)(before, after));
-  }
-  function projectSnapshotValidator(snapshot) {
-    return projectHistoryAssets().then(({ module, bytecodes }) =>
-      createProjectSnapshotValidator(module, bytecodes)(snapshot));
-  }
-  const contentStore = createProjectSnapshotStore(policyDatabaseClient,
-    { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
-    snapshotValidator: projectSnapshotValidator });
   const contentReadStore = Object.freeze({
     getNamespace: (...args) => applicationStoreCall("content", "getNamespace", args),
     getProject: (...args) => applicationStoreCall("content", "getProject", args),
@@ -250,12 +207,21 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     listPublicProjects: (...args) => applicationStoreCall(
       "content", "listPublicProjects", args),
   });
-  // Metadata-only mutations belong to the application machine. Snapshot-bearing
-  // operations remain on the bounded host path: a project may contain 72 MiB of
-  // source, which must not be copied through the QuickJS message arena.
   const projectStore = Object.freeze({
-    ...contentStore,
+    createProject: (...args) => applicationStoreCall("content", "createProject", args),
     getProject: (...args) => applicationStoreCall("content", "getProject", args),
+    getProjectWorkspace: (...args) => applicationStoreCall(
+      "content", "getProjectWorkspace", args),
+    getPublicProjectWorkspace: (...args) => applicationStoreCall(
+      "content", "getPublicProjectWorkspace", args),
+    getProjectVersion: (...args) => applicationStoreCall(
+      "content", "getProjectVersion", args),
+    saveProjectSnapshot: (...args) => applicationStoreCall(
+      "content", "saveProjectSnapshot", args),
+    restoreProjectVersion: (...args) => applicationStoreCall(
+      "content", "restoreProjectVersion", args),
+    revertProjectToPublished: (...args) => applicationStoreCall(
+      "content", "revertProjectToPublished", args),
     updateProject: (...args) => applicationStoreCall("content", "updateProject", args),
     publishProject: (...args) => applicationStoreCall("content", "publishProject", args),
     deleteProject: (...args) => applicationStoreCall("content", "deleteProject", args),

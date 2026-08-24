@@ -1529,6 +1529,31 @@
   }
 
   // packages/website/resources-application-guest.js
+  if (typeof globalThis.TextEncoder !== "function") {
+    globalThis.TextEncoder = class TextEncoder {
+      encode(value) {
+        const text2 = String(value);
+        const bytes = [];
+        for (const character of text2) {
+          const point = character.codePointAt(0);
+          if (point < 128) bytes.push(point);
+          else if (point < 2048) bytes.push(192 | point >> 6, 128 | point & 63);
+          else if (point < 65536) bytes.push(
+            224 | point >> 12,
+            128 | point >> 6 & 63,
+            128 | point & 63
+          );
+          else bytes.push(
+            240 | point >> 18,
+            128 | point >> 12 & 63,
+            128 | point >> 6 & 63,
+            128 | point & 63
+          );
+        }
+        return Uint8Array.from(bytes);
+      }
+    };
+  }
   function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
     return {
@@ -1572,7 +1597,10 @@
     now: () => operationNow,
     randomId: nextRandomId
   });
-  var content = createContentStore(database);
+  var content = createContentStore(database, {
+    now: () => operationNow,
+    randomId: nextRandomId
+  });
   var organizations = createOrganizationStore(database, {
     now: () => operationNow,
     randomId: nextRandomId
@@ -1603,7 +1631,7 @@
     try {
       await initialize();
       operationNow = await hostCall("clock", "now", []);
-      randomIds = method === "authenticateIdentity" ? [await hostCall("random", "uuid", [])] : [];
+      randomIds = method === "authenticateIdentity" || storeName === "content" && method === "createProject" ? [await hostCall("random", "uuid", [])] : [];
       return ["ok", await store[method](...args)];
     } catch (error) {
       return ["error", errorValue(error)];

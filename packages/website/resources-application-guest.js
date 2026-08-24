@@ -3,6 +3,29 @@ import { createContentStore } from "@macchiato-dev/hub/content";
 import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
 import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 
+// QuickJS intentionally has no browser globals. The content model currently
+// uses TextEncoder only to enforce its UTF-8 snapshot byte limit; keep that
+// compatibility surface local to the application machine until the hybrid
+// runtime can delegate this safe operation directly.
+if (typeof globalThis.TextEncoder !== "function") {
+  globalThis.TextEncoder = class TextEncoder {
+    encode(value) {
+      const text = String(value);
+      const bytes = [];
+      for (const character of text) {
+        const point = character.codePointAt(0);
+        if (point < 0x80) bytes.push(point);
+        else if (point < 0x800) bytes.push(0xc0 | point >> 6, 0x80 | point & 0x3f);
+        else if (point < 0x10000) bytes.push(0xe0 | point >> 12,
+          0x80 | point >> 6 & 0x3f, 0x80 | point & 0x3f);
+        else bytes.push(0xf0 | point >> 18, 0x80 | point >> 12 & 0x3f,
+          0x80 | point >> 6 & 0x3f, 0x80 | point & 0x3f);
+      }
+      return Uint8Array.from(bytes);
+    }
+  };
+}
+
 function compatibleResult(result) {
   const [columns, values, rowsAffected] = result;
   return {
@@ -39,7 +62,10 @@ const accounts = createAccountStore(database, {
   now: () => operationNow,
   randomId: nextRandomId,
 });
-const content = createContentStore(database);
+const content = createContentStore(database, {
+  now: () => operationNow,
+  randomId: nextRandomId,
+});
 const organizations = createOrganizationStore(database, {
   now: () => operationNow,
   randomId: nextRandomId,
@@ -67,7 +93,8 @@ async function storeCall(storeName, method, args) {
   try {
     await initialize();
     operationNow = await hostCall("clock", "now", []);
-    randomIds = method === "authenticateIdentity"
+    randomIds = method === "authenticateIdentity" ||
+      (storeName === "content" && method === "createProject")
       ? [await hostCall("random", "uuid", [])] : [];
     return ["ok", await store[method](...args)];
   } catch (error) {

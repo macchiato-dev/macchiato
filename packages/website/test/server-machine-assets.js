@@ -10,4 +10,5 @@ function bytecodes(directory) {
 }
 
 export const serverBytecodes = bytecodes("resources-server-bytecode");
+export const policyBytecodes = bytecodes("resources-policy-bytecode");
 export const projectVersionBytecodes = bytecodes("resources-project-version-bytecode");

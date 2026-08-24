@@ -8,9 +8,10 @@ import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
 import { seal } from "../auth/session.js";
 import { createResourcesServerMachine, isResourcesServerMachineRequest } from "../resources-server-machine.js";
+import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
-import { projectVersionBytecodes, serverBytecodes,
+import { policyBytecodes, projectVersionBytecodes, serverBytecodes,
   serverModule } from "./server-machine-assets.js";
 
 const secret = "resources-server-machine-test-secret-value";
@@ -71,8 +72,31 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
     publicOrigin: "http://resources-edge.localhost", sessionSecret: secret,
     secureCookies: false,
   };
+  const policy = new ServerMachineController(serverModule, {
+    bytecodes: policyBytecodes,
+    devices: { database: async (operation, input) => {
+      if (operation === "batch") {
+        return (await client.batch(input.map(([sql, args]) => ({ sql, args }))))
+          .map(result => Number(result.rowsAffected) || 0);
+      }
+      const result = await client.execute({ sql: input[0], args: input[1] });
+      const columns = Array.from(result.columns || Object.keys(result.rows?.[0] || {}), String);
+      return [columns, result.rows.map(row => columns.map(column => row[column])),
+        Number(result.rowsAffected) || 0];
+    } },
+  });
+  let sqlError = "";
   const machine = createResourcesServerMachine(serverModule, {
-    bytecodes: serverBytecodes, databaseClient: client, authConfig,
+    bytecodes: serverBytecodes,
+    sqlDevice: async (operation, input) => {
+      const result = await policy.request(["sql", operation, input]);
+      if (!Array.isArray(result) || result[0] !== "ok") {
+        sqlError = Array.isArray(result) ? String(result[2]) : "policy rejected SQL";
+        throw new Error(sqlError);
+      }
+      return result[1];
+    },
+    authConfig,
     contentStore: content, now: () => 3,
   });
   const document = await machine.handle(new Request("http://resources-edge.localhost/about"), {
@@ -153,7 +177,7 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
   const response = await machine.handle(new Request(url, {
     headers: { cookie: `resources_session=${session}` },
   }));
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 200, `${await response.clone().text()} ${sqlError}`);
   const listing = await response.json();
   assert.equal(listing.versions.length, 2);
   assert.equal(listing.versions[0].sequence, 2);
