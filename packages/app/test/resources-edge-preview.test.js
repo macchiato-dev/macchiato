@@ -82,9 +82,12 @@ test("local edge health runs through MicroQuickJS and named sql-use", async () =
 });
 
 test("the private server machine is absent from public publication authority", async () => {
-  const response = await resourcesEdgePreviewHandler(new Request(
-    "http://resources-edge.localhost/machines/resources-server-microquickjs.wasm"));
-  assert.equal(response.status, 404);
+  for (const path of ["microquickjs-server.wasm", "resources-server/manifest.json",
+    "resources-server/00.bin"]) {
+    const response = await resourcesEdgePreviewHandler(new Request(
+      `http://resources-edge.localhost/machines/${path}`));
+    assert.equal(response.status, 404);
+  }
 });
 
 test("local edge adapter consumes its declarative app-scoped OAuth environment", async () => {
