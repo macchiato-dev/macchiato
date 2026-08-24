@@ -310,6 +310,8 @@ static int eval_buf(JSContext *ctx, const char *eval_str, const char *filename, 
         goto exception;
 
     val = JS_Run(ctx, val);
+    if (!JS_IsException(val) && JS_ExecutePendingJobs(ctx))
+        val = JS_EXCEPTION;
     if (JS_IsException(val)) {
     exception:
         dump_error(ctx);
@@ -366,6 +368,8 @@ static int eval_file(JSContext *ctx, const char *filename,
     
     
     val = JS_Run(ctx, val);
+    if (!JS_IsException(val) && JS_ExecutePendingJobs(ctx))
+        val = JS_EXCEPTION;
     if (JS_IsException(val)) {
     exception:
         dump_error(ctx);

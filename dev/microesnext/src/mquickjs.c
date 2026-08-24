@@ -251,6 +251,7 @@ struct JSContext {
     void *opaque;
     JSValue *class_obj; /* same as class_proto + class_count */
     JSStringPosCacheEntry string_pos_cache[JS_STRING_POS_CACHE_SIZE];
+    uint32_t promise_job_read;
                                            
     /* must only contain JSValue from this point (see JS_GC()) */
     JSValue unique_strings; /* JSValueArray of sorted strings or JS_NULL */
@@ -263,6 +264,7 @@ struct JSContext {
     JSValue empty_props; /* empty prop list, for objects with no properties */
     JSValue global_obj;
     JSValue minus_zero; /* minus zero float64 value */
+    JSValue promise_jobs;
     JSValue class_proto[]; /* prototype for each class (class_count
                               element, then class_count elements for
                               class_obj */
@@ -2673,6 +2675,91 @@ int JS_GetCollectionIteratorKind(JSContext *ctx, JSValue iterator)
     return ((JSObject *)JS_VALUE_TO_PTR(iterator))->u.collection_iterator.kind;
 }
 
+JSValue JS_NewPromise(JSContext *ctx)
+{
+    JSValue data, reactions;
+    JSObject *promise;
+    JSGCRef data_ref;
+    data = JS_NewArray(ctx, 3);
+    if (JS_IsException(data))
+        return data;
+    JS_PUSH_VALUE(ctx, data);
+    reactions = JS_NewArray(ctx, 0);
+    if (JS_IsException(reactions)) {
+        JS_POP_VALUE(ctx, data);
+        return reactions;
+    }
+    JS_SetPropertyUint32(ctx, data, 0, JS_NewShortInt(0)); /* pending */
+    JS_SetPropertyUint32(ctx, data, 1, JS_UNDEFINED);
+    JS_SetPropertyUint32(ctx, data, 2, reactions);
+    promise = JS_NewObjectProtoClass1(ctx, ctx->class_proto[JS_CLASS_PROMISE],
+                                      JS_CLASS_PROMISE, sizeof(JSValue));
+    JS_POP_VALUE(ctx, data);
+    if (!promise)
+        return JS_EXCEPTION;
+    promise->u.promise_data = data;
+    return JS_VALUE_FROM_PTR(promise);
+}
+
+JSValue JS_GetPromiseData(JSContext *ctx, JSValue promise)
+{
+    if (JS_GetClassID(ctx, promise) != JS_CLASS_PROMISE)
+        return JS_EXCEPTION;
+    return ((JSObject *)JS_VALUE_TO_PTR(promise))->u.promise_data;
+}
+
+int JS_EnqueuePromiseJob(JSContext *ctx, JSValue job)
+{
+    JSValue length_value;
+    JSGCRef job_ref;
+    uint32_t length;
+    JS_PUSH_VALUE(ctx, job);
+    if (JS_IsNull(ctx->promise_jobs)) {
+        ctx->promise_jobs = JS_NewArray(ctx, 0);
+        ctx->promise_job_read = 0;
+        if (JS_IsException(ctx->promise_jobs)) {
+            ctx->promise_jobs = JS_NULL;
+            JS_POP_VALUE(ctx, job);
+            return -1;
+        }
+    }
+    length_value = JS_GetPropertyStr(ctx, ctx->promise_jobs, "length");
+    if (JS_ToUint32(ctx, &length, length_value) ||
+        JS_IsException(JS_SetPropertyUint32(ctx, ctx->promise_jobs, length, job))) {
+        JS_POP_VALUE(ctx, job);
+        return -1;
+    }
+    JS_POP_VALUE(ctx, job);
+    return 0;
+}
+
+JSValue JS_DequeuePromiseJob(JSContext *ctx)
+{
+    JSValue length_value, job;
+    JSGCRef job_ref;
+    uint32_t length;
+    if (JS_IsNull(ctx->promise_jobs))
+        return JS_UNDEFINED;
+    length_value = JS_GetPropertyStr(ctx, ctx->promise_jobs, "length");
+    if (JS_ToUint32(ctx, &length, length_value) ||
+        ctx->promise_job_read >= length) {
+        ctx->promise_jobs = JS_NULL;
+        ctx->promise_job_read = 0;
+        return JS_UNDEFINED;
+    }
+    job = JS_GetPropertyUint32(ctx, ctx->promise_jobs, ctx->promise_job_read);
+    JS_PUSH_VALUE(ctx, job);
+    JS_SetPropertyUint32(ctx, ctx->promise_jobs, ctx->promise_job_read,
+                         JS_UNDEFINED);
+    ctx->promise_job_read++;
+    if (ctx->promise_job_read >= length) {
+        ctx->promise_jobs = JS_NULL;
+        ctx->promise_job_read = 0;
+    }
+    JS_POP_VALUE(ctx, job);
+    return job;
+}
+
 JSValue JS_NewObject(JSContext *ctx)
 {
     return JS_NewObjectClass(ctx, JS_CLASS_OBJECT, 0);
@@ -3928,6 +4015,8 @@ JSContext *JS_NewContext2(void *mem_start, size_t mem_size, const JSSTDLibraryDe
 
     ctx->global_obj = JS_NewObject(ctx);
     ctx->minus_zero = js_alloc_float64(ctx, -0.0); /* XXX: use a ROM value instead */
+    ctx->promise_jobs = JS_NULL;
+    ctx->promise_job_read = 0;
         
     if (!prepare_compilation) {
         stdlib_init(ctx, (JSValueArray *)(stdlib_def->stdlib_table + stdlib_def->global_object_offset));

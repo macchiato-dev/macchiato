@@ -134,6 +134,10 @@ typedef enum {
 /* predefined functions */
 typedef enum {
     JS_CFUNCTION_bound,
+    JS_CFUNCTION_promise_resolver,
+    JS_CFUNCTION_promise_all_element,
+    JS_CFUNCTION_promise_finally,
+    JS_CFUNCTION_promise_finally_value,
     JS_CFUNCTION_USER, /* user functions start from this value */
 } JSCFunctionEnum;
 
@@ -236,6 +240,11 @@ JSValue JS_NewCollectionIterator(JSContext *ctx, JSValue collection,
 int JS_CollectionIteratorNext(JSContext *ctx, JSValue iterator,
                               JSValue *key, JSValue *value);
 int JS_GetCollectionIteratorKind(JSContext *ctx, JSValue iterator);
+JSValue JS_NewPromise(JSContext *ctx);
+JSValue JS_GetPromiseData(JSContext *ctx, JSValue promise);
+int JS_EnqueuePromiseJob(JSContext *ctx, JSValue job);
+JSValue JS_DequeuePromiseJob(JSContext *ctx);
+int JS_ExecutePendingJobs(JSContext *ctx);
 
 /* ES6-subset standard-library entry points. */
 JSValue js_map_constructor(JSContext *, JSValue *, int, JSValue *);
@@ -259,6 +268,20 @@ JSValue js_weak_collection_has(JSContext *, JSValue *, int, JSValue *, int);
 JSValue js_weak_map_get(JSContext *, JSValue *, int, JSValue *);
 JSValue js_weak_map_set(JSContext *, JSValue *, int, JSValue *);
 JSValue js_weak_set_add(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_constructor(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_then(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_catch(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_finally(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_resolve(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_reject(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_all(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_race(JSContext *, JSValue *, int, JSValue *);
+JSValue js_promise_resolver(JSContext *, JSValue *, int, JSValue *, JSValue);
+JSValue js_promise_all_element(JSContext *, JSValue *, int, JSValue *, JSValue);
+JSValue js_promise_finally_handler(JSContext *, JSValue *, int, JSValue *,
+                                   JSValue);
+JSValue js_promise_finally_value(JSContext *, JSValue *, int, JSValue *,
+                                 JSValue);
 
 typedef JSValue JSCFunction(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 /* no JS function call be called from a C finalizer */

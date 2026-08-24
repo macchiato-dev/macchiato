@@ -394,6 +394,23 @@ static const JSClassDef js_collection_iterator_class =
                  JS_CLASS_COLLECTION_ITERATOR, NULL,
                  js_collection_iterator_proto, NULL, NULL);
 
+static const JSPropDef js_promise_proto[] = {
+    JS_CFUNC_DEF("then", 2, js_promise_then),
+    JS_CFUNC_DEF("catch", 1, js_promise_catch),
+    JS_CFUNC_DEF("finally", 1, js_promise_finally),
+    JS_PROP_END,
+};
+static const JSPropDef js_promise[] = {
+    JS_CFUNC_DEF("resolve", 1, js_promise_resolve),
+    JS_CFUNC_DEF("reject", 1, js_promise_reject),
+    JS_CFUNC_DEF("all", 1, js_promise_all),
+    JS_CFUNC_DEF("race", 1, js_promise_race),
+    JS_PROP_END,
+};
+static const JSClassDef js_promise_class =
+    JS_CLASS_DEF("Promise", 1, js_promise_constructor, JS_CLASS_PROMISE,
+                 js_promise, js_promise_proto, NULL, NULL);
+
 static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("Object", &js_object_class),
     JS_PROP_CLASS_DEF("Function", &js_function_class),
@@ -444,6 +461,7 @@ static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("Set", &js_set_class),
     JS_PROP_CLASS_DEF("WeakMap", &js_weak_map_class),
     JS_PROP_CLASS_DEF("WeakSet", &js_weak_set_class),
+    JS_PROP_CLASS_DEF("Promise", &js_promise_class),
     /* Initializes the native iterator prototype. The binding is intentionally
        non-standard and will disappear when symbol-keyed prototypes land. */
     JS_PROP_CLASS_DEF("__CollectionIterator", &js_collection_iterator_class),
@@ -465,6 +483,14 @@ static const JSPropDef js_global_object[] = {
 static const JSPropDef js_c_function_decl[] = {
     /* must come first if "bind" is defined */
     JS_CFUNC_SPECIAL_DEF("bound", 0, generic_params, js_function_bound ),
+    JS_CFUNC_SPECIAL_DEF("promise_resolver", 0, generic_params,
+                         js_promise_resolver),
+    JS_CFUNC_SPECIAL_DEF("promise_all_element", 0, generic_params,
+                         js_promise_all_element),
+    JS_CFUNC_SPECIAL_DEF("promise_finally", 0, generic_params,
+                         js_promise_finally_handler),
+    JS_CFUNC_SPECIAL_DEF("promise_finally_value", 0, generic_params,
+                         js_promise_finally_value),
 #ifdef CONFIG_CLASS_EXAMPLE
     JS_CFUNC_SPECIAL_DEF("rectangle_closure_test", 0, generic_params, js_rectangle_closure_test ),
 #endif
