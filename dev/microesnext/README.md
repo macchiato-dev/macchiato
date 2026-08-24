@@ -26,6 +26,8 @@ The build uses the local C compiler and writes generated executables under
 
 The precise implemented surface and its intentional boundaries are described
 in [Supported ES6 subset](docs/supported-es6.md).
+The [bytecode study](docs/bytecode.md) records how newer syntax maps onto the
+engine and why `await` is the one requested feature that needs an instruction.
 
 ## Source provenance
 

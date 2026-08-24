@@ -1,0 +1,52 @@
+# Bytecode study
+
+MicroESNext inherits MicroQuickJS's compact stack bytecode. Instructions have a
+one-byte opcode followed by zero, one, two, or four bytes of immediate data.
+`mquickjs_opcode.h` is the authoritative instruction list: it declares each
+instruction's encoded size, stack inputs and outputs, and operand format. The
+same table drives interpretation, stack-depth analysis, relocation, dumping,
+and 64-to-32-bit bytecode conversion.
+
+Function bytecode carries a constant pool, argument and local-variable names,
+captured-variable descriptors, a maximum operand-stack depth, source mapping,
+and nested function bytecode. `fclosure` instantiates a nested function and
+connects its captured variables to the enclosing frame. Calls, returns,
+exceptions, and `finally` already have direct instructions.
+
+## Arrow functions
+
+Arrow functions do not require a new instruction. Their parameters and body
+use ordinary function bytecode, and `fclosure` creates the function. A function
+metadata bit distinguishes arrows so closure creation captures the enclosing
+`this`, calls restore that captured value, and construction can be rejected.
+Expression bodies compile as an expression followed by `return`.
+
+## Untagged template literals
+
+Bare template literals do not require a new instruction. Cooked literal pieces
+enter the existing constant pool. Each substitution uses the ordinary
+expression compiler, and the pieces are combined with the existing `add`
+instruction, whose string coercion supplies template interpolation semantics.
+Tagged templates are intentionally not part of this milestone.
+
+## Async functions and await
+
+An async function can reuse ordinary closure and call instructions, with a
+function metadata bit selecting Promise-returning entry and completion.
+`await`, however, cannot be represented by the existing synchronous bytecode
+without source-level control-flow rewriting. It must suspend after evaluating
+one operand, retain the function's arguments, locals, operand stack, program
+counter, exception state, and live captured-variable references, then resume
+with either a fulfilled value or a thrown rejection.
+
+MicroESNext therefore adds one `await` instruction. Async entry and return are
+metadata-driven rather than separate opcodes. The runtime stores suspended
+frames in GC-visible engine objects and schedules their continuation through
+the same FIFO Promise job queue used by `then`. This preserves ordinary
+bytecode for everything on either side of an await while making suspension an
+explicit, auditable boundary.
+
+Whenever the instruction table changes, tests must cover source execution,
+bytecode compilation/loading, stack-size analysis, dumping, relocation, and
+the 64-to-32-bit conversion path. An opcode working only in the interpreter is
+not considered implemented.
