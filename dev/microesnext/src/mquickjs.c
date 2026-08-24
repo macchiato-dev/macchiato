@@ -134,13 +134,26 @@ typedef struct {
     uint8_t buf[];
 } JSByteArray;
 
-#define JS_VALUE_ARRAY_SIZE_MAX ((1 << (32 - JS_MTAG_BITS)) - 1)
+#define JS_VALUE_ARRAY_SIZE_MAX ((1 << (32 - JS_MTAG_BITS - 2)) - 1)
 
 typedef struct {
     JS_MB_HEADER;
     JSWord size: JS_MB_PAD(JS_MTAG_BITS);
     JSValue arr[];
 } JSValueArray;
+
+/* Collection tables share the compact value-array memory tag. Two high size
+   bits distinguish tables without adding another allocator block kind. */
+#define JS_WEAK_TABLE_FLAG ((JSWord)1 << (JSW * 8 - JS_MTAG_BITS - 1))
+#define JS_STRONG_TABLE_FLAG ((JSWord)1 << (JSW * 8 - JS_MTAG_BITS - 2))
+#define JS_COLLECTION_TABLE_SIZE_MASK (JS_STRONG_TABLE_FLAG - 1)
+typedef struct {
+    JS_MB_HEADER;
+    JSWord size: JS_MB_PAD(JS_MTAG_BITS);
+    JSWord count; /* live entries */
+    JSWord used;  /* slots including deletion tombstones */
+    JSValue entries[]; /* alternating key and value */
+} JSCollectionTable;
 
 typedef struct JSVarRef {
     JS_MB_HEADER;
@@ -325,6 +338,12 @@ typedef struct {
     void *opaque;
 } JSObjectUserData;
 
+typedef struct {
+    JSValue collection;
+    uint32_t index;
+    uint8_t kind;
+} JSCollectionIterator;
+
 struct JSObject {
     JS_MB_HEADER;
     JSWord class_id: 8;
@@ -348,6 +367,9 @@ struct JSObject {
         JSTypedArray typed_array;
         JSRegExp regexp;
         JSDate date;
+        JSValue collection_table;
+        JSCollectionIterator collection_iterator;
+        JSValue promise_data;
         JSObjectUserData user;
     } u;
 };
@@ -2394,6 +2416,261 @@ JSValue JS_NewObjectClassUser(JSContext *ctx, int class_id)
         return JS_EXCEPTION;
     p->u.user.opaque = NULL;
     return JS_VALUE_FROM_PTR(p);
+}
+
+static JSObject *js_get_collection(JSContext *ctx, JSValue value)
+{
+    int class_id = JS_GetClassID(ctx, value);
+    if (class_id != JS_CLASS_MAP && class_id != JS_CLASS_SET &&
+        class_id != JS_CLASS_WEAK_MAP && class_id != JS_CLASS_WEAK_SET)
+        return NULL;
+    return JS_VALUE_TO_PTR(value);
+}
+
+static BOOL js_strict_eq(JSContext *ctx, JSValue op1, JSValue op2);
+
+/* ECMAScript collections compare keys with SameValueZero. This differs from
+   strict equality only by treating every NaN as the same key. */
+static BOOL collection_key_equal(JSContext *ctx, JSValue left, JSValue right)
+{
+    double left_number, right_number;
+    if (js_strict_eq(ctx, left, right))
+        return TRUE;
+    if (!JS_IsNumber(ctx, left) || !JS_IsNumber(ctx, right) ||
+        JS_ToNumber(ctx, &left_number, left) ||
+        JS_ToNumber(ctx, &right_number, right))
+        return FALSE;
+    return isnan(left_number) && isnan(right_number);
+}
+
+static int collection_table_find(JSContext *ctx, JSCollectionTable *table,
+                                 JSValue key)
+{
+    uint32_t index;
+    if (!table)
+        return -1;
+    for (index = 0; index < table->used; index++) {
+        JSValue candidate = table->entries[index * 2];
+        if (!JS_IsUninitialized(candidate) &&
+            collection_key_equal(ctx, candidate, key))
+            return (int)index;
+    }
+    return -1;
+}
+
+static JSCollectionTable *collection_table_new(JSContext *ctx,
+                                               uint32_t capacity,
+                                               BOOL is_weak)
+{
+    JSCollectionTable *table;
+    uint32_t size;
+    if (capacity > (JS_VALUE_ARRAY_SIZE_MAX - 2) / 2)
+        return NULL;
+    size = sizeof(*table) + capacity * 2 * sizeof(JSValue);
+    table = js_malloc(ctx, size, JS_MTAG_VALUE_ARRAY);
+    if (!table)
+        return NULL;
+    table->size = (is_weak ? JS_WEAK_TABLE_FLAG : JS_STRONG_TABLE_FLAG) |
+        (2 + capacity * 2);
+    table->count = 0;
+    table->used = 0;
+    return table;
+}
+
+static uint32_t collection_table_capacity(const JSCollectionTable *table)
+{
+    return ((table->size & JS_COLLECTION_TABLE_SIZE_MASK) - 2) / 2;
+}
+
+JSValue JS_NewCollection(JSContext *ctx, int class_id)
+{
+    JSObject *object;
+    if (class_id != JS_CLASS_MAP && class_id != JS_CLASS_SET &&
+        class_id != JS_CLASS_WEAK_MAP && class_id != JS_CLASS_WEAK_SET)
+        return JS_ThrowTypeError(ctx, "invalid collection class");
+    object = JS_NewObjectProtoClass1(ctx, ctx->class_proto[class_id], class_id,
+                                     sizeof(JSValue));
+    if (!object)
+        return JS_EXCEPTION;
+    object->u.collection_table = JS_NULL;
+    return JS_VALUE_FROM_PTR(object);
+}
+
+int JS_CollectionSet(JSContext *ctx, JSValue collection,
+                     JSValue key, JSValue value)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    JSCollectionTable *table, *new_table;
+    JSGCRef collection_ref, key_ref, value_ref;
+    int found, class_id = JS_GetClassID(ctx, collection);
+    uint32_t capacity;
+    BOOL is_weak = class_id == JS_CLASS_WEAK_MAP || class_id == JS_CLASS_WEAK_SET;
+    if (!object || (is_weak && JS_GetClassID(ctx, key) < 0))
+        return -2;
+    table = JS_IsNull(object->u.collection_table)
+        ? NULL : JS_VALUE_TO_PTR(object->u.collection_table);
+    found = collection_table_find(ctx, table, key);
+    if (found >= 0) {
+        table->entries[found * 2 + 1] = value;
+        return 0;
+    }
+    if (!table || table->used == collection_table_capacity(table)) {
+        capacity = table ? collection_table_capacity(table) * 2 : 8;
+        JS_PUSH_VALUE(ctx, collection);
+        JS_PUSH_VALUE(ctx, key);
+        JS_PUSH_VALUE(ctx, value);
+        new_table = collection_table_new(ctx, capacity, is_weak);
+        JS_POP_VALUE(ctx, value);
+        JS_POP_VALUE(ctx, key);
+        JS_POP_VALUE(ctx, collection);
+        if (!new_table)
+            return -1;
+        object = js_get_collection(ctx, collection);
+        table = JS_IsNull(object->u.collection_table)
+            ? NULL : JS_VALUE_TO_PTR(object->u.collection_table);
+        if (table) {
+            new_table->count = table->count;
+            new_table->used = table->used;
+            memcpy(new_table->entries, table->entries,
+                   table->used * 2 * sizeof(JSValue));
+        }
+        object->u.collection_table = JS_VALUE_FROM_PTR(new_table);
+        table = new_table;
+    }
+    table->entries[table->used * 2] = key;
+    table->entries[table->used * 2 + 1] = value;
+    table->used++;
+    table->count++;
+    return 0;
+}
+
+JSValue JS_CollectionGet(JSContext *ctx, JSValue collection, JSValue key)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    JSCollectionTable *table;
+    int found;
+    if (!object || JS_IsNull(object->u.collection_table))
+        return JS_UNDEFINED;
+    table = JS_VALUE_TO_PTR(object->u.collection_table);
+    found = collection_table_find(ctx, table, key);
+    return found < 0 ? JS_UNDEFINED : table->entries[found * 2 + 1];
+}
+
+int JS_CollectionHas(JSContext *ctx, JSValue collection, JSValue key)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    if (!object || JS_IsNull(object->u.collection_table))
+        return 0;
+    return collection_table_find(ctx,
+        JS_VALUE_TO_PTR(object->u.collection_table), key) >= 0;
+}
+
+int JS_CollectionDelete(JSContext *ctx, JSValue collection, JSValue key)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    JSCollectionTable *table;
+    int found;
+    if (!object || JS_IsNull(object->u.collection_table))
+        return 0;
+    table = JS_VALUE_TO_PTR(object->u.collection_table);
+    found = collection_table_find(ctx, table, key);
+    if (found < 0)
+        return 0;
+    table->entries[found * 2] = JS_UNINITIALIZED;
+    table->entries[found * 2 + 1] = JS_UNDEFINED;
+    table->count--;
+    return 1;
+}
+
+void JS_CollectionClear(JSContext *ctx, JSValue collection)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    if (object && !JS_IsNull(object->u.collection_table))
+    {
+        JSCollectionTable *table = JS_VALUE_TO_PTR(object->u.collection_table);
+        table->count = 0;
+        table->used = 0;
+    }
+}
+
+uint32_t JS_CollectionSize(JSContext *ctx, JSValue collection)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    if (!object || JS_IsNull(object->u.collection_table))
+        return 0;
+    return ((JSCollectionTable *)JS_VALUE_TO_PTR(object->u.collection_table))->count;
+}
+
+JSValue JS_CollectionKeyAt(JSContext *ctx, JSValue collection, uint32_t index)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    JSCollectionTable *table;
+    if (!object || JS_IsNull(object->u.collection_table))
+        return JS_UNDEFINED;
+    table = JS_VALUE_TO_PTR(object->u.collection_table);
+    return index < table->used ? table->entries[index * 2] : JS_UNDEFINED;
+}
+
+JSValue JS_CollectionValueAt(JSContext *ctx, JSValue collection, uint32_t index)
+{
+    JSObject *object = js_get_collection(ctx, collection);
+    JSCollectionTable *table;
+    if (!object || JS_IsNull(object->u.collection_table))
+        return JS_UNDEFINED;
+    table = JS_VALUE_TO_PTR(object->u.collection_table);
+    return index < table->used ? table->entries[index * 2 + 1] : JS_UNDEFINED;
+}
+
+JSValue JS_NewCollectionIterator(JSContext *ctx, JSValue collection, int kind)
+{
+    JSObject *iterator;
+    JSGCRef collection_ref;
+    if (!js_get_collection(ctx, collection) || kind < 0 || kind > 2)
+        return JS_ThrowTypeError(ctx, "invalid collection iterator");
+    JS_PUSH_VALUE(ctx, collection);
+    iterator = JS_NewObjectProtoClass1(ctx,
+        ctx->class_proto[JS_CLASS_COLLECTION_ITERATOR],
+        JS_CLASS_COLLECTION_ITERATOR, sizeof(JSCollectionIterator));
+    JS_POP_VALUE(ctx, collection);
+    if (!iterator)
+        return JS_EXCEPTION;
+    iterator->u.collection_iterator.collection = collection;
+    iterator->u.collection_iterator.index = 0;
+    iterator->u.collection_iterator.kind = kind;
+    return JS_VALUE_FROM_PTR(iterator);
+}
+
+/* Returns one for a value, zero at the end, and minus one for a bad receiver. */
+int JS_CollectionIteratorNext(JSContext *ctx, JSValue iterator,
+                              JSValue *key, JSValue *value)
+{
+    JSObject *object, *collection;
+    JSCollectionTable *table;
+    uint32_t index;
+    if (JS_GetClassID(ctx, iterator) != JS_CLASS_COLLECTION_ITERATOR)
+        return -1;
+    object = JS_VALUE_TO_PTR(iterator);
+    collection = js_get_collection(ctx, object->u.collection_iterator.collection);
+    if (!collection || JS_IsNull(collection->u.collection_table))
+        return 0;
+    table = JS_VALUE_TO_PTR(collection->u.collection_table);
+    index = object->u.collection_iterator.index;
+    while (index < table->used &&
+           JS_IsUninitialized(table->entries[index * 2]))
+        index++;
+    object->u.collection_iterator.index = index + 1;
+    if (index >= table->used)
+        return 0;
+    *key = table->entries[index * 2];
+    *value = table->entries[index * 2 + 1];
+    return 1;
+}
+
+int JS_GetCollectionIteratorKind(JSContext *ctx, JSValue iterator)
+{
+    if (JS_GetClassID(ctx, iterator) != JS_CLASS_COLLECTION_ITERATOR)
+        return -1;
+    return ((JSObject *)JS_VALUE_TO_PTR(iterator))->u.collection_iterator.kind;
 }
 
 JSValue JS_NewObject(JSContext *ctx)
@@ -11863,7 +12140,8 @@ static int get_mblock_size(const void *ptr)
     case JS_MTAG_VALUE_ARRAY:
         {
             const JSValueArray *p = ptr;
-            size = sizeof(JSValueArray) + p->size * sizeof(p->arr[0]);
+            size = sizeof(JSValueArray) +
+                (p->size & JS_COLLECTION_TABLE_SIZE_MASK) * sizeof(p->arr[0]);
         }
         break;
     case JS_MTAG_FREE:
@@ -11998,6 +12276,18 @@ static void gc_mark_flush(GCMarkState *s)
                     gc_mark(s, p->u.regexp.source);
                     gc_mark(s, p->u.regexp.byte_code);
                     break;
+                case JS_CLASS_MAP:
+                case JS_CLASS_SET:
+                case JS_CLASS_WEAK_MAP:
+                case JS_CLASS_WEAK_SET:
+                    gc_mark(s, p->u.collection_table);
+                    break;
+                case JS_CLASS_COLLECTION_ITERATOR:
+                    gc_mark(s, p->u.collection_iterator.collection);
+                    break;
+                case JS_CLASS_PROMISE:
+                    gc_mark(s, p->u.promise_data);
+                    break;
                 }
             }
             break;
@@ -12007,6 +12297,20 @@ static void gc_mark_flush(GCMarkState *s)
                 int pos;
 
                 pos = *s->gsp++;
+                if (p->size & JS_WEAK_TABLE_FLAG)
+                    break;
+                if (p->size & JS_STRONG_TABLE_FLAG) {
+                    JSCollectionTable *table = (void *)p;
+                    uint32_t index;
+                    for (index = 0; index < table->used; index++) {
+                        JSValue key = table->entries[index * 2];
+                        if (!JS_IsUninitialized(key)) {
+                            gc_mark(s, key);
+                            gc_mark(s, table->entries[index * 2 + 1]);
+                        }
+                    }
+                    break;
+                }
 
                 /* fast path to skip non objects */
                 while (pos < p->size && !JS_IsPtr(p->arr[pos]))
@@ -12061,6 +12365,86 @@ static BOOL gc_mb_is_marked(JSValue val)
         return FALSE;
     b = (JSFreeBlock *)JS_VALUE_TO_PTR(val);
     return b->gc_mark;
+}
+
+static void gc_flush_overflow(GCMarkState *s)
+{
+    JSContext *ctx = s->ctx;
+    while (s->overflow) {
+        uint8_t *ptr;
+        s->overflow = FALSE;
+        ptr = ctx->heap_base;
+        while (ptr < ctx->heap_free) {
+            int size = get_mblock_size(ptr);
+            JSMemBlockHeader *block = (void *)ptr;
+            if (block->gc_mark && mtag_has_references(block->mtag)) {
+                if (block->mtag == JS_MTAG_VALUE_ARRAY)
+                    *--s->gsp = 0;
+                *--s->gsp = JS_VALUE_FROM_PTR(ptr);
+                gc_mark_flush(s);
+            }
+            ptr += size;
+        }
+    }
+}
+
+/* Weak collection values are ephemerons: a live table retains a value only
+   when its key is independently live. Repeat to close chains where a newly
+   marked value makes a key in another weak collection reachable. */
+static void gc_mark_weak_collections(GCMarkState *s)
+{
+    BOOL changed;
+    do {
+        uint8_t *ptr = s->ctx->heap_base;
+        changed = FALSE;
+        while (ptr < s->ctx->heap_free) {
+            int size = get_mblock_size(ptr);
+            JSMemBlockHeader *header = (void *)ptr;
+            if (header->mtag == JS_MTAG_VALUE_ARRAY && header->gc_mark &&
+                (((JSValueArray *)ptr)->size & JS_WEAK_TABLE_FLAG)) {
+                JSCollectionTable *table = (void *)ptr;
+                uint32_t index;
+                for (index = 0; index < table->used; index++) {
+                    JSValue key = table->entries[index * 2];
+                    JSValue value = table->entries[index * 2 + 1];
+                    if (!JS_IsUninitialized(key) && gc_mb_is_marked(key) &&
+                        JS_IsPtr(value) &&
+                        !gc_mb_is_marked(value)) {
+                        gc_mark_root(s, value);
+                        changed = TRUE;
+                    }
+                }
+            }
+            ptr += size;
+        }
+        gc_flush_overflow(s);
+    } while (changed);
+
+    {
+        uint8_t *ptr = s->ctx->heap_base;
+        while (ptr < s->ctx->heap_free) {
+            int size = get_mblock_size(ptr);
+            JSMemBlockHeader *header = (void *)ptr;
+            if (header->mtag == JS_MTAG_VALUE_ARRAY && header->gc_mark &&
+                (((JSValueArray *)ptr)->size & JS_WEAK_TABLE_FLAG)) {
+                JSCollectionTable *table = (void *)ptr;
+                uint32_t read_index, write_index = 0;
+                for (read_index = 0; read_index < table->used; read_index++) {
+                    if (!JS_IsUninitialized(table->entries[read_index * 2]) &&
+                        gc_mb_is_marked(table->entries[read_index * 2])) {
+                        table->entries[write_index * 2] =
+                            table->entries[read_index * 2];
+                        table->entries[write_index * 2 + 1] =
+                            table->entries[read_index * 2 + 1];
+                        write_index++;
+                    }
+                }
+                table->count = write_index;
+                table->used = write_index;
+            }
+            ptr += size;
+        }
+    }
 }
 
 static void gc_mark_all(JSContext *ctx, BOOL keep_atoms)
@@ -12120,26 +12504,8 @@ static void gc_mark_all(JSContext *ctx, BOOL keep_atoms)
     }
 
     /* if the mark stack overflowed, need to scan the heap */
-    while (s->overflow) {
-        uint8_t *ptr;
-        int size;
-        JSMemBlockHeader *mb;
-        
-        s->overflow = FALSE;
-        
-        ptr = ctx->heap_base;
-        while (ptr < ctx->heap_free) {
-            size = get_mblock_size(ptr);
-            mb = (JSMemBlockHeader *)ptr;
-            if (mb->gc_mark && mtag_has_references(mb->mtag)) {
-                if (mb->mtag == JS_MTAG_VALUE_ARRAY)
-                    *--s->gsp = 0;
-                *--s->gsp = JS_VALUE_FROM_PTR(ptr);
-                gc_mark_flush(s);
-            }
-            ptr += size;
-        }
-    }
+    gc_flush_overflow(s);
+    gc_mark_weak_collections(s);
 
     /* update the unique string table (its elements are considered as
        weak string references) */
@@ -12306,15 +12672,37 @@ static void gc_thread_block(JSContext *ctx, void *ptr)
                 gc_thread_pointer(ctx, &p->u.regexp.source);
                 gc_thread_pointer(ctx, &p->u.regexp.byte_code);
                 break;
+            case JS_CLASS_MAP:
+            case JS_CLASS_SET:
+            case JS_CLASS_WEAK_MAP:
+            case JS_CLASS_WEAK_SET:
+                gc_thread_pointer(ctx, &p->u.collection_table);
+                break;
+            case JS_CLASS_COLLECTION_ITERATOR:
+                gc_thread_pointer(ctx, &p->u.collection_iterator.collection);
+                break;
+            case JS_CLASS_PROMISE:
+                gc_thread_pointer(ctx, &p->u.promise_data);
+                break;
             }
         }
         break;
     case JS_MTAG_VALUE_ARRAY:
         {
             JSValueArray *p = ptr;
-            int i;
-            for(i = 0; i < p->size; i++) {
-                gc_thread_pointer(ctx, &p->arr[i]);
+            if (p->size & (JS_WEAK_TABLE_FLAG | JS_STRONG_TABLE_FLAG)) {
+                JSCollectionTable *table = ptr;
+                uint32_t index;
+                for (index = 0; index < table->used; index++) {
+                    if (!JS_IsUninitialized(table->entries[index * 2])) {
+                        gc_thread_pointer(ctx, &table->entries[index * 2]);
+                        gc_thread_pointer(ctx, &table->entries[index * 2 + 1]);
+                    }
+                }
+            } else {
+                uint32_t index;
+                for (index = 0; index < p->size; index++)
+                    gc_thread_pointer(ctx, &p->arr[index]);
             }
         }
         break;

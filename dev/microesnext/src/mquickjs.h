@@ -121,6 +121,13 @@ typedef enum {
     JS_CLASS_FLOAT32_ARRAY,
     JS_CLASS_FLOAT64_ARRAY,
 
+    JS_CLASS_MAP,
+    JS_CLASS_SET,
+    JS_CLASS_WEAK_MAP,
+    JS_CLASS_WEAK_SET,
+    JS_CLASS_COLLECTION_ITERATOR,
+    JS_CLASS_PROMISE,
+
     JS_CLASS_USER, /* user classes start from this value */
 } JSObjectClassEnum;
 
@@ -212,6 +219,46 @@ JS_BOOL JS_IsArray(JSContext *ctx, JSValue obj);
 int JS_GetClassID(JSContext *ctx, JSValue val);
 void JS_SetOpaque(JSContext *ctx, JSValue val, void *opaque);
 void *JS_GetOpaque(JSContext *ctx, JSValue val);
+
+/* Native ES6-subset primitives used by the standard library. */
+JSValue JS_NewCollection(JSContext *ctx, int class_id);
+int JS_CollectionSet(JSContext *ctx, JSValue collection,
+                     JSValue key, JSValue value);
+JSValue JS_CollectionGet(JSContext *ctx, JSValue collection, JSValue key);
+int JS_CollectionHas(JSContext *ctx, JSValue collection, JSValue key);
+int JS_CollectionDelete(JSContext *ctx, JSValue collection, JSValue key);
+void JS_CollectionClear(JSContext *ctx, JSValue collection);
+uint32_t JS_CollectionSize(JSContext *ctx, JSValue collection);
+JSValue JS_CollectionKeyAt(JSContext *ctx, JSValue collection, uint32_t index);
+JSValue JS_CollectionValueAt(JSContext *ctx, JSValue collection, uint32_t index);
+JSValue JS_NewCollectionIterator(JSContext *ctx, JSValue collection,
+                                 int kind);
+int JS_CollectionIteratorNext(JSContext *ctx, JSValue iterator,
+                              JSValue *key, JSValue *value);
+int JS_GetCollectionIteratorKind(JSContext *ctx, JSValue iterator);
+
+/* ES6-subset standard-library entry points. */
+JSValue js_map_constructor(JSContext *, JSValue *, int, JSValue *);
+JSValue js_set_constructor(JSContext *, JSValue *, int, JSValue *);
+JSValue js_weak_map_constructor(JSContext *, JSValue *, int, JSValue *);
+JSValue js_weak_set_constructor(JSContext *, JSValue *, int, JSValue *);
+JSValue js_collection_clear(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_delete(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_has(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_size(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_iterator(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_for_each(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_collection_iterator_next(JSContext *, JSValue *, int, JSValue *);
+JSValue js_collection_iterator_constructor(JSContext *, JSValue *, int,
+                                           JSValue *);
+JSValue js_map_get(JSContext *, JSValue *, int, JSValue *);
+JSValue js_map_set(JSContext *, JSValue *, int, JSValue *);
+JSValue js_set_add(JSContext *, JSValue *, int, JSValue *);
+JSValue js_weak_collection_delete(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_weak_collection_has(JSContext *, JSValue *, int, JSValue *, int);
+JSValue js_weak_map_get(JSContext *, JSValue *, int, JSValue *);
+JSValue js_weak_map_set(JSContext *, JSValue *, int, JSValue *);
+JSValue js_weak_set_add(JSContext *, JSValue *, int, JSValue *);
 
 typedef JSValue JSCFunction(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 /* no JS function call be called from a C finalizer */

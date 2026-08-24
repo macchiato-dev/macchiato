@@ -331,6 +331,69 @@ static const JSPropDef js_performance[] = {
 static const JSClassDef js_performance_obj =
     JS_OBJECT_DEF("Performance", js_performance);
 
+static const JSPropDef js_map_proto[] = {
+    JS_CFUNC_MAGIC_DEF("clear", 0, js_collection_clear, 0),
+    JS_CFUNC_MAGIC_DEF("delete", 1, js_collection_delete, 0),
+    JS_CFUNC_MAGIC_DEF("has", 1, js_collection_has, 0),
+    JS_CFUNC_DEF("get", 1, js_map_get),
+    JS_CFUNC_DEF("set", 2, js_map_set),
+    JS_CFUNC_MAGIC_DEF("keys", 0, js_collection_iterator, 0),
+    JS_CFUNC_MAGIC_DEF("values", 0, js_collection_iterator, 1),
+    JS_CFUNC_MAGIC_DEF("entries", 0, js_collection_iterator, 2),
+    JS_CFUNC_MAGIC_DEF("forEach", 1, js_collection_for_each, 0),
+    JS_CGETSET_MAGIC_DEF("size", js_collection_size, NULL, 0),
+    JS_PROP_END,
+};
+static const JSClassDef js_map_class =
+    JS_CLASS_DEF("Map", 0, js_map_constructor, JS_CLASS_MAP,
+                 NULL, js_map_proto, NULL, NULL);
+
+static const JSPropDef js_set_proto[] = {
+    JS_CFUNC_MAGIC_DEF("clear", 0, js_collection_clear, 1),
+    JS_CFUNC_MAGIC_DEF("delete", 1, js_collection_delete, 1),
+    JS_CFUNC_MAGIC_DEF("has", 1, js_collection_has, 1),
+    JS_CFUNC_DEF("add", 1, js_set_add),
+    JS_CFUNC_MAGIC_DEF("keys", 0, js_collection_iterator, 3),
+    JS_CFUNC_MAGIC_DEF("values", 0, js_collection_iterator, 3),
+    JS_CFUNC_MAGIC_DEF("entries", 0, js_collection_iterator, 5),
+    JS_CFUNC_MAGIC_DEF("forEach", 1, js_collection_for_each, 1),
+    JS_CGETSET_MAGIC_DEF("size", js_collection_size, NULL, 1),
+    JS_PROP_END,
+};
+static const JSClassDef js_set_class =
+    JS_CLASS_DEF("Set", 0, js_set_constructor, JS_CLASS_SET,
+                 NULL, js_set_proto, NULL, NULL);
+
+static const JSPropDef js_weak_map_proto[] = {
+    JS_CFUNC_MAGIC_DEF("delete", 1, js_weak_collection_delete, 0),
+    JS_CFUNC_MAGIC_DEF("has", 1, js_weak_collection_has, 0),
+    JS_CFUNC_DEF("get", 1, js_weak_map_get),
+    JS_CFUNC_DEF("set", 2, js_weak_map_set),
+    JS_PROP_END,
+};
+static const JSClassDef js_weak_map_class =
+    JS_CLASS_DEF("WeakMap", 0, js_weak_map_constructor, JS_CLASS_WEAK_MAP,
+                 NULL, js_weak_map_proto, NULL, NULL);
+
+static const JSPropDef js_weak_set_proto[] = {
+    JS_CFUNC_MAGIC_DEF("delete", 1, js_weak_collection_delete, 1),
+    JS_CFUNC_MAGIC_DEF("has", 1, js_weak_collection_has, 1),
+    JS_CFUNC_DEF("add", 1, js_weak_set_add),
+    JS_PROP_END,
+};
+static const JSClassDef js_weak_set_class =
+    JS_CLASS_DEF("WeakSet", 0, js_weak_set_constructor, JS_CLASS_WEAK_SET,
+                 NULL, js_weak_set_proto, NULL, NULL);
+
+static const JSPropDef js_collection_iterator_proto[] = {
+    JS_CFUNC_DEF("next", 0, js_collection_iterator_next),
+    JS_PROP_END,
+};
+static const JSClassDef js_collection_iterator_class =
+    JS_CLASS_DEF("CollectionIterator", 0, js_collection_iterator_constructor,
+                 JS_CLASS_COLLECTION_ITERATOR, NULL,
+                 js_collection_iterator_proto, NULL, NULL);
+
 static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("Object", &js_object_class),
     JS_PROP_CLASS_DEF("Function", &js_function_class),
@@ -377,6 +440,13 @@ static const JSPropDef js_global_object[] = {
 
     JS_PROP_CLASS_DEF("console", &js_console_obj),
     JS_PROP_CLASS_DEF("performance", &js_performance_obj),
+    JS_PROP_CLASS_DEF("Map", &js_map_class),
+    JS_PROP_CLASS_DEF("Set", &js_set_class),
+    JS_PROP_CLASS_DEF("WeakMap", &js_weak_map_class),
+    JS_PROP_CLASS_DEF("WeakSet", &js_weak_set_class),
+    /* Initializes the native iterator prototype. The binding is intentionally
+       non-standard and will disappear when symbol-keyed prototypes land. */
+    JS_PROP_CLASS_DEF("__CollectionIterator", &js_collection_iterator_class),
     JS_CFUNC_DEF("print", 1, js_print),
 #ifdef CONFIG_CLASS_EXAMPLE
     JS_PROP_CLASS_DEF("Rectangle", &js_rectangle_class),

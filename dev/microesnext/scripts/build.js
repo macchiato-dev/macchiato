@@ -31,6 +31,7 @@ execFileSync(cc, [
   join(source, "readline.c"),
   join(source, "readline_tty.c"),
   join(source, "mquickjs.c"),
+  join(source, "microesnext.c"),
   join(source, "dtoa.c"),
   join(source, "libm.c"),
   join(source, "cutils.c"),
