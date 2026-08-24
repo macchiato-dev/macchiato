@@ -88,6 +88,8 @@ static __maybe_unused const char *js_mtag_name[JS_MTAG_COUNT] = {
 /* FRAME_CF_CTOR */
 #define FRAME_CF_POP_RET        (1 << 17) /* pop the return value */
 #define FRAME_CF_PC_ADD1        (1 << 18) /* increment the PC by 1 instead of 3 */
+#define FRAME_CF_ASYNC_BODY     (1 << 19)
+#define FRAME_CF_ASYNC_RESUME   (1 << 20)
 
 #define JS_MB_PAD(n)  (JSW * 8 - (n))
 
@@ -158,7 +160,8 @@ typedef struct {
 typedef struct JSVarRef {
     JS_MB_HEADER;
     JSWord is_detached : 1;
-    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 1);
+    JSWord is_resumable : 1;
+    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 2);
     union {
         JSValue value; /* is_detached = true */
         struct {
@@ -252,6 +255,7 @@ struct JSContext {
     JSValue *class_obj; /* same as class_proto + class_count */
     JSStringPosCacheEntry string_pos_cache[JS_STRING_POS_CACHE_SIZE];
     uint32_t promise_job_read;
+    BOOL async_resume_rejected : 8;
                                            
     /* must only contain JSValue from this point (see JS_GC()) */
     JSValue unique_strings; /* JSValueArray of sorted strings or JS_NULL */
@@ -265,6 +269,8 @@ struct JSContext {
     JSValue global_obj;
     JSValue minus_zero; /* minus zero float64 value */
     JSValue promise_jobs;
+    JSValue async_resume_state;
+    JSValue async_resume_value;
     JSValue class_proto[]; /* prototype for each class (class_count
                               element, then class_count elements for
                               class_obj */
@@ -383,9 +389,10 @@ typedef struct JSFunctionBytecode {
     JSWord has_local_func_name : 1; /* only used during parsing */
     JSWord has_column : 1; /* column debug info is present */
     JSWord is_arrow : 1;
+    JSWord is_async : 1;
     /* during parse: variable index + 1 of hoisted function, 0 otherwise */
     JSWord arg_count : 16; 
-    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 4 + 16);
+    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 5 + 16);
 
     JSValue func_name; /* JS_NULL if anonymous function */
     JSValue byte_code; /* JS_NULL if the function is not parsed yet */
@@ -394,6 +401,7 @@ typedef struct JSFunctionBytecode {
     JSValue ext_vars; /* records of (var_name, var_kind (2 bits) var_idx (16 bits)) */
     uint16_t stack_size; /* maximum stack size */
     uint16_t ext_vars_len; /* XXX: only used during parsing */
+    uint16_t async_var_idx;
     JSValue filename; /* filename in which the function is defined */
     JSValue pc2line; /* JSByteArray or JS_NULL if not initialized */
     uint32_t source_pos; /* only used during parsing (XXX: shrink) */
@@ -4021,6 +4029,8 @@ JSContext *JS_NewContext2(void *mem_start, size_t mem_size, const JSSTDLibraryDe
     ctx->minus_zero = js_alloc_float64(ctx, -0.0); /* XXX: use a ROM value instead */
     ctx->promise_jobs = JS_NULL;
     ctx->promise_job_read = 0;
+    ctx->async_resume_state = JS_NULL;
+    ctx->async_resume_value = JS_UNDEFINED;
         
     if (!prepare_compilation) {
         stdlib_init(ctx, (JSValueArray *)(stdlib_def->stdlib_table + stdlib_def->global_object_offset));
@@ -4104,6 +4114,7 @@ static JSValue get_var_ref(JSContext *ctx, JSValue *pfirst_var_ref, JSValue *pva
     if (!p)
         return JS_EXCEPTION;
     p->is_detached = FALSE;
+    p->is_resumable = FALSE;
     p->u.pvalue = pval;
     p->u.next = *pfirst_var_ref;
     val = JS_VALUE_FROM_PTR(p);
@@ -4119,6 +4130,15 @@ static JSValue get_var_ref(JSContext *ctx, JSValue *pfirst_var_ref, JSValue *pva
 #define FRAME_OFFSET_CUR_PC     (-1) /* current pc_offset */
 #define FRAME_OFFSET_FIRST_VARREF (-2)
 #define FRAME_OFFSET_VAR0      (-3)
+
+enum {
+    ASYNC_STATE_PROMISE,
+    ASYNC_STATE_STACK,
+    ASYNC_STATE_FP_OFFSET,
+    ASYNC_STATE_PC_OFFSET,
+    ASYNC_STATE_VAR_REFS,
+    ASYNC_STATE_LENGTH,
+};
 
 /* stack layout:
    
@@ -5471,6 +5491,96 @@ void JS_PushArg(JSContext *ctx, JSValue val)
     *--ctx->sp = val;
 }
 
+static JSValue js_save_async_frame(JSContext *ctx, int pc_offset)
+{
+    JSValue state, stack, refs, ref_value;
+    JSGCRef state_ref, stack_ref, refs_ref;
+    JSValue *fp = ctx->fp, *sp = ctx->sp, *frame_top;
+    JSFunctionBytecode *b;
+    JSObject *closure, *state_object, *stack_object, *refs_object;
+    JSValueArray *state_values, *stack_values, *ref_values;
+    JSVarRef *ref;
+    int argc, frame_len, fp_offset, ref_count = 0, index, stack_offset;
+
+    closure = JS_VALUE_TO_PTR(fp[FRAME_OFFSET_FUNC_OBJ]);
+    b = JS_VALUE_TO_PTR(closure->u.closure.func_bytecode);
+    argc = JS_VALUE_GET_INT(fp[FRAME_OFFSET_CALL_FLAGS]) & FRAME_CF_ARGC_MASK;
+    frame_top = fp + FRAME_OFFSET_ARG0 + max_int(argc, b->arg_count);
+    frame_len = frame_top - sp;
+    fp_offset = fp - sp;
+    for (ref_value = fp[FRAME_OFFSET_FIRST_VARREF]; ref_value != JS_NULL;) {
+        ref = JS_VALUE_TO_PTR(ref_value);
+        ref_count++;
+        ref_value = ref->u.next;
+    }
+
+    state = JS_NewArray(ctx, ASYNC_STATE_LENGTH);
+    if (JS_IsException(state))
+        return state;
+    JS_PUSH_VALUE(ctx, state);
+    stack = JS_NewArray(ctx, frame_len);
+    JS_PUSH_VALUE(ctx, stack);
+    refs = JS_NewArray(ctx, ref_count * 2);
+    JS_PUSH_VALUE(ctx, refs);
+    if (JS_IsException(stack) || JS_IsException(refs))
+        goto fail;
+
+    /* Allocations may compact the VM heap, so reload all stack pointers. */
+    fp = ctx->fp;
+    sp = ctx->sp;
+    state_object = JS_VALUE_TO_PTR(state);
+    stack_object = JS_VALUE_TO_PTR(stack);
+    refs_object = JS_VALUE_TO_PTR(refs);
+    state_values = JS_VALUE_TO_PTR(state_object->u.array.tab);
+    stack_values = JS_VALUE_TO_PTR(stack_object->u.array.tab);
+    ref_values = JS_VALUE_TO_PTR(refs_object->u.array.tab);
+    for (index = 0; index < frame_len; index++)
+        stack_values->arr[index] = sp[index];
+
+    index = 0;
+    for (ref_value = fp[FRAME_OFFSET_FIRST_VARREF]; ref_value != JS_NULL;) {
+        ref = JS_VALUE_TO_PTR(ref_value);
+        ref->is_resumable = TRUE;
+        stack_offset = ref->u.pvalue - fp;
+        ref_values->arr[index++] = ref_value;
+        ref_values->arr[index++] = JS_NewInt32(ctx, stack_offset);
+        ref_value = ref->u.next;
+    }
+    state_values->arr[ASYNC_STATE_PROMISE] =
+        fp[FRAME_OFFSET_VAR0 - b->async_var_idx];
+    state_values->arr[ASYNC_STATE_STACK] = stack;
+    state_values->arr[ASYNC_STATE_FP_OFFSET] = JS_NewInt32(ctx, fp_offset);
+    state_values->arr[ASYNC_STATE_PC_OFFSET] = JS_NewInt32(ctx, pc_offset);
+    state_values->arr[ASYNC_STATE_VAR_REFS] = refs;
+    JS_POP_VALUE(ctx, refs);
+    JS_POP_VALUE(ctx, stack);
+    JS_POP_VALUE(ctx, state);
+    return state;
+fail:
+    JS_POP_VALUE(ctx, refs);
+    JS_POP_VALUE(ctx, stack);
+    JS_POP_VALUE(ctx, state);
+    return JS_EXCEPTION;
+}
+
+JSValue JS_ResumeAsync(JSContext *ctx, JSValue state, JSValue value,
+                       JS_BOOL rejected)
+{
+    JSValue result;
+    JSGCRef state_ref, value_ref;
+    JS_PUSH_VALUE(ctx, state);
+    JS_PUSH_VALUE(ctx, value);
+    ctx->async_resume_state = state;
+    ctx->async_resume_value = value;
+    ctx->async_resume_rejected = rejected;
+    result = JS_Call(ctx, FRAME_CF_ASYNC_RESUME);
+    ctx->async_resume_state = JS_NULL;
+    ctx->async_resume_value = JS_UNDEFINED;
+    JS_POP_VALUE(ctx, value);
+    JS_POP_VALUE(ctx, state);
+    return result;
+}
+
 /* Usage:
    if (JS_StackCheck(ctx, n + 2)) ...
    JS_PushArg(ctx, arg[n - 1]);
@@ -5484,6 +5594,7 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
 {
     JSValue *fp, *sp, val = JS_UNDEFINED, *initial_fp;
     uint8_t *pc;
+    BOOL async_suspended = FALSE;
     /* temporary variables */
     int opcode = OP_invalid, i;
     JSFunctionBytecode *b;
@@ -5500,6 +5611,60 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
     initial_fp = fp;
     b = NULL;
     pc = NULL;
+    if (call_flags & FRAME_CF_ASYNC_RESUME) {
+        JSValue state = ctx->async_resume_state;
+        JSValue stack = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_STACK);
+        JSValue refs;
+        JSObject *stack_object = JS_VALUE_TO_PTR(stack);
+        JSValueArray *stack_values;
+        JSObject *refs_object;
+        JSValueArray *ref_values;
+        JSValue offset_value;
+        JSObject *closure;
+        JSVarRef *ref;
+        int frame_len = stack_object->u.array.len;
+        int fp_offset, pc_offset, offset;
+
+        if (JS_StackCheck(ctx, frame_len)) {
+            val = JS_EXCEPTION;
+            goto done;
+        }
+        state = ctx->async_resume_state;
+        stack = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_STACK);
+        refs = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_VAR_REFS);
+        stack_object = JS_VALUE_TO_PTR(stack);
+        stack_values = JS_VALUE_TO_PTR(stack_object->u.array.tab);
+        refs_object = JS_VALUE_TO_PTR(refs);
+        ref_values = JS_VALUE_TO_PTR(refs_object->u.array.tab);
+        sp = ctx->sp - frame_len;
+        for (i = 0; i < frame_len; i++)
+            sp[i] = stack_values->arr[i];
+        offset_value = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_FP_OFFSET);
+        fp_offset = JS_VALUE_GET_INT(offset_value);
+        offset_value = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_PC_OFFSET);
+        pc_offset = JS_VALUE_GET_INT(offset_value);
+        fp = sp + fp_offset;
+        fp[FRAME_OFFSET_SAVED_FP] = SP_TO_VALUE(ctx, initial_fp);
+        fp[FRAME_OFFSET_FIRST_VARREF] = JS_NULL;
+        for (i = 0; i < refs_object->u.array.len; i += 2) {
+            ref = JS_VALUE_TO_PTR(ref_values->arr[i]);
+            offset = JS_VALUE_GET_INT(ref_values->arr[i + 1]);
+            ref->u.pvalue = fp + offset;
+            ref->u.next = fp[FRAME_OFFSET_FIRST_VARREF];
+            ref->is_detached = FALSE;
+            ref->is_resumable = FALSE;
+            fp[FRAME_OFFSET_FIRST_VARREF] = ref_values->arr[i];
+        }
+        closure = JS_VALUE_TO_PTR(fp[FRAME_OFFSET_FUNC_OBJ]);
+        b = JS_VALUE_TO_PTR(closure->u.closure.func_bytecode);
+        pc = ((JSByteArray *)JS_VALUE_TO_PTR(b->byte_code))->buf + pc_offset;
+        sp[0] = ctx->async_resume_value;
+        if (ctx->async_resume_rejected) {
+            val = JS_Throw(ctx, sp[0]);
+            goto exception;
+        }
+        goto restart;
+    }
     goto function_call;
 
 #define CASE(op)        case op
@@ -5926,6 +6091,17 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                             sp[i] = JS_UNDEFINED;
                         byte_code = JS_VALUE_TO_PTR(b->byte_code);
                         pc = byte_code->buf;
+                        if (b->is_async) {
+                            SAVE();
+                            val = JS_NewPromise(ctx);
+                            RESTORE();
+                            if (JS_IsException(val))
+                                goto exception;
+                            fp[FRAME_OFFSET_VAR0 - b->async_var_idx] = val;
+                            call_flags |= FRAME_CF_ASYNC_BODY;
+                            fp[FRAME_OFFSET_CALL_FLAGS] =
+                                JS_NewShortInt(call_flags);
+                        }
                     } else {
                     not_a_function:
                         sp += 2; /* go back to the caller frame */
@@ -6000,6 +6176,32 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
         CASE(OP_return_undef):
             val = JS_UNDEFINED;
             goto generic_return;
+
+        CASE(OP_await):
+            {
+                JSValue state;
+                JSGCRef state_ref;
+                JSByteArray *byte_code = JS_VALUE_TO_PTR(b->byte_code);
+                SAVE();
+                state = js_save_async_frame(ctx, pc - byte_code->buf);
+                if (JS_IsException(state)) {
+                    RESTORE();
+                    val = JS_EXCEPTION;
+                    goto exception;
+                }
+                JS_PUSH_VALUE(ctx, state);
+                if (JS_AsyncAttach(ctx, sp[0], state)) {
+                    JS_POP_VALUE(ctx, state);
+                    RESTORE();
+                    val = JS_EXCEPTION;
+                    goto exception;
+                }
+                val = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_PROMISE);
+                JS_POP_VALUE(ctx, state);
+                RESTORE();
+                async_suspended = TRUE;
+                goto generic_return;
+            }
             
         CASE(OP_return):
             val = sp[0];
@@ -6019,11 +6221,36 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                     assert(!pv->is_detached);
                     pv->u.value = *pv->u.pvalue;
                     pv->is_detached = TRUE;
-                    /* shrink 'pv' */
-                    set_free_block((uint8_t *)pv + sizeof(JSVarRef) - sizeof(JSValue), sizeof(JSValue));
+                    if (!pv->is_resumable) {
+                        /* A final detached reference no longer needs pvalue. */
+                        set_free_block((uint8_t *)pv + sizeof(JSVarRef) -
+                                       sizeof(JSValue), sizeof(JSValue));
+                    }
                 }
 
                 call_flags = JS_VALUE_GET_INT(fp[FRAME_OFFSET_CALL_FLAGS]);
+                if ((call_flags & FRAME_CF_ASYNC_BODY) && !async_suspended) {
+                    JSValue promise =
+                        fp[FRAME_OFFSET_VAR0 - b->async_var_idx];
+                    if (JS_IsException(val)) {
+                        JSValue reason = JS_GetException(ctx);
+                        JSGCRef reason_ref;
+                        JS_PUSH_VALUE(ctx, reason);
+                        SAVE();
+                        JS_AsyncReject(ctx, promise, reason);
+                        RESTORE();
+                        JS_POP_VALUE(ctx, reason);
+                    } else {
+                        SAVE();
+                        if (JS_AsyncResolve(ctx, promise, val)) {
+                            JSValue reason = JS_GetException(ctx);
+                            JS_AsyncReject(ctx, promise, reason);
+                        }
+                        RESTORE();
+                    }
+                    val = fp[FRAME_OFFSET_VAR0 - b->async_var_idx];
+                }
+                async_suspended = FALSE;
                 if (unlikely(call_flags & FRAME_CF_CTOR)) {
                     if (!JS_IsException(val) && !JS_IsObject(ctx, val)) {
                         val = fp[FRAME_OFFSET_THIS_OBJ];
@@ -8205,6 +8432,17 @@ static int peek_token(JSParseState *s)
     return token;
 }
 
+static BOOL token_is_ident(JSParseState *s, const char *name)
+{
+    JSCStringBuf buffer;
+    size_t length;
+    const char *value;
+    if (s->token.val != TOK_IDENT)
+        return FALSE;
+    value = JS_ToCStringLen(s->ctx, &length, s->token.value, &buffer);
+    return value && strlen(name) == length && !memcmp(value, name, length);
+}
+
 static BOOL is_parenthesized_arrow(JSParseState *s)
 {
     JSParsePos pos;
@@ -9132,7 +9370,8 @@ typedef enum {
 } JSParseFunctionEnum;
 
 static void js_parse_function_decl(JSParseState *s,
-                                   JSParseFunctionEnum func_type, JSValue func_name);
+                                   JSParseFunctionEnum func_type,
+                                   JSValue func_name, BOOL is_async);
 
 /* labels are short integers so they can be used as JSValue. -1 is not
    a valid label. */
@@ -9856,7 +10095,7 @@ static void js_skip_arrow_expression(JSParseState *s)
     }
 }
 
-static void js_parse_arrow_decl(JSParseState *s)
+static void js_parse_arrow_decl(JSParseState *s, BOOL is_async)
 {
     JSContext *ctx = s->ctx;
     JSFunctionBytecode *b;
@@ -9873,6 +10112,10 @@ static void js_parse_arrow_decl(JSParseState *s)
     b->source_pos = s->token.source_pos;
     b->has_column = s->has_column;
     b->is_arrow = 1;
+    b->is_async = is_async;
+
+    if (is_async)
+        next_token(s);
 
     if (s->token.val == TOK_IDENT) {
         next_token(s);
@@ -9900,8 +10143,24 @@ static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
     PARSE_START8();
     if ((s->token.val == TOK_IDENT && peek_token(s) == TOK_ARROW) ||
         (s->token.val == '(' && is_parenthesized_arrow(s))) {
-        js_parse_arrow_decl(s);
+        js_parse_arrow_decl(s, FALSE);
         goto postfix_suffix;
+    }
+    if (token_is_ident(s, "async")) {
+        JSParsePos async_pos;
+        js_parse_get_pos(s, &async_pos);
+        next_token(s);
+        if (s->token.val == TOK_FUNCTION) {
+            js_parse_function_decl(s, JS_PARSE_FUNC_EXPR, JS_NULL, TRUE);
+            goto postfix_suffix;
+        }
+        if ((s->token.val == TOK_IDENT && peek_token(s) == TOK_ARROW) ||
+            (s->token.val == '(' && is_parenthesized_arrow(s))) {
+            js_parse_seek_token(s, &async_pos);
+            js_parse_arrow_decl(s, TRUE);
+            goto postfix_suffix;
+        }
+        js_parse_seek_token(s, &async_pos);
     }
     switch(s->token.val) {
     case TOK_NUMBER:
@@ -9976,7 +10235,7 @@ static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
         js_parse_expect(s, ')');
         break;
     case TOK_FUNCTION:
-        js_parse_function_decl(s, JS_PARSE_FUNC_EXPR, JS_NULL);
+        js_parse_function_decl(s, JS_PARSE_FUNC_EXPR, JS_NULL, FALSE);
         break;
     case TOK_NULL:
         emit_op(s, OP_null);
@@ -10061,7 +10320,8 @@ static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
                     }
                 } else {
                     /* getter/setter/method */
-                    js_parse_function_decl(s, JS_PARSE_FUNC_METHOD, name);
+                    js_parse_function_decl(s, JS_PARSE_FUNC_METHOD, name,
+                                           FALSE);
                     if (prop_type == PARSE_PROP_METHOD)
                         emit_op(s, OP_define_field);
                     else if (prop_type == PARSE_PROP_GET)
@@ -10293,7 +10553,18 @@ static void js_emit_delete(JSParseState *s)
 
 static int js_parse_unary(JSParseState *s, int state, int parse_flags)
 {
-    PARSE_START7();
+    PARSE_START8();
+
+    {
+        JSFunctionBytecode *function = JS_VALUE_TO_PTR(s->cur_func);
+        if (function->is_async && token_is_ident(s, "await")) {
+            JSSourcePos source_pos = s->token.source_pos;
+            next_token(s);
+            PARSE_CALL_SAVE1(s, 7, js_parse_unary, 0, source_pos);
+            emit_op_pos(s, OP_await, source_pos);
+            return PARSE_STATE_RET;
+        }
+    }
 
     switch(s->token.val) {
     case '+':
@@ -11507,7 +11778,10 @@ static JSParseFunc *parse_func_table[] = {
 static void js_parse_source_element(JSParseState *s)
 {
     if (s->token.val == TOK_FUNCTION) {
-        js_parse_function_decl(s, JS_PARSE_FUNC_STATEMENT, JS_NULL);
+        js_parse_function_decl(s, JS_PARSE_FUNC_STATEMENT, JS_NULL, FALSE);
+    } else if (token_is_ident(s, "async") && peek_token(s) == TOK_FUNCTION) {
+        next_token(s);
+        js_parse_function_decl(s, JS_PARSE_FUNC_STATEMENT, JS_NULL, TRUE);
     } else {
         js_parse_call(s, PARSE_FUNC_js_parse_statement, 0);
     }
@@ -11532,7 +11806,8 @@ static JSFunctionBytecode *js_alloc_function_bytecode(JSContext *ctx)
 /* the current token must be TOK_FUNCTION for JS_PARSE_FUNC_STATEMENT
    or JS_PARSE_FUNC_EXPR. Otherwise it is '('. */
 static void js_parse_function_decl(JSParseState *s,
-                                   JSParseFunctionEnum func_type, JSValue func_name)
+                                   JSParseFunctionEnum func_type,
+                                   JSValue func_name, BOOL is_async)
 {
     JSContext *ctx = s->ctx;
     BOOL is_expr;
@@ -11568,6 +11843,7 @@ static void js_parse_function_decl(JSParseState *s,
     b->func_name = func_name_ref.val;
     b->source_pos = s->token.source_pos;
     b->has_column = s->has_column;
+    b->is_async = is_async;
     
     js_parse_expect1(s, '(');
     /* skip the arguments */
@@ -11679,6 +11955,11 @@ static void js_parse_function(JSParseState *s)
 
     b = JS_VALUE_TO_PTR(s->cur_func);
     if (b->is_arrow) {
+        if (b->is_async) {
+            if (!token_is_ident(s, "async"))
+                js_parse_error(s, "expecting async arrow function");
+            next_token(s);
+        }
         if (s->token.val == TOK_IDENT) {
             JSValue name = s->token.value;
             add_var(s, name);
@@ -11702,6 +11983,11 @@ static void js_parse_function(JSParseState *s)
         }
         b = JS_VALUE_TO_PTR(s->cur_func);
         b->arg_count = s->local_vars_len;
+        if (b->is_async) {
+            int hidden = add_var(s, JS_NULL);
+            b = JS_VALUE_TO_PTR(s->cur_func);
+            b->async_var_idx = hidden - b->arg_count;
+        }
         if (s->token.val != TOK_ARROW)
             js_parse_error(s, "expecting '=>'");
         next_token(s);
@@ -11744,6 +12030,12 @@ static void js_parse_function(JSParseState *s)
     }
     b = JS_VALUE_TO_PTR(s->cur_func);
     arg_count = b->arg_count = s->local_vars_len;
+
+    if (b->is_async) {
+        int hidden = add_var(s, JS_NULL);
+        b = JS_VALUE_TO_PTR(s->cur_func);
+        b->async_var_idx = hidden - arg_count;
+    }
 
     next_token(s);
     
@@ -12512,7 +12804,7 @@ static int get_mblock_size(const void *ptr)
         {
             const JSVarRef *p = ptr;
             size = sizeof(JSVarRef);
-            if (p->is_detached)
+            if (p->is_detached && !p->is_resumable)
                 size -= sizeof(JSValue);
         }
         break;
@@ -13227,7 +13519,7 @@ void JS_GC(JSContext *ctx)
 
 /* bytecode saving and loading */
 
-#define JS_BYTECODE_VERSION_32 0x0001
+#define JS_BYTECODE_VERSION_32 0x0002
 /* bit 15 of bytecode version is a 64-bit indicator */
 #define JS_BYTECODE_VERSION (JS_BYTECODE_VERSION_32 | ((JSW & 8) << 12))
 
@@ -13320,8 +13612,9 @@ typedef struct {
     JSWord_32 has_local_func_name : 1; /* only used during parsing */
     JSWord_32 has_column : 1; /* column debug info is present */
     JSWord_32 is_arrow : 1;
+    JSWord_32 is_async : 1;
     JSWord_32 arg_count : 16;
-    JSWord_32 dummy: JS_MB_PAD_32(JS_MTAG_BITS + 4 + 16);
+    JSWord_32 dummy: JS_MB_PAD_32(JS_MTAG_BITS + 5 + 16);
 
     JSValue_32 func_name; /* JS_NULL if anonymous function */
     JSValue_32 byte_code; /* JS_NULL if the function is not parsed yet */
@@ -13330,6 +13623,7 @@ typedef struct {
     JSValue_32 ext_vars; /* records of (var_name, var_kind (2 bits) var_idx (16 bits)) */
     uint16_t stack_size; /* maximum stack size */
     uint16_t ext_vars_len; /* XXX: only used during parsing */
+    uint16_t async_var_idx;
     JSValue_32 filename; /* filename in which the function is defined */
     JSValue_32 pc2line; /* JSByteArray or JS_NULL if not initialized */
     uint32_t source_pos; /* only used during parsing (XXX: shrink) */
@@ -13352,6 +13646,7 @@ static int convert_mblock_64to32(void *ptr1, const void *ptr)
             b1->has_local_func_name = b->has_local_func_name;
             b1->has_column = b->has_column;
             b1->is_arrow = b->is_arrow;
+            b1->is_async = b->is_async;
             b1->arg_count = b->arg_count;
             b1->dummy = 0;
             b1->func_name = b->func_name;
@@ -13361,6 +13656,7 @@ static int convert_mblock_64to32(void *ptr1, const void *ptr)
             b1->ext_vars = b->ext_vars;
             b1->stack_size = b->stack_size;
             b1->ext_vars_len = b->ext_vars_len;
+            b1->async_var_idx = b->async_var_idx;
             b1->filename = b->filename;
             b1->pc2line = b->pc2line;
             b1->source_pos = b->source_pos;

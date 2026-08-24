@@ -491,6 +491,8 @@ static const JSPropDef js_c_function_decl[] = {
                          js_promise_finally_handler),
     JS_CFUNC_SPECIAL_DEF("promise_finally_value", 0, generic_params,
                          js_promise_finally_value),
+    JS_CFUNC_SPECIAL_DEF("async_resume", 0, generic_params,
+                         js_async_resume_handler),
 #ifdef CONFIG_CLASS_EXAMPLE
     JS_CFUNC_SPECIAL_DEF("rectangle_closure_test", 0, generic_params, js_rectangle_closure_test ),
 #endif

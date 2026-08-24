@@ -138,6 +138,7 @@ typedef enum {
     JS_CFUNCTION_promise_all_element,
     JS_CFUNCTION_promise_finally,
     JS_CFUNCTION_promise_finally_value,
+    JS_CFUNCTION_async_resume,
     JS_CFUNCTION_USER, /* user functions start from this value */
 } JSCFunctionEnum;
 
@@ -282,6 +283,8 @@ JSValue js_promise_finally_handler(JSContext *, JSValue *, int, JSValue *,
                                    JSValue);
 JSValue js_promise_finally_value(JSContext *, JSValue *, int, JSValue *,
                                  JSValue);
+JSValue js_async_resume_handler(JSContext *, JSValue *, int, JSValue *,
+                                JSValue);
 
 typedef JSValue JSCFunction(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 /* no JS function call be called from a C finalizer */
@@ -390,6 +393,13 @@ void JS_PushArg(JSContext *ctx, JSValue val);
 #define FRAME_CF_CTOR           (1 << 16) /* also ored with argc in
                                              C constructors */
 JSValue JS_Call(JSContext *ctx, int call_flags);
+JSValue JS_ResumeAsync(JSContext *ctx, JSValue state, JSValue value,
+                       JS_BOOL rejected);
+
+/* Promise operations used by the interpreter's async-function boundary. */
+int JS_AsyncAttach(JSContext *ctx, JSValue awaited, JSValue state);
+int JS_AsyncResolve(JSContext *ctx, JSValue promise, JSValue value);
+int JS_AsyncReject(JSContext *ctx, JSValue promise, JSValue reason);
 
 #define JS_BYTECODE_MAGIC   0xacfb
 

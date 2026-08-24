@@ -636,6 +636,77 @@ static JSValue promise_resolved_value(JSContext *ctx, JSValue value)
     return promise;
 }
 
+int JS_AsyncResolve(JSContext *ctx, JSValue promise, JSValue value)
+{
+    return resolve_promise(ctx, promise, value);
+}
+
+int JS_AsyncReject(JSContext *ctx, JSValue promise, JSValue reason)
+{
+    return settle_raw(ctx, promise, reason, 1);
+}
+
+JSValue js_async_resume_handler(JSContext *ctx, JSValue *this_value,
+                                int argc, JSValue *argv, JSValue params)
+{
+    JSValue state = JS_GetPropertyUint32(ctx, params, 0);
+    JSValue rejected_value = JS_GetPropertyUint32(ctx, params, 1);
+    JSValue result;
+    JS_BOOL rejected = JS_VALUE_GET_SPECIAL_VALUE(rejected_value) != 0;
+    UNUSED(this_value);
+    result = JS_ResumeAsync(ctx, state,
+                            argc ? argv[0] : JS_UNDEFINED, rejected);
+    return JS_IsException(result) ? result : JS_UNDEFINED;
+}
+
+int JS_AsyncAttach(JSContext *ctx, JSValue awaited, JSValue state)
+{
+    JSValue promise, fulfilled_params, rejected_params;
+    JSValue fulfilled, rejected, next;
+    JSGCRef promise_ref, fulfilled_params_ref, rejected_params_ref;
+    JSGCRef fulfilled_ref, rejected_ref;
+
+    promise = promise_resolved_value(ctx, awaited);
+    if (JS_IsException(promise))
+        return -1;
+    JS_PUSH_VALUE(ctx, promise);
+    fulfilled_params = JS_NewArray(ctx, 2);
+    JS_PUSH_VALUE(ctx, fulfilled_params);
+    rejected_params = JS_NewArray(ctx, 2);
+    JS_PUSH_VALUE(ctx, rejected_params);
+    if (JS_IsException(fulfilled_params) || JS_IsException(rejected_params))
+        goto fail;
+    JS_SetPropertyUint32(ctx, fulfilled_params, 0, state);
+    JS_SetPropertyUint32(ctx, fulfilled_params, 1, JS_FALSE);
+    JS_SetPropertyUint32(ctx, rejected_params, 0, state);
+    JS_SetPropertyUint32(ctx, rejected_params, 1, JS_TRUE);
+    fulfilled = JS_NewCFunctionParams(ctx, JS_CFUNCTION_async_resume,
+                                      fulfilled_params);
+    JS_PUSH_VALUE(ctx, fulfilled);
+    rejected = JS_NewCFunctionParams(ctx, JS_CFUNCTION_async_resume,
+                                     rejected_params);
+    JS_PUSH_VALUE(ctx, rejected);
+    if (JS_IsException(fulfilled) || JS_IsException(rejected)) {
+        JS_POP_VALUE(ctx, rejected);
+        JS_POP_VALUE(ctx, fulfilled);
+        goto fail;
+    }
+    next = promise_then_native(ctx, promise, fulfilled, rejected);
+    JS_POP_VALUE(ctx, rejected);
+    JS_POP_VALUE(ctx, fulfilled);
+    if (JS_IsException(next))
+        goto fail;
+    JS_POP_VALUE(ctx, rejected_params);
+    JS_POP_VALUE(ctx, fulfilled_params);
+    JS_POP_VALUE(ctx, promise);
+    return 0;
+fail:
+    JS_POP_VALUE(ctx, rejected_params);
+    JS_POP_VALUE(ctx, fulfilled_params);
+    JS_POP_VALUE(ctx, promise);
+    return -1;
+}
+
 JSValue js_promise_resolve(JSContext *ctx, JSValue *this_value,
                            int argc, JSValue *argv)
 {

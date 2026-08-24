@@ -97,6 +97,7 @@ DEF(    call_method, 3, 2, 1, npop) /* this func args.. -> ret (arguments are no
 DEF(     array_from, 3, 0, 1, npop) /* arguments are not counted in n_pop */
 DEF(         return, 1, 1, 0, none)
 DEF(   return_undef, 1, 0, 0, none)
+DEF(          await, 1, 1, 1, none)
 DEF(          throw, 1, 1, 0, none)
 DEF(         regexp, 1, 2, 1, none) /* create a RegExp object from the pattern and a bytecode string */
 
