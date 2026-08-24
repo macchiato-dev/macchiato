@@ -39,10 +39,10 @@ const publicManifest = JSON.parse(readFileSync(join(root, "site", prefix, "manif
 const publicManifestText = JSON.stringify(publicManifest);
 const machinePrefix = `site/${prefix}/machines/`;
 const machinePaths = [...expected.keys()].filter(path => path.startsWith(machinePrefix));
-if (!machinePaths.includes(`${machinePrefix}microquickjs-server.wasm`) ||
-    !machinePaths.some(path => path.startsWith(`${machinePrefix}resources-server/`)) ||
+if (machinePaths.some(path => path === `${machinePrefix}microquickjs-server.wasm` ||
+    path.startsWith(`${machinePrefix}resources-server/`)) ||
     !machinePaths.some(path => path.startsWith(`${machinePrefix}resources-project-version/`))) {
-  throw new Error("Private runtime or bytecode set is missing");
+  throw new Error("Only deferred project-version bytecode should be stored separately");
 }
 for (const path of machinePaths) {
   const name = path.slice(machinePrefix.length);
@@ -64,21 +64,11 @@ const edge = readFileSync(join(root, deployment.edgeEntry), "utf8");
 if (!edge.includes(`resources-co-${deployment.revision}`)) {
   throw new Error("Edge entry does not contain its revisioned Storage prefix");
 }
-if (!edge.includes("microquickjs-server.wasm") || !edge.includes("manifest.json") ||
-    !edge.includes("resources-server")) {
-  throw new Error("Edge entry does not load the server MicroQuickJS machine");
+if (!edge.includes("H4sI") || !edge.includes("DecompressionStream") ||
+    !edge.includes("compileStreaming")) {
+  throw new Error("Edge entry does not embed and stream the compressed server machine");
 }
-const backendController = readFileSync(join(root, "edge/backend/controller.ts"), "utf8");
-const backendControllerJavaScript = readFileSync(join(root, "edge/backend/controller.js"), "utf8");
-const backendMachine = readFileSync(join(root, "edge/backend/machine.js"), "utf8");
-if (!backendController.includes('from "./machine.js"')) {
-  throw new Error("Backend controller does not import its prebuilt machine");
-}
-if (backendControllerJavaScript !== backendController) {
-  throw new Error("Backend controller TypeScript and JavaScript artifacts differ");
-}
-if (!backendMachine.includes(`resources-co-${deployment.revision}`) ||
-    backendMachine.includes("__MACCHIATO_GIT_REVISION__")) {
-  throw new Error("Prebuilt backend machine does not contain its deployment revision");
+if ([...expected.keys()].some(path => path.startsWith("edge/backend/"))) {
+  throw new Error("Bunny deployment contains obsolete multi-file backend artifacts");
 }
 console.log(`Verified ${actual.length} Resources Bunny files for ${deployment.revision}.`);

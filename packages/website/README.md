@@ -528,40 +528,32 @@ The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for
 another environment, such as staging.
 
-This produces a reviewed Edge entry, a separately loadable server machine,
-and the validated Storage objects:
+This produces one reviewed Edge script and the validated Storage objects:
 
 ```text
 dist/resources-bunny/
   deployment.json                    hashes and roles for every build artifact
   edge/script.ts                     conventional Bunny upload entry
-  edge/backend/controller.ts         small TypeScript controller source
-  edge/backend/controller.js         directly runnable compiled controller
-  edge/backend/machine.js            prebuilt server application machine
-  edge/backend/deno.json             Bunny SDK mapping for the source pair
   site/resources-co-<sha>/
     manifest.json
-    machines/microquickjs-server.wasm  shared private MicroQuickJS runtime
-    machines/resources-server/  split private request-policy bytecode
     machines/resources-project-version/  split private disposable-worker bytecode
     ...published site objects
 ```
 
-The browser and server sources use the same scoped names:
-`frontend/controller.ts` builds `frontend/controller.js`, and
-`backend/controller.ts` builds `backend/controller.js`. Each controller imports
-the `machine.js` beside it; publication maps those files to the appropriate
-browser or Edge artifact location.
+The browser and server sources use the same scoped names. The Bunny build
+bundles `backend/controller.ts` and its generated `machine.js` into the single
+published `edge/script.ts` artifact.
 
 Both runnable Edge forms embed the seven-character Git revision used by the
 Storage prefix. Bunny's current Set Code API accepts one code string, so
 `script.ts` is the reproducible bundle used by the official deployment action.
-The adjacent controller/machine pair preserves the authored multi-file build
-and is the entry structure for repository-driven tooling. Server application
-request policy runs in the separately fetched MicroQuickJS/Wasm artifact. The
-Resources guest is an explicit concatenation of its selected runtime and
-application slices, compiled directly to MicroQuickJS bytecode. Its TypeScript
-host controller only instantiates the machine, grants bounded `server-use`
+The shared MicroQuickJS runtime and request-policy bytecode are gzip-compressed
+and base64-embedded in that script. The controller streams decompression into
+WebAssembly compilation and keeps only the less frequent project-version
+bytecode in private Storage. The Resources guest is an explicit concatenation
+of its selected runtime and application slices, compiled directly to
+MicroQuickJS bytecode. Its TypeScript host controller only instantiates the
+machine, grants bounded `server-use`
 messages and named `sql-use` operations rather than Requests or raw database
 authority. Database migration and store initialization remain lazy and shared
 across requests. `/health` and the authenticated project-version list/read APIs
@@ -630,11 +622,10 @@ assets may retain their long public lifetime.
 1. Build the deployment and upload the *contents* of
    `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
    The build-created revision directory is part of every uploaded object key.
-2. Create one Bunny standalone Edge Script. Its TypeScript controller is
-   `packages/website/backend/controller.ts`; it imports the prebuilt
-   `backend/machine.js`. Their deployment copies are under
-   `dist/resources-bunny/edge/backend/`. The conventional Bunny Set Code
-   artifact is `dist/resources-bunny/edge/script.ts`.
+2. Create one Bunny standalone Edge Script from
+   `dist/resources-bunny/edge/script.ts`. The authored TypeScript controller is
+   `packages/website/backend/controller.ts`; the build bundles its machine and
+   embedded compressed runtime into the single Set Code artifact.
 3. Configure the main Resources.co script with:
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
