@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const engine = join(here, "vendor/microquickjs");
+const libcPonyfill = join(here, "libc-ponyfill/include");
 const generated = join(here, "generated");
 const option = (name, fallback) => {
   const index = process.argv.indexOf(name);
@@ -79,13 +80,12 @@ writeFileSync(join(bytecodeDirectory, "manifest.json"),
   `${JSON.stringify({ format: "microquickjs-bytecode-v1", bytes: bytes.length, chunks }, null, 2)}\n`);
 
 const clang = [
-  "--target=wasm32-wasi", "--sysroot=/usr/wasm32-wasi", "-Os",
-  "-mllvm", "-wasm-enable-sjlj", "-nostdlib", "-Wl,--no-entry",
+  "--target=wasm32-wasi", "-Os", "-mllvm", "-wasm-enable-sjlj",
+  "-nostdlib", "-nostdlibinc", "-Wl,--no-entry", `-I${libcPonyfill}`,
   `-I${wasmHeaders}`, `-I${engine}`, `-I${generated}`,
   "-Wl,--export=onmsg", "-Wl,--export-memory", "-Wl,--strip-all",
   join(engine, "mquickjs.c"), join(engine, "dtoa.c"), join(engine, "libm.c"),
   join(engine, "cutils.c"), join(here, "server.c"),
-  "/usr/wasm32-wasi/lib/wasm32-wasi/libc.a",
   "/usr/wasm32-wasi/lib/wasm32-wasi/libsetjmp.a", builtins,
   "-o", output,
 ];
