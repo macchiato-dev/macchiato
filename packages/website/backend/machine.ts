@@ -1,6 +1,6 @@
 // @ts-nocheck -- migrated machine composition; capability types follow separately.
 import { createClient } from "@libsql/client/http";
-import { createContentStore } from "@macchiato-dev/hub/content";
+import { createProjectSnapshotStore } from "@macchiato-dev/hub/project-snapshot-store";
 import { createAuthConfig } from "../auth/github.js";
 import { createGitlabAuthConfig } from "../auth/gitlab.js";
 import { createResourcesEdgeHandler } from "../edge/app.js";
@@ -240,7 +240,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     return projectHistoryAssets().then(({ module, bytecodes }) =>
       createProjectSnapshotValidator(module, bytecodes)(snapshot));
   }
-  const contentStore = createContentStore(policyDatabaseClient,
+  const contentStore = createProjectSnapshotStore(policyDatabaseClient,
     { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
     snapshotValidator: projectSnapshotValidator });
   const contentReadStore = Object.freeze({

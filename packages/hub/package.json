@@ -12,6 +12,7 @@
     "./container-profiles": "./src/container-profiles.js",
     "./project-archive": "./src/project-archive.js",
     "./project-history": "./src/project-history.js",
+    "./project-snapshot-store": "./src/project-snapshot-store.js",
     "./url-pattern": "./src/url-pattern.js"
   }
 }
