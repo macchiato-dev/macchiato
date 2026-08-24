@@ -24,3 +24,21 @@ test("the document machine renders the session shell", async () => {
   assert.match(rendered, /controller\.js\?v=abc123/);
   assert.doesNotMatch(rendered, />old</);
 });
+
+test("the document machine renders data-driven page regions", async () => {
+  const machine = new ServerMachineController(module, { bytecodes });
+  const dashboard = await machine.request(["dashboard", JSON.stringify([{
+    projects: [{ name: "Unsafe < title", namespace: "owner", slug: "demo",
+      description: "", template: "article", visibility: "public" }],
+    organizations: [],
+  }, {}])]);
+  const publicProjects = await machine.request(["public-projects", JSON.stringify([[
+    { name: "Public & safe", namespace: "owner", slug: "demo",
+      description: "Example", template: "article" },
+  ], {}])]);
+
+  assert.match(dashboard, /Unsafe &lt; title/);
+  assert.match(dashboard, /owner\/demo/);
+  assert.match(publicProjects, /Public &amp; safe/);
+  assert.doesNotMatch(publicProjects, /Public & safe/);
+});

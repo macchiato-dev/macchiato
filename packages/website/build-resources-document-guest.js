@@ -14,8 +14,12 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const source = await readFile(join(here, "edge/app.js"), "utf8");
 const start = source.indexOf("function escapeHtml(");
-const end = source.indexOf("function projectRoute(");
-if (start < 0 || end <= start) throw new Error("Resources document renderer slice was not found");
+const firstEnd = source.indexOf("function projectRoute(");
+const secondStart = source.indexOf("function dashboardHtml(");
+const secondEnd = source.indexOf("export function createResourcesEdgeHandler(");
+if (start < 0 || firstEnd <= start || secondStart < firstEnd || secondEnd <= secondStart) {
+  throw new Error("Resources document renderer slices were not found");
+}
 
 const inputs = [
   `var resourcesAppearanceHtml = ${JSON.stringify(resourcesAppearanceHtml)};`,
@@ -23,7 +27,8 @@ const inputs = [
   `var resourcesBlankAvatarHtml = ${JSON.stringify(resourcesBlankAvatarHtml)};`,
   `var resourcesCreateIconHtml = ${JSON.stringify(resourcesCreateIconHtml)};`,
   `function renderResourcesCommandPalette() { return ${JSON.stringify(renderResourcesCommandPalette())}; }`,
-  source.slice(start, end),
+  source.slice(start, firstEnd),
+  source.slice(secondStart, secondEnd).replace(/^export /gm, ""),
 ].join("\n");
 const transformed = transformSync(inputs, {
   babelrc: false,

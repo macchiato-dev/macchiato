@@ -118,8 +118,8 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       });
     return documentMachinePromise;
   }
-  async function documentRenderer(...args) {
-    const result = await (await documentMachine()).request(["session", JSON.stringify(args)]);
+  async function documentRenderer(operation, args) {
+    const result = await (await documentMachine()).request([operation, JSON.stringify(args)]);
     if (typeof result !== "string") {
       throw new Error(Array.isArray(result) && typeof result[2] === "string"
         ? result[2] : "Document machine rejected the request");

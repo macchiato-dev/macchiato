@@ -158,7 +158,7 @@ function applySignupPolicy(html, pathname, messages, signupsEnabled) {
 
 function renderSessionHtml(html, session, messages, options, controllerVersion = "") {
   const controllerSrc = `/-/resources-site/controller.js${controllerVersion ? `?v=${controllerVersion}` : ""}`;
-  return html
+  return applySignupPolicy(html, options.pathname, messages, options.signupsEnabled)
     .replace(/<aside class="box userbar edge-status(?: toolbar--cardless)?"[\s\S]*?<\/aside>/, authStatusHtml(session, messages, options))
     .replace("</body>", `<script type="module" src="${controllerSrc}"></script></body>`);
 }
@@ -264,8 +264,7 @@ function projectsHtml(content, messages) {
   return `<div class="account-dashboard"><div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.projects", "Projects")}</h1></div><a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div><section class="account-section">${projects}</section></div>`;
 }
 
-function formError(url, messages) {
-  const error = url.searchParams.get("error");
+function formError(error, messages) {
   return error
     ? `<p class="form-error" role="alert">${error === "slug" ? message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens.") : message(messages, "content.error", "Check the form and try again.")}</p>`
     : "";
@@ -385,7 +384,26 @@ function organizationFormHtml(token, messages, url) {
   </div>`;
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console, documentRenderer = renderSessionHtml } = {}) {
+export function renderResourcesDocument(operation, args) {
+  if (!Array.isArray(args)) throw new TypeError("document renderer arguments must be an array");
+  if (operation === "session") return renderSessionHtml(...args);
+  if (operation === "dashboard") return dashboardHtml(...args);
+  if (operation === "projects") return projectsHtml(...args);
+  if (operation === "try") return tryProjectHtml(...args);
+  if (operation === "public-projects") return publicProjectsHtml(...args);
+  if (operation === "namespace-projects") return namespaceProjectsHtml(...args);
+  if (operation === "project-view") return projectViewHtml(...args);
+  if (operation === "project-form") return projectFormHtml(...args);
+  if (operation === "profile") return profileHtml(...args);
+  if (operation === "managed-organization") return managedOrganizationHtml(...args);
+  if (operation === "organization-form") return organizationFormHtml(...args);
+  if (operation === "focused-project-document") return focusedProjectDocument(...args);
+  if (operation === "embedded-project-document") return embeddedProjectDocument(...args);
+  if (operation === "namespace-document") return namespaceDocument(...args);
+  throw new Error(`document renderer operation is not available: ${operation}`);
+}
+
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console, documentRenderer } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   if (typeof documentRenderer !== "function") throw new Error("Edge handler requires a document renderer");
   let cachedManifest = null;
@@ -485,6 +503,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
         : null;
       const projectOwner = Boolean(dynamicProject && session && dynamicProject.ownerUserId === session.sub);
+      const formErrorCode = url.searchParams.get("error") || "";
       const visibleWorkspace = dynamicProject ? {
         snapshot: { files: [], config: { entry: "", template: dynamicProject.template, container: "page", containerOptions: { allowedLinkPatterns: [] }, sandbox: { network: false, storage: "session" } } },
         versionCount: 0,
@@ -530,31 +549,43 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const token = projectOwner ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
           const content = projectOwner ? await contentStore.listForUser(session.sub) : { organizations: [], projects: [] };
           const snapshotUrl = `/-/projects/${encodeURIComponent(dynamicProject.namespace)}/${encodeURIComponent(dynamicProject.slug)}/workspace`;
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => projectViewHtml(dynamicProject, manifest.messages[locale], visibleWorkspace, token, projectOwner, session, content, url, { embed: requestedProject.embed, blogExamplesOrigin, snapshotUrl }));
-          html = requestedProject.embed ? embeddedProjectDocument(html) : focusedProjectDocument(html, requestedProject.namespace, requestedProject.slug);
+          html = html.replace(ACCOUNT_CONTENT_MARKER,
+            await documentRenderer("project-view", [dynamicProject, manifest.messages[locale],
+              visibleWorkspace, token, projectOwner, session, content, formErrorCode,
+              { embed: requestedProject.embed, blogExamplesOrigin, snapshotUrl }]));
+          html = await documentRenderer(requestedProject.embed
+            ? "embedded-project-document" : "focused-project-document",
+          requestedProject.embed ? [html] : [html, requestedProject.namespace, requestedProject.slug]);
         } else if (dynamicNamespace) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = managedOrganization ? await csrfToken(session, `organization:${managedOrganization.slug}`, authConfig, now) : "";
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => managedOrganization
-            ? managedOrganizationHtml(dynamicNamespace, managedOrganization, token, manifest.messages[locale], url)
-            : namespaceProjectsHtml(dynamicNamespace, manifest.messages[locale]));
-          html = namespaceDocument(html, dynamicNamespace);
+          const namespaceContent = managedOrganization
+            ? await documentRenderer("managed-organization", [dynamicNamespace,
+              managedOrganization, token, manifest.messages[locale], formErrorCode])
+            : await documentRenderer("namespace-projects",
+              [dynamicNamespace, manifest.messages[locale]]);
+          html = html.replace(ACCOUNT_CONTENT_MARKER, namespaceContent);
+          html = await documentRenderer("namespace-document", [html, dynamicNamespace]);
         } else if (pathname === "/try" || directTryTemplate) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => tryProjectHtml(manifest.messages[locale]));
+          html = html.replace(ACCOUNT_CONTENT_MARKER,
+            await documentRenderer("try", [manifest.messages[locale]]));
         } else if (session && ACCOUNT_PATHS.has(pathname)) {
           if (!contentStore) return new Response("Account content unavailable", { status: 503 });
           const content = await contentStore.listForUser(session.sub);
           const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : pathname === "/organizations/new" ? "/organizations" : pathname === "/profile" ? "profile" : "/", authConfig, now);
           const dynamic = pathname === "/"
-            ? dashboardHtml(content, manifest.messages[locale])
+            ? await documentRenderer("dashboard", [content, manifest.messages[locale]])
             : pathname === "/projects"
-              ? projectsHtml(content, manifest.messages[locale])
+              ? await documentRenderer("projects", [content, manifest.messages[locale]])
             : pathname === "/projects/new"
-              ? projectFormHtml(session, content, token, manifest.messages[locale], url)
+              ? await documentRenderer("project-form", [session, content, token,
+                manifest.messages[locale], formErrorCode])
               : pathname === "/organizations/new"
-                ? organizationFormHtml(token, manifest.messages[locale], url)
-                : profileHtml(await accountStore.getAccount(session.sub), token, manifest.messages[locale], url);
+                ? await documentRenderer("organization-form", [token,
+                  manifest.messages[locale], formErrorCode])
+                : await documentRenderer("profile", [await accountStore.getAccount(session.sub),
+                  token, manifest.messages[locale], formErrorCode]);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
@@ -563,12 +594,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           const projects = contentStore?.listPublicProjects
             ? await contentStore.listPublicProjects({ limit: pathname === "/" ? 6 : 48, namespaces: DISCOVERABLE_PROJECT_NAMESPACES })
             : [];
-          html = html.replace(PUBLIC_PROJECTS_MARKER, () => publicProjectsHtml(projects, manifest.messages[locale]));
+          html = html.replace(PUBLIC_PROJECTS_MARKER,
+            await documentRenderer("public-projects", [projects, manifest.messages[locale]]));
         }
-        html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
         const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
         const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
-        body = await documentRenderer(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion);
+        body = await documentRenderer("session", [html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion]);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

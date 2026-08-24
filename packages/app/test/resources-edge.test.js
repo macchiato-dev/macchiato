@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createResourcesEdgeHandler } from "../../../packages/website/edge/app.js";
+import { createResourcesEdgeHandler,
+  renderResourcesDocument } from "../../../packages/website/edge/app.js";
 import {
   createEdgeConfig,
   normalizeExportManifest,
@@ -18,6 +19,10 @@ const config = createEdgeConfig({
   STORAGE_API_KEY: "test-secret",
   MANIFEST_TTL_MS: "30000",
 });
+
+function createTestResourcesEdgeHandler(options) {
+  return createResourcesEdgeHandler({ ...options, documentRenderer: renderResourcesDocument });
+}
 
 test("standalone blog examples receive an opaque script-only document policy", () => {
   const documentHeaders = publicResponseHeaders("-/blog-examples/vtv/index.html");
@@ -95,7 +100,7 @@ test("edge handler serves only exported artifacts with hardened headers", async 
     if (request.url.endsWith("/locales/en/about/index.html")) return new Response("<h1>About</h1>", { headers: { etag: '"about-v1"' } });
     return new Response("missing", { status: 404 });
   };
-  const handler = createResourcesEdgeHandler({ config, fetchImpl, now: () => 1_000 });
+  const handler = createTestResourcesEdgeHandler({ config, fetchImpl, now: () => 1_000 });
 
   const response = await handler(new Request("https://resources.example/about"));
   assert.equal(response.status, 200);
@@ -119,14 +124,14 @@ test("edge handler serves only exported artifacts with hardened headers", async 
 });
 
 test("edge handler fails closed on storage redirects and manifest failures", async () => {
-  const redirectHandler = createResourcesEdgeHandler({
+  const redirectHandler = createTestResourcesEdgeHandler({
     config,
     fetchImpl: async () => new Response(null, { status: 302, headers: { location: "https://attacker.test" } }),
     logger: { error() {} },
   });
   assert.equal((await redirectHandler(new Request("https://resources.example/about"))).status, 503);
 
-  const invalidHandler = createResourcesEdgeHandler({
+  const invalidHandler = createTestResourcesEdgeHandler({
     config,
     fetchImpl: async () => Response.json({ ...manifest, files: ["/../secret"] }),
     logger: { error() {} },
@@ -134,7 +139,7 @@ test("edge handler fails closed on storage redirects and manifest failures", asy
   assert.equal((await invalidHandler(new Request("https://resources.example/about"))).status, 503);
 
   const errors = [];
-  const missingHandler = createResourcesEdgeHandler({
+  const missingHandler = createTestResourcesEdgeHandler({
     config,
     fetchImpl: async () => new Response("private upstream detail", { status: 404, statusText: "Not Found" }),
     logger: { error(...values) { errors.push(values.join(" ")); } },
@@ -163,7 +168,7 @@ test("edge HTML renders escaped session identity without executable browser code
     exp: 20_000,
   }, authConfig.sessionSecret);
   const html = `<main><aside class="box userbar edge-status" data-screen-label="runtime-status"><div>Guest account controls</div></aside></main>`;
-  const handler = createResourcesEdgeHandler({
+  const handler = createTestResourcesEdgeHandler({
     config,
     authConfig,
     now: () => 10_000,
@@ -186,7 +191,7 @@ test("edge HTML renders escaped session identity without executable browser code
 
 test("edge locale negotiation serves localized HTML and persists explicit switches", async () => {
   const requests = [];
-  const handler = createResourcesEdgeHandler({
+  const handler = createTestResourcesEdgeHandler({
     config,
     fetchImpl: async (request) => {
       requests.push(request.url);
@@ -230,7 +235,7 @@ test("provider linking requires a signed-in account and starts a fresh provider 
     GITLAB_CLIENT_ID: "gitlab-client",
     GITLAB_CLIENT_SECRET: "gitlab-secret",
   }, authConfig);
-  const handler = createResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, now: () => 10_000 });
+  const handler = createTestResourcesEdgeHandler({ config, authConfig, gitlabAuthConfig, now: () => 10_000 });
 
   const guest = await handler(new Request("https://resources.example/auth/gitlab/link"));
   assert.equal(guest.status, 302);
@@ -253,7 +258,7 @@ test("provider linking requires a signed-in account and starts a fresh provider 
 });
 
 test("published document handler does not retain server-machine mutation fallbacks", async () => {
-  const handler = createResourcesEdgeHandler({ config, now: () => 10_000 });
+  const handler = createTestResourcesEdgeHandler({ config, now: () => 10_000 });
   for (const path of ["/logout", "/profile", "/projects", "/projects/project-1",
     "/organizations", "/notifications/notice-1",
     "/api/projects/project-1/snapshot"]) {

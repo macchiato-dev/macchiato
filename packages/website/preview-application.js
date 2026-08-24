@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
-import { createResourcesEdgeHandler } from "./edge/app.js";
+import { createResourcesEdgeHandler, renderResourcesDocument } from "./edge/app.js";
 import { createResourcesServerMachine } from "./resources-server-machine.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "./project-version-machine.js";
@@ -51,6 +51,7 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   const handler = createResourcesEdgeHandler({
     config, authConfig, gitlabAuthConfig, accountStore, contentStore,
     organizationStore, fetchImpl, blogExamplesOrigin,
+    documentRenderer: renderResourcesDocument,
   });
   let readyPromise;
   async function ready() {
