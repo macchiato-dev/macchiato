@@ -1515,7 +1515,7 @@ async function mountProjectRoot(root) {
   openTabList.addEventListener("dragend", () => { draggedTab = ""; });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
   const fileTriggerIcon = fileTrigger.querySelector("svg");
-  fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
+  fileTriggerIcon.replaceChildren();
   for (const d of ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]) {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
@@ -1889,23 +1889,6 @@ async function mountProjectRoot(root) {
     versionButton.setAttribute("aria-expanded", "false");
     if (restoreFocus) versionButton.focus();
   }
-  function positionHistory() {
-    const gap = 6;
-    const edge = 8;
-    const buttonRect = versionButton.getBoundingClientRect();
-    const panelRect = historyPanel.getBoundingClientRect();
-    const maxLeft = Math.max(edge, innerWidth - panelRect.width - edge);
-    const left = Math.max(edge, Math.min(buttonRect.left, maxLeft));
-    const roomBelow = innerHeight - buttonRect.bottom - gap - edge;
-    const roomAbove = buttonRect.top - gap - edge;
-    const openAbove = panelRect.height > roomBelow && roomAbove > roomBelow;
-    const availableHeight = Math.max(120, openAbove ? roomAbove : roomBelow);
-    historyPanel.style.left = `${left}px`;
-    historyPanel.style.top = openAbove
-      ? `${Math.max(edge, buttonRect.top - gap - Math.min(panelRect.height, availableHeight))}px`
-      : `${buttonRect.bottom + gap}px`;
-    historyPanel.style.maxHeight = `${availableHeight}px`;
-  }
   const openVersionHistory = () => {
     if (!historyPanel.hidden) {
       closeHistory();
@@ -1916,14 +1899,11 @@ async function mountProjectRoot(root) {
     versionButton.setAttribute("aria-expanded", "true");
     if (readOnly) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
-      positionHistory();
     } else if (draft || memoryOnly) {
       renderDraftVersions();
-      positionHistory();
     } else {
-      renderStoredVersions().then(positionHistory).catch((error) => {
+      renderStoredVersions().catch((error) => {
         versionList.textContent = `Version history unavailable: ${error.message}`;
-        positionHistory();
       });
     }
   };
@@ -1932,7 +1912,6 @@ async function mountProjectRoot(root) {
   // A synchronous read provides the bridge boundary that publishes it before
   // control returns to the browser.
   versionButton.getBoundingClientRect();
-  historyPanel.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
   document.addEventListener("pointerdown", (event) => {
     if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
     closeHistory();

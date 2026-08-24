@@ -1520,7 +1520,8 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(await page.getByRole("button", { name: "Close style.css" }).evaluate((element) => getComputedStyle(element).opacity), "1");
   await page.getByRole("button", { name: "Close style.css" }).click();
   assert.equal(await page.getByRole("tab", { name: "style.css" }).count(), 0);
-  await page.getByRole("button", { name: "Browse other files" }).click();
+  await page.getByRole("button", { name: "Select a file or view" }).click();
+  assert.equal(await page.locator("[data-project-file-menu] .project-editor__popover-head").textContent(), "Open File/View");
   assert.deepEqual(await page.locator("[data-project-file-available] [role='menuitemradio']").allTextContents(), ["style.css", "Configuration"]);
   assert.deepEqual(await page.locator("[data-project-open-files] [role='menuitemradio']").allTextContents(), ["index.html"]);
   assert.equal(await page.locator("[data-project-open-files] > p").textContent(), "Open files");
@@ -1605,13 +1606,16 @@ test("Resources project save controls publish titled latest versions", async (t)
   });
   assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds? ago$/);
   await page.locator("[data-project-versions-proxy]").click();
+  assert.equal(await page.locator("[data-project-history] .project-editor__popover-head").textContent(), "Version history");
+  assert.equal(await page.locator("[data-project-history-close]").count(), 0);
   assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-version-list] .project-editor__latest").count(), 1);
   const latest = page.locator("[data-project-version-list] [data-version-sequence]", { hasText: "LATEST" }).first();
   await latest.waitFor();
   assert.match(await latest.textContent(), /Ready for review.*\d+ seconds? ago.*LATEST/);
   await page.screenshot({ path: "/tmp/resources-version-history.png" });
-  await page.locator("[data-project-history-close]").click();
+  await page.locator("[data-project-versions-proxy]").click();
+  assert.equal(await page.locator("[data-project-history]").isHidden(), true);
   await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   let unloadDialogs = 0;

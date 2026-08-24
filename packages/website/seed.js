@@ -997,6 +997,7 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__file-menu input { width: 100%; padding: 7px 8px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--input-bg); font: inherit; font-size: 11px; outline: none; }
 .project-editor__file-menu input:focus { border-color: #7688eb; }
 .project-editor__file-menu [data-project-file-empty] { margin: 5px; color: var(--muted); font-size: 11px; }
+.project-editor__popover-head { padding: 4px 8px 5px; color: var(--text); font-size: 10px; line-height: 1.2; }
 .project-editor__file-choices { max-height: min(280px, 42vh); overflow: auto; }
 .project-editor__file-choices:empty { display: none; }
 .project-editor__open-files { margin-top: 4px; padding: 4px 0 0; border-top: 1px solid var(--track-border); }
@@ -1080,7 +1081,7 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__preview-toolbar { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: var(--project-toolbar-strong); font-size: 12px; }
 .project-editor__preview > [data-project-preview] { padding: 0; color: #edf3f2; }
 .project-editor__view-controls { display: flex; align-items: center; gap: 4px; }
-.project-editor__view-controls button, .project-editor__view-controls a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: var(--project-toolbar-fg); background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
+.project-editor__view-controls > button, .project-editor__view-controls > a { padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; color: var(--project-toolbar-fg); background: transparent; font: inherit; font-size: 11px; text-decoration: none; }
 .project-editor__view-controls button[data-instant-tooltip] { position: relative; display: grid; width: 30px; height: 30px; place-items: center; padding: 5px; }
 .project-editor__view-controls button[data-instant-tooltip] svg { width: 16px; height: 16px; }
 .project-editor__view-controls > [data-project-present]:hover, .project-editor__view-controls > [data-project-present]:focus-visible { border-color: var(--track-border); color: var(--project-toolbar-strong); background: var(--project-toolbar-hover); outline: none; }
@@ -1120,9 +1121,8 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__status-action:hover { background: rgba(255, 255, 255, 0.1); }
 .project-editor__status-action:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
 .project-editor__save { flex: 0 0 auto; }
-.project-editor__history { position: fixed; top: 48px; left: 10px; z-index: 60; width: min(330px, calc(100vw - 16px)); max-height: calc(100vh - 16px); padding: 10px; overflow: auto; border: 1px solid var(--track-border); border-radius: 10px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
-.project-editor__history-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.project-editor__history-head { padding: 3px 5px 9px; }
+.project-editor__history-picker { position: relative; }
+.project-editor__history { position: absolute; top: calc(100% + 5px); right: 0; z-index: 35; width: min(260px, calc(100vw - 24px)); max-height: min(420px, calc(100vh - 80px)); padding: 5px; overflow: auto; border: 1px solid var(--track-border); border-radius: 8px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__version { width: 100%; text-align: left; }
 .project-editor__version[aria-current="true"] { color: var(--text); background: var(--hover); opacity: 1; cursor: default; }
 .layout.project-create-layout > .brand,
