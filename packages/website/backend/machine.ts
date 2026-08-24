@@ -16,8 +16,7 @@ import { createAccountSqlUseClient } from "../account-sql-policy.js";
 import { createOrganizationSqlUseClient } from "../organization-sql-policy.js";
 import { createContentSqlUseClient } from "../content-sql-policy.js";
 import { createMigrationSqlUseClient } from "../migration-sql-policy.js";
-import { compileEmbeddedServerRuntime,
-  loadEmbeddedServerBytecodes } from "../generated/resources-bunny-machine-assets.ts";
+import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
 
 // The server delays calling this factory until a database-backed route needs
 // it. Keeping construction synchronous and side-effect free lets the static
@@ -39,20 +38,33 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     read: readOnlyDatabaseClient,
     write: databaseClient,
   }));
-  async function machineAsset(path) {
-    const response = await fetchImpl(storageRequest(config, `machines/${path}`));
-    if (!response.ok) throw new Error(`Machine storage response for ${path}: ${response.status}`);
-    return new Uint8Array(await response.arrayBuffer());
+  let backendAssetsPromise;
+  function backendAssets() {
+    if (!backendAssetsPromise) backendAssetsPromise = (async () => {
+      const response = await fetchImpl(storageRequest(config, "machines/backend.bin"));
+      if (!response.ok) throw new Error(`Backend storage response: ${response.status}`);
+      return decodeResourceArtifact(new Uint8Array(await response.arrayBuffer()));
+    })().catch((error) => {
+      backendAssetsPromise = null;
+      throw error;
+    });
+    return backendAssetsPromise;
   }
   async function bytecodeSet(path) {
-    const manifestBytes = await machineAsset(`${path}/manifest.json`);
+    const assets = await backendAssets();
+    const manifestBytes = assets.get(`${path}/manifest.json`);
+    if (!manifestBytes) throw new Error(`Backend artifact lacks ${path}/manifest.json`);
     const manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
     if (manifest?.format !== "microquickjs-bytecode-v1" ||
         !Array.isArray(manifest.chunks) || !manifest.chunks.length ||
         manifest.chunks.some(name => !/^[0-9]+\.bin$/.test(name))) {
       throw new Error(`Machine bytecode manifest for ${path} is invalid`);
     }
-    const chunks = await Promise.all(manifest.chunks.map(name => machineAsset(`${path}/${name}`)));
+    const chunks = manifest.chunks.map(name => {
+      const chunk = assets.get(`${path}/${name}`);
+      if (!chunk) throw new Error(`Backend artifact lacks ${path}/${name}`);
+      return chunk;
+    });
     if (chunks.reduce((total, chunk) => total + chunk.length, 0) !== manifest.bytes) {
       throw new Error(`Machine bytecode size for ${path} is invalid`);
     }
@@ -60,7 +72,11 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   }
   let runtimeModulePromise;
   function runtimeModule() {
-    if (!runtimeModulePromise) runtimeModulePromise = compileEmbeddedServerRuntime()
+    if (!runtimeModulePromise) runtimeModulePromise = backendAssets().then((assets) => {
+      const runtime = assets.get("runtime.wasm");
+      if (!runtime) throw new Error("Backend artifact lacks runtime.wasm");
+      return WebAssembly.compile(runtime);
+    })
       .catch((error) => {
         runtimeModulePromise = null;
         throw error;
@@ -110,7 +126,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
       const [module, bytecodes] = await Promise.all([
         runtimeModule(),
-        loadEmbeddedServerBytecodes(),
+        bytecodeSet("resources-server"),
       ]);
       return createResourcesServerMachine(module, {
         bytecodes, databaseClient, readDatabaseClient: readOnlyDatabaseClient,

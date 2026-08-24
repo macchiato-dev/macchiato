@@ -15,18 +15,11 @@ npm run build --prefix "$repo_root/packages/website/blog-examples/vtv"
 npm ci --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
 npm run build --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
 node "$repo_root/packages/website/build-resources-server.js"
-node "$repo_root/scripts/embed-resources-bunny-machine.js"
-deno test "$repo_root/packages/website/test/bunny-embedded-machine.test.ts"
+node "$repo_root/packages/website/build-resources-backend-artifact.js"
 node "$repo_root/packages/website/export-static.js" --out "$out_dir/site/$storage_prefix"
 mkdir -p "$out_dir/site/$storage_prefix/machines"
-for bytecode_set in resources-project-version; do
-  source_dir="$repo_root/packages/website/generated/$bytecode_set-bytecode"
-  target_dir="$out_dir/site/$storage_prefix/machines/$bytecode_set"
-  mkdir -p "$target_dir"
-  for artifact in "$source_dir"/*; do
-    install -m 0644 "$artifact" "$target_dir/$(basename "$artifact")"
-  done
-done
+install -m 0644 "$repo_root/packages/website/generated/resources-backend.bin" \
+  "$out_dir/site/$storage_prefix/machines/backend.bin"
 deno bundle \
   --config "$repo_root/packages/website/deno.json" \
   --platform deno \
