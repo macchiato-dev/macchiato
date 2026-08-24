@@ -39,10 +39,8 @@ const publicManifest = JSON.parse(readFileSync(join(root, "site", prefix, "manif
 const publicManifestText = JSON.stringify(publicManifest);
 const machinePrefix = `site/${prefix}/machines/`;
 const machinePaths = [...expected.keys()].filter(path => path.startsWith(machinePrefix));
-if (machinePaths.some(path => path === `${machinePrefix}microquickjs-server.wasm` ||
-    path.startsWith(`${machinePrefix}resources-server/`)) ||
-    !machinePaths.some(path => path.startsWith(`${machinePrefix}resources-project-version/`))) {
-  throw new Error("Only deferred project-version bytecode should be stored separately");
+if (machinePaths.length !== 1 || machinePaths[0] !== `${machinePrefix}backend.bin`) {
+  throw new Error("Backend runtime and bytecode must be stored in one private artifact");
 }
 for (const path of machinePaths) {
   const name = path.slice(machinePrefix.length);
@@ -67,9 +65,9 @@ if (!edge.startsWith("// @ts-nocheck -- generated JavaScript bundle\n")) {
 if (!edge.includes(`resources-co-${deployment.revision}`)) {
   throw new Error("Edge entry does not contain its revisioned Storage prefix");
 }
-if (!edge.includes("H4sI") || !edge.includes("DecompressionStream") ||
-    !edge.includes("compileStreaming")) {
-  throw new Error("Edge entry does not embed and stream the compressed server machine");
+if (!edge.includes("machines/backend.bin") || !edge.includes("DecompressionStream") ||
+    !edge.includes("WebAssembly.compile") || edge.includes("H4sIAAAAA")) {
+  throw new Error("Edge entry does not load the private backend artifact");
 }
 if ([...expected.keys()].some(path => path.startsWith("edge/backend/"))) {
   throw new Error("Bunny deployment contains obsolete multi-file backend artifacts");
