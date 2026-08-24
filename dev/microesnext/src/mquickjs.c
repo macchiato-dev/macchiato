@@ -294,6 +294,7 @@ typedef struct {
 
 typedef struct {
     JSValue func_bytecode; /* JSFunctionBytecode */
+    JSValue lexical_this; /* captured receiver for arrow functions */
     JSValue var_refs[]; /* JSValueArray */
 } JSClosureData;
 
@@ -381,9 +382,10 @@ typedef struct JSFunctionBytecode {
     JSWord has_arguments : 1; /* only used during parsing */
     JSWord has_local_func_name : 1; /* only used during parsing */
     JSWord has_column : 1; /* column debug info is present */
+    JSWord is_arrow : 1;
     /* during parse: variable index + 1 of hoisted function, 0 otherwise */
     JSWord arg_count : 16; 
-    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 3 + 16);
+    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 4 + 16);
 
     JSValue func_name; /* JS_NULL if anonymous function */
     JSValue byte_code; /* JS_NULL if the function is not parsed yet */
@@ -5283,13 +5285,17 @@ static JSValue js_closure(JSContext *ctx, JSValue bfunc, JSValue *fp)
     }
     
     JS_PUSH_VALUE(ctx, bfunc);
-    closure = JS_NewObjectProtoClass(ctx, ctx->class_proto[JS_CLASS_CLOSURE], JS_CLASS_CLOSURE,
-                                     sizeof(JSClosureData) + ext_vars_len * sizeof(JSValue));
+    closure = JS_NewObjectProtoClass(ctx, ctx->class_proto[JS_CLASS_CLOSURE],
+                                     JS_CLASS_CLOSURE,
+                                     sizeof(JSClosureData) +
+                                     ext_vars_len * sizeof(JSValue));
     JS_POP_VALUE(ctx, bfunc);
     if (JS_IsException(closure))
         return JS_EXCEPTION;
     p = JS_VALUE_TO_PTR(closure);
     p->u.closure.func_bytecode = bfunc;
+    p->u.closure.lexical_this = b->is_arrow && fp
+        ? fp[FRAME_OFFSET_THIS_OBJ] : JS_UNDEFINED;
         
     if (ext_vars_len > 0) {
         JSValue *pfirst_var_ref, val;
@@ -5872,6 +5878,17 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                             p = JS_VALUE_TO_PTR(func_obj);
                         }
                         b = JS_VALUE_TO_PTR(p->u.closure.func_bytecode);
+                        if (b->is_arrow) {
+                            if (call_flags & FRAME_CF_CTOR) {
+                                sp += 2;
+                                ctx->sp = sp;
+                                ctx->fp = fp;
+                                val = JS_ThrowTypeError(ctx,
+                                    "arrow function is not a constructor");
+                                goto call_exception;
+                            }
+                            sp[FRAME_OFFSET_THIS_OBJ] = p->u.closure.lexical_this;
+                        }
                         if (b->vars != JS_NULL) {
                             JSValueArray *vars = JS_VALUE_TO_PTR(b->vars);
                             n_vars = vars->size - b->arg_count;
@@ -7531,6 +7548,7 @@ void JS_DumpValue(JSContext *ctx, const char *str,
 enum {
     TOK_NUMBER = 128,
     TOK_STRING,
+    TOK_TEMPLATE,
     TOK_IDENT,
     TOK_REGEXP,
     /* warning: order matters (see js_parse_assign_expr) */
@@ -7562,6 +7580,7 @@ enum {
     TOK_LAND,
     TOK_LOR,
     TOK_POW,
+    TOK_ARROW,
     TOK_EOF,
     /* keywords */
     TOK_FIRST_KEYWORD,
@@ -7633,6 +7652,7 @@ typedef struct JSToken {
             uint32_t re_flags; /* regular expression flags */
             uint32_t re_end_pos; /* at the final '/' */
         } regexp;
+        uint8_t template_tail;
     } u;
     JSValue value; /* associated value: string for TOK_STRING, TOK_REGEXP;
                       identifier for TOK_IDENT or keyword */
@@ -7936,6 +7956,7 @@ static void __attribute((unused)) dump_token(JSParseState *s,
         }
         break;
     case TOK_STRING:
+    case TOK_TEMPLATE:
         {
             js_printf(ctx, "string: ");
             JS_PrintValue(s->ctx, token->value);
@@ -8121,6 +8142,7 @@ static BOOL is_regexp_allowed(int tok)
     switch (tok) {
     case TOK_NUMBER:
     case TOK_STRING:
+    case TOK_TEMPLATE:
     case TOK_REGEXP:
     case TOK_DEC:
     case TOK_INC:
@@ -8170,6 +8192,28 @@ static int js_parse_skip_parens_token(JSParseState *s)
     bits = js_skip_parens(s, NULL);
     js_parse_seek_token(s, &pos);
     return bits;
+}
+
+static int peek_token(JSParseState *s)
+{
+    JSParsePos pos;
+    int token;
+    js_parse_get_pos(s, &pos);
+    next_token(s);
+    token = s->token.val;
+    js_parse_seek_token(s, &pos);
+    return token;
+}
+
+static BOOL is_parenthesized_arrow(JSParseState *s)
+{
+    JSParsePos pos;
+    BOOL result;
+    js_parse_get_pos(s, &pos);
+    js_skip_parens(s, NULL);
+    result = s->token.val == TOK_ARROW;
+    js_parse_seek_token(s, &pos);
+    return result;
 }
 
 /* return the escape value or -1 */
@@ -8313,6 +8357,62 @@ static JSValue js_parse_string(JSParseState *s, uint32_t *ppos, int sep)
     return res;
 }
 
+/* Parse one cooked part of an untagged template. `pos` points immediately
+   after the opening backquote or the closing brace of a substitution. */
+static void js_parse_template_part(JSParseState *s, uint32_t pos)
+{
+    JSContext *ctx = s->ctx;
+    StringBuffer b_s, *b = &b_s;
+    uint32_t c;
+    size_t escape_len;
+
+    if (string_buffer_push(ctx, b, 16))
+        js_parse_error_mem(s);
+    for (;;) {
+        c = s->source_buf[pos++];
+        if (c == '\0')
+            js_parse_error(s, "unexpected end of template literal");
+        if (c == '`') {
+            s->token.u.template_tail = 1;
+            break;
+        }
+        if (c == '$' && s->source_buf[pos] == '{') {
+            pos++;
+            s->token.u.template_tail = 0;
+            break;
+        }
+        if (c == '\\') {
+            if (s->source_buf[pos] == '\n') {
+                pos++;
+                continue;
+            }
+            c = js_parse_escape(s->source_buf + pos, &escape_len);
+            if (c == -1)
+                js_parse_error(s, "invalid template escape sequence");
+            if (c == -2) {
+                c = s->source_buf[pos];
+                escape_len = 1;
+            }
+            pos += escape_len;
+        } else if (c >= 0x80) {
+            size_t char_len;
+            pos--;
+            c = unicode_from_utf8(s->source_buf + pos, UTF8_CHAR_LEN_MAX,
+                                  &char_len);
+            if (c == (uint32_t)-1)
+                js_parse_error(s, "invalid UTF-8 sequence");
+            pos += char_len;
+        }
+        if (string_buffer_putc(ctx, b, c))
+            js_parse_error_mem(s);
+    }
+    s->token.value = string_buffer_pop(ctx, b);
+    if (JS_IsException(s->token.value))
+        js_parse_error_mem(s);
+    s->token.val = TOK_TEMPLATE;
+    s->buf_pos = pos;
+}
+
 static void js_parse_ident(JSParseState *s, JSToken *token,
                            uint32_t *ppos, int c)
 {
@@ -8443,6 +8543,10 @@ static void next_token(JSParseState *s)
         s->token.value = js_parse_string(s, &pos, c);
         s->token.val = TOK_STRING;
         p = s->source_buf + pos;
+        break;
+    case '`':
+        js_parse_template_part(s, (uint32_t)(p + 1 - s->source_buf));
+        p = s->source_buf + s->buf_pos;
         break;
     case '\n':
         s->got_lf = TRUE;
@@ -8626,7 +8730,10 @@ static void next_token(JSParseState *s)
         }
         break;
     case '=':
-        if (p[1] == '=') {
+        if (p[1] == '>') {
+            p += 2;
+            s->token.val = TOK_ARROW;
+        } else if (p[1] == '=') {
             if (p[2] == '=') {
                 p += 3;
                 s->token.val = TOK_STRICT_EQ;
@@ -9561,6 +9668,20 @@ static JSValue js_parse_pop_val(JSParseState *s)
     case 6: goto parse_state6;\
     }
 
+#define PARSE_START8()                          \
+    switch(state) {\
+    case PARSE_STATE_INIT: break;\
+    default: abort();\
+    case 0: goto parse_state0;\
+    case 1: goto parse_state1;\
+    case 2: goto parse_state2;\
+    case 3: goto parse_state3;\
+    case 4: goto parse_state4;\
+    case 5: goto parse_state5;\
+    case 6: goto parse_state6;\
+    case 7: goto parse_state7;\
+    }
+
 #define PARSE_START12()                          \
     switch(state) {\
     case PARSE_STATE_INIT: break;\
@@ -9698,11 +9819,90 @@ static void js_emit_push_number(JSParseState *s, double d)
     }
 }
 
+static JSFunctionBytecode *js_alloc_function_bytecode(JSContext *ctx);
+
+static void js_skip_arrow_expression(JSParseState *s)
+{
+    int conditional_depth = 0;
+    for (;;) {
+        switch (s->token.val) {
+        case '(':
+        case '[':
+        case '{':
+            js_skip_parens(s, NULL);
+            break;
+        case '?':
+            conditional_depth++;
+            next_token(s);
+            break;
+        case ':':
+            if (conditional_depth > 0) {
+                conditional_depth--;
+                next_token(s);
+                break;
+            }
+            return;
+        case ',':
+        case ';':
+        case ')':
+        case ']':
+        case '}':
+        case TOK_EOF:
+            return;
+        default:
+            next_token(s);
+            break;
+        }
+    }
+}
+
+static void js_parse_arrow_decl(JSParseState *s)
+{
+    JSContext *ctx = s->ctx;
+    JSFunctionBytecode *b;
+    JSValue bfunc;
+    JSGCRef bfunc_ref;
+    int idx;
+
+    b = js_alloc_function_bytecode(ctx);
+    if (!b)
+        js_parse_error_mem(s);
+    bfunc = JS_VALUE_FROM_PTR(b);
+    JS_PUSH_VALUE(ctx, bfunc);
+    b->filename = s->filename_str;
+    b->source_pos = s->token.source_pos;
+    b->has_column = s->has_column;
+    b->is_arrow = 1;
+
+    if (s->token.val == TOK_IDENT) {
+        next_token(s);
+    } else {
+        js_skip_parens(s, NULL);
+    }
+    if (s->token.val != TOK_ARROW)
+        js_parse_error(s, "expecting '=>'");
+    next_token(s);
+    if (s->token.val == '{')
+        js_skip_parens(s, NULL);
+    else
+        js_skip_arrow_expression(s);
+
+    idx = cpool_add(s, bfunc);
+    emit_op(s, OP_fclosure);
+    emit_u16(s, idx);
+    JS_POP_VALUE(ctx, bfunc);
+}
+
 static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
 {
     BOOL is_new = FALSE;
 
-    PARSE_START7();
+    PARSE_START8();
+    if ((s->token.val == TOK_IDENT && peek_token(s) == TOK_ARROW) ||
+        (s->token.val == '(' && is_parenthesized_arrow(s))) {
+        js_parse_arrow_decl(s);
+        goto postfix_suffix;
+    }
     switch(s->token.val) {
     case TOK_NUMBER:
         js_emit_push_number(s, s->token.u.d);
@@ -9712,6 +9912,27 @@ static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
         {
             js_emit_push_const(s, s->token.value);
             next_token(s);
+        }
+        break;
+    case TOK_TEMPLATE:
+        js_emit_push_const(s, s->token.value);
+        if (s->token.u.template_tail) {
+            next_token(s);
+            break;
+        }
+        for (;;) {
+            next_token(s);
+            PARSE_CALL_SAVE1(s, 7, js_parse_assign_expr, 0, parse_flags);
+            if (s->token.val != '}')
+                js_parse_error(s, "expecting '}' in template literal");
+            emit_op(s, OP_add);
+            js_parse_template_part(s, s->buf_pos);
+            js_emit_push_const(s, s->token.value);
+            emit_op(s, OP_add);
+            if (s->token.u.template_tail) {
+                next_token(s);
+                break;
+            }
         }
         break;
     case TOK_REGEXP:
@@ -9919,6 +10140,7 @@ static int js_parse_postfix_expr(JSParseState *s, int state, int parse_flags)
         js_parse_error(s, "unexpected character in expression");
     }
 
+postfix_suffix:
     for(;;) {
         if (s->token.val == '(' && (parse_flags & PF_ACCEPT_LPAREN)) {
             int opcode, arg_count;
@@ -11455,6 +11677,51 @@ static void js_parse_function(JSParseState *s)
     
     next_token(s);
 
+    b = JS_VALUE_TO_PTR(s->cur_func);
+    if (b->is_arrow) {
+        if (s->token.val == TOK_IDENT) {
+            JSValue name = s->token.value;
+            add_var(s, name);
+            next_token(s);
+        } else {
+            js_parse_expect(s, '(');
+            while (s->token.val != ')') {
+                JSValue name;
+                if (s->token.val != TOK_IDENT)
+                    js_parse_error(s, "missing arrow parameter");
+                name = s->token.value;
+                if (find_var(s, name) >= 0)
+                    js_parse_error(s, "duplicate arrow parameter");
+                add_var(s, name);
+                next_token(s);
+                if (s->token.val == ')')
+                    break;
+                js_parse_expect(s, ',');
+            }
+            js_parse_expect(s, ')');
+        }
+        b = JS_VALUE_TO_PTR(s->cur_func);
+        b->arg_count = s->local_vars_len;
+        if (s->token.val != TOK_ARROW)
+            js_parse_error(s, "expecting '=>'");
+        next_token(s);
+        if (s->token.val == '{') {
+            next_token(s);
+            while (s->token.val != '}')
+                js_parse_source_element(s);
+            if (js_is_live_code(s))
+                emit_op(s, OP_return_undef);
+            next_token(s);
+        } else {
+            js_parse_assign_expr2(s, 0);
+            emit_op(s, OP_return);
+        }
+        define_hoisted_functions(s, FALSE);
+        b = JS_VALUE_TO_PTR(s->cur_func);
+        b->byte_code = s->byte_code;
+        return;
+    }
+
     js_parse_expect(s, '(');
 
     while (s->token.val != ')') {
@@ -12334,7 +12601,8 @@ static void gc_mark_flush(GCMarkState *s)
                     {
                         int i;
                         gc_mark(s, p->u.closure.func_bytecode);
-                        for(i = 0; i < p->extra_size - 1; i++)
+                        gc_mark(s, p->u.closure.lexical_this);
+                        for(i = 0; i < p->extra_size - 2; i++)
                             gc_mark(s, p->u.closure.var_refs[i]);
                     }
                     break;
@@ -12730,7 +12998,8 @@ static void gc_thread_block(JSContext *ctx, void *ptr)
                 {
                     int i;
                     gc_thread_pointer(ctx, &p->u.closure.func_bytecode);
-                    for(i = 0; i < p->extra_size - 1; i++)
+                    gc_thread_pointer(ctx, &p->u.closure.lexical_this);
+                    for(i = 0; i < p->extra_size - 2; i++)
                         gc_thread_pointer(ctx, &p->u.closure.var_refs[i]);
                 }
                 break;
@@ -13050,8 +13319,9 @@ typedef struct {
     JSWord_32 has_arguments : 1; /* only used during parsing */
     JSWord_32 has_local_func_name : 1; /* only used during parsing */
     JSWord_32 has_column : 1; /* column debug info is present */
+    JSWord_32 is_arrow : 1;
     JSWord_32 arg_count : 16;
-    JSWord_32 dummy: JS_MB_PAD_32(JS_MTAG_BITS + 3 + 16);
+    JSWord_32 dummy: JS_MB_PAD_32(JS_MTAG_BITS + 4 + 16);
 
     JSValue_32 func_name; /* JS_NULL if anonymous function */
     JSValue_32 byte_code; /* JS_NULL if the function is not parsed yet */
@@ -13081,6 +13351,7 @@ static int convert_mblock_64to32(void *ptr1, const void *ptr)
             b1->has_arguments = b->has_arguments;
             b1->has_local_func_name = b->has_local_func_name;
             b1->has_column = b->has_column;
+            b1->is_arrow = b->is_arrow;
             b1->arg_count = b->arg_count;
             b1->dummy = 0;
             b1->func_name = b->func_name;

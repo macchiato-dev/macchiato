@@ -9,8 +9,10 @@ const build = join(root, "build");
 mkdirSync(build, { recursive: true });
 
 const cc = process.env.CC || "cc";
+const cppflags = (process.env.CPPFLAGS || "").split(/\s+/).filter(Boolean);
 const common = [
-  "-std=c11", "-D_GNU_SOURCE", "-Os", "-Wall", "-Wextra", `-I${source}`,
+  "-std=c11", "-D_GNU_SOURCE", ...cppflags,
+  "-Os", "-Wall", "-Wextra", `-I${source}`,
 ];
 
 execFileSync(cc, [
