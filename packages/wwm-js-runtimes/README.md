@@ -57,3 +57,11 @@ belongs to the guest build.
 The existing development runtime trees will move here incrementally. Their
 source history and runnable examples should remain useful during the move;
 this directory is not a second implementation or a wrapper around `dev/`.
+## QuickJS server runtime
+
+`quickjs-server` runs ordinary asynchronous application code. A device call
+returns a guest Promise; the host performs the capability operation, delivers
+the result through `onmsg`, and QuickJS drains its pending-job queue before
+returning the application response. Both runtimes use the same typed
+`msg`/`onmsg` server bridge, so selecting the larger application runtime does
+not grant it additional host authority.

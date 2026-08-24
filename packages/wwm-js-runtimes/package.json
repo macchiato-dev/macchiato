@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "build:server": "node microquickjs-server/build.js",
-    "test": "node --test microquickjs-server/server.test.js"
+    "build:quickjs-server": "node quickjs-server/build.js",
+    "test": "node --test microquickjs-server/server.test.js quickjs-server/server.test.js"
   }
 }

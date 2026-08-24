@@ -51,7 +51,8 @@ fn main() {
         .file(root.join("libc-ponyfill/libc.c"))
         .file(root.join("libc-ponyfill/format.c"))
         .file(root.join("libc-ponyfill/time.c"))
-        .file(root.join("src/guest.c"))
+        .file(env::var("WWC_SERVER_GUEST").map(PathBuf::from)
+            .unwrap_or_else(|_| root.join("src/guest.c")))
         .define("CONFIG_VERSION", Some("\"2026-06-04\""))
         .define("WASM_WEB_CONTAINER", None)
         .flag_if_supported("-Os")
@@ -66,6 +67,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=WWC_CANONICAL_HOST");
     println!("cargo:rerun-if-env-changed=WWC_GUEST_ENVIRONMENT");
     println!("cargo:rerun-if-env-changed=WWC_APPLICATION_SOURCE");
+    println!("cargo:rerun-if-env-changed=WWC_SERVER_GUEST");
     if let Some(path) = environment_path { println!("cargo:rerun-if-changed={}", path.display()); }
     if let Some(path) = application_path { println!("cargo:rerun-if-changed={}", path.display()); }
 }
