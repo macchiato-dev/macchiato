@@ -21,12 +21,14 @@ const config = createEdgeConfig({
 });
 
 function createTestResourcesEdgeHandler(options) {
-  const documentPlan = options.documentPlan || (async input => ({
+  const documentPlan = options.documentPlan || (async input => input.shellOnly
+    ? { accountShellPath: input.pathname }
+    : ({
     requestedProject: null, dynamicProject: null, projectOwner: false,
     dynamicNamespace: null, managedOrganization: null, accountContent: null,
     account: null, publicProjects: input.publicApi ? [] : null, notifications: [],
-    kind: "static", csrfActions: [], shellPath: input.pathname, focused: false,
-  }));
+      kind: "static", csrfActions: [], shellPath: input.pathname, focused: false,
+    }));
   return createResourcesEdgeHandler({ ...options, documentPlan,
     documentRenderer: renderResourcesDocument });
 }

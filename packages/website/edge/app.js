@@ -538,9 +538,8 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
       const formErrorCode = url.searchParams.get("error") || "";
-      const accountShellPath = directTryTemplate
-        ? "/try"
-        : ((pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname);
+      const { accountShellPath } = await documentPlan({ pathname, session,
+        directTryTemplate, shellOnly: true });
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
       const plan = await documentPlan({ pathname, session, directTryTemplate,
         staticShellExists: manifest.files.has(staticKey) });

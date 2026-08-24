@@ -75,10 +75,11 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   }) : null;
   const documentPlan = application
     ? input => application.documentPlan(input)
-    : async input => ({ requestedProject: null, dynamicProject: null, projectOwner: false,
+    : async input => input.shellOnly ? { accountShellPath: input.pathname }
+      : ({ requestedProject: null, dynamicProject: null, projectOwner: false,
       dynamicNamespace: null, managedOrganization: null, accountContent: null,
       account: null, publicProjects: input.publicApi ? [] : null, notifications: [],
-      kind: "static", csrfActions: [], shellPath: input.pathname, focused: false });
+        kind: "static", csrfActions: [], shellPath: input.pathname, focused: false });
   const machine = client ? createResourcesServerMachine(serverModule, {
     bytecodes: serverBytecodes,
     sqlDevice: (operation, input) => policyRequest(["sql", operation, input]),

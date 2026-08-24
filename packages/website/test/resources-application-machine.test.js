@@ -121,6 +121,9 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.equal(plan[1].shellPath, "/dashboard");
   assert.deepEqual(plan[1].csrfActions,
     ["project:project-1", "notifications"]);
+  assert.deepEqual(await withTimeout(application.request(["document-plan", {
+    pathname: "/", session: { sub: "user-1" }, shellOnly: true,
+  }])), ["ok", { accountShellPath: "/dashboard" }]);
   const rejected = await withTimeout(application.request(["store", "content",
     "saveProjectSnapshot", ["user-1", "project-1", {
       files: [], config: { containerOptions: {

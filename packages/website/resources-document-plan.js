@@ -28,15 +28,19 @@ export function createResourcesDocumentPlanner({ accounts, content, organization
     if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
       throw new TypeError("Document plan input is invalid");
     }
+    const directTryTemplate = typeof input.directTryTemplate === "string"
+      ? input.directTryTemplate : "";
+    const session = input.session && typeof input.session.sub === "string" ? input.session : null;
+    const accountShellPath = directTryTemplate ? "/try"
+      : ((input.pathname === "/" && session) || input.pathname === "/profile"
+        ? "/dashboard" : input.pathname);
+    if (input.shellOnly === true) return { accountShellPath };
     if (input.publicApi === true) {
       return { publicProjects: await content.listPublicProjects({
         limit: 6, namespaces: discoverableNamespaces,
       }) };
     }
     const pathname = input.pathname;
-    const session = input.session && typeof input.session.sub === "string" ? input.session : null;
-    const directTryTemplate = typeof input.directTryTemplate === "string"
-      ? input.directTryTemplate : "";
     const requestedProject = directTryTemplate ? null : projectRoute(pathname);
     const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
     const dynamicProject = requestedProject
@@ -58,8 +62,6 @@ export function createResourcesDocumentPlanner({ accounts, content, organization
       ? await content.listPublicProjects({ limit: pathname === "/" ? 6 : 48,
         namespaces: discoverableNamespaces }) : null;
     const notifications = session ? await organizations.listNotifications(session.sub) : [];
-    const accountShellPath = directTryTemplate ? "/try"
-      : (pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname;
     let kind = "static";
     if (dynamicProject) kind = "project";
     else if (dynamicNamespace) kind = managedOrganization ? "managed-organization" : "namespace";

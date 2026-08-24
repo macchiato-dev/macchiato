@@ -1,4 +1,4 @@
-‹unescape$encodeURIComponent$decodeURIComponentescape__hostSendserverHandlecryptoTextEncoderstructuredCloneURLhostCall*server-application.jspendingnextCallWriterReadersendbyteuinttexttake__serverReceive
+›unescape$encodeURIComponent$decodeURIComponentescape__hostSendserverHandlecryptoTextEncoderstructuredCloneURLhostCall*server-application.jspendingnextCallWriterReadersendbyteuinttexttake__serverReceive
 bytespushisSafeIntegerinvalid integer
 floorcharCodeAt
 depthitementries
@@ -305,12 +305,12 @@ exactparsedlastSlashexpression2
 slashhostnamehostnamePatternpathPatternexpressionpathname6URL pattern cannot be emptystartsWith`endsWithFExact URLs need matching backquotesprotocolhttps:
 http:BExact URLs must use HTTP or HTTPSPRegular expressions need a closing slashindexOf/*LUse a hostname such as *.wikipedia.orgBA hostname path must start with /^$iurlsearchhashpatternspattern containerOptions&allowedLinkPatternscontainerRallowed link URL patterns must be strings
 match
-embedaccounts2XDocument planner requires application storesplanDocument2session"directTryTemplate requestedProject$requestedNamespacedynamicProjectprojectOwner dynamicNamespaceaccountContentaccount accountShellPathcsrfActions<Document plan input is invalidpublicApisub"staticShellExists/browse/try/dashboard(managed-organizationdashboardproject-form"organization-formprofileproject:organization:/organizationsshellPathfocused
+embedaccounts2XDocument planner requires application storesplanDocument2"directTryTemplatesession accountShellPath requestedProject$requestedNamespacedynamicProjectprojectOwner dynamicNamespaceaccountContentaccountcsrfActions<Document plan input is invalidsub/try/dashboardshellOnlypublicApi"staticShellExists/browse(managed-organizationdashboardproject-form"organization-formprofileproject:organization:/organizationsshellPathfocused
 text2character
 pointcodePointAtcolumnslastInsertRowidcolumn
 queryaffected^Application operation lacks a random identifier
 shiftstoreNamemethodstores
-store@Store operation is not availablerandomuuid:unknown application operationdocument-plan  ®   	™   –  ¬  ⁄  Ê  Ë    Ã     “  Í  Ï  Ó  ™    å  †  Œ  Ú  ﬁ  é  ‹  Ù  ˆ  ‘  ¯  Ê  ˙  æ Ï«æÏÀ(¸   ñ ∆ C   û˛ @Ä@Ç @Ñ@Ü@–  ¬ ⁄ Ê Ë  Ã   “ Í	 Ï
+store@Store operation is not availablerandomuuid:unknown application operationdocument-plan  ®   	™   –  ¬  ⁄  Ê  Ë    Ã     “  Í  Ï  Ó  ™    å  †  Œ  Ú  ﬁ  é  ‹  Ù  ˆ  ‘  ¯  Ê  ˙  æ Ï«æÏÀ(¸   ñ » C   û˛ @Ä@Ç @Ñ@Ü@–  ¬ ⁄ Ê Ë  Ã   “ Í	 Ï
  Ó ™  å † æ …æ æ¡8 !  «¥»≈=?   æ?  ≈=?   æ?  ≈=?   æ?  ≈=?   æ?D   ∆=?   æ?  ∆=?   æ?  ∆=?   æ?  ∆=?   æ	?  ∆=?   æ
 ?D   8 æ?˝   8 æ?  )¸Z 6&
 &  
@@ -636,10 +636,10 @@ store@Store operation is not availablerandomuuid:unknown application operation
 &&& ÇŸ H ú  Z&k k Ê X  Æ ®  ä6 C 16k $k Ä 
 1pÄ/&/*ãp¨%ùpÑó%
 %%
- Ä*è & z z0¢1  §? %Fp , 
+ Ä*è & z z0¢1  ¶? %Fp , 
 &O+ *' &O)& ' 
 0O? >1 ,- Tz<? 
-!∆ñ() => {
+!ôó() => {
   // packages/hub/src/names.js
   var NAMESPACE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   var RESERVED_NAMESPACE_NAMES = Object.freeze(/* @__PURE__ */ new Set([
@@ -2264,6 +2264,10 @@ store@Store operation is not availablerandomuuid:unknown application operation
       if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
         throw new TypeError("Document plan input is invalid");
       }
+      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
+      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
+      const accountShellPath = directTryTemplate ? "/try" : input.pathname === "/" && session || input.pathname === "/profile" ? "/dashboard" : input.pathname;
+      if (input.shellOnly === true) return { accountShellPath };
       if (input.publicApi === true) {
         return { publicProjects: await content2.listPublicProjects({
           limit: 6,
@@ -2271,8 +2275,6 @@ store@Store operation is not availablerandomuuid:unknown application operation
         }) };
       }
       const pathname = input.pathname;
-      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
-      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
       const requestedProject = directTryTemplate ? null : projectRoute(pathname);
       const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
       const dynamicProject = requestedProject ? await content2.getProject(requestedProject.namespace, requestedProject.slug, session?.sub) : null;
@@ -2286,7 +2288,6 @@ store@Store operation is not availablerandomuuid:unknown application operation
         namespaces: discoverableNamespaces
       }) : null;
       const notifications = session ? await organizations2.listNotifications(session.sub) : [];
-      const accountShellPath = directTryTemplate ? "/try" : pathname === "/" && session || pathname === "/profile" ? "/dashboard" : pathname;
       let kind = "static";
       if (dynamicProject) kind = "project";
       else if (dynamicNamespace) kind = managedOrganization ? "managed-organization" : "namespace";
@@ -4829,7 +4830,7 @@ HR	H9	§function compileAllowedUrlPattern(input) {
     }
   }^\/([^/]+)$b   )      ıˇˇˇ 	/ $   . 0 ˇˇˇˇˇ A ‰8   ∏ @®
  @Ü@¬ ﬁH  ‡I  ‚J  ‘ ‹G  œo=x  «=y  »=z  …√îÈ
-ƒîÈ≈îË8  ù  ! 0æ (¸ﬁ{  '/%ªfunction createResourcesDocumentPlanner({ accounts: accounts2, content: content2, organizations: organizations2 }) {
+ƒîÈ≈îË8  ù  ! 0æ (¸ﬁ{  '/%éfunction createResourcesDocumentPlanner({ accounts: accounts2, content: content2, organizations: organizations2 }) {
     if (!accounts2 || !content2 || !organizations2) {
       throw new TypeError("Document planner requires application stores");
     }
@@ -4837,6 +4838,10 @@ HR	H9	§function compileAllowedUrlPattern(input) {
       if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
         throw new TypeError("Document plan input is invalid");
       }
+      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
+      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
+      const accountShellPath = directTryTemplate ? "/try" : input.pathname === "/" && session || input.pathname === "/profile" ? "/dashboard" : input.pathname;
+      if (input.shellOnly === true) return { accountShellPath };
       if (input.publicApi === true) {
         return { publicProjects: await content2.listPublicProjects({
           limit: 6,
@@ -4844,8 +4849,6 @@ HR	H9	§function compileAllowedUrlPattern(input) {
         }) };
       }
       const pathname = input.pathname;
-      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
-      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
       const requestedProject = directTryTemplate ? null : projectRoute(pathname);
       const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
       const dynamicProject = requestedProject ? await content2.getProject(requestedProject.namespace, requestedProject.slug, session?.sub) : null;
@@ -4859,7 +4862,6 @@ HR	H9	§function compileAllowedUrlPattern(input) {
         namespaces: discoverableNamespaces
       }) : null;
       const notifications = session ? await organizations2.listNotifications(session.sub) : [];
-      const accountShellPath = directTryTemplate ? "/try" : pathname === "/" && session || pathname === "/profile" ? "/dashboard" : pathname;
       let kind = "static";
       if (dynamicProject) kind = "project";
       else if (dynamicNamespace) kind = managedOrganization ? "managed-organization" : "namespace";
@@ -4891,33 +4893,38 @@ HR	H9	§function compileAllowedUrlPattern(input) {
         focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate)
       };
     };
-  }b º 	 Â	∏  ˛  ∞æ ∞¿ ∞¬ ∞ƒ ∞∆ ∞» ∞  ∞Ú ∞Ã	 ∞Œ
- ∞⁄ ∞é ∞– ∞Æ †“ ∞¬  ®
+  }b º 	 Ç
+∏  æ  ∞¿ ∞¬ ∞˛ ∞ƒ ∞∆ ∞» ∞  ∞Ã ∞Ú	 ∞Œ
+ ∞– ∞⁄ ∞é ∞Æ †“ ∞¬  ®
   ﬁ ‡ ‚ ‘ Ü  ‹ ∏   ^ ^ ^ ^ ^ ^
- ^	 ^ ^ ^ ^ ^ ^ ^ ^ ^  œîÈœïM   ™Èœ=  ïL   ™Ë8  ™  ! 0œ=´  
-©Ë‹>   πI4  ›I5  $ âIÌ  /œ=  «œ=ü  Ëœ=ü  =¨  ïL   ©Ë	œ=ü  Í»œ=†  ïL   ©Ë	œ=†  Íø…_ ËÍﬁ_  Ì _ ËÍ[ _  Ì¡_ Ë-‹>  _ =  _ =[  _ ÆËÍ=¨  $ âÍ¡8 _ Ë_ Ë_ =  _ =¨  ©Ì¡œ=≠  îË%_ Ë ‹>!  _ _ ÆËÍ=¨  $ âÍ¡_ ÆËÍ=◊  d  ©Ë$_ Ë[ >Á  _ =  _ =¨  $ âÍ¡_ È_ Ë%[ >g   _  $ Ë‹>$  _ =¨  $ âÍ¡	_ Ë"_  7  ©Ë[ >b  _ =¨  $ âÍ¡
-_  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë[ >È  _ =¨  $ âÍ&  ¡_ ËØ  Í*_  3  ©Ë_ È_  7  ©Ë∞  Í_  ¡,   ¡_ Ë^  ` Îü _ Ë_ Ë±  Í  ` ÎÉ _  Ø  ©È_ Ë   ` Íf_ Ëa[ >g   _  $ ËQ_  3  ©Ë≤  Í<_  4  ©Ëã  Í*_  5  ©Ë≥  Í_  6  ©Ë¥  Íµ  ` &  ¡_ Ë%_ >
-  ∂  >`   _ =(  $ $ Îë _ Ë$_ >
-  ∑  >`   _ =[  $ $ Íh_ Ë_ ≥  ©Ë_ >
-  4  $ ÍE_ Ë_ ¥  ©Ë_ >
-  ∏  $ Í"_ Ë_ µ  ©Ë_ >
-  µ  $ _ Ë_ >
-  «  $ _ I°  _ I£  _ I§  _ I•  _ Iπ  _	 I¶  _
- Iß  _ IÌ  _ I«  _ I◊  _ I©  _ I®  _ È_ Ë∞  Í_ Iπ  8 _ ÌÈ#_  5  ©È_  Ø  ©È	8 _ ÌI∫  /¸∑‚Û   9.
-0i/%	
- @1 X/s 
-
-
+ ^	 ^ ^ ^ ^ ^ ^ ^ ^ ^  œîÈœïM   ™Èœ=  ïL   ™Ë8  ™  ! 0œ=ü  ïL   ©Ë	œ=ü  Íø«œ=†  Ëœ=†  =´  ïL   ©Ë	œ=†  Í»_  Ë¨  Í3œ=  3  ©Ë_ Èœ=  7  ©Ë≠  Íœ=  …œ=Æ  
+©Ë_ I°  /œ=Ø  
+©Ë‹>   πI4  ›I5  $ âIÌ  /œ=   _  ËÍﬁ_ Ì¡_ ËÍ[ _ Ì¡_ Ë-‹>  _ =  _ =[  _ ÆËÍ=´  $ âÍ¡8 _ Ë_ Ë_ =  _ =´  ©Ì¡œ=∞  îË%_ Ë ‹>!  _ _ ÆËÍ=´  $ âÍ¡_ ÆËÍ=◊  d  ©Ë$_ Ë[ >Á  _ =  _ =´  $ âÍ¡	_ È_ Ë%[ >g   _ $ Ë‹>$  _ =´  $ âÍ¡
+_ Ë"_ 7  ©Ë[ >b  _ =´  $ âÍ¡_ 3  ©Ë_ îÈ_ ±  ©Ë)‹>   _ 3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë[ >È  _ =´  $ âÍ&  ¡,   ¡_ Ë^  ` Îü _ Ë_	 Ë≤  Í  ` ÎÉ _ ¨  ©È_  Ë   ` Íf_ Ëa[ >g   _ $ ËQ_ 3  ©Ë≥  Í<_ 4  ©Ëã  Í*_ 5  ©Ë¥  Í_ 6  ©Ëµ  Í∂  ` &  ¡_ Ë%_ >
+  ∑  >`   _ =(  $ $ Îë _	 Ë$_ >
+  ∏  >`   _	 =[  $ $ Íh_ Ë_ ¥  ©Ë_ >
+  4  $ ÍE_ Ë_ µ  ©Ë_ >
+  π  $ Í"_ Ë_ ∂  ©Ë_ >
+  ∂  $ _ Ë_ >
+  «  $ _ I¢  _ I§  _ I•  _ I¶  _	 Iπ  _
+ Iß  _ I®  _ IÌ  _ I«  _ I◊  _ I©  _ I°  _ È_ Ë≠  Í_ I∫  8 _ ÌÈ#_ 5  ©È_ ¨  ©È	8 _  ÌIª  /¸≈‚Û   9.
+0i/%	>
+&/
+*i
 %&
 
 /
-*&
-&/
-*i*6Q*4S2  Cu%[ %$%"q
+*>:
+4%
+44@
+Ô%
+ >3
+ @1 X/s 
+
+*6Q*4S2  Cu%[ %$%"q
 *,6(C7%õ
  \, 0 G%«% 
-&%ß	*.%Å***,!©*D ∆%∑  &/c
->:*%*4@Õ&	 :2v1*&5S
+&%ß	*.%Å***,!©*D ∆%∑  &/c&	 :2v1*&5S
 5*40*4>*4N*mÒM"*3&1*M,&*G!I*
 (4
 !g*
@@ -4925,10 +4932,14 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
 !q*
 4
 g4
- e%$>D+k(*.* «Øasync function planDocument2(input) {
+ e%$>D+k(*.* «Çasync function planDocument2(input) {
       if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
         throw new TypeError("Document plan input is invalid");
       }
+      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
+      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
+      const accountShellPath = directTryTemplate ? "/try" : input.pathname === "/" && session || input.pathname === "/profile" ? "/dashboard" : input.pathname;
+      if (input.shellOnly === true) return { accountShellPath };
       if (input.publicApi === true) {
         return { publicProjects: await content2.listPublicProjects({
           limit: 6,
@@ -4936,8 +4947,6 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         }) };
       }
       const pathname = input.pathname;
-      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
-      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
       const requestedProject = directTryTemplate ? null : projectRoute(pathname);
       const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
       const dynamicProject = requestedProject ? await content2.getProject(requestedProject.namespace, requestedProject.slug, session?.sub) : null;
@@ -4951,7 +4960,6 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         namespaces: discoverableNamespaces
       }) : null;
       const notifications = session ? await organizations2.listNotifications(session.sub) : [];
-      const accountShellPath = directTryTemplate ? "/try" : pathname === "/" && session || pathname === "/profile" ? "/dashboard" : pathname;
       let kind = "static";
       if (dynamicProject) kind = "project";
       else if (dynamicNamespace) kind = managedOrganization ? "managed-organization" : "namespace";
@@ -4982,11 +4990,11 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         shellPath: dynamicProject || dynamicNamespace ? "/dashboard" : accountShellPath,
         focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate)
       };
-    }B   ˘à  ˆ  ∞í ∞¯ ∞˙ ∞“   ^ ^  8  œÌ«&  »^ _  {Î  …^ _ >æ  ≥$  _ ºÄ °Ë_ >
+    }B   ˘à  ¯  ∞í ∞˙ ∞¸ ∞“   ^ ^  8  œÌ«&  »^ _  {Î  …^ _ >ø  ≥$  _ ºÄ °Ë_ >
   _ $ Îû _ º °Ë"_ >
   º¿ _ πü≠ºÄ _ ª?´≠$ Ís_    °Ë/_ >
   º‡ _ ªü≠ºÄ _ πüª?´≠ºÄ _ ª?´≠$ Í:_ >
-  º _ ªü≠ºÄ _ ªüª?´≠ºÄ _ πüª?´≠ºÄ _ ª?´≠$ ~ h5ˇˇˇÇ8 >   _ % ¸â°!  : - 
+  º _ ªü≠ºÄ _ ªüª?´≠ºÄ _ πüª?´≠ºÄ _ ª?´≠$ ~ h5ˇˇˇÇ8 >   _ % ¸â¢!  : - 
 &# 
 *(-!/*
 +)
@@ -5013,7 +5021,7 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
           );
         }
         return Uint8Array.from(bytes);
-      }@       ˆM «+d  Ë√$  )¸∂∆class TextEncoder {
+      }@       ˆM «+d  Ë√$  )¸∑∆class TextEncoder {
       encode(value) {
         const text2 = String(value);
         const bytes = [];
@@ -5035,7 +5043,7 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         }
         return Uint8Array.from(bytes);
       }
-    }C ÊLæ  ˛  ﬁ ∞‰	 ∞  ^ ^ ^  È{~ «~ »~ …ÇÍœÍÌ_  Iø  _ >k  æ $ IZ  _ Ir  I¿  (¸∏ûTA?% #©function compatibleResult(result) {
+    }C ÊLæ  Ä  ﬁ ∞‰	 ∞  ^ ^ ^  È{~ «~ »~ …ÇÍœÍÌ_  I¿  _ >k  æ $ IZ  _ Ir  I¡  (¸πûTA?% #©function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
     return {
       columns,
@@ -5045,9 +5053,9 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
       rowsAffected,
       lastInsertRowid: null
     };
-  }B   ∂	 @   ˛  8  >Ä  d >k  æ $ % ¸º;%>a(row) => Object.fromEntries(
+  }B   ∂	 @   Ä  8  >Ä  d >k  æ $ % ¸Ω;%>a(row) => Object.fromEntries(
         columns.map((column, index) => [column, row[index]])
-      )B     Ç  ∂  ∂	  œ€–C& (¸Ω('(column, index) => [column, row[index]]b     (Ñ  ÊN  ˙ €8 l  <  œ=l  œ=m  È&  & ÔâÌ/¸ƒ.F5
+      )B     Ñ  ∂  ∂	  œ€–C& (¸æ('(column, index) => [column, row[index]]b     (Ü  ÊN  ˙ €8 l  <  œ=l  œ=m  È&  & ÔâÌ/¸≈.F5
 
  &-úasync execute(query) {
       return compatibleResult(await hostCall(
@@ -5055,7 +5063,7 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         "execute",
         [query.sql, query.args || []]
       ));
-    }b   ,¨  Ü  ∞˙ ^  8  l  =  œ>k  æ $ Ôâ«_  >k  æ$ /¸À2F)% $ 
+    }b   ,¨  à  ∞˙ ^  8  l  =  œ>k  æ $ Ôâ«_  >k  æ$ /¸Ã2F)% $ 
 %%øasync batch(queries) {
       const affected = await hostCall(
         "sql",
@@ -5068,18 +5076,18 @@ _  3  ©Ë_ îÈ_  Æ  ©Ë)‹>   _  3  ©ËπÍª0I4  ›I5  $ âÍ¡_ Ë
         rowsAffected,
         lastInsertRowid: null
       }));
-    }B      Ñ  œ=l  œ=m  È&  & (¸œ
+    }B      Ü  œ=l  œ=m  È&  & (¸–
 
-((query) => [query.sql, query.args || []]B      ‰	  &  Iø  &  IZ  œIr  I¿  (¸—x(rowsAffected) => ({
+((query) => [query.sql, query.args || []]B      ‰	  &  I¿  &  IZ  œIr  I¡  (¸“x(rowsAffected) => ({
         columns: [],
         rows: [],
         rowsAffected,
         lastInsertRowid: null
-      })C Ó      ÏQ  Œ €ÁîË8 ƒ  ! 0€>≈  %  ¸€&/
+      })C Ó      ÏQ  Œ €ÁîË8 ≈  ! 0€>∆  %  ¸‹&/
 öfunction nextRandomId() {
     if (!randomIds.length) throw new Error("Application operation lacks a random identifier");
     return randomIds.shift();
-  }        ÍP  €(¸‡	() => operationNow        ÍP  €(¸‰	() => operationNow        ÍP  €(¸È	() => operationNowC ˙   π‹  “  Ã 8  œÆËÍ=:   Èß   ÌI:   8  œÆËÍ=6   ÈœÌI6   œÆËÍ=K  ïL   ©Ë	œ=K  ÍøIK  œÆËÍ=A  ïL   ©Ë	œ=A  ÍøIA  8 >  œÆËÍ=L  $ Ë&  ≥œ=L  OÍ&  IL  (¸;Ó	
+  }        ÍP  €(¸·	() => operationNow        ÍP  €(¸Â	() => operationNow        ÍP  €(¸Í	() => operationNowC ˙   π‹  “  Ã 8  œÆËÍ=:   Èß   ÌI:   8  œÆËÍ=6   ÈœÌI6   œÆËÍ=K  ïL   ©Ë	œ=K  ÍøIK  œÆËÍ=A  ïL   ©Ë	œ=A  ÍøIA  8 >  œÆËÍ=L  $ Ë&  ≥œ=L  OÍ&  IL  (¸;Ô	
 p!
 W%!
 C/
@@ -5096,7 +5104,7 @@ C/2
       field: typeof error?.field === "string" ? error.field : "",
       providers: Array.isArray(error?.providers) ? [...error.providers] : []
     };
-  }b ¸ 	 úå  é  ⁄	  ê  ∞í ∞‹ ÉS  ÚT  ÙU  Ã ˛Z  ˙ ÍP  ÏQ  ˙X  ^ ^  €Iß  ‹Iy  ›Id  «_  œC»_ îÈ_ –Cï   ™È8 >  —$ îË3.  ß   I:      I6   øIK  øIA  &  IL  & /ky   [ Ïâ8 #  >  &  Ôâ\ –h  ©Èœy  ©Ë!–&  ©Ë8 À  Ã  &  Ôâ& Í&  \ û   _ –D&  ≥—O'  â& nl%   /…k   .  [ ≈Ì& nl   /l   0&  \ m/¸Y˜&8>B [* 9&
+  }b ¸ 	 úé  ê  ⁄	  í  ∞î ∞‹ ÉS  ÚT  ÙU  Ã ˛Z  ˙ ÍP  ÏQ  ˙X  ^ ^  €I®  ‹Iy  ›Id  «_  œC»_ îÈ_ –Cï   ™È8 >  —$ îË3.  ß   I:   À  I6   øIK  øIA  &  IL  & /ky   [ Ïâ8 #  >  &  Ôâ\ –h  ©Èœy  ©Ë!–&  ©Ë8 Ã  Õ  &  Ôâ& Í&  \ û   _ –D&  ≥—O'  â& nl%   /…k   .  [ ≈Ì& nl   /l   0&  \ m/¸Y¯&8>B [* 9&
  7Å 
 R! < " :R]«*A^"5E ∆async function storeCall(storeName, method, args) {
     const stores = { account: accounts, content, organization: organizations };
@@ -5120,7 +5128,7 @@ R! < " :R]«*A^"5E ∆async function storeCall(storeName, m
     } finally {
       randomIds = [];
     }
-  }C ˛    $ ™ S  ÚT  ÙU  ¯W  ˆV  [ È[ >e  $  >Ñ   æ $ ] [ (¸é% %
+  }C ˛    $ ™ S  ÚT  ÙU  ¯W  ˆV  [ È[ >e  $  >Ñ   æ $ ] [ (¸è% %
  
 ?÷function initialize() {
     initialized ||= migrations.ready().then(() => Promise.all([
@@ -5129,11 +5137,11 @@ R! < " :R]«*A^"5E ∆async function storeCall(storeName, m
       organizations.initialize()
     ]));
     return initialized;
-  }B       ) ™   Ú Ù 8  >D  ‹>  $  ›>  $  ﬁ>  $  & % ¸è,e%# >t() => Promise.all([
+  }B       ) ™   Ú Ù 8  >D  ‹>  $  ›>  $  ﬁ>  $  & % ¸ê,e%# >t() => Promise.all([
       accounts.initialize(),
       content.initialize(),
       organizations.initialize()
-    ])b   †∏  ‹  ÉÃ ˛Z  ¸Y  Ä[  ˙X  8  >  œ$ îË.  Õ  & /œ≥C  ©Ë‹Ïâû   & /œ≥C…  ©ËœÁ∑©Ë›œ¥CœµCœ∂CÔ/œ≥CŒ  ©Ë6œÁµ©Ë0k   ‹Ïâû   ﬁœ¥CÌâ& n/«k   .  [ √Ì& n/0.  Õ  & /¸[õ%
+    ])b   †∏  ‹  ÉÃ ˛Z  ¸Y  Ä[  ˙X  8  >  œ$ îË.  Œ  & /œ≥C  ©Ë‹Ïâû   & /œ≥C   ©ËœÁ∑©Ë›œ¥CœµCœ∂CÔ/œ≥Cœ  ©Ë6œÁµ©Ë0k   ‹Ïâû   ﬁœ¥CÌâ& n/«k   .  [ √Ì& n/0.  Œ  & /¸[ú%
 b	
  	:	
  
