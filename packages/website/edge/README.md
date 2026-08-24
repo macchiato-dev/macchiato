@@ -78,6 +78,16 @@ directly servable Storage objects. Dynamic HTML/CSS generation follows the
 two-machine path: application data enters the policy/rendering machine and only
 validated output returns through the controller.
 
+Dynamic document selection follows the same split. The QuickJS application
+machine resolves project and namespace ownership, account-page models, public
+discovery, notifications, the immutable shell path, and the exact CSRF actions
+needed by the page. The controller fetches that shell and mints only those
+signed capabilities. A separate MicroQuickJS document machine applies the
+declarative plan and returns the completed HTML; page-kind switches and store
+reads are absent from host JavaScript. The local Resources Edge preview uses
+this same application/policy-machine chain rather than direct in-process
+stores.
+
 ## What is intentionally absent
 
 - No host Request, database client, or arbitrary SQL authority is exposed to

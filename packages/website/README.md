@@ -614,6 +614,14 @@ different: it belongs in the policy/rendering machine and crosses to the
 controller only as validated output. The controller forwards messages between
 that machine and the application machine; it does not become a renderer.
 
+The application machine also owns the dynamic document plan. It chooses the
+published shell and gathers project, namespace, profile, dashboard,
+notification, and public-discovery models. Its plan names the CSRF capabilities
+the controller may mint. The MicroQuickJS document machine consumes the shell,
+plan, signed tokens, and localized messages, then performs all dynamic region
+composition. Consequently the host coordinates storage, authentication, and
+machine messages without carrying the page-kind switch or direct store calls.
+
 ### Update an existing staging deployment manually
 
 1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
