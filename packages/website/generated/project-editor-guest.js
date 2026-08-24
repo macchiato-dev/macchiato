@@ -29506,6 +29506,16 @@ ${bundleProjectModule(entry, script.textContent)}
     versionButton.setAttribute("aria-expanded", "false");
     if (restoreFocus) versionButton.focus();
   }
+  function positionHistory() {
+    const gap = 5;
+    const edge = 8;
+    const buttonRect = versionButton.getBoundingClientRect();
+    const panelRect = historyPanel.getBoundingClientRect();
+    const containingRect = historyPanel.parentElement?.getBoundingClientRect() || { left: 0, top: 0 };
+    historyPanel.style.left = `${Math.max(edge, Math.min(buttonRect.left, innerWidth - panelRect.width - edge)) - containingRect.left}px`;
+    historyPanel.style.top = `${buttonRect.bottom + gap - containingRect.top}px`;
+    historyPanel.style.maxHeight = `${Math.max(120, innerHeight - buttonRect.bottom - gap - edge)}px`;
+  }
   const openVersionHistory = () => {
     if (!historyPanel.hidden) {
       closeHistory();
@@ -29514,13 +29524,17 @@ ${bundleProjectModule(entry, script.textContent)}
     versionButton._hideInstantTooltip?.();
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
+    positionHistory();
     if (readOnly2) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
+      positionHistory();
     } else if (draft || memoryOnly) {
       renderDraftVersions();
+      positionHistory();
     } else {
-      renderStoredVersions().catch((error) => {
+      renderStoredVersions().then(positionHistory).catch((error) => {
         versionList.textContent = `Version history unavailable: ${error.message}`;
+        positionHistory();
       });
     }
   };
