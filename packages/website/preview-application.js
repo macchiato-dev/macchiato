@@ -16,9 +16,14 @@ import { createContentSqlUseClient } from "./content-sql-policy.js";
 import { createMigrationSqlUseClient } from "./migration-sql-policy.js";
 
 const serverModule = new WebAssembly.Module(readFileSync(
-  new URL("./generated/resources-server-microquickjs.wasm", import.meta.url)));
-const projectVersionModule = new WebAssembly.Module(readFileSync(
-  new URL("./generated/resources-project-version-microquickjs.wasm", import.meta.url)));
+  new URL("./generated/microquickjs-server.wasm", import.meta.url)));
+function localBytecodes(directory) {
+  const root = new URL(`./generated/${directory}/`, import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL("manifest.json", root), "utf8"));
+  return manifest.chunks.map(name => readFileSync(new URL(name, root)));
+}
+const serverBytecodes = localBytecodes("resources-server-bytecode");
+const projectVersionBytecodes = localBytecodes("resources-project-version-bytecode");
 
 // This is the local counterpart of backend/machine.ts. Keeping it behind a
 // dynamic import makes resources-edge exercise the same deferred application,
@@ -28,9 +33,9 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   const gitlabAuthConfig = createGitlabAuthConfig(environment, authConfig);
   const client = db ? createNodeSqliteClient(db) : null;
   const accountStore = client ? createAccountStore(createAccountSqlUseClient({ read: client, write: client })) : null;
-  const versionPlanner = createProjectVersionPlanner(projectVersionModule);
-  const snapshotDiffer = createProjectSnapshotDiffer(projectVersionModule);
-  const snapshotValidator = createProjectSnapshotValidator(projectVersionModule);
+  const versionPlanner = createProjectVersionPlanner(serverModule, projectVersionBytecodes);
+  const snapshotDiffer = createProjectSnapshotDiffer(serverModule, projectVersionBytecodes);
+  const snapshotValidator = createProjectSnapshotValidator(serverModule, projectVersionBytecodes);
   const contentStore = client ? createContentStore(createContentSqlUseClient({
     read: client, write: client,
   }), { versionPlanner, snapshotDiffer, snapshotValidator }) : null;
@@ -41,7 +46,7 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
     read: client, write: client,
   })) : null;
   const machine = client ? createResourcesServerMachine(serverModule, {
-    databaseClient: client, authConfig, contentStore,
+    bytecodes: serverBytecodes, databaseClient: client, authConfig, contentStore,
   }) : null;
   const handler = createResourcesEdgeHandler({
     config, authConfig, gitlabAuthConfig, accountStore, contentStore,

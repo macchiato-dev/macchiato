@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import { diffProjectSnapshots, planProjectVersionUpdate } from "@macchiato-dev/hub/project-history";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
+import { projectVersionBytecodes, serverModule } from "./server-machine-assets.js";
 
 test("disposable MicroQuickJS version planners match the canonical policy", async () => {
-  const module = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-project-version-microquickjs.wasm", import.meta.url)));
-  const planner = createProjectVersionPlanner(module);
+  const planner = createProjectVersionPlanner(serverModule, projectVersionBytecodes);
   for (const changeEmpty of [false, true]) {
     for (const pendingCheckpointEmpty of [false, true]) {
       for (const destructive of [false, true]) {
@@ -25,9 +23,7 @@ test("disposable MicroQuickJS version planners match the canonical policy", asyn
 });
 
 test("the version machine rejects invalid policy input", async () => {
-  const module = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-project-version-microquickjs.wasm", import.meta.url)));
-  const planner = createProjectVersionPlanner(module);
+  const planner = createProjectVersionPlanner(serverModule, projectVersionBytecodes);
   await assert.rejects(() => planner({
     changeEmpty: false, pendingCheckpointEmpty: true, destructive: false,
     reason: "invented", checkpointDue: false, lastVersionSequence: 1,
@@ -35,9 +31,7 @@ test("the version machine rejects invalid policy input", async () => {
 });
 
 test("MicroQuickJS computes exact file splice ranges through bounded UTF-16 chunks", async () => {
-  const module = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-project-version-microquickjs.wasm", import.meta.url)));
-  const differ = createProjectSnapshotDiffer(module);
+  const differ = createProjectSnapshotDiffer(serverModule, projectVersionBytecodes);
   const cases = [
     ["plain text", "plain text"],
     ["prefix suffix", "prefix changed suffix"],
@@ -57,9 +51,7 @@ test("MicroQuickJS computes exact file splice ranges through bounded UTF-16 chun
 });
 
 test("MicroQuickJS validates bounded normalized snapshot metadata", async () => {
-  const module = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-project-version-microquickjs.wasm", import.meta.url)));
-  const validate = createProjectSnapshotValidator(module);
+  const validate = createProjectSnapshotValidator(serverModule, projectVersionBytecodes);
   await validate({ files: [{ path: "src/index.js", content: "const value = '\ud800';" }],
     config: { entry: "src/index.js", nested: { enabled: true } } });
   await assert.rejects(() => validate({ files: [{ path: ".env", content: "x" }],

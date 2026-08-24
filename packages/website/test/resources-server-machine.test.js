@@ -10,6 +10,8 @@ import { seal } from "../auth/session.js";
 import { createResourcesServerMachine, isResourcesServerMachineRequest } from "../resources-server-machine.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
+import { projectVersionBytecodes, serverBytecodes,
+  serverModule } from "./server-machine-assets.js";
 
 const secret = "resources-server-machine-test-secret-value";
 
@@ -41,8 +43,6 @@ test("selects every document route and each machine-owned mutation", () => {
 
 test("MicroQuickJS owns the authenticated project versions route", async () => {
   const client = createNodeSqliteClient(new DatabaseSync(":memory:"));
-  const projectVersionModule = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-project-version-microquickjs.wasm", import.meta.url)));
   let accountId = 0;
   const accounts = createAccountStore(client, { now: () => 1, randomId: () => `user-${++accountId}` });
   const account = await accounts.authenticateIdentity({
@@ -57,9 +57,9 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
   let projectIdentifier = 0;
   const content = createContentStore(client, { now: () => createdAt,
     randomId: () => `project-${++projectIdentifier}`,
-    versionPlanner: createProjectVersionPlanner(projectVersionModule),
-    snapshotDiffer: createProjectSnapshotDiffer(projectVersionModule),
-    snapshotValidator: createProjectSnapshotValidator(projectVersionModule) });
+    versionPlanner: createProjectVersionPlanner(serverModule, projectVersionBytecodes),
+    snapshotDiffer: createProjectSnapshotDiffer(serverModule, projectVersionBytecodes),
+    snapshotValidator: createProjectSnapshotValidator(serverModule, projectVersionBytecodes) });
   const first = { files: [{ path: "index.html", content: "<h1>One</h1>" }], config: {} };
   const second = { files: [{ path: "index.html", content: "<h1>Two</h1>" }], config: {} };
   const project = await content.createProject(account.id, {
@@ -67,14 +67,13 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
     description: "", visibility: "private", template: "blank", snapshot: first,
   });
   await content.saveProjectSnapshot(account.id, project.id, second, { reason: "manual" });
-  const module = new WebAssembly.Module(readFileSync(new URL(
-    "../generated/resources-server-microquickjs.wasm", import.meta.url)));
   const authConfig = {
     publicOrigin: "http://resources-edge.localhost", sessionSecret: secret,
     secureCookies: false,
   };
-  const machine = createResourcesServerMachine(module, {
-    databaseClient: client, authConfig, contentStore: content, now: () => 3,
+  const machine = createResourcesServerMachine(serverModule, {
+    bytecodes: serverBytecodes, databaseClient: client, authConfig,
+    contentStore: content, now: () => 3,
   });
   const document = await machine.handle(new Request("http://resources-edge.localhost/about"), {
     documentHandler: () => {
@@ -88,7 +87,7 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
       return new Response("machine-routed document", { headers });
     },
   });
-  assert.equal(document.status, 200);
+  assert.equal(document.status, 200, await document.clone().text());
   assert.equal(document.headers.get("content-security-policy"), "default-src 'none'");
   assert.deepEqual(document.headers.getSetCookie(),
     ["resources_session=active; Path=/; HttpOnly", "resources_oauth=; Path=/; Max-Age=0"]);

@@ -37,7 +37,7 @@ function wtf8(value, offset, count) {
   return new MachineWtf8String(Uint8Array.from(bytes));
 }
 
-export function createProjectVersionPlanner(module) {
+export function createProjectVersionPlanner(module, bytecodes) {
   if (!(module instanceof WebAssembly.Module)) {
     throw new Error("Project version planner requires a WebAssembly module");
   }
@@ -45,7 +45,7 @@ export function createProjectVersionPlanner(module) {
     // Each plan gets a fresh MicroQuickJS context. The module is compiled once,
     // while the small disposable instance cannot retain authority or state from
     // a previous project write.
-    const controller = new ServerMachineController(module);
+    const controller = new ServerMachineController(module, { bytecodes });
     const result = await controller.request([
       "version", input.changeEmpty, input.pendingCheckpointEmpty, input.destructive,
       input.reason, input.checkpointDue, input.lastVersionSequence,
@@ -68,13 +68,13 @@ export function createProjectVersionPlanner(module) {
   };
 }
 
-export function createProjectSnapshotDiffer(module) {
+export function createProjectSnapshotDiffer(module, bytecodes) {
   if (!(module instanceof WebAssembly.Module)) {
     throw new Error("Project snapshot differ requires a WebAssembly module");
   }
   return (before, after) => diffProjectSnapshotsWithSplice(before, after,
     async (beforeText, afterText) => {
-      const controller = new ServerMachineController(module, { devices: {
+      const controller = new ServerMachineController(module, { bytecodes, devices: {
         text(operation, input) {
           if (operation !== "units" || !Array.isArray(input) || input.length !== 3 ||
               input.some((value) => !Number.isSafeInteger(value) || value < 0)) {
@@ -99,7 +99,7 @@ export function createProjectSnapshotDiffer(module) {
       }
       return { start: result[0], beforeEnd: result[1], afterEnd: result[2] };
     }, async (beforeConfig, afterConfig) => {
-      const controller = new ServerMachineController(module);
+      const controller = new ServerMachineController(module, { bytecodes });
       const result = await controller.request(["config", JSON.stringify(beforeConfig),
         JSON.stringify(afterConfig)]);
       const failure = machineFailure(result);
@@ -117,7 +117,7 @@ export function createProjectSnapshotDiffer(module) {
     });
 }
 
-export function createProjectSnapshotValidator(module) {
+export function createProjectSnapshotValidator(module, bytecodes) {
   if (!(module instanceof WebAssembly.Module)) {
     throw new Error("Project snapshot validator requires a WebAssembly module");
   }
@@ -126,7 +126,7 @@ export function createProjectSnapshotValidator(module) {
     const snapshotJson = JSON.stringify(snapshot);
     const files = snapshot.files.map((file) => [file.path,
       textEncoder.encode(file.content).length]);
-    const controller = new ServerMachineController(module);
+    const controller = new ServerMachineController(module, { bytecodes });
     const result = await controller.request(["validate", files, configJson,
       textEncoder.encode(configJson).length, textEncoder.encode(snapshotJson).length]);
     const failure = machineFailure(result);

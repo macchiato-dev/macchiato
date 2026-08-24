@@ -37,33 +37,58 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     read: readOnlyDatabaseClient,
     write: databaseClient,
   }));
-  let projectHistoryModulePromise;
-  function projectHistoryModule() {
-    if (!projectHistoryModulePromise) {
-      projectHistoryModulePromise = (async () => {
-        const response = await fetchImpl(storageRequest(config,
-          "machines/resources-project-version-microquickjs.wasm"));
-        if (!response.ok) {
-          throw new Error(`Project version machine storage response: ${response.status}`);
-        }
-        return WebAssembly.compile(await response.arrayBuffer());
-      })().catch((error) => {
-        projectHistoryModulePromise = null;
+  async function machineAsset(path) {
+    const response = await fetchImpl(storageRequest(config, `machines/${path}`));
+    if (!response.ok) throw new Error(`Machine storage response for ${path}: ${response.status}`);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  async function bytecodeSet(path) {
+    const manifestBytes = await machineAsset(`${path}/manifest.json`);
+    const manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
+    if (manifest?.format !== "microquickjs-bytecode-v1" ||
+        !Array.isArray(manifest.chunks) || !manifest.chunks.length ||
+        manifest.chunks.some(name => !/^[0-9]+\.bin$/.test(name))) {
+      throw new Error(`Machine bytecode manifest for ${path} is invalid`);
+    }
+    const chunks = await Promise.all(manifest.chunks.map(name => machineAsset(`${path}/${name}`)));
+    if (chunks.reduce((total, chunk) => total + chunk.length, 0) !== manifest.bytes) {
+      throw new Error(`Machine bytecode size for ${path} is invalid`);
+    }
+    return chunks;
+  }
+  let runtimeModulePromise;
+  function runtimeModule() {
+    if (!runtimeModulePromise) runtimeModulePromise = machineAsset("microquickjs-server.wasm")
+      .then(bytes => WebAssembly.compile(bytes)).catch((error) => {
+        runtimeModulePromise = null;
+        throw error;
+      });
+    return runtimeModulePromise;
+  }
+  let projectHistoryAssetsPromise;
+  function projectHistoryAssets() {
+    if (!projectHistoryAssetsPromise) {
+      projectHistoryAssetsPromise = Promise.all([
+        runtimeModule(),
+        bytecodeSet("resources-project-version"),
+      ]).then(([module, bytecodes]) => ({ module, bytecodes })).catch((error) => {
+        projectHistoryAssetsPromise = null;
         throw error;
       });
     }
-    return projectHistoryModulePromise;
+    return projectHistoryAssetsPromise;
   }
   function projectVersionPlanner(input) {
-    return projectHistoryModule().then((module) => createProjectVersionPlanner(module)(input));
+    return projectHistoryAssets().then(({ module, bytecodes }) =>
+      createProjectVersionPlanner(module, bytecodes)(input));
   }
   function projectSnapshotDiffer(before, after) {
-    return projectHistoryModule().then((module) =>
-      createProjectSnapshotDiffer(module)(before, after));
+    return projectHistoryAssets().then(({ module, bytecodes }) =>
+      createProjectSnapshotDiffer(module, bytecodes)(before, after));
   }
   function projectSnapshotValidator(snapshot) {
-    return projectHistoryModule().then((module) =>
-      createProjectSnapshotValidator(module)(snapshot));
+    return projectHistoryAssets().then(({ module, bytecodes }) =>
+      createProjectSnapshotValidator(module, bytecodes)(snapshot));
   }
   const contentStore = createContentStore(createContentSqlUseClient({
     read: readOnlyDatabaseClient,
@@ -81,11 +106,13 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   let serverMachinePromise;
   function serverMachine() {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
-      const response = await fetchImpl(storageRequest(config, "machines/resources-server-microquickjs.wasm"));
-      if (!response.ok) throw new Error(`Server machine storage response: ${response.status}`);
-      const module = await WebAssembly.compile(await response.arrayBuffer());
+      const [module, bytecodes] = await Promise.all([
+        runtimeModule(),
+        bytecodeSet("resources-server"),
+      ]);
       return createResourcesServerMachine(module, {
-        databaseClient, readDatabaseClient: readOnlyDatabaseClient, authConfig, contentStore,
+        bytecodes, databaseClient, readDatabaseClient: readOnlyDatabaseClient,
+        authConfig, contentStore,
       });
     })().catch((error) => {
       serverMachinePromise = null;

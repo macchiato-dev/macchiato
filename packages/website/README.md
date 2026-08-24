@@ -541,8 +541,9 @@ dist/resources-bunny/
   edge/backend/deno.json             Bunny SDK mapping for the source pair
   site/resources-co-<sha>/
     manifest.json
-    machines/resources-server-microquickjs.wasm  private, not in the public manifest
-    machines/resources-project-version-microquickjs.wasm  private, disposable worker
+    machines/microquickjs-server.wasm  shared private MicroQuickJS runtime
+    machines/resources-server/  split private request-policy bytecode
+    machines/resources-project-version/  split private disposable-worker bytecode
     ...published site objects
 ```
 

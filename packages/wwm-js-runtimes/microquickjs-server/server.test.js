@@ -7,12 +7,14 @@ import { ServerUse } from "../../server-use/src/index.js";
 import { SqlUse } from "../../sql-use/src/index.js";
 
 async function machine(options = {}) {
-  const [wasm, bytecode] = await Promise.all([
+  const root = new URL("generated/bytecode/", import.meta.url);
+  const [wasm, manifest] = await Promise.all([
     readFile(new URL("generated/microquickjs-server.wasm", import.meta.url)),
-    readFile(new URL("generated/bytecode/00-application.bin", import.meta.url)),
+    readFile(new URL("manifest.json", root), "utf8").then(JSON.parse),
   ]);
+  const bytecodes = await Promise.all(manifest.chunks.map(name => readFile(new URL(name, root))));
   return new ServerMachineController(new WebAssembly.Module(wasm), {
-    ...options, bytecodes: [bytecode],
+    ...options, bytecodes,
   });
 }
 

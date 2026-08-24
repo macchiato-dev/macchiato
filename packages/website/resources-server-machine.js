@@ -116,6 +116,7 @@ function refererPath(value, origin) {
 }
 
 export function createResourcesServerMachine(module, {
+  bytecodes,
   databaseClient, readDatabaseClient = databaseClient, authConfig, contentStore = null,
   now = Date.now,
 }) {
@@ -210,7 +211,7 @@ export function createResourcesServerMachine(module, {
       parameters: ["role", "updated-at", "organization-id", "user-id"],
     },
   } });
-  const controller = new ServerMachineController(module, { devices: {
+  const controller = new ServerMachineController(module, { bytecodes, devices: {
     random: async (operation, input) => {
       if (operation !== "uuid" || !Array.isArray(input) || input.length) {
         throw new Error("random operation is not available");

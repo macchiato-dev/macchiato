@@ -34,6 +34,7 @@ void __assert_fail(const char *condition, const char *file,
 
 static uint8_t arena[4 * 1024 * 1024];
 static uint8_t transfer[1024 * 1024];
+static uint8_t programs[1024 * 1024];
 static JSContext *context;
 static uint32_t pending_request;
 static uint32_t next_call = 1;
@@ -345,19 +346,22 @@ static void finish_or_suspend(uint32_t request_id, JSValue result) {
 
 static int start(void) {
   JSValue program, result;
+  uint32_t used = 0;
   context = JS_NewContext(arena, sizeof(arena), &js_stdlib);
   if (!context) return -1;
   for (uint32_t index = 0;; index++) {
     uint32_t length = host_bytecode(index, 0, 0);
-    if (!length) return index ? 0 : -1;
-    if (length > sizeof(transfer) ||
-        host_bytecode(index, (uint32_t)(uintptr_t)transfer,
-                      sizeof(transfer)) != length ||
-        JS_RelocateBytecode(context, transfer, length)) return -1;
-    program = JS_LoadBytecode(context, transfer);
-    if (JS_IsException(program)) return -1;
-    result = JS_Run(context, program);
-    if (JS_IsException(result)) return -1;
+    if (!length) {
+      if (!used || JS_RelocateBytecode(context, programs, used)) return -1;
+      program = JS_LoadBytecode(context, programs);
+      if (JS_IsException(program)) return -1;
+      result = JS_Run(context, program);
+      return JS_IsException(result) ? -1 : 0;
+    }
+    if (length > sizeof(programs) - used ||
+        host_bytecode(index, (uint32_t)(uintptr_t)(programs + used), length) != length)
+      return -1;
+    used += length;
   }
 }
 

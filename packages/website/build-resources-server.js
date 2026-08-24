@@ -8,13 +8,13 @@ execFileSync(process.execPath, [
   "--source-root", here,
   "--runtime", join(here, "guest-runtime/http.js"),
   "--application", join(here, "resources-server-guest.js"),
-  "--output", join(here, "generated/resources-server-microquickjs.wasm"),
-  "--guest-output", join(here, "generated/resources-server-guest.js"),
+  "--output", join(here, "generated/microquickjs-server.wasm"),
+  "--bytecode-dir", join(here, "generated/resources-server-bytecode"),
 ], { stdio: "inherit" });
 execFileSync(process.execPath, [
   join(here, "../wwm-js-runtimes/microquickjs-server/build.js"),
   "--source-root", here,
   "--application", join(here, "resources-project-version-guest.js"),
-  "--output", join(here, "generated/resources-project-version-microquickjs.wasm"),
-  "--guest-output", join(here, "generated/resources-project-version-guest.js"),
+  "--output", join(here, "generated/microquickjs-server.wasm"),
+  "--bytecode-dir", join(here, "generated/resources-project-version-bytecode"),
 ], { stdio: "inherit" });

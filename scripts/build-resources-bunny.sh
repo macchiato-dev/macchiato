@@ -17,10 +17,16 @@ npm run build --prefix "$repo_root/packages/website/blog-examples/markdown-edito
 node "$repo_root/packages/website/build-resources-server.js"
 node "$repo_root/packages/website/export-static.js" --out "$out_dir/site/$storage_prefix"
 mkdir -p "$out_dir/site/$storage_prefix/machines"
-install -m 0644 "$repo_root/packages/website/generated/resources-server-microquickjs.wasm" \
-  "$out_dir/site/$storage_prefix/machines/resources-server-microquickjs.wasm"
-install -m 0644 "$repo_root/packages/website/generated/resources-project-version-microquickjs.wasm" \
-  "$out_dir/site/$storage_prefix/machines/resources-project-version-microquickjs.wasm"
+install -m 0644 "$repo_root/packages/website/generated/microquickjs-server.wasm" \
+  "$out_dir/site/$storage_prefix/machines/microquickjs-server.wasm"
+for bytecode_set in resources-server resources-project-version; do
+  source_dir="$repo_root/packages/website/generated/$bytecode_set-bytecode"
+  target_dir="$out_dir/site/$storage_prefix/machines/$bytecode_set"
+  mkdir -p "$target_dir"
+  for artifact in "$source_dir"/*; do
+    install -m 0644 "$artifact" "$target_dir/$(basename "$artifact")"
+  done
+done
 deno bundle \
   --config "$repo_root/packages/website/deno.json" \
   --platform deno \

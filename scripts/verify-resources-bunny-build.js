@@ -35,8 +35,9 @@ for (const path of actual) {
 }
 
 const prefix = deployment.storagePrefix.replace(/^site\//, "").replace(/\/$/, "");
-const machineNames = ["resources-server-microquickjs.wasm",
-  "resources-project-version-microquickjs.wasm"];
+const machineNames = ["microquickjs-server.wasm",
+  "resources-server/manifest.json", "resources-server/00.bin",
+  "resources-project-version/manifest.json", "resources-project-version/00.bin"];
 const publicManifest = JSON.parse(readFileSync(join(root, "site", prefix, "manifest.json"), "utf8"));
 const publicManifestText = JSON.stringify(publicManifest);
 for (const name of machineNames) {
@@ -60,7 +61,8 @@ const edge = readFileSync(join(root, deployment.edgeEntry), "utf8");
 if (!edge.includes(`resources-co-${deployment.revision}`)) {
   throw new Error("Edge entry does not contain its revisioned Storage prefix");
 }
-if (!edge.includes("resources-server-microquickjs.wasm")) {
+if (!edge.includes("microquickjs-server.wasm") ||
+    !edge.includes("resources-server/manifest.json")) {
   throw new Error("Edge entry does not load the server MicroQuickJS machine");
 }
 const backendController = readFileSync(join(root, "edge/backend/controller.ts"), "utf8");
