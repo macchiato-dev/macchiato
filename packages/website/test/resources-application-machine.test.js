@@ -86,4 +86,7 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.deepEqual(await withTimeout(application.request(["store", "account",
     "getAccount", ["user-1"]])), ["ok",
       { id: "user-1", login: "latte", name: "Latte" }]);
+  assert.deepEqual(await withTimeout(application.request(["store", "content",
+    "listPublicProjects", [{ limit: 6, namespaces: ["benatkin"] }]])),
+    ["ok", []]);
 });

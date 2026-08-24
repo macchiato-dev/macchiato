@@ -1589,7 +1589,7 @@
     };
   }
   async function storeCall(storeName, method, args) {
-    const stores = { account: accounts, organization: organizations };
+    const stores = { account: accounts, content, organization: organizations };
     const store = stores[storeName];
     if (!store || typeof store[method] !== "function" || !Array.isArray(args)) {
       return ["error", {

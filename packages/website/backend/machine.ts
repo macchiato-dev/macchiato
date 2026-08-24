@@ -243,6 +243,13 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   const contentStore = createContentStore(policyDatabaseClient,
     { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
     snapshotValidator: projectSnapshotValidator });
+  const contentReadStore = Object.freeze({
+    getNamespace: (...args) => applicationStoreCall("content", "getNamespace", args),
+    getProject: (...args) => applicationStoreCall("content", "getProject", args),
+    listForUser: (...args) => applicationStoreCall("content", "listForUser", args),
+    listPublicProjects: (...args) => applicationStoreCall(
+      "content", "listPublicProjects", args),
+  });
   const organizationStore = Object.freeze({
     initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
     getManagedOrganization: (...args) => applicationStoreCall(
@@ -273,7 +280,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     authConfig,
     gitlabAuthConfig,
     accountStore,
-    contentStore,
+    contentStore: contentReadStore,
     organizationStore,
     blogExamplesOrigin: env.BLOG_EXAMPLES_ORIGIN,
     documentRenderer,
