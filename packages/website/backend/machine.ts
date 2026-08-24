@@ -107,6 +107,25 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     });
     return policyMachinePromise;
   }
+  let documentMachinePromise;
+  function documentMachine() {
+    if (!documentMachinePromise) documentMachinePromise = Promise.all([
+      runtimeModule(), bytecodeSet("resources-document"),
+    ]).then(([module, bytecodes]) => new ServerMachineController(module, { bytecodes }))
+      .catch((error) => {
+        documentMachinePromise = null;
+        throw error;
+      });
+    return documentMachinePromise;
+  }
+  async function documentRenderer(...args) {
+    const result = await (await documentMachine()).request(["session", JSON.stringify(args)]);
+    if (typeof result !== "string") {
+      throw new Error(Array.isArray(result) && typeof result[2] === "string"
+        ? result[2] : "Document machine rejected the request");
+    }
+    return result;
+  }
   async function policyRequest(input) {
     const result = await (await policyMachine()).request(input);
     if (!Array.isArray(result) || result[0] !== "ok") {
@@ -191,6 +210,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     contentStore,
     organizationStore,
     blogExamplesOrigin: env.BLOG_EXAMPLES_ORIGIN,
+    documentRenderer,
     fetchImpl,
   });
 

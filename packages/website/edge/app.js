@@ -385,8 +385,9 @@ function organizationFormHtml(token, messages, url) {
   </div>`;
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console } = {}) {
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console, documentRenderer = renderSessionHtml } = {}) {
   if (!config) throw new Error("Edge handler requires config");
+  if (typeof documentRenderer !== "function") throw new Error("Edge handler requires a document renderer");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
   let manifestPromise = null;
@@ -567,7 +568,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         html = applySignupPolicy(html, pathname, manifest.messages[locale], authConfig.signupsEnabled);
         const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
         const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
-        body = renderSessionHtml(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion);
+        body = await documentRenderer(html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");
