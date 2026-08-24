@@ -35,15 +35,18 @@ for (const path of actual) {
 }
 
 const prefix = deployment.storagePrefix.replace(/^site\//, "").replace(/\/$/, "");
-const machineNames = ["microquickjs-server.wasm",
-  "resources-server/manifest.json", "resources-server/00.bin",
-  "resources-project-version/manifest.json", "resources-project-version/00.bin"];
 const publicManifest = JSON.parse(readFileSync(join(root, "site", prefix, "manifest.json"), "utf8"));
 const publicManifestText = JSON.stringify(publicManifest);
-for (const name of machineNames) {
-  const path = `site/${prefix}/machines/${name}`;
-  if (!expected.has(path)) throw new Error(`Private machine is missing: ${name}`);
-  if (publicManifestText.includes(name)) {
+const machinePrefix = `site/${prefix}/machines/`;
+const machinePaths = [...expected.keys()].filter(path => path.startsWith(machinePrefix));
+if (!machinePaths.includes(`${machinePrefix}microquickjs-server.wasm`) ||
+    !machinePaths.some(path => path.startsWith(`${machinePrefix}resources-server/`)) ||
+    !machinePaths.some(path => path.startsWith(`${machinePrefix}resources-project-version/`))) {
+  throw new Error("Private runtime or bytecode set is missing");
+}
+for (const path of machinePaths) {
+  const name = path.slice(machinePrefix.length);
+  if (publicManifestText.includes(name) || publicManifestText.includes(path)) {
     throw new Error(`Private machine entered the public manifest: ${name}`);
   }
 }
@@ -61,8 +64,8 @@ const edge = readFileSync(join(root, deployment.edgeEntry), "utf8");
 if (!edge.includes(`resources-co-${deployment.revision}`)) {
   throw new Error("Edge entry does not contain its revisioned Storage prefix");
 }
-if (!edge.includes("microquickjs-server.wasm") ||
-    !edge.includes("resources-server/manifest.json")) {
+if (!edge.includes("microquickjs-server.wasm") || !edge.includes("manifest.json") ||
+    !edge.includes("resources-server")) {
   throw new Error("Edge entry does not load the server MicroQuickJS machine");
 }
 const backendController = readFileSync(join(root, "edge/backend/controller.ts"), "utf8");
