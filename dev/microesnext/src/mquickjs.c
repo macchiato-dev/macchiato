@@ -1051,7 +1051,9 @@ static JSValue __JS_NewFloat64(JSContext *ctx, double d)
 
 static inline JSValue JS_NewShortInt(int32_t val)
 {
-    return JS_TAG_INT + (val << 1);
+    /* Shift in the unsigned tagged representation: left-shifting a negative
+       signed integer is undefined C even though two's-complement was meant. */
+    return JS_TAG_INT + (JSValue)(int64_t)val * 2;
 }
 
 #if defined(USE_SOFTFLOAT)

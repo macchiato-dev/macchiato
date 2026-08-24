@@ -101,4 +101,13 @@ test("async bytecode survives compilation, loading, and 32-bit conversion", () =
   assert.equal(runBytecode(bytecode), "answer: 42");
   assert.equal(readFileSync(bytecode).readUInt16LE(2) & 0xfff, 2);
   assert.equal(readFileSync(bytecode32).readUInt16LE(2) & 0xfff, 2);
+
+  execFileSync(process.execPath, [join(root, "scripts", "build.js")], {
+    env: { ...process.env, CPPFLAGS: "-DDUMP_FUNC_BYTECODE" },
+    stdio: "ignore",
+  });
+  const dump = execFileSync(mqjs, ["-o", bytecode, source], {
+    encoding: "utf8",
+  });
+  assert.match(dump, /function calculate:[\s\S]*\bawait\b/);
 });
