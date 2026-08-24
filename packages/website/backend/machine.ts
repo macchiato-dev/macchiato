@@ -250,6 +250,16 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     listPublicProjects: (...args) => applicationStoreCall(
       "content", "listPublicProjects", args),
   });
+  // Metadata-only mutations belong to the application machine. Snapshot-bearing
+  // operations remain on the bounded host path: a project may contain 72 MiB of
+  // source, which must not be copied through the QuickJS message arena.
+  const projectStore = Object.freeze({
+    ...contentStore,
+    getProject: (...args) => applicationStoreCall("content", "getProject", args),
+    updateProject: (...args) => applicationStoreCall("content", "updateProject", args),
+    publishProject: (...args) => applicationStoreCall("content", "publishProject", args),
+    deleteProject: (...args) => applicationStoreCall("content", "deleteProject", args),
+  });
   const organizationStore = Object.freeze({
     initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
     getManagedOrganization: (...args) => applicationStoreCall(
@@ -267,7 +277,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       return createResourcesServerMachine(module, {
         bytecodes,
         sqlDevice: (operation, input) => policyRequest(["sql", operation, input]),
-        authConfig, contentStore,
+        authConfig, contentStore: projectStore,
       });
     })().catch((error) => {
       serverMachinePromise = null;

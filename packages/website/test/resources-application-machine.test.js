@@ -3,6 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
+import { createContentStore } from "../../hub/src/content.js";
 import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
 
 const generated = new URL("../generated/", import.meta.url);
@@ -89,4 +90,26 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.deepEqual(await withTimeout(application.request(["store", "content",
     "listPublicProjects", [{ limit: 6, namespaces: ["benatkin"] }]])),
     ["ok", []]);
+
+  const fixtureContent = createContentStore(database, {
+    now: () => 123, randomId: () => "project-1",
+  });
+  await fixtureContent.createProject("user-1", {
+    namespace: "user", userSlug: "latte", slug: "first", name: "First",
+    description: "", visibility: "private", template: "blank",
+    snapshot: { files: [], config: {} },
+  });
+  const updated = await withTimeout(application.request(["store", "content",
+    "updateProject", ["user-1", "project-1", {
+      namespace: "user", userSlug: "latte", slug: "renamed", name: "Renamed",
+      description: "Metadata stays in the application machine.",
+      visibility: "public", template: "blank",
+    }]]));
+  assert.equal(updated[0], "ok");
+  assert.equal(updated[1].slug, "renamed");
+  assert.deepEqual(await withTimeout(application.request(["store", "content",
+    "publishProject", ["user-1", "project-1", { title: "Ready" }]])),
+    ["ok", true]);
+  assert.deepEqual(await withTimeout(application.request(["store", "content",
+    "deleteProject", ["user-1", "project-1"]])), ["ok", true]);
 });
