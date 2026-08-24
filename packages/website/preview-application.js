@@ -1,20 +1,11 @@
-import { createAccountStore } from "@macchiato-dev/hub/accounts";
-import { createContentStore } from "@macchiato-dev/hub/content";
-import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
-import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { readFileSync } from "node:fs";
 import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createResourcesEdgeHandler, renderResourcesDocument } from "./edge/app.js";
-import { createResourcesDocumentPlanner } from "./resources-document-plan.js";
+import { ResourcesApplicationMachine } from "./resources-application-machine.js";
 import { createResourcesServerMachine } from "./resources-server-machine.js";
-import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
-  createProjectVersionPlanner } from "./project-version-machine.js";
-import { createAccountSqlUseClient } from "./account-sql-policy.js";
-import { createOrganizationSqlUseClient } from "./organization-sql-policy.js";
-import { createContentSqlUseClient } from "./content-sql-policy.js";
-import { createMigrationSqlUseClient } from "./migration-sql-policy.js";
+import { ServerMachineController } from "../server-use/src/machine-controller.js";
 
 const serverModule = new WebAssembly.Module(readFileSync(
   new URL("./generated/microquickjs-server.wasm", import.meta.url)));
@@ -24,7 +15,11 @@ function localBytecodes(directory) {
   return manifest.chunks.map(name => readFileSync(new URL(name, root)));
 }
 const serverBytecodes = localBytecodes("resources-server-bytecode");
-const projectVersionBytecodes = localBytecodes("resources-project-version-bytecode");
+const policyBytecodes = localBytecodes("resources-policy-bytecode");
+const applicationModule = new WebAssembly.Module(readFileSync(new URL(
+  "./generated/resources-application-machine/quickjs-server.wasm", import.meta.url)));
+const applicationBytecode = readFileSync(new URL(
+  "./generated/resources-application-machine/application.bin", import.meta.url));
 
 // This is the local counterpart of backend/machine.ts. Keeping it behind a
 // dynamic import makes resources-edge exercise the same deferred application,
@@ -33,37 +28,70 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   const authConfig = createAuthConfig({ ...environment, AUTH_ALLOW_INSECURE_LOCALHOST: "true" });
   const gitlabAuthConfig = createGitlabAuthConfig(environment, authConfig);
   const client = db ? createNodeSqliteClient(db) : null;
-  const accountStore = client ? createAccountStore(createAccountSqlUseClient({ read: client, write: client })) : null;
-  const versionPlanner = createProjectVersionPlanner(serverModule, projectVersionBytecodes);
-  const snapshotDiffer = createProjectSnapshotDiffer(serverModule, projectVersionBytecodes);
-  const snapshotValidator = createProjectSnapshotValidator(serverModule, projectVersionBytecodes);
-  const contentStore = client ? createContentStore(createContentSqlUseClient({
-    read: client, write: client,
-  }), { versionPlanner, snapshotDiffer, snapshotValidator }) : null;
-  const organizationStore = client ? createOrganizationStore(createOrganizationSqlUseClient({
-    read: client, write: client,
-  })) : null;
-  const documentPlan = client
-    ? createResourcesDocumentPlanner({ accounts: accountStore, content: contentStore,
-      organizations: organizationStore })
+  const databaseDevice = async (operation, input) => {
+    if (operation === "batch") {
+      return (await client.batch(input.map(([sql, args]) => ({ sql, args }))))
+        .map(result => Number(result.rowsAffected) || 0);
+    }
+    const result = await client.execute({ sql: input[0], args: input[1] });
+    const columns = Array.from(result.columns || Object.keys(result.rows?.[0] || {}), String);
+    return [columns, result.rows.map(row => columns.map(column => row[column])),
+      Number(result.rowsAffected) || 0];
+  };
+  const policy = client ? new ServerMachineController(serverModule, {
+    bytecodes: policyBytecodes, devices: { database: databaseDevice },
+  }) : null;
+  const policyRequest = async (input) => {
+    const result = await policy.request(input);
+    if (!Array.isArray(result) || result[0] !== "ok") {
+      throw new Error(Array.isArray(result) ? result[2] : "SQL policy rejected the request");
+    }
+    return result[1];
+  };
+  const application = client ? new ResourcesApplicationMachine(applicationModule, {
+    bytecode: applicationBytecode,
+    sqlDevice: (operation, input) => policyRequest(["database-client", operation, input]),
+  }) : null;
+  const store = (name, method, args) => application.store(name, method, args);
+  const accountStore = application ? Object.freeze({
+    getAccount: userId => store("account", "getAccount", [userId]),
+    authenticateIdentity: (identity, options) => store(
+      "account", "authenticateIdentity", [identity, options]),
+  }) : null;
+  const projectStore = application ? Object.freeze({
+    createProject: (...args) => store("content", "createProject", args),
+    getProject: (...args) => store("content", "getProject", args),
+    getProjectWorkspace: (...args) => store("content", "getProjectWorkspace", args),
+    getPublicProjectWorkspace: (...args) => store(
+      "content", "getPublicProjectWorkspace", args),
+    getProjectVersion: (...args) => store("content", "getProjectVersion", args),
+    saveProjectSnapshot: (...args) => store("content", "saveProjectSnapshot", args),
+    restoreProjectVersion: (...args) => store("content", "restoreProjectVersion", args),
+    revertProjectToPublished: (...args) => store(
+      "content", "revertProjectToPublished", args),
+    updateProject: (...args) => store("content", "updateProject", args),
+    publishProject: (...args) => store("content", "publishProject", args),
+    deleteProject: (...args) => store("content", "deleteProject", args),
+  }) : null;
+  const documentPlan = application
+    ? input => application.documentPlan(input)
     : async () => ({ requestedProject: null, dynamicProject: null, projectOwner: false,
       dynamicNamespace: null, managedOrganization: null, accountContent: null,
       account: null, publicProjects: [], notifications: [] });
-  const migrations = client ? createMigrationRunner(createMigrationSqlUseClient({
-    read: client, write: client,
-  })) : null;
   const machine = client ? createResourcesServerMachine(serverModule, {
-    bytecodes: serverBytecodes, databaseClient: client, authConfig, contentStore,
+    bytecodes: serverBytecodes,
+    sqlDevice: (operation, input) => policyRequest(["sql", operation, input]),
+    authConfig, contentStore: projectStore,
   }) : null;
   const handler = createResourcesEdgeHandler({
-    config, authConfig, gitlabAuthConfig, accountStore, contentStore,
-    fetchImpl, blogExamplesOrigin, documentPlan,
+    config, authConfig, gitlabAuthConfig, accountStore, fetchImpl,
+    blogExamplesOrigin, documentPlan,
     documentRenderer: renderResourcesDocument,
   });
   let readyPromise;
   async function ready() {
     if (!readyPromise) {
-      readyPromise = (migrations ? migrations.ready() : Promise.resolve()).catch((error) => {
+      readyPromise = (application ? application.initialize() : Promise.resolve()).catch((error) => {
         readyPromise = null;
         throw error;
       });

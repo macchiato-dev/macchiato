@@ -6,6 +6,7 @@ import { createResourcesEdgeHandler } from "../edge/app.js";
 import { createResourcesBootstrapHandler } from "../edge/bootstrap.js";
 import { createEdgeConfig, storageRequest } from "../edge/models.js";
 import { createResourcesServerMachine } from "../resources-server-machine.js";
+import { ResourcesApplicationMachine } from "../resources-application-machine.js";
 import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 
@@ -151,22 +152,11 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       if (!application) {
         throw new Error("Backend artifact lacks resources-application/application.bin");
       }
-      return new ServerMachineController(module, {
-        bytecodes: [application],
-        maxMessageBytes: 128 * 1024 * 1024,
-        devices: {
-          sql: (operation, input) => policyRequest([
-            "database-client", operation, input,
-          ]),
-          clock: (operation) => {
-            if (operation !== "now") throw new Error("Clock operation is not available");
-            return Date.now();
-          },
-          random: (operation) => {
-            if (operation !== "uuid") throw new Error("Random operation is not available");
-            return crypto.randomUUID();
-          },
-        },
+      return new ResourcesApplicationMachine(module, {
+        bytecode: application,
+        sqlDevice: (operation, input) => policyRequest([
+          "database-client", operation, input,
+        ]),
       });
     }).catch((error) => {
       applicationMachinePromise = null;
@@ -175,28 +165,13 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     return applicationMachinePromise;
   }
   async function applicationStoreCall(store, method, args) {
-    const result = await (await applicationMachine()).request([
-      "store", store, method, args,
-    ]);
-    if (Array.isArray(result) && result[0] === "ok") return result[1];
-    const detail = Array.isArray(result) && result[1] &&
-      typeof result[1] === "object" ? result[1] : {};
-    const error = new Error(detail.message || "Application store operation failed");
-    error.name = detail.name || "Error";
-    error.code = detail.code || "";
-    error.field = detail.field || "";
-    error.providers = Array.isArray(detail.providers) ? detail.providers : [];
-    throw error;
+    return (await applicationMachine()).store(store, method, args);
   }
   async function applicationDocumentPlan(input) {
-    const result = await (await applicationMachine()).request(["document-plan", input]);
-    if (Array.isArray(result) && result[0] === "ok") return result[1];
-    const detail = Array.isArray(result) && result[1] &&
-      typeof result[1] === "object" ? result[1] : {};
-    throw new Error(detail.message || "Application document plan failed");
+    return (await applicationMachine()).documentPlan(input);
   }
   const accountStore = Object.freeze({
-    initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
+    initialize: () => applicationMachine().then(machine => machine.initialize()),
     getAccount: userId => applicationStoreCall("account", "getAccount", [userId]),
     authenticateIdentity: (identity, options) => applicationStoreCall(
       "account", "authenticateIdentity", [identity, options]),
@@ -252,13 +227,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   let databaseReadyPromise;
   function databaseReady() {
     if (!databaseReadyPromise) {
-      databaseReadyPromise = applicationMachine()
-        .then(machine => machine.request(["initialize"]))
-        .then((result) => {
-          if (!Array.isArray(result) || result[0] !== "ok") {
-            throw new Error("Application machine initialization failed");
-          }
-        })
+      databaseReadyPromise = applicationMachine().then(machine => machine.initialize())
         .catch((error) => {
           databaseReadyPromise = null;
           throw error;
