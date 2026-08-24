@@ -1906,6 +1906,7 @@ async function mountProjectRoot(root) {
     versionButton._hideInstantTooltip?.();
     historyPanel.hidden = false;
     versionButton.setAttribute("aria-expanded", "true");
+    positionHistory();
     if (readOnly) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
       positionHistory();
