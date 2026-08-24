@@ -3,6 +3,7 @@ import { createContentStore } from "@macchiato-dev/hub/content";
 import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
 import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { validateProjectUrlPatterns } from "./project-snapshot-validation.js";
+import { createResourcesDocumentPlanner } from "./resources-document-plan.js";
 
 // QuickJS intentionally has no browser globals. The content model currently
 // uses TextEncoder only to enforce its UTF-8 snapshot byte limit; keep that
@@ -113,6 +114,10 @@ function initialize() {
   return initialized;
 }
 
+const planDocument = createResourcesDocumentPlanner({
+  accounts, content, organizations,
+});
+
 globalThis.serverHandle = async function serverHandle(input) {
   if (!Array.isArray(input)) {
     return ["error", "unknown application operation"];
@@ -123,6 +128,14 @@ globalThis.serverHandle = async function serverHandle(input) {
   }
   if (input[0] === "store" && input.length === 4) {
     return storeCall(input[1], input[2], input[3]);
+  }
+  if (input[0] === "document-plan" && input.length === 2) {
+    try {
+      await initialize();
+      return ["ok", await planDocument(input[1])];
+    } catch (error) {
+      return ["error", errorValue(error)];
+    }
   }
   return ["error", "unknown application operation"];
 };

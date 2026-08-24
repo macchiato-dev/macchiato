@@ -1590,6 +1590,74 @@
     }
   }
 
+  // packages/website/resources-document-plan.js
+  var accountPaths = /* @__PURE__ */ new Set([
+    "/",
+    "/projects",
+    "/projects/new",
+    "/organizations/new",
+    "/profile"
+  ]);
+  var discoverableNamespaces = ["benatkin", "resources", "macchiato"];
+  function projectRoute(pathname) {
+    try {
+      const match = /^\/([^/]+)\/([^/]+)(?:\/(embed))?$/.exec(decodeURIComponent(pathname));
+      return match ? { namespace: match[1], slug: match[2], embed: match[3] === "embed" } : null;
+    } catch {
+      return null;
+    }
+  }
+  function namespaceRoute(pathname) {
+    try {
+      const match = /^\/([^/]+)$/.exec(decodeURIComponent(pathname));
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  }
+  function createResourcesDocumentPlanner({ accounts: accounts2, content: content2, organizations: organizations2 }) {
+    if (!accounts2 || !content2 || !organizations2) {
+      throw new TypeError("Document planner requires application stores");
+    }
+    return async function planDocument2(input) {
+      if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
+        throw new TypeError("Document plan input is invalid");
+      }
+      if (input.publicApi === true) {
+        return { publicProjects: await content2.listPublicProjects({
+          limit: 6,
+          namespaces: discoverableNamespaces
+        }) };
+      }
+      const pathname = input.pathname;
+      const session = input.session && typeof input.session.sub === "string" ? input.session : null;
+      const requestedProject = projectRoute(pathname);
+      const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
+      const dynamicProject = requestedProject ? await content2.getProject(requestedProject.namespace, requestedProject.slug, session?.sub) : null;
+      const projectOwner = Boolean(dynamicProject && session && dynamicProject.ownerUserId === session.sub);
+      const dynamicNamespace = !input.staticShellExists && requestedNamespace ? await content2.getNamespace(requestedNamespace, session?.sub) : null;
+      const managedOrganization = dynamicNamespace?.kind === "organization" && session ? await organizations2.getManagedOrganization(dynamicNamespace.namespace, session.sub) : null;
+      const accountContent = projectOwner || session && accountPaths.has(pathname) ? await content2.listForUser(session.sub) : null;
+      const account = session && pathname === "/profile" ? await accounts2.getAccount(session.sub) : null;
+      const publicProjects = pathname === "/" && !session || pathname === "/browse" ? await content2.listPublicProjects({
+        limit: pathname === "/" ? 6 : 48,
+        namespaces: discoverableNamespaces
+      }) : null;
+      const notifications = session ? await organizations2.listNotifications(session.sub) : [];
+      return {
+        requestedProject,
+        dynamicProject,
+        projectOwner,
+        dynamicNamespace,
+        managedOrganization,
+        accountContent,
+        account,
+        publicProjects,
+        notifications
+      };
+    };
+  }
+
   // packages/website/resources-application-guest.js
   if (typeof globalThis.TextEncoder !== "function") {
     globalThis.TextEncoder = class TextEncoder {
@@ -1710,6 +1778,11 @@
     ]));
     return initialized;
   }
+  var planDocument = createResourcesDocumentPlanner({
+    accounts,
+    content,
+    organizations
+  });
   globalThis.serverHandle = async function serverHandle(input) {
     if (!Array.isArray(input)) {
       return ["error", "unknown application operation"];
@@ -1720,6 +1793,14 @@
     }
     if (input[0] === "store" && input.length === 4) {
       return storeCall(input[1], input[2], input[3]);
+    }
+    if (input[0] === "document-plan" && input.length === 2) {
+      try {
+        await initialize();
+        return ["ok", await planDocument(input[1])];
+      } catch (error) {
+        return ["error", errorValue(error)];
+      }
     }
     return ["error", "unknown application operation"];
   };

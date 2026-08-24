@@ -19,8 +19,6 @@ import {
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
 const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
-const ACCOUNT_PATHS = new Set(["/", "/projects", "/projects/new", "/organizations/new", "/profile"]);
-const DISCOVERABLE_PROJECT_NAMESPACES = Object.freeze(["benatkin", "resources", "macchiato"]);
 const TRY_TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "slides"]);
 
 async function fetchStorage(fetchImpl, request) {
@@ -199,24 +197,6 @@ function projectEditorHtml({ snapshot, snapshotUrl = "", versionCount = 1, proje
     </div>
     <aside class="project-editor__history" data-project-history role="dialog" aria-label="${message(messages, "projectEditor.history", "Version history")}" hidden><div class="project-editor__popover-head"><strong>${message(messages, "projectEditor.history", "Version history")}</strong></div><div data-project-version-list></div></aside>
   </section>`;
-}
-
-function projectRoute(pathname) {
-  try {
-    const match = /^\/([^/]+)\/([^/]+)(?:\/(embed))?$/.exec(decodeURIComponent(pathname));
-    return match ? { namespace: match[1], slug: match[2], embed: match[3] === "embed" } : null;
-  } catch {
-    return null;
-  }
-}
-
-function namespaceRoute(pathname) {
-  try {
-    const match = /^\/([^/]+)$/.exec(decodeURIComponent(pathname));
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
 }
 
 async function csrfToken(session, action, authConfig, now) {
@@ -403,9 +383,12 @@ export function renderResourcesDocument(operation, args) {
   throw new Error(`document renderer operation is not available: ${operation}`);
 }
 
-export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null, accountStore = null, contentStore = null, organizationStore = null, blogExamplesOrigin = "https://blog-examples.resources.co", fetchImpl = fetch, now = Date.now, logger = console, documentRenderer } = {}) {
+export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAuthConfig = null,
+  accountStore = null, blogExamplesOrigin = "https://blog-examples.resources.co",
+  fetchImpl = fetch, now = Date.now, logger = console, documentRenderer, documentPlan } = {}) {
   if (!config) throw new Error("Edge handler requires config");
   if (typeof documentRenderer !== "function") throw new Error("Edge handler requires a document renderer");
+  if (typeof documentPlan !== "function") throw new Error("Edge handler requires a document plan");
   let cachedManifest = null;
   let manifestExpiresAt = 0;
   let manifestPromise = null;
@@ -476,9 +459,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       return finishGitlabAuth(request, gitlabAuthConfig, { fetchImpl, now, accountStore });
     }
     if (request.method === "GET" && pathname === "/api/public-projects") {
-      const projects = contentStore?.listPublicProjects
-        ? await contentStore.listPublicProjects({ limit: 6, namespaces: DISCOVERABLE_PROJECT_NAMESPACES })
-        : [];
+      const projects = (await documentPlan({ pathname, publicApi: true })).publicProjects;
       return new Response(JSON.stringify(projects), {
         status: 200,
         headers: {
@@ -497,28 +478,21 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const manifest = await loadManifest();
       const locale = negotiateLocale(request, manifest);
       const session = authConfig && await readSession(request, authConfig, now);
-      const requestedProject = projectRoute(pathname);
-      const requestedNamespace = !requestedProject ? namespaceRoute(pathname) : null;
-      const dynamicProject = requestedProject && contentStore?.getProject
-        ? await contentStore.getProject(requestedProject.namespace, requestedProject.slug, session?.sub)
-        : null;
-      const projectOwner = Boolean(dynamicProject && session && dynamicProject.ownerUserId === session.sub);
       const formErrorCode = url.searchParams.get("error") || "";
-      const visibleWorkspace = dynamicProject ? {
-        snapshot: { files: [], config: { entry: "", template: dynamicProject.template, container: "page", containerOptions: { allowedLinkPatterns: [] }, sandbox: { network: false, storage: "session" } } },
-        versionCount: 0,
-        hasUnpublishedChanges: false,
-      } : null;
       const accountShellPath = directTryTemplate
         ? "/try"
         : ((pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname);
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
-      const dynamicNamespace = !manifest.files.has(staticKey) && requestedNamespace && contentStore?.getNamespace
-        ? await contentStore.getNamespace(requestedNamespace, session?.sub)
-        : null;
-      const managedOrganization = dynamicNamespace?.kind === "organization" && session && organizationStore
-        ? await organizationStore.getManagedOrganization(dynamicNamespace.namespace, session.sub)
-        : null;
+      const plan = await documentPlan({ pathname, session,
+        staticShellExists: manifest.files.has(staticKey) });
+      const { requestedProject, dynamicProject, projectOwner, dynamicNamespace,
+        managedOrganization } = plan;
+      const visibleWorkspace = dynamicProject ? {
+        snapshot: { files: [], config: { entry: "", template: dynamicProject.template,
+          container: "page", containerOptions: { allowedLinkPatterns: [] },
+          sandbox: { network: false, storage: "session" } } },
+        versionCount: 0, hasUnpublishedChanges: false,
+      } : null;
       const key = localizedObjectKey(locale, (dynamicProject || dynamicNamespace) ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
@@ -547,7 +521,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         if (dynamicProject) {
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           const token = projectOwner ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
-          const content = projectOwner ? await contentStore.listForUser(session.sub) : { organizations: [], projects: [] };
+          const content = plan.accountContent || { organizations: [], projects: [] };
           const snapshotUrl = `/-/projects/${encodeURIComponent(dynamicProject.namespace)}/${encodeURIComponent(dynamicProject.slug)}/workspace`;
           html = html.replace(ACCOUNT_CONTENT_MARKER,
             await documentRenderer("project-view", [dynamicProject, manifest.messages[locale],
@@ -570,9 +544,8 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER,
             await documentRenderer("try", [manifest.messages[locale]]));
-        } else if (session && ACCOUNT_PATHS.has(pathname)) {
-          if (!contentStore) return new Response("Account content unavailable", { status: 503 });
-          const content = await contentStore.listForUser(session.sub);
+        } else if (session && plan.accountContent) {
+          const content = plan.accountContent;
           const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : pathname === "/organizations/new" ? "/organizations" : pathname === "/profile" ? "profile" : "/", authConfig, now);
           const dynamic = pathname === "/"
             ? await documentRenderer("dashboard", [content, manifest.messages[locale]])
@@ -584,20 +557,18 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
               : pathname === "/organizations/new"
                 ? await documentRenderer("organization-form", [token,
                   manifest.messages[locale], formErrorCode])
-                : await documentRenderer("profile", [await accountStore.getAccount(session.sub),
+                : await documentRenderer("profile", [plan.account,
                   token, manifest.messages[locale], formErrorCode]);
           if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
           html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
         }
         if ((pathname === "/" && !session) || pathname === "/browse") {
           if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error(`Public projects marker missing from ${key}`);
-          const projects = contentStore?.listPublicProjects
-            ? await contentStore.listPublicProjects({ limit: pathname === "/" ? 6 : 48, namespaces: DISCOVERABLE_PROJECT_NAMESPACES })
-            : [];
+          const projects = plan.publicProjects || [];
           html = html.replace(PUBLIC_PROJECTS_MARKER,
             await documentRenderer("public-projects", [projects, manifest.messages[locale]]));
         }
-        const notifications = session && organizationStore ? await organizationStore.listNotifications(session.sub) : [];
+        const notifications = plan.notifications;
         const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
         body = await documentRenderer("session", [html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion]);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");

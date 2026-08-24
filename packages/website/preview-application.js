@@ -7,6 +7,7 @@ import { createNodeSqliteClient } from "./adapters/node-sqlite-client.js";
 import { createAuthConfig } from "./auth/github.js";
 import { createGitlabAuthConfig } from "./auth/gitlab.js";
 import { createResourcesEdgeHandler, renderResourcesDocument } from "./edge/app.js";
+import { createResourcesDocumentPlanner } from "./resources-document-plan.js";
 import { createResourcesServerMachine } from "./resources-server-machine.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "./project-version-machine.js";
@@ -42,6 +43,12 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   const organizationStore = client ? createOrganizationStore(createOrganizationSqlUseClient({
     read: client, write: client,
   })) : null;
+  const documentPlan = client
+    ? createResourcesDocumentPlanner({ accounts: accountStore, content: contentStore,
+      organizations: organizationStore })
+    : async () => ({ requestedProject: null, dynamicProject: null, projectOwner: false,
+      dynamicNamespace: null, managedOrganization: null, accountContent: null,
+      account: null, publicProjects: [], notifications: [] });
   const migrations = client ? createMigrationRunner(createMigrationSqlUseClient({
     read: client, write: client,
   })) : null;
@@ -50,7 +57,7 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   }) : null;
   const handler = createResourcesEdgeHandler({
     config, authConfig, gitlabAuthConfig, accountStore, contentStore,
-    organizationStore, fetchImpl, blogExamplesOrigin,
+    fetchImpl, blogExamplesOrigin, documentPlan,
     documentRenderer: renderResourcesDocument,
   });
   let readyPromise;

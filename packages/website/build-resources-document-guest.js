@@ -14,9 +14,9 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const source = await readFile(join(here, "edge/app.js"), "utf8");
 const start = source.indexOf("function escapeHtml(");
-const firstEnd = source.indexOf("function projectRoute(");
+const firstEnd = source.indexOf("async function csrfToken(");
 const secondStart = source.indexOf("function dashboardHtml(");
-const secondEnd = source.indexOf("export function createResourcesEdgeHandler(");
+const secondEnd = source.indexOf("export function createResourcesEdgeHandler");
 if (start < 0 || firstEnd <= start || secondStart < firstEnd || secondEnd <= secondStart) {
   throw new Error("Resources document renderer slices were not found");
 }

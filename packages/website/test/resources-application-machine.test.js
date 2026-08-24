@@ -109,6 +109,14 @@ test("the application machine initializes stores through the SQL policy machine"
     "getProjectWorkspace", ["latte", "first", "user-1"]]));
   assert.equal(workspace[0], "ok");
   assert.equal(workspace[1].snapshot.files[0].content, "<p>machine owned</p>");
+  const plan = await withTimeout(application.request(["document-plan", {
+    pathname: "/latte/first", session: { sub: "user-1", login: "latte" },
+    staticShellExists: false,
+  }]));
+  assert.equal(plan[0], "ok");
+  assert.equal(plan[1].dynamicProject.id, "project-1");
+  assert.equal(plan[1].projectOwner, true);
+  assert.equal(plan[1].accountContent.projects.length, 1);
   const rejected = await withTimeout(application.request(["store", "content",
     "saveProjectSnapshot", ["user-1", "project-1", {
       files: [], config: { containerOptions: {

@@ -188,18 +188,18 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     error.providers = Array.isArray(detail.providers) ? detail.providers : [];
     throw error;
   }
+  async function applicationDocumentPlan(input) {
+    const result = await (await applicationMachine()).request(["document-plan", input]);
+    if (Array.isArray(result) && result[0] === "ok") return result[1];
+    const detail = Array.isArray(result) && result[1] &&
+      typeof result[1] === "object" ? result[1] : {};
+    throw new Error(detail.message || "Application document plan failed");
+  }
   const accountStore = Object.freeze({
     initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
     getAccount: userId => applicationStoreCall("account", "getAccount", [userId]),
     authenticateIdentity: (identity, options) => applicationStoreCall(
       "account", "authenticateIdentity", [identity, options]),
-  });
-  const contentReadStore = Object.freeze({
-    getNamespace: (...args) => applicationStoreCall("content", "getNamespace", args),
-    getProject: (...args) => applicationStoreCall("content", "getProject", args),
-    listForUser: (...args) => applicationStoreCall("content", "listForUser", args),
-    listPublicProjects: (...args) => applicationStoreCall(
-      "content", "listPublicProjects", args),
   });
   const projectStore = Object.freeze({
     createProject: (...args) => applicationStoreCall("content", "createProject", args),
@@ -219,13 +219,6 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     updateProject: (...args) => applicationStoreCall("content", "updateProject", args),
     publishProject: (...args) => applicationStoreCall("content", "publishProject", args),
     deleteProject: (...args) => applicationStoreCall("content", "deleteProject", args),
-  });
-  const organizationStore = Object.freeze({
-    initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
-    getManagedOrganization: (...args) => applicationStoreCall(
-      "organization", "getManagedOrganization", args),
-    listNotifications: (...args) => applicationStoreCall(
-      "organization", "listNotifications", args),
   });
   let serverMachinePromise;
   function serverMachine() {
@@ -250,8 +243,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     authConfig,
     gitlabAuthConfig,
     accountStore,
-    contentStore: contentReadStore,
-    organizationStore,
+    documentPlan: applicationDocumentPlan,
     blogExamplesOrigin: env.BLOG_EXAMPLES_ORIGIN,
     documentRenderer,
     fetchImpl,

@@ -21,7 +21,13 @@ const config = createEdgeConfig({
 });
 
 function createTestResourcesEdgeHandler(options) {
-  return createResourcesEdgeHandler({ ...options, documentRenderer: renderResourcesDocument });
+  const documentPlan = options.documentPlan || (async () => ({
+    requestedProject: null, dynamicProject: null, projectOwner: false,
+    dynamicNamespace: null, managedOrganization: null, accountContent: null,
+    account: null, publicProjects: [], notifications: [],
+  }));
+  return createResourcesEdgeHandler({ ...options, documentPlan,
+    documentRenderer: renderResourcesDocument });
 }
 
 test("standalone blog examples receive an opaque script-only document policy", () => {
