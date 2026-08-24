@@ -1159,7 +1159,7 @@ html[data-theme="light"] .layout.focused-view {
 .layout.focused-view > .main::before { content: ""; position: absolute; top: 0; right: 0; left: 0; z-index: 50; height: 2px; background: var(--project-edge-dark); box-shadow: 0 1px var(--project-edge-light); pointer-events: none; }
 .layout.focused-view > .main > .crumb { display: none; }
 .layout.focused-view .content-root, .layout.focused-view .content-block { width: 100%; height: 100%; min-height: 0; }
-.layout.focused-view .content-block { padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; }
+.layout.focused-view .content-block { padding: 0; border: none; border-radius: 0; background: transparent; box-shadow: none; transform: none; }
 .focused-header { display: flex; align-items: center; }
 .focused-header .crumb { align-self: center; margin: 0; padding: 0; box-shadow: none; }
 .toolbar--cardless { border: none; border-radius: 0; box-shadow: none; }
