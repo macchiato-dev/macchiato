@@ -1,12 +1,8 @@
-import { ACCOUNT_QUERIES } from "@macchiato-dev/hub/accounts";
-import { ContentConflictError, CONTENT_QUERIES,
-  ContentValidationError } from "@macchiato-dev/hub/content";
-import { ORGANIZATION_QUERIES } from "@macchiato-dev/hub/organizations";
+import { ContentConflictError, ContentValidationError } from "@macchiato-dev/hub/content";
 import { readSession, refreshedSessionCookie, signOut } from "./auth/github.js";
 import { unseal } from "./auth/session.js";
 import { ServerMachineController } from "../server-use/src/machine-controller.js";
 import { ServerUse } from "../server-use/src/index.js";
-import { SqlUse } from "../sql-use/src/index.js";
 import { validateProjectUrlPatterns } from "./project-snapshot-validation.js";
 
 const projectSnapshotPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/snapshot$/;
@@ -116,101 +112,10 @@ function refererPath(value, origin) {
 }
 
 export function createResourcesServerMachine(module, {
-  bytecodes,
-  databaseClient, readDatabaseClient = databaseClient, authConfig, contentStore = null,
+  bytecodes, sqlDevice, authConfig, contentStore = null,
   now = Date.now,
 }) {
-  const sql = new SqlUse({ read: readDatabaseClient, write: databaseClient, operations: {
-    "system.ready": { kind: "read", sql: "SELECT 1 AS ready", maxRows: 1 },
-    "account.organization-slug-exists": {
-      kind: "read", sql: ACCOUNT_QUERIES.organizationSlugExists,
-      parameters: ["username"], maxRows: 1,
-    },
-    "account.update-username": {
-      kind: "write", sql: ACCOUNT_QUERIES.updateUsername,
-      parameters: ["username", "updated-at", "user-id"],
-    },
-    "account.update-project-namespace": {
-      kind: "write", sql: ACCOUNT_QUERIES.updateUserProjectNamespace,
-      parameters: ["username", "updated-at", "user-id"],
-    },
-    "account.get": {
-      kind: "read", sql: ACCOUNT_QUERIES.accountById,
-      parameters: ["user-id"], maxRows: 1,
-    },
-    "content.username-exists": {
-      kind: "read", sql: CONTENT_QUERIES.usernameExists,
-      parameters: ["slug"], maxRows: 1,
-    },
-    "content.insert-organization": {
-      kind: "write", sql: CONTENT_QUERIES.insertOrganization,
-      parameters: ["id", "owner-user-id", "slug", "name", "description", "created-at", "updated-at"],
-    },
-    "content.versions": {
-      kind: "read", sql: CONTENT_QUERIES.versions,
-      parameters: ["project-id", "user-id"], maxRows: 1_000,
-    },
-    "content.latest-version": {
-      kind: "read", sql: CONTENT_QUERIES.latestVersion,
-      parameters: ["project-id", "user-id"], maxRows: 1,
-    },
-    "content.version-patches": {
-      kind: "read", sql: CONTENT_QUERIES.versionPatches,
-      parameters: ["project-id", "user-id", "sequence"], maxRows: 1_000,
-    },
-    "organization.mark-notification-read": {
-      kind: "write", sql: ORGANIZATION_QUERIES.markNotificationRead,
-      parameters: ["now", "notification-id", "user-id"],
-    },
-    "organization.delete-pending-invitation": {
-      kind: "write", sql: ORGANIZATION_QUERIES.deletePendingInvitation,
-      parameters: ["notification-id", "user-id"],
-    },
-    "organization.delete-notification": {
-      kind: "write", sql: ORGANIZATION_QUERIES.deleteNotification,
-      parameters: ["notification-id", "user-id"],
-    },
-    "organization.invitation": {
-      kind: "read", sql: ORGANIZATION_QUERIES.invitation,
-      parameters: ["notification-id", "user-id"], maxRows: 1,
-    },
-    "organization.insert-member": {
-      kind: "write", sql: ORGANIZATION_QUERIES.insertMember,
-      parameters: ["organization-id", "user-id", "role", "created-at", "updated-at"],
-    },
-    "organization.accept-invitation": {
-      kind: "write", sql: ORGANIZATION_QUERIES.acceptInvitation,
-      parameters: ["updated-at", "invitation-id"],
-    },
-    "organization.managed": {
-      kind: "read", sql: ORGANIZATION_QUERIES.managedOrganization,
-      parameters: ["viewer-a", "viewer-b", "slug", "viewer-c"], maxRows: 1,
-    },
-    "organization.user-by-username": {
-      kind: "read", sql: ORGANIZATION_QUERIES.userByUsername,
-      parameters: ["username"], maxRows: 1,
-    },
-    "organization.existing-member": {
-      kind: "read", sql: ORGANIZATION_QUERIES.existingMember,
-      parameters: ["organization-id", "user-id"], maxRows: 1,
-    },
-    "organization.existing-admin": {
-      kind: "read", sql: ORGANIZATION_QUERIES.existingAdmin,
-      parameters: ["organization-id"], maxRows: 1,
-    },
-    "organization.insert-invitation": {
-      kind: "write", sql: ORGANIZATION_QUERIES.insertInvitation,
-      parameters: ["id", "organization-id", "inviter-id", "invitee-id", "role", "created-at", "updated-at"],
-    },
-    "organization.insert-notification": {
-      kind: "write", sql: ORGANIZATION_QUERIES.insertNotification,
-      parameters: ["id", "user-id", "invitation-id", "created-at"],
-    },
-    "organization.change-role": {
-      kind: "write", sql: ORGANIZATION_QUERIES.changeRole,
-      parameters: ["role", "updated-at", "organization-id", "user-id"],
-    },
-  } });
+  if (typeof sqlDevice !== "function") throw new TypeError("sqlDevice must be a function");
   const controller = new ServerMachineController(module, { bytecodes, devices: {
     random: async (operation, input) => {
       if (operation !== "uuid" || !Array.isArray(input) || input.length) {
@@ -245,72 +150,7 @@ export function createResourcesServerMachine(module, {
       }), authConfig, now);
       return session ? [String(session.sub), String(session.login || "")] : null;
     },
-    sql: async (operation, input) => {
-      if (operation === "system.ready") {
-        const result = await sql.call(operation);
-        return result.rows.map(row => [row.ready]);
-      }
-      if (operation === "content.versions") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [
-          Number(row.sequence), String(row.reason), Number(row.created_at), String(row.title || ""),
-          row.saved_at == null ? null : Number(row.saved_at), Boolean(row.latest),
-        ]);
-      }
-      if (operation === "account.organization-slug-exists") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.length ? [1] : [];
-      }
-      if (operation === "content.username-exists") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.length ? [1] : [];
-      }
-      if (operation === "account.get") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [String(row.id), String(row.display_name),
-          String(row.username)]);
-      }
-      if (operation === "content.latest-version") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [Number(row.last_version_sequence),
-          String(row.checkpoint_snapshot_json)]);
-      }
-      if (operation === "content.version-patches") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [Number(row.sequence), String(row.patch_json)]);
-      }
-      if (operation === "organization.invitation") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [String(row.invitation_id), String(row.organization_id),
-          String(row.role), String(row.status), String(row.slug)]);
-      }
-      if (operation === "organization.managed") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [String(row.id), String(row.slug),
-          String(row.owner_user_id), String(row.viewer_role)]);
-      }
-      if (operation === "organization.user-by-username") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.map(row => [String(row.id), String(row.username)]);
-      }
-      if (operation === "organization.existing-member" || operation === "organization.existing-admin") {
-        const result = await sql.callValues(operation, input);
-        return result.rows.length ? [1] : [];
-      }
-      if (operation === "batch") {
-        const result = await sql.batchValues(input.map(call => ({ name: call[0], values: call[1] })));
-        return result.map(item => Number(item.rowsAffected) || 0);
-      }
-      if (operation.startsWith("organization.")) {
-        const result = await sql.callValues(operation, input);
-        return [Number(result.rowsAffected) || 0];
-      }
-      if (operation === "content.insert-organization") {
-        const result = await sql.callValues(operation, input);
-        return [Number(result.rowsAffected) || 0];
-      }
-      throw new Error(`SQL operation ${operation} is not available`);
-    },
+    sql: sqlDevice,
   } });
   return new ServerUse({
     routes: [

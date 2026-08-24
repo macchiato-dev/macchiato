@@ -17,6 +17,7 @@ import { createOrganizationSqlUseClient } from "../organization-sql-policy.js";
 import { createContentSqlUseClient } from "../content-sql-policy.js";
 import { createMigrationSqlUseClient } from "../migration-sql-policy.js";
 import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
+import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 
 // The server delays calling this factory until a database-backed route needs
 // it. Keeping construction synchronous and side-effect free lets the static
@@ -124,12 +125,45 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   let serverMachinePromise;
   function serverMachine() {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
-      const [module, bytecodes] = await Promise.all([
+      const [module, bytecodes, policyBytecodes] = await Promise.all([
         runtimeModule(),
         bytecodeSet("resources-server"),
+        bytecodeSet("resources-policy"),
       ]);
+      const database = async (operation, input) => {
+        if (!Array.isArray(input)) throw new Error("Database input is invalid");
+        if (operation === "batch") {
+          const result = await databaseClient.batch(input.map(([sql, args]) => ({ sql, args })));
+          return result.map(item => Number(item.rowsAffected) || 0);
+        }
+        if ((operation !== "read" && operation !== "write") || input.length !== 2 ||
+            typeof input[0] !== "string" || !Array.isArray(input[1])) {
+          throw new Error("Database operation is not available");
+        }
+        const client = operation === "read" ? readOnlyDatabaseClient : databaseClient;
+        const result = await client.execute({ sql: input[0], args: input[1] });
+        const columns = Array.from(result.columns || [], String);
+        const rows = Array.from(result.rows || [], row => columns.map((column) => {
+          const value = row[column];
+          return typeof value === "bigint" ? Number(value) : value;
+        }));
+        return [columns, rows, Number(result.rowsAffected) || 0];
+      };
+      const policy = new ServerMachineController(module, {
+        bytecodes: policyBytecodes,
+        devices: { database },
+      });
+      const sqlDevice = async (operation, input) => {
+        const result = await policy.request(["sql", operation, input]);
+        if (!Array.isArray(result) || result[0] !== "ok") {
+          throw new Error(Array.isArray(result) && typeof result[2] === "string"
+            ? result[2] : "SQL policy machine rejected the request");
+        }
+        return result[1];
+      };
       return createResourcesServerMachine(module, {
-        bytecodes, databaseClient, readDatabaseClient: readOnlyDatabaseClient,
+        bytecodes,
+        sqlDevice,
         authConfig, contentStore,
       });
     })().catch((error) => {

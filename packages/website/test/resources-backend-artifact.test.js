@@ -9,7 +9,7 @@ test("the Resources backend artifact contains both server machines", async () =>
   const files = await decodeResourceArtifact(bytes);
 
   assert.ok(files.get("runtime.wasm")?.length);
-  for (const name of ["resources-server", "resources-project-version"]) {
+  for (const name of ["resources-server", "resources-policy", "resources-project-version"]) {
     const manifest = JSON.parse(new TextDecoder().decode(files.get(`${name}/manifest.json`)));
     assert.equal(manifest.format, "microquickjs-bytecode-v1");
     assert.ok(manifest.chunks.length);

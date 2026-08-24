@@ -10,7 +10,7 @@ const files = new Map();
 files.set("runtime.wasm", new Uint8Array(await readFile(join(generated,
   "microquickjs-server.wasm"))));
 
-for (const name of ["resources-server", "resources-project-version"]) {
+for (const name of ["resources-server", "resources-policy", "resources-project-version"]) {
   const directory = join(generated, `${name}-bytecode`);
   for (const entry of await readdir(directory)) {
     files.set(`${name}/${entry}`, new Uint8Array(await readFile(join(directory, entry))));
