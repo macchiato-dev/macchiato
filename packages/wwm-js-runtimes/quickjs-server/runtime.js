@@ -93,7 +93,13 @@
     }
     if (type === 8) {
       result = {}; length = this.uint();
-      for (index = 0; index < length; index++) result[this.text()] = this.value(depth + 1);
+      for (index = 0; index < length; index++) {
+        var key = this.text();
+        if (key === "__proto__" || Object.prototype.hasOwnProperty.call(result, key)) {
+          throw new TypeError("unsafe or duplicate object key");
+        }
+        result[key] = this.value(depth + 1);
+      }
       return result;
     }
     throw new TypeError("unknown value type " + type);

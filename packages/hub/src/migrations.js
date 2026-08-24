@@ -27,11 +27,15 @@ export function createMigrationRunner(client, { migrations = HUB_MIGRATIONS, now
       sql: "SELECT version, name, applied_at FROM resource_schema_migrations ORDER BY version",
       args: [],
     });
-    const applied = new Map(result.rows.map((row) => [Number(row.version), String(row.name)]));
+    const applied = result.rows.map((row) => Object.freeze({
+      version: Number(row.version),
+      name: String(row.name),
+    }));
     return Object.freeze({
-      current: migrations.every((migration) => applied.get(migration.version) === migration.name),
+      current: migrations.every((migration) => applied.some((entry) =>
+        entry.version === migration.version && entry.name === migration.name)),
       latestVersion: migrations.at(-1)?.version || 0,
-      appliedVersions: Object.freeze([...applied.keys()]),
+      appliedVersions: Object.freeze(applied.map(entry => entry.version)),
     });
   }
 

@@ -1,0 +1,4 @@
+*
+!.gitignore
+!application.bin
+!quickjs-server.wasm

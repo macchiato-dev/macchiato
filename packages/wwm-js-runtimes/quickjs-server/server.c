@@ -71,29 +71,28 @@ static JSValue send_message(JSContext *ctx, JSValueConst self,
   return JS_UNDEFINED;
 }
 
-static int evaluate_sources(void) {
-  uint8_t *source = NULL;
+static int evaluate_program(void) {
+  uint8_t *bytecode = NULL;
   uint32_t used = 0;
   JSValue result, global;
   for (uint32_t index = 0;; index++) {
     uint32_t length = host_bytecode(index, 0, 0);
     if (!length) break;
-    uint8_t *next = realloc(source, (size_t)used + length + 1);
-    if (!next) { free(source); return -1; }
-    source = next;
-    if (host_bytecode(index, (uint32_t)(uintptr_t)(source + used), length)
-        != length) { free(source); return -1; }
+    uint8_t *next = realloc(bytecode, (size_t)used + length);
+    if (!next) { free(bytecode); return -1; }
+    bytecode = next;
+    if (host_bytecode(index, (uint32_t)(uintptr_t)(bytecode + used), length)
+        != length) { free(bytecode); return -1; }
     used += length;
   }
   if (!used) return -1;
-  source[used] = 0;
   global = JS_GetGlobalObject(context);
   JS_SetPropertyStr(context, global, "__hostSend",
     JS_NewCFunction(context, send_message, "__hostSend", 1));
   JS_FreeValue(context, global);
-  result = JS_Eval(context, (const char *)source, used,
-                   "server-application.js", JS_EVAL_TYPE_GLOBAL);
-  free(source);
+  result = JS_ReadObject(context, bytecode, used, JS_READ_OBJ_BYTECODE);
+  free(bytecode);
+  if (!JS_IsException(result)) result = JS_EvalFunction(context, result);
   if (JS_IsException(result)) { report_exception(); return -1; }
   JS_FreeValue(context, result);
   drain_jobs();
@@ -105,7 +104,7 @@ static int start(void) {
   if (!runtime) return -1;
   JS_SetMemoryLimit(runtime, 128 * 1024 * 1024);
   context = JS_NewContext(runtime);
-  return context ? evaluate_sources() : -1;
+  return context ? evaluate_program() : -1;
 }
 
 void quickjs_guest_onmsg(uint32_t minimum_length) {

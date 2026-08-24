@@ -7,6 +7,13 @@ execFileSync(process.execPath, [join(here, "build-resources-policy-catalog.js")]
   { stdio: "inherit" });
 execFileSync(process.execPath, [join(here, "build-resources-document-guest.js")],
   { stdio: "inherit" });
+execFileSync(process.execPath, [join(here, "build-resources-application-guest.js")],
+  { stdio: "inherit" });
+execFileSync(process.execPath, [
+  join(here, "../wwm-js-runtimes/quickjs-server/build.js"),
+  "--application", join(here, "generated/resources-application.js"),
+  "--output-dir", join(here, "generated/resources-application-machine"),
+], { stdio: "inherit" });
 execFileSync(process.execPath, [
   join(here, "../wwm-js-runtimes/microquickjs-server/build.js"),
   "--source-root", here,

@@ -548,9 +548,10 @@ Both runnable Edge forms embed the seven-character Git revision used by the
 Storage prefix. Bunny's current Set Code API accepts one code string, so
 `script.ts` is the reproducible bundle used by the official deployment action.
 The controller fetches one private, gzip-compressed `backend.bin` object. Its
-bounded resource table contains the shared MicroQuickJS runtime, the Resources
-application bytecode, the SQL policy bytecode, and the disposable
-project-history worker bytecode. One shared promise performs that Storage read.
+bounded resource table contains the QuickJS application runtime and bytecode,
+the shared MicroQuickJS policy/worker runtime, the SQL policy bytecode, and the
+disposable project-history worker bytecode. One shared promise performs that
+Storage read.
 
 The Resources application and its SQL policy run in separate Wasm machines.
 Application `sql` messages are forwarded to the policy machine, which owns the
@@ -559,7 +560,8 @@ rules, row limits, and result shaping. Only that machine can request the host's
 low-level database adapter. The adapter transports column names, row arrays,
 and affected-row counts; it contains no `sql-use` catalog or operation policy.
 Database migration and store initialization remain lazy and shared across
-requests. Their compatibility clients also cross the policy machine: legacy
+requests, but their orchestration now runs in the inner QuickJS application
+machine. Their compatibility clients also cross the policy machine: legacy
 query-shaped calls are matched against the same build-time catalog before the
 host database adapter sees them. This keeps `sql-use` and its policy maps out of
 the host bundle while the hub application code is moved into the inner machine.

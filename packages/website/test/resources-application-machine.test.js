@@ -1,0 +1,77 @@
+import assert from "node:assert/strict";
+import { readFile, readdir } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
+import test from "node:test";
+import { ServerMachineController } from "../../server-use/src/machine-controller.js";
+import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
+
+const generated = new URL("../generated/", import.meta.url);
+
+function wireResult(result) {
+  const columns = Array.from(result.columns || Object.keys(result.rows?.[0] || {}), String);
+  return [columns, Array.from(result.rows || [], row =>
+    columns.map(column => row[column])), Number(result.rowsAffected) || 0];
+}
+
+async function withTimeout(promise) {
+  let timer;
+  try {
+    return await Promise.race([promise, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("application machine timed out")), 2_000);
+    })]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+test("the application machine initializes stores through the SQL policy machine", async () => {
+  const database = createNodeSqliteClient(new DatabaseSync(":memory:"));
+  const calls = [];
+  const policyModule = await WebAssembly.compile(await readFile(new URL(
+    "microquickjs-server.wasm", generated)));
+  const policyDirectory = new URL("resources-policy-bytecode/", generated);
+  const policyBytecodes = await Promise.all((await readdir(policyDirectory))
+    .filter(name => name.endsWith(".bin")).sort()
+    .map(name => readFile(new URL(name, policyDirectory))));
+  const policy = new ServerMachineController(policyModule, {
+    bytecodes: policyBytecodes,
+    devices: { database: async (operation, input) => {
+      calls.push([operation, input[0]?.slice?.(0, 48)]);
+      if (operation === "batch") {
+        return (await database.batch(input.map(([sql, args]) => ({ sql, args }))))
+          .map(result => Number(result.rowsAffected) || 0);
+      }
+      return wireResult(await database.execute({ sql: input[0], args: input[1] }));
+    } },
+  });
+  const applicationModule = await WebAssembly.compile(await readFile(new URL(
+    "resources-application-machine/quickjs-server.wasm", generated)));
+  const application = new ServerMachineController(applicationModule, {
+    bytecodes: [await readFile(new URL(
+      "resources-application-machine/application.bin", generated))],
+    devices: { sql: async (operation, input) => {
+      const result = await policy.request(["database-client", operation, input]);
+      if (!Array.isArray(result) || result[0] !== "ok") {
+        throw new Error(Array.isArray(result) ? result[2] : "policy rejected SQL");
+      }
+      return result[1];
+    } },
+  });
+
+  const first = await withTimeout(application.request(["initialize"]));
+  if (first[0] !== "ok") {
+    const ledger = await database.execute({
+      sql: "SELECT version, name FROM resource_schema_migrations ORDER BY version",
+      args: [],
+    });
+    assert.fail(`${JSON.stringify(first)}; ledger=${JSON.stringify(ledger.rows)}; calls=${calls.length}`);
+  }
+  assert.deepEqual(await application.request(["initialize"]), ["ok"]);
+  const tables = await database.execute({
+    sql: "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name",
+    args: [],
+  });
+  assert.ok(tables.rows.some(row => row.name === "users"));
+  assert.ok(tables.rows.some(row => row.name === "resource_projects"));
+  assert.ok(tables.rows.some(row => row.name === "resource_organizations"));
+});

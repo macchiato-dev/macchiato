@@ -2,7 +2,6 @@
 import { createClient } from "@libsql/client/http";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
-import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
 import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { createAuthConfig } from "../auth/github.js";
 import { createGitlabAuthConfig } from "../auth/gitlab.js";
@@ -76,6 +75,20 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       });
     return runtimeModulePromise;
   }
+  let applicationRuntimeModulePromise;
+  function applicationRuntimeModule() {
+    if (!applicationRuntimeModulePromise) {
+      applicationRuntimeModulePromise = backendAssets().then((assets) => {
+        const runtime = assets.get("application-runtime.wasm");
+        if (!runtime) throw new Error("Backend artifact lacks application-runtime.wasm");
+        return WebAssembly.compile(runtime);
+      }).catch((error) => {
+        applicationRuntimeModulePromise = null;
+        throw error;
+      });
+    }
+    return applicationRuntimeModulePromise;
+  }
   const databaseDevice = async (operation, input) => {
     if (!Array.isArray(input)) throw new Error("Database input is invalid");
     if (operation === "batch") {
@@ -134,6 +147,29 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     }
     return result[1];
   }
+  let applicationMachinePromise;
+  function applicationMachine() {
+    if (!applicationMachinePromise) applicationMachinePromise = Promise.all([
+      applicationRuntimeModule(), backendAssets(),
+    ]).then(([module, assets]) => {
+      const application = assets.get("resources-application/application.bin");
+      if (!application) {
+        throw new Error("Backend artifact lacks resources-application/application.bin");
+      }
+      return new ServerMachineController(module, {
+        bytecodes: [application],
+        devices: {
+          sql: (operation, input) => policyRequest([
+            "database-client", operation, input,
+          ]),
+        },
+      });
+    }).catch((error) => {
+      applicationMachinePromise = null;
+      throw error;
+    });
+    return applicationMachinePromise;
+  }
   function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
     const rows = values.map(row => Object.fromEntries(
@@ -183,7 +219,6 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
     snapshotValidator: projectSnapshotValidator });
   const organizationStore = createOrganizationStore(policyDatabaseClient);
-  const migrations = createMigrationRunner(policyDatabaseClient);
   let serverMachinePromise;
   function serverMachine() {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
@@ -217,8 +252,13 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   let databaseReadyPromise;
   function databaseReady() {
     if (!databaseReadyPromise) {
-      databaseReadyPromise = migrations.ready()
-        .then(() => Promise.all([accountStore.initialize(), contentStore.initialize(), organizationStore.initialize()]))
+      databaseReadyPromise = applicationMachine()
+        .then(machine => machine.request(["initialize"]))
+        .then((result) => {
+          if (!Array.isArray(result) || result[0] !== "ok") {
+            throw new Error("Application machine initialization failed");
+          }
+        })
         .catch((error) => {
           databaseReadyPromise = null;
           throw error;

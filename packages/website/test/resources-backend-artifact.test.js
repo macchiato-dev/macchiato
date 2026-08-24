@@ -3,12 +3,14 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
 
-test("the Resources backend artifact contains both server machines", async () => {
+test("the Resources backend artifact contains its application and policy machines", async () => {
   const bytes = new Uint8Array(await readFile(new URL(
     "../generated/resources-backend.bin", import.meta.url)));
   const files = await decodeResourceArtifact(bytes);
 
   assert.ok(files.get("runtime.wasm")?.length);
+  assert.ok(files.get("application-runtime.wasm")?.length);
+  assert.ok(files.get("resources-application/application.bin")?.length);
   for (const name of ["resources-server", "resources-policy", "resources-document",
     "resources-project-version"]) {
     const manifest = JSON.parse(new TextDecoder().decode(files.get(`${name}/manifest.json`)));

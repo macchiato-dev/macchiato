@@ -9,6 +9,10 @@ const files = new Map();
 
 files.set("runtime.wasm", new Uint8Array(await readFile(join(generated,
   "microquickjs-server.wasm"))));
+files.set("application-runtime.wasm", new Uint8Array(await readFile(join(generated,
+  "resources-application-machine/quickjs-server.wasm"))));
+files.set("resources-application/application.bin", new Uint8Array(await readFile(join(generated,
+  "resources-application-machine/application.bin"))));
 
 for (const name of ["resources-server", "resources-policy", "resources-document",
   "resources-project-version"]) {
