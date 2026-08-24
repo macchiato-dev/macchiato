@@ -2,18 +2,36 @@
 
 ## Runtime
 
-Use a current Node.js release when working on this repository. The project uses
-`node:sqlite`; older Node 22 builds may print an experimental warning for that
-module. Newer Node releases mark `node:sqlite` as a release-candidate API and
-avoid that warning.
+Prefer Deno for new JavaScript and TypeScript tooling, build scripts, and
+services. Do not introduce Node-only dependencies or npm-driven tooling when a
+straightforward Deno implementation is available.
 
-Check the local runtime with:
+Some existing packages still use Node APIs such as `node:sqlite`. Treat Node as
+a compatibility runtime for those packages while they are being migrated, not
+as the repository's preferred runtime. When touching one, use a current Node
+release and avoid expanding its Node-specific surface.
+
+Check the preferred runtime with:
 
 ```bash
-node -v
-npm -v
-node -p "process.versions.sqlite"
+deno --version
 ```
+
+When an existing Node-only package must be run, also check `node -v` first.
+
+## Containers
+
+Use Fedora-based images for development, build, and deployment containers.
+Podman is the primary container engine, including for deployment. Containerfiles
+must work with Podman and should use the Docker-compatible subset when CI or
+other users may invoke them with Docker. Do not introduce Debian- or
+Ubuntu-specific package management unless a narrowly scoped upstream build
+requires it and the exception is documented.
+
+Do not depend on base images or build images available only from Docker Hub.
+Prefer fully qualified OCI image references from Fedora's registries, GHCR, or
+another registry that works directly and predictably with Podman. Docker Hub
+may be an additional mirror, but it must not be the sole source.
 
 ## JavaScript Modules and Working Files
 
