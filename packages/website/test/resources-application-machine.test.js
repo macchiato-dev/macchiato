@@ -109,6 +109,14 @@ test("the application machine initializes stores through the SQL policy machine"
     "getProjectWorkspace", ["latte", "first", "user-1"]]));
   assert.equal(workspace[0], "ok");
   assert.equal(workspace[1].snapshot.files[0].content, "<p>machine owned</p>");
+  const rejected = await withTimeout(application.request(["store", "content",
+    "saveProjectSnapshot", ["user-1", "project-1", {
+      files: [], config: { containerOptions: {
+        allowedLinkPatterns: ["https://outside.example/path"],
+      } },
+    }, { reason: "manual" }]]));
+  assert.equal(rejected[0], "error");
+  assert.equal(rejected[1].field, "snapshot");
   const updated = await withTimeout(application.request(["store", "content",
     "updateProject", ["user-1", "project-1", {
       namespace: "user", userSlug: "latte", slug: "renamed", name: "Renamed",

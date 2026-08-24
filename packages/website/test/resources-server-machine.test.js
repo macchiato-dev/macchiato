@@ -11,6 +11,7 @@ import { createResourcesServerMachine, isResourcesServerMachineRequest } from ".
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
+import { validateProjectUrlPatterns } from "../project-snapshot-validation.js";
 import { policyBytecodes, projectVersionBytecodes, serverBytecodes,
   serverModule } from "./server-machine-assets.js";
 
@@ -56,11 +57,15 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
   });
   const createdAt = 1_775_000_000_123;
   let projectIdentifier = 0;
+  const validateSnapshot = createProjectSnapshotValidator(serverModule, projectVersionBytecodes);
   const content = createContentStore(client, { now: () => createdAt,
     randomId: () => `project-${++projectIdentifier}`,
     versionPlanner: createProjectVersionPlanner(serverModule, projectVersionBytecodes),
     snapshotDiffer: createProjectSnapshotDiffer(serverModule, projectVersionBytecodes),
-    snapshotValidator: createProjectSnapshotValidator(serverModule, projectVersionBytecodes) });
+    snapshotValidator: async (snapshot) => {
+      validateProjectUrlPatterns(snapshot);
+      await validateSnapshot(snapshot);
+    } });
   const first = { files: [{ path: "index.html", content: "<h1>One</h1>" }], config: {} };
   const second = { files: [{ path: "index.html", content: "<h1>Two</h1>" }], config: {} };
   const project = await content.createProject(account.id, {

@@ -188,12 +188,6 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     error.providers = Array.isArray(detail.providers) ? detail.providers : [];
     throw error;
   }
-  function compatibleResult(result) {
-    const [columns, values, rowsAffected] = result;
-    const rows = values.map(row => Object.fromEntries(
-      columns.map((column, index) => [column, row[index]])));
-    return { columns, rows, rowsAffected, lastInsertRowid: null };
-  }
   const accountStore = Object.freeze({
     initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
     getAccount: userId => applicationStoreCall("account", "getAccount", [userId]),

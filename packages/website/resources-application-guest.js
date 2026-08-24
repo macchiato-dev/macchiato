@@ -2,6 +2,7 @@ import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
 import { createMigrationRunner } from "@macchiato-dev/hub/migrations";
 import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
+import { validateProjectUrlPatterns } from "./project-snapshot-validation.js";
 
 // QuickJS intentionally has no browser globals. The content model currently
 // uses TextEncoder only to enforce its UTF-8 snapshot byte limit; keep that
@@ -65,6 +66,7 @@ const accounts = createAccountStore(database, {
 const content = createContentStore(database, {
   now: () => operationNow,
   randomId: nextRandomId,
+  snapshotValidator: validateProjectUrlPatterns,
 });
 const organizations = createOrganizationStore(database, {
   now: () => operationNow,

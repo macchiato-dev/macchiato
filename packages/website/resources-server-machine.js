@@ -3,7 +3,6 @@ import { readSession, refreshedSessionCookie, signOut } from "./auth/github.js";
 import { unseal } from "./auth/session.js";
 import { ServerMachineController } from "../server-use/src/machine-controller.js";
 import { ServerUse } from "../server-use/src/index.js";
-import { validateProjectUrlPatterns } from "./project-snapshot-validation.js";
 
 const projectSnapshotPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/snapshot$/;
 const projectRestorePath = /^\/api\/projects\/([A-Za-z0-9-]+)\/restore\/([1-9][0-9]*)$/;
@@ -54,7 +53,6 @@ async function readProjectForm(resource) {
   if (form.has("snapshot")) {
     try {
       snapshot = JSON.parse(form.get("snapshot") || "{}");
-      validateProjectUrlPatterns(snapshot);
     } catch (error) {
       if (error instanceof ContentValidationError) {
         return { error: [false, error.field || "snapshot", error.message] };
@@ -266,7 +264,6 @@ export function createResourcesServerMachine(module, {
               const decoded = await readProjectJson(resources.body);
               if (decoded.error) return decoded.error;
               if (operation === "save" && input.length === 2) {
-                validateProjectUrlPatterns(decoded.value?.snapshot);
                 result = await contentStore.saveProjectSnapshot(userId, projectId,
                   decoded.value?.snapshot, {
                     reason: decoded.value?.manual ? "manual" : "periodic",

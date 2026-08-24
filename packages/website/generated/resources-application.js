@@ -1237,6 +1237,7 @@
         };
         const timestamp = now();
         const initialSnapshot = validatedSnapshot(input.snapshot || { files: [], config: {} });
+        await snapshotValidator(initialSnapshot);
         const initialPatch = diffProjectSnapshots(emptyProjectSnapshot(), initialSnapshot);
         try {
           await client.batch([{
@@ -1528,6 +1529,67 @@
     });
   }
 
+  // packages/hub/src/url-pattern.js
+  var HOST_LABEL = /^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/i;
+  function wildcardSource(value, { dotAware = false } = {}) {
+    return value.split("*").map((part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")).join(dotAware ? "[^.]+" : ".*");
+  }
+  function compileAllowedUrlPattern(input) {
+    const source = String(input || "").trim();
+    if (!source) throw new Error("URL pattern cannot be empty");
+    if (source.startsWith("`") || source.endsWith("`")) {
+      if (!(source.length > 2 && source.startsWith("`") && source.endsWith("`"))) throw new Error("Exact URLs need matching backquotes");
+      const exact = source.slice(1, -1);
+      const parsed = new URL(exact);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Exact URLs must use HTTP or HTTPS");
+      return (value) => String(value) === exact;
+    }
+    if (source.startsWith("/")) {
+      const lastSlash = source.lastIndexOf("/");
+      if (lastSlash === 0) throw new Error("Regular expressions need a closing slash");
+      const expression2 = new RegExp(source.slice(1, lastSlash), source.slice(lastSlash + 1));
+      return (value) => {
+        expression2.lastIndex = 0;
+        return expression2.test(String(value));
+      };
+    }
+    const slash = source.indexOf("/");
+    const hostname = (slash < 0 ? source : source.slice(0, slash)).toLowerCase();
+    const path = slash < 0 ? "/*" : source.slice(slash);
+    if (!hostname.includes(".") || hostname.split(".").some((label) => !HOST_LABEL.test(label))) throw new Error("Use a hostname such as *.wikipedia.org");
+    if (!path.startsWith("/")) throw new Error("A hostname path must start with /");
+    const hostnamePattern = wildcardSource(hostname, { dotAware: true });
+    const pathPattern = wildcardSource(path);
+    const expression = new RegExp(`^${hostnamePattern}$`, "i");
+    const pathname = new RegExp(`^${pathPattern}$`);
+    return (value) => {
+      try {
+        const url = new URL(String(value));
+        return (url.protocol === "https:" || url.protocol === "http:") && expression.test(url.hostname) && pathname.test(`${url.pathname}${url.search}${url.hash}`);
+      } catch {
+        return false;
+      }
+    };
+  }
+  function validateAllowedUrlPatterns(patterns) {
+    for (const pattern of patterns || []) compileAllowedUrlPattern(pattern);
+    return patterns;
+  }
+
+  // packages/website/project-snapshot-validation.js
+  function validateProjectUrlPatterns(snapshot) {
+    const patterns = snapshot?.config?.containerOptions?.allowedLinkPatterns || snapshot?.config?.container?.allowedLinkPatterns;
+    if (patterns === void 0) return;
+    if (!Array.isArray(patterns) || patterns.some((pattern) => typeof pattern !== "string")) {
+      throw new ContentValidationError("snapshot", "allowed link URL patterns must be strings");
+    }
+    try {
+      validateAllowedUrlPatterns(patterns);
+    } catch (error) {
+      throw new ContentValidationError("snapshot", error.message);
+    }
+  }
+
   // packages/website/resources-application-guest.js
   if (typeof globalThis.TextEncoder !== "function") {
     globalThis.TextEncoder = class TextEncoder {
@@ -1599,7 +1661,8 @@
   });
   var content = createContentStore(database, {
     now: () => operationNow,
-    randomId: nextRandomId
+    randomId: nextRandomId,
+    snapshotValidator: validateProjectUrlPatterns
   });
   var organizations = createOrganizationStore(database, {
     now: () => operationNow,

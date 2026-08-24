@@ -545,6 +545,7 @@ export function createContentStore(client, {
       };
       const timestamp = now();
       const initialSnapshot = validatedSnapshot(input.snapshot || { files: [], config: {} });
+      await snapshotValidator(initialSnapshot);
       const initialPatch = diffProjectSnapshots(emptyProjectSnapshot(), initialSnapshot);
       try {
         await client.batch([{
