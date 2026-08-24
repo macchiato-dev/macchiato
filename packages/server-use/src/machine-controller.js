@@ -10,7 +10,8 @@ function sameMagic(memory, offset) {
   return SEND_MAGIC.every((byte, index) => memory[offset + index] === byte);
 }
 
-export function createServerMachineBridge({ devices = {}, maxMessageBytes = 16 * 1024 * 1024 } = {}) {
+export function createServerMachineBridge({ bytecodes = [], devices = {},
+  maxMessageBytes = 16 * 1024 * 1024 } = {}) {
   const grantedDevices = Object.assign(Object.create(null), devices);
   for (const [name, device] of Object.entries(grantedDevices)) {
     if (typeof device !== "function") fail(`device ${name} is invalid`);
@@ -23,6 +24,24 @@ export function createServerMachineBridge({ devices = {}, maxMessageBytes = 16 *
   const requests = new Map();
   const deviceResults = [];
   const deviceCalls = new Map();
+  const programs = bytecodes.map((value, index) => {
+    if (!(value instanceof Uint8Array) || !value.length) {
+      fail(`bytecode ${index} must be a non-empty Uint8Array`);
+    }
+    return value;
+  });
+
+  function bytecode(index, offset, capacity) {
+    const program = programs[index];
+    if (!program) return 0;
+    if (!offset && !capacity) return program.length;
+    const bytes = memory();
+    if (!Number.isInteger(offset) || !Number.isInteger(capacity) || offset < 0 ||
+        capacity < program.length || offset > bytes.length ||
+        capacity > bytes.length - offset) fail("guest bytecode buffer is outside memory");
+    bytes.set(program, offset);
+    return program.length;
+  }
 
   function memory() {
     const value = instance?.exports?.memory;
@@ -116,7 +135,7 @@ export function createServerMachineBridge({ devices = {}, maxMessageBytes = 16 *
   }
 
   return Object.freeze({
-    imports: Object.freeze({ host: Object.freeze({ msg }) }),
+    imports: Object.freeze({ host: Object.freeze({ bytecode, msg }) }),
     connect(nextInstance) {
       if (instance) fail("a guest is already connected");
       if (typeof nextInstance?.exports?.onmsg !== "function" ||
@@ -150,6 +169,9 @@ export class ServerMachineController {
 
   constructor(module, options = {}) {
     if (!(module instanceof WebAssembly.Module)) fail("module must be a WebAssembly.Module");
+    if (!Array.isArray(options.bytecodes) || !options.bytecodes.length) {
+      fail("at least one guest bytecode program is required");
+    }
     this.#bridge = createServerMachineBridge(options);
     const instance = new WebAssembly.Instance(module, this.#bridge.imports);
     this.#bridge.connect(instance);

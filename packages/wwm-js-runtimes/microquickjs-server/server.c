@@ -18,10 +18,11 @@ static JSValue js_setTimeout(JSContext *, JSValue *, int, JSValue *);
 static JSValue js_clearTimeout(JSContext *, JSValue *, int, JSValue *);
 
 #include "mqjs_stdlib.h"
-#include "application.h"
 
 __attribute__((import_module("host"), import_name("msg")))
 extern uint32_t host_msg(uint32_t offset, uint32_t length);
+__attribute__((import_module("host"), import_name("bytecode")))
+extern uint32_t host_bytecode(uint32_t index, uint32_t offset, uint32_t capacity);
 
 __attribute__((noreturn)) void abort(void) { __builtin_trap(); }
 __attribute__((noreturn))
@@ -345,12 +346,19 @@ static void finish_or_suspend(uint32_t request_id, JSValue result) {
 static int start(void) {
   JSValue program, result;
   context = JS_NewContext(arena, sizeof(arena), &js_stdlib);
-  if (!context || JS_RelocateBytecode(context, application_bytecode,
-                                      sizeof(application_bytecode))) return -1;
-  program = JS_LoadBytecode(context, application_bytecode);
-  if (JS_IsException(program)) return -1;
-  result = JS_Run(context, program);
-  return JS_IsException(result) ? -1 : 0;
+  if (!context) return -1;
+  for (uint32_t index = 0;; index++) {
+    uint32_t length = host_bytecode(index, 0, 0);
+    if (!length) return index ? 0 : -1;
+    if (length > sizeof(transfer) ||
+        host_bytecode(index, (uint32_t)(uintptr_t)transfer,
+                      sizeof(transfer)) != length ||
+        JS_RelocateBytecode(context, transfer, length)) return -1;
+    program = JS_LoadBytecode(context, transfer);
+    if (JS_IsException(program)) return -1;
+    result = JS_Run(context, program);
+    if (JS_IsException(result)) return -1;
+  }
 }
 
 __attribute__((export_name("onmsg")))

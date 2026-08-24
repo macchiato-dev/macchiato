@@ -6,9 +6,18 @@ import { ServerMachineController } from "../../server-use/src/machine-controller
 import { ServerUse } from "../../server-use/src/index.js";
 import { SqlUse } from "../../sql-use/src/index.js";
 
+async function machine(options = {}) {
+  const [wasm, bytecode] = await Promise.all([
+    readFile(new URL("generated/microquickjs-server.wasm", import.meta.url)),
+    readFile(new URL("generated/bytecode/00-application.bin", import.meta.url)),
+  ]);
+  return new ServerMachineController(new WebAssembly.Module(wasm), {
+    ...options, bytecodes: [bytecode],
+  });
+}
+
 test("runs a bounded server route inside MicroQuickJS", async () => {
-  const bytes = await readFile(new URL("generated/microquickjs-server.wasm", import.meta.url));
-  const controller = new ServerMachineController(new WebAssembly.Module(bytes));
+  const controller = await machine();
   const server = new ServerUse({
     routes: [{ name: "health", method: "GET", path: "/health" }],
     dispatch: async ({ route, request }) => {
@@ -34,7 +43,6 @@ test("runs a bounded server route inside MicroQuickJS", async () => {
 });
 
 test("resumes MicroQuickJS after an asynchronous named SQL operation", async () => {
-  const bytes = await readFile(new URL("generated/microquickjs-server.wasm", import.meta.url));
   const read = { async execute({ sql, args }) {
     assert.equal(sql, "SELECT title FROM site_settings WHERE name = ?");
     assert.deepEqual(args, ["resources"]);
@@ -44,7 +52,7 @@ test("resumes MicroQuickJS after an asynchronous named SQL operation", async () 
     "site.title": { kind: "read", sql: "SELECT title FROM site_settings WHERE name = ?",
       parameters: ["name"], maxRows: 1 },
   } });
-  const controller = new ServerMachineController(new WebAssembly.Module(bytes), {
+  const controller = await machine({
     devices: { sql: async (operation, input) => {
       const result = await sql.call(operation, { name: input[0] });
       return result.rows.map(row => [row.title]);
@@ -65,8 +73,7 @@ test("resumes MicroQuickJS after an asynchronous named SQL operation", async () 
 });
 
 test("streams a request-scoped body chunk into MicroQuickJS", async () => {
-  const bytes = await readFile(new URL("generated/microquickjs-server.wasm", import.meta.url));
-  const controller = new ServerMachineController(new WebAssembly.Module(bytes));
+  const controller = await machine();
   const server = new ServerUse({
     routes: [{ name: "body", method: "POST", path: "/body", requestBody: "resource",
       maxRequestBytes: 70 * 1024 * 1024 }],

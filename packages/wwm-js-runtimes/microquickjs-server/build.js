@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -16,9 +16,10 @@ const runtimeSources = options("--runtime");
 const applicationSources = options("--application");
 if (!applicationSources.length) applicationSources.push(join(here, "application.js"));
 const output = option("--output", join(generated, "microquickjs-server.wasm"));
-const guestOutput = option("--guest-output", output.replace(/\.wasm$/, ".guest.js"));
+const bytecodeDirectory = option("--bytecode-dir", dirname(output));
 const sourceRoot = option("--source-root", process.cwd());
 mkdirSync(generated, { recursive: true });
+mkdirSync(bytecodeDirectory, { recursive: true });
 const rustc = process.env.RUSTC || join(process.env.HOME, ".cargo/bin/rustc");
 const builtinsDirectory = execFileSync(rustc,
   ["--print", "target-libdir", "--target", "wasm32-unknown-unknown"],
@@ -44,32 +45,24 @@ execFileSync(process.env.CC || "cc", ["-Os", `-I${engine}`,
   join(engine, "readline.c"), join(engine, "readline_tty.c"),
   join(engine, "mquickjs.c"), join(engine, "dtoa.c"), join(engine, "libm.c"),
   join(engine, "cutils.c"), "-lm", "-o", compiler], { stdio: "inherit" });
-const bytecode = join(generated, "application.bin");
 const sourceParts = [...runtimeSources, ...applicationSources];
-const guestSource = sourceParts.map((file, index) => {
+sourceParts.forEach((file, index) => {
   const source = readFileSync(file, "utf8");
   if (/^\s*(?:import|export)\s/m.test(source)) {
     throw new Error(`MicroQuickJS guest slice must not use modules: ${file}`);
   }
   const kind = index < runtimeSources.length ? "runtime" : "application";
   const label = relative(sourceRoot, file).replaceAll("\\", "/");
-  return `/* guest ${kind}: ${label} */\n${source.trim()}\n;\n`;
-}).join("\n");
-writeFileSync(guestOutput, guestSource);
-// MicroQuickJS's compiler currently reports some source errors without a
-// failing process status. Remove the previous output so an unsuccessful
-// compile cannot silently reuse stale bytecode.
-rmSync(bytecode, { force: true });
-execFileSync(compiler, ["-m32", "-o", bytecode, guestOutput],
-  { stdio: "inherit" });
-
-const bytes = readFileSync(bytecode);
-const rows = [];
-for (let offset = 0; offset < bytes.length; offset += 12) {
-  rows.push(`  ${[...bytes.subarray(offset, offset + 12)].join(", ")}`);
-}
-writeFileSync(join(generated, "application.h"),
-  `static uint8_t application_bytecode[] = {\n${rows.join(",\n")}\n};\n`);
+  const stem = basename(file, extname(file)).replace(/[^a-zA-Z0-9_-]+/g, "-");
+  const prefix = String(index).padStart(2, "0");
+  const guestSource = join(generated, `${prefix}-${stem}.guest.js`);
+  const bytecode = join(bytecodeDirectory, `${prefix}-${stem}.bin`);
+  writeFileSync(guestSource, `/* guest ${kind}: ${label} */\n${source.trim()}\n;\n`);
+  // MicroQuickJS can report source errors without a failing process status.
+  rmSync(bytecode, { force: true });
+  execFileSync(compiler, ["-m32", "-o", bytecode, guestSource], { stdio: "inherit" });
+  if (!readFileSync(bytecode).length) throw new Error(`Empty bytecode output for ${file}`);
+});
 
 const clang = [
   "--target=wasm32-wasi", "--sysroot=/usr/wasm32-wasi", "-Os",
