@@ -28126,9 +28126,6 @@ async function mountProjectRoot(root) {
   let outputFramePort = null;
   let outputFrameReady = null;
   let outputFrameRequested = true;
-  let outputSurfaceHost = null;
-  let outputSurfaceBody = null;
-  let outputRootKey = "";
   const syncOutputTheme = () => {
     const theme2 = frontendTheme();
     if (outputFrame) {
@@ -28294,24 +28291,15 @@ async function mountProjectRoot(root) {
       if (generation !== previewGeneration) return;
       preview.dataset.outputSurface = "iframe";
     } else {
-      if (!outputSurfaceHost) {
-        outputSurfaceHost = document.createElement("div");
-        outputSurfaceHost.className = "project-editor__preview-surface";
-        outputSurfaceBody = document.createElement("div");
-        outputSurfaceHost.append(outputSurfaceBody);
-        outputRootKey = String(generation);
-        outputSurfaceBody.dataset.projectOutputMount = outputRootKey;
-        preview.replaceChildren(outputSurfaceHost);
-      }
-      surfaceHost = outputSurfaceHost;
-      surfaceRoot = outputSurfaceHost;
-      surfaceBody = outputSurfaceBody;
+      surfaceHost = document.createElement("div");
+      surfaceHost.className = "project-editor__preview-surface";
+      surfaceRoot = surfaceHost;
+      surfaceBody = document.createElement("div");
+      surfaceRoot.append(surfaceBody);
+      preview.replaceChildren(surfaceHost);
       preview.dataset.outputSurface = "direct";
     }
-    if (!outputRootKey) {
-      outputRootKey = String(generation);
-      surfaceBody.dataset.projectOutputMount = outputRootKey;
-    }
+    surfaceBody.dataset.projectOutputMount = String(generation);
     const parsed = parseProjectHtml(source);
     const allowed = /* @__PURE__ */ new Set();
     containerElementNames("web-page").forEach((name2) => allowed.add(name2));
@@ -28514,9 +28502,8 @@ ${bundleProjectModule(entry, script.textContent)}
         allowed.forEach((tag) => {
           if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
         });
-        const existingController = previewController;
-        const controller = existingController || await mountResourcesProjectPreview({
-          rootKey: outputRootKey,
+        const controller = await mountResourcesProjectPreview({
+          rootKey: String(generation),
           root: surfaceBody,
           statusRoot: preview,
           scripts: [],
@@ -28536,9 +28523,8 @@ ${bundleProjectModule(entry, script.textContent)}
             if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
           }
         });
-        if (generation !== previewGeneration) {
-          if (!existingController) controller.destroy();
-        } else {
+        if (generation !== previewGeneration) controller.destroy();
+        else {
           if (useOutputFrame) {
             controller.setContent(outputTree);
             await controller.run(scripts);
@@ -28566,6 +28552,7 @@ ${bundleProjectModule(entry, script.textContent)}
             outputFrame.hidden = false;
             for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
           }
+          previewController?.destroy();
           previewController = controller;
           root.dataset.outputMachineState = "ready";
           delete preview.dataset.previewViolations;
@@ -28600,8 +28587,6 @@ ${bundleProjectModule(entry, script.textContent)}
     outputFramePort?.close();
     outputFrame?.remove();
     outputFrame = outputFramePort = outputFrameReady = null;
-    outputSurfaceHost = outputSurfaceBody = null;
-    outputRootKey = "";
     outputFrameRequested = true;
     delete preview.dataset.previewRuntime;
     delete preview.dataset.previewViolations;
@@ -29130,7 +29115,7 @@ ${bundleProjectModule(entry, script.textContent)}
   });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
   const fileTriggerIcon = fileTrigger.querySelector("svg");
-  fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
+  fileTriggerIcon.replaceChildren();
   for (const d of ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]) {
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
@@ -29521,21 +29506,6 @@ ${bundleProjectModule(entry, script.textContent)}
     versionButton.setAttribute("aria-expanded", "false");
     if (restoreFocus) versionButton.focus();
   }
-  function positionHistory() {
-    const gap = 6;
-    const edge = 8;
-    const buttonRect = versionButton.getBoundingClientRect();
-    const panelRect = historyPanel.getBoundingClientRect();
-    const maxLeft = Math.max(edge, innerWidth - panelRect.width - edge);
-    const left = Math.max(edge, Math.min(buttonRect.left, maxLeft));
-    const roomBelow = innerHeight - buttonRect.bottom - gap - edge;
-    const roomAbove = buttonRect.top - gap - edge;
-    const openAbove = panelRect.height > roomBelow && roomAbove > roomBelow;
-    const availableHeight = Math.max(120, openAbove ? roomAbove : roomBelow);
-    historyPanel.style.left = `${left}px`;
-    historyPanel.style.top = openAbove ? `${Math.max(edge, buttonRect.top - gap - Math.min(panelRect.height, availableHeight))}px` : `${buttonRect.bottom + gap}px`;
-    historyPanel.style.maxHeight = `${availableHeight}px`;
-  }
   const openVersionHistory = () => {
     if (!historyPanel.hidden) {
       closeHistory();
@@ -29546,20 +29516,16 @@ ${bundleProjectModule(entry, script.textContent)}
     versionButton.setAttribute("aria-expanded", "true");
     if (readOnly2) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
-      positionHistory();
     } else if (draft || memoryOnly) {
       renderDraftVersions();
-      positionHistory();
     } else {
-      renderStoredVersions().then(positionHistory).catch((error) => {
+      renderStoredVersions().catch((error) => {
         versionList.textContent = `Version history unavailable: ${error.message}`;
-        positionHistory();
       });
     }
   };
   versionButton.addEventListener("click", openVersionHistory);
   versionButton.getBoundingClientRect();
-  historyPanel.querySelector("[data-project-history-close]").addEventListener("click", () => closeHistory({ restoreFocus: true }));
   document.addEventListener("pointerdown", (event) => {
     if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
     closeHistory();

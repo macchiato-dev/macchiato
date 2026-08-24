@@ -1,5 +1,5 @@
 function _regeneratorValues(e) { if (null != e) { var t = e["function" == typeof Symbol && Symbol.iterator || "@@iterator"], r = 0; if (t) return t.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) return { next: function next() { return e && r >= e.length && (e = void 0), { value: e && e[r++], done: !e }; } }; } throw new TypeError(typeof e + " is not iterable"); }
-function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (_t11) { i = e, c = 1, u = _t11; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i.return) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (_t10) { i = e, c = 1, u = _t10; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (_e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
@@ -1695,25 +1695,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee10(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, outputSurfaceHost, outputSurfaceBody, outputRootKey, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t1, _t10;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, openVersionHistory, _t0, _t1;
       return _regenerator().w(function (_context14) {
         while (1) switch (_context14.p = _context14.n) {
           case 0:
-            positionHistory = function _positionHistory() {
-              var gap = 6;
-              var edge = 8;
-              var buttonRect = versionButton.getBoundingClientRect();
-              var panelRect = historyPanel.getBoundingClientRect();
-              var maxLeft = Math.max(edge, innerWidth - panelRect.width - edge);
-              var left = Math.max(edge, Math.min(buttonRect.left, maxLeft));
-              var roomBelow = innerHeight - buttonRect.bottom - gap - edge;
-              var roomAbove = buttonRect.top - gap - edge;
-              var openAbove = panelRect.height > roomBelow && roomAbove > roomBelow;
-              var availableHeight = Math.max(120, openAbove ? roomAbove : roomBelow);
-              historyPanel.style.left = left + "px";
-              historyPanel.style.top = openAbove ? Math.max(edge, buttonRect.top - gap - Math.min(panelRect.height, availableHeight)) + "px" : buttonRect.bottom + gap + "px";
-              historyPanel.style.maxHeight = availableHeight + "px";
-            };
             closeHistory = function _closeHistory(_temp10) {
               var _ref22 = _temp10 === void 0 ? {} : _temp10,
                 _ref22$restoreFocus = _ref22.restoreFocus,
@@ -2129,7 +2114,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _save = function _save3() {
               _save = _asyncToGenerator(_regenerator().m(function _callee9() {
-                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure, result2, _t9, _t0;
+                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure, result2, _t8, _t9;
                 return _regenerator().w(function (_context0) {
                   while (1) switch (_context0.p = _context0.n) {
                     case 0:
@@ -2197,11 +2182,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       });
                     case 6:
                       page = _context0.v;
-                      _t9 = new DOMParser();
+                      _t8 = new DOMParser();
                       _context0.n = 7;
                       return page.text();
                     case 7:
-                      documentCopy = _t9.parseFromString.call(_t9, _context0.v, "text/html");
+                      documentCopy = _t8.parseFromString.call(_t8, _context0.v, "text/html");
                       fresh = (_find = [].concat(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
                         return __resourcesDatasetGet(editor, "data-project-id") === projectId;
                       })) == null ? void 0 : __resourcesDatasetGet(_find, "data-csrf");
@@ -2247,8 +2232,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       break;
                     case 13:
                       _context0.p = 13;
-                      _t0 = _context0.v;
-                      setStatus(_t0.message, true);
+                      _t9 = _context0.v;
+                      setStatus(_t9.message, true);
                     case 14:
                       _context0.p = 14;
                       saving = false;
@@ -2537,7 +2522,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _mountEditorMachine = function _mountEditorMachine3() {
               _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee8(reason) {
                 var _editorController6;
-                var generation, _controller$inspect, controller, _t8;
+                var generation, _controller$inspect, controller, _t7;
                 return _regenerator().w(function (_context9) {
                   while (1) switch (_context9.p = _context9.n) {
                     case 0:
@@ -2591,7 +2576,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       break;
                     case 4:
                       _context9.p = 4;
-                      _t8 = _context9.v;
+                      _t7 = _context9.v;
                       if (!(generation !== editorGeneration)) {
                         _context9.n = 5;
                         break;
@@ -2599,8 +2584,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       return _context9.a(2);
                     case 5:
                       __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
-                      __resourcesDatasetSet(root, "data-editor-machine-error", _t8.stack || _t8.message);
-                      setStatus("Editor failed to start: " + _t8.message, true, null, "editor");
+                      __resourcesDatasetSet(root, "data-editor-machine-error", _t7.stack || _t7.message);
+                      setStatus("Editor failed to start: " + _t7.message, true, null, "editor");
                     case 6:
                       return _context9.a(2);
                   }
@@ -2620,8 +2605,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               (_outputFramePort2 = outputFramePort) == null || _outputFramePort2.close();
               (_outputFrame = outputFrame) == null || _outputFrame.remove();
               outputFrame = outputFramePort = outputFrameReady = null;
-              outputSurfaceHost = outputSurfaceBody = null;
-              outputRootKey = "";
               outputFrameRequested = true;
               __resourcesDatasetDelete(preview, "data-preview-runtime");
               __resourcesDatasetDelete(preview, "data-preview-violations");
@@ -2640,7 +2623,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _renderPreview = function _renderPreview3() {
               _renderPreview = _asyncToGenerator(_regenerator().m(function _callee7() {
                 var _state$config8, _previewState$config, _previewState$files$f, _exec2, _previewState$config2, _previewState$config9;
-                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t6, _t7;
+                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
                 return _regenerator().w(function (_context8) {
                   while (1) switch (_context8.p = _context8.n) {
                     case 0:
@@ -2727,19 +2710,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         break;
                       }
                       _context8.p = 2;
-                      _t6 = normalizeProjectSnapshot;
+                      _t5 = normalizeProjectSnapshot;
                       _context8.n = 3;
                       return buildProject2(state.files, state.config);
                     case 3:
-                      previewState = _t6(_context8.v);
+                      previewState = _t5(_context8.v);
                       _context8.n = 5;
                       break;
                     case 4:
                       _context8.p = 4;
-                      _t7 = _context8.v;
+                      _t6 = _context8.v;
                       if (generation === previewGeneration) {
                         __resourcesDatasetSet(root, "data-output-machine-state", "failed");
-                        setStatus("Build blocked: " + _t7.message, "error", null, "output");
+                        setStatus("Build blocked: " + _t6.message, "error", null, "output");
                       }
                       return _context8.a(2);
                     case 5:
@@ -2810,24 +2793,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       _context8.n = 10;
                       break;
                     case 9:
-                      if (!outputSurfaceHost) {
-                        outputSurfaceHost = document.createElement("div");
-                        outputSurfaceHost.className = "project-editor__preview-surface";
-                        outputSurfaceBody = document.createElement("div");
-                        outputSurfaceHost.append(outputSurfaceBody);
-                        outputRootKey = String(generation);
-                        __resourcesDatasetSet(outputSurfaceBody, "data-project-output-mount", outputRootKey);
-                        preview.replaceChildren(outputSurfaceHost);
-                      }
-                      surfaceHost = outputSurfaceHost;
-                      surfaceRoot = outputSurfaceHost;
-                      surfaceBody = outputSurfaceBody;
+                      surfaceHost = document.createElement("div");
+                      surfaceHost.className = "project-editor__preview-surface";
+                      surfaceRoot = surfaceHost;
+                      surfaceBody = document.createElement("div");
+                      surfaceRoot.append(surfaceBody);
+                      preview.replaceChildren(surfaceHost);
                       __resourcesDatasetSet(preview, "data-output-surface", "direct");
                     case 10:
-                      if (!outputRootKey) {
-                        outputRootKey = String(generation);
-                        __resourcesDatasetSet(surfaceBody, "data-project-output-mount", outputRootKey);
-                      }
+                      __resourcesDatasetSet(surfaceBody, "data-project-output-mount", String(generation));
                       parsed = parseProjectHtml(source);
                       allowed = new Set();
                       containerElementNames("web-page").forEach(function (name) {
@@ -3035,7 +3009,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     case 23:
                       clearTimeout(previewTimer);
                       previewTimer = setTimeout(_asyncToGenerator(_regenerator().m(function _callee6() {
-                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, existingController, controller, _i9, _arr6, child, inspection, machine, _t4, _t5;
+                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, controller, _previewController4, _i9, _arr6, child, inspection, machine, _t4;
                         return _regenerator().w(function (_context6) {
                           while (1) switch (_context6.p = _context6.n) {
                             case 0:
@@ -3050,15 +3024,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               allowed.forEach(function (tag) {
                                 if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
                               });
-                              existingController = previewController;
-                              _t4 = existingController;
-                              if (_t4) {
-                                _context6.n = 3;
-                                break;
-                              }
                               _context6.n = 2;
                               return mountResourcesProjectPreview({
-                                rootKey: outputRootKey,
+                                rootKey: String(generation),
                                 root: surfaceBody,
                                 statusRoot: preview,
                                 scripts: [],
@@ -3085,40 +3053,38 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                 }
                               });
                             case 2:
-                              _t4 = _context6.v;
-                            case 3:
-                              controller = _t4;
+                              controller = _context6.v;
                               if (!(generation !== previewGeneration)) {
-                                _context6.n = 4;
+                                _context6.n = 3;
                                 break;
                               }
-                              if (!existingController) controller.destroy();
-                              _context6.n = 11;
+                              controller.destroy();
+                              _context6.n = 10;
                               break;
-                            case 4:
+                            case 3:
                               if (!useOutputFrame) {
-                                _context6.n = 6;
+                                _context6.n = 5;
                                 break;
                               }
                               controller.setContent(outputTree);
-                              _context6.n = 5;
+                              _context6.n = 4;
                               return controller.run(scripts);
-                            case 5:
-                              _context6.n = 7;
+                            case 4:
+                              _context6.n = 6;
                               break;
-                            case 6:
-                              _context6.n = 7;
+                            case 5:
+                              _context6.n = 6;
                               return controller.load({
                                 tree: outputTree,
                                 stylesheets: renderedCss ? [renderedCss] : [],
                                 scripts: scripts
                               });
-                            case 7:
+                            case 6:
                               if (!useOutputFrame) {
-                                _context6.n = 10;
+                                _context6.n = 9;
                                 break;
                               }
-                              _context6.n = 8;
+                              _context6.n = 7;
                               return new Promise(function (resolve) {
                                 var _receive2 = function receive(event) {
                                   var _event$data4;
@@ -3132,20 +3098,21 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                   generation: generation
                                 });
                               });
-                            case 8:
+                            case 7:
                               if (!(generation !== previewGeneration)) {
-                                _context6.n = 9;
+                                _context6.n = 8;
                                 break;
                               }
                               controller.destroy();
                               return _context6.a(2);
-                            case 9:
+                            case 8:
                               outputFrame.hidden = false;
                               for (_i9 = 0, _arr6 = [].concat(preview.children); _i9 < _arr6.length; _i9++) {
                                 child = _arr6[_i9];
                                 if (child !== outputFrame) child.remove();
                               }
-                            case 10:
+                            case 9:
+                              (_previewController4 = previewController) == null || _previewController4.destroy();
                               previewController = controller;
                               __resourcesDatasetSet(root, "data-output-machine-state", "ready");
                               __resourcesDatasetDelete(preview, "data-preview-violations");
@@ -3154,24 +3121,24 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               machine = inspection == null ? void 0 : inspection.machine;
                               __resourcesDatasetSet(preview, "data-project-machine-id", (machine == null ? void 0 : machine.machineId) || "wasm-web-machine");
                               __resourcesDatasetSet(preview, "data-project-programs", String((inspection == null ? void 0 : inspection.programs) || 0));
-                            case 11:
-                              _context6.n = 13;
+                            case 10:
+                              _context6.n = 12;
                               break;
-                            case 12:
-                              _context6.p = 12;
-                              _t5 = _context6.v;
+                            case 11:
+                              _context6.p = 11;
+                              _t4 = _context6.v;
                               if (generation === previewGeneration) __resourcesDatasetSet(root, "data-output-machine-state", "failed");
-                              setStatus("Blocked: " + _t5.message, true, null, "output");
+                              setStatus("Blocked: " + _t4.message, true, null, "output");
                               queueMicrotask(function () {
                                 if (generation === previewGeneration) routeProjectStatus(generation, {
                                   type: "blocked",
-                                  message: _t5.message
+                                  message: _t4.message
                                 });
                               });
-                            case 13:
+                            case 12:
                               return _context6.a(2);
                           }
-                        }, _callee6, null, [[1, 12]]);
+                        }, _callee6, null, [[1, 11]]);
                       })), 120);
                     case 24:
                       return _context8.a(2);
@@ -3313,12 +3280,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             break;
           case 5:
             _context14.p = 5;
-            _t1 = _context14.v;
+            _t0 = _context14.v;
             __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
             __resourcesDatasetSet(status, "data-state", "error");
             status.hidden = false;
             statusError.hidden = false;
-            statusError.textContent = "Project failed to load: " + _t1.message;
+            statusError.textContent = "Project failed to load: " + _t0.message;
             return _context14.a(2);
           case 6:
             if (!(typeof (snapshotField == null ? void 0 : snapshotField.value) !== "string")) {
@@ -3333,8 +3300,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             break;
           case 8:
             _context14.p = 8;
-            _t10 = _context14.v;
-            throw new Error("Project snapshot JSON is invalid: " + ((_t10 == null ? void 0 : _t10.message) || _t10));
+            _t1 = _context14.v;
+            throw new Error("Project snapshot JSON is invalid: " + ((_t1 == null ? void 0 : _t1.message) || _t1));
           case 9:
             state = normalizeProjectSnapshot(parsedSnapshot);
             historyInEditorMachine = snapshotField.value.length <= 256e3;
@@ -3400,9 +3367,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             outputFramePort = null;
             outputFrameReady = null;
             outputFrameRequested = true;
-            outputSurfaceHost = null;
-            outputSurfaceBody = null;
-            outputRootKey = "";
             syncOutputTheme = function syncOutputTheme() {
               var _outputFramePort;
               var theme = frontendTheme();
@@ -3521,7 +3485,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             });
             fileTrigger = root.querySelector("[data-project-file-trigger]");
             fileTriggerIcon = fileTrigger.querySelector("svg");
-            fileTriggerIcon.setAttribute("viewBox", "0 0 24 24");
+            fileTriggerIcon.replaceChildren();
             for (_i5 = 0, _arr3 = ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]; _i5 < _arr3.length; _i5++) {
               d = _arr3[_i5];
               path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -3956,24 +3920,16 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, {
                   current: true
                 }));
-                positionHistory();
               } else if (draft || memoryOnly) {
                 renderDraftVersions();
-                positionHistory();
               } else {
-                renderStoredVersions().then(positionHistory).catch(function (error) {
+                renderStoredVersions().catch(function (error) {
                   versionList.textContent = "Version history unavailable: " + error.message;
-                  positionHistory();
                 });
               }
             };
             versionButton.addEventListener("click", openVersionHistory);
             versionButton.getBoundingClientRect();
-            historyPanel.querySelector("[data-project-history-close]").addEventListener("click", function () {
-              return closeHistory({
-                restoreFocus: true
-              });
-            });
             document.addEventListener("pointerdown", function (event) {
               if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
               closeHistory();
