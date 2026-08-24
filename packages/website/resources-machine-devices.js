@@ -152,16 +152,19 @@ export class ResourcesBuildDevice {
 }
 
 export class ResourcesEditorDevice {
-  constructor(document, deliver, outputDevice, storageDevice, projectResources, request, call) {
+  constructor(document, deliver, outputDevice, buildDevice, storageDevice,
+    projectResources, request, call) {
     this.document = document;
     this.deliver = deliver;
     this.outputDevice = outputDevice;
+    this.buildDevice = buildDevice;
     this.storageDevice = storageDevice;
     this.projectResources = projectResources;
     this.request = request;
     this.hostCall = call;
     this.editor = null;
     this.initialSnapshot = null;
+    this.initialOutputId = null;
     this.outputIds = new Set();
     this.operations = Object.freeze({
       "editor.command": (payload) => this.editor.command(payload),
@@ -209,6 +212,10 @@ export class ResourcesEditorDevice {
     // requests it explicitly after its browser facade has started.
     snapshotField.value = "";
     snapshotField.textContent = "";
+    await this.mountInitialOutput(root);
+    // Let the browser paint the useful output before CodeMirror evaluates its
+    // comparatively large bytecode program on this same thread.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     this.editor = await createProjectEditorMachine({
       root,
       limits: false,
@@ -236,7 +243,50 @@ export class ResourcesEditorDevice {
   }
   getInitialSnapshot() {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
-    return this.initialSnapshot;
+    return { snapshot: this.initialSnapshot, outputId: this.initialOutputId };
+  }
+  async mountInitialOutput(root) {
+    const snapshot = this.initialSnapshot;
+    const preview = root.querySelector("[data-project-preview]");
+    if (!preview || !snapshot?.files?.length) return;
+    const surface = this.document.createElement("div");
+    surface.className = "project-editor__preview-surface";
+    const mount = this.document.createElement("div");
+    mount.dataset.projectOutputMount = "1";
+    surface.appendChild(mount);
+    preview.replaceChildren(surface);
+    root.dataset.outputMachineState = "starting";
+    try {
+      root.dataset.outputMachineStage = "build";
+      const source = { files: snapshot.files, config: snapshot.config || {} };
+      const project = source.config.build ? await this.buildDevice.run(source) : source;
+      root.dataset.outputMachineStage = "compile";
+      const compiled = await this.buildDevice.compile(project);
+      const options = project.config?.containerOptions || {};
+      const outputId = await this.outputDevice.mount({
+        rootKey: "1", scripts: [], iframe: project.config?.output?.iframe !== false,
+        files: project.files, allowedFetchOrigins: options.allowedFetchOrigins || [],
+        allowedLinkPatterns: options.allowedLinkPatterns || [],
+        environment: project.config?.environment || {},
+      });
+      this.outputIds.add(outputId);
+      root.dataset.outputMachineStage = "load";
+      await this.outputDevice.load({ id: outputId, project: {
+        tree: compiled.tree, stylesheets: compiled.stylesheets,
+        scripts: compiled.scripts, files: project.files,
+        allowedFetchOrigins: options.allowedFetchOrigins || [],
+        allowedLinkPatterns: options.allowedLinkPatterns || [],
+        environment: project.config?.environment || {},
+      } });
+      this.initialOutputId = outputId;
+      root.dataset.outputMachineStage = "ready";
+      root.dataset.outputMachineState = "ready";
+    } catch (error) {
+      root.dataset.outputMachineState = "failed";
+      root.dataset.outputMachineError = error?.message || String(error);
+      this.deliver({ type: "output-error", id: 0,
+        message: error?.message || String(error) });
+    }
   }
   async mountOutput(payload) {
     if (!this.editor) throw new Error("Project editor is not mounted");
@@ -256,6 +306,7 @@ export class ResourcesEditorDevice {
     this.editor?.destroy();
     this.editor = null;
     this.initialSnapshot = null;
+    this.initialOutputId = null;
   }
 }
 

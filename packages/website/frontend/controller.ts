@@ -54,8 +54,8 @@ export async function startResourcesMachineController() {
   }
 
   const outputDevice = new ResourcesOutputDevice(document, deliver, projectResources);
-  const editorDevice = new ResourcesEditorDevice(document, deliver, outputDevice, storageDevice, projectResources,
-    editorRequest, editorCall);
+  const editorDevice = new ResourcesEditorDevice(document, deliver, outputDevice, buildDevice,
+    storageDevice, projectResources, editorRequest, editorCall);
   asynchronousServices = Object.freeze({
     "archive.import": () => archiveDevice.import(),
     "build.compile": (payload) => buildDevice.compile(payload),

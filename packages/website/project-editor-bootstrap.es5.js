@@ -13,8 +13,9 @@
   mount.replaceChildren(editor);
   globalThis.__CODE_EDITOR_DEFER_START__ = true;
   load("editor.bin");
-  var initialSnapshot = JSON.parse(globalThis.__wwcServiceCall(
+  var initialWorkspace = JSON.parse(globalThis.__wwcServiceCall(
     "editor.workspace.initial", "{}"));
+  var initialSnapshot = initialWorkspace.snapshot;
   var neededLanguages = { json: true };
   initialSnapshot.files.forEach(function (file) {
     var path = String(file.path || "").toLowerCase();
@@ -43,7 +44,7 @@
   var activeSnapshot = null;
   var activeFile = null;
   var activePath = "";
-  var outputId = null;
+  var outputId = initialWorkspace.outputId || null;
   var outputGeneration = 0;
   var refreshTimer = 0;
   var syntaxTimer = 0;
@@ -118,7 +119,7 @@
     var current = root.querySelector("[data-project-file-current]");
     if (current) current.textContent = selected.path;
     root.setAttribute("data-editor-machine-state", "ready");
-    if (files.length) startOutput(activeSnapshot);
+    if (files.length && !outputId) startOutput(activeSnapshot);
     else loadProjectUi();
   }
 
