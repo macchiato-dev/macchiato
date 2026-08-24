@@ -5528,6 +5528,9 @@ static JSValue js_save_async_frame(JSContext *ctx, int pc_offset)
         goto fail;
 
     /* Allocations may compact the VM heap, so reload all stack pointers. */
+    state = state_ref.val;
+    stack = stack_ref.val;
+    refs = refs_ref.val;
     fp = ctx->fp;
     sp = ctx->sp;
     state_object = JS_VALUE_TO_PTR(state);
@@ -5615,7 +5618,9 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
     pc = NULL;
     if (call_flags & FRAME_CF_ASYNC_RESUME) {
         JSValue state = ctx->async_resume_state;
-        JSValue stack = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_STACK);
+        JSObject *state_object = JS_VALUE_TO_PTR(state);
+        JSValueArray *state_values = JS_VALUE_TO_PTR(state_object->u.array.tab);
+        JSValue stack = state_values->arr[ASYNC_STATE_STACK];
         JSValue refs;
         JSObject *stack_object = JS_VALUE_TO_PTR(stack);
         JSValueArray *stack_values;
@@ -5632,8 +5637,10 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
             goto done;
         }
         state = ctx->async_resume_state;
-        stack = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_STACK);
-        refs = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_VAR_REFS);
+        state_object = JS_VALUE_TO_PTR(state);
+        state_values = JS_VALUE_TO_PTR(state_object->u.array.tab);
+        stack = state_values->arr[ASYNC_STATE_STACK];
+        refs = state_values->arr[ASYNC_STATE_VAR_REFS];
         stack_object = JS_VALUE_TO_PTR(stack);
         stack_values = JS_VALUE_TO_PTR(stack_object->u.array.tab);
         refs_object = JS_VALUE_TO_PTR(refs);
@@ -5641,9 +5648,9 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
         sp = ctx->sp - frame_len;
         for (i = 0; i < frame_len; i++)
             sp[i] = stack_values->arr[i];
-        offset_value = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_FP_OFFSET);
+        offset_value = state_values->arr[ASYNC_STATE_FP_OFFSET];
         fp_offset = JS_VALUE_GET_INT(offset_value);
-        offset_value = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_PC_OFFSET);
+        offset_value = state_values->arr[ASYNC_STATE_PC_OFFSET];
         pc_offset = JS_VALUE_GET_INT(offset_value);
         fp = sp + fp_offset;
         fp[FRAME_OFFSET_SAVED_FP] = SP_TO_VALUE(ctx, initial_fp);
@@ -6192,13 +6199,14 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                     goto exception;
                 }
                 JS_PUSH_VALUE(ctx, state);
-                if (JS_AsyncAttach(ctx, sp[0], state)) {
+                if (JS_AsyncAttach(ctx, sp[0], state_ref.val)) {
                     JS_POP_VALUE(ctx, state);
                     RESTORE();
                     val = JS_EXCEPTION;
                     goto exception;
                 }
-                val = JS_GetPropertyUint32(ctx, state, ASYNC_STATE_PROMISE);
+                val = JS_GetPropertyUint32(ctx, state_ref.val,
+                                           ASYNC_STATE_PROMISE);
                 JS_POP_VALUE(ctx, state);
                 RESTORE();
                 async_suspended = TRUE;

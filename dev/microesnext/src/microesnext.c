@@ -628,11 +628,17 @@ JSValue js_promise_catch(JSContext *ctx, JSValue *this_value,
 static JSValue promise_resolved_value(JSContext *ctx, JSValue value)
 {
     JSValue promise;
+    JSGCRef promise_ref, value_ref;
     if (promise_state(ctx, value) >= PROMISE_PENDING)
         return value;
+    JS_PUSH_VALUE(ctx, value);
     promise = JS_NewPromise(ctx);
-    if (!JS_IsException(promise))
+    JS_POP_VALUE(ctx, value);
+    if (!JS_IsException(promise)) {
+        JS_PUSH_VALUE(ctx, promise);
         resolve_promise(ctx, promise, value);
+        JS_POP_VALUE(ctx, promise);
+    }
     return promise;
 }
 
@@ -664,11 +670,14 @@ int JS_AsyncAttach(JSContext *ctx, JSValue awaited, JSValue state)
     JSValue promise, fulfilled_params, rejected_params;
     JSValue fulfilled, rejected, next;
     JSGCRef promise_ref, fulfilled_params_ref, rejected_params_ref;
-    JSGCRef fulfilled_ref, rejected_ref;
+    JSGCRef fulfilled_ref, rejected_ref, state_ref;
 
+    JS_PUSH_VALUE(ctx, state);
     promise = promise_resolved_value(ctx, awaited);
-    if (JS_IsException(promise))
+    if (JS_IsException(promise)) {
+        JS_POP_VALUE(ctx, state);
         return -1;
+    }
     JS_PUSH_VALUE(ctx, promise);
     fulfilled_params = JS_NewArray(ctx, 2);
     JS_PUSH_VALUE(ctx, fulfilled_params);
@@ -676,22 +685,23 @@ int JS_AsyncAttach(JSContext *ctx, JSValue awaited, JSValue state)
     JS_PUSH_VALUE(ctx, rejected_params);
     if (JS_IsException(fulfilled_params) || JS_IsException(rejected_params))
         goto fail;
-    JS_SetPropertyUint32(ctx, fulfilled_params, 0, state);
-    JS_SetPropertyUint32(ctx, fulfilled_params, 1, JS_FALSE);
-    JS_SetPropertyUint32(ctx, rejected_params, 0, state);
-    JS_SetPropertyUint32(ctx, rejected_params, 1, JS_TRUE);
+    JS_SetPropertyUint32(ctx, fulfilled_params_ref.val, 0, state_ref.val);
+    JS_SetPropertyUint32(ctx, fulfilled_params_ref.val, 1, JS_FALSE);
+    JS_SetPropertyUint32(ctx, rejected_params_ref.val, 0, state_ref.val);
+    JS_SetPropertyUint32(ctx, rejected_params_ref.val, 1, JS_TRUE);
     fulfilled = JS_NewCFunctionParams(ctx, JS_CFUNCTION_async_resume,
-                                      fulfilled_params);
+                                      fulfilled_params_ref.val);
     JS_PUSH_VALUE(ctx, fulfilled);
     rejected = JS_NewCFunctionParams(ctx, JS_CFUNCTION_async_resume,
-                                     rejected_params);
+                                     rejected_params_ref.val);
     JS_PUSH_VALUE(ctx, rejected);
     if (JS_IsException(fulfilled) || JS_IsException(rejected)) {
         JS_POP_VALUE(ctx, rejected);
         JS_POP_VALUE(ctx, fulfilled);
         goto fail;
     }
-    next = promise_then_native(ctx, promise, fulfilled, rejected);
+    next = promise_then_native(ctx, promise_ref.val,
+                               fulfilled_ref.val, rejected_ref.val);
     JS_POP_VALUE(ctx, rejected);
     JS_POP_VALUE(ctx, fulfilled);
     if (JS_IsException(next))
@@ -699,11 +709,13 @@ int JS_AsyncAttach(JSContext *ctx, JSValue awaited, JSValue state)
     JS_POP_VALUE(ctx, rejected_params);
     JS_POP_VALUE(ctx, fulfilled_params);
     JS_POP_VALUE(ctx, promise);
+    JS_POP_VALUE(ctx, state);
     return 0;
 fail:
     JS_POP_VALUE(ctx, rejected_params);
     JS_POP_VALUE(ctx, fulfilled_params);
     JS_POP_VALUE(ctx, promise);
+    JS_POP_VALUE(ctx, state);
     return -1;
 }
 
