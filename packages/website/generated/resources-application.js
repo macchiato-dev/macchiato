@@ -141,7 +141,7 @@
       throw new Error("Account store providers must be lowercase identifiers");
     }
     let initialized2;
-    function initialize() {
+    function initialize2() {
       initialized2 ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] })));
       return initialized2;
     }
@@ -153,17 +153,17 @@
       return result.rows.map((row) => String(row.provider));
     }
     async function getAccount(userId) {
-      await initialize();
+      await initialize2();
       return accountFromRow(firstRow(await client.execute({
         sql: ACCOUNT_QUERIES.accountById,
         args: [String(userId)]
       })));
     }
     return Object.freeze({
-      initialize,
+      initialize: initialize2,
       getAccount,
       async updateUsername(userId, value) {
-        await initialize();
+        await initialize2();
         let username;
         try {
           username = namespaceName(value, { field: "username" });
@@ -192,7 +192,7 @@
         return getAccount(userId);
       },
       async authenticateIdentity(identity, { linkToUserId = null, allowCreate = true } = {}) {
-        await initialize();
+        await initialize2();
         if (!providers.has(identity.provider)) throw new Error("Unsupported identity provider");
         const providerUserId = String(identity.providerUserId);
         const { email, normalized } = normalizeEmail(identity.email);
@@ -581,7 +581,7 @@
   function createOrganizationStore(client, { now = Date.now, randomId = () => crypto.randomUUID() } = {}) {
     if (!client?.execute || !client?.batch) throw new Error("Organization store requires a libSQL-compatible client");
     let initialized2;
-    const initialize = () => initialized2 ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] })));
+    const initialize2 = () => initialized2 ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] })));
     async function managedOrganization(slugValue, userId) {
       const slug2 = namespaceName(slugValue, { field: "organization name" });
       const result = await client.execute({
@@ -591,9 +591,9 @@
       return result.rows[0] || null;
     }
     return Object.freeze({
-      initialize,
+      initialize: initialize2,
       async getManagedOrganization(slugValue, userId) {
-        await initialize();
+        await initialize2();
         const org = await managedOrganization(slugValue, userId);
         if (!org) return null;
         const members = await client.execute({
@@ -617,7 +617,7 @@
         });
       },
       async invite(slugValue, actorUserId, { username, role: requestedRole }) {
-        await initialize();
+        await initialize2();
         const org = await managedOrganization(slugValue, actorUserId);
         if (!org) throw new OrganizationAccessError();
         const targetName = namespaceName(username, { field: "username" });
@@ -657,7 +657,7 @@
         return Object.freeze({ id: invitationId, notificationId, username: String(target.username) });
       },
       async listNotifications(userId) {
-        await initialize();
+        await initialize2();
         const result = await client.execute({
           sql: ORGANIZATION_QUERIES.notifications,
           args: [String(userId)]
@@ -665,12 +665,12 @@
         return Object.freeze(result.rows.map(notification));
       },
       async markNotificationRead(userId, notificationId) {
-        await initialize();
+        await initialize2();
         const result = await client.execute({ sql: ORGANIZATION_QUERIES.markNotificationRead, args: [now(), String(notificationId), String(userId)] });
         return Boolean(result.rowsAffected);
       },
       async deleteNotification(userId, notificationId) {
-        await initialize();
+        await initialize2();
         const results = await client.batch([{
           sql: ORGANIZATION_QUERIES.deletePendingInvitation,
           args: [String(notificationId), String(userId)]
@@ -681,7 +681,7 @@
         return Boolean(results[0]?.rowsAffected || results[1]?.rowsAffected);
       },
       async acceptInvitation(userId, notificationId) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: ORGANIZATION_QUERIES.invitation,
           args: [String(notificationId), String(userId)]
@@ -706,7 +706,7 @@
         return String(invite.slug);
       },
       async changeRole(slugValue, actorUserId, memberUserId, requestedRole) {
-        await initialize();
+        await initialize2();
         const org = await managedOrganization(slugValue, actorUserId);
         if (!org) throw new OrganizationAccessError();
         try {
@@ -1040,11 +1040,11 @@
     if (typeof snapshotDiffer !== "function") throw new Error("Content store requires a snapshot differ");
     if (typeof snapshotValidator !== "function") throw new Error("Content store requires a snapshot validator");
     let initialized2;
-    const initialize = () => initialized2 ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] })));
+    const initialize2 = () => initialized2 ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] })));
     return Object.freeze({
-      initialize,
+      initialize: initialize2,
       async getProject(namespace, projectSlug, viewerUserId = null) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.projectByNamespace,
           args: [slug(namespace), slug(projectSlug)]
@@ -1054,7 +1054,7 @@
         return project(row);
       },
       async getProjectWorkspace(namespace, projectSlug, userId) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.ownedWorkspace,
           args: [slug(namespace), slug(projectSlug), String(userId)]
@@ -1071,7 +1071,7 @@
         });
       },
       async getPublicProjectWorkspace(namespace, projectSlug) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.publicWorkspace,
           args: [slug(namespace), slug(projectSlug)]
@@ -1081,7 +1081,7 @@
         return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json), versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
       },
       async listPublicProjects({ limit = 24, namespaces } = {}) {
-        await initialize();
+        await initialize2();
         const bounded = Math.max(1, Math.min(100, Number(limit) || 24));
         let allowedNamespaces = null;
         if (namespaces !== void 0) {
@@ -1097,7 +1097,7 @@
         return Object.freeze(found.rows.map(project));
       },
       async getNamespace(namespaceValue, viewerUserId = null) {
-        await initialize();
+        await initialize2();
         const namespace = slug(namespaceValue);
         const identity = await client.execute({
           sql: CONTENT_QUERIES.namespaceIdentity,
@@ -1116,7 +1116,7 @@
         });
       },
       async listProjectVersions(projectId, userId) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.versions,
           args: [String(projectId), String(userId)]
@@ -1131,7 +1131,7 @@
         })));
       },
       async getProjectVersion(projectId, sequence, userId) {
-        await initialize();
+        await initialize2();
         const target = Number(sequence);
         if (!Number.isSafeInteger(target) || target < 1) throw new ContentValidationError("version", "version is invalid");
         const latest = await client.execute({
@@ -1151,7 +1151,7 @@
         return snapshot;
       },
       async listForUser(userId) {
-        await initialize();
+        await initialize2();
         const [organizations2, projects] = await Promise.all([
           client.execute({
             sql: CONTENT_QUERIES.organizationsForUser,
@@ -1168,7 +1168,7 @@
         });
       },
       async createOrganization(userId, input) {
-        await initialize();
+        await initialize2();
         let organizationSlug;
         try {
           organizationSlug = namespaceName(input.slug, { field: "organization name" });
@@ -1201,7 +1201,7 @@
         return organization({ ...value, created_at: timestamp });
       },
       async createProject(userId, input) {
-        await initialize();
+        await initialize2();
         const user = String(userId);
         const namespace = String(input.namespace || "user");
         let namespaceKind = "user";
@@ -1277,7 +1277,7 @@
         return project({ ...value, created_at: timestamp });
       },
       async updateProject(userId, projectId, input) {
-        await initialize();
+        await initialize2();
         const user = String(userId);
         const namespace = String(input.namespace || "user");
         let namespaceKind = "user";
@@ -1326,7 +1326,7 @@
         return found.rows[0] ? project(found.rows[0]) : null;
       },
       async saveProjectSnapshot(userId, projectId, snapshotValue, { reason = "periodic", checkpointIntervalMs = 3e5, destructive = false } = {}) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.projectState,
           args: [String(projectId), String(userId)]
@@ -1430,7 +1430,7 @@
         return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
       },
       async publishProject(userId, projectId, { title = "" } = {}) {
-        await initialize();
+        await initialize2();
         const timestamp = now();
         const versionTitle = text(title, "version title", { max: 80 });
         const result = await client.batch([{
@@ -1443,7 +1443,7 @@
         return Number(result[0].rowsAffected) > 0;
       },
       async deleteProject(userId, projectId) {
-        await initialize();
+        await initialize2();
         const result = await client.execute({
           sql: CONTENT_QUERIES.deleteProject,
           args: [String(projectId), String(userId)]
@@ -1451,7 +1451,7 @@
         return Number(result.rowsAffected) > 0;
       },
       async revertProjectToPublished(userId, projectId) {
-        await initialize();
+        await initialize2();
         const found = await client.execute({
           sql: CONTENT_QUERIES.publishedSnapshot,
           args: [String(projectId), String(userId)]
@@ -1562,22 +1562,74 @@
       }));
     }
   });
-  var accounts = createAccountStore(database);
+  var operationNow = 0;
+  var randomIds = [];
+  function nextRandomId() {
+    if (!randomIds.length) throw new Error("Application operation lacks a random identifier");
+    return randomIds.shift();
+  }
+  var accounts = createAccountStore(database, {
+    now: () => operationNow,
+    randomId: nextRandomId
+  });
   var content = createContentStore(database);
-  var organizations = createOrganizationStore(database);
+  var organizations = createOrganizationStore(database, {
+    now: () => operationNow,
+    randomId: nextRandomId
+  });
   var migrations = createMigrationRunner(database);
   var initialized;
-  globalThis.serverHandle = async function serverHandle(input) {
-    if (!Array.isArray(input)) {
-      return ["error", "unknown application operation"];
+  function errorValue(error) {
+    return {
+      name: String(error?.name || "Error"),
+      message: String(error?.message || error),
+      code: typeof error?.code === "string" ? error.code : "",
+      field: typeof error?.field === "string" ? error.field : "",
+      providers: Array.isArray(error?.providers) ? [...error.providers] : []
+    };
+  }
+  async function storeCall(storeName, method, args) {
+    const stores = { account: accounts, organization: organizations };
+    const store = stores[storeName];
+    if (!store || typeof store[method] !== "function" || !Array.isArray(args)) {
+      return ["error", {
+        name: "Error",
+        message: "Store operation is not available",
+        code: "",
+        field: "",
+        providers: []
+      }];
     }
-    if (input[0] !== "initialize") return ["error", "unknown application operation"];
+    try {
+      await initialize();
+      operationNow = await hostCall("clock", "now", []);
+      randomIds = method === "authenticateIdentity" ? [await hostCall("random", "uuid", [])] : [];
+      return ["ok", await store[method](...args)];
+    } catch (error) {
+      return ["error", errorValue(error)];
+    } finally {
+      randomIds = [];
+    }
+  }
+  function initialize() {
     initialized ||= migrations.ready().then(() => Promise.all([
       accounts.initialize(),
       content.initialize(),
       organizations.initialize()
     ]));
-    await initialized;
-    return ["ok"];
+    return initialized;
+  }
+  globalThis.serverHandle = async function serverHandle(input) {
+    if (!Array.isArray(input)) {
+      return ["error", "unknown application operation"];
+    }
+    if (input[0] === "initialize") {
+      await initialize();
+      return ["ok"];
+    }
+    if (input[0] === "store" && input.length === 4) {
+      return storeCall(input[1], input[2], input[3]);
+    }
+    return ["error", "unknown application operation"];
   };
 })();

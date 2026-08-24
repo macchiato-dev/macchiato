@@ -49,13 +49,17 @@ test("the application machine initializes stores through the SQL policy machine"
   const application = new ServerMachineController(applicationModule, {
     bytecodes: [await readFile(new URL(
       "resources-application-machine/application.bin", generated))],
-    devices: { sql: async (operation, input) => {
-      const result = await policy.request(["database-client", operation, input]);
-      if (!Array.isArray(result) || result[0] !== "ok") {
-        throw new Error(Array.isArray(result) ? result[2] : "policy rejected SQL");
-      }
-      return result[1];
-    } },
+    devices: {
+      sql: async (operation, input) => {
+        const result = await policy.request(["database-client", operation, input]);
+        if (!Array.isArray(result) || result[0] !== "ok") {
+          throw new Error(Array.isArray(result) ? result[2] : "policy rejected SQL");
+        }
+        return result[1];
+      },
+      clock: async () => 123,
+      random: async () => "user-1",
+    },
   });
 
   const first = await withTimeout(application.request(["initialize"]));
@@ -74,4 +78,12 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.ok(tables.rows.some(row => row.name === "users"));
   assert.ok(tables.rows.some(row => row.name === "resource_projects"));
   assert.ok(tables.rows.some(row => row.name === "resource_organizations"));
+  const account = await withTimeout(application.request(["store", "account",
+    "authenticateIdentity", [{ provider: "github", providerUserId: "1",
+      login: "latte", name: "Latte", email: "latte@example.test",
+      emailVerified: true }, { allowCreate: true }]]));
+  assert.deepEqual(account, ["ok", { id: "user-1", login: "latte", name: "Latte" }]);
+  assert.deepEqual(await withTimeout(application.request(["store", "account",
+    "getAccount", ["user-1"]])), ["ok",
+      { id: "user-1", login: "latte", name: "Latte" }]);
 });

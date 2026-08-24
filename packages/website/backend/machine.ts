@@ -1,8 +1,6 @@
 // @ts-nocheck -- migrated machine composition; capability types follow separately.
 import { createClient } from "@libsql/client/http";
-import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "@macchiato-dev/hub/content";
-import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { createAuthConfig } from "../auth/github.js";
 import { createGitlabAuthConfig } from "../auth/gitlab.js";
 import { createResourcesEdgeHandler } from "../edge/app.js";
@@ -162,6 +160,14 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
           sql: (operation, input) => policyRequest([
             "database-client", operation, input,
           ]),
+          clock: (operation) => {
+            if (operation !== "now") throw new Error("Clock operation is not available");
+            return Date.now();
+          },
+          random: (operation) => {
+            if (operation !== "uuid") throw new Error("Random operation is not available");
+            return crypto.randomUUID();
+          },
         },
       });
     }).catch((error) => {
@@ -169,6 +175,20 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       throw error;
     });
     return applicationMachinePromise;
+  }
+  async function applicationStoreCall(store, method, args) {
+    const result = await (await applicationMachine()).request([
+      "store", store, method, args,
+    ]);
+    if (Array.isArray(result) && result[0] === "ok") return result[1];
+    const detail = Array.isArray(result) && result[1] &&
+      typeof result[1] === "object" ? result[1] : {};
+    const error = new Error(detail.message || "Application store operation failed");
+    error.name = detail.name || "Error";
+    error.code = detail.code || "";
+    error.field = detail.field || "";
+    error.providers = Array.isArray(detail.providers) ? detail.providers : [];
+    throw error;
   }
   function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
@@ -189,7 +209,12 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
         rowsAffected, lastInsertRowid: null }));
     },
   });
-  const accountStore = createAccountStore(policyDatabaseClient);
+  const accountStore = Object.freeze({
+    initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
+    getAccount: userId => applicationStoreCall("account", "getAccount", [userId]),
+    authenticateIdentity: (identity, options) => applicationStoreCall(
+      "account", "authenticateIdentity", [identity, options]),
+  });
   let projectHistoryAssetsPromise;
   function projectHistoryAssets() {
     if (!projectHistoryAssetsPromise) {
@@ -218,7 +243,13 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   const contentStore = createContentStore(policyDatabaseClient,
     { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
     snapshotValidator: projectSnapshotValidator });
-  const organizationStore = createOrganizationStore(policyDatabaseClient);
+  const organizationStore = Object.freeze({
+    initialize: () => applicationMachine().then(machine => machine.request(["initialize"])),
+    getManagedOrganization: (...args) => applicationStoreCall(
+      "organization", "getManagedOrganization", args),
+    listNotifications: (...args) => applicationStoreCall(
+      "organization", "listNotifications", args),
+  });
   let serverMachinePromise;
   function serverMachine() {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
