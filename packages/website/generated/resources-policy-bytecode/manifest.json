@@ -1,7 +1,9 @@
 {
   "format": "microquickjs-bytecode-v1",
-  "bytes": 13228,
+  "bytes": 42756,
   "chunks": [
-    "00.bin"
+    "00.bin",
+    "01.bin",
+    "02.bin"
   ]
 }
