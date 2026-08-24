@@ -187,12 +187,20 @@ to the browser interpreter. The resident guest environment and the Resources
 application are separate artifacts. This permits the small environment to
 start first and the versioned application bytecode to load dynamically.
 
-Build tooling lowers the authored module graph through Babel and compiles the
-result with a WebAssembly-hosted MicroQuickJS compiler. A WebAssembly-hosted
-Babel loader is a further build/runtime tool, not ambient authority in the
-frontend machine: it accepts bytes through an explicit service, emits compiled
-bytes, and receives no DOM or network capability. Bytecode is runtime-versioned
-and trusted like executable code; it is not accepted from an untrusted project.
+The current build tooling lowers the authored module graph through Babel and
+compiles the result with a WebAssembly-hosted MicroQuickJS compiler. That ES5
+path is transitional. The planned authoring target is a documented ES6 subset
+implemented by a hybrid of MicroQuickJS, full QuickJS, and explicit calls to
+safe host operations. The hybrid should delegate rather than duplicate stable
+functions, while leaving authority at the same typed machine boundary.
+
+A WebAssembly-hosted Babel loader remains a possible build/runtime tool, not
+ambient authority in the frontend machine: it accepts bytes through an
+explicit service, emits compiled bytes, and receives no DOM or network
+capability. Cached bytecode is runtime-versioned, reproducible, and disposable,
+closer to a `.pyc` cache than source authority. Builds record the source,
+compiler/runtime identity, and hashes needed to inspect or recreate it;
+untrusted projects cannot supply privileged cache artifacts.
 
 The same runtime and device model is intended to host Pi agent contexts and
 Vite build/watch contexts using a bottom-up Node-compatible facade. Their

@@ -29,14 +29,22 @@ semicolon separators, and newlines. It rejects module declarations and passes
 the resulting plain script directly to `mqjs`; there is no guest module loader
 or general-purpose bundler.
 
-This permits deliberately different builds. A minimal server can use concise,
-hand-written ES5 and no optional runtime slices. A larger build can select a
-QuickJS-oriented runtime, while future `QuickJSmax` and `Denomax` profiles can
-provide broader facilities without increasing the minimal artifact. Guest code
-that benefits from richer authoring may instead be written in TypeScript,
-checked normally, lowered to ES5 with Babel, and then supplied as one of the
-ordered inputs. The generated concatenated ES5 remains the auditable source
-that MicroQuickJS compiles.
+The current concatenated ES5 build is a compatibility milestone, not the
+authoring model to preserve. The intended runtime is a hybrid of MicroQuickJS,
+full QuickJS, and narrow host calls. It will support a documented ES6 subset:
+small control paths can remain in MicroQuickJS, intricate language operations
+can execute in QuickJS, and safe deterministic functions can be called through
+the host instead of being copied into either interpreter. The split must not
+grant ambient host authority or make the same operation acquire subtly
+different semantics in each engine.
+
+Source remains the authoritative, reviewable artifact. If runtime-specific
+bytecode is cached, the cache will be reproducible, versioned by its compiler
+and runtime inputs, and disposable in the same spirit as Python's `.pyc`
+files. Builds should expose the source-to-cache relationship and hashes rather
+than presenting bytecode as an opaque replacement for source. `QuickJSmax` and
+`Denomax` profiles may later provide broader facilities without increasing the
+minimal hybrid runtime.
 
 For example:
 
