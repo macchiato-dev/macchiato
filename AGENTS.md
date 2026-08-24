@@ -21,12 +21,19 @@ When an existing Node-only package must be run, also check `node -v` first.
 
 ## Containers
 
-Use Fedora-based images for development, build, and deployment containers.
-Podman is the primary container engine, including for deployment. Containerfiles
-must work with Podman and use the Docker-compatible subset needed for GitHub
-Actions, where Docker is the explicit compatibility exception. Do not introduce Debian- or
-Ubuntu-specific package management unless a narrowly scoped upstream build
-requires it and the exception is documented.
+Use Fedora-based images for development and build containers. Podman is the
+primary container engine. Containerfiles must work with Podman and use the
+Docker-compatible subset needed for GitHub Actions, where Docker is the
+explicit compatibility exception. Do not introduce Debian- or Ubuntu-specific
+package management unless a narrowly scoped upstream build requires it and the
+exception is documented.
+
+Keep the Bunny deployment container separate and deliberately narrow. Its
+reason to exist is to receive the Bunny API key temporarily and perform the
+deployment. It should contain only the deployment client and the minimum
+artifacts and instructions needed for that operation. Building, packaging,
+serving, development authentication, and unrelated tooling stay outside this
+key-bearing container and must not receive the key.
 
 Do not depend on base images or build images available only from Docker Hub.
 Prefer fully qualified OCI image references from Fedora's registries, GHCR, or
