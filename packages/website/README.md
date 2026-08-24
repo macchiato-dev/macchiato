@@ -590,8 +590,10 @@ owns content-type, origin, session, and project-scoped CSRF decisions before it
 invokes a request-scoped project capability. That capability consumes the body
 as bounded 64 KiB chunks and preserves the existing 72 MiB request and response
 contract without copying a project-sized value into the server guest's 4 MiB
-arena. Snapshot validation and history semantics remain identical while their
-processing is moved into a separate short-lived Wasm worker.
+arena. It forwards the validated value to the separate QuickJS application
+machine, where snapshot validation, diffing, checkpoint planning, persistence,
+and reconstruction now run. The controller no longer carries a parallel
+project snapshot implementation.
 Project form mutations use the controller too. `POST /projects` and
 `POST /projects/:id` are intercepted before the published-document handler.
 The MicroQuickJS guest owns authentication, same-origin and form-encoding
@@ -599,14 +601,11 @@ policy, CSRF sequencing, intent selection, create/update/save/publish/revert/
 delete ordering, and redirects. A request-scoped device keeps the large
 URL-encoded snapshot outside the guest arena and exposes only bounded fields;
 it does not collapse the workflow into one host-side application operation.
-Each project-history operation instantiates a fresh MicroQuickJS context from a
-cached compiled module. The worker validates normalized snapshot metadata,
-generates configuration patches, computes changed-file splice coordinates, and
-returns the exact checkpoint/version plan. Large strings remain host-owned:
-the worker requests paired 32 Ki-code-unit WTF-8 slices and returns only the
-common-prefix/suffix coordinates, so even a 70 MiB file does not require a
-large interpreter arena. The host materializes the selected slices and retains
-SQL authority; the worker receives neither raw SQL nor a database client.
+The application machine receives database results only through the separate
+MicroQuickJS SQL-policy machine. Large snapshots currently cross its dedicated
+128 MiB wire arena; replacing that copy with bounded shared resources remains a
+performance refinement, while application authority already stays out of the
+host controller.
 
 Build-published HTML and CSS remain ordinary immutable Storage objects. They
 have already passed `html-use`, `dom-use`, and `style-use`, so serving them does

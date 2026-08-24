@@ -107,10 +107,10 @@ validated output returns through the controller.
   the session/origin/content-type checks, obtains the bounded form only after
   authentication, verifies the action-specific CSRF token, selects create,
   update, save, titled publish, revert, or delete, and owns every redirect.
-  The request-scoped project device retains the potentially large snapshot;
-  only bounded metadata crosses the server ABI. Those operations remain
-  separate capability calls, so the guest—not an opaque host helper—controls
-  their ordering.
+  The request-scoped project device forwards the validated operation to the
+  separate QuickJS application machine. That machine owns creation, snapshot
+  history, publication, restoration, and deletion; the Edge controller no
+  longer contains a duplicate project store.
 - Account, organization, and project stores use build-time named `sql-use`
   policies. The trusted compatibility adapter accepts only exact statements in
   those policies, separates read-only and write credentials, and rejects SQL
@@ -121,11 +121,12 @@ validated output returns through the controller.
   /api/projects/:id/snapshot` and `POST
   /api/projects/:id/restore/:sequence` are machine-owned: MicroQuickJS checks
   encoding, origin, session, and project-scoped CSRF before granting body and
-  store access. A disposable MicroQuickJS worker validates snapshot metadata,
-  generates configuration and streaming file-splice patches, and plans version
-  boundaries. The host only supplies exact WTF-8 text slices, materializes the
-  guest-selected range, and executes named SQL; the full response contract does
-  not pass through the small server guest arena.
+  store access. Snapshot validation, diffing, checkpoint planning, and version
+  reconstruction execute in the QuickJS application machine. Its dedicated
+  wire limit matches the 128 MiB project transport contract; the smaller
+  routing guest never receives the snapshot value. The remaining direct copy
+  through the application-machine wire is an optimization target, not hidden
+  host application logic.
 - No edge-side HTML templating or interpretation of arbitrary route data.
 - No public Storage proxy and no prefix-only authorization.
 - No provider token in cookies, Storage, logs, or browser responses.
