@@ -1894,8 +1894,9 @@ async function mountProjectRoot(root) {
     const edge = 8;
     const buttonRect = versionButton.getBoundingClientRect();
     const panelRect = historyPanel.getBoundingClientRect();
-    historyPanel.style.left = `${Math.max(edge, Math.min(buttonRect.left, innerWidth - panelRect.width - edge))}px`;
-    historyPanel.style.top = `${buttonRect.bottom + gap}px`;
+    const containingRect = historyPanel.offsetParent?.getBoundingClientRect() || { left: 0, top: 0 };
+    historyPanel.style.left = `${Math.max(edge, Math.min(buttonRect.left, innerWidth - panelRect.width - edge)) - containingRect.left}px`;
+    historyPanel.style.top = `${buttonRect.bottom + gap - containingRect.top}px`;
     historyPanel.style.maxHeight = `${Math.max(120, innerHeight - buttonRect.bottom - gap - edge)}px`;
   }
   const openVersionHistory = () => {
