@@ -6,8 +6,8 @@
   it imports the prebuilt sibling `machine.js` in the multi-file build.
 - `bootstrap.js`: anonymous fast-home selection before database readiness.
 - `../backend/machine.ts`: prebuilt application machine with lazy database readiness.
-- `../resources-server-machine.js`: `server-use` controller for the separately
-  loaded MicroQuickJS/Wasm server guest and its named `sql-use` device.
+- `../resources-server-machine.js`: `server-use` controller for the application
+  guest. Its SQL device forwards to a separate MicroQuickJS policy machine.
 - `../project-version-machine.js`: disposable MicroQuickJS policy worker for
   checkpoint and project-version boundary planning. The compiled module is
   cached, but every write receives a fresh interpreter instance.
@@ -49,8 +49,8 @@ repository route/view models
   -> dom-use + html-use strictly sanitize document-profile markup
   -> exporter writes immutable objects and manifest evidence
   -> operator uploads one export prefix to private Bunny Storage
-  -> build emits a minified Edge entry plus revisioned server and disposable
-     project-version MicroQuickJS/Wasm machines
+  -> build emits a minified Edge entry plus one private backend.bin containing
+     the runtime, application, policy, and disposable-worker bytecode
   -> edge validates manifest structure and security profile
   -> request path canonicalizes to an exact allowlisted key
   -> authenticated, non-redirecting HTTPS Storage request
@@ -64,6 +64,17 @@ credential separately from the read-only credential used by the edge script.
 The server-machine Wasm shares the revisioned Storage directory for atomic
 deployment but is deliberately absent from this public manifest. Only the Edge
 controller knows its fixed key, and the public object router cannot serve it.
+
+The application machine cannot call the database adapter directly. Its named
+SQL request is forwarded by the controller to the policy machine. That outer
+machine contains `sql-use` semantics and the fixed Resources catalog, then asks
+the host for a low-level read, write, or batch. The host transports a compact
+columnar result and has no statement allowlist to drift from the machine.
+
+HTML and CSS exported at build time are already policy output and remain
+directly servable Storage objects. Dynamic HTML/CSS generation follows the
+two-machine path: application data enters the policy/rendering machine and only
+validated output returns through the controller.
 
 ## What is intentionally absent
 

@@ -536,7 +536,7 @@ dist/resources-bunny/
   edge/script.ts                     conventional Bunny upload entry
   site/resources-co-<sha>/
     manifest.json
-    machines/resources-project-version/  split private disposable-worker bytecode
+    machines/backend.bin              private runtime and backend bytecode bundle
     ...published site objects
 ```
 
@@ -547,16 +547,20 @@ published `edge/script.ts` artifact.
 Both runnable Edge forms embed the seven-character Git revision used by the
 Storage prefix. Bunny's current Set Code API accepts one code string, so
 `script.ts` is the reproducible bundle used by the official deployment action.
-The shared MicroQuickJS runtime and request-policy bytecode are gzip-compressed
-and base64-embedded in that script. The controller streams decompression into
-WebAssembly compilation and keeps only the less frequent project-version
-bytecode in private Storage. The Resources guest is an explicit concatenation
-of its selected runtime and application slices, compiled directly to
-MicroQuickJS bytecode. Its TypeScript host controller only instantiates the
-machine, grants bounded `server-use`
-messages and named `sql-use` operations rather than Requests or raw database
-authority. Database migration and store initialization remain lazy and shared
-across requests. `/health` and the authenticated project-version list/read APIs
+The controller fetches one private, gzip-compressed `backend.bin` object. Its
+bounded resource table contains the shared MicroQuickJS runtime, the Resources
+application bytecode, the SQL policy bytecode, and the disposable
+project-history worker bytecode. One shared promise performs that Storage read.
+
+The Resources application and its SQL policy run in separate Wasm machines.
+Application `sql` messages are forwarded to the policy machine, which owns the
+fixed statement catalog, argument validation, read/write selection, batch
+rules, row limits, and result shaping. Only that machine can request the host's
+low-level database adapter. The adapter transports column names, row arrays,
+and affected-row counts; it contains no `sql-use` catalog or operation policy.
+Database migration and store initialization remain lazy and shared across
+requests while their compatibility stores move behind the same boundary.
+`/health` and the authenticated project-version list/read APIs
 execute their route decisions and version reconstruction inside that guest.
 Account, organization, and project stores are also constrained by exact named
 SQL policies.
@@ -598,6 +602,13 @@ the worker requests paired 32 Ki-code-unit WTF-8 slices and returns only the
 common-prefix/suffix coordinates, so even a 70 MiB file does not require a
 large interpreter arena. The host materializes the selected slices and retains
 SQL authority; the worker receives neither raw SQL nor a database client.
+
+Build-published HTML and CSS remain ordinary immutable Storage objects. They
+have already passed `html-use`, `dom-use`, and `style-use`, so serving them does
+not require reparsing them in the request path. Dynamic HTML/CSS generation is
+different: it belongs in the policy/rendering machine and crosses to the
+controller only as validated output. The controller forwards messages between
+that machine and the application machine; it does not become a renderer.
 
 ### Update an existing staging deployment manually
 
