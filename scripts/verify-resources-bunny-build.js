@@ -61,6 +61,9 @@ if (!readFileSync(browserControllerPath, "utf8").includes('from "./machine.js"')
 }
 
 const edge = readFileSync(join(root, deployment.edgeEntry), "utf8");
+if (!edge.startsWith("// @ts-nocheck -- generated JavaScript bundle\n")) {
+  throw new Error("Edge entry is not marked as generated JavaScript");
+}
 if (!edge.includes(`resources-co-${deployment.revision}`)) {
   throw new Error("Edge entry does not contain its revisioned Storage prefix");
 }

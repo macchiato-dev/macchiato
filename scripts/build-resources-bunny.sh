@@ -43,6 +43,7 @@ deno bundle \
   --minify \
   "$repo_root/packages/website/backend/controller.ts" \
   --output "$out_dir/edge/script.ts"
+node "$repo_root/scripts/mark-generated-typescript.js" "$out_dir/edge/script.ts"
 node "$repo_root/scripts/write-resources-bunny-manifest.js" "$out_dir" "$revision"
 
 echo "Bunny Edge Script: $out_dir/edge/script.ts"
