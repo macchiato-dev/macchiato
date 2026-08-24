@@ -1121,8 +1121,7 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__status-action:hover { background: rgba(255, 255, 255, 0.1); }
 .project-editor__status-action:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
 .project-editor__save { flex: 0 0 auto; }
-.project-editor__history-picker { position: relative; }
-.project-editor__history { position: absolute; top: calc(100% + 5px); right: 0; z-index: 35; width: min(260px, calc(100vw - 24px)); max-height: min(420px, calc(100vh - 80px)); padding: 5px; overflow: auto; border: 1px solid var(--track-border); border-radius: 8px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
+.project-editor__history { position: fixed; top: 48px; left: 8px; z-index: 60; width: min(260px, calc(100vw - 24px)); max-height: calc(100vh - 80px); padding: 5px; overflow: auto; border: 1px solid var(--track-border); border-radius: 8px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__version { width: 100%; text-align: left; }
 .project-editor__version[aria-current="true"] { color: var(--text); background: var(--hover); opacity: 1; cursor: default; }
 .layout.project-create-layout > .brand,

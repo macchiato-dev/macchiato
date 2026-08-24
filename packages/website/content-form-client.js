@@ -1889,6 +1889,15 @@ async function mountProjectRoot(root) {
     versionButton.setAttribute("aria-expanded", "false");
     if (restoreFocus) versionButton.focus();
   }
+  function positionHistory() {
+    const gap = 5;
+    const edge = 8;
+    const buttonRect = versionButton.getBoundingClientRect();
+    const panelRect = historyPanel.getBoundingClientRect();
+    historyPanel.style.left = `${Math.max(edge, Math.min(buttonRect.left, innerWidth - panelRect.width - edge))}px`;
+    historyPanel.style.top = `${buttonRect.bottom + gap}px`;
+    historyPanel.style.maxHeight = `${Math.max(120, innerHeight - buttonRect.bottom - gap - edge)}px`;
+  }
   const openVersionHistory = () => {
     if (!historyPanel.hidden) {
       closeHistory();
@@ -1899,11 +1908,14 @@ async function mountProjectRoot(root) {
     versionButton.setAttribute("aria-expanded", "true");
     if (readOnly) {
       versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
+      positionHistory();
     } else if (draft || memoryOnly) {
       renderDraftVersions();
+      positionHistory();
     } else {
-      renderStoredVersions().catch((error) => {
+      renderStoredVersions().then(positionHistory).catch((error) => {
         versionList.textContent = `Version history unavailable: ${error.message}`;
+        positionHistory();
       });
     }
   };
