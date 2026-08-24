@@ -1631,7 +1631,8 @@
       }
       const pathname = input.pathname;
       const session = input.session && typeof input.session.sub === "string" ? input.session : null;
-      const requestedProject = projectRoute(pathname);
+      const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
+      const requestedProject = directTryTemplate ? null : projectRoute(pathname);
       const requestedNamespace = requestedProject ? null : namespaceRoute(pathname);
       const dynamicProject = requestedProject ? await content2.getProject(requestedProject.namespace, requestedProject.slug, session?.sub) : null;
       const projectOwner = Boolean(dynamicProject && session && dynamicProject.ownerUserId === session.sub);
@@ -1644,6 +1645,21 @@
         namespaces: discoverableNamespaces
       }) : null;
       const notifications = session ? await organizations2.listNotifications(session.sub) : [];
+      const accountShellPath = directTryTemplate ? "/try" : pathname === "/" && session || pathname === "/profile" ? "/dashboard" : pathname;
+      let kind = "static";
+      if (dynamicProject) kind = "project";
+      else if (dynamicNamespace) kind = managedOrganization ? "managed-organization" : "namespace";
+      else if (pathname === "/try" || directTryTemplate) kind = "try";
+      else if (session && accountPaths.has(pathname)) {
+        kind = pathname === "/" ? "dashboard" : pathname === "/projects" ? "projects" : pathname === "/projects/new" ? "project-form" : pathname === "/organizations/new" ? "organization-form" : "profile";
+      }
+      const csrfActions = [];
+      if (projectOwner) csrfActions.push(`project:${dynamicProject.id}`);
+      else if (managedOrganization) csrfActions.push(`organization:${managedOrganization.slug}`);
+      else if (session && kind === "project-form") csrfActions.push("/projects");
+      else if (session && kind === "organization-form") csrfActions.push("/organizations");
+      else if (session && kind === "profile") csrfActions.push("profile");
+      if (session) csrfActions.push("notifications");
       return {
         requestedProject,
         dynamicProject,
@@ -1653,7 +1669,12 @@
         accountContent,
         account,
         publicProjects,
-        notifications
+        notifications,
+        kind,
+        csrfActions,
+        accountShellPath,
+        shellPath: dynamicProject || dynamicNamespace ? "/dashboard" : accountShellPath,
+        focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate)
       };
     };
   }

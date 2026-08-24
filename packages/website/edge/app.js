@@ -364,6 +364,64 @@ function organizationFormHtml(token, messages, url) {
   </div>`;
 }
 
+function renderPlannedDocument(html, plan, session, messages, tokens, options) {
+  const marker = ACCOUNT_CONTENT_MARKER;
+  const errorCode = options.formErrorCode || "";
+  if (plan.kind === "project") {
+    if (html.indexOf(marker) < 0) throw new Error("Project shell lacks its content marker");
+    const project = plan.dynamicProject;
+    const workspace = {
+      snapshot: { files: [], config: { entry: "", template: project.template,
+        container: "page", containerOptions: { allowedLinkPatterns: [] },
+        sandbox: { network: false, storage: "session" } } },
+      versionCount: 0, hasUnpublishedChanges: false,
+    };
+    const snapshotUrl = `/-/projects/${encodeURIComponent(project.namespace)}/${encodeURIComponent(project.slug)}/workspace`;
+    html = html.replace(marker, projectViewHtml(project, messages, workspace,
+      tokens[`project:${project.id}`] || "", plan.projectOwner, session,
+      plan.accountContent || { organizations: [], projects: [] }, errorCode,
+      { embed: plan.requestedProject.embed,
+        blogExamplesOrigin: options.blogExamplesOrigin, snapshotUrl }));
+    html = plan.requestedProject.embed ? embeddedProjectDocument(html)
+      : focusedProjectDocument(html, project.namespace, project.slug);
+  } else if (plan.kind === "managed-organization" || plan.kind === "namespace") {
+    if (html.indexOf(marker) < 0) throw new Error("Namespace shell lacks its content marker");
+    const namespaceContent = plan.kind === "managed-organization"
+      ? managedOrganizationHtml(plan.dynamicNamespace, plan.managedOrganization,
+        tokens[`organization:${plan.managedOrganization.slug}`] || "", messages, errorCode)
+      : namespaceProjectsHtml(plan.dynamicNamespace, messages);
+    html = namespaceDocument(html.replace(marker, namespaceContent), plan.dynamicNamespace);
+  } else if (plan.kind === "try") {
+    if (html.indexOf(marker) < 0) throw new Error("Try shell lacks its content marker");
+    html = html.replace(marker, tryProjectHtml(messages));
+  } else if (plan.kind === "dashboard" || plan.kind === "projects" ||
+      plan.kind === "project-form" || plan.kind === "organization-form" ||
+      plan.kind === "profile") {
+    if (html.indexOf(marker) < 0) throw new Error("Account shell lacks its content marker");
+    const content = plan.accountContent;
+    const dynamic = plan.kind === "dashboard" ? dashboardHtml(content, messages)
+      : plan.kind === "projects" ? projectsHtml(content, messages)
+      : plan.kind === "project-form" ? projectFormHtml(session, content,
+        tokens["/projects"] || "", messages, errorCode)
+      : plan.kind === "organization-form" ? organizationFormHtml(
+        tokens["/organizations"] || "", messages, errorCode)
+      : profileHtml(plan.account, tokens.profile || "", messages, errorCode);
+    html = html.replace(marker, () => dynamic);
+  }
+  if (plan.publicProjects) {
+    if (html.indexOf(PUBLIC_PROJECTS_MARKER) < 0) {
+      throw new Error("Public-project shell lacks its content marker");
+    }
+    html = html.replace(PUBLIC_PROJECTS_MARKER,
+      publicProjectsHtml(plan.publicProjects, messages));
+  }
+  return renderSessionHtml(html, session, messages, {
+    locale: options.locale, pathname: options.pathname, focused: plan.focused,
+    signupsEnabled: options.signupsEnabled, notifications: plan.notifications,
+    notificationCsrf: tokens.notifications || "",
+  }, options.controllerVersion);
+}
+
 export function renderResourcesDocument(operation, args) {
   if (!Array.isArray(args)) throw new TypeError("document renderer arguments must be an array");
   if (operation === "session") return renderSessionHtml(...args);
@@ -380,6 +438,7 @@ export function renderResourcesDocument(operation, args) {
   if (operation === "focused-project-document") return focusedProjectDocument(...args);
   if (operation === "embedded-project-document") return embeddedProjectDocument(...args);
   if (operation === "namespace-document") return namespaceDocument(...args);
+  if (operation === "page") return renderPlannedDocument(...args);
   throw new Error(`document renderer operation is not available: ${operation}`);
 }
 
@@ -483,17 +542,9 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         ? "/try"
         : ((pathname === "/" && session) || pathname === "/profile" ? "/dashboard" : pathname);
       const staticKey = localizedObjectKey(locale, pathToObjectKey(accountShellPath));
-      const plan = await documentPlan({ pathname, session,
+      const plan = await documentPlan({ pathname, session, directTryTemplate,
         staticShellExists: manifest.files.has(staticKey) });
-      const { requestedProject, dynamicProject, projectOwner, dynamicNamespace,
-        managedOrganization } = plan;
-      const visibleWorkspace = dynamicProject ? {
-        snapshot: { files: [], config: { entry: "", template: dynamicProject.template,
-          container: "page", containerOptions: { allowedLinkPatterns: [] },
-          sandbox: { network: false, storage: "session" } } },
-        versionCount: 0, hasUnpublishedChanges: false,
-      } : null;
-      const key = localizedObjectKey(locale, (dynamicProject || dynamicNamespace) ? pathToObjectKey("/dashboard") : pathToObjectKey(accountShellPath));
+      const key = localizedObjectKey(locale, pathToObjectKey(plan.shellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
       const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
       if (upstream.status === 404) return new Response("Not found", { status: 404 });
@@ -504,7 +555,7 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         throw new Error(`Storage length mismatch for ${key}`);
       }
       const headers = publicResponseHeaders(key, upstream.headers);
-      if (requestedProject && pathname.endsWith("/embed")) {
+      if (plan.requestedProject?.embed) {
         headers.set("content-security-policy", headers.get("content-security-policy").replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
       }
       if (key.startsWith("locales/") && key.endsWith(".html")) headers.set("content-language", locale);
@@ -517,60 +568,12 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         body = editorHtml.replace("./app.css", `./app.css?v=${styleVersion}`).replace("./app.js", `./app.js?v=${editorVersion}`);
       }
       if (authConfig && key.startsWith("locales/") && key.endsWith(".html") && request.method !== "HEAD") {
-        let html = await upstream.text();
-        if (dynamicProject) {
-          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          const token = projectOwner ? await csrfToken(session, `project:${dynamicProject.id}`, authConfig, now) : "";
-          const content = plan.accountContent || { organizations: [], projects: [] };
-          const snapshotUrl = `/-/projects/${encodeURIComponent(dynamicProject.namespace)}/${encodeURIComponent(dynamicProject.slug)}/workspace`;
-          html = html.replace(ACCOUNT_CONTENT_MARKER,
-            await documentRenderer("project-view", [dynamicProject, manifest.messages[locale],
-              visibleWorkspace, token, projectOwner, session, content, formErrorCode,
-              { embed: requestedProject.embed, blogExamplesOrigin, snapshotUrl }]));
-          html = await documentRenderer(requestedProject.embed
-            ? "embedded-project-document" : "focused-project-document",
-          requestedProject.embed ? [html] : [html, requestedProject.namespace, requestedProject.slug]);
-        } else if (dynamicNamespace) {
-          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          const token = managedOrganization ? await csrfToken(session, `organization:${managedOrganization.slug}`, authConfig, now) : "";
-          const namespaceContent = managedOrganization
-            ? await documentRenderer("managed-organization", [dynamicNamespace,
-              managedOrganization, token, manifest.messages[locale], formErrorCode])
-            : await documentRenderer("namespace-projects",
-              [dynamicNamespace, manifest.messages[locale]]);
-          html = html.replace(ACCOUNT_CONTENT_MARKER, namespaceContent);
-          html = await documentRenderer("namespace-document", [html, dynamicNamespace]);
-        } else if (pathname === "/try" || directTryTemplate) {
-          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Try content marker missing from ${key}`);
-          html = html.replace(ACCOUNT_CONTENT_MARKER,
-            await documentRenderer("try", [manifest.messages[locale]]));
-        } else if (session && plan.accountContent) {
-          const content = plan.accountContent;
-          const token = await csrfToken(session, pathname === "/projects/new" ? "/projects" : pathname === "/organizations/new" ? "/organizations" : pathname === "/profile" ? "profile" : "/", authConfig, now);
-          const dynamic = pathname === "/"
-            ? await documentRenderer("dashboard", [content, manifest.messages[locale]])
-            : pathname === "/projects"
-              ? await documentRenderer("projects", [content, manifest.messages[locale]])
-            : pathname === "/projects/new"
-              ? await documentRenderer("project-form", [session, content, token,
-                manifest.messages[locale], formErrorCode])
-              : pathname === "/organizations/new"
-                ? await documentRenderer("organization-form", [token,
-                  manifest.messages[locale], formErrorCode])
-                : await documentRenderer("profile", [plan.account,
-                  token, manifest.messages[locale], formErrorCode]);
-          if (!html.includes(ACCOUNT_CONTENT_MARKER)) throw new Error(`Account content marker missing from ${key}`);
-          html = html.replace(ACCOUNT_CONTENT_MARKER, () => dynamic);
-        }
-        if ((pathname === "/" && !session) || pathname === "/browse") {
-          if (!html.includes(PUBLIC_PROJECTS_MARKER)) throw new Error(`Public projects marker missing from ${key}`);
-          const projects = plan.publicProjects || [];
-          html = html.replace(PUBLIC_PROJECTS_MARKER,
-            await documentRenderer("public-projects", [projects, manifest.messages[locale]]));
-        }
-        const notifications = plan.notifications;
-        const notificationCsrf = session ? await csrfToken(session, "notifications", authConfig, now) : "";
-        body = await documentRenderer("session", [html, session, manifest.messages[locale], { locale, pathname, focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate), signupsEnabled: authConfig.signupsEnabled, notifications, notificationCsrf }, controllerVersion]);
+        const tokens = Object.fromEntries(await Promise.all(plan.csrfActions.map(async action =>
+          [action, await csrfToken(session, action, authConfig, now)])));
+        body = await documentRenderer("page", [await upstream.text(), plan, session,
+          manifest.messages[locale], tokens, { locale, pathname, formErrorCode,
+            signupsEnabled: authConfig.signupsEnabled, controllerVersion,
+            blogExamplesOrigin }]);
         headers.set("cache-control", session ? "private, no-store" : "public, max-age=30, stale-while-revalidate=60");
       }
       if (key.endsWith(".html")) headers.set("vary", "accept-language, cookie");

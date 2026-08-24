@@ -22,6 +22,8 @@ if (start < 0 || firstEnd <= start || secondStart < firstEnd || secondEnd <= sec
 }
 
 const inputs = [
+  `var ACCOUNT_CONTENT_MARKER = ${JSON.stringify("<p>__RESOURCES_ACCOUNT_CONTENT__</p>")};`,
+  `var PUBLIC_PROJECTS_MARKER = ${JSON.stringify("<p>__RESOURCES_PUBLIC_PROJECTS__</p>")};`,
   `var resourcesAppearanceHtml = ${JSON.stringify(resourcesAppearanceHtml)};`,
   `var resourcesBellIconHtml = ${JSON.stringify(resourcesBellIconHtml)};`,
   `var resourcesBlankAvatarHtml = ${JSON.stringify(resourcesBlankAvatarHtml)};`,

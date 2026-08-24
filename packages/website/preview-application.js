@@ -75,9 +75,10 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   }) : null;
   const documentPlan = application
     ? input => application.documentPlan(input)
-    : async () => ({ requestedProject: null, dynamicProject: null, projectOwner: false,
+    : async input => ({ requestedProject: null, dynamicProject: null, projectOwner: false,
       dynamicNamespace: null, managedOrganization: null, accountContent: null,
-      account: null, publicProjects: [], notifications: [] });
+      account: null, publicProjects: input.publicApi ? [] : null, notifications: [],
+      kind: "static", csrfActions: [], shellPath: input.pathname, focused: false });
   const machine = client ? createResourcesServerMachine(serverModule, {
     bytecodes: serverBytecodes,
     sqlDevice: (operation, input) => policyRequest(["sql", operation, input]),

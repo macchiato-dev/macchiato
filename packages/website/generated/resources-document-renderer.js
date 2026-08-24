@@ -4,6 +4,8 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+var ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
+var PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
 var resourcesAppearanceHtml = "<div class=\"menu__head\">Appearance</div><div class=\"seg\" role=\"group\" aria-label=\"Appearance\"><button class=\"seg__btn\" type=\"button\" data-theme-choice=\"system\" aria-pressed=\"true\"><span>System</span></button><button class=\"seg__btn\" type=\"button\" data-theme-choice=\"dark\" aria-pressed=\"false\"><span>Dark</span></button><button class=\"seg__btn\" type=\"button\" data-theme-choice=\"light\" aria-pressed=\"false\"><span>Light</span></button></div>";
 var resourcesBellIconHtml = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9\"></path><path d=\"M13.73 21a2 2 0 0 1-3.46 0\"></path></svg>";
 var resourcesBlankAvatarHtml = "<span class=\"ub-avatar ub-avatar--blank\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 21a8 8 0 0 0-16 0\"></path><circle cx=\"12\" cy=\"7\" r=\"4\"></circle></svg></span>";
@@ -290,6 +292,71 @@ function managedOrganizationHtml(namespace, managed, token, messages, url) {
 function organizationFormHtml(token, messages, url) {
   return "<div class=\"account-dashboard\">\n    <h1>".concat(message(messages, "organizationCreate.heading", "Create an organization"), "</h1>\n    <p class=\"account-dashboard__intro\">").concat(message(messages, "organizationCreate.intro", "Organizations give related projects a shared namespace."), "</p>\n    ").concat(formError(url, messages), "\n    <form class=\"create-form\" method=\"post\" action=\"/organizations\">\n      <input type=\"hidden\" name=\"csrf\" value=\"").concat(escapeHtml(token), "\">\n      <div class=\"create-form__field\"><label for=\"organization-name\">").concat(message(messages, "organizationCreate.name", "Title"), "</label><input id=\"organization-name\" name=\"name\" minlength=\"4\" maxlength=\"80\" data-slug-source=\"organization-slug\" required></div>\n      <div class=\"create-form__field\"><label for=\"organization-slug\">").concat(message(messages, "organizationCreate.slug", "Name"), "</label><input id=\"organization-slug\" name=\"slug\" minlength=\"4\" maxlength=\"63\" pattern=\"[a-z0-9]+(?:-[a-z0-9]+)*\" aria-describedby=\"organization-slug-error\" autocapitalize=\"none\" autocomplete=\"off\" spellcheck=\"false\" required><p id=\"organization-slug-error\" class=\"form-field-error\" data-message=\"").concat(message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens."), "\" hidden>").concat(message(messages, "content.slugError", "Use lowercase letters, numbers, and single hyphens."), "</p></div>\n      <div class=\"create-form__field\"><label for=\"organization-description\">").concat(message(messages, "organizationCreate.description", "Description (optional)"), "</label><textarea id=\"organization-description\" name=\"description\" maxlength=\"500\"></textarea></div>\n      <div class=\"create-actions\"><button class=\"account-action\" type=\"submit\">").concat(message(messages, "organizationCreate.submit", "Create organization"), "</button></div>\n    </form>\n  </div>");
 }
+function renderPlannedDocument(html, plan, session, messages, tokens, options) {
+  var marker = ACCOUNT_CONTENT_MARKER;
+  var errorCode = options.formErrorCode || "";
+  if (plan.kind === "project") {
+    if (html.indexOf(marker) < 0) throw new Error("Project shell lacks its content marker");
+    var project = plan.dynamicProject;
+    var workspace = {
+      snapshot: {
+        files: [],
+        config: {
+          entry: "",
+          template: project.template,
+          container: "page",
+          containerOptions: {
+            allowedLinkPatterns: []
+          },
+          sandbox: {
+            network: false,
+            storage: "session"
+          }
+        }
+      },
+      versionCount: 0,
+      hasUnpublishedChanges: false
+    };
+    var snapshotUrl = "/-/projects/".concat(encodeURIComponent(project.namespace), "/").concat(encodeURIComponent(project.slug), "/workspace");
+    html = html.replace(marker, projectViewHtml(project, messages, workspace, tokens["project:".concat(project.id)] || "", plan.projectOwner, session, plan.accountContent || {
+      organizations: [],
+      projects: []
+    }, errorCode, {
+      embed: plan.requestedProject.embed,
+      blogExamplesOrigin: options.blogExamplesOrigin,
+      snapshotUrl: snapshotUrl
+    }));
+    html = plan.requestedProject.embed ? embeddedProjectDocument(html) : focusedProjectDocument(html, project.namespace, project.slug);
+  } else if (plan.kind === "managed-organization" || plan.kind === "namespace") {
+    if (html.indexOf(marker) < 0) throw new Error("Namespace shell lacks its content marker");
+    var namespaceContent = plan.kind === "managed-organization" ? managedOrganizationHtml(plan.dynamicNamespace, plan.managedOrganization, tokens["organization:".concat(plan.managedOrganization.slug)] || "", messages, errorCode) : namespaceProjectsHtml(plan.dynamicNamespace, messages);
+    html = namespaceDocument(html.replace(marker, namespaceContent), plan.dynamicNamespace);
+  } else if (plan.kind === "try") {
+    if (html.indexOf(marker) < 0) throw new Error("Try shell lacks its content marker");
+    html = html.replace(marker, tryProjectHtml(messages));
+  } else if (plan.kind === "dashboard" || plan.kind === "projects" || plan.kind === "project-form" || plan.kind === "organization-form" || plan.kind === "profile") {
+    if (html.indexOf(marker) < 0) throw new Error("Account shell lacks its content marker");
+    var content = plan.accountContent;
+    var dynamic = plan.kind === "dashboard" ? dashboardHtml(content, messages) : plan.kind === "projects" ? projectsHtml(content, messages) : plan.kind === "project-form" ? projectFormHtml(session, content, tokens["/projects"] || "", messages, errorCode) : plan.kind === "organization-form" ? organizationFormHtml(tokens["/organizations"] || "", messages, errorCode) : profileHtml(plan.account, tokens.profile || "", messages, errorCode);
+    html = html.replace(marker, function () {
+      return dynamic;
+    });
+  }
+  if (plan.publicProjects) {
+    if (html.indexOf(PUBLIC_PROJECTS_MARKER) < 0) {
+      throw new Error("Public-project shell lacks its content marker");
+    }
+    html = html.replace(PUBLIC_PROJECTS_MARKER, publicProjectsHtml(plan.publicProjects, messages));
+  }
+  return renderSessionHtml(html, session, messages, {
+    locale: options.locale,
+    pathname: options.pathname,
+    focused: plan.focused,
+    signupsEnabled: options.signupsEnabled,
+    notifications: plan.notifications,
+    notificationCsrf: tokens.notifications || ""
+  }, options.controllerVersion);
+}
 function renderResourcesDocument(operation, args) {
   if (!Array.isArray(args)) throw new TypeError("document renderer arguments must be an array");
   if (operation === "session") return renderSessionHtml.apply(void 0, _toConsumableArray(args));
@@ -306,5 +373,6 @@ function renderResourcesDocument(operation, args) {
   if (operation === "focused-project-document") return focusedProjectDocument.apply(void 0, _toConsumableArray(args));
   if (operation === "embedded-project-document") return embeddedProjectDocument.apply(void 0, _toConsumableArray(args));
   if (operation === "namespace-document") return namespaceDocument.apply(void 0, _toConsumableArray(args));
+  if (operation === "page") return renderPlannedDocument.apply(void 0, _toConsumableArray(args));
   throw new Error("document renderer operation is not available: ".concat(operation));
 }

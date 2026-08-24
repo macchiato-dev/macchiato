@@ -117,6 +117,10 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.equal(plan[1].dynamicProject.id, "project-1");
   assert.equal(plan[1].projectOwner, true);
   assert.equal(plan[1].accountContent.projects.length, 1);
+  assert.equal(plan[1].kind, "project");
+  assert.equal(plan[1].shellPath, "/dashboard");
+  assert.deepEqual(plan[1].csrfActions,
+    ["project:project-1", "notifications"]);
   const rejected = await withTimeout(application.request(["store", "content",
     "saveProjectSnapshot", ["user-1", "project-1", {
       files: [], config: { containerOptions: {

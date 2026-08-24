@@ -42,3 +42,23 @@ test("the document machine renders data-driven page regions", async () => {
   assert.match(publicProjects, /Public &amp; safe/);
   assert.doesNotMatch(publicProjects, /Public & safe/);
 });
+
+test("the document machine applies an application-owned page plan", async () => {
+  const machine = new ServerMachineController(module, { bytecodes });
+  const html = `<!doctype html><body><aside class="box userbar edge-status">old</aside>
+    <p>__RESOURCES_ACCOUNT_CONTENT__</p></body>`;
+  const plan = {
+    kind: "dashboard", focused: false, notifications: [], publicProjects: null,
+    accountContent: { organizations: [], projects: [{ name: "Machine page",
+      namespace: "latte", slug: "machine-page", description: "",
+      template: "article", visibility: "public" }] },
+  };
+  const rendered = await machine.request(["page", JSON.stringify([html, plan,
+    { sub: "u1", login: "latte", name: "Latte" }, {}, {}, {
+      locale: "en", pathname: "/", formErrorCode: "", signupsEnabled: true,
+      controllerVersion: "page123", blogExamplesOrigin: "https://examples.test",
+    }])]);
+  assert.match(rendered, /Machine page/);
+  assert.match(rendered, /latte\/machine-page/);
+  assert.match(rendered, /controller\.js\?v=page123/);
+});
