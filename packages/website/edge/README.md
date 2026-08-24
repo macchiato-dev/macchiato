@@ -70,6 +70,8 @@ SQL request is forwarded by the controller to the policy machine. That outer
 machine contains `sql-use` semantics and the fixed Resources catalog, then asks
 the host for a low-level read, write, or batch. The host transports a compact
 columnar result and has no statement allowlist to drift from the machine.
+Account, content, organization, and migration compatibility clients use this
+same hop; none embeds another `sql-use` instance in the Edge controller.
 
 HTML and CSS exported at build time are already policy output and remain
 directly servable Storage objects. Dynamic HTML/CSS generation follows the

@@ -559,7 +559,10 @@ rules, row limits, and result shaping. Only that machine can request the host's
 low-level database adapter. The adapter transports column names, row arrays,
 and affected-row counts; it contains no `sql-use` catalog or operation policy.
 Database migration and store initialization remain lazy and shared across
-requests while their compatibility stores move behind the same boundary.
+requests. Their compatibility clients also cross the policy machine: legacy
+query-shaped calls are matched against the same build-time catalog before the
+host database adapter sees them. This keeps `sql-use` and its policy maps out of
+the host bundle while the hub application code is moved into the inner machine.
 `/health` and the authenticated project-version list/read APIs
 execute their route decisions and version reconstruction inside that guest.
 Account, organization, and project stores are also constrained by exact named
