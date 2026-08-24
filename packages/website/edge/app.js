@@ -19,7 +19,6 @@ import {
 const MANIFEST_KEY = "manifest.json";
 const ACCOUNT_CONTENT_MARKER = "<p>__RESOURCES_ACCOUNT_CONTENT__</p>";
 const PUBLIC_PROJECTS_MARKER = "<p>__RESOURCES_PUBLIC_PROJECTS__</p>";
-const TRY_TEMPLATES = new Set(["article", "hello", "clock", "mark", "chart", "ball", "stars", "blank", "slides"]);
 
 async function fetchStorage(fetchImpl, request) {
   const response = await fetchImpl(request);
@@ -472,13 +471,13 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
   return async function resourcesEdgeHandler(request) {
     const url = new URL(request.url);
     const pathname = url.pathname;
-    const directTryTemplate = /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname)?.[1] || "";
-    if (directTryTemplate && !TRY_TEMPLATES.has(directTryTemplate)) return new Response("Not found", { status: 404 });
-    if ((request.method === "GET" || request.method === "HEAD") && pathname === "/try" && url.searchParams.has("template")) {
-      const template = url.searchParams.get("template");
-      if (!TRY_TEMPLATES.has(template)) return new Response("Not found", { status: 404 });
-      return new Response(null, { status: 302, headers: { location: `/try/${template}`, "cache-control": "no-store" } });
-    }
+    const routePlan = await documentPlan({ pathname, method: request.method,
+      template: url.searchParams.has("template") ? url.searchParams.get("template") : null,
+      routeOnly: true });
+    if (routePlan.notFound) return new Response("Not found", { status: 404 });
+    if (routePlan.redirect) return new Response(null, { status: 302,
+      headers: { location: routePlan.redirect, "cache-control": "no-store" } });
+    const directTryTemplate = routePlan.directTryTemplate;
     const languageRoute = request.method === "GET"
       ? parseLanguageSelection(new URL(request.url)) || parseLanguageRoute(pathname)
       : null;

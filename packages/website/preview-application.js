@@ -75,7 +75,8 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   }) : null;
   const documentPlan = application
     ? input => application.documentPlan(input)
-    : async input => input.shellOnly ? { accountShellPath: input.pathname }
+    : async input => input.routeOnly ? { directTryTemplate: "" }
+      : input.shellOnly ? { accountShellPath: input.pathname }
       : ({ requestedProject: null, dynamicProject: null, projectOwner: false,
       dynamicNamespace: null, managedOrganization: null, accountContent: null,
       account: null, publicProjects: input.publicApi ? [] : null, notifications: [],

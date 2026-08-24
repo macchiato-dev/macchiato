@@ -1,6 +1,8 @@
 const accountPaths = new Set(["/", "/projects", "/projects/new",
   "/organizations/new", "/profile"]);
 const discoverableNamespaces = ["benatkin", "resources", "macchiato"];
+const tryTemplates = new Set(["article", "hello", "clock", "mark", "chart", "ball",
+  "stars", "blank", "slides"]);
 
 function projectRoute(pathname) {
   try {
@@ -27,6 +29,17 @@ export function createResourcesDocumentPlanner({ accounts, content, organization
   return async function planDocument(input) {
     if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
       throw new TypeError("Document plan input is invalid");
+    }
+    if (input.routeOnly === true) {
+      const direct = /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(input.pathname)?.[1] || "";
+      if (direct) return tryTemplates.has(direct)
+        ? { directTryTemplate: direct } : { notFound: true };
+      if ((input.method === "GET" || input.method === "HEAD") &&
+          input.pathname === "/try" && typeof input.template === "string") {
+        return tryTemplates.has(input.template)
+          ? { redirect: `/try/${input.template}` } : { notFound: true };
+      }
+      return { directTryTemplate: "" };
     }
     const directTryTemplate = typeof input.directTryTemplate === "string"
       ? input.directTryTemplate : "";

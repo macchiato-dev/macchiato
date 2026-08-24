@@ -1599,6 +1599,17 @@
     "/profile"
   ]);
   var discoverableNamespaces = ["benatkin", "resources", "macchiato"];
+  var tryTemplates = /* @__PURE__ */ new Set([
+    "article",
+    "hello",
+    "clock",
+    "mark",
+    "chart",
+    "ball",
+    "stars",
+    "blank",
+    "slides"
+  ]);
   function projectRoute(pathname) {
     try {
       const match = /^\/([^/]+)\/([^/]+)(?:\/(embed))?$/.exec(decodeURIComponent(pathname));
@@ -1622,6 +1633,14 @@
     return async function planDocument2(input) {
       if (!input || typeof input !== "object" || typeof input.pathname !== "string") {
         throw new TypeError("Document plan input is invalid");
+      }
+      if (input.routeOnly === true) {
+        const direct = /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(input.pathname)?.[1] || "";
+        if (direct) return tryTemplates.has(direct) ? { directTryTemplate: direct } : { notFound: true };
+        if ((input.method === "GET" || input.method === "HEAD") && input.pathname === "/try" && typeof input.template === "string") {
+          return tryTemplates.has(input.template) ? { redirect: `/try/${input.template}` } : { notFound: true };
+        }
+        return { directTryTemplate: "" };
       }
       const directTryTemplate = typeof input.directTryTemplate === "string" ? input.directTryTemplate : "";
       const session = input.session && typeof input.session.sub === "string" ? input.session : null;

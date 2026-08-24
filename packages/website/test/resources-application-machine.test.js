@@ -124,6 +124,12 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.deepEqual(await withTimeout(application.request(["document-plan", {
     pathname: "/", session: { sub: "user-1" }, shellOnly: true,
   }])), ["ok", { accountShellPath: "/dashboard" }]);
+  assert.deepEqual(await withTimeout(application.request(["document-plan", {
+    pathname: "/try/article", method: "GET", template: null, routeOnly: true,
+  }])), ["ok", { directTryTemplate: "article" }]);
+  assert.deepEqual(await withTimeout(application.request(["document-plan", {
+    pathname: "/try/executable", method: "GET", template: null, routeOnly: true,
+  }])), ["ok", { notFound: true }]);
   const rejected = await withTimeout(application.request(["store", "content",
     "saveProjectSnapshot", ["user-1", "project-1", {
       files: [], config: { containerOptions: {

@@ -21,14 +21,26 @@ const config = createEdgeConfig({
 });
 
 function createTestResourcesEdgeHandler(options) {
-  const documentPlan = options.documentPlan || (async input => input.shellOnly
-    ? { accountShellPath: input.pathname }
-    : ({
+  const documentPlan = options.documentPlan || (async input => {
+    if (input.routeOnly) {
+      const direct = /^\/try\/([a-z0-9-]+)$/.exec(input.pathname)?.[1] || "";
+      const allowed = new Set(["article", "hello", "clock", "mark", "chart", "ball",
+        "stars", "blank", "slides"]);
+      if (direct) return allowed.has(direct)
+        ? { directTryTemplate: direct } : { notFound: true };
+      if (input.pathname === "/try" && typeof input.template === "string") {
+        return allowed.has(input.template)
+          ? { redirect: `/try/${input.template}` } : { notFound: true };
+      }
+      return { directTryTemplate: "" };
+    }
+    return input.shellOnly ? { accountShellPath: input.pathname } : ({
     requestedProject: null, dynamicProject: null, projectOwner: false,
     dynamicNamespace: null, managedOrganization: null, accountContent: null,
     account: null, publicProjects: input.publicApi ? [] : null, notifications: [],
       kind: "static", csrfActions: [], shellPath: input.pathname, focused: false,
-    }));
+    });
+  });
   return createResourcesEdgeHandler({ ...options, documentPlan,
     documentRenderer: renderResourcesDocument });
 }
