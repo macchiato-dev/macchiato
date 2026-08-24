@@ -16,26 +16,8 @@ import { createAccountSqlUseClient } from "../account-sql-policy.js";
 import { createOrganizationSqlUseClient } from "../organization-sql-policy.js";
 import { createContentSqlUseClient } from "../content-sql-policy.js";
 import { createMigrationSqlUseClient } from "../migration-sql-policy.js";
-import { runtimeGzipBase64,
-  serverBytecodeGzipBase64 } from "../generated/resources-bunny-machine-assets.ts";
-
-function compressedBytes(base64) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-  return bytes;
-}
-
-function decompressedResponse(base64, contentType = "application/octet-stream") {
-  const body = new Blob([compressedBytes(base64)]).stream()
-    .pipeThrough(new DecompressionStream("gzip"));
-  return new Response(body, { headers: { "content-type": contentType } });
-}
-
-async function embeddedBytecodes() {
-  return Promise.all(serverBytecodeGzipBase64.map(async base64 =>
-    new Uint8Array(await decompressedResponse(base64).arrayBuffer())));
-}
+import { compileEmbeddedServerRuntime,
+  loadEmbeddedServerBytecodes } from "../generated/resources-bunny-machine-assets.ts";
 
 // The server delays calling this factory until a database-backed route needs
 // it. Keeping construction synchronous and side-effect free lets the static
@@ -78,8 +60,8 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   }
   let runtimeModulePromise;
   function runtimeModule() {
-    if (!runtimeModulePromise) runtimeModulePromise = WebAssembly.compileStreaming(
-      decompressedResponse(runtimeGzipBase64, "application/wasm")).catch((error) => {
+    if (!runtimeModulePromise) runtimeModulePromise = compileEmbeddedServerRuntime()
+      .catch((error) => {
         runtimeModulePromise = null;
         throw error;
       });
@@ -128,7 +110,7 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
       const [module, bytecodes] = await Promise.all([
         runtimeModule(),
-        embeddedBytecodes(),
+        loadEmbeddedServerBytecodes(),
       ]);
       return createResourcesServerMachine(module, {
         bytecodes, databaseClient, readDatabaseClient: readOnlyDatabaseClient,

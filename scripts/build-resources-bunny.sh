@@ -16,6 +16,7 @@ npm ci --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
 npm run build --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
 node "$repo_root/packages/website/build-resources-server.js"
 node "$repo_root/scripts/embed-resources-bunny-machine.js"
+deno test "$repo_root/packages/website/test/bunny-embedded-machine.test.ts"
 node "$repo_root/packages/website/export-static.js" --out "$out_dir/site/$storage_prefix"
 mkdir -p "$out_dir/site/$storage_prefix/machines"
 for bytecode_set in resources-project-version; do
