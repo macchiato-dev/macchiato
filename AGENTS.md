@@ -23,8 +23,8 @@ When an existing Node-only package must be run, also check `node -v` first.
 
 Use Fedora-based images for development, build, and deployment containers.
 Podman is the primary container engine, including for deployment. Containerfiles
-must work with Podman and should use the Docker-compatible subset when CI or
-other users may invoke them with Docker. Do not introduce Debian- or
+must work with Podman and use the Docker-compatible subset needed for GitHub
+Actions, where Docker is the explicit compatibility exception. Do not introduce Debian- or
 Ubuntu-specific package management unless a narrowly scoped upstream build
 requires it and the exception is documented.
 
