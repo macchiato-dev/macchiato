@@ -8282,6 +8282,8 @@ static void js_parse_expect_semi(JSParseState *s)
 #define SKIP_HAS_FUNC_NAME     (1 << 1)
 #define SKIP_HAS_SEMI          (1 << 2) /* semicolon found inside the first level */
 
+static void js_parse_template_part(JSParseState *s, uint32_t pos);
+
 /* Skip parenthesis or blocks. The current token should be '(', '[' or
    '{'. 'func_name' can be JS_NULL. */
 static int js_skip_parens(JSParseState *s, JSValue *pfunc_name)
@@ -8308,9 +8310,24 @@ static int js_skip_parens(JSParseState *s, JSValue *pfunc_name)
             }
             state[level++] = c;
             break;
+        case TOK_TEMPLATE:
+            /* A substitution brace belongs to the template rather than the
+               surrounding function block. Keep scanning until its tail. */
+            if (!s->token.u.template_tail) {
+                if (level >= sizeof(state))
+                    js_parse_error(s, "too many nested blocks");
+                state[level++] = '`';
+            }
+            break;
         case ')':
         case ']':
         case '}':
+            if (s->token.val == '}' && state[level - 1] == '`') {
+                js_parse_template_part(s, s->buf_pos);
+                if (s->token.u.template_tail)
+                    level--;
+                break;
+            }
             c = state[--level];
             if (s->token.val != c)
                 js_parse_error(s, "expecting '%c'", c);
@@ -10560,7 +10577,7 @@ static int js_parse_unary(JSParseState *s, int state, int parse_flags)
         if (function->is_async && token_is_ident(s, "await")) {
             JSSourcePos source_pos = s->token.source_pos;
             next_token(s);
-            PARSE_CALL_SAVE1(s, 7, js_parse_unary, 0, source_pos);
+            PARSE_CALL_SAVE1(s, 7, js_parse_unary, parse_flags, source_pos);
             emit_op_pos(s, OP_await, source_pos);
             return PARSE_STATE_RET;
         }

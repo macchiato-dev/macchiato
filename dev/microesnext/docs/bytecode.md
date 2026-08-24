@@ -46,6 +46,24 @@ the same FIFO Promise job queue used by `then`. This preserves ordinary
 bytecode for everything on either side of an await while making suspension an
 explicit, auditable boundary.
 
+The saved frame contains the active stack range, the frame-pointer and
+program-counter offsets, the outer promise, and the live captured-variable
+references. A captured variable normally points directly into the active VM
+stack. At suspension it is detached to its heap value while retaining enough
+storage to be reattached; at resumption its signed stack-relative offset is
+used to reconnect it to the reconstructed frame. This is a stack-layout
+change, not merely an extra parser production.
+
+MicroESNext executes a resumed function on its ordinary compact VM stack. It
+does not leave every async invocation permanently resident there: while the
+function is suspended, its snapshot is an ordinary GC-visible value graph.
+Fulfillment restores the awaited operand and continues after `await`;
+rejection restores the same frame and enters its existing exception machinery
+as though the await expression had thrown.
+
+The bytecode format version is `2`. Version `1` readers cannot safely infer the
+new function metadata or opcode numbering and must reject these artifacts.
+
 Whenever the instruction table changes, tests must cover source execution,
 bytecode compilation/loading, stack-size analysis, dumping, relocation, and
 the 64-to-32-bit conversion path. An opcode working only in the interpreter is

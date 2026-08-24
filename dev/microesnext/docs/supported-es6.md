@@ -1,7 +1,20 @@
-# Supported ES6 subset
+# Supported modern JavaScript subset
 
-MicroESNext currently implements five newer primitives in native C. This is a
-focused compatibility surface, not a general claim of ES6 conformance.
+MicroESNext implements a focused set of newer primitives and syntax. This is
+not a general claim of ECMAScript conformance.
+
+## Syntax and async execution
+
+Arrow functions support expression and block bodies, lexical `this` and
+`arguments`, and rejection as constructors. Untagged template literals support
+cooked text, escapes, multiline text, and substitutions. Tagged templates are
+not included.
+
+Function declarations, function expressions, and arrows may be `async`.
+`await` accepts values, native promises, and thenables; always resumes through
+the Promise job queue; preserves locals and captured variables across repeated
+suspensions; and turns uncaught exceptions into promise rejections. Async
+methods and async generators are not part of this initial surface.
 
 ## Collections
 
