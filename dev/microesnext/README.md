@@ -24,10 +24,12 @@ npm test
 The build uses the local C compiler and writes generated executables under
 `build/`. Generated files are not committed.
 
+The precise implemented surface and its intentional boundaries are described
+in [Supported ES6 subset](docs/supported-es6.md).
+
 ## Source provenance
 
 `src/` began as an unmodified copy of MicroQuickJS commit
 `203d5bb79789bc47b74855d9207415dab71661a0`. Its MIT license is retained in
 `src/LICENSE`. Subsequent changes belong to the MicroESNext history and are
 kept readable and independently testable here.
-

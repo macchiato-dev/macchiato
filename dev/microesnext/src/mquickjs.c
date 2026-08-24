@@ -2679,7 +2679,7 @@ JSValue JS_NewPromise(JSContext *ctx)
 {
     JSValue data, reactions;
     JSObject *promise;
-    JSGCRef data_ref;
+    JSGCRef data_ref, reactions_ref;
     data = JS_NewArray(ctx, 3);
     if (JS_IsException(data))
         return data;
@@ -2689,11 +2689,13 @@ JSValue JS_NewPromise(JSContext *ctx)
         JS_POP_VALUE(ctx, data);
         return reactions;
     }
+    JS_PUSH_VALUE(ctx, reactions);
     JS_SetPropertyUint32(ctx, data, 0, JS_NewShortInt(0)); /* pending */
     JS_SetPropertyUint32(ctx, data, 1, JS_UNDEFINED);
     JS_SetPropertyUint32(ctx, data, 2, reactions);
     promise = JS_NewObjectProtoClass1(ctx, ctx->class_proto[JS_CLASS_PROMISE],
                                       JS_CLASS_PROMISE, sizeof(JSValue));
+    JS_POP_VALUE(ctx, reactions);
     JS_POP_VALUE(ctx, data);
     if (!promise)
         return JS_EXCEPTION;

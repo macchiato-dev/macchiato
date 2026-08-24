@@ -351,9 +351,9 @@ static JSValue new_resolver(JSContext *ctx, JSValue promise, int reject)
     params = JS_NewArray(ctx, 2);
     if (JS_IsException(params))
         return params;
+    JS_PUSH_VALUE(ctx, params);
     JS_SetPropertyUint32(ctx, params, 0, promise);
     JS_SetPropertyUint32(ctx, params, 1, JS_NewBool(reject));
-    JS_PUSH_VALUE(ctx, params);
     resolver = JS_NewCFunctionParams(ctx, JS_CFUNCTION_promise_resolver, params);
     JS_POP_VALUE(ctx, params);
     return resolver;
@@ -363,8 +363,10 @@ static int enqueue_reaction(JSContext *ctx, JSValue reaction,
                             JSValue value, int rejected)
 {
     JSValue job = JS_NewArray(ctx, 5);
+    JSGCRef job_ref;
     if (JS_IsException(job))
         return -1;
+    JS_PUSH_VALUE(ctx, job);
     JS_SetPropertyUint32(ctx, job, 0,
                          JS_GetPropertyUint32(ctx, reaction, 0));
     JS_SetPropertyUint32(ctx, job, 1,
@@ -373,11 +375,15 @@ static int enqueue_reaction(JSContext *ctx, JSValue reaction,
                          JS_GetPropertyUint32(ctx, reaction, 2));
     JS_SetPropertyUint32(ctx, job, 3, value);
     JS_SetPropertyUint32(ctx, job, 4, JS_NewBool(rejected));
-    return JS_EnqueuePromiseJob(ctx, job);
+    {
+        int status = JS_EnqueuePromiseJob(ctx, job);
+        JS_POP_VALUE(ctx, job);
+        return status;
+    }
 }
 
-static int settle_raw(JSContext *ctx, JSValue promise,
-                      JSValue value, int rejected)
+static int settle_raw_inner(JSContext *ctx, JSValue promise,
+                            JSValue value, int rejected)
 {
     JSValue data, reactions;
     JSGCRef data_ref, reactions_ref;
@@ -416,10 +422,23 @@ static int settle_raw(JSContext *ctx, JSValue promise,
     return 0;
 }
 
+static int settle_raw(JSContext *ctx, JSValue promise,
+                      JSValue value, int rejected)
+{
+    JSGCRef promise_ref, value_ref;
+    int status;
+    JS_PUSH_VALUE(ctx, promise);
+    JS_PUSH_VALUE(ctx, value);
+    status = settle_raw_inner(ctx, promise, value, rejected);
+    JS_POP_VALUE(ctx, value);
+    JS_POP_VALUE(ctx, promise);
+    return status;
+}
+
 static JSValue promise_then_native(JSContext *ctx, JSValue promise,
                                    JSValue fulfilled, JSValue rejected);
 
-static int resolve_promise(JSContext *ctx, JSValue promise, JSValue value)
+static int resolve_promise_inner(JSContext *ctx, JSValue promise, JSValue value)
 {
     JSValue then, resolve, reject, result;
     JSGCRef value_ref, resolve_ref, reject_ref;
@@ -490,6 +509,18 @@ static int resolve_promise(JSContext *ctx, JSValue promise, JSValue value)
     if (JS_IsException(result))
         return settle_raw(ctx, promise, JS_GetException(ctx), 1);
     return 0;
+}
+
+static int resolve_promise(JSContext *ctx, JSValue promise, JSValue value)
+{
+    JSGCRef promise_ref, value_ref;
+    int status;
+    JS_PUSH_VALUE(ctx, promise);
+    JS_PUSH_VALUE(ctx, value);
+    status = resolve_promise_inner(ctx, promise, value);
+    JS_POP_VALUE(ctx, value);
+    JS_POP_VALUE(ctx, promise);
+    return status;
 }
 
 static JSValue promise_then_native(JSContext *ctx, JSValue promise,
@@ -641,12 +672,16 @@ static JSValue promise_array_method(JSContext *ctx, int argc, JSValue *argv,
     }
     if (!race && length == 0) {
         JSValue empty = JS_NewArray(ctx, 0);
+        JSGCRef empty_ref;
+        JS_PUSH_VALUE(ctx, empty);
         resolve_promise(ctx, aggregate, empty);
+        JS_POP_VALUE(ctx, empty);
     } else if (!race) {
         JSValue results = JS_NewArray(ctx, length);
-        JSValue counter = JS_NewArray(ctx, 1);
+        JSValue counter;
         JSGCRef results_ref, counter_ref;
         JS_PUSH_VALUE(ctx, results);
+        counter = JS_NewArray(ctx, 1);
         JS_PUSH_VALUE(ctx, counter);
         JS_SetPropertyUint32(ctx, counter, 0, JS_NewInt32(ctx, (int32_t)length));
         for (index = 0; index < length; index++) {
