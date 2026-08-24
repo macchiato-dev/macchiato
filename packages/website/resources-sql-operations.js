@@ -1,6 +1,10 @@
 import { ACCOUNT_QUERIES } from "@macchiato-dev/hub/accounts";
 import { CONTENT_QUERIES } from "@macchiato-dev/hub/content";
 import { ORGANIZATION_QUERIES } from "@macchiato-dev/hub/organizations";
+import { accountSqlOperations } from "./account-sql-policy.js";
+import { contentSqlOperations } from "./content-sql-policy.js";
+import { organizationSqlOperations } from "./organization-sql-policy.js";
+import { MIGRATION_SQL_OPERATIONS } from "./migration-sql-policy.js";
 
 // This catalog is build input for the policy machine. It is deliberately not
 // imported by the deployed host controller.
@@ -73,3 +77,14 @@ export const RESOURCES_SQL_OPERATIONS = {
   "organization.change-role": { kind: "write", sql: ORGANIZATION_QUERIES.changeRole,
     parameters: ["role", "updated-at", "organization-id", "user-id"], result: "affected" },
 };
+
+const storeOperations = [accountSqlOperations, contentSqlOperations,
+  organizationSqlOperations, MIGRATION_SQL_OPERATIONS];
+
+export const RESOURCES_STORE_SQL_OPERATIONS = Object.freeze(Object.fromEntries(
+  storeOperations.flatMap(operations => Object.entries(operations).map(([name, operation]) => [
+    operation.sql,
+    { name, kind: operation.kind, parameterCount: operation.parameterCount,
+      maxRows: operation.maxRows || 1_000 },
+  ])),
+));

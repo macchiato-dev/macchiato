@@ -12,10 +12,6 @@ import { createEdgeConfig, storageRequest } from "../edge/models.js";
 import { createResourcesServerMachine } from "../resources-server-machine.js";
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
-import { createAccountSqlUseClient } from "../account-sql-policy.js";
-import { createOrganizationSqlUseClient } from "../organization-sql-policy.js";
-import { createContentSqlUseClient } from "../content-sql-policy.js";
-import { createMigrationSqlUseClient } from "../migration-sql-policy.js";
 import { decodeResourceArtifact } from "../../wasm-web-container/src/resource-bundle.js";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 
@@ -35,10 +31,6 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     url: env.BUNNY_DATABASE_URL,
     authToken: env.BUNNY_DATABASE_READ_ONLY_AUTH_TOKEN,
   });
-  const accountStore = createAccountStore(createAccountSqlUseClient({
-    read: readOnlyDatabaseClient,
-    write: databaseClient,
-  }));
   let backendAssetsPromise;
   function backendAssets() {
     if (!backendAssetsPromise) backendAssetsPromise = (async () => {
@@ -84,6 +76,65 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       });
     return runtimeModulePromise;
   }
+  const databaseDevice = async (operation, input) => {
+    if (!Array.isArray(input)) throw new Error("Database input is invalid");
+    if (operation === "batch") {
+      const result = await databaseClient.batch(input.map(([sql, args]) => ({ sql, args })));
+      return result.map(item => Number(item.rowsAffected) || 0);
+    }
+    if ((operation !== "read" && operation !== "write") || input.length !== 2 ||
+        typeof input[0] !== "string" || !Array.isArray(input[1])) {
+      throw new Error("Database operation is not available");
+    }
+    const client = operation === "read" ? readOnlyDatabaseClient : databaseClient;
+    const result = await client.execute({ sql: input[0], args: input[1] });
+    const columns = Array.from(result.columns || [], String);
+    const rows = Array.from(result.rows || [], row => columns.map((column) => {
+      const value = row[column];
+      return typeof value === "bigint" ? Number(value) : value;
+    }));
+    return [columns, rows, Number(result.rowsAffected) || 0];
+  };
+  let policyMachinePromise;
+  function policyMachine() {
+    if (!policyMachinePromise) policyMachinePromise = Promise.all([
+      runtimeModule(), bytecodeSet("resources-policy"),
+    ]).then(([module, bytecodes]) => new ServerMachineController(module, {
+      bytecodes, devices: { database: databaseDevice },
+    })).catch((error) => {
+      policyMachinePromise = null;
+      throw error;
+    });
+    return policyMachinePromise;
+  }
+  async function policyRequest(input) {
+    const result = await (await policyMachine()).request(input);
+    if (!Array.isArray(result) || result[0] !== "ok") {
+      throw new Error(Array.isArray(result) && typeof result[2] === "string"
+        ? result[2] : "SQL policy machine rejected the request");
+    }
+    return result[1];
+  }
+  function compatibleResult(result) {
+    const [columns, values, rowsAffected] = result;
+    const rows = values.map(row => Object.fromEntries(
+      columns.map((column, index) => [column, row[index]])));
+    return { columns, rows, rowsAffected, lastInsertRowid: null };
+  }
+  const policyDatabaseClient = Object.freeze({
+    async execute(query) {
+      return compatibleResult(await policyRequest([
+        "database-client", "execute", [query.sql, query.args || []],
+      ]));
+    },
+    async batch(queries) {
+      const affected = await policyRequest(["database-client", "batch",
+        queries.map(query => [query.sql, query.args || []])]);
+      return affected.map(rowsAffected => ({ columns: [], rows: [],
+        rowsAffected, lastInsertRowid: null }));
+    },
+  });
+  const accountStore = createAccountStore(policyDatabaseClient);
   let projectHistoryAssetsPromise;
   function projectHistoryAssets() {
     if (!projectHistoryAssetsPromise) {
@@ -109,61 +160,21 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
     return projectHistoryAssets().then(({ module, bytecodes }) =>
       createProjectSnapshotValidator(module, bytecodes)(snapshot));
   }
-  const contentStore = createContentStore(createContentSqlUseClient({
-    read: readOnlyDatabaseClient,
-    write: databaseClient,
-  }), { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
+  const contentStore = createContentStore(policyDatabaseClient,
+    { versionPlanner: projectVersionPlanner, snapshotDiffer: projectSnapshotDiffer,
     snapshotValidator: projectSnapshotValidator });
-  const organizationStore = createOrganizationStore(createOrganizationSqlUseClient({
-    read: readOnlyDatabaseClient,
-    write: databaseClient,
-  }));
-  const migrations = createMigrationRunner(createMigrationSqlUseClient({
-    read: readOnlyDatabaseClient,
-    write: databaseClient,
-  }));
+  const organizationStore = createOrganizationStore(policyDatabaseClient);
+  const migrations = createMigrationRunner(policyDatabaseClient);
   let serverMachinePromise;
   function serverMachine() {
     if (!serverMachinePromise) serverMachinePromise = (async () => {
-      const [module, bytecodes, policyBytecodes] = await Promise.all([
+      const [module, bytecodes] = await Promise.all([
         runtimeModule(),
         bytecodeSet("resources-server"),
-        bytecodeSet("resources-policy"),
       ]);
-      const database = async (operation, input) => {
-        if (!Array.isArray(input)) throw new Error("Database input is invalid");
-        if (operation === "batch") {
-          const result = await databaseClient.batch(input.map(([sql, args]) => ({ sql, args })));
-          return result.map(item => Number(item.rowsAffected) || 0);
-        }
-        if ((operation !== "read" && operation !== "write") || input.length !== 2 ||
-            typeof input[0] !== "string" || !Array.isArray(input[1])) {
-          throw new Error("Database operation is not available");
-        }
-        const client = operation === "read" ? readOnlyDatabaseClient : databaseClient;
-        const result = await client.execute({ sql: input[0], args: input[1] });
-        const columns = Array.from(result.columns || [], String);
-        const rows = Array.from(result.rows || [], row => columns.map((column) => {
-          const value = row[column];
-          return typeof value === "bigint" ? Number(value) : value;
-        }));
-        return [columns, rows, Number(result.rowsAffected) || 0];
-      };
-      const policy = new ServerMachineController(module, {
-        bytecodes: policyBytecodes,
-        devices: { database },
-      });
-      const sqlDevice = async (operation, input) => {
-        const result = await policy.request(["sql", operation, input]);
-        if (!Array.isArray(result) || result[0] !== "ok") {
-          throw new Error(Array.isArray(result) && typeof result[2] === "string"
-            ? result[2] : "SQL policy machine rejected the request");
-        }
-        return result[1];
-      };
       return createResourcesServerMachine(module, {
         bytecodes,
-        sqlDevice,
+        sqlDevice: (operation, input) => policyRequest(["sql", operation, input]),
         authConfig, contentStore,
       });
     })().catch((error) => {
