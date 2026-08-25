@@ -305,10 +305,11 @@ thenable resolving to another separately scheduled thenable. Minimal,
 Promise-storage, native-resolution, and receiver-only artifacts remain
 byte-for-byte unchanged.
 
-The 45,893-byte (16,224 gzip) async-thenable composition runs an async closure
-that returns an ordinary object thenable, observes its outer Promise remain
-pending, executes the separately queued assimilation job, and verifies final
-fulfillment. Refactoring async completion behind its generic static resolver
+The 45,893-byte (16,224 gzip) async-thenable composition runs async closures
+that return and await ordinary object thenables. Each outer Promise remains
+pending until the separately queued assimilation job runs; an awaited object
+settles an intermediate Promise whose reaction restores the guest
+continuation. Refactoring async resolution behind its generic static policy
 reduced the isolated async-functions artifact by 72 raw bytes rather than
 adding dispatch overhead. The facade dependency check proves that ordinary
 `async-functions` includes neither `microesnext-thenables` nor

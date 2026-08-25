@@ -114,10 +114,12 @@ not link to that C implementation.
   caller-supplied frame stack connects nested calls to outer promises; caller
   suspension and promise orchestration remain absent from ordinary function
   builds.
-- `microesnext-async-thenables` supplies a statically selected async completion
-  policy that queues object assimilation. The ordinary async driver remains
-  monomorphized with its smaller native-Promise resolver when this composition
-  is omitted.
+- `microesnext-async-thenables` supplies a statically selected policy for
+  object assimilation at both async return and `await`. Object operands use a
+  small intermediate Promise and the bounded thenable-job queue; primitives
+  and native Promises retain the ordinary path. The ordinary async driver
+  remains monomorphized with its smaller native-Promise resolver when this
+  composition is omitted.
 - `microesnext` is a small facade; its `async` and `async-functions` features
   are disabled by default.
 

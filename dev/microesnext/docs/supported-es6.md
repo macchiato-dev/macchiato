@@ -28,11 +28,10 @@ engine Promise resumes through the Promise job queue; synchronous throws
 reject the outer Promise. Rejections after suspension propagate through nested
 awaits and enter restored guest `catch` handlers. Named async expressions
 retain a private self-binding through the removable recursive-async
-composition. An optional async completion policy assimilates an object
-thenable returned by an async function through the bounded thenable-job queue.
-Assimilating a thenable used as the operand of `await`, source-visible Promise
-APIs, async methods, and async generators remain compiler/runtime work rather
-than implied support.
+composition. An optional async resolution policy assimilates object thenables
+returned by an async function or used as the operand of `await` through the
+bounded thenable-job queue. Source-visible Promise APIs, async methods, and
+async generators remain compiler/runtime work rather than implied support.
 
 The current Rust compiler slice also emits function declarations, anonymous
 function expressions, single- or parenthesized-parameter arrows, postfix calls,
