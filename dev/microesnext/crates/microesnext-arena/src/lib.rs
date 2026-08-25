@@ -387,6 +387,32 @@ impl<'memory> Arena<'memory> {
         Ok(())
     }
 
+    /// Insert one value at a stable bottom-relative position. Frame setup uses
+    /// this once to put metadata below arguments; ordinary operand operations
+    /// remain push/pop and pay no insertion cost.
+    pub fn insert_stack_value_from_bottom(
+        &mut self,
+        index: usize,
+        value: Value,
+    ) -> Result<(), Error> {
+        let length = self.stack_len();
+        if index > length {
+            return Err(Error::StackUnderflow);
+        }
+        if self.stack_start == self.heap_end {
+            return Err(Error::OutOfMemory);
+        }
+        if index == length {
+            return self.push(value);
+        }
+        let insertion = self.words.len() - 1 - index;
+        self.words
+            .copy_within(self.stack_start..=insertion, self.stack_start - 1);
+        self.stack_start -= 1;
+        self.words[insertion] = value.raw();
+        Ok(())
+    }
+
     pub fn clear_stack(&mut self) {
         self.stack_start = self.words.len();
     }
@@ -1010,6 +1036,22 @@ mod tests {
         assert_eq!(arena.stack_value_from_bottom(0).unwrap().as_i30(), Some(4));
         assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(10));
         assert_eq!(arena.pop(), Ok(Value::TRUE));
+    }
+
+    #[test]
+    fn inserts_frame_metadata_below_existing_arguments() {
+        let mut memory = [0; 16];
+        let mut arena = Arena::new(&mut memory);
+        arena.push(Value::from_i30(10).unwrap()).unwrap();
+        arena.push(Value::from_i30(20).unwrap()).unwrap();
+        arena.push(Value::from_i30(30).unwrap()).unwrap();
+        arena
+            .insert_stack_value_from_bottom(2, Value::from_i30(2).unwrap())
+            .unwrap();
+        assert_eq!(arena.stack_value_from_bottom(0).unwrap().as_i30(), Some(10));
+        assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(20));
+        assert_eq!(arena.stack_value_from_bottom(2).unwrap().as_i30(), Some(2));
+        assert_eq!(arena.stack_value_from_bottom(3).unwrap().as_i30(), Some(30));
     }
 
     #[test]
