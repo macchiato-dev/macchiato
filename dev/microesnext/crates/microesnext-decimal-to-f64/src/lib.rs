@@ -8,6 +8,7 @@
 const MAX_DIGITS: usize = 768;
 const MAX_SHIFT: usize = 60;
 const MAX_SHIFT_DIGITS: usize = 19;
+const MAX_EXACT_INTEGER: u64 = 1_u64 << 53;
 const EXACT_POWERS_OF_TEN: [f64; 23] = [
     1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16,
     1e17, 1e18, 1e19, 1e20, 1e21, 1e22,
@@ -306,9 +307,10 @@ fn fast_path(mut source: &[u8]) -> Option<f64> {
                 }
                 if significant_digits != 0 || byte != b'0' {
                     significant_digits += 1;
-                    if significant_digits > 15 {
+                    if significant_digits > 19 {
                         return None;
                     }
+                    // Nineteen decimal digits are always representable by u64.
                     mantissa = mantissa * 10 + (byte - b'0') as u64;
                 }
                 index += 1;
@@ -354,7 +356,14 @@ fn fast_path(mut source: &[u8]) -> Option<f64> {
     if index != source.len() {
         return None;
     }
-    let exponent = exponent - fractional_digits;
+    let mut exponent = exponent - fractional_digits;
+    while mantissa != 0 && mantissa % 10 == 0 {
+        mantissa /= 10;
+        exponent += 1;
+    }
+    if mantissa > MAX_EXACT_INTEGER {
+        return None;
+    }
     let power = *EXACT_POWERS_OF_TEN.get(exponent.unsigned_abs() as usize)?;
     let value = if exponent < 0 {
         mantissa as f64 / power
@@ -397,7 +406,17 @@ mod tests {
 
     #[test]
     fn uses_the_bounded_exact_fast_path_only_for_common_inputs() {
-        for source in ["0", "-0", ".5", "1.", "123.5", "1e22", "1e-22"] {
+        for source in [
+            "0",
+            "-0",
+            ".5",
+            "1.",
+            "123.5",
+            "1234567890123456",
+            "9007199254740992.0",
+            "1e22",
+            "1e-22",
+        ] {
             let expected = source.parse::<f64>().unwrap();
             assert_eq!(
                 fast_path(source.as_bytes()).unwrap().to_bits(),
@@ -407,7 +426,7 @@ mod tests {
         }
         for source in [
             "9007199254740993",
-            "1234567890123456",
+            "12345678901234567890",
             "1e23",
             "1e-23",
             "1e",
