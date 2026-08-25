@@ -168,6 +168,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "objects",
         feature = "functions",
         feature = "function-arguments",
+        feature = "integer-operations",
         feature = "locals",
         feature = "numbers",
         feature = "exceptions",
@@ -503,6 +504,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "integer-operations")]
+            Opcode::SubtractI30 => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_integer_operations::subtract(left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "integer-operations")]
+            Opcode::MultiplyI30 => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_integer_operations::multiply(left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -567,6 +584,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "integer-operations",
         feature = "locals",
         feature = "numbers",
         feature = "exceptions",

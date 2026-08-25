@@ -231,6 +231,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-integer-operations"
+version = "0.0.0"
+dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-iterable-protocol"
 version = "0.0.0"
 dependencies = [
@@ -417,6 +424,7 @@ dependencies = [
  "microesnext-environments",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-integer-operations",
  "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",

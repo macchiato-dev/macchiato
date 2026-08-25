@@ -92,6 +92,10 @@ pub enum Opcode {
     LoadThis = 80,
     #[cfg(feature = "receivers")]
     ReturnReceiverLocals = 81,
+    #[cfg(feature = "integer-operations")]
+    SubtractI30 = 82,
+    #[cfg(feature = "integer-operations")]
+    MultiplyI30 = 83,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -175,6 +179,10 @@ impl TryFrom<u8> for Opcode {
             80 => Ok(Self::LoadThis),
             #[cfg(feature = "receivers")]
             81 => Ok(Self::ReturnReceiverLocals),
+            #[cfg(feature = "integer-operations")]
+            82 => Ok(Self::SubtractI30),
+            #[cfg(feature = "integer-operations")]
+            83 => Ok(Self::MultiplyI30),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -230,6 +238,20 @@ mod tests {
     #[test]
     fn immediate_opcode_is_part_of_every_build() {
         assert_eq!(Opcode::try_from(23), Ok(Opcode::ConstImmediate));
+    }
+
+    #[cfg(feature = "integer-operations")]
+    #[test]
+    fn enabled_integer_operation_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(82), Ok(Opcode::SubtractI30));
+        assert_eq!(Opcode::try_from(83), Ok(Opcode::MultiplyI30));
+    }
+
+    #[cfg(not(feature = "integer-operations"))]
+    #[test]
+    fn omitted_integer_operation_opcodes_are_invalid() {
+        assert!(Opcode::try_from(82).is_err());
+        assert!(Opcode::try_from(83).is_err());
     }
 
     #[cfg(feature = "locals")]

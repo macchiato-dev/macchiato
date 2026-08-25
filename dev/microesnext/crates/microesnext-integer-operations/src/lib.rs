@@ -38,6 +38,9 @@ mod tests {
     fn rejects_non_integers_and_i30_overflow() {
         assert_eq!(multiply(Value::TRUE, Value::TRUE), Err(Error::Type));
         let maximum = Value::from_i30((1 << 29) - 1).unwrap();
-        assert_eq!(multiply(maximum, Value::from_i30(2).unwrap()), Err(Error::Type));
+        assert_eq!(
+            multiply(maximum, Value::from_i30(2).unwrap()),
+            Err(Error::Type)
+        );
     }
 }

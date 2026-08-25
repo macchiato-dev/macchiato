@@ -33,6 +33,10 @@ function-arguments = [
   "dep:microesnext-parameters",
   "microesnext-bytecode/function-arguments",
 ]
+integer-operations = [
+  "dep:microesnext-integer-operations",
+  "microesnext-bytecode/integer-operations",
+]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-bytecode/numbers",
@@ -73,6 +77,7 @@ microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
+microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
