@@ -4,14 +4,23 @@ use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
 pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    let value = microesnext_number_coercion::to_number(arena, value)?;
-    if value.as_i30().is_some_and(|value| value != 0) {
-        if let Ok(value) = microesnext_integer_negation::negate(value) {
-            return Ok(value);
+    if let Some(number) = value.as_i30() {
+        if number != 0 {
+            if let Ok(value) = microesnext_integer_negation::negate(value) {
+                return Ok(value);
+            }
+        }
+        return microesnext_numbers::new(arena, -(number as f64));
+    }
+    let number = microesnext_number_coercion::coerce(arena, value)?;
+    match number {
+        microesnext_number_coercion::PrimitiveNumber::I30(value) => {
+            microesnext_numbers::new(arena, -(value as f64))
+        }
+        microesnext_number_coercion::PrimitiveNumber::F64(value) => {
+            microesnext_numbers::new(arena, -value)
         }
     }
-    let result = -microesnext_numbers::get(arena, value)?;
-    microesnext_numbers::new(arena, result)
 }
 
 #[cfg(test)]
