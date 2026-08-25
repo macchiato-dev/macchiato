@@ -229,6 +229,7 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-callable-objects",
+ "microesnext-class-constructors",
  "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",

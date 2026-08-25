@@ -7,14 +7,23 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+class-constructors = [
+  "dep:microesnext-class-constructors",
+  "microesnext-objects/class-constructors",
+]
+
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-callable-objects.workspace = true
+microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-objects.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-functions.workspace = true
+microesnext-class-constructors.workspace = true
 
 [lib]
 path = "src/lib.rs"

@@ -12,9 +12,7 @@ pub fn prepare(
     constructor: Value,
     prototype_key: Value,
 ) -> Result<(Value, Value), Error> {
-    if !microesnext_callable_objects::is_callable_object(arena, constructor) {
-        return Err(Error::Type);
-    }
+    constructor_callable(arena, constructor)?;
     let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
     if !microesnext_objects::is_object(arena, prototype) {
         return Err(Error::Type);
@@ -27,8 +25,22 @@ pub fn prepare(
         &mut [roots[1], Value::from_ref(properties)],
         &mut roots,
     )?;
-    let callable = microesnext_callable_objects::callable(arena, roots[0])?;
+    let callable = constructor_callable(arena, roots[0])?;
     Ok((callable, Value::from_ref(receiver)))
+}
+
+#[cfg(not(feature = "class-constructors"))]
+fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
+    microesnext_callable_objects::callable(arena, constructor)
+}
+
+#[cfg(feature = "class-constructors")]
+fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
+    if microesnext_class_constructors::is_class_constructor(arena, constructor) {
+        microesnext_class_constructors::callable(arena, constructor)
+    } else {
+        microesnext_callable_objects::callable(arena, constructor)
+    }
 }
 
 /// Apply the ordinary constructor return rule without allocating.
@@ -70,5 +82,36 @@ mod tests {
         );
         assert_eq!(select(&arena, receiver, Value::UNDEFINED), receiver);
         assert_eq!(select(&arena, receiver, prototype), prototype);
+    }
+
+    #[cfg(feature = "class-constructors")]
+    #[test]
+    fn prepares_a_class_without_making_it_an_ordinary_callable() {
+        let mut memory = [0; 224];
+        let mut arena = Arena::new(&mut memory);
+        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let prototype_key = Value::from_i30(1).unwrap();
+        let constructor_key = Value::from_i30(2).unwrap();
+        let constructor = microesnext_class_constructors::new(
+            &mut arena,
+            closure,
+            Value::NULL,
+            Value::NULL,
+            prototype_key,
+            constructor_key,
+        )
+        .unwrap();
+        let (callable, receiver) = prepare(&mut arena, constructor, prototype_key).unwrap();
+        let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
+
+        assert!(microesnext_functions::is_function(&arena, callable));
+        assert_eq!(
+            microesnext_objects::prototype(&arena, receiver),
+            Ok(prototype)
+        );
+        assert_eq!(
+            microesnext_callable_objects::callable(&arena, constructor),
+            Err(Error::Type)
+        );
     }
 }
