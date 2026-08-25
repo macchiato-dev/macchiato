@@ -323,6 +323,14 @@ impl<'memory> Arena<'memory> {
         self.stack_start = self.words.len();
     }
 
+    pub fn truncate_stack(&mut self, length: usize) -> Result<(), Error> {
+        if length > self.stack_len() {
+            return Err(Error::StackUnderflow);
+        }
+        self.stack_start = self.words.len() - length;
+        Ok(())
+    }
+
     pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
         let slot = self.root_free_head.ok_or(Error::OutOfMemory)?;
         let next = self.words[self.root_values_start() + slot];
@@ -385,9 +393,10 @@ impl<'memory> Arena<'memory> {
         &mut self,
         pc: u32,
         frame_depth: Option<usize>,
+        handler_depth: Option<usize>,
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
-        let length = HEADER_WORDS + 2 + self.stack_len();
+        let length = HEADER_WORDS + 3 + self.stack_len();
         if self.heap_end + length > self.stack_start {
             self.compact(roots)?;
         }
@@ -403,14 +412,21 @@ impl<'memory> Arena<'memory> {
         self.words[start + HEADER_WORDS + 1] = Value::from_i30(frame_depth)
             .ok_or(Error::BadBytecode)?
             .raw();
+        let handler_depth = handler_depth.map_or(-1, |depth| depth as i32);
+        self.words[start + HEADER_WORDS + 2] = Value::from_i30(handler_depth)
+            .ok_or(Error::BadBytecode)?
+            .raw();
         let source = self.stack_start..self.words.len();
-        self.words.copy_within(source, start + HEADER_WORDS + 2);
+        self.words.copy_within(source, start + HEADER_WORDS + 3);
         self.heap_end += length;
         self.clear_stack();
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
-    pub fn resume_stack(&mut self, continuation: HeapRef) -> Result<(u32, Option<usize>), Error> {
+    pub fn resume_stack(
+        &mut self,
+        continuation: HeapRef,
+    ) -> Result<(u32, Option<usize>, Option<usize>), Error> {
         if self.kind(continuation)? != BlockKind::Continuation {
             return Err(Error::Type);
         }
@@ -423,14 +439,18 @@ impl<'memory> Arena<'memory> {
             .as_i30()
             .ok_or(Error::BadBytecode)?;
         let frame_depth = (frame_depth >= 0).then_some(frame_depth as usize);
-        let stack_length = length - HEADER_WORDS - 2;
+        let handler_depth = Value::from_raw(self.words[start + HEADER_WORDS + 2])
+            .as_i30()
+            .ok_or(Error::BadBytecode)?;
+        let handler_depth = (handler_depth >= 0).then_some(handler_depth as usize);
+        let stack_length = length - HEADER_WORDS - 3;
         if self.heap_end + stack_length > self.words.len() {
             return Err(Error::OutOfMemory);
         }
         self.stack_start = self.words.len() - stack_length;
-        let source = start + HEADER_WORDS + 2..start + length;
+        let source = start + HEADER_WORDS + 3..start + length;
         self.words.copy_within(source, self.stack_start);
-        Ok((pc, frame_depth))
+        Ok((pc, frame_depth, handler_depth))
     }
 
     pub fn values(&self, reference: HeapRef) -> Result<&[u32], Error> {
@@ -884,9 +904,9 @@ mod tests {
         let mut arena = Arena::new(&mut memory);
         arena.push(Value::from_i30(4).unwrap()).unwrap();
         arena.push(Value::from_i30(9).unwrap()).unwrap();
-        let continuation = arena.suspend_stack(17, None, &mut []).unwrap();
+        let continuation = arena.suspend_stack(17, None, None, &mut []).unwrap();
         assert_eq!(arena.stack_len(), 0);
-        assert_eq!(arena.resume_stack(continuation).unwrap(), (17, None));
+        assert_eq!(arena.resume_stack(continuation).unwrap(), (17, None, None));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(9));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(4));
     }
@@ -913,14 +933,19 @@ mod tests {
         arena.push(Value::from_i30(5).unwrap()).unwrap();
         let mut roots = [Value::from_ref(live)];
 
-        let continuation = arena.suspend_stack(11, Some(2), &mut roots).unwrap();
+        let continuation = arena
+            .suspend_stack(11, Some(2), Some(4), &mut roots)
+            .unwrap();
 
         assert_eq!(roots[0].as_ref().unwrap().word_index(), 1);
         assert_eq!(
             arena.values(roots[0].as_ref().unwrap()).unwrap(),
             &[Value::TRUE.raw()]
         );
-        assert_eq!(arena.resume_stack(continuation).unwrap(), (11, Some(2)));
+        assert_eq!(
+            arena.resume_stack(continuation).unwrap(),
+            (11, Some(2), Some(4))
+        );
         assert_eq!(arena.pop().unwrap().as_i30(), Some(5));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(3));
     }

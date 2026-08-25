@@ -24,6 +24,32 @@ pub extern "C" fn core_probe() -> i32 {
     }
 }
 
+#[cfg(all(feature = "exceptions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn exceptions_probe() -> i32 {
+    let code = [
+        Opcode::Try as u8,
+        12,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Throw as u8,
+        Opcode::EndTry as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut core = Core::new(&code, &mut memory, 0);
+    match core.run() {
+        Ok(CoreOutcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
 #[cfg(all(feature = "arrays", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn arrays_probe() -> usize {

@@ -2,6 +2,7 @@ const configurations = [
   ["minimal", ""],
   ["arrays", "arrays"],
   ["collections", "collections"],
+  ["exceptions", "exceptions"],
   ["functions", "functions"],
   ["objects", "objects"],
   ["promises", "promises"],

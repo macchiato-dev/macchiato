@@ -29,6 +29,15 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
+- Guest exception handlers are explicit records in the guest stack. A throw
+  restores the recorded operand and call-frame depths without unwinding the
+  native Rust stack. Suspension snapshots the active handler depth, so a
+  rejected `await` follows exactly the same handler chain as a synchronous
+  throw.
+- Wasm exception references are an optional foreign-call optimization, not the
+  representation of a JavaScript exception. A baseline artifact must remain
+  usable by engines that cannot validate `exnref`; a separately selected build
+  may catch and rethrow opaque host or foreign-Wasm exceptions unchanged.
 - Scheduler and host references use O(1), generation-checked root slots. Raw
   moving heap offsets are not exposed as durable asynchronous handles.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;

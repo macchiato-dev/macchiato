@@ -40,6 +40,12 @@ impl Builder {
         self
     }
 
+    pub fn try_at(mut self, catch_offset: u32) -> Self {
+        self.code.push(Opcode::Try as u8);
+        self.code.extend_from_slice(&catch_offset.to_le_bytes());
+        self
+    }
+
     pub fn string(mut self, bytes: &[u8]) -> Self {
         assert!(u16::try_from(bytes.len()).is_ok());
         self.output_string(bytes);

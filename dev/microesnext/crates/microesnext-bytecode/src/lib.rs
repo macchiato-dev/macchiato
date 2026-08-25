@@ -21,6 +21,8 @@ pub enum Opcode {
     NewArray = 14,
     GetIndex = 15,
     SetIndex = 16,
+    Try = 17,
+    EndTry = 18,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -44,6 +46,8 @@ impl TryFrom<u8> for Opcode {
             14 => Ok(Self::NewArray),
             15 => Ok(Self::GetIndex),
             16 => Ok(Self::SetIndex),
+            17 => Ok(Self::Try),
+            18 => Ok(Self::EndTry),
             _ => Err(Error::BadBytecode),
         }
     }

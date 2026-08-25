@@ -50,7 +50,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let mut arena = Arena::with_root_capacity(memory, root_capacity);
         let atoms = Atoms::new(&mut arena)?;
         Ok(Self {
-            core: Core::from_parts(arena, code, 0, None),
+            core: Core::from_parts(arena, code, 0, None, None),
             atoms: Some(atoms),
         })
     }
@@ -133,6 +133,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
                     let value = atoms.intern(self.core.arena_mut(), bytes)?;
                     self.core.arena_mut().push(value)?;
+                    Ok(None)
                 }
             }
             Opcode::NewObject => {
@@ -142,6 +143,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 {
                     let object = new_object(self.core.arena_mut(), Value::NULL)?;
                     self.core.arena_mut().push(object)?;
+                    Ok(None)
                 }
             }
             Opcode::GetProperty => {
@@ -153,6 +155,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let object = self.core.arena_mut().pop()?;
                     let value = get(self.core.arena(), object, key)?;
                     self.core.arena_mut().push(value)?;
+                    Ok(None)
                 }
             }
             Opcode::SetProperty => {
@@ -165,6 +168,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let object = self.core.arena_mut().pop()?;
                     let object = set(self.core.arena_mut(), object, key, value)?;
                     self.core.arena_mut().push(object)?;
+                    Ok(None)
                 }
             }
             Opcode::Closure => {
@@ -179,6 +183,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }
                     let closure = capture_stack(self.core.arena_mut(), target, capture_count)?;
                     self.core.arena_mut().push(closure)?;
+                    Ok(None)
                 }
             }
             Opcode::CallValue => {
@@ -189,6 +194,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let function = self.core.arena_mut().pop()?;
                     let target = entry(self.core.arena(), function)?;
                     self.core.enter_call(function, target)?;
+                    Ok(None)
                 }
             }
             Opcode::LoadCapture => {
@@ -202,6 +208,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let function = self.core.arena().stack_value(function_index)?;
                     let value = capture(self.core.arena(), function, index)?;
                     self.core.arena_mut().push(value)?;
+                    Ok(None)
                 }
             }
             Opcode::NewArray => {
@@ -211,6 +218,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 {
                     let array = new_array(self.core.arena_mut())?;
                     self.core.arena_mut().push(array)?;
+                    Ok(None)
                 }
             }
             Opcode::GetIndex => {
@@ -228,6 +236,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let array = self.core.arena_mut().pop()?;
                     let value = array_get(self.core.arena(), array, index)?;
                     self.core.arena_mut().push(value)?;
+                    Ok(None)
                 }
             }
             Opcode::SetIndex => {
@@ -246,11 +255,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let array = self.core.arena_mut().pop()?;
                     let array = array_set(self.core.arena_mut(), array, index, value)?;
                     self.core.arena_mut().push(array)?;
+                    Ok(None)
                 }
             }
             _ => return Err(Error::BadBytecode),
         }
-        Ok(None)
     }
 
     #[inline(always)]
@@ -293,8 +302,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         reason: Value,
     ) -> Result<Outcome, Error> {
         match self.core.reject(continuation, reason)? {
-            CoreOutcome::Throw(reason) => Ok(Outcome::Throw(reason)),
-            _ => Err(Error::BadBytecode),
+            Some(reason) => Ok(Outcome::Throw(reason)),
+            None => self.run(),
         }
     }
 
@@ -305,8 +314,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         reason: Value,
     ) -> Result<Outcome, Error> {
         match self.core.reject_value(continuation, reason)? {
-            CoreOutcome::Throw(reason) => Ok(Outcome::Throw(reason)),
-            _ => Err(Error::BadBytecode),
+            Some(reason) => Ok(Outcome::Throw(reason)),
+            None => self.run(),
         }
     }
 }
@@ -393,6 +402,28 @@ mod tests {
         assert_eq!(
             machine.resume_rejected(continuation, reason).unwrap(),
             Outcome::Throw(reason)
+        );
+    }
+
+    #[cfg(all(feature = "async", feature = "exceptions"))]
+    #[test]
+    fn rejected_await_resumes_at_its_preserved_guest_handler() {
+        let code = Builder::new()
+            .try_at(12)
+            .const_i30(2)
+            .op(Opcode::Await)
+            .op(Opcode::EndTry)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
+        let Outcome::Await { continuation, .. } = machine.run().unwrap() else {
+            panic!("expected suspension")
+        };
+        let reason = Value::from_i30(17).unwrap();
+        assert_eq!(
+            machine.resume_rejected(continuation, reason).unwrap(),
+            Outcome::Complete(reason)
         );
     }
 

@@ -55,14 +55,23 @@ LTO from merely discarding an enabled but unused dependency.
 
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| Minimal | 1,905 | 873 |
-| Arrays | 6,806 | 2,834 |
-| Collections | 3,206 | 1,415 |
-| Functions | 1,929 | 893 |
-| Objects | 4,750 | 2,137 |
-| Promises | 4,761 | 2,148 |
-| Weak collections | 1,972 | 917 |
-| All capabilities | 10,118 | 4,031 |
+| Minimal | 1,907 | 875 |
+| Arrays | 6,808 | 2,833 |
+| Collections | 3,208 | 1,415 |
+| Exceptions | 3,133 | 1,314 |
+| Functions | 1,931 | 894 |
+| Objects | 4,752 | 2,138 |
+| Promises | 4,763 | 2,149 |
+| Weak collections | 1,974 | 918 |
+| All capabilities | 10,120 | 4,031 |
+
+After adding explicit guest handler records, the minimal probe remained 1,907
+bytes (875 gzip), while the exception probe was 3,133 bytes (1,314 gzip).
+That separation matters: exception state is absent from `Core` unless the
+`exceptions` feature is selected. Five direct-loop samples measured 3.52–3.62
+ns/instruction without exceptions after one 3.99 ns warm-up outlier, and
+3.46–3.64 ns/instruction with exceptions. This run detects no capability cost
+in the invariant arithmetic loop.
 
 These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the

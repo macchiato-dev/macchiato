@@ -61,6 +61,13 @@ Fulfillment restores the awaited operand and continues after `await`;
 rejection restores the same frame and enters its existing exception machinery
 as though the await expression had thrown.
 
+`try` records a catch target together with the current operand, call-frame, and
+outer-handler depths. `end_try` removes that record on normal completion while
+preserving the expression result. `throw`, including the abrupt completion
+created by a rejected `await`, truncates the guest stack to the nearest record
+and resumes at its catch target. None of these operations uses native Rust or
+WebAssembly stack unwinding.
+
 The bytecode format version is `2`. Version `1` readers cannot safely infer the
 new function metadata or opcode numbering and must reject these artifacts.
 
