@@ -60,6 +60,8 @@ impl Value {
     pub const NULL: Self = Self((1 << 2) | TAG_IMMEDIATE);
     pub const FALSE: Self = Self((2 << 2) | TAG_IMMEDIATE);
     pub const TRUE: Self = Self((3 << 2) | TAG_IMMEDIATE);
+    #[doc(hidden)]
+    pub const EMPTY: Self = Self((4 << 2) | TAG_IMMEDIATE);
 
     #[inline(always)]
     pub const fn from_i30(value: i32) -> Option<Self> {

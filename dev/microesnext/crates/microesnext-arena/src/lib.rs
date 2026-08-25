@@ -17,6 +17,9 @@ pub enum BlockKind {
     Properties = 6,
     Atoms = 7,
     Closure = 8,
+    Map = 9,
+    Set = 10,
+    CollectionTable = 11,
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
@@ -198,6 +201,72 @@ impl<'memory> Arena<'memory> {
         }
         self.heap_end += length;
         self.stack_start += stack_count;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
+    pub fn allocate_repeated_values(
+        &mut self,
+        kind: BlockKind,
+        prefix: &mut [Value],
+        repeated: usize,
+        fill: Value,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let length = HEADER_WORDS + prefix.len() + repeated;
+        if self.heap_end + length > self.stack_start {
+            self.compact_groups(&mut [roots, prefix])?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        for (slot, value) in self.words[start + HEADER_WORDS..]
+            .iter_mut()
+            .zip(prefix.iter())
+        {
+            *slot = value.raw();
+        }
+        self.words[start + HEADER_WORDS + prefix.len()..start + length].fill(fill.raw());
+        self.heap_end += length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
+    pub fn extend_repeated_values(
+        &mut self,
+        source: HeapRef,
+        repeated: usize,
+        fill: Value,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        let kind = self.kind(source)?;
+        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let mut source_root = [Value::from_ref(source)];
+        let old_length = self.values(source)?.len();
+        let length = HEADER_WORDS + old_length + repeated;
+        if self.heap_end + length > self.stack_start {
+            self.compact_groups(&mut [roots, &mut source_root])?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let source = source_root[0].as_ref().ok_or(Error::DanglingReference)?;
+        let source_start = self.block_start(source)? + HEADER_WORDS;
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        self.words.copy_within(
+            source_start..source_start + old_length,
+            start + HEADER_WORDS,
+        );
+        self.words[start + HEADER_WORDS + old_length..start + length].fill(fill.raw());
+        self.heap_end += length;
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
@@ -416,6 +485,9 @@ impl<'memory> Arena<'memory> {
             6 => Ok(BlockKind::Properties),
             7 => Ok(BlockKind::Atoms),
             8 => Ok(BlockKind::Closure),
+            9 => Ok(BlockKind::Map),
+            10 => Ok(BlockKind::Set),
+            11 => Ok(BlockKind::CollectionTable),
             _ => Err(Error::DanglingReference),
         }
     }

@@ -6,3 +6,6 @@ pub use microesnext_vm::{Machine, Outcome};
 
 #[cfg(feature = "async")]
 pub use microesnext_async as r#async;
+
+#[cfg(feature = "collections")]
+pub use microesnext_collections as collections;

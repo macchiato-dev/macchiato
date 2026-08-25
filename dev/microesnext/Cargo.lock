@@ -8,6 +8,7 @@ version = "0.0.0"
 dependencies = [
  "microesnext-async",
  "microesnext-bytecode",
+ "microesnext-collections",
  "microesnext-compiler",
  "microesnext-types",
  "microesnext-vm",
@@ -32,6 +33,14 @@ dependencies = [
 name = "microesnext-bytecode"
 version = "0.0.0"
 dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-collections"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 

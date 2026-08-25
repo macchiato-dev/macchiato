@@ -24,6 +24,9 @@ not link to that C implementation.
   objects only to builds enabling the `objects` feature.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
+- `microesnext-collections` contains ordered, geometrically grown Map and Set
+  storage with live cursor semantics. Weak ephemeron collections will remain a
+  separate capability because they alter collector tracing.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.
