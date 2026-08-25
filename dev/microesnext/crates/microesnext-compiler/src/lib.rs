@@ -435,7 +435,7 @@ impl Parser<'_> {
             captured: false,
         });
         let parameters = self.function_parameters()?;
-        self.function_value(parameters, Some(slot), FunctionBody::Block)?;
+        self.function_value(parameters, Some(slot), FunctionBody::Block, None)?;
         Ok(())
     }
 
@@ -506,6 +506,7 @@ impl Parser<'_> {
         parameters: Vec<Binding>,
         destination: Option<u16>,
         body_kind: FunctionBody,
+        expression_name: Option<Binding>,
     ) -> Result<(), CompileError> {
         if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
             return Err(self.error("{"));
@@ -514,6 +515,7 @@ impl Parser<'_> {
             .map_err(|_| self.error("fewer than 65536 parameters"))?;
         let mut outer_bindings = self.outer_bindings.clone();
         outer_bindings.extend_from_slice(&self.locals);
+        outer_bindings.extend(expression_name);
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
@@ -522,7 +524,7 @@ impl Parser<'_> {
                 .finish(),
             locals: parameters,
             outer_bindings,
-            captures: Vec::new(),
+            captures: expression_name.into_iter().collect(),
             functions: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
@@ -552,6 +554,9 @@ impl Parser<'_> {
 
         let mut capture_sources = Vec::with_capacity(body.captures.len());
         for capture in &body.captures {
+            if expression_name.is_some_and(|name| same_binding(name, *capture)) {
+                continue;
+            }
             if let Some(index) = self
                 .locals
                 .iter()
@@ -584,6 +589,8 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
+        let capture_count = u16::try_from(capture_sources.len())
+            .map_err(|_| self.error("fewer than 65536 captures"))?;
         for source in capture_sources {
             match source {
                 CaptureSource::Local(index) => {
@@ -597,9 +604,11 @@ impl Parser<'_> {
                 }
             }
         }
-        let capture_count = u16::try_from(body.captures.len())
-            .map_err(|_| self.error("fewer than 65536 captures"))?;
-        self.output.push(Opcode::Closure as u8);
+        self.output.push(if expression_name.is_some() {
+            Opcode::RecursiveClosure as u8
+        } else {
+            Opcode::Closure as u8
+        });
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
@@ -759,7 +768,7 @@ impl Parser<'_> {
             } else {
                 FunctionBody::Expression
             };
-            self.function_value(parameters, None, body)?;
+            self.function_value(parameters, None, body, None)?;
             (false, TermKind::General)
         } else if let Some((start, end)) = binding {
             self.offset += end - start;
@@ -780,8 +789,19 @@ impl Parser<'_> {
             (false, TermKind::General)
         } else if self.try_word(b"function") {
             self.whitespace();
+            let expression_name = if self.source.get(self.offset) == Some(&b'(') {
+                None
+            } else {
+                let (start, end) = self.identifier()?;
+                Some(Binding {
+                    start,
+                    end,
+                    slot: 0,
+                    captured: true,
+                })
+            };
             let parameters = self.function_parameters()?;
-            self.function_value(parameters, None, FunctionBody::Block)?;
+            self.function_value(parameters, None, FunctionBody::Block, expression_name)?;
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
@@ -1242,6 +1262,23 @@ mod tests {
         assert!(
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
+        );
+    }
+
+    #[test]
+    fn compiles_a_named_expression_with_a_private_self_capture() {
+        let code = compile_script(
+            "let value = function privateName() { return privateName; }; return value();",
+        )
+        .unwrap();
+        assert!(code.contains(&(Opcode::RecursiveClosure as u8)));
+        assert_eq!(
+            compile_script(
+                "let value = function privateName() { return 42; }; return privateName();"
+            )
+            .unwrap_err()
+            .offset,
+            58
         );
     }
 

@@ -43,6 +43,16 @@ fn anonymous_function_expression_shares_an_outer_binding() {
 }
 
 #[test]
+fn named_function_expression_recurses_through_its_private_binding() {
+    assert_eq!(
+        run(
+            "let first = true; function takeFirst() { let previous = first; first = false; return previous; } let recurse = function again() { if (takeFirst()) { return again(); } else { return 42; } }; return recurse();"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn arrow_expression_body_receives_arguments_and_captures() {
     assert_eq!(
         run("let base = 40; let addBase = value => base + value; return addBase(2);"),

@@ -215,6 +215,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(closure)?;
                 Ok(None)
             }
+            #[cfg(feature = "recursive-functions")]
+            Opcode::RecursiveClosure => {
+                let target = self.core.next_u32()?;
+                let capture_count = self.core.next_u16()? as usize;
+                if target as usize >= self.core.code().len() {
+                    return Err(Error::BadBytecode);
+                }
+                let closure = microesnext_recursive_functions::capture_recursive_stack(
+                    self.core.arena_mut(),
+                    target,
+                    capture_count,
+                )?;
+                self.core.arena_mut().push(closure)?;
+                Ok(None)
+            }
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;

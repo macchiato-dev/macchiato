@@ -74,6 +74,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Shared environment cells | 6,285 | 2,728 |
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
+| Recursive functions | 10,414 | 4,044 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
@@ -99,6 +100,12 @@ call through `Machine`, rather than merely returning a freshly allocated
 closure reference. That correction raised the honest live feature measurement
 from 1,916 to 6,869 bytes at that checkpoint; the smaller result was mostly an
 LTO artifact.
+The recursive-functions row executes its distinct closure constructor and
+verifies that the resulting private self cell resolves back to the closure.
+It statically composes functions and environments; the minimal,
+functions-only, and environment-only rows remain unchanged. The combined
+artifact also remains 46,099 bytes because fat LTO reuses allocation and
+stack-editing paths already exercised by other enabled capabilities.
 The parameter composition additionally removes a callable from beneath its
 evaluated arguments, enters a guest frame, exposes the argument through local
 slot zero, and returns through that frame. Moving this path into

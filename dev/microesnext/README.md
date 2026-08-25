@@ -38,6 +38,9 @@ not link to that C implementation.
 - `microesnext-environments` supplies traced one-value cells for bindings that
   genuinely escape into closures. The compiler shares a cell across sibling
   closures and outer writes; uncaptured locals remain direct stack words.
+- `microesnext-recursive-functions` composes closures with environment cells
+  only for private self-bindings in named function expressions. Ordinary
+  function builds do not resolve the crate or decode its constructor opcode.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely.

@@ -37,6 +37,12 @@ numbers = [
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
+recursive-functions = [
+  "functions",
+  "environments",
+  "dep:microesnext-recursive-functions",
+  "microesnext-vm/recursive-functions",
+]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]
 collection-entry-iterators = [
@@ -79,6 +85,7 @@ microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
+microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
@@ -112,7 +119,13 @@ required-features = ["locals"]
 [[test]]
 name = "functions"
 path = "tests/functions.rs"
-required-features = ["control-flow", "environments", "function-arguments", "numbers"]
+required-features = [
+  "control-flow",
+  "environments",
+  "function-arguments",
+  "numbers",
+  "recursive-functions",
+]
 
 [[test]]
 name = "control-flow"

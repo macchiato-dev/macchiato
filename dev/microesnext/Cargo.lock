@@ -27,6 +27,7 @@ dependencies = [
  "microesnext-objects",
  "microesnext-parameters",
  "microesnext-promises",
+ "microesnext-recursive-functions",
  "microesnext-strings",
  "microesnext-symbols",
  "microesnext-types",
@@ -259,6 +260,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-recursive-functions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-environments",
+ "microesnext-functions",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-strings"
 version = "0.0.0"
 dependencies = [
@@ -312,6 +323,7 @@ dependencies = [
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
+ "microesnext-recursive-functions",
  "microesnext-strings",
  "microesnext-suspension",
  "microesnext-truthiness",

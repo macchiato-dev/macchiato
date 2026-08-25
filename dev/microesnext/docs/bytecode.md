@@ -21,6 +21,16 @@ metadata bit distinguishes arrows so closure creation captures the enclosing
 `this`, calls restore that captured value, and construction can be rejected.
 Expression bodies compile as an expression followed by `return`.
 
+## Named function expressions
+
+A named expression has a lexical self-binding that is not visible in its
+enclosing scope. The optional `recursive_closure` instruction composes the
+ordinary closure and environment-cell capabilities: it creates one cell,
+places it first in the capture list, constructs the closure, and initializes
+the cell with that closure. Unnamed expressions, arrows, and declarations do
+not pay for this constructor, and builds omitting `recursive-functions` reject
+its opcode.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

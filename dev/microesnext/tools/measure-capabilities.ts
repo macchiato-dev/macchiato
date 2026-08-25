@@ -77,6 +77,14 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["functions", "functions", [core, ["functions_probe", "nonzero"]]],
     [
+      "recursive functions",
+      "recursive-functions",
+      [core, ["functions_probe", "nonzero"], ["environments_probe", 42], [
+        "recursive_functions_probe",
+        42,
+      ]],
+    ],
+    [
       "functions with local parameters",
       "function-arguments",
       [core, ["functions_probe", "nonzero"], ["function_arguments_probe", 42]],

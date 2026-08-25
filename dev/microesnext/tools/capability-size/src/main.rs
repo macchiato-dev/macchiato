@@ -20,6 +20,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "locals",
         feature = "numbers",
         feature = "objects",
+        feature = "recursive-functions",
         feature = "strings"
     )
 ))]
@@ -346,6 +347,37 @@ pub extern "C" fn functions_probe() -> i32 {
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "recursive-functions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn recursive_functions_probe() -> i32 {
+    const BODY: u32 = 9;
+    let code = [
+        Opcode::RecursiveClosure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::CallValue as u8,
+        Opcode::Return as u8,
+        Opcode::LoadCapture as u8,
+        0,
+        0,
+        Opcode::LoadEnvironmentCell as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(Outcome::Complete(function)) = machine.run() else {
+        return -1;
+    };
+    match microesnext::functions::entry(machine.arena(), function) {
+        Ok(entry) if entry == BODY as usize => 42,
         _ => -1,
     }
 }

@@ -51,6 +51,9 @@ pub use microesnext_exceptions as exceptions;
 #[cfg(feature = "environments")]
 pub use microesnext_environments as environments;
 
+#[cfg(feature = "recursive-functions")]
+pub use microesnext_recursive_functions as recursive_functions;
+
 #[cfg(any(
     feature = "objects",
     feature = "iterator-results",

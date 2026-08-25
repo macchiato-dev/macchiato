@@ -33,8 +33,10 @@ function expression may be called immediately or retained in a local, and all
 three forms use the same capture analysis. Both declared parameters and call
 arguments have a `u16` count. Argument-to-local frame setup is a removable
 capability rather than a cost borne by functions without parameters. Named
-function expressions, `this` and `arguments` exposure, constructors, and full
-declaration hoisting remain compiler work.
+function expressions get a private self-binding backed by a removable
+recursive-function constructor, allowing recursion without leaking the name
+into the enclosing scope. `this` and `arguments` exposure, constructors, and
+full declaration hoisting remain compiler work.
 
 Mutable closure semantics use optional traced environment cells. Compiler
 capture analysis boxes only bindings that cross a function boundary; sibling

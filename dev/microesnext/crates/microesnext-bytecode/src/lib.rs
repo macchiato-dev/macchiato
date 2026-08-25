@@ -80,6 +80,8 @@ pub enum Opcode {
     LoadEnvironmentCell = 74,
     #[cfg(feature = "environments")]
     StoreEnvironmentCell = 75,
+    #[cfg(feature = "recursive-functions")]
+    RecursiveClosure = 76,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -151,6 +153,8 @@ impl TryFrom<u8> for Opcode {
             74 => Ok(Self::LoadEnvironmentCell),
             #[cfg(feature = "environments")]
             75 => Ok(Self::StoreEnvironmentCell),
+            #[cfg(feature = "recursive-functions")]
+            76 => Ok(Self::RecursiveClosure),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -245,5 +249,17 @@ mod tests {
         assert_eq!(Opcode::try_from(73), Ok(Opcode::NewEnvironmentCell));
         assert_eq!(Opcode::try_from(74), Ok(Opcode::LoadEnvironmentCell));
         assert_eq!(Opcode::try_from(75), Ok(Opcode::StoreEnvironmentCell));
+    }
+
+    #[cfg(feature = "recursive-functions")]
+    #[test]
+    fn enabled_recursive_closure_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(76), Ok(Opcode::RecursiveClosure));
+    }
+
+    #[cfg(not(feature = "recursive-functions"))]
+    #[test]
+    fn omitted_recursive_closure_opcode_is_invalid() {
+        assert!(Opcode::try_from(76).is_err());
     }
 }
