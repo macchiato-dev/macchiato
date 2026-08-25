@@ -140,10 +140,16 @@ and construction rules. The separate `class-methods` gate adds synchronous
 instance methods with ordered parameters and receiver-preserving member calls.
 Those methods are callable objects without constructor prototypes, so extracting
 one loses its receiver and attempting to construct one fails. `extends`, fields,
-class expressions, accessors, generators, async methods, computed names, and
-static initialization blocks are not included by these focused gates. The
+accessors, generators, async methods, computed names, and static initialization
+blocks are not included by these focused gates. The
 compiler-only `class-static-methods` feature does support synchronous named
 static methods. They live on the class record and receive that record as `this`.
+
+The `class-expressions` composition accepts anonymous classes in expression
+position. Explicit and default constructors, instance methods, and static
+methods behave as they do in declarations, while the expression evaluates to
+the decorated class record. Named class expressions and their private inner
+binding are not yet included.
 
 The compiler-only `class-default-constructors` feature also accepts empty and
 method-only base classes. It synthesizes a zero-argument receiver frame that

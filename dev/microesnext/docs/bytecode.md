@@ -58,6 +58,13 @@ record rather than its `prototype`, applies `to_method`, and stores the result;
 subsequent member calls use the same `get_method` and `call_method_arguments`
 sequence as instance methods.
 
+Anonymous class expressions use the independently gated `duplicate_top`
+instruction while installing methods. The original class record stays beneath
+the duplicate, decoration consumes the duplicate, and the original becomes the
+expression result. A class with no methods needs no duplication. This avoids a
+persistent temporary local and leaves declaration-only class bytecode and its
+runtime unchanged.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

@@ -218,6 +218,14 @@ runtime. Their focused compiler is 20,525 raw / 7,999 gzip bytes. Omitting them
 leaves instance methods exactly 20,408 / 7,953. The default compiler including
 static methods is 40,365 / 15,109.
 
+Anonymous class expressions add one removable operand-stack operation so the
+class record can remain as the expression result while methods are installed.
+The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
+is 23,057 / 8,957. Omitting it leaves the class-method runtime exactly 32,689 /
+10,891 and every declaration compiler slice above unchanged. With expressions
+included, the default compiler is 42,256 / 15,719 and the all-capability runtime
+is 107,208 / 34,141.
+
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
 its compiler is 18,134 / 7,571. Its allocation-free opcode changes capture zero
@@ -305,6 +313,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Ordinary construction | 27,444 | 9,825 |
 | Constructor-only classes | 30,301 | 10,377 |
 | Classes with instance methods | 32,689 | 10,891 |
+| Anonymous class expressions | 33,060 | 11,025 |
 | Recursive constructors | 23,517 | 8,554 |
 | Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
@@ -317,7 +326,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 106,818 | 33,993 |
+| All capabilities | 107,208 | 34,141 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -593,6 +602,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | class methods | 20,408 | 7,953 |
 | implicit class constructors | 20,339 | 8,147 |
 | static class methods | 20,525 | 7,999 |
+| anonymous class expressions | 23,057 | 8,957 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -616,7 +626,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,134 | 7,571 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 40,365 | 15,109 |
+| default language slice | 42,256 | 15,719 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

@@ -77,6 +77,11 @@ an explicit relational stopping condition.
   `class-methods` composition stores receiver-aware, non-constructible callable
   objects on a class prototype; constructor-only class builds retain neither
   its stack operations nor its three opcodes.
+- `microesnext-stack-operations` supplies the independently removable
+  top-of-stack duplication used while a class expression is decorated. The
+  compiler keeps one class record as the expression result and duplicates it
+  only for each property installation; declaration-only class builds retain
+  neither the crate nor its opcode.
 - `class-default-constructors` is compiler-only: it synthesizes the same compact
   receiver-aware body and class-record opcode sequence when a base class omits
   `constructor`. Explicit-constructor compiler builds do not retain that parser
@@ -85,6 +90,10 @@ an explicit relational stopping condition.
   non-constructible method wrapper directly on the class record instead of its
   prototype, so static calls reuse receiver-preserving method bytecode and
   observe the class as `this` without another runtime dispatch path.
+- `class-expressions` accepts anonymous class values with explicit or implicit
+  constructors and the same instance and static method compositions as class
+  declarations. Named class-expression identity remains a separate future
+  slice.
 - `microesnext-recursive-constructors` allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not link this cross-composition.
