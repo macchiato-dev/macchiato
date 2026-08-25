@@ -214,6 +214,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-construction"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-callable-objects",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-core-loop"
 version = "0.0.0"
 dependencies = [
