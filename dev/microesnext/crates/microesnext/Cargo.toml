@@ -34,6 +34,7 @@ method-calls = [
 ]
 class-methods = ["classes", "method-calls"]
 class-static-methods = ["class-methods"]
+class-expressions = ["class-static-methods", "stack-operations"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
@@ -399,6 +400,11 @@ required-features = ["classes", "instanceof", "locals", "objects", "typeof"]
 name = "class-methods"
 path = "tests/class_methods.rs"
 required-features = ["class-methods", "locals", "objects"]
+
+[[test]]
+name = "class-expressions"
+path = "tests/class_expressions.rs"
+required-features = ["class-expressions", "locals", "objects"]
 
 [[test]]
 name = "recursive-constructors"

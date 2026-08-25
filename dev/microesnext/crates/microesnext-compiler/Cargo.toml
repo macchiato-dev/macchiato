@@ -16,6 +16,7 @@ default = [
   "construction",
   "class-methods",
   "class-static-methods",
+  "class-expressions",
   "class-default-constructors",
   "equality",
   "exceptions",
@@ -55,6 +56,11 @@ classes = [
 ]
 class-methods = ["classes", "method-calls"]
 class-static-methods = ["class-methods"]
+class-expressions = [
+  "class-default-constructors",
+  "class-static-methods",
+  "microesnext-bytecode/stack-operations",
+]
 class-default-constructors = ["classes"]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]

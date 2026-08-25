@@ -2176,6 +2176,10 @@ impl Parser<'_> {
             }
         } else if self.receiver_term() {
             (false, TermKind::General)
+        } else if cfg!(feature = "class-expressions") && self.try_word(b"class") {
+            #[cfg(feature = "class-expressions")]
+            self.class_expression()?;
+            (false, TermKind::General)
         } else if async_function || self.try_word(b"function") {
             self.whitespace();
             let expression_name = if self.source.get(self.offset) == Some(&b'(') {
@@ -2270,6 +2274,75 @@ impl Parser<'_> {
     #[cfg(all(feature = "functions", not(feature = "receivers")))]
     fn receiver_term(&mut self) -> bool {
         false
+    }
+
+    #[cfg(feature = "class-expressions")]
+    fn class_expression(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        if self.try_word_after_whitespace(b"constructor") {
+            let parameters = self.function_parameters()?;
+            self.function_value(
+                parameters,
+                None,
+                FunctionBody::ClassConstructor,
+                None,
+                false,
+                true,
+            )?;
+        } else {
+            self.default_class_value();
+        }
+        loop {
+            self.whitespace();
+            if self.consume_raw(b'}') {
+                break;
+            }
+            self.class_expression_method()?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "class-expressions")]
+    fn default_class_value(&mut self) {
+        self.output.push(Opcode::Closure as u8);
+        let target_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.extend_from_slice(&0_u16.to_le_bytes());
+        self.output.push(Opcode::ToClassConstructor as u8);
+        let code = self
+            .initial_function_frame(0, true)
+            .into_iter()
+            .chain([Opcode::LoadThis as u8, Opcode::ReturnReceiverLocals as u8])
+            .collect();
+        self.functions.push(PendingFunction {
+            target_patch,
+            code,
+            relocations: Vec::new(),
+        });
+    }
+
+    #[cfg(feature = "class-expressions")]
+    fn class_expression_method(&mut self) -> Result<(), CompileError> {
+        let static_method = self.try_word(b"static");
+        if static_method {
+            self.whitespace();
+        }
+        let (name_start, name_end) = self.identifier()?;
+        let parameters = self.function_parameters()?;
+        self.output.push(Opcode::DuplicateTop as u8);
+        if !static_method {
+            self.output.push(Opcode::ConstAtom as u8);
+            self.output
+                .extend_from_slice(&(b"prototype".len() as u16).to_le_bytes());
+            self.output.extend_from_slice(b"prototype");
+            self.output.push(Opcode::GetProperty as u8);
+        }
+        self.output_atom_range(name_start, name_end);
+        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        self.output.push(Opcode::SetPropertyStatement as u8);
+        Ok(())
     }
 
     #[cfg(feature = "function-arguments")]
@@ -3853,5 +3926,25 @@ mod tests {
             .expected,
             "("
         );
+    }
+
+    #[cfg(feature = "class-expressions")]
+    #[test]
+    fn compiles_a_complete_anonymous_class_expression() {
+        let code = compile_script(
+            "let Type = class { constructor(value) { this.value = value; } \
+             read() { return this.value; } static identity(value) { return value; } }; \
+             let value = new Type(42); return Type.identity(value.read());",
+        )
+        .unwrap();
+
+        assert!(code.contains(&(Opcode::DuplicateTop as u8)));
+        assert!(code.contains(&(Opcode::ToClassConstructor as u8)));
+    }
+
+    #[cfg(all(feature = "classes", not(feature = "class-expressions")))]
+    #[test]
+    fn declaration_only_class_builds_reject_class_expressions() {
+        assert!(compile_script("let Type = class {}; return Type;").is_err());
     }
 }
