@@ -22,6 +22,7 @@ arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = [
   "dep:microesnext-strings",
   "microesnext-bytecode/strings",
+  "microesnext-equality?/strings",
   "microesnext-truthiness?/strings",
 ]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
@@ -37,9 +38,11 @@ integer-operations = [
   "dep:microesnext-integer-operations",
   "microesnext-bytecode/integer-operations",
 ]
+equality = ["dep:microesnext-equality", "microesnext-bytecode/equality"]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-bytecode/numbers",
+  "microesnext-equality?/numbers",
   "microesnext-truthiness?/numbers",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
@@ -81,6 +84,7 @@ microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
+microesnext-equality = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }

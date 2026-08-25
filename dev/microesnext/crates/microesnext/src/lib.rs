@@ -60,6 +60,9 @@ pub use microesnext_exceptions as exceptions;
 #[cfg(feature = "errors")]
 pub use microesnext_errors as errors;
 
+#[cfg(feature = "equality")]
+pub use microesnext_equality as equality;
+
 #[cfg(feature = "environments")]
 pub use microesnext_environments as environments;
 

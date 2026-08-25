@@ -760,7 +760,26 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
-        let (used_binding, _) = self.additive(binding)?;
+        let (used_binding, _) = self.relational(binding)?;
+        loop {
+            let opcode = if self.consume_bytes(b"===") {
+                Opcode::StrictEqual
+            } else if self.consume_bytes(b"!==") {
+                Opcode::StrictNotEqual
+            } else {
+                break;
+            };
+            self.relational(None)?;
+            self.output.push(opcode as u8);
+        }
+        Ok(used_binding)
+    }
+
+    fn relational(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.additive(binding)?;
         loop {
             let opcode = if self.consume(b'<') {
                 Opcode::LessThanI30
@@ -771,8 +790,9 @@ impl Parser<'_> {
             };
             self.additive(None)?;
             self.output.push(opcode as u8);
+            kind = TermKind::General;
         }
-        Ok(used_binding)
+        Ok((used_binding, kind))
     }
 
     fn additive(
@@ -1175,6 +1195,16 @@ impl Parser<'_> {
     fn consume(&mut self, byte: u8) -> bool {
         self.whitespace();
         self.consume_raw(byte)
+    }
+
+    fn consume_bytes(&mut self, bytes: &[u8]) -> bool {
+        self.whitespace();
+        if self.source[self.offset..].starts_with(bytes) {
+            self.offset += bytes.len();
+            true
+        } else {
+            false
+        }
     }
 
     fn consume_raw(&mut self, byte: u8) -> bool {

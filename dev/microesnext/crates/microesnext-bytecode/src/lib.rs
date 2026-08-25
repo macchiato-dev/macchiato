@@ -100,6 +100,10 @@ pub enum Opcode {
     LessThanI30 = 84,
     #[cfg(feature = "integer-operations")]
     GreaterThanI30 = 85,
+    #[cfg(feature = "equality")]
+    StrictEqual = 86,
+    #[cfg(feature = "equality")]
+    StrictNotEqual = 87,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -191,6 +195,10 @@ impl TryFrom<u8> for Opcode {
             84 => Ok(Self::LessThanI30),
             #[cfg(feature = "integer-operations")]
             85 => Ok(Self::GreaterThanI30),
+            #[cfg(feature = "equality")]
+            86 => Ok(Self::StrictEqual),
+            #[cfg(feature = "equality")]
+            87 => Ok(Self::StrictNotEqual),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -264,6 +272,20 @@ mod tests {
         assert!(Opcode::try_from(83).is_err());
         assert!(Opcode::try_from(84).is_err());
         assert!(Opcode::try_from(85).is_err());
+    }
+
+    #[cfg(feature = "equality")]
+    #[test]
+    fn enabled_equality_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(86), Ok(Opcode::StrictEqual));
+        assert_eq!(Opcode::try_from(87), Ok(Opcode::StrictNotEqual));
+    }
+
+    #[cfg(not(feature = "equality"))]
+    #[test]
+    fn omitted_equality_opcodes_are_invalid() {
+        assert!(Opcode::try_from(86).is_err());
+        assert!(Opcode::try_from(87).is_err());
     }
 
     #[cfg(feature = "locals")]

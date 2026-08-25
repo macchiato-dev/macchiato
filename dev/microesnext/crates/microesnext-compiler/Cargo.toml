@@ -16,6 +16,7 @@ microesnext-bytecode = { workspace = true, features = [
   "control-flow",
   "exceptions",
   "environments",
+  "equality",
   "functions",
   "function-arguments",
   "integer-operations",

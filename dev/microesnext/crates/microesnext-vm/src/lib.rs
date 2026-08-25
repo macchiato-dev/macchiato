@@ -173,6 +173,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "numbers",
         feature = "exceptions",
         feature = "environments",
+        feature = "equality",
         feature = "async-functions",
         feature = "promise-resolvers"
     ))]
@@ -536,6 +537,26 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "equality")]
+            Opcode::StrictEqual => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let equal = microesnext_equality::strict_equal(self.core.arena(), left, right)?;
+                self.core
+                    .arena_mut()
+                    .push(if equal { Value::TRUE } else { Value::FALSE })?;
+                Ok(None)
+            }
+            #[cfg(feature = "equality")]
+            Opcode::StrictNotEqual => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let equal = microesnext_equality::strict_equal(self.core.arena(), left, right)?;
+                self.core
+                    .arena_mut()
+                    .push(if equal { Value::FALSE } else { Value::TRUE })?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -604,6 +625,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "locals",
         feature = "numbers",
         feature = "exceptions",
+        feature = "equality",
         feature = "environments",
         feature = "async-functions",
         feature = "promise-resolvers",
