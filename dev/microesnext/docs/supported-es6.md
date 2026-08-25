@@ -46,6 +46,15 @@ linking boxed IEEE-754 numbers. Results outside the i30 range currently fail
 rather than promote, so this is a deliberately bounded programming subset, not
 yet full JavaScript numeric semantics.
 
+Unary numeric negation is independently removable from those binary
+operations. Its bounded build accepts i30 operands and reports overflow; the
+JavaScript Number composition keeps nonzero i30 results immediate, promotes
+the asymmetric minimum, and boxes `-0` so its sign remains observable. Prefix
+operators are collected iteratively before emission, so a long chain does not
+recurse on the native stack. A compiler selecting only `number-negation` can
+emit the promoted instruction without also retaining decimal and exponent
+literal parsing; selecting `numbers` adds those literal forms.
+
 Strict equality and inequality (`===` and `!==`) are a separate removable
 capability. Immediate values, objects, and symbols compare by identity. When
 composed with strings, independently allocated equal strings compare by

@@ -17,7 +17,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions",
   ],
 ] as const;
 

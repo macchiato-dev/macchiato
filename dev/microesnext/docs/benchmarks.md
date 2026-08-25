@@ -69,6 +69,7 @@ independent:
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Logical operations | 3,428 | 1,647 |
+| Bounded numeric negation | 2,587 | 1,279 |
 | Logical operations with numbers only | 7,502 | 3,268 |
 | Logical operations with strings only | 7,208 | 3,121 |
 
@@ -137,6 +138,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
 | Promoted number operations | 9,382 | 3,309 |
+| JavaScript Number negation | 6,784 | 2,991 |
 | Objects with atoms and strings | 14,663 | 5,859 |
 | Strings only | 4,960 | 2,299 |
 | Symbols | 4,995 | 2,254 |
@@ -147,7 +149,15 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,528 | 12,642 |
 | Async return thenable assimilation | 46,604 | 16,397 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 78,302 | 24,694 |
+| All capabilities | 78,513 | 24,760 |
+
+The negation rows are intentionally separate. Adding unary instructions to the
+existing integer and promoted-arithmetic crates initially grew the minimal
+programmable runtime from 6,506 to 6,967 bytes and promoted number operations
+from 9,382 to 10,413 bytes. Extracting two static capability crates restored
+both baselines exactly. Bounded negation is 2,587 bytes in isolation; the
+negative-zero-preserving Number composition is 6,784 bytes. Neither boundary
+adds runtime dispatch to an arithmetic build that omits it.
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -387,6 +397,9 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | control flow | 7,506 | 2,941 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
+| bounded integer operations | 6,632 | 2,728 |
+| bounded numeric negation | 5,791 | 2,503 |
+| JavaScript Number negation | 6,072 | 2,597 |
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |
 | locals | 8,346 | 3,519 |
@@ -396,11 +409,17 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 47,716 | 26,293 |
+| default language slice | 48,486 | 26,553 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric
 promotion or general JavaScript coercion.
+
+The 6,072-byte Number-negation compiler can target boxed results without the
+decimal/exponent literal parser. Before that parser boundary was separated,
+the same probe was 24,258 bytes (17,770 gzip). This is a compiler-only removal;
+the runtime Number-negation composition still includes the representation it
+needs to preserve negative zero.
 
 The minimal row links neither lexical binding nor function/capture parsing.
 The locals row adds stable slots without closures. Basic functions use

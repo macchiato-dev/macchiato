@@ -72,6 +72,9 @@ an explicit relational stopping condition.
   multiplication, and relational comparisons. The `minimal-program` feature
   composes it with locals and control flow without adding floating-point
   storage or changing the invariant interpreter loop.
+- `microesnext-integer-negation` is a smaller unary-only boundary. A build can
+  compile `-value` without acquiring multiplication, subtraction, comparison,
+  or floating-point storage.
 - `microesnext-equality` supplies strict equality and SameValueZero as distinct
   operations. Identity-only builds remain small; optional number and string
   features add their JavaScript value semantics without making equality depend
@@ -90,6 +93,9 @@ an explicit relational stopping condition.
 - `microesnext-number-operations` adds promoted arithmetic and relational
   comparison. Its i30 fast paths remain direct; overflow falls through to the
   number representation only in builds selecting this crate.
+- `microesnext-number-negation` composes the integer fast path with boxed
+  IEEE-754 results, including negative zero. It does not make the compiler
+  retain decimal/exponent literal parsing merely to emit `NegateNumber`.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.

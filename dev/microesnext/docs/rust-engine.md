@@ -94,6 +94,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   IEEE-754 numbers use opaque two-word payloads from `microesnext-numbers`, so
   arbitrary floating-point bits are never traced as guest references. Builds
   without `numbers` omit the arena block kind, typed opcodes, and implementation.
+- Unary integer and JavaScript Number negation are separate capability crates
+  from binary arithmetic. The promoted path preserves negative zero, while a
+  build needing only multiplication or comparison retains neither negation
+  crate nor either negation opcode.
 - Ordinary strings, atom interning, and objects form three boundaries. A string
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine

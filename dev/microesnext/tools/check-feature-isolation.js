@@ -140,10 +140,12 @@ assertCompilerFeatures(
     "functions",
     "function-arguments",
     "integer-operations",
+    "integer-negation",
     "logical-operations",
     "locals",
     "numbers",
     "number-operations",
+    "number-negation",
     "objects",
     "receivers",
     "recursive-functions",
@@ -200,7 +202,7 @@ assertCompilerFeatures(
 );
 assertCompilerFeatures(
   ["number-negation"],
-  ["integer-negation", "numbers", "number-negation"],
+  ["integer-negation", "number-negation"],
   ["integer-operations", "number-operations"],
 );
 assertCompilerFeatures(
