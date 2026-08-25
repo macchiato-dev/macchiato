@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-async"
+description = "Optional async scheduling types for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-types.workspace = true
+microesnext-vm.workspace = true
+
+[lib]
+path = "src/lib.rs"
+

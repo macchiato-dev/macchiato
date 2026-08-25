@@ -1,0 +1,22 @@
+[package]
+name = "microesnext"
+description = "A compact JavaScript engine with explicit removable capabilities"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = []
+async = ["dep:microesnext-async"]
+
+[dependencies]
+microesnext-async = { workspace = true, optional = true }
+microesnext-bytecode.workspace = true
+microesnext-types.workspace = true
+microesnext-vm.workspace = true
+
+[lib]
+path = "src/lib.rs"
+

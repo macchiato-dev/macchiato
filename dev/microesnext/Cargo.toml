@@ -1,0 +1,32 @@
+[workspace]
+members = [
+  "crates/microesnext",
+  "crates/microesnext-arena",
+  "crates/microesnext-async",
+  "crates/microesnext-bytecode",
+  "crates/microesnext-types",
+  "crates/microesnext-vm",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/macchiato-dev/macchiato"
+rust-version = "1.85"
+version = "0.0.0"
+
+[workspace.dependencies]
+microesnext-arena = { path = "crates/microesnext-arena", version = "0.0.0" }
+microesnext-async = { path = "crates/microesnext-async", version = "0.0.0" }
+microesnext-bytecode = { path = "crates/microesnext-bytecode", version = "0.0.0" }
+microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
+microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = "s"
+panic = "abort"
+strip = "symbols"
+
