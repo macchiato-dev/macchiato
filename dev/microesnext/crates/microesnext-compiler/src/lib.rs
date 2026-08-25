@@ -381,6 +381,7 @@ enum FunctionBody {
 impl Parser<'_> {
     #[cfg(feature = "control-flow")]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
+        self.property_assignments()?;
         self.local_assignments()?;
         if self.try_word_after_whitespace(b"if") {
             self.if_else()
@@ -397,6 +398,7 @@ impl Parser<'_> {
 
     #[cfg(not(feature = "control-flow"))]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
+        self.property_assignments()?;
         self.local_assignments()?;
         #[cfg(feature = "exceptions")]
         if self.try_word_after_whitespace(b"try") {
@@ -909,6 +911,71 @@ impl Parser<'_> {
         #[cfg(not(feature = "recursive-functions"))]
         let _ = named;
         Opcode::Closure
+    }
+
+    #[cfg(feature = "property-assignment")]
+    fn property_assignments(&mut self) -> Result<(), CompileError> {
+        loop {
+            self.whitespace();
+            let source_start = self.offset;
+            let output_start = self.output.len();
+            if !self.property_receiver_term() && !self.property_local_term() {
+                return Ok(());
+            }
+            if !self.consume(b'.') {
+                self.offset = source_start;
+                self.output.truncate(output_start);
+                return Ok(());
+            }
+            self.whitespace();
+            let (key_start, key_end) = self.identifier()?;
+            if !self.consume(b'=') {
+                self.offset = source_start;
+                self.output.truncate(output_start);
+                return Ok(());
+            }
+            self.output_atom_range(key_start, key_end);
+            self.expression(None)?;
+            self.output.push(Opcode::SetPropertyStatement as u8);
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
+    }
+
+    #[cfg(not(feature = "property-assignment"))]
+    fn property_assignments(&mut self) -> Result<(), CompileError> {
+        Ok(())
+    }
+
+    #[cfg(all(feature = "property-assignment", feature = "receivers"))]
+    fn property_receiver_term(&mut self) -> bool {
+        self.receiver_term()
+    }
+
+    #[cfg(all(feature = "property-assignment", not(feature = "receivers")))]
+    fn property_receiver_term(&mut self) -> bool {
+        false
+    }
+
+    #[cfg(all(feature = "property-assignment", feature = "locals"))]
+    fn property_local_term(&mut self) -> bool {
+        let Some(local) = self.local_at_offset() else {
+            return false;
+        };
+        self.offset += local.end - local.start;
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&local.slot.to_le_bytes());
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::LoadEnvironmentCell as u8);
+        }
+        true
+    }
+
+    #[cfg(all(feature = "property-assignment", not(feature = "locals")))]
+    fn property_local_term(&mut self) -> bool {
+        false
     }
 
     #[cfg(feature = "environments")]
@@ -3195,6 +3262,17 @@ mod tests {
                 .windows(3)
                 .any(|bytes| { bytes == [Opcode::ConstructValueArguments as u8, 0, 0] })
         );
+    }
+
+    #[cfg(all(feature = "property-assignment", feature = "receivers"))]
+    #[test]
+    fn compiles_receiver_property_assignment_as_a_statement() {
+        let code = compile_script(
+            "let Constructor = function (value) { this.answer = value; return this; }; \
+             return new Constructor(42);",
+        )
+        .unwrap();
+        assert!(code.contains(&(Opcode::SetPropertyStatement as u8)));
     }
 
     #[cfg(feature = "recursive-constructors")]

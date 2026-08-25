@@ -248,6 +248,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(object)?;
                 Ok(None)
             }
+            #[cfg(feature = "property-assignment")]
+            Opcode::SetPropertyStatement => {
+                let value = self.core.arena_mut().pop()?;
+                let key = self.core.arena_mut().pop()?;
+                let object = self.core.arena_mut().pop()?;
+                microesnext_objects::set(self.core.arena_mut(), object, key, value)?;
+                Ok(None)
+            }
             #[cfg(feature = "functions")]
             Opcode::Closure => {
                 let target = self.core.next_u32()?;

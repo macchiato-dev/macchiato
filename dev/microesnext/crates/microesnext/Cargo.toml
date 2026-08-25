@@ -47,6 +47,7 @@ symbols = ["dep:microesnext-symbols", "microesnext-typeof?/symbols"]
 well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
+property-assignment = ["objects", "microesnext-vm/property-assignment"]
 prototype-chain = ["objects", "dep:microesnext-prototype-chain"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
 callable-objects = [
@@ -357,6 +358,7 @@ required-features = [
   "instanceof",
   "locals",
   "objects",
+  "property-assignment",
 ]
 
 [[test]]

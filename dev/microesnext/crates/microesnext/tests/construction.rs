@@ -37,3 +37,13 @@ fn new_without_parentheses_uses_the_zero_argument_path() {
          return new Constructor instanceof Constructor;");
     assert_eq!(outcome, Outcome::Complete(Value::TRUE));
 }
+
+#[test]
+fn constructor_arguments_can_initialize_receiver_properties() {
+    let outcome = run(
+        "let Constructor = function (value) { this.answer = value; return 0; }; \
+         let instance = new Constructor(42); \
+         return instance.answer;",
+    );
+    assert_eq!(outcome, Outcome::Complete(Value::from_i30(42).unwrap()));
+}
