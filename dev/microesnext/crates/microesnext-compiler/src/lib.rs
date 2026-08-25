@@ -430,7 +430,7 @@ impl Parser<'_> {
             self.whitespace();
             if self.try_word(b"function") {
                 self.function_declaration(count_patch, false)?;
-            } else if self.try_async_function() {
+            } else if cfg!(feature = "async-functions") && self.try_async_function() {
                 self.function_declaration(count_patch, true)?;
             } else if self.try_word(b"let") {
                 self.let_declaration(count_patch)?;
@@ -681,15 +681,7 @@ impl Parser<'_> {
             }
         }
         self.output
-            .push(if expression_name.is_some() && asynchronous {
-                Opcode::RecursiveAsyncClosure as u8
-            } else if expression_name.is_some() {
-                Opcode::RecursiveClosure as u8
-            } else if asynchronous {
-                Opcode::AsyncClosure as u8
-            } else {
-                Opcode::Closure as u8
-            });
+            .push(self.closure_opcode(expression_name.is_some(), asynchronous) as u8);
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
@@ -705,6 +697,25 @@ impl Parser<'_> {
             relocations: body.relocations,
         });
         Ok(())
+    }
+
+    #[cfg(feature = "async-functions")]
+    fn closure_opcode(&self, named: bool, asynchronous: bool) -> Opcode {
+        match (named, asynchronous) {
+            (true, true) => Opcode::RecursiveAsyncClosure,
+            (true, false) => Opcode::RecursiveClosure,
+            (false, true) => Opcode::AsyncClosure,
+            (false, false) => Opcode::Closure,
+        }
+    }
+
+    #[cfg(not(feature = "async-functions"))]
+    fn closure_opcode(&self, named: bool, _asynchronous: bool) -> Opcode {
+        if named {
+            Opcode::RecursiveClosure
+        } else {
+            Opcode::Closure
+        }
     }
 
     fn local_assignments(&mut self) -> Result<(), CompileError> {
@@ -1166,24 +1177,37 @@ impl Parser<'_> {
 
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "async")]
         let awaiting = self.try_word(b"await");
         self.whitespace();
         let async_start = self.offset;
+        #[cfg(feature = "async-functions")]
         let async_prefix = self.try_word(b"async")
             && self
                 .source
                 .get(self.offset)
                 .is_some_and(u8::is_ascii_whitespace);
+        #[cfg(not(feature = "async-functions"))]
+        let async_prefix = false;
+        #[cfg(feature = "async-functions")]
         let mut asynchronous = false;
+        #[cfg(not(feature = "async-functions"))]
+        let asynchronous = false;
+        #[cfg(feature = "async-functions")]
         let mut async_function = false;
+        #[cfg(not(feature = "async-functions"))]
+        let async_function = false;
         let mut arrow_parameters = None;
         if async_prefix {
-            self.whitespace();
-            arrow_parameters = self.try_arrow_parameters()?;
-            asynchronous = arrow_parameters.is_some();
-            if !asynchronous && self.try_word(b"function") {
-                asynchronous = true;
-                async_function = true;
+            #[cfg(feature = "async-functions")]
+            {
+                self.whitespace();
+                arrow_parameters = self.try_arrow_parameters()?;
+                asynchronous = arrow_parameters.is_some();
+                if !asynchronous && self.try_word(b"function") {
+                    asynchronous = true;
+                    async_function = true;
+                }
             }
         }
         if !asynchronous {
@@ -1285,6 +1309,7 @@ impl Parser<'_> {
             }
             break;
         }
+        #[cfg(feature = "async")]
         if awaiting {
             self.output.push(Opcode::Await as u8);
         }
@@ -1454,6 +1479,7 @@ impl Parser<'_> {
         self.try_word(word)
     }
 
+    #[cfg(feature = "async-functions")]
     fn try_async_function(&mut self) -> bool {
         let start = self.offset;
         if !self.try_word(b"async")
@@ -1472,6 +1498,11 @@ impl Parser<'_> {
             self.offset = start;
             false
         }
+    }
+
+    #[cfg(not(feature = "async-functions"))]
+    fn try_async_function(&mut self) -> bool {
+        false
     }
 
     fn consume(&mut self, byte: u8) -> bool {
@@ -1533,6 +1564,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "async")]
     #[test]
     fn compiles_directly_to_stack_bytecode() {
         assert_eq!(
@@ -1565,7 +1597,7 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
-    #[cfg(feature = "exceptions")]
+    #[cfg(all(feature = "async", feature = "exceptions"))]
     #[test]
     fn closes_a_handler_before_a_normal_return() {
         let code = compile_script("try { return await 2; } catch { return 17; }").unwrap();
@@ -1686,6 +1718,23 @@ mod tests {
         );
     }
 
+    #[cfg(all(not(feature = "async"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_await_as_an_unexpected_token() {
+        assert_eq!(compile_script("return await 1;").unwrap_err().offset, 7);
+    }
+
+    #[cfg(all(not(feature = "async-functions"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_async_functions_as_unexpected_tokens() {
+        assert_eq!(
+            compile_script("async function value() { return 1; } return value();")
+                .unwrap_err()
+                .offset,
+            0
+        );
+    }
+
     #[cfg(feature = "number-operations")]
     #[test]
     fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
@@ -1799,6 +1848,7 @@ mod tests {
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }
 
+    #[cfg(feature = "async-functions")]
     #[test]
     fn compiles_async_declarations_to_the_async_closure_capability() {
         let code = compile_script("async function answer() { return await 42; } return answer();")
@@ -1808,6 +1858,7 @@ mod tests {
         assert!(!code.contains(&(Opcode::Closure as u8)));
     }
 
+    #[cfg(feature = "async-functions")]
     #[test]
     fn compiles_async_expressions_and_arrows_to_async_closures() {
         for source in [
@@ -1821,6 +1872,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "async-functions")]
     #[test]
     fn compiles_named_async_expressions_with_a_private_self_capture() {
         let code =
@@ -1829,6 +1881,7 @@ mod tests {
         assert!(code.contains(&(Opcode::Await as u8)));
     }
 
+    #[cfg(feature = "async-functions")]
     #[test]
     fn keeps_async_available_as_an_ordinary_binding() {
         let code = compile_script("let async = 41; return async + 1;").unwrap();

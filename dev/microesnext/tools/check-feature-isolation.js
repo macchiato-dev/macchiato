@@ -85,6 +85,8 @@ assertCompilerFeatures(
   [],
   [
     "arrays",
+    "async",
+    "async-functions",
     "atoms",
     "control-flow",
     "equality",
@@ -96,6 +98,11 @@ assertCompilerFeatures(
     "objects",
     "strings",
   ],
+);
+assertCompilerFeatures(
+  ["async-functions"],
+  ["async", "async-functions", "recursive-async-functions"],
+  ["arrays", "control-flow", "equality", "numbers", "objects"],
 );
 assertCompilerFeatures(
   ["exceptions"],

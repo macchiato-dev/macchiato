@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = [
   "arrays",
+  "async-functions",
   "control-flow",
   "equality",
   "exceptions",
@@ -19,6 +20,12 @@ default = [
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
+async = ["microesnext-bytecode/async"]
+async-functions = [
+  "async",
+  "microesnext-bytecode/async-functions",
+  "microesnext-bytecode/recursive-async-functions",
+]
 atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 equality = ["microesnext-bytecode/equality"]
@@ -37,14 +44,11 @@ strings = ["microesnext-bytecode/strings"]
 
 [dependencies]
 microesnext-bytecode = { workspace = true, features = [
-  "async",
-  "async-functions",
   "environments",
   "functions",
   "function-arguments",
   "locals",
   "recursive-functions",
-  "recursive-async-functions",
   "receivers",
 ] }
 
