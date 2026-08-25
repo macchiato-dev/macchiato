@@ -66,15 +66,15 @@ for (const [name, features] of builds) {
   );
   const { instance } = await WebAssembly.instantiate(bytes);
   const source = features === "class-expressions"
-    ? "let C = class { constructor(value) { this.value = value; } read() { return this.value; } }; let value = new C(1); return value.read();"
+    ? "let C = class { constructor(value) { this.value = value; } read() { return this.value; } }; return new C(1).read();"
     : features === "class-static-methods"
     ? "class C { constructor() {} static read(value) { return value; } } return C.read(1);"
     : features === "class-default-constructors"
     ? "class Empty {} return new Empty();"
     : features === "class-methods"
-    ? "class C { constructor(value) { this.value = value; } read() { return this.value; } } let value = new C(1); return value.read();"
+    ? "class C { constructor(value) { this.value = value; } read() { return this.value; } } return new C(1).read();"
     : features === "classes"
-    ? "class C { constructor(value) { this.value = value; } } let value = new C(1); return value.value;"
+    ? "class C { constructor(value) { this.value = value; } } return new C(1).value;"
     : features.includes("recursive-async-functions")
     ? "return async function named() { return await named(); };"
     : features.includes("async-functions")
