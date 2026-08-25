@@ -274,6 +274,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-instanceof"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-callable-objects",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-prototype-chain",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-integer-negation"
 version = "0.0.0"
 dependencies = [

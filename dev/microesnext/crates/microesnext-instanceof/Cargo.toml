@@ -1,0 +1,21 @@
+[package]
+name = "microesnext-instanceof"
+description = "Removable ordinary instanceof semantics for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["callable-objects"] }
+microesnext-callable-objects.workspace = true
+microesnext-objects = { workspace = true, features = ["callable-objects"] }
+microesnext-prototype-chain.workspace = true
+microesnext-types.workspace = true
+
+[dev-dependencies]
+microesnext-functions.workspace = true
+
+[lib]
+path = "src/lib.rs"
