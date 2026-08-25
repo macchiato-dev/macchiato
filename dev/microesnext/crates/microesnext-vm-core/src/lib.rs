@@ -105,6 +105,7 @@ impl<'code, 'memory> Core<'code, 'memory> {
 
     /// Run only invariant opcodes. Capability opcodes return to the wrapper
     /// after their byte has been consumed, then execution can re-enter here.
+    #[inline(never)]
     pub fn run(&mut self) -> Result<CoreOutcome, Error> {
         loop {
             match read_opcode(self.code, &mut self.pc)? {

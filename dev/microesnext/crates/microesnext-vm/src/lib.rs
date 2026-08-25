@@ -13,11 +13,7 @@ use microesnext_vm_core::{Core, CoreOutcome};
 pub enum Outcome {
     Complete(Value),
     Throw(Value),
-    #[cfg(feature = "async")]
-    Await {
-        value: Value,
-        continuation: RootId,
-    },
+    Await { value: Value, continuation: RootId },
 }
 
 pub struct Machine<'code, 'memory> {
@@ -95,101 +91,121 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             match self.core.run()? {
                 CoreOutcome::Complete(value) => return Ok(Outcome::Complete(value)),
                 CoreOutcome::Throw(value) => return Ok(Outcome::Throw(value)),
-                CoreOutcome::Extension(Opcode::Await) => {
-                    #[cfg(not(feature = "async"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "async")]
-                    {
-                        let (value, continuation) = self.core.suspend()?;
-                        return Ok(Outcome::Await {
-                            value,
-                            continuation,
-                        });
+                CoreOutcome::Extension(opcode) => {
+                    if let Some(outcome) = self.run_extension(opcode)? {
+                        return Ok(outcome);
                     }
                 }
-                CoreOutcome::Extension(Opcode::ConstString) => {
-                    #[cfg(not(feature = "objects"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "objects")]
-                    {
-                        let bytes = self.core.next_bytes()?;
-                        let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
-                        let value = atoms.intern(self.core.arena_mut(), bytes)?;
-                        self.core.arena_mut().push(value)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::NewObject) => {
-                    #[cfg(not(feature = "objects"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "objects")]
-                    {
-                        let object = new_object(self.core.arena_mut(), Value::NULL)?;
-                        self.core.arena_mut().push(object)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::GetProperty) => {
-                    #[cfg(not(feature = "objects"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "objects")]
-                    {
-                        let key = self.core.arena_mut().pop()?;
-                        let object = self.core.arena_mut().pop()?;
-                        let value = get(self.core.arena(), object, key)?;
-                        self.core.arena_mut().push(value)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::SetProperty) => {
-                    #[cfg(not(feature = "objects"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "objects")]
-                    {
-                        let value = self.core.arena_mut().pop()?;
-                        let key = self.core.arena_mut().pop()?;
-                        let object = self.core.arena_mut().pop()?;
-                        let object = set(self.core.arena_mut(), object, key, value)?;
-                        self.core.arena_mut().push(object)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::Closure) => {
-                    #[cfg(not(feature = "functions"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "functions")]
-                    {
-                        let target = self.core.next_u32()?;
-                        let capture_count = self.core.next_u16()? as usize;
-                        if target as usize >= self.core.code().len() {
-                            return Err(Error::BadBytecode);
-                        }
-                        let closure = capture_stack(self.core.arena_mut(), target, capture_count)?;
-                        self.core.arena_mut().push(closure)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::CallValue) => {
-                    #[cfg(not(feature = "functions"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "functions")]
-                    {
-                        let function = self.core.arena_mut().pop()?;
-                        let target = entry(self.core.arena(), function)?;
-                        self.core.enter_call(function, target)?;
-                    }
-                }
-                CoreOutcome::Extension(Opcode::LoadCapture) => {
-                    #[cfg(not(feature = "functions"))]
-                    return Err(Error::BadBytecode);
-                    #[cfg(feature = "functions")]
-                    {
-                        let index = self.core.next_u16()? as usize;
-                        let frame_depth = self.core.frame_depth().ok_or(Error::BadBytecode)?;
-                        let function_index = self.core.arena().stack_len() - frame_depth;
-                        let function = self.core.arena().stack_value(function_index)?;
-                        let value = capture(self.core.arena(), function, index)?;
-                        self.core.arena_mut().push(value)?;
-                    }
-                }
-                CoreOutcome::Extension(_) => return Err(Error::BadBytecode),
             }
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    #[cfg(any(feature = "async", feature = "objects", feature = "functions"))]
+    fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
+        match opcode {
+            Opcode::Await => {
+                #[cfg(not(feature = "async"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "async")]
+                {
+                    let (value, continuation) = self.core.suspend()?;
+                    return Ok(Some(Outcome::Await {
+                        value,
+                        continuation,
+                    }));
+                }
+            }
+            Opcode::ConstString => {
+                #[cfg(not(feature = "objects"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "objects")]
+                {
+                    let bytes = self.core.next_bytes()?;
+                    let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
+                    let value = atoms.intern(self.core.arena_mut(), bytes)?;
+                    self.core.arena_mut().push(value)?;
+                }
+            }
+            Opcode::NewObject => {
+                #[cfg(not(feature = "objects"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "objects")]
+                {
+                    let object = new_object(self.core.arena_mut(), Value::NULL)?;
+                    self.core.arena_mut().push(object)?;
+                }
+            }
+            Opcode::GetProperty => {
+                #[cfg(not(feature = "objects"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "objects")]
+                {
+                    let key = self.core.arena_mut().pop()?;
+                    let object = self.core.arena_mut().pop()?;
+                    let value = get(self.core.arena(), object, key)?;
+                    self.core.arena_mut().push(value)?;
+                }
+            }
+            Opcode::SetProperty => {
+                #[cfg(not(feature = "objects"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "objects")]
+                {
+                    let value = self.core.arena_mut().pop()?;
+                    let key = self.core.arena_mut().pop()?;
+                    let object = self.core.arena_mut().pop()?;
+                    let object = set(self.core.arena_mut(), object, key, value)?;
+                    self.core.arena_mut().push(object)?;
+                }
+            }
+            Opcode::Closure => {
+                #[cfg(not(feature = "functions"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "functions")]
+                {
+                    let target = self.core.next_u32()?;
+                    let capture_count = self.core.next_u16()? as usize;
+                    if target as usize >= self.core.code().len() {
+                        return Err(Error::BadBytecode);
+                    }
+                    let closure = capture_stack(self.core.arena_mut(), target, capture_count)?;
+                    self.core.arena_mut().push(closure)?;
+                }
+            }
+            Opcode::CallValue => {
+                #[cfg(not(feature = "functions"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "functions")]
+                {
+                    let function = self.core.arena_mut().pop()?;
+                    let target = entry(self.core.arena(), function)?;
+                    self.core.enter_call(function, target)?;
+                }
+            }
+            Opcode::LoadCapture => {
+                #[cfg(not(feature = "functions"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "functions")]
+                {
+                    let index = self.core.next_u16()? as usize;
+                    let frame_depth = self.core.frame_depth().ok_or(Error::BadBytecode)?;
+                    let function_index = self.core.arena().stack_len() - frame_depth;
+                    let function = self.core.arena().stack_value(function_index)?;
+                    let value = capture(self.core.arena(), function, index)?;
+                    self.core.arena_mut().push(value)?;
+                }
+            }
+            _ => return Err(Error::BadBytecode),
+        }
+        Ok(None)
+    }
+
+    #[inline(always)]
+    #[cfg(not(any(feature = "async", feature = "objects", feature = "functions")))]
+    fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
+        Err(Error::BadBytecode)
     }
 
     /// Enter a guest closure from a scheduler job without using a native call

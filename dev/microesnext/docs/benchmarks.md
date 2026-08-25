@@ -25,3 +25,24 @@ Future checks must include representative object, closure, collection, parser,
 and suspension workloads and compare peak arena usage against upstream
 MicroQuickJS. A faster synthetic addition loop cannot excuse regressions in
 those workloads.
+
+## Feature-independent core, 2026-08-25
+
+After Promise jobs were added, the facade benchmark began varying with enabled
+features even though it executed only integer opcodes. The hot interpreter was
+therefore extracted into `microesnext-vm-core`; capability opcodes return to an
+out-of-line wrapper, while base bytecodes stay in a state type whose layout is
+independent of Cargo features.
+
+`core-loop-direct` runs the same 20,020,000-instruction workload directly on
+that boundary. Alternating minimal and full builds produced 3.31–3.34
+ns/instruction before the final out-of-line adjustment, and 3.49–3.50
+ns/instruction with the core function kept out of the capability wrapper by an
+inlining boundary. The minimal and full direct-core samples were effectively
+identical within each configuration.
+
+The facade-level `core-loop` still shows noisier binary-layout and return-path
+variation across separately linked executables. It remains a regression gate,
+not evidence that optional code affects the core dispatch loop. A future
+benchmark runner should sample both configurations in one process where
+possible and report distributions rather than isolated wall-clock readings.

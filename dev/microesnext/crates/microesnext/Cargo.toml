@@ -25,6 +25,7 @@ microesnext-promises = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
+microesnext-vm-core.workspace = true
 
 [lib]
 path = "src/lib.rs"

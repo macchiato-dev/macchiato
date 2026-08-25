@@ -13,6 +13,7 @@ dependencies = [
  "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
+ "microesnext-vm-core",
  "microesnext-weak-collections",
 ]
 

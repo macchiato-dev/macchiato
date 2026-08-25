@@ -3,6 +3,7 @@
 pub use microesnext_bytecode as bytecode;
 pub use microesnext_types::{Error, HeapRef, Value};
 pub use microesnext_vm::{Machine, Outcome};
+pub use microesnext_vm_core::{Core, CoreOutcome};
 
 #[cfg(feature = "async")]
 pub use microesnext_async as r#async;
