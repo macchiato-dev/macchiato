@@ -3,6 +3,15 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 
+#[cfg(not(feature = "callable-objects"))]
+pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
+    value
+        .as_ref()
+        .and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::Object)
+}
+
+#[cfg(feature = "callable-objects")]
 pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
     value
         .as_ref()
@@ -88,6 +97,11 @@ pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
 fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object_ref(arena, object)?;
     let fields = arena.values(object)?;
+    #[cfg(not(feature = "callable-objects"))]
+    if fields.len() != 2 {
+        return Err(Error::DanglingReference);
+    }
+    #[cfg(feature = "callable-objects")]
     if fields.len() != object_field_count(arena.kind(object)?) {
         return Err(Error::DanglingReference);
     }
@@ -96,27 +110,28 @@ fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
 
 fn object_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object.as_ref().ok_or(Error::Type)?;
+    #[cfg(not(feature = "callable-objects"))]
+    if arena.kind(object)? != BlockKind::Object {
+        return Err(Error::Type);
+    }
+    #[cfg(feature = "callable-objects")]
     if !is_object_kind(arena.kind(object)?) {
         return Err(Error::Type);
     }
     Ok(object)
 }
 
+#[cfg(feature = "callable-objects")]
 #[inline]
 const fn is_object_kind(kind: BlockKind) -> bool {
-    match kind {
-        BlockKind::Object => true,
-        #[cfg(feature = "callable-objects")]
-        BlockKind::CallableObject => true,
-        _ => false,
-    }
+    matches!(kind, BlockKind::Object | BlockKind::CallableObject)
 }
 
+#[cfg(feature = "callable-objects")]
 #[inline]
 const fn object_field_count(kind: BlockKind) -> usize {
     match kind {
         BlockKind::Object => 2,
-        #[cfg(feature = "callable-objects")]
         BlockKind::CallableObject => 3,
         _ => 0,
     }

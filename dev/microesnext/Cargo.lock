@@ -14,6 +14,7 @@ dependencies = [
  "microesnext-async-thenables",
  "microesnext-atoms",
  "microesnext-bytecode",
+ "microesnext-callable-objects",
  "microesnext-collection-entry-iterators",
  "microesnext-collection-iterators",
  "microesnext-collections",
@@ -547,6 +548,8 @@ name = "microesnext-typeof"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-callable-objects",
+ "microesnext-functions",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -564,6 +567,7 @@ dependencies = [
  "microesnext-async-functions",
  "microesnext-atoms",
  "microesnext-bytecode",
+ "microesnext-callable-objects",
  "microesnext-compiler",
  "microesnext-environments",
  "microesnext-equality",

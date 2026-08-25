@@ -231,6 +231,16 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       ],
     ],
     [
+      "functions and objects",
+      "functions,objects",
+      [core, ["atoms_probe", "nonzero"], ["functions_probe", 42], ["objects_probe", 42]],
+    ],
+    [
+      "callable objects",
+      "callable-objects",
+      [core, ["atoms_probe", "nonzero"], ["callable_objects_probe", 42]],
+    ],
+    [
       "prototype chain",
       "prototype-chain",
       [core, ["atoms_probe", "nonzero"], ["prototype_chain_probe", 1]],

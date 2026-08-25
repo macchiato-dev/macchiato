@@ -35,6 +35,12 @@ string-operations = [
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 functions = ["dep:microesnext-functions", "microesnext-bytecode/functions"]
+callable-objects = [
+  "functions",
+  "objects",
+  "dep:microesnext-callable-objects",
+  "microesnext-typeof?/callable-objects",
+]
 function-arguments = [
   "functions",
   "locals",
@@ -126,6 +132,7 @@ microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
+microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }

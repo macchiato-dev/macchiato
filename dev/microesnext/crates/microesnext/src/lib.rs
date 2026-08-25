@@ -38,6 +38,9 @@ pub use microesnext_async_thenables as async_thenables;
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
 
+#[cfg(feature = "callable-objects")]
+pub use microesnext_callable_objects as callable_objects;
+
 #[cfg(feature = "collection-iterators")]
 pub use microesnext_collection_iterators as collection_iterators;
 

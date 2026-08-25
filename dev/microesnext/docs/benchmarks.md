@@ -491,6 +491,14 @@ gzip bytes; composing prototype traversal is 15,213 / 6,012. The incremental
 cost is therefore 740 raw / 237 gzip bytes, and builds selecting only objects
 do not resolve the crate.
 
+Callable objects remain separate from both pieces. A final Wasm containing
+functions and objects is 16,905 raw / 6,713 gzip bytes. Adding the wrapper
+record, ordinary-property integration, call unwrapping, and its exercised
+probe produces 17,812 / 7,107—an increment of 907 raw / 394 gzip bytes. The
+objects-only probe remains exactly 14,473 / 5,775 after this addition; its
+kind checks and two-field layout are compile-time-specialized rather than
+paying a generalized branch for a feature it omitted.
+
 ## Progressive compiler artifacts
 
 The compiler has its own final-linked Wasm probe because `.rlib` archives and

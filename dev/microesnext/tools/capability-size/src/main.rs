@@ -45,6 +45,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "recursive-async-functions",
         feature = "receivers",
         feature = "strings",
+        feature = "callable-objects",
         feature = "thenables",
         feature = "typeof"
     )
@@ -79,6 +80,38 @@ pub extern "C" fn prototype_chain_probe() -> i32 {
     let value = microesnext::objects::new_object(&mut arena, prototype);
     let Ok(value) = value else { return 0 };
     microesnext::prototype_chain::contains(&arena, value, prototype).unwrap_or(false) as i32
+}
+
+#[cfg(all(feature = "callable-objects", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn callable_objects_probe() -> i32 {
+    let code = [
+        Opcode::CallValue as u8,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 96];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(closure) = microesnext::functions::capture_stack(machine.arena_mut(), 2, 0) else {
+        return -1;
+    };
+    let Ok(function) =
+        microesnext::callable_objects::new(machine.arena_mut(), closure, microesnext::Value::NULL)
+    else {
+        return -1;
+    };
+    if machine.arena_mut().push(function).is_err() {
+        return -1;
+    }
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
 }
 
 #[cfg(all(feature = "locals", target_arch = "wasm32"))]

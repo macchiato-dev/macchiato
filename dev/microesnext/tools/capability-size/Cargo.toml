@@ -16,6 +16,7 @@ async-functions = ["async", "promises", "microesnext/async-functions"]
 async-thenables = ["async-functions", "thenables", "microesnext/async-thenables"]
 atoms = ["strings", "microesnext/atoms"]
 collections = ["microesnext/collections"]
+callable-objects = ["functions", "objects", "microesnext/callable-objects"]
 control-flow = ["microesnext/control-flow"]
 collection-iterators = ["collections", "iterators", "microesnext/collection-iterators"]
 collection-entry-iterators = [

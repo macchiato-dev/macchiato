@@ -47,6 +47,13 @@ atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 prototype-chain = ["objects", "dep:microesnext-prototype-chain"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
+callable-objects = [
+  "functions",
+  "objects",
+  "dep:microesnext-callable-objects",
+  "microesnext-vm/callable-objects",
+  "microesnext-typeof?/callable-objects",
+]
 function-arguments = [
   "functions",
   "locals",
@@ -181,6 +188,7 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-array-iterators = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
+microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-collection-iterators = { workspace = true, optional = true }
 microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }

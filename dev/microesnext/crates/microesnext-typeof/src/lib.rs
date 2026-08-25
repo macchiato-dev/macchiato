@@ -17,6 +17,8 @@ pub fn type_of(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
         match arena.kind(reference)? {
             BlockKind::String => b"string",
             BlockKind::Closure => b"function",
+            #[cfg(feature = "callable-objects")]
+            BlockKind::CallableObject => b"function",
             #[cfg(feature = "numbers")]
             BlockKind::Number => b"number",
             #[cfg(feature = "symbols")]
@@ -87,6 +89,16 @@ mod tests {
             .map(Value::from_ref)
             .unwrap();
         assert_type(&mut arena, symbol, b"symbol");
+    }
+
+    #[cfg(feature = "callable-objects")]
+    #[test]
+    fn classifies_callable_objects_as_functions() {
+        let mut memory = [0; 64];
+        let mut arena = Arena::new(&mut memory);
+        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let callable = microesnext_callable_objects::new(&mut arena, closure, Value::NULL).unwrap();
+        assert_type(&mut arena, callable, b"function");
     }
 
     #[cfg(all(feature = "async-functions", feature = "promise-resolvers"))]

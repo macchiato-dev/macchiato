@@ -299,6 +299,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
+                #[cfg(feature = "callable-objects")]
+                let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
                 if microesnext_promise_resolvers::is_resolver(self.core.arena(), function) {
                     if let Some(call) = microesnext_promise_resolvers::take_call(
@@ -330,6 +332,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let argument_count = self.core.next_u16()? as usize;
                 let function =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                #[cfg(feature = "callable-objects")]
+                let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
                 if microesnext_promise_resolvers::is_resolver(self.core.arena(), function) {
                     if let Some(call) = microesnext_promise_resolvers::take_call(
@@ -780,6 +784,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     /// frame. The argument begins as the closure's sole operand.
     #[cfg(feature = "functions")]
     pub fn call_closure(&mut self, function: Value, argument: Value) -> Result<Outcome, Error> {
+        #[cfg(feature = "callable-objects")]
+        let function = unwrap_callable(self.core.arena(), function)?;
         let target = entry(self.core.arena(), function)?;
         self.core.enter_external_call(function, target, argument)?;
         self.run()
@@ -797,6 +803,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         if self.core.frame_depth().is_some() || self.core.arena().stack_len() != 0 {
             return Err(Error::Type);
         }
+        #[cfg(feature = "callable-objects")]
+        let function = unwrap_callable(self.core.arena(), function)?;
         let target = entry(self.core.arena(), function)?;
         for argument in arguments {
             if let Err(error) = self.core.arena_mut().push(*argument) {
@@ -951,6 +959,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         self.core.abandon();
         Ok(Some(Outcome::Throw(reason)))
+    }
+}
+
+#[cfg(feature = "callable-objects")]
+#[inline]
+fn unwrap_callable(arena: &microesnext_arena::Arena<'_>, value: Value) -> Result<Value, Error> {
+    if microesnext_callable_objects::is_callable_object(arena, value) {
+        microesnext_callable_objects::callable(arena, value)
+    } else {
+        Ok(value)
     }
 }
 
@@ -1328,6 +1346,28 @@ mod tests {
         assert_eq!(
             machine.run().unwrap(),
             Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[cfg(feature = "callable-objects")]
+    #[test]
+    fn an_ordinary_callable_object_enters_its_compact_closure() {
+        let code = Builder::new()
+            .op(Opcode::CallValue)
+            .op(Opcode::Return)
+            .const_i30(42)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 96];
+        let mut machine = Machine::new(&code, &mut memory);
+        let closure = microesnext_functions::capture_stack(machine.arena_mut(), 2, 0).unwrap();
+        let function =
+            microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
+        machine.arena_mut().push(function).unwrap();
+
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
     }
 
