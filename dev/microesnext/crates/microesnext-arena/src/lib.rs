@@ -61,6 +61,21 @@ const fn opaque_kind(kind: u32) -> bool {
         || kind == BlockKind::Number as u32
 }
 
+#[inline]
+fn words_as_bytes(words: &[u32]) -> &[u8] {
+    // SAFETY: every initialized `u32` is four initialized bytes, `u8` has
+    // alignment one, and the returned slice cannot outlive `words`.
+    unsafe { core::slice::from_raw_parts(words.as_ptr().cast(), words.len() * 4) }
+}
+
+#[inline]
+fn words_as_bytes_mut(words: &mut [u32]) -> &mut [u8] {
+    // SAFETY: this is the unique borrow of the word range. Byte payloads are
+    // opaque and are read through the same native-byte view, so this remains
+    // endian-independent rather than interpreting their bytes as integers.
+    unsafe { core::slice::from_raw_parts_mut(words.as_mut_ptr().cast(), words.len() * 4) }
+}
+
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
 pub struct Arena<'memory> {
     words: &'memory mut [u32],
@@ -164,10 +179,9 @@ impl<'memory> Arena<'memory> {
         self.words[start] = length as u32;
         self.words[start + 1] = kind as u32;
         self.words[start + HEADER_WORDS] = bytes.len() as u32;
-        self.words[start + HEADER_WORDS + 1..start + length].fill(0);
-        for (index, byte) in bytes.iter().copied().enumerate() {
-            self.words[start + HEADER_WORDS + 1 + index / 4] |= (byte as u32) << ((index % 4) * 8);
-        }
+        let storage = &mut self.words[start + HEADER_WORDS + 1..start + length];
+        storage.fill(0);
+        words_as_bytes_mut(storage)[..bytes.len()].copy_from_slice(bytes);
         self.heap_end += length;
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
@@ -204,18 +218,19 @@ impl<'memory> Arena<'memory> {
         let left = sources[0].as_ref().ok_or(Error::DanglingReference)?;
         let right = sources[1].as_ref().ok_or(Error::DanglingReference)?;
         let start = self.heap_end;
+        let left_start = (self.block_start(left)? + HEADER_WORDS + 1) * 4;
+        let right_start = (self.block_start(right)? + HEADER_WORDS + 1) * 4;
+        let data_start = (start + HEADER_WORDS + 1) * 4;
         self.words[start] = length as u32;
         self.words[start + 1] = kind as u32;
         self.words[start + HEADER_WORDS] = byte_length as u32;
-        self.words[start + HEADER_WORDS + 1..start + length].fill(0);
-        for index in 0..byte_length {
-            let byte = if index < left_length {
-                self.byte(left, index)?
-            } else {
-                self.byte(right, index - left_length)?
-            };
-            self.words[start + HEADER_WORDS + 1 + index / 4] |= (byte as u32) << ((index % 4) * 8);
-        }
+        let bytes = words_as_bytes_mut(self.words);
+        bytes[data_start..(start + length) * 4].fill(0);
+        bytes.copy_within(left_start..left_start + left_length, data_start);
+        bytes.copy_within(
+            right_start..right_start + right_length,
+            data_start + left_length,
+        );
         self.heap_end += length;
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
@@ -674,24 +689,21 @@ impl<'memory> Arena<'memory> {
     }
 
     pub fn byte(&self, reference: HeapRef, index: usize) -> Result<u8, Error> {
-        if index >= self.byte_len(reference)? {
-            return Err(Error::BadBytecode);
-        }
-        let start = self.block_start(reference)?;
-        let word = self.words[start + HEADER_WORDS + 1 + index / 4];
-        Ok((word >> ((index % 4) * 8)) as u8)
+        self.bytes(reference)?
+            .get(index)
+            .copied()
+            .ok_or(Error::BadBytecode)
+    }
+
+    /// Borrow a byte or string payload without copying it out of the arena.
+    pub fn bytes(&self, reference: HeapRef) -> Result<&[u8], Error> {
+        let length = self.byte_len(reference)?;
+        let start = self.block_start(reference)? + HEADER_WORDS + 1;
+        Ok(&words_as_bytes(&self.words[start..])[..length])
     }
 
     pub fn bytes_equal(&self, reference: HeapRef, bytes: &[u8]) -> Result<bool, Error> {
-        if self.byte_len(reference)? != bytes.len() {
-            return Ok(false);
-        }
-        for (index, expected) in bytes.iter().copied().enumerate() {
-            if self.byte(reference, index)? != expected {
-                return Ok(false);
-            }
-        }
-        Ok(true)
+        Ok(self.bytes(reference)? == bytes)
     }
 
     pub fn kind(&self, reference: HeapRef) -> Result<BlockKind, Error> {
