@@ -1,6 +1,6 @@
 [package]
 name = "microesnext-equality"
-description = "Composable SameValueZero equality for MicroESNext"
+description = "Composable JavaScript equality operations for MicroESNext"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

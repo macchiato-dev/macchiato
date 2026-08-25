@@ -23,26 +23,67 @@ pub fn same_value_zero(arena: &Arena<'_>, left: Value, right: Value) -> Result<b
         }
     }
     #[cfg(feature = "strings")]
-    if let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) {
-        if arena.kind(left)? == BlockKind::String && arena.kind(right)? == BlockKind::String {
-            let length = arena.byte_len(left)?;
-            if length != arena.byte_len(right)? {
-                return Ok(false);
-            }
-            for index in 0..length {
-                if arena.byte(left, index)? != arena.byte(right, index)? {
-                    return Ok(false);
-                }
-            }
-            return Ok(true);
-        }
+    if string_equal(arena, left, right)? {
+        return Ok(true);
     }
     Ok(false)
 }
 
-#[cfg(all(test, any(feature = "numbers", feature = "strings")))]
+pub fn strict_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    #[cfg(not(any(feature = "numbers", feature = "strings")))]
+    let _ = arena;
+    #[cfg(feature = "numbers")]
+    {
+        let left_number = microesnext_numbers::try_get(arena, left)?;
+        let right_number = microesnext_numbers::try_get(arena, right)?;
+        if left_number.is_some() || right_number.is_some() {
+            let (Some(left), Some(right)) = (left_number, right_number) else {
+                return Ok(false);
+            };
+            return Ok(left == right);
+        }
+    }
+    if left == right {
+        return Ok(true);
+    }
+    #[cfg(feature = "strings")]
+    if string_equal(arena, left, right)? {
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+#[cfg(feature = "strings")]
+fn string_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) else {
+        return Ok(false);
+    };
+    if arena.kind(left)? != BlockKind::String || arena.kind(right)? != BlockKind::String {
+        return Ok(false);
+    }
+    let length = arena.byte_len(left)?;
+    if length != arena.byte_len(right)? {
+        return Ok(false);
+    }
+    for index in 0..length {
+        if arena.byte(left, index)? != arena.byte(right, index)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn strict_equality_compares_immediate_identity() {
+        let mut memory = [0; 8];
+        let arena = Arena::new(&mut memory);
+        assert!(strict_equal(&arena, Value::TRUE, Value::TRUE).unwrap());
+        assert!(!strict_equal(&arena, Value::TRUE, Value::FALSE).unwrap());
+    }
 
     #[cfg(feature = "numbers")]
     #[test]
@@ -55,6 +96,8 @@ mod tests {
         let zero = microesnext_numbers::new(&mut arena, 0.0).unwrap();
         let negative_zero = microesnext_numbers::new(&mut arena, -0.0).unwrap();
         assert!(same_value_zero(&arena, zero, negative_zero).unwrap());
+        assert!(!strict_equal(&arena, nan_a, nan_b).unwrap());
+        assert!(strict_equal(&arena, zero, negative_zero).unwrap());
     }
 
     #[cfg(feature = "strings")]
@@ -66,5 +109,6 @@ mod tests {
         let right = microesnext_strings::new(&mut arena, b"key").unwrap();
         assert_ne!(left, right);
         assert!(same_value_zero(&arena, left, right).unwrap());
+        assert!(strict_equal(&arena, left, right).unwrap());
     }
 }
