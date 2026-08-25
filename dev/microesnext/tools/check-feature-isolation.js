@@ -79,6 +79,11 @@ assertPresence(
   ],
 );
 assertPresence(
+  ["equality", "numbers"],
+  [equality, "microesnext-numbers"],
+  ["microesnext-atoms", "microesnext-objects", "microesnext-strings"],
+);
+assertPresence(
   ["minimal-program"],
   [integerOperations, "microesnext-locals", "microesnext-truthiness"],
   [

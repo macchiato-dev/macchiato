@@ -212,14 +212,9 @@ pub extern "C" fn equality_probe() -> i32 {
     }
 }
 
-#[cfg(all(
-    feature = "equality",
-    feature = "numbers",
-    feature = "strings",
-    target_arch = "wasm32"
-))]
+#[cfg(all(feature = "equality", feature = "numbers", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
-pub extern "C" fn scalar_equality_probe() -> i32 {
+pub extern "C" fn number_equality_probe() -> i32 {
     let nan = f64::NAN.to_bits().to_le_bytes();
     let number_code = [
         Opcode::ConstF64 as u8,
@@ -245,10 +240,15 @@ pub extern "C" fn scalar_equality_probe() -> i32 {
     ];
     let mut number_memory = [0; 48];
     let mut number_machine = Machine::new(&number_code, &mut number_memory);
-    if number_machine.run() != Ok(Outcome::Complete(Value::FALSE)) {
-        return 0;
+    match number_machine.run() {
+        Ok(Outcome::Complete(Value::FALSE)) => 1,
+        _ => 0,
     }
+}
 
+#[cfg(all(feature = "equality", feature = "strings", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn string_equality_probe() -> i32 {
     let string_code = [
         Opcode::ConstString as u8,
         1,

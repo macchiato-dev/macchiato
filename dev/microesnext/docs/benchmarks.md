@@ -48,9 +48,11 @@ figure remains useful for measuring the fixed interpreter mechanism itself.
 
 The identity-only strict-equality build is 2,890 bytes (1,337 gzip). Its live
 probe compares tagged booleans and its dependency graph omits string and number
-storage. Composing both scalar representations produces a 10,043-byte (4,181
-gzip) artifact whose probes verify separately allocated equal strings, unequal
-boxed NaNs, and the existing numeric and string operations.
+storage. A number-only build is 8,111 bytes (3,422 gzip); its graph contains no
+string, atom, or object crate and its live probe verifies that boxed NaNs remain
+unequal. Composing both scalar representations produces a 10,093-byte (4,147
+gzip) artifact whose additional probe verifies separately allocated equal
+strings.
 
 `microesnext-equality` also retains SameValueZero for collection keys, but the
 VM's `===` and `!==` instructions call the strict operation. This avoids the

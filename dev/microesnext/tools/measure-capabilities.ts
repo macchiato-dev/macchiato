@@ -76,6 +76,16 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["environment cells", "environments", [core, ["environments_probe", 42]]],
     ["strict equality", "equality", [core, ["equality_probe", 1]]],
     [
+      "strict equality with numbers only",
+      "equality,numbers",
+      [
+        core,
+        ["equality_probe", 1],
+        ["number_equality_probe", 1],
+        ["numbers_probe", 3.25],
+      ],
+    ],
+    [
       "strict equality with scalar values",
       "equality,numbers,strings",
       [
@@ -83,7 +93,8 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["equality_probe", 1],
         ["numbers_probe", 3.25],
         ["strings_probe", "nonzero"],
-        ["scalar_equality_probe", 1],
+        ["number_equality_probe", 1],
+        ["string_equality_probe", 1],
       ],
     ],
     ["guest errors", "errors", [core, ["errors_probe", 42]]],
@@ -222,7 +233,8 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["errors_probe", 42],
         ["environments_probe", 42],
         ["equality_probe", 1],
-        ["scalar_equality_probe", 1],
+        ["number_equality_probe", 1],
+        ["string_equality_probe", 1],
         ["closure_environments_probe", 42],
         ["functions_probe", "nonzero"],
         ["recursive_functions_probe", 42],
