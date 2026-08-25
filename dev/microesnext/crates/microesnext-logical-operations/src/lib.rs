@@ -11,6 +11,14 @@ pub fn is_falsy(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
     Ok(!is_truthy(arena, value)?)
 }
 
+pub fn logical_not(arena: &Arena<'_>, value: Value) -> Result<Value, Error> {
+    Ok(if is_falsy(arena, value)? {
+        Value::TRUE
+    } else {
+        Value::FALSE
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -21,6 +29,8 @@ mod tests {
         let arena = Arena::new(&mut memory);
         assert!(is_falsy(&arena, Value::FALSE).unwrap());
         assert!(is_truthy(&arena, Value::TRUE).unwrap());
+        assert_eq!(logical_not(&arena, Value::FALSE), Ok(Value::TRUE));
+        assert_eq!(logical_not(&arena, Value::TRUE), Ok(Value::FALSE));
     }
 
     macro_rules! scalar_falsy_test {

@@ -118,6 +118,8 @@ pub enum Opcode {
     GreaterThanNumber = 93,
     #[cfg(feature = "string-operations")]
     ConcatenateStrings = 94,
+    #[cfg(feature = "logical-operations")]
+    LogicalNot = 95,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -227,6 +229,8 @@ impl TryFrom<u8> for Opcode {
             93 => Ok(Self::GreaterThanNumber),
             #[cfg(feature = "string-operations")]
             94 => Ok(Self::ConcatenateStrings),
+            #[cfg(feature = "logical-operations")]
+            95 => Ok(Self::LogicalNot),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -350,6 +354,7 @@ mod tests {
     fn enabled_logical_operation_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(88), Ok(Opcode::JumpIfFalsyOrPop));
         assert_eq!(Opcode::try_from(89), Ok(Opcode::JumpIfTruthyOrPop));
+        assert_eq!(Opcode::try_from(95), Ok(Opcode::LogicalNot));
     }
 
     #[cfg(not(feature = "logical-operations"))]
@@ -357,6 +362,7 @@ mod tests {
     fn omitted_logical_operation_opcodes_are_invalid() {
         assert!(Opcode::try_from(88).is_err());
         assert!(Opcode::try_from(89).is_err());
+        assert!(Opcode::try_from(95).is_err());
     }
 
     #[cfg(feature = "locals")]

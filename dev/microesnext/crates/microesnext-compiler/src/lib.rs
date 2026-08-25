@@ -1236,9 +1236,9 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.term(binding)?;
+        let (used_binding, mut kind) = self.unary(binding)?;
         while self.consume(b'*') {
-            let (_, right) = self.term(None)?;
+            let (_, right) = self.unary(None)?;
             let result = match (kind, right) {
                 (TermKind::I30(left), TermKind::I30(right)) => left
                     .checked_mul(right)
@@ -1257,6 +1257,30 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
+        self.unary(binding)
+    }
+
+    #[cfg(feature = "logical-operations")]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut negations = 0_usize;
+        while self.consume(b'!') {
+            negations += 1;
+        }
+        let (used_binding, kind) = self.term(binding)?;
+        self.output
+            .extend(core::iter::repeat_n(Opcode::LogicalNot as u8, negations));
+        Ok((
+            used_binding,
+            if negations == 0 {
+                kind
+            } else {
+                TermKind::General
+            },
+        ))
+    }
+
+    #[cfg(not(feature = "logical-operations"))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.term(binding)
     }
 
@@ -2082,6 +2106,24 @@ mod tests {
             compile_script("return true || false;").unwrap_err().offset,
             12
         );
+        assert_eq!(compile_script("return !true;").unwrap_err().offset, 7);
+    }
+
+    #[cfg(feature = "logical-operations")]
+    #[test]
+    fn compiles_repeated_logical_not_without_parser_recursion() {
+        let code = compile_script("return !!!false;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::LogicalNot as u8)
+                .count(),
+            3
+        );
+
+        let mut source = alloc::string::String::from("return ");
+        source.extend(core::iter::repeat_n('!', 20_000));
+        source.push_str("false;");
+        assert!(compile_script(&source).is_ok());
     }
 
     #[cfg(all(not(feature = "integer-operations"), feature = "source-positions"))]

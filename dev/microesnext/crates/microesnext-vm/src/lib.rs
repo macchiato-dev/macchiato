@@ -552,6 +552,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "logical-operations")]
+            Opcode::LogicalNot => {
+                let operand = self.core.arena_mut().pop()?;
+                let value =
+                    microesnext_logical_operations::logical_not(self.core.arena(), operand)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "integer-operations")]
             Opcode::SubtractI30 => {
                 let right = self.core.arena_mut().pop()?;
@@ -1144,6 +1152,20 @@ mod tests {
                 .bytes_equal(value.as_ref().unwrap(), b"hello")
                 .unwrap()
         );
+    }
+
+    #[cfg(feature = "logical-operations")]
+    #[test]
+    fn executes_logical_negation_through_selected_truthiness() {
+        let code = Builder::new()
+            .immediate(microesnext_bytecode::Immediate::False)
+            .op(Opcode::LogicalNot)
+            .op(Opcode::LogicalNot)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 16];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::FALSE)));
     }
 
     #[cfg(feature = "string-operations")]
