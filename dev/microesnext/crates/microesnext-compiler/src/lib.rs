@@ -392,6 +392,14 @@ impl Parser<'_> {
         }) {
             return Err(self.error("a unique local binding"));
         }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.locals.push(Binding {
+            start: name_start,
+            end: name_end,
+            slot,
+            captured: false,
+        });
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
@@ -468,25 +476,33 @@ impl Parser<'_> {
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
                 binding.captured = true;
             }
+        }
+        let self_captured = self.locals[slot as usize].captured;
+        if self_captured {
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+        }
+        for capture in &body.captures {
+            let binding = self
+                .locals
+                .iter()
+                .find(|binding| binding.slot == capture.slot)
+                .ok_or_else(|| self.error("an enclosing binding"))?;
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&binding.slot.to_le_bytes());
         }
         let capture_count = u16::try_from(body.captures.len())
             .map_err(|_| self.error("fewer than 65536 captures"))?;
-        let slot = u16::try_from(self.locals.len())
-            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         self.output.push(Opcode::Closure as u8);
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
-        self.output.push(Opcode::StoreLocal as u8);
-        self.output.extend_from_slice(&slot.to_le_bytes());
-        self.locals.push(Binding {
-            start: name_start,
-            end: name_end,
-            slot,
-            captured: false,
-        });
+        if self_captured {
+            self.output.push(Opcode::StoreEnvironmentCell as u8);
+        } else {
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+        }
         self.functions.push(PendingFunction {
             target_patch,
             code: body.output,
@@ -1169,6 +1185,25 @@ mod tests {
                 .filter(|opcode| **opcode == Opcode::LoadEnvironmentCell as u8)
                 .count(),
             2
+        );
+    }
+
+    #[test]
+    fn self_referential_function_initializes_its_own_cell() {
+        let code = compile_script(
+            "function selfReference() { return selfReference; } return selfReference();",
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::NewEnvironmentCell as u8)
+                .count(),
+            1
+        );
+        assert!(code.contains(&(Opcode::StoreEnvironmentCell as u8)));
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::LoadCapture as u8, 0, 0] })
         );
     }
 

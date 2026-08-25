@@ -69,3 +69,17 @@ fn sibling_closures_and_outer_writes_share_one_binding_cell() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn self_reference_resolves_to_the_initialized_closure() {
+    let code = compile_script(
+        "function selfReference() { return selfReference; } return selfReference();",
+    )
+    .unwrap();
+    let mut memory = [0; 256];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Outcome::Complete(function) = machine.run().unwrap() else {
+        panic!("expected a closure")
+    };
+    assert!(microesnext::functions::entry(machine.arena(), function).is_ok());
+}
