@@ -25,11 +25,13 @@ the Promise job queue; preserves locals and captured variables across repeated
 suspensions; and turns uncaught exceptions into promise rejections. Async
 methods and async generators are not part of this initial surface.
 
-The current Rust compiler slice also emits top-level function declarations,
-postfix calls, and ordered parameter slots directly to bytecode. Both declared
-parameters and call arguments have a `u16` count. Argument-to-local frame setup
-is a removable capability rather than a cost borne by functions without
-parameters.
+The current Rust compiler slice also emits function declarations, anonymous
+function expressions, postfix calls, and ordered parameter slots directly to
+bytecode. An expression may be called immediately or retained in a local, and
+uses the same capture analysis as a declaration. Both declared parameters and
+call arguments have a `u16` count. Argument-to-local frame setup is a removable
+capability rather than a cost borne by functions without parameters. Named
+function expressions and full declaration hoisting remain compiler work.
 
 Mutable closure semantics use optional traced environment cells. Compiler
 capture analysis boxes only bindings that cross a function boundary; sibling

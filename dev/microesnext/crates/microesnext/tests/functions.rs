@@ -25,6 +25,24 @@ fn source_function_without_parameters_leaves_its_frame() {
 }
 
 #[test]
+fn anonymous_function_expression_is_immediately_callable() {
+    assert_eq!(
+        run("return function (value) { return value; }(42);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn anonymous_function_expression_shares_an_outer_binding() {
+    assert_eq!(
+        run(
+            "let base = 40; let addBase = function (value) { return base + value; }; return addBase(2);"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_function_receives_multiple_arguments_in_order() {
     assert_eq!(
         run("function add(left, right) { return left + right; } return add(40, 2);"),

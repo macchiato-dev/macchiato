@@ -428,36 +428,50 @@ impl Parser<'_> {
             slot,
             captured: false,
         });
+        let parameters = self.function_parameters()?;
+        self.function_value(parameters, Some(slot))?;
+        Ok(())
+    }
+
+    fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
         self.whitespace();
         let mut parameters = Vec::new();
-        if !self.consume_raw(b')') {
-            loop {
-                self.whitespace();
-                let (start, end) = self.identifier()?;
-                if parameters.iter().any(|binding: &Binding| {
-                    self.source[binding.start..binding.end] == self.source[start..end]
-                }) {
-                    return Err(self.error("a unique parameter binding"));
-                }
-                let slot = u16::try_from(parameters.len())
-                    .map_err(|_| self.error("fewer than 65536 parameters"))?;
-                parameters.push(Binding {
-                    start,
-                    end,
-                    slot,
-                    captured: false,
-                });
-                if self.consume(b')') {
-                    break;
-                }
-                if !self.consume(b',') {
-                    return Err(self.error(", or )"));
-                }
+        if self.consume_raw(b')') {
+            return Ok(parameters);
+        }
+        loop {
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            if parameters.iter().any(|binding: &Binding| {
+                self.source[binding.start..binding.end] == self.source[start..end]
+            }) {
+                return Err(self.error("a unique parameter binding"));
+            }
+            let slot = u16::try_from(parameters.len())
+                .map_err(|_| self.error("fewer than 65536 parameters"))?;
+            parameters.push(Binding {
+                start,
+                end,
+                slot,
+                captured: false,
+            });
+            if self.consume(b')') {
+                return Ok(parameters);
+            }
+            if !self.consume(b',') {
+                return Err(self.error(", or )"));
             }
         }
+    }
+
+    fn function_value(
+        &mut self,
+        parameters: Vec<Binding>,
+        destination: Option<u16>,
+    ) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -519,8 +533,9 @@ impl Parser<'_> {
                 return Err(self.error("an enclosing binding"));
             }
         }
-        let self_captured = self.locals[slot as usize].captured;
+        let self_captured = destination.is_some_and(|slot| self.locals[slot as usize].captured);
         if self_captured {
+            let slot = destination.expect("captured declarations have a destination");
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
@@ -545,7 +560,7 @@ impl Parser<'_> {
         self.output.extend_from_slice(&capture_count.to_le_bytes());
         if self_captured {
             self.output.push(Opcode::StoreEnvironmentCell as u8);
-        } else {
+        } else if let Some(slot) = destination {
             self.output.push(Opcode::StoreLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
@@ -707,6 +722,11 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadCapture as u8);
             self.output.extend_from_slice(&capture.to_le_bytes());
             self.output.push(Opcode::LoadEnvironmentCell as u8);
+            (false, TermKind::General)
+        } else if self.try_word(b"function") {
+            self.whitespace();
+            let parameters = self.function_parameters()?;
+            self.function_value(parameters, None)?;
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
@@ -1156,6 +1176,18 @@ mod tests {
             &[Opcode::InitFrame as u8, 0, 0, 0, 0]
         );
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
+    }
+
+    #[test]
+    fn compiles_an_anonymous_function_expression_as_a_value() {
+        let code = compile_script("return function (value) { return value; }(42);").unwrap();
+        assert_eq!(code[0], Opcode::Closure as u8);
+        let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
+        assert_eq!(code[target], Opcode::InitFrame as u8);
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
+        );
     }
 
     #[test]
