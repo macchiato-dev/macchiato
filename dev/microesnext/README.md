@@ -33,7 +33,10 @@ an explicit relational stopping condition.
   the runtime crates do not depend on it. Its syntax families are progressively
   feature gated too: reduced builds leave omitted syntax to the ordinary parse
   error at that character rather than retaining feature-specific diagnostics.
-  Source positions are a separate authoring feature.
+  Source positions are a separate authoring feature. Basic function parsing,
+  captured-environment analysis, synchronous named recursion, and asynchronous
+  named recursion are independently selectable, mirroring their runtime
+  instruction groups.
 - `microesnext-strings` supplies ordinary packed byte strings without retained
   global state.
 - `microesnext-atoms` adds rooted interning for property names and other keys;

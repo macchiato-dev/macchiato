@@ -387,14 +387,20 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | control flow | 7,506 | 2,941 |
 | exceptions | 7,004 | 2,947 |
 | locals | 8,346 | 3,519 |
-| functions and captures | 18,904 | 7,785 |
-| default language slice | 46,459 | 25,562 |
+| basic functions | 14,151 | 5,962 |
+| captured environments | 18,879 | 7,825 |
+| recursive named functions | 18,994 | 7,885 |
+| async functions | 15,206 | 6,312 |
+| recursive async functions | 19,958 | 8,232 |
+| default language slice | 46,558 | 25,654 |
 
 The minimal row links neither lexical binding nor function/capture parsing.
-The locals row adds stable slots without closures; functions compose locals,
-argument frames, environments, and recursive named closures as the current
-function compiler cluster. The default row additionally retains all currently
-supported structural and scalar syntax. Re-run it with:
+The locals row adds stable slots without closures. Basic functions compose
+locals and argument frames, but neither captured environments nor either
+recursive constructor. Captures add environment-cell analysis; named function
+expressions add only their matching synchronous or asynchronous recursive
+constructor. The default row additionally retains all currently supported
+structural and scalar syntax. Re-run it with:
 
 ```sh
 npm run measure:compiler
