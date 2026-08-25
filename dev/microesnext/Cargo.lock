@@ -22,6 +22,7 @@ dependencies = [
  "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-integer-operations",
  "microesnext-iterable-protocol",
  "microesnext-iterator-results",
  "microesnext-iterators",

@@ -44,6 +44,11 @@ function-arguments = [
   "dep:microesnext-parameters",
   "microesnext-vm/function-arguments",
 ]
+integer-operations = [
+  "dep:microesnext-integer-operations",
+  "microesnext-vm/integer-operations",
+]
+minimal-program = ["control-flow", "integer-operations", "locals"]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-vm/numbers",
@@ -131,6 +136,7 @@ microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
+microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
@@ -195,6 +201,11 @@ required-features = [
 name = "control-flow"
 path = "tests/control_flow.rs"
 required-features = ["control-flow", "locals"]
+
+[[test]]
+name = "minimal-program"
+path = "tests/minimal_program.rs"
+required-features = ["minimal-program"]
 
 [[test]]
 name = "objects"

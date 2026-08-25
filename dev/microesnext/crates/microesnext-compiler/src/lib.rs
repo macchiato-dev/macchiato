@@ -760,18 +760,51 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
-        let (used_binding, mut kind) = self.term(binding)?;
-        while self.consume(b'+') {
-            let (_, right) = self.term(None)?;
-            self.output
-                .push(if kind == TermKind::I30 && right == TermKind::I30 {
-                    Opcode::AddI30 as u8
+        let (used_binding, mut kind) = self.product(binding)?;
+        loop {
+            if self.consume(b'+') {
+                let (_, right) = self.product(None)?;
+                let immediate = kind == TermKind::I30 && right == TermKind::I30;
+                self.output.push(if immediate {
+                    Opcode::AddI30
                 } else {
-                    Opcode::AddNumber as u8
-                });
-            kind = TermKind::General;
+                    Opcode::AddNumber
+                } as u8);
+                kind = if immediate {
+                    TermKind::I30
+                } else {
+                    TermKind::General
+                };
+            } else if self.consume(b'-') {
+                let (_, right) = self.product(None)?;
+                self.output.push(Opcode::SubtractI30 as u8);
+                kind = if kind == TermKind::I30 && right == TermKind::I30 {
+                    TermKind::I30
+                } else {
+                    TermKind::General
+                };
+            } else {
+                break;
+            }
         }
         Ok(used_binding)
+    }
+
+    fn product(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.term(binding)?;
+        while self.consume(b'*') {
+            let (_, right) = self.term(None)?;
+            self.output.push(Opcode::MultiplyI30 as u8);
+            kind = if kind == TermKind::I30 && right == TermKind::I30 {
+                TermKind::I30
+            } else {
+                TermKind::General
+            };
+        }
+        Ok((used_binding, kind))
     }
 
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
@@ -1591,5 +1624,21 @@ mod tests {
             4
         );
         assert_eq!(*code.last().unwrap(), Opcode::ReturnLocals as u8);
+    }
+
+    #[test]
+    fn compiles_integer_products_before_addition_and_subtraction() {
+        let code = compile_script("return 10 - 2 * 3 + 1;").unwrap();
+        let expected = Builder::new()
+            .const_i30(10)
+            .const_i30(2)
+            .const_i30(3)
+            .op(Opcode::MultiplyI30)
+            .op(Opcode::SubtractI30)
+            .const_i30(1)
+            .op(Opcode::AddI30)
+            .op(Opcode::Return)
+            .finish();
+        assert_eq!(code, expected);
     }
 }
