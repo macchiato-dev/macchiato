@@ -202,7 +202,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
         assert_eq!(
             settled_result(machine.arena(), destination).unwrap(),
             Some((Settlement::Fulfilled, answer))
@@ -237,7 +237,7 @@ mod tests {
             awaited,
         )
         .unwrap();
-        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
         assert_eq!(settled_result(machine.arena(), destination).unwrap(), None);
 
         let answer = Value::from_i30(42).unwrap();
@@ -249,7 +249,7 @@ mod tests {
             answer,
         )
         .unwrap();
-        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
         assert_eq!(
             settled_result(machine.arena(), destination).unwrap(),
             Some((Settlement::Fulfilled, answer))

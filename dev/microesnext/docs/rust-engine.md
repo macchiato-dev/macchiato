@@ -29,7 +29,8 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
-- Guest exception handlers are explicit records in the guest stack. A throw
+- Guest exception handlers are explicit records in the guest stack, owned by
+  the optional machine wrapper rather than the invariant opcode core. A throw
   restores the recorded operand and call-frame depths without unwinding the
   native Rust stack. Suspension snapshots the active handler depth, so a
   rejected `await` follows exactly the same handler chain as a synchronous

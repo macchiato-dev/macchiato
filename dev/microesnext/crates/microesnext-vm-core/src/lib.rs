@@ -18,8 +18,6 @@ pub struct Core<'code, 'memory> {
     code: &'code [u8],
     pc: usize,
     frame_depth: Option<usize>,
-    #[cfg(feature = "exceptions")]
-    handler_depth: Option<usize>,
 }
 
 impl<'code, 'memory> Core<'code, 'memory> {
@@ -29,8 +27,6 @@ impl<'code, 'memory> Core<'code, 'memory> {
             code,
             pc: 0,
             frame_depth: None,
-            #[cfg(feature = "exceptions")]
-            handler_depth: None,
         }
     }
 
@@ -39,23 +35,17 @@ impl<'code, 'memory> Core<'code, 'memory> {
         code: &'code [u8],
         pc: usize,
         frame_depth: Option<usize>,
-        handler_depth: Option<usize>,
     ) -> Self {
-        #[cfg(not(feature = "exceptions"))]
-        let _ = handler_depth;
         Self {
             arena,
             code,
             pc,
             frame_depth,
-            #[cfg(feature = "exceptions")]
-            handler_depth,
         }
     }
 
-    pub fn into_parts(self) -> (Arena<'memory>, usize, Option<usize>, Option<usize>) {
-        let handler_depth = self.handler_depth();
-        (self.arena, self.pc, self.frame_depth, handler_depth)
+    pub fn into_parts(self) -> (Arena<'memory>, usize, Option<usize>) {
+        (self.arena, self.pc, self.frame_depth)
     }
 
     pub fn grow_into<'next>(self, memory: &'next mut [u32]) -> Result<Core<'code, 'next>, Error> {
@@ -64,8 +54,6 @@ impl<'code, 'memory> Core<'code, 'memory> {
             code: self.code,
             pc: self.pc,
             frame_depth: self.frame_depth,
-            #[cfg(feature = "exceptions")]
-            handler_depth: self.handler_depth,
         })
     }
 
@@ -101,14 +89,6 @@ impl<'code, 'memory> Core<'code, 'memory> {
 
     pub fn set_frame_depth(&mut self, frame_depth: Option<usize>) {
         self.frame_depth = frame_depth;
-    }
-
-    #[inline(always)]
-    fn handler_depth(&self) -> Option<usize> {
-        #[cfg(feature = "exceptions")]
-        return self.handler_depth;
-        #[cfg(not(feature = "exceptions"))]
-        None
     }
 
     pub fn next_u32(&mut self) -> Result<u32, Error> {
@@ -166,28 +146,7 @@ impl<'code, 'memory> Core<'code, 'memory> {
                 }
                 Opcode::Throw => {
                     let reason = self.arena.pop()?;
-                    #[cfg(feature = "exceptions")]
-                    if !self.unwind(reason)? {
-                        return Ok(CoreOutcome::Throw(reason));
-                    }
-                    #[cfg(not(feature = "exceptions"))]
-                    {
-                        self.arena.clear_stack();
-                        self.frame_depth = None;
-                        return Ok(CoreOutcome::Throw(reason));
-                    }
-                }
-                #[cfg(feature = "exceptions")]
-                Opcode::Try => {
-                    let catch_pc = read_u32(self.code, &mut self.pc)? as usize;
-                    if catch_pc >= self.code.len() {
-                        return Err(Error::BadBytecode);
-                    }
-                    self.push_handler(catch_pc)?;
-                }
-                #[cfg(feature = "exceptions")]
-                Opcode::EndTry => {
-                    self.pop_handler()?;
+                    return Ok(CoreOutcome::Throw(reason));
                 }
                 opcode => return Ok(CoreOutcome::Extension(opcode)),
             }
@@ -230,11 +189,18 @@ impl<'code, 'memory> Core<'code, 'memory> {
     }
 
     pub fn suspend(&mut self) -> Result<(Value, RootId), Error> {
+        self.suspend_with_handler(None)
+    }
+
+    pub fn suspend_with_handler(
+        &mut self,
+        handler_depth: Option<usize>,
+    ) -> Result<(Value, RootId), Error> {
         let mut roots = [self.arena.pop()?];
         let continuation = self.arena.suspend_stack(
             self.pc as u32,
             self.frame_depth,
-            self.handler_depth(),
+            handler_depth,
             &mut roots,
         )?;
         let continuation = self.arena.retain(Value::from_ref(continuation))?;
@@ -242,99 +208,49 @@ impl<'code, 'memory> Core<'code, 'memory> {
     }
 
     pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<(), Error> {
+        self.resume_with_handler(continuation, value).map(|_| ())
+    }
+
+    pub fn resume_with_handler(
+        &mut self,
+        continuation: RootId,
+        value: Value,
+    ) -> Result<Option<usize>, Error> {
         let continuation = self.arena.release(continuation)?;
-        self.resume_value(continuation, value)
+        self.resume_value_with_handler(continuation, value)
     }
 
     pub fn resume_value(&mut self, continuation: Value, value: Value) -> Result<(), Error> {
-        self.restore_value(continuation)?;
-        self.arena.push(value)
+        self.resume_value_with_handler(continuation, value)
+            .map(|_| ())
     }
 
-    pub fn reject(&mut self, continuation: RootId, reason: Value) -> Result<Option<Value>, Error> {
-        let continuation = self.arena.release(continuation)?;
-        self.reject_value(continuation, reason)
-    }
-
-    pub fn reject_value(
+    pub fn resume_value_with_handler(
         &mut self,
         continuation: Value,
-        reason: Value,
-    ) -> Result<Option<Value>, Error> {
-        self.restore_value(continuation)?;
-        #[cfg(feature = "exceptions")]
-        if self.unwind(reason)? {
-            return Ok(None);
-        }
-        #[cfg(not(feature = "exceptions"))]
-        {
-            self.arena.clear_stack();
-            self.frame_depth = None;
-        }
-        Ok(Some(reason))
+        value: Value,
+    ) -> Result<Option<usize>, Error> {
+        let handler_depth = self.restore_value(continuation)?;
+        self.arena.push(value)?;
+        Ok(handler_depth)
     }
 
-    fn restore_value(&mut self, continuation: Value) -> Result<(), Error> {
+    pub fn restore(&mut self, continuation: RootId) -> Result<Option<usize>, Error> {
+        let continuation = self.arena.release(continuation)?;
+        self.restore_value(continuation)
+    }
+
+    pub fn restore_value(&mut self, continuation: Value) -> Result<Option<usize>, Error> {
         let continuation = continuation.as_ref().ok_or(Error::Type)?;
         let (pc, frame_depth, handler_depth) = self.arena.resume_stack(continuation)?;
         self.pc = pc as usize;
         self.frame_depth = frame_depth;
-        #[cfg(feature = "exceptions")]
-        {
-            self.handler_depth = handler_depth;
-        }
-        #[cfg(not(feature = "exceptions"))]
-        let _ = handler_depth;
-        Ok(())
+        Ok(handler_depth)
     }
 
-    #[cfg(feature = "exceptions")]
-    fn push_handler(&mut self, catch_pc: usize) -> Result<(), Error> {
-        let previous = self.handler_depth.map_or(-1, |depth| depth as i32);
-        let frame = self.frame_depth.map_or(-1, |depth| depth as i32);
-        self.arena
-            .push(Value::from_i30(previous).ok_or(Error::BadBytecode)?)?;
-        self.arena
-            .push(Value::from_i30(frame).ok_or(Error::BadBytecode)?)?;
-        self.arena
-            .push(Value::from_i30(catch_pc as i32).ok_or(Error::BadBytecode)?)?;
-        self.handler_depth = Some(self.arena.stack_len());
-        Ok(())
-    }
-
-    #[cfg(feature = "exceptions")]
-    fn pop_handler(&mut self) -> Result<(), Error> {
-        let depth = self.handler_depth.ok_or(Error::BadBytecode)?;
-        if self.arena.stack_len() != depth + 1 {
-            return Err(Error::BadBytecode);
-        }
-        let result = self.arena.pop()?;
-        let _catch_pc = self.arena.pop()?;
-        let _frame = self.arena.pop()?;
-        let previous = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-        self.handler_depth = (previous >= 0).then_some(previous as usize);
-        self.arena.push(result)?;
-        Ok(())
-    }
-
-    /// Restore the nearest guest handler. Handler records live in the guest
-    /// stack, so calls and suspended continuations preserve them naturally.
-    #[cfg(feature = "exceptions")]
-    fn unwind(&mut self, reason: Value) -> Result<bool, Error> {
-        let Some(depth) = self.handler_depth else {
-            self.arena.clear_stack();
-            self.frame_depth = None;
-            return Ok(false);
-        };
-        self.arena.truncate_stack(depth)?;
-        let catch_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-        let frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-        let previous = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-        self.pc = usize::try_from(catch_pc).map_err(|_| Error::BadBytecode)?;
-        self.frame_depth = (frame >= 0).then_some(frame as usize);
-        self.handler_depth = (previous >= 0).then_some(previous as usize);
-        self.arena.push(reason)?;
-        Ok(true)
+    pub fn abandon(&mut self) {
+        self.arena.clear_stack();
+        self.frame_depth = None;
     }
 }
 
@@ -367,82 +283,5 @@ mod tests {
         let mut core = Core::new(&code, &mut memory, 0);
         assert_eq!(core.run().unwrap(), CoreOutcome::Extension(Opcode::Await));
         assert_eq!(core.pc(), 1);
-    }
-
-    #[cfg(feature = "exceptions")]
-    #[test]
-    fn catches_a_throw_without_native_unwinding() {
-        let code = Builder::new()
-            .try_at(12)
-            .const_i30(42)
-            .op(Opcode::Throw)
-            .op(Opcode::EndTry)
-            .op(Opcode::Return)
-            .finish();
-        let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(42).unwrap())
-        );
-    }
-
-    #[cfg(feature = "exceptions")]
-    #[test]
-    fn catches_a_throw_across_a_guest_call_frame() {
-        let code = Builder::new()
-            .try_at(12)
-            .call(13)
-            .op(Opcode::EndTry)
-            .op(Opcode::Return)
-            .op(Opcode::Return)
-            .const_i30(17)
-            .op(Opcode::Throw)
-            .finish();
-        let mut memory = [0; 48];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(17).unwrap())
-        );
-    }
-
-    #[cfg(feature = "exceptions")]
-    #[test]
-    fn removes_a_handler_on_the_normal_path_without_losing_its_value() {
-        let code = Builder::new()
-            .try_at(11)
-            .const_i30(42)
-            .op(Opcode::EndTry)
-            .op(Opcode::Return)
-            .finish();
-        let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(42).unwrap())
-        );
-    }
-
-    #[cfg(feature = "exceptions")]
-    #[test]
-    fn rethrow_reaches_the_next_outer_handler() {
-        let code = Builder::new()
-            .try_at(20)
-            .try_at(19)
-            .const_i30(17)
-            .op(Opcode::Throw)
-            .op(Opcode::EndTry)
-            .op(Opcode::EndTry)
-            .op(Opcode::Return)
-            .op(Opcode::Throw)
-            .op(Opcode::Return)
-            .finish();
-        let mut memory = [0; 40];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(17).unwrap())
-        );
     }
 }

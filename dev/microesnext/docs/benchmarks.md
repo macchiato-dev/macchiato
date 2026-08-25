@@ -55,23 +55,23 @@ LTO from merely discarding an enabled but unused dependency.
 
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| Minimal | 1,907 | 875 |
-| Arrays | 6,808 | 2,833 |
-| Collections | 3,208 | 1,415 |
-| Exceptions | 3,133 | 1,314 |
-| Functions | 1,931 | 894 |
-| Objects | 4,752 | 2,138 |
-| Promises | 4,763 | 2,149 |
-| Weak collections | 1,974 | 918 |
-| All capabilities | 10,120 | 4,031 |
+| Minimal | 1,900 | 874 |
+| Arrays | 6,801 | 2,835 |
+| Collections | 3,201 | 1,416 |
+| Exceptions | 2,126 | 936 |
+| Functions | 1,924 | 892 |
+| Objects | 4,745 | 2,135 |
+| Promises | 4,756 | 2,144 |
+| Weak collections | 1,967 | 918 |
+| All capabilities | 10,113 | 4,030 |
 
-After adding explicit guest handler records, the minimal probe remained 1,907
-bytes (875 gzip), while the exception probe was 3,133 bytes (1,314 gzip).
-That separation matters: exception state is absent from `Core` unless the
-`exceptions` feature is selected. Five direct-loop samples measured 3.52–3.62
-ns/instruction without exceptions after one 3.99 ns warm-up outlier, and
-3.46–3.64 ns/instruction with exceptions. This run detects no capability cost
-in the invariant arithmetic loop.
+After adding source-level catches and explicit guest handler records, the
+minimal probe is 1,900 bytes (874 gzip), while the exception probe is 2,126
+bytes (936 gzip). Handler state belongs to the optional `Machine` wrapper;
+`Core` has one layout and one opcode loop in every feature configuration.
+Alternating direct-loop samples converged to 3.45–3.48 ns/instruction both with
+and without the exception feature after process warm-up. This run detects no
+capability cost in the invariant arithmetic loop.
 
 These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the

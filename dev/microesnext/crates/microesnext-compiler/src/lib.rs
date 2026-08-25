@@ -92,25 +92,14 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         output: Vec::new(),
     };
     parser.whitespace();
-    let completion = if parser.try_word(b"return") {
-        Opcode::Return
-    } else if parser.try_word(b"throw") {
-        Opcode::Throw
+    if parser.try_word(b"try") {
+        parser.try_catch()?;
     } else {
-        return Err(parser.error("return or throw"));
-    };
-    parser.term()?;
-    while parser.consume(b'+') {
-        parser.term()?;
-        parser.output.push(Opcode::AddI30 as u8);
-    }
-    if parser.consume(b';') {
-        parser.whitespace();
+        parser.completion(None, false, false)?;
     }
     if parser.offset != parser.source.len() {
         return Err(parser.error("end of input"));
     }
-    parser.output.push(completion as u8);
     Ok(parser.output)
 }
 
@@ -121,11 +110,91 @@ struct Parser<'source> {
 }
 
 impl Parser<'_> {
-    fn term(&mut self) -> Result<(), CompileError> {
+    fn try_catch(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_patch = self.output.len() + 1;
+        self.output.push(Opcode::Try as u8);
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.completion(None, true, false)?;
+        if !self.consume(b'}') || !self.try_word_after_whitespace(b"catch") {
+            return Err(self.error("} catch"));
+        }
+        let binding = if self.consume(b'(') {
+            self.whitespace();
+            let binding = self.identifier()?;
+            if !self.consume(b')') {
+                return Err(self.error(")"));
+            }
+            Some(binding)
+        } else {
+            None
+        };
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_offset = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
+        self.completion(binding, false, true)?;
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        self.whitespace();
+        Ok(())
+    }
+
+    fn completion(
+        &mut self,
+        binding: Option<(usize, usize)>,
+        close_handler: bool,
+        pending_exception: bool,
+    ) -> Result<(), CompileError> {
+        self.whitespace();
+        let completion = if self.try_word(b"return") {
+            Opcode::Return
+        } else if self.try_word(b"throw") {
+            Opcode::Throw
+        } else {
+            return Err(self.error("return or throw"));
+        };
+        let expression_start = self.output.len();
+        let used_binding = self.expression(binding)?;
+        if pending_exception && !used_binding {
+            self.output.insert(expression_start, Opcode::Drop as u8);
+        }
+        if self.consume(b';') {
+            self.whitespace();
+        }
+        if close_handler && completion == Opcode::Return {
+            self.output.push(Opcode::EndTry as u8);
+        }
+        self.output.push(completion as u8);
+        Ok(())
+    }
+
+    fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
+        let used_binding = self.term(binding)?;
+        while self.consume(b'+') {
+            self.term(None)?;
+            self.output.push(Opcode::AddI30 as u8);
+        }
+        Ok(used_binding)
+    }
+
+    fn term(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
-        if self.consume_raw(b'[') {
+        let binding = binding.filter(|(start, end)| {
+            self.source[self.offset..].starts_with(&self.source[*start..*end])
+                && self.identifier_end(self.offset + end - start)
+        });
+        let used_binding = if let Some((start, end)) = binding {
+            self.offset += end - start;
+            true
+        } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
             let mut index = 0_i32;
             if !self.consume(b']') {
@@ -145,6 +214,7 @@ impl Parser<'_> {
                     }
                 }
             }
+            false
         } else if self.consume_raw(b'{') {
             self.output.push(Opcode::NewObject as u8);
             if !self.consume(b'}') {
@@ -165,9 +235,11 @@ impl Parser<'_> {
                     }
                 }
             }
+            false
         } else {
             self.integer()?;
-        }
+            false
+        };
         while self.consume(b'.') {
             self.whitespace();
             let (start, end) = self.identifier()?;
@@ -177,7 +249,14 @@ impl Parser<'_> {
         if awaiting {
             self.output.push(Opcode::Await as u8);
         }
-        Ok(())
+        Ok(used_binding)
+    }
+
+    fn identifier_end(&self, offset: usize) -> bool {
+        !self
+            .source
+            .get(offset)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
     }
 
     fn integer(&mut self) -> Result<(), CompileError> {
@@ -201,7 +280,7 @@ impl Parser<'_> {
         if negative {
             value = -value;
         }
-        if value < -(1 << 29) || value >= (1 << 29) {
+        if !(-(1 << 29)..(1 << 29)).contains(&value) {
             return Err(self.error("an i30 integer"));
         }
         self.output.push(Opcode::ConstI30 as u8);
@@ -251,6 +330,11 @@ impl Parser<'_> {
         }
         self.offset = end;
         true
+    }
+
+    fn try_word_after_whitespace(&mut self, word: &[u8]) -> bool {
+        self.whitespace();
+        self.try_word(word)
     }
 
     fn consume(&mut self, byte: u8) -> bool {
@@ -309,6 +393,26 @@ mod tests {
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
         );
+    }
+
+    #[test]
+    fn backpatches_a_directly_emitted_catch_target() {
+        let code = compile_script("try { throw 17; } catch (error) { return error; }").unwrap();
+        assert_eq!(code[0], Opcode::Try as u8);
+        let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
+        assert_eq!(code[target], Opcode::Return as u8);
+        assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
+    }
+
+    #[test]
+    fn closes_a_handler_before_a_normal_return() {
+        let code = compile_script("try { return await 2; } catch { return 17; }").unwrap();
+        assert!(
+            code.windows(2)
+                .any(|ops| ops == [Opcode::EndTry as u8, Opcode::Return as u8])
+        );
+        let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
+        assert_eq!(code[target], Opcode::Drop as u8);
     }
 
     #[test]

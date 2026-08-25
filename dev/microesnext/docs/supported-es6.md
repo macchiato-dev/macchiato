@@ -16,6 +16,13 @@ the Promise job queue; preserves locals and captured variables across repeated
 suspensions; and turns uncaught exceptions into promise rejections. Async
 methods and async generators are not part of this initial surface.
 
+The Rust vertical slice directly emits bytecode for a deliberately narrow
+`try { return|throw expression } catch [(name)] { return|throw expression }`
+form. Catch targets are backpatched without an AST. Its handler and caught
+value live on the guest stack, survive `await`, and are removed on both normal
+and abrupt paths. General statements, nested lexical environments, `finally`,
+and the complete ECMAScript grammar remain future compiler work.
+
 ## Collections
 
 `Map` and `Set` provide constructors from arrays, ordered storage,

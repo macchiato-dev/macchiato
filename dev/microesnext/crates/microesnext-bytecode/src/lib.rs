@@ -23,6 +23,7 @@ pub enum Opcode {
     SetIndex = 16,
     Try = 17,
     EndTry = 18,
+    Drop = 19,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -48,6 +49,7 @@ impl TryFrom<u8> for Opcode {
             16 => Ok(Self::SetIndex),
             17 => Ok(Self::Try),
             18 => Ok(Self::EndTry),
+            19 => Ok(Self::Drop),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -69,7 +71,7 @@ pub fn read_i30(code: &[u8], pc: &mut usize) -> Result<i32, Error> {
         .map_err(|_| Error::BadBytecode)?;
     *pc += 4;
     let value = i32::from_le_bytes(bytes);
-    if value >= -(1 << 29) && value < (1 << 29) {
+    if (-(1 << 29)..(1 << 29)).contains(&value) {
         Ok(value)
     } else {
         Err(Error::BadBytecode)

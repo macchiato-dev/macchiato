@@ -42,7 +42,7 @@ microesnext-compiler.workspace = true
 [[test]]
 name = "source"
 path = "tests/source.rs"
-required-features = ["async"]
+required-features = ["async", "exceptions"]
 
 [[test]]
 name = "objects"

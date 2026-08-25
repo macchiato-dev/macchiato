@@ -56,7 +56,7 @@ impl RootId {
 pub struct Value(u32);
 
 impl Value {
-    pub const UNDEFINED: Self = Self((0 << 2) | TAG_IMMEDIATE);
+    pub const UNDEFINED: Self = Self(TAG_IMMEDIATE);
     pub const NULL: Self = Self((1 << 2) | TAG_IMMEDIATE);
     pub const FALSE: Self = Self((2 << 2) | TAG_IMMEDIATE);
     pub const TRUE: Self = Self((3 << 2) | TAG_IMMEDIATE);

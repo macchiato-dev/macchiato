@@ -7,10 +7,6 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
-[features]
-default = []
-exceptions = []
-
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-bytecode.workspace = true
