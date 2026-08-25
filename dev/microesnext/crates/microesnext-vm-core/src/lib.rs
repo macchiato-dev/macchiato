@@ -200,19 +200,32 @@ impl<'code, 'memory> Core<'code, 'memory> {
     }
 
     pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<(), Error> {
-        self.restore(continuation)?;
+        let continuation = self.arena.release(continuation)?;
+        self.resume_value(continuation, value)
+    }
+
+    pub fn resume_value(&mut self, continuation: Value, value: Value) -> Result<(), Error> {
+        self.restore_value(continuation)?;
         self.arena.push(value)
     }
 
     pub fn reject(&mut self, continuation: RootId, reason: Value) -> Result<CoreOutcome, Error> {
-        self.restore(continuation)?;
+        let continuation = self.arena.release(continuation)?;
+        self.reject_value(continuation, reason)
+    }
+
+    pub fn reject_value(
+        &mut self,
+        continuation: Value,
+        reason: Value,
+    ) -> Result<CoreOutcome, Error> {
+        self.restore_value(continuation)?;
         self.arena.clear_stack();
         self.frame_depth = None;
         Ok(CoreOutcome::Throw(reason))
     }
 
-    fn restore(&mut self, continuation: RootId) -> Result<(), Error> {
-        let continuation = self.arena.release(continuation)?;
+    fn restore_value(&mut self, continuation: Value) -> Result<(), Error> {
         let continuation = continuation.as_ref().ok_or(Error::Type)?;
         let (pc, frame_depth) = self.arena.resume_stack(continuation)?;
         self.pc = pc as usize;

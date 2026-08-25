@@ -9,12 +9,13 @@ version.workspace = true
 
 [features]
 default = []
-promises = ["dep:microesnext-promises", "microesnext-vm/functions"]
+promises = ["dep:microesnext-arena", "dep:microesnext-promises", "microesnext-vm/functions"]
 
 [dependencies]
 microesnext-types.workspace = true
 microesnext-vm = { workspace = true, features = ["async"] }
 microesnext-promises = { workspace = true, optional = true }
+microesnext-arena = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-bytecode.workspace = true

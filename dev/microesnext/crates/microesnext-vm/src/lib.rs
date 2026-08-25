@@ -222,6 +222,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         self.run()
     }
 
+    pub fn resume_value(&mut self, continuation: Value, value: Value) -> Result<Outcome, Error> {
+        self.core.resume_value(continuation, value)?;
+        self.run()
+    }
+
     /// Resume an `await` with an abrupt completion. Exception handlers will
     /// consume this path once try/catch bytecode is added; until then it is an
     /// observable uncaught throw rather than a Rust error.
@@ -232,6 +237,18 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         reason: Value,
     ) -> Result<Outcome, Error> {
         match self.core.reject(continuation, reason)? {
+            CoreOutcome::Throw(reason) => Ok(Outcome::Throw(reason)),
+            _ => Err(Error::BadBytecode),
+        }
+    }
+
+    #[cfg(feature = "async")]
+    pub fn resume_value_rejected(
+        &mut self,
+        continuation: Value,
+        reason: Value,
+    ) -> Result<Outcome, Error> {
+        match self.core.reject_value(continuation, reason)? {
             CoreOutcome::Throw(reason) => Ok(Outcome::Throw(reason)),
             _ => Err(Error::BadBytecode),
         }

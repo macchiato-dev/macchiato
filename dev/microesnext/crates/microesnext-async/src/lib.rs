@@ -1,7 +1,9 @@
 #![no_std]
 
 #[cfg(feature = "promises")]
-use microesnext_promises::{JobQueue, Settlement, settle};
+use microesnext_arena::BlockKind;
+#[cfg(feature = "promises")]
+use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
@@ -45,25 +47,13 @@ pub fn reject(
         .map(Into::into)
 }
 
-/// Result of running one Promise reaction. A suspended reaction retains both
-/// its VM continuation and the destination Promise across host turns.
-#[cfg(feature = "promises")]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ReactionProgress {
-    Complete,
-    Suspended {
-        continuation: RootId,
-        destination: RootId,
-    },
-}
-
 #[cfg(feature = "promises")]
 pub fn run_one_reaction(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-) -> Result<Option<ReactionProgress>, Error> {
+) -> Result<bool, Error> {
     let Some(job) = queue.pop(machine.arena_mut())? else {
-        return Ok(None);
+        return Ok(false);
     };
 
     if job.callback == Value::UNDEFINED {
@@ -74,41 +64,32 @@ pub fn run_one_reaction(
             job.settlement,
             job.argument,
         )?;
-        return Ok(Some(ReactionProgress::Complete));
+        return Ok(true);
     }
 
     let destination = machine.retain(job.destination)?;
-    let outcome = match machine.call_closure(job.callback, job.argument) {
+    let continuation = job
+        .callback
+        .as_ref()
+        .and_then(|reference| machine.arena().kind(reference).ok())
+        == Some(BlockKind::Continuation);
+    let outcome = match if continuation {
+        if job.settlement == Settlement::Fulfilled {
+            machine.resume_value(job.callback, job.argument)
+        } else {
+            machine.resume_value_rejected(job.callback, job.argument)
+        }
+    } else {
+        machine.call_closure(job.callback, job.argument)
+    } {
         Ok(outcome) => outcome,
         Err(error) => {
             machine.release(destination)?;
             return Err(error);
         }
     };
-    finish_reaction(machine, queue, destination, outcome).map(Some)
-}
-
-#[cfg(feature = "promises")]
-pub fn resume_reaction(
-    machine: &mut Machine<'_, '_>,
-    queue: &mut JobQueue<'_>,
-    suspended: ReactionProgress,
-    settlement: Settlement,
-    value: Value,
-) -> Result<ReactionProgress, Error> {
-    let ReactionProgress::Suspended {
-        continuation,
-        destination,
-    } = suspended
-    else {
-        return Err(Error::Type);
-    };
-    let outcome = if settlement == Settlement::Fulfilled {
-        machine.resume(continuation, value)?
-    } else {
-        machine.resume_rejected(continuation, value)?
-    };
-    finish_reaction(machine, queue, destination, outcome)
+    finish_reaction(machine, queue, destination, outcome)?;
+    Ok(true)
 }
 
 #[cfg(feature = "promises")]
@@ -117,7 +98,7 @@ fn finish_reaction(
     queue: &mut JobQueue<'_>,
     destination: RootId,
     outcome: Outcome,
-) -> Result<ReactionProgress, Error> {
+) -> Result<(), Error> {
     match outcome {
         Outcome::Complete(value) => {
             let destination = machine.release(destination)?;
@@ -128,7 +109,7 @@ fn finish_reaction(
                 Settlement::Fulfilled,
                 value,
             )?;
-            Ok(ReactionProgress::Complete)
+            Ok(())
         }
         Outcome::Throw(reason) => {
             let destination = machine.release(destination)?;
@@ -139,13 +120,49 @@ fn finish_reaction(
                 Settlement::Rejected,
                 reason,
             )?;
-            Ok(ReactionProgress::Complete)
+            Ok(())
         }
-        Outcome::Await { continuation, .. } => Ok(ReactionProgress::Suspended {
+        Outcome::Await {
+            value,
+            continuation,
+        } => {
+            park_reaction(machine, queue, destination, value, continuation)?;
+            Ok(())
+        }
+    }
+}
+
+#[cfg(feature = "promises")]
+fn park_reaction(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    destination: RootId,
+    awaited: Value,
+    continuation: RootId,
+) -> Result<(), Error> {
+    let continuation = machine.release(continuation)?;
+    let destination = machine.release(destination)?;
+    if is_promise(machine.arena(), awaited) {
+        then(
+            machine.arena_mut(),
+            queue,
+            awaited,
+            continuation,
             continuation,
             destination,
-        }),
+        )?;
+    } else {
+        queue.push(
+            machine.arena_mut(),
+            Job {
+                callback: continuation,
+                argument: awaited,
+                destination,
+                settlement: Settlement::Fulfilled,
+            },
+        )?;
     }
+    Ok(())
 }
 
 #[cfg(all(test, feature = "promises"))]
@@ -185,10 +202,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            run_one_reaction(&mut machine, &mut queue).unwrap(),
-            Some(ReactionProgress::Complete)
-        );
+        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
         assert_eq!(
             settled_result(machine.arena(), destination).unwrap(),
             Some((Settlement::Fulfilled, answer))
@@ -196,12 +210,13 @@ mod tests {
     }
 
     #[test]
-    fn suspended_callback_keeps_destination_until_resume() {
+    fn suspended_callback_resumes_through_the_same_job_queue() {
         let code = [Opcode::Await as u8, Opcode::Return as u8];
         let mut memory = [0; 192];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
         let callback = capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let source = pending(machine.arena_mut()).unwrap();
+        let awaited = pending(machine.arena_mut()).unwrap();
         let destination = pending(machine.arena_mut()).unwrap();
         let mut slots: [Option<JobSlot>; 4] = [None; 4];
         let mut queue = JobQueue::new(&mut slots);
@@ -214,32 +229,27 @@ mod tests {
             destination,
         )
         .unwrap();
-        let first = Value::from_i30(1).unwrap();
         settle(
             machine.arena_mut(),
             &mut queue,
             source,
             Settlement::Fulfilled,
-            first,
+            awaited,
         )
         .unwrap();
-        let suspended = run_one_reaction(&mut machine, &mut queue)
-            .unwrap()
-            .expect("one reaction");
-        assert!(matches!(suspended, ReactionProgress::Suspended { .. }));
+        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
+        assert_eq!(settled_result(machine.arena(), destination).unwrap(), None);
 
         let answer = Value::from_i30(42).unwrap();
-        assert_eq!(
-            resume_reaction(
-                &mut machine,
-                &mut queue,
-                suspended,
-                Settlement::Fulfilled,
-                answer,
-            )
-            .unwrap(),
-            ReactionProgress::Complete
-        );
+        settle(
+            machine.arena_mut(),
+            &mut queue,
+            awaited,
+            Settlement::Fulfilled,
+            answer,
+        )
+        .unwrap();
+        assert_eq!(run_one_reaction(&mut machine, &mut queue).unwrap(), true);
         assert_eq!(
             settled_result(machine.arena(), destination).unwrap(),
             Some((Settlement::Fulfilled, answer))

@@ -243,6 +243,13 @@ pub fn status(arena: &Arena<'_>, promise: Value) -> Result<Option<Settlement>, E
     })
 }
 
+pub fn is_promise(arena: &Arena<'_>, value: Value) -> bool {
+    value
+        .as_ref()
+        .and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::Promise)
+}
+
 pub fn settled_result(
     arena: &Arena<'_>,
     promise: Value,
