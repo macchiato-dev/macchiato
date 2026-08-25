@@ -17,6 +17,7 @@ pub enum Opcode {
     Closure = 10,
     CallValue = 11,
     LoadCapture = 12,
+    Throw = 13,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -36,6 +37,7 @@ impl TryFrom<u8> for Opcode {
             10 => Ok(Self::Closure),
             11 => Ok(Self::CallValue),
             12 => Ok(Self::LoadCapture),
+            13 => Ok(Self::Throw),
             _ => Err(Error::BadBytecode),
         }
     }

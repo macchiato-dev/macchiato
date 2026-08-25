@@ -243,6 +243,19 @@ pub fn status(arena: &Arena<'_>, promise: Value) -> Result<Option<Settlement>, E
     })
 }
 
+pub fn settled_result(
+    arena: &Arena<'_>,
+    promise: Value,
+) -> Result<Option<(Settlement, Value)>, Error> {
+    let (promise_state, result, _) = fields(arena, promise)?;
+    Ok(match promise_state {
+        PENDING => None,
+        FULFILLED => Some((Settlement::Fulfilled, result)),
+        REJECTED => Some((Settlement::Rejected, result)),
+        _ => return Err(Error::DanglingReference),
+    })
+}
+
 fn fields(
     arena: &Arena<'_>,
     promise: Value,

@@ -15,6 +15,7 @@ functions = ["microesnext-vm/functions"]
 collections = ["dep:microesnext-collections"]
 weak-collections = ["dep:microesnext-weak-collections"]
 promises = ["dep:microesnext-promises"]
+promise-jobs = ["async", "functions", "promises", "microesnext-async/promises"]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }

@@ -15,6 +15,7 @@ use microesnext_types::{Error, RootId, Value};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Outcome {
     Complete(Value),
+    Throw(Value),
     #[cfg(feature = "async")]
     Await {
         value: Value,
@@ -71,6 +72,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[inline(always)]
     pub fn arena(&self) -> &Arena<'_> {
         &self.arena
+    }
+
+    #[inline(always)]
+    pub fn arena_mut(&mut self) -> &mut Arena<'memory> {
+        &mut self.arena
     }
 
     pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
@@ -143,6 +149,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let _function = self.arena.pop()?;
                     let previous_frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
                     let return_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
+                    if return_pc < 0 {
+                        self.frame_depth = None;
+                        return Ok(Outcome::Complete(result));
+                    }
                     self.frame_depth = (previous_frame >= 0).then_some(previous_frame as usize);
                     self.pc = return_pc as usize;
                     self.arena.push(result)?;
@@ -246,18 +256,65 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         self.arena.push(capture(&self.arena, function, index)?)?;
                     }
                 }
+                Opcode::Throw => {
+                    let reason = self.arena.pop()?;
+                    return Ok(self.finish_throw(reason));
+                }
             }
         }
     }
 
+    /// Enter a guest closure from a scheduler job without using a native call
+    /// frame. The argument begins as the closure's sole operand.
+    #[cfg(feature = "functions")]
+    pub fn call_closure(&mut self, function: Value, argument: Value) -> Result<Outcome, Error> {
+        if self.frame_depth.is_some() || self.arena.stack_len() != 0 {
+            return Err(Error::Type);
+        }
+        let target = entry(&self.arena, function)?;
+        self.arena
+            .push(Value::from_i30(-1).ok_or(Error::BadBytecode)?)?;
+        self.arena
+            .push(Value::from_i30(-1).ok_or(Error::BadBytecode)?)?;
+        self.arena.push(function)?;
+        self.frame_depth = Some(self.arena.stack_len());
+        self.arena.push(argument)?;
+        self.pc = target;
+        self.run()
+    }
+
     pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<Outcome, Error> {
+        self.restore(continuation)?;
+        self.arena.push(value)?;
+        self.run()
+    }
+
+    /// Resume an `await` with an abrupt completion. Exception handlers will
+    /// consume this path once try/catch bytecode is added; until then it is an
+    /// observable uncaught throw rather than a Rust error.
+    #[cfg(feature = "async")]
+    pub fn resume_rejected(
+        &mut self,
+        continuation: RootId,
+        reason: Value,
+    ) -> Result<Outcome, Error> {
+        self.restore(continuation)?;
+        Ok(self.finish_throw(reason))
+    }
+
+    fn finish_throw(&mut self, reason: Value) -> Outcome {
+        self.arena.clear_stack();
+        self.frame_depth = None;
+        Outcome::Throw(reason)
+    }
+
+    fn restore(&mut self, continuation: RootId) -> Result<(), Error> {
         let continuation = self.arena.release(continuation)?;
         let continuation = continuation.as_ref().ok_or(Error::Type)?;
         let (pc, frame_depth) = self.arena.resume_stack(continuation)?;
         self.pc = pc as usize;
         self.frame_depth = frame_depth;
-        self.arena.push(value)?;
-        self.run()
+        Ok(())
     }
 }
 
@@ -330,6 +387,22 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "async")]
+    #[test]
+    fn rejected_await_is_an_abrupt_guest_completion() {
+        let code = awaiting_program();
+        let mut memory = [0; 64];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
+        let Outcome::Await { continuation, .. } = machine.run().unwrap() else {
+            panic!("expected suspension")
+        };
+        let reason = Value::from_i30(17).unwrap();
+        assert_eq!(
+            machine.resume_rejected(continuation, reason).unwrap(),
+            Outcome::Throw(reason)
+        );
+    }
+
     #[test]
     fn guest_calls_use_vm_frames_instead_of_native_recursion() {
         let code = Builder::new()
@@ -386,6 +459,20 @@ mod tests {
         assert_eq!(
             machine.run().unwrap(),
             Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[cfg(feature = "functions")]
+    #[test]
+    fn scheduler_can_invoke_a_closure_with_an_argument() {
+        let code = Builder::new().op(Opcode::Return).finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let argument = Value::from_i30(42).unwrap();
+        assert_eq!(
+            machine.call_closure(function, argument).unwrap(),
+            Outcome::Complete(argument)
         );
     }
 }

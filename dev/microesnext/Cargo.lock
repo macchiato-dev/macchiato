@@ -27,6 +27,9 @@ dependencies = [
 name = "microesnext-async"
 version = "0.0.0"
 dependencies = [
+ "microesnext-bytecode",
+ "microesnext-functions",
+ "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
 ]
