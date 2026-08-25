@@ -39,6 +39,9 @@ not link to that C implementation.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.
+- `microesnext-well-known-symbols` retains realm-owned identities separately.
+  A realm can omit description strings or compose them without changing the
+  ordinary symbol crate.
 - `microesnext-iterators` stores a source, cursor, and adapter tag in a
   relocatable guest object. `microesnext-array-iterators` and
   `microesnext-collection-iterators` are separate adapters, so adding array

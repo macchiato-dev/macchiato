@@ -43,6 +43,9 @@ pub use microesnext_strings as strings;
 #[cfg(feature = "symbols")]
 pub use microesnext_symbols as symbols;
 
+#[cfg(feature = "well-known-symbols")]
+pub use microesnext_well_known_symbols as well_known_symbols;
+
 #[cfg(feature = "weak-collections")]
 pub use microesnext_weak_collections as weak_collections;
 

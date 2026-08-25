@@ -21,6 +21,7 @@ members = [
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
   "crates/microesnext-symbols",
+  "crates/microesnext-well-known-symbols",
   "crates/microesnext-types",
   "crates/microesnext-vm",
   "crates/microesnext-vm-core",
@@ -59,6 +60,7 @@ microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0"
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
+microesnext-well-known-symbols = { path = "crates/microesnext-well-known-symbols", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
 microesnext-vm-core = { path = "crates/microesnext-vm-core", version = "0.0.0" }

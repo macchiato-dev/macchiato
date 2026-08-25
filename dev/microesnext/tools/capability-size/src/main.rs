@@ -316,6 +316,15 @@ pub extern "C" fn symbols_probe() -> u32 {
     u32::from(first != second && microesnext::symbols::description(&arena, first).is_ok())
 }
 
+#[cfg(all(feature = "well-known-symbols", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn well_known_symbols_probe() -> u32 {
+    let mut memory = [0; 32];
+    let mut arena = microesnext_arena::Arena::with_root_capacity(&mut memory, 1);
+    let symbols = microesnext::well_known_symbols::WellKnownSymbols::new(&mut arena).unwrap();
+    symbols.iterator(&arena).unwrap().raw()
+}
+
 #[cfg(all(feature = "atoms", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn atoms_probe() -> u32 {

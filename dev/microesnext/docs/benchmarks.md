@@ -74,9 +74,10 @@ LTO from merely discarding an enabled but unused dependency.
 | Objects with atoms and strings | 14,517 | 5,734 |
 | Strings only | 5,008 | 2,243 |
 | Symbols | 5,043 | 2,198 |
+| Well-known symbols | 5,573 | 2,392 |
 | Promises | 4,888 | 2,183 |
 | Weak collections | 2,099 | 951 |
-| All capabilities | 35,634 | 12,517 |
+| All capabilities | 35,998 | 12,619 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -103,6 +104,12 @@ The symbol probe creates two undescribed symbols, verifies distinct identity,
 and reads a description. Its 5,043-byte artifact does not link strings, atoms,
 objects, or collections. Adding the feature leaves every previously measured
 isolated artifact byte-for-byte unchanged.
+
+The 5,573-byte well-known-symbol row retains a realm-local `Symbol.iterator`
+identity through the arena root table. Its production dependency graph adds
+neither strings nor atoms; callers that already have strings may provide the
+standard description. Adding this realm capability leaves the symbol-only and
+all other isolated artifacts byte-for-byte unchanged.
 
 The iterator probes keep the 3,647-byte cursor separate from their sources.
 The 10,804-byte array row executes a live value step; the 10,223-byte

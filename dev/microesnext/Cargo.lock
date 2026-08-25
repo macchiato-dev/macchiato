@@ -27,6 +27,7 @@ dependencies = [
  "microesnext-vm",
  "microesnext-vm-core",
  "microesnext-weak-collections",
+ "microesnext-well-known-symbols",
 ]
 
 [[package]]
@@ -259,5 +260,15 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-well-known-symbols"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-strings",
+ "microesnext-symbols",
  "microesnext-types",
 ]

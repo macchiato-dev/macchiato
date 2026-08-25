@@ -36,9 +36,11 @@ and the complete ECMAScript grammar remain future compiler work.
 
 Unique symbols are available as a removable primitive and compose directly as
 object, Map, and Set keys. Descriptions may be absent or ordinary strings, but
-do not affect equality. The global symbol registry and well-known symbols will
-join the iterable boundary rather than making every symbol build retain an atom
-table.
+do not affect equality. The global symbol registry remains future work. The
+realm-owned `Symbol.iterator` identity is a separate capability rather than
+making every symbol build retain realm state or an atom table. Small realms can
+omit its description string, while string-capable realms can supply the
+standard `"Symbol.iterator"` description.
 
 `Map` and `Set` provide constructors from arrays, ordered storage,
 SameValueZero key comparison, `size`, `get`, `set`, `add`, `has`, `delete`,

@@ -18,6 +18,7 @@ strings = [
   "microesnext-collections?/string-keys",
 ]
 symbols = ["dep:microesnext-symbols"]
+well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
@@ -50,6 +51,7 @@ microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
+microesnext-well-known-symbols = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
