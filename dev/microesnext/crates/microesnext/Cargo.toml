@@ -33,6 +33,7 @@ method-calls = [
   "microesnext-vm/method-calls",
 ]
 class-methods = ["classes", "method-calls"]
+class-static-methods = ["class-methods"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]

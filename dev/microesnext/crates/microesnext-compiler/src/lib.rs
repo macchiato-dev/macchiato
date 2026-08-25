@@ -765,7 +765,7 @@ impl Parser<'_> {
         });
     }
 
-    #[cfg(feature = "class-methods")]
+    #[cfg(all(feature = "class-methods", not(feature = "class-static-methods")))]
     fn class_method(&mut self, class_slot: u16) -> Result<(), CompileError> {
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
@@ -776,6 +776,29 @@ impl Parser<'_> {
             .extend_from_slice(&(b"prototype".len() as u16).to_le_bytes());
         self.output.extend_from_slice(b"prototype");
         self.output.push(Opcode::GetProperty as u8);
+        self.output_atom_range(name_start, name_end);
+        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        self.output.push(Opcode::SetPropertyStatement as u8);
+        Ok(())
+    }
+
+    #[cfg(feature = "class-static-methods")]
+    fn class_method(&mut self, class_slot: u16) -> Result<(), CompileError> {
+        let static_method = self.try_word(b"static");
+        if static_method {
+            self.whitespace();
+        }
+        let (name_start, name_end) = self.identifier()?;
+        let parameters = self.function_parameters()?;
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&class_slot.to_le_bytes());
+        if !static_method {
+            self.output.push(Opcode::ConstAtom as u8);
+            self.output
+                .extend_from_slice(&(b"prototype".len() as u16).to_le_bytes());
+            self.output.extend_from_slice(b"prototype");
+            self.output.push(Opcode::GetProperty as u8);
+        }
         self.output_atom_range(name_start, name_end);
         self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
@@ -3801,6 +3824,34 @@ mod tests {
                 .unwrap_err()
                 .expected,
             "{ constructor"
+        );
+    }
+
+    #[cfg(feature = "class-static-methods")]
+    #[test]
+    fn compiles_static_methods_onto_the_class_record() {
+        let code = compile_script(
+            "class Identity { constructor() {} static read(value) { return value; } } \
+             return Identity.read(42);",
+        )
+        .unwrap();
+
+        assert!(code.contains(&(Opcode::ToMethod as u8)));
+        assert!(code.contains(&(Opcode::GetMethod as u8)));
+        assert!(code.contains(&(Opcode::CallMethodArguments as u8)));
+    }
+
+    #[cfg(all(feature = "class-methods", not(feature = "class-static-methods")))]
+    #[test]
+    fn instance_method_builds_reject_static_syntax() {
+        assert_eq!(
+            compile_script(
+                "class Identity { constructor() {} static read(value) { return value; } } \
+                 return Identity.read(42);"
+            )
+            .unwrap_err()
+            .expected,
+            "("
         );
     }
 }

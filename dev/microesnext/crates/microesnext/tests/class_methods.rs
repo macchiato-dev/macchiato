@@ -72,3 +72,23 @@ fn a_method_only_class_uses_the_implicit_constructor() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn a_static_method_receives_arguments_without_an_instance() {
+    let code = compile_script(
+        "class Identity { \
+           constructor() {} \
+           static self() { return this; } \
+           static read(value) { return value; } \
+         } \
+         return Identity.self().read(42);",
+    )
+    .unwrap();
+    let mut memory = [0; 1024];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
