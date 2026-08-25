@@ -48,6 +48,8 @@ pub extern "C" fn locals_probe() -> i32 {
         Opcode::InitLocals as u8,
         1,
         0,
+        0,
+        0,
         Opcode::ConstI30 as u8,
         42,
         0,

@@ -252,8 +252,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "locals")]
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
+                let parameter_count = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_locals::init(self.core.arena_mut(), base, count)?;
+                microesnext_locals::init_with_parameters(
+                    self.core.arena_mut(),
+                    base,
+                    count,
+                    parameter_count,
+                )?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]
@@ -736,6 +742,24 @@ mod tests {
         assert_eq!(
             machine.call_closure(function, argument).unwrap(),
             Outcome::Complete(argument)
+        );
+    }
+
+    #[cfg(all(feature = "functions", feature = "locals"))]
+    #[test]
+    fn external_arguments_initialize_parameter_slots() {
+        let code = Builder::new()
+            .init_frame(1, 1)
+            .load_local(0)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let argument = Value::from_i30(42).unwrap();
+        assert_eq!(
+            machine.call_closure(function, argument),
+            Ok(Outcome::Complete(argument))
         );
     }
 

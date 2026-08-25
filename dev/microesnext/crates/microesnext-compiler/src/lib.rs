@@ -36,9 +36,19 @@ impl Builder {
     }
 
     pub fn init_locals(mut self, count: u16) -> Self {
+        self.output_frame(count, 0);
+        self
+    }
+
+    pub fn init_frame(mut self, count: u16, parameter_count: u16) -> Self {
+        self.output_frame(count, parameter_count);
+        self
+    }
+
+    fn output_frame(&mut self, count: u16, parameter_count: u16) {
         self.code.push(Opcode::InitLocals as u8);
         self.code.extend_from_slice(&count.to_le_bytes());
-        self
+        self.code.extend_from_slice(&parameter_count.to_le_bytes());
     }
 
     pub fn load_local(mut self, slot: u16) -> Self {
@@ -265,6 +275,7 @@ impl Parser<'_> {
             if count_patch.is_none() {
                 self.output.push(Opcode::InitLocals as u8);
                 count_patch = Some(self.output.len());
+                self.output.extend_from_slice(&0_u16.to_le_bytes());
                 self.output.extend_from_slice(&0_u16.to_le_bytes());
             }
             self.whitespace();
