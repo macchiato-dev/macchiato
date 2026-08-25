@@ -14,12 +14,13 @@ small integers as immediate i30 words. Addition of statically small integer
 terms stays on the invariant opcode path; expressions requiring promotion use
 the removable numeric path.
 
-The removable integer-operations slice adds subtraction and multiplication
-with ordinary multiplicative-before-additive precedence. Together with local
-assignment and `while`, it can run a source-compiled factorial loop without
+The removable integer-operations slice adds subtraction, multiplication, and
+`<`/`>` comparisons with ordinary multiplicative, additive, then relational
+precedence. Together with local assignment and `while`, it can run a
+source-compiled factorial loop with `n > 1` as its stopping condition without
 linking boxed IEEE-754 numbers. Results outside the i30 range currently fail
-rather than promote, so this is a deliberately bounded programming subset,
-not yet full JavaScript numeric semantics.
+rather than promote, so this is a deliberately bounded programming subset, not
+yet full JavaScript numeric semantics.
 
 Arrow functions support expression and block bodies. Lexical `this` and
 `arguments`, and rejection as constructors, remain compiler work. Untagged

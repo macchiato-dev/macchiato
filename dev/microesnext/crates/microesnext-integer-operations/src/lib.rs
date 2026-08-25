@@ -3,45 +3,37 @@
 use microesnext_types::{Error, Value};
 
 pub fn subtract(left: Value, right: Value) -> Result<Value, Error> {
-    binary_i30(left, right, i32::checked_sub)
-}
-
-pub fn multiply(left: Value, right: Value) -> Result<Value, Error> {
-    binary_i30(left, right, i32::checked_mul)
-}
-
-pub fn less_than(left: Value, right: Value) -> Result<Value, Error> {
-    compare_i30(left, right, i32::lt)
-}
-
-pub fn greater_than(left: Value, right: Value) -> Result<Value, Error> {
-    compare_i30(left, right, i32::gt)
-}
-
-fn binary_i30(
-    left: Value,
-    right: Value,
-    operation: fn(i32, i32) -> Option<i32>,
-) -> Result<Value, Error> {
-    let left = left.as_i30().ok_or(Error::Type)?;
-    let right = right.as_i30().ok_or(Error::Type)?;
-    operation(left, right)
+    let (left, right) = operands(left, right)?;
+    left.checked_sub(right)
         .and_then(Value::from_i30)
         .ok_or(Error::Type)
 }
 
-fn compare_i30(
-    left: Value,
-    right: Value,
-    comparison: fn(&i32, &i32) -> bool,
-) -> Result<Value, Error> {
+pub fn multiply(left: Value, right: Value) -> Result<Value, Error> {
+    let (left, right) = operands(left, right)?;
+    left.checked_mul(right)
+        .and_then(Value::from_i30)
+        .ok_or(Error::Type)
+}
+
+pub fn less_than(left: Value, right: Value) -> Result<Value, Error> {
+    let (left, right) = operands(left, right)?;
+    Ok(boolean(left < right))
+}
+
+pub fn greater_than(left: Value, right: Value) -> Result<Value, Error> {
+    let (left, right) = operands(left, right)?;
+    Ok(boolean(left > right))
+}
+
+fn operands(left: Value, right: Value) -> Result<(i32, i32), Error> {
     let left = left.as_i30().ok_or(Error::Type)?;
     let right = right.as_i30().ok_or(Error::Type)?;
-    Ok(if comparison(&left, &right) {
-        Value::TRUE
-    } else {
-        Value::FALSE
-    })
+    Ok((left, right))
+}
+
+fn boolean(value: bool) -> Value {
+    if value { Value::TRUE } else { Value::FALSE }
 }
 
 #[cfg(test)]

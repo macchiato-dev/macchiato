@@ -96,6 +96,10 @@ pub enum Opcode {
     SubtractI30 = 82,
     #[cfg(feature = "integer-operations")]
     MultiplyI30 = 83,
+    #[cfg(feature = "integer-operations")]
+    LessThanI30 = 84,
+    #[cfg(feature = "integer-operations")]
+    GreaterThanI30 = 85,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -183,6 +187,10 @@ impl TryFrom<u8> for Opcode {
             82 => Ok(Self::SubtractI30),
             #[cfg(feature = "integer-operations")]
             83 => Ok(Self::MultiplyI30),
+            #[cfg(feature = "integer-operations")]
+            84 => Ok(Self::LessThanI30),
+            #[cfg(feature = "integer-operations")]
+            85 => Ok(Self::GreaterThanI30),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -245,6 +253,8 @@ mod tests {
     fn enabled_integer_operation_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(82), Ok(Opcode::SubtractI30));
         assert_eq!(Opcode::try_from(83), Ok(Opcode::MultiplyI30));
+        assert_eq!(Opcode::try_from(84), Ok(Opcode::LessThanI30));
+        assert_eq!(Opcode::try_from(85), Ok(Opcode::GreaterThanI30));
     }
 
     #[cfg(not(feature = "integer-operations"))]
@@ -252,6 +262,8 @@ mod tests {
     fn omitted_integer_operation_opcodes_are_invalid() {
         assert!(Opcode::try_from(82).is_err());
         assert!(Opcode::try_from(83).is_err());
+        assert!(Opcode::try_from(84).is_err());
+        assert!(Opcode::try_from(85).is_err());
     }
 
     #[cfg(feature = "locals")]

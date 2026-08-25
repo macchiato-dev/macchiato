@@ -13,9 +13,10 @@ not link to that C implementation.
 
 The 1,984-byte Wasm build is the interpreter kernel: it proves the fixed core
 can execute bytecode, but is not presented as the smallest generally useful
-language runtime. The first practical boundary is the 5,905-byte minimal
+language runtime. The first practical boundary is the 6,506-byte minimal
 programmable runtime. It composes locals, boolean control flow, and removable
-i30 subtraction and multiplication, and executes a compiled factorial loop.
+i30 arithmetic and comparisons, and executes a compiled factorial loop with
+an explicit relational stopping condition.
 
 ## Crates and removable capabilities
 
@@ -57,10 +58,10 @@ i30 subtraction and multiplication, and executes a compiled factorial loop.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely.
-- `microesnext-integer-operations` supplies checked i30 subtraction and
-  multiplication. The `minimal-program` feature composes it with locals and
-  control flow without adding floating-point storage or changing the invariant
-  interpreter loop.
+- `microesnext-integer-operations` supplies checked i30 subtraction,
+  multiplication, and relational comparisons. The `minimal-program` feature
+  composes it with locals and control flow without adding floating-point
+  storage or changing the invariant interpreter loop.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.

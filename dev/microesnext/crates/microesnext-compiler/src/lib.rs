@@ -760,6 +760,25 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
+        let (used_binding, _) = self.additive(binding)?;
+        loop {
+            let opcode = if self.consume(b'<') {
+                Opcode::LessThanI30
+            } else if self.consume(b'>') {
+                Opcode::GreaterThanI30
+            } else {
+                break;
+            };
+            self.additive(None)?;
+            self.output.push(opcode as u8);
+        }
+        Ok(used_binding)
+    }
+
+    fn additive(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
         let (used_binding, mut kind) = self.product(binding)?;
         loop {
             if self.consume(b'+') {
@@ -787,7 +806,7 @@ impl Parser<'_> {
                 break;
             }
         }
-        Ok(used_binding)
+        Ok((used_binding, kind))
     }
 
     fn product(
