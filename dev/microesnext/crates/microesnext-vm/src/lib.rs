@@ -573,6 +573,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "number-negation")]
             Opcode::NegateNumber => {
                 let operand = self.core.arena_mut().pop()?;
+                #[cfg(feature = "string-number-coercion")]
+                let value = {
+                    let number =
+                        microesnext_string_number_coercion::coerce(self.core.arena(), operand)?;
+                    microesnext_number_negation::negate_coerced(self.core.arena_mut(), number)?
+                };
+                #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_number_negation::negate(self.core.arena_mut(), operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
@@ -580,6 +587,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "number-coercion")]
             Opcode::ToNumber => {
                 let operand = self.core.arena_mut().pop()?;
+                #[cfg(feature = "string-number-coercion")]
+                let value =
+                    microesnext_string_number_coercion::to_number(self.core.arena_mut(), operand)?;
+                #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_number_coercion::to_number(self.core.arena_mut(), operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)

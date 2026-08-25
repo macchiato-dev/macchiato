@@ -10,6 +10,7 @@ version.workspace = true
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-number-coercion.workspace = true
+microesnext-numbers.workspace = true
 microesnext-types.workspace = true
 
 [lib]

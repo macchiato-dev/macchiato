@@ -42,6 +42,7 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-string-number-coercion",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-symbols",
@@ -426,6 +427,7 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-number-coercion",
+ "microesnext-numbers",
  "microesnext-types",
 ]
 
@@ -519,6 +521,7 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-string-number-coercion",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-suspension",

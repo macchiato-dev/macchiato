@@ -65,6 +65,8 @@ pub use microesnext_number_operations as number_operations;
 pub use microesnext_numbers as numbers;
 #[cfg(feature = "function-arguments")]
 pub use microesnext_parameters as parameters;
+#[cfg(feature = "string-number-coercion")]
+pub use microesnext_string_number_coercion as string_number_coercion;
 
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;

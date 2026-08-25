@@ -89,6 +89,12 @@ number-coercion = [
   "dep:microesnext-number-coercion",
   "microesnext-vm/number-coercion",
 ]
+string-number-coercion = [
+  "number-coercion",
+  "strings",
+  "dep:microesnext-string-number-coercion",
+  "microesnext-vm/string-number-coercion",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
@@ -179,6 +185,7 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-number-operations = { workspace = true, optional = true }
 microesnext-number-negation = { workspace = true, optional = true }
 microesnext-number-coercion = { workspace = true, optional = true }
+microesnext-string-number-coercion = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }
@@ -283,6 +290,11 @@ required-features = ["arrays"]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["locals", "number-coercion", "number-negation", "number-operations"]
+
+[[test]]
+name = "string-number-coercion"
+path = "tests/string_number_coercion.rs"
+required-features = ["number-negation", "string-number-coercion"]
 
 [[test]]
 name = "symbols"
