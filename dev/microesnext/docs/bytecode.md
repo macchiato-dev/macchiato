@@ -40,6 +40,13 @@ Constructor-only class declarations otherwise reuse receiver frames, argument
 calls, property stores, and return selection rather than adding a parallel
 execution model.
 
+The separate method composition uses `to_method`, `get_method`, and
+`call_method_arguments`. `get_method` preserves the base immediately below the
+resolved value; evaluated arguments follow it. The call instruction removes the
+method and base, appends the base as the hidden receiver only for a callable
+object, and enters the otherwise ordinary argument frame. Omitting method calls
+leaves `get_property` and ordinary call bytecode unchanged.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

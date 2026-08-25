@@ -72,6 +72,11 @@ an explicit relational stopping condition.
   class can use the same removable construction path, but ordinary call
   unwrapping does not accept it. The initial `classes` compiler slice supports
   constructor-only declarations; methods and inheritance remain separate.
+- `microesnext-method-calls` preserves a member receiver beneath its resolved
+  method and removes both before entering the call frame. The independent
+  `class-methods` composition stores receiver-aware, non-constructible callable
+  objects on a class prototype; constructor-only class builds retain neither
+  its stack operations nor its three opcodes.
 - `microesnext-recursive-constructors` allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not link this cross-composition.

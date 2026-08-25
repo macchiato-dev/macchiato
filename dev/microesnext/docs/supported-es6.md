@@ -131,13 +131,17 @@ private self cell is rebound to the wrapper by the independent
 same function identity. Function declarations already reuse their ordinary
 captured declaration cell and do not need that opcode.
 
-The `classes` slice initially accepts a named declaration containing exactly
-one `constructor`. It emits a distinct class-constructor record rather than
+The `classes` slice accepts a named declaration containing a constructor. It
+emits a distinct class-constructor record rather than
 lowering the declaration to an ordinary function, so calling it without `new`
 is a type error. Constructor parameters, `this` property initialization,
 explicit returns, and the implicit `this` result compose with existing receiver
-and construction rules. Methods, `extends`, fields, class expressions, and
-static initialization are not included by this focused gate.
+and construction rules. The separate `class-methods` gate adds synchronous
+instance methods with ordered parameters and receiver-preserving member calls.
+Those methods are callable objects without constructor prototypes, so extracting
+one loses its receiver and attempting to construct one fails. `extends`, fields,
+class expressions, accessors, generators, async methods, computed names, and
+static initialization are not included by these focused gates.
 
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
@@ -195,8 +199,10 @@ recursive-function constructor, allowing recursion without leaking the name
 into the enclosing scope. The optional receiver runtime can enter a closure
 with an explicit receiver, expose it through receiver-specific frame bytecode,
 and leave the frame without changing ordinary parameter/local positions.
-Source compilation of `this`, method-call receiver preservation, `arguments`,
-constructors, and full declaration hoisting remain compiler work.
+Source compilation of `arguments` and full declaration hoisting remains
+compiler work. Receiver-preserving member calls are an independent composition:
+ordinary property reads still discard the base, while a property immediately
+followed by a call retains the base only until the method frame is entered.
 
 Mutable closure semantics use optional traced environment cells. Compiler
 capture analysis boxes only bindings that cross a function boundary; sibling
