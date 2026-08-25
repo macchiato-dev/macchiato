@@ -64,7 +64,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,969 | 4,208 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 23,042 | 8,857 |
+| Async functions | 23,243 | 8,910 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 9,380 | 3,962 |
@@ -77,11 +77,12 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 25,648 | 9,526 |
+| Recursive async functions | 25,849 | 9,576 |
 | Functions with local parameters | 10,897 | 4,357 |
+| Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
-| Iterator result objects | 13,944 | 5,448 |
+| Iterator result objects | 13,944 | 5,441 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Numbers | 5,981 | 2,627 |
 | Objects with atoms and strings | 14,663 | 5,859 |
@@ -89,9 +90,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Symbols | 4,995 | 2,254 |
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
-| Native Promise resolution | 12,288 | 5,129 |
+| Native Promise resolution | 12,664 | 5,239 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 58,635 | 19,239 |
+| All capabilities | 60,817 | 19,967 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -114,6 +115,11 @@ slot zero, and returns through that frame. Moving this path into
 `microesnext-parameters` restored the functions-only artifact from 8,018 to
 6,962 bytes and locals-only from 4,324 to 4,012 bytes. The 10,897-byte
 composition is the only row that pays for both operations.
+The 13,156-byte receiver row invokes a real closure with one argument and an
+explicit `this`, reads that receiver through optional frame bytecode, and
+returns through receiver-aware cleanup. It composes functions, parameters, and
+locals, while the minimal, functions-only, and parameter rows remain unchanged.
+The invariant `Core` has no receiver state or branch.
 The 6,285-byte environment-cell row allocates and reads a traced shared cell
 through live VM opcodes. Its arena block kind and decoder arms are feature
 gated. Adding it leaves the 1,984-byte minimal, 6,962-byte functions-only, and

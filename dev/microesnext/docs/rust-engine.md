@@ -66,6 +66,11 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   than recursively following a chain on the Rust or WebAssembly stack. Its
   compact error dependency turns self-resolution into a guest TypeError
   rejection rather than an engine-control error.
+- Receiver-aware invocation is an optional frame composition. It reuses the
+  existing argument entry path with one hidden value after fixed locals; the
+  invariant `Core`, ordinary frames, and builds omitting `receivers` are
+  unchanged. This is the call boundary for eventual object thenable
+  assimilation rather than a host callback or proxy.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.

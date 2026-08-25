@@ -35,6 +35,9 @@ not link to that C implementation.
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
+- `microesnext-receivers` adds hidden `this` values to selected call frames.
+  Receiver slots live after ordinary locals, so existing local access remains
+  unchanged and builds without methods or thenables do not link the crate.
 - `microesnext-environments` supplies traced one-value cells for bindings that
   genuinely escape into closures. The compiler shares a cell across sibling
   closures and outer writes; uncaptured locals remain direct stack words.

@@ -31,6 +31,20 @@ the cell with that closure. Unnamed expressions, arrows, and declarations do
 not pay for this constructor, and builds omitting `recursive-functions` reject
 its opcode.
 
+## Receivers
+
+Receiver-aware functions use `init_receiver_frame`, `load_this`, and
+`return_receiver_locals`. The caller appends one hidden receiver after the
+evaluated arguments. Frame initialization leaves the ordinary count and local
+slots in their existing positions and keeps the receiver immediately after the
+fixed local region. Temporary operands can therefore grow above it without
+changing its address.
+
+These instructions are optional rather than a new field in the invariant VM.
+Ordinary closures and bytecode remain unchanged, while object thenable
+assimilation can invoke a guest `then` function with the source object as its
+receiver.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

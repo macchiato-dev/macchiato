@@ -14,10 +14,10 @@ small integers as immediate i30 words. Addition of statically small integer
 terms stays on the invariant opcode path; expressions requiring promotion use
 the removable numeric path.
 
-Arrow functions support expression and block bodies, lexical `this` and
-`arguments`, and rejection as constructors. Untagged template literals support
-cooked text, escapes, multiline text, and substitutions. Tagged templates are
-not included.
+Arrow functions support expression and block bodies. Lexical `this` and
+`arguments`, and rejection as constructors, remain compiler work. Untagged
+template literals support cooked text, escapes, multiline text, and
+substitutions. Tagged templates are not included.
 
 The current compiler accepts `async function` declarations, anonymous async
 function expressions, and async arrows with expression or block bodies.
@@ -41,8 +41,11 @@ arguments have a `u16` count. Argument-to-local frame setup is a removable
 capability rather than a cost borne by functions without parameters. Named
 function expressions get a private self-binding backed by a removable
 recursive-function constructor, allowing recursion without leaking the name
-into the enclosing scope. `this` and `arguments` exposure, constructors, and
-full declaration hoisting remain compiler work.
+into the enclosing scope. The optional receiver runtime can enter a closure
+with an explicit receiver, expose it through receiver-specific frame bytecode,
+and leave the frame without changing ordinary parameter/local positions.
+Source compilation of `this`, method-call receiver preservation, `arguments`,
+constructors, and full declaration hoisting remain compiler work.
 
 Mutable closure semantics use optional traced environment cells. Compiler
 capture analysis boxes only bindings that cross a function boundary; sibling
@@ -107,7 +110,9 @@ reaction lists, and a caller-owned FIFO job ring. Optional native resolution
 adopts another engine Promise, including its eventual rejection, without
 linking object property lookup. Async function return uses this path.
 
-Self-resolution rejects with a compact guest TypeError value. Object thenables,
+Self-resolution rejects with a compact guest TypeError value. The separate
+receiver capability now supplies the correct `this` call shape required by
+thenables; resolving functions and the assimilation job remain work. Object thenables,
 source-visible `Promise`, `then`, `catch`, `finally`, `resolve`, `reject`,
 `all`, and `race`,
 subclass constructors, species, and unhandled-rejection reporting remain work
