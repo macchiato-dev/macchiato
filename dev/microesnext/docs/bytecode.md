@@ -41,28 +41,29 @@ Tagged templates are intentionally not part of this milestone.
 
 ## Async functions and await
 
-An async function can reuse ordinary closure and call instructions, with a
-function metadata bit selecting Promise-returning entry and completion.
-`await`, however, cannot be represented by the existing synchronous bytecode
-without source-level control-flow rewriting. It must suspend after evaluating
-one operand, retain the function's arguments, locals, operand stack, program
-counter, exception state, and live captured-variable references, then resume
-with either a fulfilled value or a thrown rejection.
+An async function body reuses ordinary frame, local, capture, and return
+instructions. The optional `async_closure` constructor distinguishes its call
+boundary from an ordinary closure: a call returns a pending Promise to the
+caller while its body runs in an independent guest context. Builds omitting
+`async-functions` neither decode that constructor nor link its closure and
+invocation storage.
 
-MicroESNext therefore adds one `await` instruction. Async entry and return are
-metadata-driven rather than separate opcodes. The runtime stores suspended
-frames in GC-visible engine objects and schedules their continuation through
-the same FIFO Promise job queue used by `then`. This preserves ordinary
-bytecode for everything on either side of an await while making suspension an
-explicit, auditable boundary.
+`await` suspends after evaluating one operand. It retains the function's
+arguments, locals, operand stack, program counter, exception state, and live
+captured-variable references, then resumes with either a fulfilled value or a
+thrown rejection.
 
-The saved frame contains the active stack range, the frame-pointer and
-program-counter offsets, the outer promise, and the live captured-variable
-references. A captured variable normally points directly into the active VM
-stack. At suspension it is detached to its heap value while retaining enough
-storage to be reattached; at resumption its signed stack-relative offset is
-used to reconnect it to the reconstructed frame. This is a stack-layout
-change, not merely an extra parser production.
+The runtime stores suspended contexts in GC-visible engine objects and
+schedules their continuation through the same bounded FIFO Promise job queue
+used by `then`. A caller-supplied async frame array tracks only currently
+running nested bodies; once a body reaches `await`, its heap continuation and
+Promise reaction replace that scheduler frame. This preserves ordinary
+bytecode on either side of an await while making suspension explicit.
+
+The saved context contains the active stack range, frame and handler depths,
+and program counter. The scheduler frame separately roots the caller context
+and outer Promise. Captured mutable variables remain traced environment cells,
+so compaction can relocate the entire graph without exposing raw offsets.
 
 MicroESNext executes a resumed function on its ordinary compact VM stack. It
 does not leave every async invocation permanently resident there: while the

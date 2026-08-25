@@ -64,6 +64,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,969 | 4,208 |
 | Async suspension | 6,455 | 2,856 |
+| Async functions | 22,306 | 8,515 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 9,380 | 3,962 |
@@ -87,7 +88,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 46,099 | 15,569 |
+| All capabilities | 55,447 | 18,332 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -103,9 +104,7 @@ LTO artifact.
 The recursive-functions row executes its distinct closure constructor and
 verifies that the resulting private self cell resolves back to the closure.
 It statically composes functions and environments; the minimal,
-functions-only, and environment-only rows remain unchanged. The combined
-artifact also remains 46,099 bytes because fat LTO reuses allocation and
-stack-editing paths already exercised by other enabled capabilities.
+functions-only, and environment-only rows remain unchanged.
 The parameter composition additionally removes a callable from beneath its
 evaluated arguments, enters a guest frame, exposes the argument through local
 slot zero, and returns through that frame. Moving this path into
@@ -257,11 +256,18 @@ prove the relevant artifact property: omitted capabilities are absent from the
 final Wasm, while enabled rows contain live exported calls into that crate.
 Moving suspend/resume/restore out of `microesnext-vm-core` and into the optional
 `microesnext-suspension` crate leaves the invariant core untouched. The
-isolated live async probe is 6,503 bytes (2,805 gzip). Enabling `async` adds the crate
+isolated live async probe is 6,455 bytes (2,856 gzip). Enabling `async` adds the crate
 through the VM; disabling it also removes resume operations from the public
 surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
+
+The 22,306-byte (8,515 gzip) async-functions row executes async closure entry,
+returns a pending outer Promise, parks an `await`, runs its queued reaction,
+and verifies fulfillment. The dependency check also proves that selecting
+plain `async` does not resolve `microesnext-async-functions`, while selecting
+`async-functions` does not pull in environment cells, parameter frames, or
+recursive-function storage. The minimal artifact remains 1,984 bytes.
 Re-run them with:
 
 ```sh

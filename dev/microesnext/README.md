@@ -91,9 +91,12 @@ not link to that C implementation.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.
 - `microesnext-async-functions` stores async closures and packages evaluated
-  calls for execution in an independent guest context. Caller suspension and
-  promise orchestration remain absent from ordinary function builds.
-- `microesnext` is a small facade; its `async` feature is disabled by default.
+  calls for execution in independent guest contexts. Its bounded,
+  caller-supplied frame stack connects nested calls to outer promises; caller
+  suspension and promise orchestration remain absent from ordinary function
+  builds.
+- `microesnext` is a small facade; its `async` and `async-functions` features
+  are disabled by default.
 
 The runtime is `no_std` and has no global-allocator or libc dependency. Its
 arena borrows a caller-supplied word slice; only compiler tooling uses `alloc`.

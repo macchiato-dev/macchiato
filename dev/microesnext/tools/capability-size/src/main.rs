@@ -12,6 +12,7 @@ use microesnext::{Core, CoreOutcome};
     any(
         feature = "arrays",
         feature = "async",
+        feature = "async-functions",
         feature = "control-flow",
         feature = "exceptions",
         feature = "environments",
@@ -157,6 +158,50 @@ pub extern "C" fn async_probe() -> i32 {
     };
     match machine.resume(continuation, Value::from_i30(7).unwrap()) {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "async-functions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn async_functions_probe() -> i32 {
+    const BODY: u32 = 9;
+    let code = [
+        Opcode::AsyncClosure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::CallValue as u8,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Await as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 192];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
+    let mut job_slots = [None; 1];
+    let mut queue = microesnext::promises::JobQueue::new(&mut job_slots);
+    let mut frame_slots = [None; 1];
+    let mut frames = microesnext::async_functions::Frames::new(&mut frame_slots);
+    let Ok(microesnext::r#async::Progress::Complete(promise)) =
+        microesnext::r#async::run_functions(&mut machine, &mut queue, &mut frames)
+    else {
+        return -1;
+    };
+    if microesnext::r#async::run_one_reaction(&mut machine, &mut queue) != Ok(true) {
+        return -1;
+    }
+    match microesnext::promises::settled_result(machine.arena(), promise) {
+        Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
+            value.as_i30().unwrap_or(-1)
+        }
         _ => -1,
     }
 }

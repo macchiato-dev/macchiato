@@ -19,11 +19,13 @@ Arrow functions support expression and block bodies, lexical `this` and
 cooked text, escapes, multiline text, and substitutions. Tagged templates are
 not included.
 
-Function declarations, function expressions, and arrows may be `async`.
-`await` accepts values, native promises, and thenables; always resumes through
-the Promise job queue; preserves locals and captured variables across repeated
-suspensions; and turns uncaught exceptions into promise rejections. Async
-methods and async generators are not part of this initial surface.
+The current compiler accepts `async function` declarations. Runtime async
+closures return their outer Promise before an awaited body finishes, and
+nested async calls restore each ordinary caller in order. `await` on a value
+or engine Promise resumes through the Promise job queue; synchronous throws
+reject the outer Promise. Promise assimilation, thenables, async expressions,
+async arrows, async methods, and async generators remain compiler/runtime
+work rather than implied support.
 
 The current Rust compiler slice also emits function declarations, anonymous
 function expressions, single- or parenthesized-parameter arrows, postfix calls,

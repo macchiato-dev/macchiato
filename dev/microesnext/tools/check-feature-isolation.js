@@ -36,12 +36,17 @@ const environments = "microesnext-environments";
 const parameters = "microesnext-parameters";
 const suspension = "microesnext-suspension";
 const recursiveFunctions = "microesnext-recursive-functions";
+const asyncFunctions = "microesnext-async-functions";
 
-assertPresence([], [], [environments, parameters, recursiveFunctions, suspension]);
+assertPresence(
+  [],
+  [],
+  [asyncFunctions, environments, parameters, recursiveFunctions, suspension],
+);
 assertPresence(
   ["functions"],
   ["microesnext-functions"],
-  [environments, parameters, recursiveFunctions],
+  [asyncFunctions, environments, parameters, recursiveFunctions],
 );
 assertPresence(
   ["locals"],
@@ -53,7 +58,16 @@ assertPresence(
   [parameters],
   [environments, recursiveFunctions],
 );
-assertPresence(["async"], [suspension], [environments, parameters]);
+assertPresence(
+  ["async"],
+  [suspension],
+  [asyncFunctions, environments, parameters],
+);
+assertPresence(
+  ["async-functions"],
+  [asyncFunctions, "microesnext-functions", "microesnext-promises", suspension],
+  [environments, parameters, recursiveFunctions],
+);
 assertPresence(
   ["recursive-functions"],
   [environments, "microesnext-functions", recursiveFunctions],

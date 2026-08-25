@@ -45,7 +45,8 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   the closure and evaluated arguments, snapshots the caller, and starts the
   body in an independent guest context over the same arena. The scheduler can
   restore the caller with the outer promise while the body continuation enters
-  that promise's reaction path.
+  that promise's reaction path. A bounded caller-owned frame array permits
+  nested async entry without a native recursive call or hidden allocation.
 - Guest exception handlers are explicit records in the guest stack. The
   optional `microesnext-exceptions` crate owns the handler-chain pointer and
   stack operations; `microesnext-vm` composes it only behind the `exceptions`
