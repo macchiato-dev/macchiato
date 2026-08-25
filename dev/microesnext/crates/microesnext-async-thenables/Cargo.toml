@@ -1,0 +1,24 @@
+[package]
+name = "microesnext-async-thenables"
+description = "Optional async return assimilation for MicroESNext thenables"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-async = { workspace = true, features = ["functions"] }
+microesnext-promises.workspace = true
+microesnext-thenables.workspace = true
+microesnext-types.workspace = true
+microesnext-vm.workspace = true
+
+[dev-dependencies]
+microesnext-async-functions.workspace = true
+microesnext-bytecode.workspace = true
+microesnext-functions.workspace = true
+microesnext-objects.workspace = true
+
+[lib]
+path = "src/lib.rs"

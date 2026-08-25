@@ -93,6 +93,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-async-thenables"
+version = "0.0.0"
+dependencies = [
+ "microesnext-async",
+ "microesnext-async-functions",
+ "microesnext-bytecode",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-promises",
+ "microesnext-thenables",
+ "microesnext-types",
+ "microesnext-vm",
+]
+
+[[package]]
 name = "microesnext-atoms"
 version = "0.0.0"
 dependencies = [
