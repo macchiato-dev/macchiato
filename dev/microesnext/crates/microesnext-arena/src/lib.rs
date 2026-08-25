@@ -367,6 +367,26 @@ impl<'memory> Arena<'memory> {
             .ok_or(Error::StackUnderflow)
     }
 
+    /// Read a stable frame/local slot. Unlike operand-stack offsets, this
+    /// index does not change as temporary values are pushed above it.
+    #[inline(always)]
+    pub fn stack_value_from_bottom(&self, index: usize) -> Result<Value, Error> {
+        if index >= self.stack_len() {
+            return Err(Error::StackUnderflow);
+        }
+        Ok(Value::from_raw(self.words[self.words.len() - 1 - index]))
+    }
+
+    #[inline(always)]
+    pub fn set_stack_value_from_bottom(&mut self, index: usize, value: Value) -> Result<(), Error> {
+        if index >= self.stack_len() {
+            return Err(Error::StackUnderflow);
+        }
+        let index = self.words.len() - 1 - index;
+        self.words[index] = value.raw();
+        Ok(())
+    }
+
     pub fn clear_stack(&mut self) {
         self.stack_start = self.words.len();
     }
@@ -972,6 +992,24 @@ mod tests {
         assert_eq!(arena.resume_stack(continuation).unwrap(), (17, None, None));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(9));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(4));
+    }
+
+    #[test]
+    fn bottom_relative_slots_ignore_temporary_operands() {
+        let mut memory = [0; 16];
+        let mut arena = Arena::new(&mut memory);
+        arena.push(Value::from_i30(4).unwrap()).unwrap();
+        arena.push(Value::from_i30(9).unwrap()).unwrap();
+        assert_eq!(arena.stack_value_from_bottom(0).unwrap().as_i30(), Some(4));
+        assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(9));
+
+        arena.push(Value::TRUE).unwrap();
+        arena
+            .set_stack_value_from_bottom(1, Value::from_i30(10).unwrap())
+            .unwrap();
+        assert_eq!(arena.stack_value_from_bottom(0).unwrap().as_i30(), Some(4));
+        assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(10));
+        assert_eq!(arena.pop(), Ok(Value::TRUE));
     }
 
     #[test]
