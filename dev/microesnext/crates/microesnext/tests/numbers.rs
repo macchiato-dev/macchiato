@@ -74,3 +74,36 @@ fn source_negation_preserves_fast_integers_and_negative_zero() {
         assert!(value.is_sign_negative());
     }
 }
+
+#[test]
+fn source_unary_numbers_coerce_immediate_primitives() {
+    for (source, expected) in [
+        ("return +true;", 1.0),
+        ("return +false;", 0.0),
+        ("return +null;", 0.0),
+        ("return - + true;", -1.0),
+    ] {
+        let code = compile_script(source).unwrap();
+        let mut memory = [0; 48];
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected number completion")
+        };
+        assert_eq!(
+            microesnext::numbers::get(machine.arena(), value),
+            Ok(expected)
+        );
+    }
+
+    let code = compile_script("return +undefined;").unwrap();
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Outcome::Complete(value) = machine.run().unwrap() else {
+        panic!("expected number completion")
+    };
+    assert!(
+        microesnext::numbers::get(machine.arena(), value)
+            .unwrap()
+            .is_nan()
+    );
+}

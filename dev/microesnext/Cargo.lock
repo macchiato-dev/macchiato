@@ -30,6 +30,7 @@ dependencies = [
  "microesnext-iterators",
  "microesnext-locals",
  "microesnext-logical-operations",
+ "microesnext-number-coercion",
  "microesnext-number-negation",
  "microesnext-number-operations",
  "microesnext-numbers",
@@ -307,11 +308,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-number-coercion"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-number-negation"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-integer-negation",
+ "microesnext-number-coercion",
  "microesnext-numbers",
  "microesnext-types",
 ]
@@ -488,6 +499,7 @@ dependencies = [
  "microesnext-integer-operations",
  "microesnext-locals",
  "microesnext-logical-operations",
+ "microesnext-number-coercion",
  "microesnext-number-negation",
  "microesnext-number-operations",
  "microesnext-numbers",

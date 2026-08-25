@@ -124,6 +124,8 @@ pub enum Opcode {
     NegateI30 = 96,
     #[cfg(feature = "number-negation")]
     NegateNumber = 97,
+    #[cfg(feature = "number-coercion")]
+    ToNumber = 98,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -239,6 +241,8 @@ impl TryFrom<u8> for Opcode {
             96 => Ok(Self::NegateI30),
             #[cfg(feature = "number-negation")]
             97 => Ok(Self::NegateNumber),
+            #[cfg(feature = "number-coercion")]
+            98 => Ok(Self::ToNumber),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -395,6 +399,18 @@ mod tests {
     #[test]
     fn omitted_number_negation_opcode_is_invalid() {
         assert!(Opcode::try_from(97).is_err());
+    }
+
+    #[cfg(feature = "number-coercion")]
+    #[test]
+    fn enabled_number_coercion_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(98), Ok(Opcode::ToNumber));
+    }
+
+    #[cfg(not(feature = "number-coercion"))]
+    #[test]
+    fn omitted_number_coercion_opcode_is_invalid() {
+        assert!(Opcode::try_from(98).is_err());
     }
 
     #[cfg(feature = "locals")]

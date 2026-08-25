@@ -175,6 +175,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "logical-operations",
         feature = "numbers",
         feature = "number-negation",
+        feature = "number-coercion",
         feature = "exceptions",
         feature = "environments",
         feature = "equality",
@@ -576,6 +577,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "number-coercion")]
+            Opcode::ToNumber => {
+                let operand = self.core.arena_mut().pop()?;
+                let value = microesnext_number_coercion::to_number(self.core.arena_mut(), operand)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "integer-operations")]
             Opcode::SubtractI30 => {
                 let right = self.core.arena_mut().pop()?;
@@ -720,6 +728,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "logical-operations",
         feature = "numbers",
         feature = "number-negation",
+        feature = "number-coercion",
         feature = "exceptions",
         feature = "equality",
         feature = "environments",

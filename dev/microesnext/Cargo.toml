@@ -28,6 +28,7 @@ members = [
   "crates/microesnext-number-operations",
   "crates/microesnext-integer-negation",
   "crates/microesnext-number-negation",
+  "crates/microesnext-number-coercion",
   "crates/microesnext-array-iterators",
   "crates/microesnext-collection-iterators",
   "crates/microesnext-collection-entry-iterators",
@@ -90,6 +91,7 @@ microesnext-logical-operations = { path = "crates/microesnext-logical-operations
 microesnext-number-operations = { path = "crates/microesnext-number-operations", version = "0.0.0" }
 microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
 microesnext-number-negation = { path = "crates/microesnext-number-negation", version = "0.0.0" }
+microesnext-number-coercion = { path = "crates/microesnext-number-coercion", version = "0.0.0" }
 microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
 microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }
 microesnext-collection-entry-iterators = { path = "crates/microesnext-collection-entry-iterators", version = "0.0.0" }

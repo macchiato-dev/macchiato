@@ -72,6 +72,11 @@ number-negation = [
   "dep:microesnext-number-negation",
   "microesnext-bytecode/number-negation",
 ]
+number-coercion = [
+  "numbers",
+  "dep:microesnext-number-coercion",
+  "microesnext-bytecode/number-coercion",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
 recursive-functions = [
@@ -113,6 +118,7 @@ microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-number-operations = { workspace = true, optional = true }
 microesnext-number-negation = { workspace = true, optional = true }
+microesnext-number-coercion = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }

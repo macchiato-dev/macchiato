@@ -4,6 +4,7 @@ use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
 pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
+    let value = microesnext_number_coercion::to_number(arena, value)?;
     if value.as_i30().is_some_and(|value| value != 0) {
         if let Ok(value) = microesnext_integer_negation::negate(value) {
             return Ok(value);
@@ -31,5 +32,12 @@ mod tests {
         let zero = microesnext_numbers::get(&arena, zero).unwrap();
         assert_eq!(zero, 0.0);
         assert!(zero.is_sign_negative());
+        assert_eq!(negate(&mut arena, Value::TRUE).unwrap().as_i30(), Some(-1));
+        let undefined = negate(&mut arena, Value::UNDEFINED).unwrap();
+        assert!(
+            microesnext_numbers::get(&arena, undefined)
+                .unwrap()
+                .is_nan()
+        );
     }
 }

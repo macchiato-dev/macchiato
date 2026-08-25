@@ -55,6 +55,8 @@ pub use microesnext_iterable_protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;
+#[cfg(feature = "number-coercion")]
+pub use microesnext_number_coercion as number_coercion;
 #[cfg(feature = "number-negation")]
 pub use microesnext_number_negation as number_negation;
 #[cfg(feature = "number-operations")]

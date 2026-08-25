@@ -34,6 +34,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "integer-negation",
         feature = "minimal-program",
         feature = "numbers",
+        feature = "number-coercion",
         feature = "number-negation",
         feature = "objects",
         feature = "promise-resolvers",
@@ -950,6 +951,23 @@ pub extern "C" fn integer_negation_probe() -> i32 {
         0,
         0,
         Opcode::NegateI30 as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 16];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+#[cfg(all(feature = "number-coercion", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn number_coercion_probe() -> i32 {
+    let code = [
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::True as u8,
+        Opcode::ToNumber as u8,
         Opcode::Return as u8,
     ];
     let mut memory = [0; 16];

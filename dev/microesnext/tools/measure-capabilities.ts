@@ -191,6 +191,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["numbers", "numbers", [core, ["numbers_probe", 1.25]]],
     [
+      "primitive Number coercion",
+      "number-coercion",
+      [core, ["numbers_probe", 1.25], ["number_coercion_probe", 1]],
+    ],
+    [
       "number operations",
       "number-operations",
       [core, ["numbers_probe", 1.25], ["number_operations_probe", 3.25]],

@@ -19,6 +19,7 @@ default = [
   "recursive-functions",
   "logical-operations",
   "number-negation",
+  "number-coercion",
   "number-operations",
   "objects",
   "receivers",
@@ -55,6 +56,7 @@ number-negation = [
   "integer-negation",
   "microesnext-bytecode/number-negation",
 ]
+number-coercion = ["microesnext-bytecode/number-coercion"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]
 recursive-async-functions = [
