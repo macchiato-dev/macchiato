@@ -86,6 +86,7 @@ const numberDivision = "microesnext-number-division";
 const numberRemainder = "microesnext-number-remainder";
 const stringNumberCoercion = "microesnext-string-number-coercion";
 const typeOf = "microesnext-typeof";
+const prototypeChain = "microesnext-prototype-chain";
 
 assertCompilerFeatures(
   ["locals"],
@@ -340,6 +341,11 @@ assertPresence(
   ["typeof"],
   [typeOf, "microesnext-strings"],
   [integerOperations, numberOperations, "microesnext-numbers", "microesnext-objects"],
+);
+assertPresence(
+  ["prototype-chain"],
+  [prototypeChain, "microesnext-objects", "microesnext-atoms", "microesnext-strings"],
+  [typeOf, "microesnext-numbers"],
 );
 assertPresence(
   ["minimal-program"],

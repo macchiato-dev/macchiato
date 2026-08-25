@@ -481,6 +481,16 @@ deno run --allow-run=cargo --allow-read=target \
   tools/measure-capabilities.ts
 ```
 
+## Prototype-chain isolation
+
+Editor bundles make heavy use of `instanceof`: the checked generated bundles
+contain 30–136 occurrences each. Its allocation-free traversal is isolated in
+`microesnext-prototype-chain` before callable and constructor semantics are
+added. On the current size profile, an objects probe is 14,473 raw / 5,775
+gzip bytes; composing prototype traversal is 15,213 / 6,012. The incremental
+cost is therefore 740 raw / 237 gzip bytes, and builds selecting only objects
+do not resolve the crate.
+
 ## Progressive compiler artifacts
 
 The compiler has its own final-linked Wasm probe because `.rlib` archives and

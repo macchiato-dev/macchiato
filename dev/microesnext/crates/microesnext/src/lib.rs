@@ -123,6 +123,9 @@ pub use microesnext_promises as promises;
 #[cfg(feature = "promise-resolution")]
 pub use microesnext_promise_resolution as promise_resolution;
 
+#[cfg(feature = "prototype-chain")]
+pub use microesnext_prototype_chain as prototype_chain;
+
 #[cfg(feature = "promise-resolvers")]
 pub use microesnext_promise_resolvers as promise_resolvers;
 

@@ -69,6 +69,18 @@ pub extern "C" fn core_probe() -> i32 {
     }
 }
 
+#[cfg(all(feature = "prototype-chain", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn prototype_chain_probe() -> i32 {
+    let mut memory = [0; 64];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let prototype = microesnext::objects::new_object(&mut arena, microesnext::Value::NULL);
+    let Ok(prototype) = prototype else { return 0 };
+    let value = microesnext::objects::new_object(&mut arena, prototype);
+    let Ok(value) = value else { return 0 };
+    microesnext::prototype_chain::contains(&arena, value, prototype).unwrap_or(false) as i32
+}
+
 #[cfg(all(feature = "locals", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn locals_probe() -> i32 {

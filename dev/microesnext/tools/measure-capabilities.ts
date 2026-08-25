@@ -230,6 +230,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["strings_probe", "nonzero"],
       ],
     ],
+    [
+      "prototype chain",
+      "prototype-chain",
+      [core, ["atoms_probe", "nonzero"], ["prototype_chain_probe", 1]],
+    ],
     ["strings", "strings", [core, ["strings_probe", "nonzero"]]],
     [
       "typeof",

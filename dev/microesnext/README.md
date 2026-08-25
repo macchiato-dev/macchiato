@@ -48,6 +48,10 @@ an explicit relational stopping condition.
 - `microesnext-objects` supplies prototype and property-table storage. Its VM
   feature composes strings for JavaScript property names, while the low-level
   crate can also use already-interned or non-string keys.
+- `microesnext-prototype-chain` performs allocation-free ordinary-object
+  prototype traversal. It is the shared semantic core for future `instanceof`
+  and `Object.prototype.isPrototypeOf` support, without making object-only
+  builds retain either operation.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
