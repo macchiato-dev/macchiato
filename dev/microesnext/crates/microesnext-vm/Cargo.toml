@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = []
 async = []
+arrays = ["dep:microesnext-arrays"]
 objects = ["dep:microesnext-objects"]
 functions = ["dep:microesnext-functions"]
 
@@ -18,6 +19,7 @@ microesnext-arena.workspace = true
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
+microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 

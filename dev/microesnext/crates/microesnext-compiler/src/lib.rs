@@ -119,7 +119,27 @@ impl Parser<'_> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
-        if self.consume_raw(b'{') {
+        if self.consume_raw(b'[') {
+            self.output.push(Opcode::NewArray as u8);
+            let mut index = 0_i32;
+            if !self.consume(b']') {
+                loop {
+                    self.output.push(Opcode::ConstI30 as u8);
+                    self.output.extend_from_slice(&index.to_le_bytes());
+                    self.integer()?;
+                    self.output.push(Opcode::SetIndex as u8);
+                    index = index
+                        .checked_add(1)
+                        .ok_or_else(|| self.error("an array index"))?;
+                    if self.consume(b']') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or ]"));
+                    }
+                }
+            }
+        } else if self.consume_raw(b'{') {
             self.output.push(Opcode::NewObject as u8);
             if !self.consume(b'}') {
                 loop {
@@ -283,6 +303,19 @@ mod tests {
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
         );
+    }
+
+    #[test]
+    fn compiles_array_literals_without_an_ast() {
+        let code = compile_script("return [7, 9];").unwrap();
+        assert_eq!(code[0], Opcode::NewArray as u8);
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::SetIndex as u8)
+                .count(),
+            2
+        );
+        assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
     #[test]

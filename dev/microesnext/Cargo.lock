@@ -101,6 +101,7 @@ name = "microesnext-vm"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-arrays",
  "microesnext-bytecode",
  "microesnext-compiler",
  "microesnext-functions",

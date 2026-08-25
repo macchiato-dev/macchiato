@@ -1,6 +1,8 @@
 #![no_std]
 
 use microesnext_arena::Arena;
+#[cfg(feature = "arrays")]
+use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "functions")]
 use microesnext_functions::{capture, capture_stack, entry};
@@ -102,7 +104,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     #[cold]
     #[inline(never)]
-    #[cfg(any(feature = "async", feature = "objects", feature = "functions"))]
+    #[cfg(any(
+        feature = "async",
+        feature = "arrays",
+        feature = "objects",
+        feature = "functions"
+    ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
             Opcode::Await => {
@@ -197,13 +204,62 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut().push(value)?;
                 }
             }
+            Opcode::NewArray => {
+                #[cfg(not(feature = "arrays"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "arrays")]
+                {
+                    let array = new_array(self.core.arena_mut())?;
+                    self.core.arena_mut().push(array)?;
+                }
+            }
+            Opcode::GetIndex => {
+                #[cfg(not(feature = "arrays"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "arrays")]
+                {
+                    let index = self
+                        .core
+                        .arena_mut()
+                        .pop()?
+                        .as_i30()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    let array = self.core.arena_mut().pop()?;
+                    let value = array_get(self.core.arena(), array, index)?;
+                    self.core.arena_mut().push(value)?;
+                }
+            }
+            Opcode::SetIndex => {
+                #[cfg(not(feature = "arrays"))]
+                return Err(Error::BadBytecode);
+                #[cfg(feature = "arrays")]
+                {
+                    let value = self.core.arena_mut().pop()?;
+                    let index = self
+                        .core
+                        .arena_mut()
+                        .pop()?
+                        .as_i30()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    let array = self.core.arena_mut().pop()?;
+                    let array = array_set(self.core.arena_mut(), array, index, value)?;
+                    self.core.arena_mut().push(array)?;
+                }
+            }
             _ => return Err(Error::BadBytecode),
         }
         Ok(None)
     }
 
     #[inline(always)]
-    #[cfg(not(any(feature = "async", feature = "objects", feature = "functions")))]
+    #[cfg(not(any(
+        feature = "async",
+        feature = "arrays",
+        feature = "objects",
+        feature = "functions"
+    )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
         Err(Error::BadBytecode)
     }

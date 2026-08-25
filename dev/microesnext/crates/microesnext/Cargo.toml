@@ -9,7 +9,7 @@ version.workspace = true
 
 [features]
 default = []
-arrays = ["dep:microesnext-arrays"]
+arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 async = ["dep:microesnext-async"]
 objects = ["microesnext-vm/objects"]
 functions = ["microesnext-vm/functions"]
@@ -44,3 +44,8 @@ required-features = ["async"]
 name = "objects"
 path = "tests/objects.rs"
 required-features = ["objects"]
+
+[[test]]
+name = "arrays"
+path = "tests/arrays.rs"
+required-features = ["arrays"]

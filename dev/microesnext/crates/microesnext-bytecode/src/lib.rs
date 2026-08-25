@@ -18,6 +18,9 @@ pub enum Opcode {
     CallValue = 11,
     LoadCapture = 12,
     Throw = 13,
+    NewArray = 14,
+    GetIndex = 15,
+    SetIndex = 16,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -38,6 +41,9 @@ impl TryFrom<u8> for Opcode {
             11 => Ok(Self::CallValue),
             12 => Ok(Self::LoadCapture),
             13 => Ok(Self::Throw),
+            14 => Ok(Self::NewArray),
+            15 => Ok(Self::GetIndex),
+            16 => Ok(Self::SetIndex),
             _ => Err(Error::BadBytecode),
         }
     }
