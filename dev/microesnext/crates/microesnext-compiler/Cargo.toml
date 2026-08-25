@@ -7,6 +7,24 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = [
+  "equality",
+  "logical-operations",
+  "number-operations",
+  "source-positions",
+]
+equality = ["microesnext-bytecode/equality"]
+integer-operations = ["microesnext-bytecode/integer-operations"]
+logical-operations = ["microesnext-bytecode/logical-operations"]
+numbers = ["microesnext-bytecode/numbers"]
+number-operations = [
+  "integer-operations",
+  "numbers",
+  "microesnext-bytecode/number-operations",
+]
+source-positions = []
+
 [dependencies]
 microesnext-bytecode = { workspace = true, features = [
   "arrays",
@@ -16,14 +34,9 @@ microesnext-bytecode = { workspace = true, features = [
   "control-flow",
   "exceptions",
   "environments",
-  "equality",
   "functions",
   "function-arguments",
-  "integer-operations",
   "locals",
-  "logical-operations",
-  "numbers",
-  "number-operations",
   "objects",
   "recursive-functions",
   "recursive-async-functions",

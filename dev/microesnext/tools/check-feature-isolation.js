@@ -27,7 +27,38 @@ function assertPresence(features, present, absent) {
   }
   for (const name of absent) {
     if (graph.has(name)) {
-      throw new Error(`${features || "minimal"}: unexpectedly contains ${name}`);
+      throw new Error(
+        `${features || "minimal"}: unexpectedly contains ${name}`,
+      );
+    }
+  }
+}
+
+function compilerTree(features) {
+  const args = [
+    "tree",
+    "--package=microesnext-compiler",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-bytecode",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  return execFileSync(cargo, args, { encoding: "utf8" });
+}
+
+function assertCompilerFeatures(features, present, absent) {
+  const tree = compilerTree(features);
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-bytecode feature "${feature}"`)) {
+      throw new Error(`compiler ${features || "minimal"}: expected ${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-bytecode feature "${feature}"`)) {
+      throw new Error(
+        `compiler ${features || "minimal"}: unexpectedly contains ${feature}`,
+      );
     }
   }
 }
@@ -48,6 +79,23 @@ const integerOperations = "microesnext-integer-operations";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
 const numberOperations = "microesnext-number-operations";
+
+assertCompilerFeatures(
+  [],
+  [],
+  [
+    "equality",
+    "integer-operations",
+    "logical-operations",
+    "numbers",
+    "number-operations",
+  ],
+);
+assertCompilerFeatures(
+  ["number-operations"],
+  ["integer-operations", "numbers", "number-operations"],
+  ["equality", "logical-operations"],
+);
 
 assertPresence(
   [],
@@ -94,8 +142,8 @@ assertPresence(
 );
 assertPresence(
   ["number-operations"],
-  [numberOperations, "microesnext-numbers"],
-  [integerOperations, "microesnext-strings"],
+  [integerOperations, numberOperations, "microesnext-numbers"],
+  ["microesnext-strings"],
 );
 assertPresence(
   ["minimal-program"],
@@ -221,7 +269,13 @@ assertPresence(
     receivers,
     thenables,
   ],
-  [asyncFunctions, asyncThenables, environments, recursiveAsyncFunctions, suspension],
+  [
+    asyncFunctions,
+    asyncThenables,
+    environments,
+    recursiveAsyncFunctions,
+    suspension,
+  ],
 );
 assertPresence(
   ["async-functions"],

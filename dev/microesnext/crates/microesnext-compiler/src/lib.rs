@@ -7,16 +7,26 @@ use microesnext_bytecode::{Immediate, Opcode};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompileError {
+    #[cfg(feature = "source-positions")]
     pub offset: usize,
     pub expected: &'static str,
 }
 
+#[cfg(feature = "number-operations")]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum NumberMode {
     /// Preserve JavaScript Number behavior, promoting beyond immediate i30s.
     #[default]
     JavaScript,
     /// Emit the smaller integer-only instruction set and fail outside i30.
+    BoundedI30,
+}
+
+#[cfg(not(feature = "number-operations"))]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum NumberMode {
+    /// The reduced compiler emits only the bounded immediate-number subset.
+    #[default]
     BoundedI30,
 }
 
@@ -81,6 +91,7 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "numbers")]
     pub fn const_f64(mut self, value: f64) -> Self {
         self.code.push(Opcode::ConstF64 as u8);
         self.code.extend_from_slice(&value.to_bits().to_le_bytes());
@@ -788,6 +799,7 @@ impl Parser<'_> {
         Ok(used_binding)
     }
 
+    #[cfg(feature = "logical-operations")]
     fn logical_or(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -805,6 +817,15 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(not(feature = "logical-operations"))]
+    fn logical_or(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.equality(binding)
+    }
+
+    #[cfg(feature = "logical-operations")]
     fn logical_and(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -822,6 +843,7 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(feature = "logical-operations")]
     fn patch_expression_end(&mut self, patches: &[usize]) -> Result<(), CompileError> {
         let target = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -832,6 +854,7 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "equality")]
     fn equality(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -852,6 +875,15 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(not(feature = "equality"))]
+    fn equality(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.relational(binding)
+    }
+
+    #[cfg(feature = "integer-operations")]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -867,19 +899,22 @@ impl Parser<'_> {
             };
             let (_, right) = self.additive(None)?;
             let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
-            let bounded = self.options.numbers == NumberMode::BoundedI30;
-            let opcode = match (less, bounded || immediate) {
-                (true, true) => Opcode::LessThanI30,
-                (false, true) => Opcode::GreaterThanI30,
-                (true, false) => Opcode::LessThanNumber,
-                (false, false) => Opcode::GreaterThanNumber,
-            };
+            let opcode = self.relational_opcode(less, immediate);
             self.output.push(opcode as u8);
             kind = TermKind::General;
         }
         Ok((used_binding, kind))
     }
 
+    #[cfg(not(feature = "integer-operations"))]
+    fn relational(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.additive(binding)
+    }
+
+    #[cfg(feature = "integer-operations")]
     fn additive(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -894,12 +929,7 @@ impl Parser<'_> {
                         .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
                     _ => None,
                 };
-                let bounded = self.options.numbers == NumberMode::BoundedI30;
-                self.output.push(if bounded || result.is_some() {
-                    Opcode::AddI30
-                } else {
-                    Opcode::AddNumber
-                } as u8);
+                self.output.push(self.add_opcode(result.is_some()) as u8);
                 kind = result.map_or(TermKind::General, TermKind::I30);
             } else if self.consume(b'-') {
                 let (_, right) = self.product(None)?;
@@ -909,12 +939,8 @@ impl Parser<'_> {
                         .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
                     _ => None,
                 };
-                let bounded = self.options.numbers == NumberMode::BoundedI30;
-                self.output.push(if bounded || result.is_some() {
-                    Opcode::SubtractI30
-                } else {
-                    Opcode::SubtractNumber
-                } as u8);
+                self.output
+                    .push(self.subtract_opcode(result.is_some()) as u8);
                 kind = result.map_or(TermKind::General, TermKind::I30);
             } else {
                 break;
@@ -923,6 +949,27 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(not(feature = "integer-operations"))]
+    fn additive(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.product(binding)?;
+        while self.consume(b'+') {
+            let (_, right) = self.product(None)?;
+            let result = match (kind, right) {
+                (TermKind::I30(left), TermKind::I30(right)) => left
+                    .checked_add(right)
+                    .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+                _ => None,
+            };
+            self.output.push(self.add_opcode(result.is_some()) as u8);
+            kind = result.map_or(TermKind::General, TermKind::I30);
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "integer-operations")]
     fn product(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -936,15 +983,88 @@ impl Parser<'_> {
                     .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
                 _ => None,
             };
-            let bounded = self.options.numbers == NumberMode::BoundedI30;
-            self.output.push(if bounded || result.is_some() {
-                Opcode::MultiplyI30
-            } else {
-                Opcode::MultiplyNumber
-            } as u8);
+            self.output
+                .push(self.multiply_opcode(result.is_some()) as u8);
             kind = result.map_or(TermKind::General, TermKind::I30);
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(not(feature = "integer-operations"))]
+    fn product(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.term(binding)
+    }
+
+    #[cfg(feature = "number-operations")]
+    fn add_opcode(&self, proven_i30: bool) -> Opcode {
+        if self.options.numbers == NumberMode::JavaScript && !proven_i30 {
+            Opcode::AddNumber
+        } else {
+            Opcode::AddI30
+        }
+    }
+
+    #[cfg(not(feature = "number-operations"))]
+    fn add_opcode(&self, _proven_i30: bool) -> Opcode {
+        Opcode::AddI30
+    }
+
+    #[cfg(feature = "number-operations")]
+    #[cfg(feature = "integer-operations")]
+    fn subtract_opcode(&self, proven_i30: bool) -> Opcode {
+        if self.options.numbers == NumberMode::JavaScript && !proven_i30 {
+            Opcode::SubtractNumber
+        } else {
+            Opcode::SubtractI30
+        }
+    }
+
+    #[cfg(all(feature = "integer-operations", not(feature = "number-operations")))]
+    fn subtract_opcode(&self, _proven_i30: bool) -> Opcode {
+        Opcode::SubtractI30
+    }
+
+    #[cfg(feature = "number-operations")]
+    #[cfg(feature = "integer-operations")]
+    fn multiply_opcode(&self, proven_i30: bool) -> Opcode {
+        if self.options.numbers == NumberMode::JavaScript && !proven_i30 {
+            Opcode::MultiplyNumber
+        } else {
+            Opcode::MultiplyI30
+        }
+    }
+
+    #[cfg(all(feature = "integer-operations", not(feature = "number-operations")))]
+    fn multiply_opcode(&self, _proven_i30: bool) -> Opcode {
+        Opcode::MultiplyI30
+    }
+
+    #[cfg(feature = "number-operations")]
+    #[cfg(feature = "integer-operations")]
+    fn relational_opcode(&self, less: bool, proven_i30: bool) -> Opcode {
+        if self.options.numbers != NumberMode::JavaScript || proven_i30 {
+            if less {
+                Opcode::LessThanI30
+            } else {
+                Opcode::GreaterThanI30
+            }
+        } else if less {
+            Opcode::LessThanNumber
+        } else {
+            Opcode::GreaterThanNumber
+        }
+    }
+
+    #[cfg(all(feature = "integer-operations", not(feature = "number-operations")))]
+    fn relational_opcode(&self, less: bool, _proven_i30: bool) -> Opcode {
+        if less {
+            Opcode::LessThanI30
+        } else {
+            Opcode::GreaterThanI30
+        }
     }
 
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
@@ -1214,11 +1334,19 @@ impl Parser<'_> {
                 }
             }
         }
-        let value = source.parse::<f64>().map_err(|_| self.error("a number"))?;
-        self.output.push(Opcode::ConstF64 as u8);
-        self.output
-            .extend_from_slice(&value.to_bits().to_le_bytes());
-        Ok(None)
+        #[cfg(not(feature = "numbers"))]
+        {
+            self.offset = start;
+            Err(self.error("a number"))
+        }
+        #[cfg(feature = "numbers")]
+        {
+            let value = source.parse::<f64>().map_err(|_| self.error("a number"))?;
+            self.output.push(Opcode::ConstF64 as u8);
+            self.output
+                .extend_from_slice(&value.to_bits().to_le_bytes());
+            Ok(None)
+        }
     }
 
     fn identifier(&mut self) -> Result<(usize, usize), CompileError> {
@@ -1291,6 +1419,7 @@ impl Parser<'_> {
         self.consume_raw(byte)
     }
 
+    #[cfg(any(feature = "equality", feature = "logical-operations"))]
     fn consume_bytes(&mut self, bytes: &[u8]) -> bool {
         self.whitespace();
         if self.source[self.offset..].starts_with(bytes) {
@@ -1322,6 +1451,7 @@ impl Parser<'_> {
 
     fn error(&self, expected: &'static str) -> CompileError {
         CompileError {
+            #[cfg(feature = "source-positions")]
             offset: self.offset,
             expected,
         }
@@ -1331,6 +1461,17 @@ impl Parser<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unknown_add_opcode() -> Opcode {
+        #[cfg(feature = "number-operations")]
+        {
+            Opcode::AddNumber
+        }
+        #[cfg(not(feature = "number-operations"))]
+        {
+            Opcode::AddI30
+        }
+    }
 
     #[test]
     fn compiles_directly_to_stack_bytecode() {
@@ -1387,6 +1528,7 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
+    #[cfg(feature = "source-positions")]
     #[test]
     fn reports_a_source_offset_without_an_ast() {
         assert_eq!(
@@ -1398,6 +1540,41 @@ mod tests {
         );
     }
 
+    #[cfg(all(not(feature = "numbers"), feature = "source-positions"))]
+    #[test]
+    fn reduced_numeric_parser_reports_the_ordinary_source_error() {
+        assert_eq!(
+            compile_script("return 1.25;").unwrap_err(),
+            CompileError {
+                offset: 7,
+                expected: "a number",
+            }
+        );
+        assert_eq!(compile_script("return 536870912;").unwrap_err().offset, 7);
+    }
+
+    #[cfg(all(not(feature = "equality"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_equality_as_an_ordinary_unexpected_token() {
+        assert_eq!(compile_script("return 1 === 1;").unwrap_err().offset, 9);
+    }
+
+    #[cfg(all(not(feature = "logical-operations"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_logical_syntax_as_an_ordinary_unexpected_token() {
+        assert_eq!(
+            compile_script("return true || false;").unwrap_err().offset,
+            12
+        );
+    }
+
+    #[cfg(all(not(feature = "integer-operations"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_integer_operators_as_unexpected_tokens() {
+        assert_eq!(compile_script("return 2 * 3;").unwrap_err().offset, 9);
+    }
+
+    #[cfg(feature = "number-operations")]
     #[test]
     fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
         let integer = compile_script("return 1 + 2;").unwrap();
@@ -1412,6 +1589,7 @@ mod tests {
         assert!(exponent.contains(&(Opcode::ConstF64 as u8)));
     }
 
+    #[cfg(feature = "number-operations")]
     #[test]
     fn promotes_only_when_the_selected_numeric_target_requires_it() {
         let overflow = compile_script("return 536870911 + 1;").unwrap();
@@ -1466,6 +1644,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "source-positions")]
     #[test]
     fn does_not_parse_a_keyword_prefix_as_an_immediate() {
         assert_eq!(compile_script("return trueValue;").unwrap_err().offset, 7);
@@ -1482,7 +1661,7 @@ mod tests {
                 .store_local(0)
                 .load_local(0)
                 .const_i30(2)
-                .op(Opcode::AddNumber)
+                .op(unknown_add_opcode())
                 .store_local(1)
                 .load_local(1)
                 .op(Opcode::ReturnLocals)
@@ -1573,6 +1752,7 @@ mod tests {
         )
         .unwrap();
         assert!(code.contains(&(Opcode::RecursiveClosure as u8)));
+        #[cfg(feature = "source-positions")]
         assert_eq!(
             compile_script(
                 "let value = function privateName() { return 42; }; return privateName();"
@@ -1751,6 +1931,7 @@ mod tests {
                 .expected,
             "a unique local binding"
         );
+        #[cfg(feature = "source-positions")]
         assert_eq!(
             compile_script("let answer = later; let later = 42; return answer;")
                 .unwrap_err()
@@ -1789,6 +1970,7 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::ReturnLocals as u8);
     }
 
+    #[cfg(feature = "integer-operations")]
     #[test]
     fn compiles_integer_products_before_addition_and_subtraction() {
         let code = compile_script("return 10 - 2 * 3 + 1;").unwrap();

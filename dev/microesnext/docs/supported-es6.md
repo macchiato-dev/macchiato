@@ -27,6 +27,14 @@ bytecode for a runtime that intentionally omits number storage and promoted
 operations. The compiler retains direct i30 instructions for statically proven
 small results in either target.
 
+The bytecode generator is progressive as well as the runtime. Its current
+Cargo gates independently remove number representation, promoted and bounded
+number operators, strict equality, and logical operators. When a gate is
+absent the parser does not consume that syntax, so callers receive the same
+ordinary grammar error they would get for another unexpected token. The
+`source-positions` feature controls whether `CompileError` retains the source
+offset; compact build-time uses can omit that field.
+
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational
 precedence. Together with local assignment and `while`, it can run a

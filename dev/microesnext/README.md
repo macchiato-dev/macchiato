@@ -30,7 +30,10 @@ an explicit relational stopping condition.
   and the capability wrapper. Its optional opcode groups follow the runtime
   capabilities, so an omitted feature does not enlarge its valid enum surface.
 - `microesnext-compiler` contains allocation-using source and bytecode tooling;
-  the runtime crates do not depend on it.
+  the runtime crates do not depend on it. Its syntax families are progressively
+  feature gated too: reduced builds leave omitted syntax to the ordinary parse
+  error at that character rather than retaining feature-specific diagnostics.
+  Source positions are a separate authoring feature.
 - `microesnext-strings` supplies ordinary packed byte strings without retained
   global state.
 - `microesnext-atoms` adds rooted interning for property names and other keys;

@@ -136,7 +136,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Iterator result objects | 13,944 | 5,441 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
-| Promoted number operations | 8,157 | 3,153 |
+| Promoted number operations | 9,382 | 3,309 |
 | Objects with atoms and strings | 14,663 | 5,859 |
 | Strings only | 4,960 | 2,299 |
 | Symbols | 4,995 | 2,254 |
@@ -147,7 +147,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,528 | 12,642 |
 | Async return thenable assimilation | 46,604 | 16,397 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 77,041 | 24,537 |
+| All capabilities | 78,302 | 24,694 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled

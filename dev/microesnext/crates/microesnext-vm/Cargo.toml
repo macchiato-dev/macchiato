@@ -53,6 +53,7 @@ numbers = [
 ]
 number-operations = [
   "numbers",
+  "integer-operations",
   "dep:microesnext-number-operations",
   "microesnext-bytecode/number-operations",
 ]
