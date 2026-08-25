@@ -11,8 +11,8 @@ version.workspace = true
 default = []
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 async = ["dep:microesnext-async"]
-objects = ["microesnext-vm/objects"]
-functions = ["microesnext-vm/functions"]
+objects = ["dep:microesnext-objects", "microesnext-vm/objects"]
+functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
 collections = ["dep:microesnext-collections"]
 weak-collections = ["dep:microesnext-weak-collections"]
 promises = ["dep:microesnext-promises"]
@@ -24,6 +24,8 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
+microesnext-functions = { workspace = true, optional = true }
+microesnext-objects = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
@@ -33,6 +35,7 @@ microesnext-vm-core.workspace = true
 path = "src/lib.rs"
 
 [dev-dependencies]
+microesnext-arena.workspace = true
 microesnext-compiler.workspace = true
 
 [[test]]

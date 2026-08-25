@@ -45,6 +45,10 @@ fat LTO and one code-generation unit, so hot functions can inline across them.
 Leaving out a capability removes its crate without adding indirect dispatch to
 the base interpreter.
 
+`tools/measure-capabilities.ts` builds final Wasm probes which call into each
+enabled crate, then reports raw and gzip sizes. This catches accidental
+capability linkage that a dependency-tree check alone would miss.
+
 The `core-loop` example provides a repeatable native instruction-loop check:
 
 ```sh

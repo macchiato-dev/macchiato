@@ -46,3 +46,30 @@ variation across separately linked executables. It remains a regression gate,
 not evidence that optional code affects the core dispatch loop. A future
 benchmark runner should sample both configurations in one process where
 possible and report distributions rather than isolated wall-clock readings.
+
+## Final Wasm capability sizes, 2026-08-25
+
+`tools/measure-capabilities.ts` builds an exported, allocator-free Wasm probe
+for each capability. Every row exercises the named implementation, preventing
+LTO from merely discarding an enabled but unused dependency.
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Minimal | 1,905 | 873 |
+| Arrays | 6,806 | 2,834 |
+| Collections | 3,206 | 1,415 |
+| Functions | 1,929 | 893 |
+| Objects | 4,750 | 2,137 |
+| Promises | 4,761 | 2,148 |
+| Weak collections | 1,972 | 917 |
+| All capabilities | 10,118 | 4,031 |
+
+These are probes rather than estimates of a complete language build. They do
+prove the relevant artifact property: omitted capabilities are absent from the
+final Wasm, while enabled rows contain live exported calls into that crate.
+Re-run them with:
+
+```sh
+deno run --allow-run=cargo --allow-read=target \
+  tools/measure-capabilities.ts
+```

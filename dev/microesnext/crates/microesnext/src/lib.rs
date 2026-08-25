@@ -14,6 +14,12 @@ pub use microesnext_async as r#async;
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
 
+#[cfg(feature = "functions")]
+pub use microesnext_functions as functions;
+
+#[cfg(feature = "objects")]
+pub use microesnext_objects as objects;
+
 #[cfg(feature = "weak-collections")]
 pub use microesnext_weak_collections as weak_collections;
 
