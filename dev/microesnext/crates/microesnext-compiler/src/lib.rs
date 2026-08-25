@@ -1260,10 +1260,67 @@ impl Parser<'_> {
         self.unary(binding)
     }
 
-    #[cfg(any(
-        feature = "integer-negation",
+    #[cfg(all(
         feature = "logical-operations",
-        feature = "number-coercion"
+        not(feature = "integer-negation"),
+        not(feature = "number-coercion")
+    ))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut negations = 0_usize;
+        while self.consume(b'!') {
+            negations += 1;
+        }
+        let (used_binding, kind) = self.term(binding)?;
+        self.output
+            .extend(core::iter::repeat_n(Opcode::LogicalNot as u8, negations));
+        Ok((
+            used_binding,
+            if negations == 0 {
+                kind
+            } else {
+                TermKind::General
+            },
+        ))
+    }
+
+    #[cfg(all(
+        feature = "integer-negation",
+        not(feature = "logical-operations"),
+        not(feature = "number-coercion")
+    ))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut negations = 0_usize;
+        while self.consume_unary_minus() {
+            negations += 1;
+        }
+        let (used_binding, mut kind) = self.term(binding)?;
+        for _ in 0..negations {
+            kind = self.emit_numeric_negation(kind);
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(
+        feature = "number-coercion",
+        not(feature = "integer-negation"),
+        not(feature = "logical-operations")
+    ))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut coercions = 0_usize;
+        while self.consume_unary_plus() {
+            coercions += 1;
+        }
+        let (used_binding, kind) = self.term(binding)?;
+        if coercions != 0 && !matches!(kind, TermKind::I30(_)) {
+            self.output.push(Opcode::ToNumber as u8);
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(any(
+        all(feature = "integer-negation", feature = "logical-operations"),
+        all(feature = "integer-negation", feature = "number-coercion"),
+        all(feature = "logical-operations", feature = "number-coercion")
     ))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let operators_start = self.offset;
@@ -1284,7 +1341,6 @@ impl Parser<'_> {
             break;
         }
         let operators_end = self.offset;
-        #[allow(unused_mut)]
         let (used_binding, mut kind) = self.term(binding)?;
         for operator in self.source[operators_start..operators_end]
             .iter()
@@ -2425,12 +2481,16 @@ mod tests {
         assert!(negative.contains(&(Opcode::NegateI30 as u8)));
         assert!(!negative.contains(&(Opcode::NegateNumber as u8)));
 
-        for source in ["return -0;", "return - 0;"] {
+        #[cfg(feature = "numbers")]
+        let sources = ["return -0;", "return - 0;"].as_slice();
+        #[cfg(not(feature = "numbers"))]
+        let sources = ["return - 0;"].as_slice();
+        for source in sources {
             let negative_zero = compile_script(source).unwrap();
-            assert!(
-                negative_zero.contains(&(Opcode::ConstF64 as u8))
-                    || negative_zero.contains(&(Opcode::NegateNumber as u8))
-            );
+            #[cfg(feature = "numbers")]
+            assert!(negative_zero.contains(&(Opcode::ConstF64 as u8)));
+            #[cfg(not(feature = "numbers"))]
+            assert!(negative_zero.contains(&(Opcode::NegateNumber as u8)));
         }
     }
 
