@@ -12,6 +12,7 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-types",
  "microesnext-vm",
+ "microesnext-weak-collections",
 ]
 
 [[package]]
@@ -79,6 +80,15 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-compiler",
  "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-weak-collections"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-objects",
  "microesnext-types",
 ]

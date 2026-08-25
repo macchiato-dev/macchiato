@@ -1,0 +1,19 @@
+[package]
+name = "microesnext-weak-collections"
+description = "Optional ephemeron WeakMap and WeakSet storage for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["ephemerons"] }
+microesnext-types.workspace = true
+
+[dev-dependencies]
+microesnext-objects.workspace = true
+
+[lib]
+path = "src/lib.rs"
+

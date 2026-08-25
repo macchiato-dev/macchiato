@@ -20,6 +20,9 @@ pub enum BlockKind {
     Map = 9,
     Set = 10,
     CollectionTable = 11,
+    WeakMap = 12,
+    WeakSet = 13,
+    WeakTable = 14,
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
@@ -83,6 +86,7 @@ impl<'memory> Arena<'memory> {
         values: &mut [Value],
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
         debug_assert!(kind != BlockKind::Bytes);
         let length = HEADER_WORDS + values.len();
         if self.heap_end + length > self.stack_start {
@@ -110,6 +114,7 @@ impl<'memory> Arena<'memory> {
         bytes: &[u8],
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
         debug_assert!(matches!(kind, BlockKind::Bytes | BlockKind::String));
         let data_words = bytes.len().div_ceil(4);
         let length = HEADER_WORDS + 1 + data_words;
@@ -138,6 +143,7 @@ impl<'memory> Arena<'memory> {
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
         let kind = self.kind(source)?;
+        self.ensure_kind_supported(kind)?;
         if matches!(kind, BlockKind::Bytes | BlockKind::String) {
             return Err(Error::Type);
         }
@@ -176,6 +182,7 @@ impl<'memory> Arena<'memory> {
         stack_count: usize,
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
         if stack_count > self.stack_len() || matches!(kind, BlockKind::Bytes | BlockKind::String) {
             return Err(Error::StackUnderflow);
         }
@@ -212,6 +219,7 @@ impl<'memory> Arena<'memory> {
         fill: Value,
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
         if matches!(kind, BlockKind::Bytes | BlockKind::String) {
             return Err(Error::Type);
         }
@@ -244,6 +252,7 @@ impl<'memory> Arena<'memory> {
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
         let kind = self.kind(source)?;
+        self.ensure_kind_supported(kind)?;
         if matches!(kind, BlockKind::Bytes | BlockKind::String) {
             return Err(Error::Type);
         }
@@ -488,6 +497,9 @@ impl<'memory> Arena<'memory> {
             9 => Ok(BlockKind::Map),
             10 => Ok(BlockKind::Set),
             11 => Ok(BlockKind::CollectionTable),
+            12 => Ok(BlockKind::WeakMap),
+            13 => Ok(BlockKind::WeakSet),
+            14 => Ok(BlockKind::WeakTable),
             _ => Err(Error::DanglingReference),
         }
     }
@@ -526,6 +538,16 @@ impl<'memory> Arena<'memory> {
                         self.words[cursor + 1],
                         value if value == BlockKind::Bytes as u32 || value == BlockKind::String as u32
                     )
+                    && {
+                        #[cfg(feature = "ephemerons")]
+                        {
+                            self.words[cursor + 1] != BlockKind::WeakTable as u32
+                        }
+                        #[cfg(not(feature = "ephemerons"))]
+                        {
+                            true
+                        }
+                    }
                 {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         if let Some(reference) = Value::from_raw(self.words[index]).as_ref() {
@@ -538,6 +560,10 @@ impl<'memory> Arena<'memory> {
                     }
                 }
                 cursor += length;
+            }
+            #[cfg(feature = "ephemerons")]
+            {
+                changed |= self.mark_ephemeron_values()?;
             }
             if !changed {
                 break;
@@ -565,13 +591,26 @@ impl<'memory> Arena<'memory> {
         let mut cursor = self.heap_base;
         while cursor < self.heap_end {
             let length = (self.words[cursor] & LENGTH_MASK) as usize;
-            if self.words[cursor] & MARK != 0
-                && self.words[cursor + 1] != BlockKind::Bytes as u32
-                && self.words[cursor + 1] != BlockKind::String as u32
-            {
-                for index in cursor + HEADER_WORDS..cursor + length {
-                    let value = Value::from_raw(self.words[index]);
-                    self.words[index] = self.forward_value(value)?.raw();
+            if self.words[cursor] & MARK != 0 {
+                #[cfg(feature = "ephemerons")]
+                if self.words[cursor + 1] == BlockKind::WeakTable as u32 {
+                    self.rewrite_ephemeron_table(cursor, length)?;
+                } else if self.words[cursor + 1] != BlockKind::Bytes as u32
+                    && self.words[cursor + 1] != BlockKind::String as u32
+                {
+                    for index in cursor + HEADER_WORDS..cursor + length {
+                        let value = Value::from_raw(self.words[index]);
+                        self.words[index] = self.forward_value(value)?.raw();
+                    }
+                }
+                #[cfg(not(feature = "ephemerons"))]
+                if self.words[cursor + 1] != BlockKind::Bytes as u32
+                    && self.words[cursor + 1] != BlockKind::String as u32
+                {
+                    for index in cursor + HEADER_WORDS..cursor + length {
+                        let value = Value::from_raw(self.words[index]);
+                        self.words[index] = self.forward_value(value)?.raw();
+                    }
                 }
             }
             cursor += length;
@@ -597,6 +636,88 @@ impl<'memory> Arena<'memory> {
             let start = self.block_start(reference)?;
             self.words[start] |= MARK;
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "ephemerons")]
+    fn mark_ephemeron_values(&mut self) -> Result<bool, Error> {
+        let mut changed = false;
+        let mut cursor = self.heap_base;
+        while cursor < self.heap_end {
+            let length = (self.words[cursor] & LENGTH_MASK) as usize;
+            if self.words[cursor] & MARK != 0
+                && self.words[cursor + 1] == BlockKind::WeakTable as u32
+            {
+                if length < HEADER_WORDS + 2 || (length - HEADER_WORDS - 2) % 2 != 0 {
+                    return Err(Error::DanglingReference);
+                }
+                let used = Value::from_raw(self.words[cursor + HEADER_WORDS + 1])
+                    .as_i30()
+                    .ok_or(Error::DanglingReference)? as usize;
+                let capacity = (length - HEADER_WORDS - 2) / 2;
+                if used > capacity {
+                    return Err(Error::DanglingReference);
+                }
+                for entry in 0..used {
+                    let key = Value::from_raw(self.words[cursor + HEADER_WORDS + 2 + entry * 2]);
+                    if key == Value::EMPTY {
+                        continue;
+                    }
+                    let key = key.as_ref().ok_or(Error::Type)?;
+                    let key_start = self.block_start(key)?;
+                    if self.words[key_start] & MARK == 0 {
+                        continue;
+                    }
+                    let value =
+                        Value::from_raw(self.words[cursor + HEADER_WORDS + 2 + entry * 2 + 1]);
+                    if let Some(value_ref) = value.as_ref() {
+                        let value_start = self.block_start(value_ref)?;
+                        if self.words[value_start] & MARK == 0 {
+                            self.words[value_start] |= MARK;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            cursor += length;
+        }
+        Ok(changed)
+    }
+
+    #[cfg(feature = "ephemerons")]
+    fn rewrite_ephemeron_table(&mut self, start: usize, length: usize) -> Result<(), Error> {
+        let count_index = start + HEADER_WORDS;
+        let used_index = count_index + 1;
+        let used = Value::from_raw(self.words[used_index])
+            .as_i30()
+            .ok_or(Error::DanglingReference)? as usize;
+        let capacity = (length - HEADER_WORDS - 2) / 2;
+        if used > capacity {
+            return Err(Error::DanglingReference);
+        }
+        let mut count = 0_i32;
+        for entry in 0..used {
+            let key_index = start + HEADER_WORDS + 2 + entry * 2;
+            let value_index = key_index + 1;
+            let key = Value::from_raw(self.words[key_index]);
+            if key == Value::EMPTY {
+                continue;
+            }
+            let key_ref = key.as_ref().ok_or(Error::Type)?;
+            let key_start = self.block_start(key_ref)?;
+            if self.words[key_start] & MARK == 0 {
+                self.words[key_index] = Value::EMPTY.raw();
+                self.words[value_index] = Value::UNDEFINED.raw();
+                continue;
+            }
+            self.words[key_index] = self.forward_value(key)?.raw();
+            let value = Value::from_raw(self.words[value_index]);
+            self.words[value_index] = self.forward_value(value)?.raw();
+            count += 1;
+        }
+        self.words[count_index] = Value::from_i30(count)
+            .ok_or(Error::DanglingReference)?
+            .raw();
         Ok(())
     }
 
@@ -695,6 +816,16 @@ impl<'memory> Arena<'memory> {
             return Err(Error::InvalidRoot);
         }
         Ok(slot)
+    }
+
+    #[inline(always)]
+    fn ensure_kind_supported(&self, kind: BlockKind) -> Result<(), Error> {
+        #[cfg(not(feature = "ephemerons"))]
+        if kind == BlockKind::WeakTable {
+            return Err(Error::Type);
+        }
+        let _ = kind;
+        Ok(())
     }
 }
 

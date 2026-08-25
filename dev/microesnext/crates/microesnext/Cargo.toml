@@ -13,10 +13,12 @@ async = ["dep:microesnext-async"]
 objects = ["microesnext-vm/objects"]
 functions = ["microesnext-vm/functions"]
 collections = ["dep:microesnext-collections"]
+weak-collections = ["dep:microesnext-weak-collections"]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
+microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true

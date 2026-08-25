@@ -10,6 +10,7 @@ members = [
   "crates/microesnext-objects",
   "crates/microesnext-types",
   "crates/microesnext-vm",
+  "crates/microesnext-weak-collections",
 ]
 resolver = "2"
 
@@ -30,6 +31,7 @@ microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
+microesnext-weak-collections = { path = "crates/microesnext-weak-collections", version = "0.0.0" }
 
 [profile.release]
 codegen-units = 1
