@@ -170,6 +170,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "function-arguments",
         feature = "integer-operations",
         feature = "locals",
+        feature = "logical-operations",
         feature = "numbers",
         feature = "exceptions",
         feature = "environments",
@@ -557,6 +558,28 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .push(if equal { Value::FALSE } else { Value::TRUE })?;
                 Ok(None)
             }
+            #[cfg(feature = "logical-operations")]
+            Opcode::JumpIfFalsyOrPop => {
+                let target = self.core.next_u32()? as usize;
+                let value = self.core.arena().stack_value(0)?;
+                if microesnext_logical_operations::is_falsy(self.core.arena(), value)? {
+                    self.core.jump(target)?;
+                } else {
+                    self.core.arena_mut().pop()?;
+                }
+                Ok(None)
+            }
+            #[cfg(feature = "logical-operations")]
+            Opcode::JumpIfTruthyOrPop => {
+                let target = self.core.next_u32()? as usize;
+                let value = self.core.arena().stack_value(0)?;
+                if microesnext_logical_operations::is_truthy(self.core.arena(), value)? {
+                    self.core.jump(target)?;
+                } else {
+                    self.core.arena_mut().pop()?;
+                }
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -623,6 +646,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "functions",
         feature = "integer-operations",
         feature = "locals",
+        feature = "logical-operations",
         feature = "numbers",
         feature = "exceptions",
         feature = "equality",

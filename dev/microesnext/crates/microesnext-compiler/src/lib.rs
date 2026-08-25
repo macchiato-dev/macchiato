@@ -760,7 +760,59 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
-        let (used_binding, _) = self.relational(binding)?;
+        let (used_binding, _) = self.logical_or(binding)?;
+        Ok(used_binding)
+    }
+
+    fn logical_or(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.logical_and(binding)?;
+        let mut patches = Vec::new();
+        while self.consume_bytes(b"||") {
+            self.output.push(Opcode::JumpIfTruthyOrPop as u8);
+            patches.push(self.output.len());
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            self.logical_and(None)?;
+            kind = TermKind::General;
+        }
+        self.patch_expression_end(&patches)?;
+        Ok((used_binding, kind))
+    }
+
+    fn logical_and(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.equality(binding)?;
+        let mut patches = Vec::new();
+        while self.consume_bytes(b"&&") {
+            self.output.push(Opcode::JumpIfFalsyOrPop as u8);
+            patches.push(self.output.len());
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            self.equality(None)?;
+            kind = TermKind::General;
+        }
+        self.patch_expression_end(&patches)?;
+        Ok((used_binding, kind))
+    }
+
+    fn patch_expression_end(&mut self, patches: &[usize]) -> Result<(), CompileError> {
+        let target = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        for patch in patches {
+            self.output[*patch..*patch + 4].copy_from_slice(&target.to_le_bytes());
+            self.relocations.push(*patch);
+        }
+        Ok(())
+    }
+
+    fn equality(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.relational(binding)?;
         loop {
             let opcode = if self.consume_bytes(b"===") {
                 Opcode::StrictEqual
@@ -771,8 +823,9 @@ impl Parser<'_> {
             };
             self.relational(None)?;
             self.output.push(opcode as u8);
+            kind = TermKind::General;
         }
-        Ok(used_binding)
+        Ok((used_binding, kind))
     }
 
     fn relational(

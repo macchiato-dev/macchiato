@@ -21,6 +21,7 @@ microesnext-bytecode = { workspace = true, features = [
   "function-arguments",
   "integer-operations",
   "locals",
+  "logical-operations",
   "numbers",
   "objects",
   "recursive-functions",

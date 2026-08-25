@@ -104,6 +104,10 @@ pub enum Opcode {
     StrictEqual = 86,
     #[cfg(feature = "equality")]
     StrictNotEqual = 87,
+    #[cfg(feature = "logical-operations")]
+    JumpIfFalsyOrPop = 88,
+    #[cfg(feature = "logical-operations")]
+    JumpIfTruthyOrPop = 89,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -199,6 +203,10 @@ impl TryFrom<u8> for Opcode {
             86 => Ok(Self::StrictEqual),
             #[cfg(feature = "equality")]
             87 => Ok(Self::StrictNotEqual),
+            #[cfg(feature = "logical-operations")]
+            88 => Ok(Self::JumpIfFalsyOrPop),
+            #[cfg(feature = "logical-operations")]
+            89 => Ok(Self::JumpIfTruthyOrPop),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -286,6 +294,20 @@ mod tests {
     fn omitted_equality_opcodes_are_invalid() {
         assert!(Opcode::try_from(86).is_err());
         assert!(Opcode::try_from(87).is_err());
+    }
+
+    #[cfg(feature = "logical-operations")]
+    #[test]
+    fn enabled_logical_operation_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(88), Ok(Opcode::JumpIfFalsyOrPop));
+        assert_eq!(Opcode::try_from(89), Ok(Opcode::JumpIfTruthyOrPop));
+    }
+
+    #[cfg(not(feature = "logical-operations"))]
+    #[test]
+    fn omitted_logical_operation_opcodes_are_invalid() {
+        assert!(Opcode::try_from(88).is_err());
+        assert!(Opcode::try_from(89).is_err());
     }
 
     #[cfg(feature = "locals")]

@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 control-flow = []
 locals = []
+logical-operations = []
 arrays = []
 async = []
 async-functions = ["async", "functions"]

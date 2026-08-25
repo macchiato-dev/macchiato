@@ -33,6 +33,7 @@ strings = [
   "microesnext-vm/strings",
   "microesnext-collections?/string-keys",
   "microesnext-equality?/strings",
+  "microesnext-logical-operations?/strings",
 ]
 symbols = ["dep:microesnext-symbols"]
 well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
@@ -51,11 +52,16 @@ integer-operations = [
 ]
 minimal-program = ["control-flow", "integer-operations", "locals"]
 equality = ["dep:microesnext-equality", "microesnext-vm/equality"]
+logical-operations = [
+  "dep:microesnext-logical-operations",
+  "microesnext-vm/logical-operations",
+]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-vm/numbers",
   "microesnext-collections?/number-keys",
   "microesnext-equality?/numbers",
+  "microesnext-logical-operations?/numbers",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 errors = ["dep:microesnext-errors"]
@@ -141,6 +147,7 @@ microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
+microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
@@ -215,6 +222,11 @@ required-features = ["minimal-program"]
 name = "equality"
 path = "tests/equality.rs"
 required-features = ["equality", "locals", "numbers", "objects", "strings"]
+
+[[test]]
+name = "logical-operations"
+path = "tests/logical_operations.rs"
+required-features = ["functions", "locals", "logical-operations"]
 
 [[test]]
 name = "objects"

@@ -23,6 +23,7 @@ strings = [
   "dep:microesnext-strings",
   "microesnext-bytecode/strings",
   "microesnext-equality?/strings",
+  "microesnext-logical-operations?/strings",
   "microesnext-truthiness?/strings",
 ]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
@@ -39,10 +40,15 @@ integer-operations = [
   "microesnext-bytecode/integer-operations",
 ]
 equality = ["dep:microesnext-equality", "microesnext-bytecode/equality"]
+logical-operations = [
+  "dep:microesnext-logical-operations",
+  "microesnext-bytecode/logical-operations",
+]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-bytecode/numbers",
   "microesnext-equality?/numbers",
+  "microesnext-logical-operations?/numbers",
   "microesnext-truthiness?/numbers",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
@@ -80,6 +86,7 @@ microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
+microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
