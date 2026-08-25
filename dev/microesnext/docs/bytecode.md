@@ -89,6 +89,11 @@ expression compiler, and the pieces are combined with the existing `add`
 instruction, whose string coercion supplies template interpolation semantics.
 Tagged templates are intentionally not part of this milestone.
 
+The Rust engine currently keeps `ConcatenateStrings` removable and strict: it
+accepts only two existing strings. This gives statically proven concatenation
+a small implementation without pretending to provide the general coercion
+required by template substitutions.
+
 ## Async functions and await
 
 An async function body reuses ordinary frame, local, capture, and return

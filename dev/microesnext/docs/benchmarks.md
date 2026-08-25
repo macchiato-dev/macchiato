@@ -386,7 +386,8 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
 | exceptions | 7,004 | 2,947 |
-| strings | 6,350 | 2,855 |
+| strings | 6,353 | 2,859 |
+| strict string concatenation | 6,528 | 2,936 |
 | locals | 8,346 | 3,519 |
 | basic functions | 13,187 | 5,574 |
 | function arguments | 14,151 | 5,963 |
@@ -394,7 +395,11 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,998 | 7,494 |
 | async functions | 14,227 | 5,947 |
 | recursive async functions | 18,970 | 7,865 |
-| default language slice | 47,717 | 26,167 |
+| default language slice | 47,691 | 26,202 |
+
+Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
+strings. It is its own opcode and capability crate, and does not link numeric
+promotion or general JavaScript coercion.
 
 The minimal row links neither lexical binding nor function/capture parsing.
 The locals row adds stable slots without closures. Basic functions use

@@ -147,6 +147,7 @@ assertCompilerFeatures(
     "recursive-functions",
     "recursive-async-functions",
     "strings",
+    "string-operations",
   ],
 );
 assertCompilerFeatures(
@@ -193,7 +194,12 @@ assertCompilerFeatures(
 assertCompilerFeatures(
   ["strings"],
   ["strings"],
-  ["arrays", "atoms", "numbers", "objects"],
+  ["arrays", "atoms", "numbers", "objects", "string-operations"],
+);
+assertCompilerFeatures(
+  ["string-operations"],
+  ["strings", "string-operations"],
+  ["arrays", "atoms", "numbers", "number-operations", "objects"],
 );
 assertCompilerFeatures(
   ["objects"],

@@ -81,6 +81,11 @@ until general JavaScript addition/coercion is composed in Rust; a string-only
 compiler rejects it at the dollar sign rather than silently changing its
 meaning.
 
+Strict concatenation is a separate runtime and compiler capability. When both
+operands are proven string literals, it emits `ConcatenateStrings` and joins
+their arena bytes without a temporary Rust allocation. It deliberately does
+not stand in for dynamic JavaScript `+`, `ToPrimitive`, or `ToString`.
+
 The current compiler accepts `async function` declarations, anonymous async
 function expressions, and async arrows with expression or block bodies.
 Runtime async closures return their outer Promise before an awaited body
