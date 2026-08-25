@@ -21,6 +21,12 @@ distinct from it. Consequently `Number.MAX_SAFE_INTEGER` is `2^53 - 1`.
 Integer-only compositions intentionally expose a smaller bounded subset;
 full numeric compositions promote results that no longer fit an i30.
 
+Compiler callers select that distinction through `CompileOptions`: the
+default JavaScript target promotes, while `NumberMode::BoundedI30` produces
+bytecode for a runtime that intentionally omits number storage and promoted
+operations. The compiler retains direct i30 instructions for statically proven
+small results in either target.
+
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational
 precedence. Together with local assignment and `while`, it can run a

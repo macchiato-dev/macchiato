@@ -1,5 +1,14 @@
 use microesnext::{Machine, Outcome, Value};
-use microesnext_compiler::compile_script;
+use microesnext_compiler::{CompileOptions, NumberMode, compile_script_with_options};
+
+fn compile_script(source: &str) -> Result<Vec<u8>, microesnext_compiler::CompileError> {
+    compile_script_with_options(
+        source,
+        CompileOptions {
+            numbers: NumberMode::BoundedI30,
+        },
+    )
+}
 
 #[test]
 fn runs_a_factorial_loop() {

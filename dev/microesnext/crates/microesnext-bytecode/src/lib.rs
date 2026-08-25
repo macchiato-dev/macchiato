@@ -53,7 +53,7 @@ pub enum Opcode {
     ConstAtom = 20,
     #[cfg(feature = "numbers")]
     ConstF64 = 21,
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     AddNumber = 22,
     ConstImmediate = 23,
     #[cfg(feature = "locals")]
@@ -108,13 +108,13 @@ pub enum Opcode {
     JumpIfFalsyOrPop = 88,
     #[cfg(feature = "logical-operations")]
     JumpIfTruthyOrPop = 89,
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     SubtractNumber = 90,
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     MultiplyNumber = 91,
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     LessThanNumber = 92,
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     GreaterThanNumber = 93,
 }
 
@@ -160,7 +160,7 @@ impl TryFrom<u8> for Opcode {
             20 => Ok(Self::ConstAtom),
             #[cfg(feature = "numbers")]
             21 => Ok(Self::ConstF64),
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             22 => Ok(Self::AddNumber),
             23 => Ok(Self::ConstImmediate),
             #[cfg(feature = "locals")]
@@ -215,13 +215,13 @@ impl TryFrom<u8> for Opcode {
             88 => Ok(Self::JumpIfFalsyOrPop),
             #[cfg(feature = "logical-operations")]
             89 => Ok(Self::JumpIfTruthyOrPop),
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             90 => Ok(Self::SubtractNumber),
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             91 => Ok(Self::MultiplyNumber),
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             92 => Ok(Self::LessThanNumber),
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             93 => Ok(Self::GreaterThanNumber),
             _ => Err(Error::BadBytecode),
         }
@@ -265,6 +265,11 @@ mod tests {
     #[test]
     fn omitted_number_opcodes_are_invalid_bytecode() {
         assert!(Opcode::try_from(21).is_err());
+    }
+
+    #[cfg(not(feature = "number-operations"))]
+    #[test]
+    fn omitted_number_operation_opcodes_are_invalid_bytecode() {
         assert!(Opcode::try_from(22).is_err());
         for opcode in 90..=93 {
             assert!(Opcode::try_from(opcode).is_err());
@@ -275,6 +280,11 @@ mod tests {
     #[test]
     fn enabled_number_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(21), Ok(Opcode::ConstF64));
+    }
+
+    #[cfg(feature = "number-operations")]
+    #[test]
+    fn enabled_number_operation_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(22), Ok(Opcode::AddNumber));
         assert_eq!(Opcode::try_from(90), Ok(Opcode::SubtractNumber));
         assert_eq!(Opcode::try_from(91), Ok(Opcode::MultiplyNumber));

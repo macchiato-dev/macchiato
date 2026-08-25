@@ -68,6 +68,19 @@ These instructions belong to `logical-operations`, not basic `control-flow`.
 Consequently a machine needing loops and `if` but no logical expressions does
 not decode them or link their truthiness composition.
 
+## Numeric targets
+
+`const_f64` belongs to number representation; `add_number`,
+`subtract_number`, `multiply_number`, and promoted relational operations
+belong to the separate number-operations capability. Numeric equality and
+storage can therefore omit all arithmetic decoder arms.
+
+The compiler target is explicit. A JavaScript-number target emits an invariant
+i30 opcode only when its result is statically known to fit, and otherwise emits
+the promoted operation. A bounded-i30 target emits only the smaller integer
+instruction family and reports overflow at execution. This is a build target,
+not a language-visible claim that JavaScript integers stop at 30 bits.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

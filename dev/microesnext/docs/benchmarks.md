@@ -48,9 +48,9 @@ figure remains useful for measuring the fixed interpreter mechanism itself.
 
 The identity-only strict-equality build is 2,890 bytes (1,337 gzip). Its live
 probe compares tagged booleans and its dependency graph omits string and number
-storage. A number-only build is 8,111 bytes (3,422 gzip); its graph contains no
+storage. A number-only build is 7,484 bytes (3,261 gzip); its graph contains no
 string, atom, or object crate and its live probe verifies that boxed NaNs remain
-unequal. Composing both scalar representations produces a 10,093-byte (4,147
+unequal. Composing both scalar representations produces a 9,487-byte (3,978
 gzip) artifact whose additional probe verifies separately allocated equal
 strings.
 
@@ -69,7 +69,7 @@ independent:
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Logical operations | 3,220 | 1,552 |
-| Logical operations with numbers only | 7,909 | 3,350 |
+| Logical operations with numbers only | 7,284 | 3,190 |
 | Logical operations with strings only | 6,982 | 3,033 |
 
 The number-only dependency graph contains no string crate, and the string-only
@@ -118,10 +118,10 @@ LTO from merely discarding an enabled but unused dependency.
 | Async functions | 23,191 | 8,866 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
-| Control flow with number/string truthiness | 9,380 | 3,962 |
+| Control flow with number/string truthiness | 8,765 | 3,771 |
 | Collection iterators | 10,170 | 4,091 |
 | Collection entry iterators | 13,542 | 4,979 |
-| Collections with number/string equality | 15,138 | 5,840 |
+| Collections with number/string equality | 14,622 | 5,682 |
 | Exceptions | 3,846 | 1,761 |
 | Shared environment cells | 6,285 | 2,728 |
 | Guest errors | 2,520 | 1,195 |
@@ -135,7 +135,8 @@ LTO from merely discarding an enabled but unused dependency.
 | Lexical locals | 4,012 | 1,798 |
 | Iterator result objects | 13,944 | 5,441 |
 | Iterable protocol binding | 10,275 | 4,197 |
-| Numbers | 5,981 | 2,627 |
+| Number representation | 5,311 | 2,422 |
+| Promoted number operations | 8,157 | 3,153 |
 | Objects with atoms and strings | 14,663 | 5,859 |
 | Strings only | 4,960 | 2,299 |
 | Symbols | 4,995 | 2,254 |
@@ -144,9 +145,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Native Promise resolution | 12,664 | 5,239 |
 | One-shot Promise resolvers | 20,479 | 7,910 |
 | Object thenable assimilation | 34,528 | 12,642 |
-| Async return thenable assimilation | 45,893 | 16,224 |
+| Async return thenable assimilation | 46,604 | 16,397 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 70,428 | 23,211 |
+| All capabilities | 77,041 | 24,537 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled

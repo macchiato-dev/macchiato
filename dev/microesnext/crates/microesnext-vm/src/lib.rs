@@ -372,43 +372,47 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             Opcode::AddNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_numbers::add(self.core.arena_mut(), left, right)?;
+                let value = microesnext_number_operations::add(self.core.arena_mut(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             Opcode::SubtractNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_numbers::subtract(self.core.arena_mut(), left, right)?;
+                let value =
+                    microesnext_number_operations::subtract(self.core.arena_mut(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             Opcode::MultiplyNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_numbers::multiply(self.core.arena_mut(), left, right)?;
+                let value =
+                    microesnext_number_operations::multiply(self.core.arena_mut(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             Opcode::LessThanNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_numbers::less_than(self.core.arena(), left, right)?;
+                let value =
+                    microesnext_number_operations::less_than(self.core.arena(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "numbers")]
+            #[cfg(feature = "number-operations")]
             Opcode::GreaterThanNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_numbers::greater_than(self.core.arena(), left, right)?;
+                let value =
+                    microesnext_number_operations::greater_than(self.core.arena(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -1132,7 +1136,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "numbers")]
+    #[cfg(feature = "number-operations")]
     #[test]
     fn promotes_optional_fractional_arithmetic_without_changing_i30_addition() {
         let code = Builder::new()

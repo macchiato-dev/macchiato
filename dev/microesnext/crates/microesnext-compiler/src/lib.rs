@@ -11,6 +11,20 @@ pub struct CompileError {
     pub expected: &'static str,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum NumberMode {
+    /// Preserve JavaScript Number behavior, promoting beyond immediate i30s.
+    #[default]
+    JavaScript,
+    /// Emit the smaller integer-only instruction set and fail outside i30.
+    BoundedI30,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct CompileOptions {
+    pub numbers: NumberMode,
+}
+
 /// An allocation-using construction API kept out of the runtime dependency
 /// graph. The source parser will join this crate rather than the VM crate.
 #[derive(Default)]
@@ -181,6 +195,13 @@ impl Builder {
 /// AST or recursing on the native stack. This grows into the production parser
 /// while preserving direct bytecode emission.
 pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
+    compile_script_with_options(source, CompileOptions::default())
+}
+
+pub fn compile_script_with_options(
+    source: &str,
+    options: CompileOptions,
+) -> Result<Vec<u8>, CompileError> {
     let mut parser = Parser {
         source: source.as_bytes(),
         offset: 0,
@@ -191,6 +212,7 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         functions: Vec::new(),
         relocations: Vec::new(),
         function_frame: false,
+        options,
     };
     parser.whitespace();
     let locals_patch = parser.local_declarations()?;
@@ -217,6 +239,7 @@ struct Parser<'source> {
     functions: Vec<PendingFunction>,
     relocations: Vec<usize>,
     function_frame: bool,
+    options: CompileOptions,
 }
 
 #[derive(Clone, Copy)]
@@ -239,7 +262,7 @@ struct PendingFunction {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum TermKind {
-    I30,
+    I30(i32),
     General,
 }
 
@@ -545,6 +568,7 @@ impl Parser<'_> {
             functions: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
+            options: self.options,
         };
         let mut body_count_patch = Some(1);
         if matches!(body_kind, FunctionBody::Block) {
@@ -834,14 +858,22 @@ impl Parser<'_> {
     ) -> Result<(bool, TermKind), CompileError> {
         let (used_binding, mut kind) = self.additive(binding)?;
         loop {
-            let opcode = if self.consume(b'<') {
-                Opcode::LessThanI30
+            let less = if self.consume(b'<') {
+                true
             } else if self.consume(b'>') {
-                Opcode::GreaterThanI30
+                false
             } else {
                 break;
             };
-            self.additive(None)?;
+            let (_, right) = self.additive(None)?;
+            let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
+            let bounded = self.options.numbers == NumberMode::BoundedI30;
+            let opcode = match (less, bounded || immediate) {
+                (true, true) => Opcode::LessThanI30,
+                (false, true) => Opcode::GreaterThanI30,
+                (true, false) => Opcode::LessThanNumber,
+                (false, false) => Opcode::GreaterThanNumber,
+            };
             self.output.push(opcode as u8);
             kind = TermKind::General;
         }
@@ -856,25 +888,34 @@ impl Parser<'_> {
         loop {
             if self.consume(b'+') {
                 let (_, right) = self.product(None)?;
-                let immediate = kind == TermKind::I30 && right == TermKind::I30;
-                self.output.push(if immediate {
+                let result = match (kind, right) {
+                    (TermKind::I30(left), TermKind::I30(right)) => left
+                        .checked_add(right)
+                        .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+                    _ => None,
+                };
+                let bounded = self.options.numbers == NumberMode::BoundedI30;
+                self.output.push(if bounded || result.is_some() {
                     Opcode::AddI30
                 } else {
                     Opcode::AddNumber
                 } as u8);
-                kind = if immediate {
-                    TermKind::I30
-                } else {
-                    TermKind::General
-                };
+                kind = result.map_or(TermKind::General, TermKind::I30);
             } else if self.consume(b'-') {
                 let (_, right) = self.product(None)?;
-                self.output.push(Opcode::SubtractI30 as u8);
-                kind = if kind == TermKind::I30 && right == TermKind::I30 {
-                    TermKind::I30
-                } else {
-                    TermKind::General
+                let result = match (kind, right) {
+                    (TermKind::I30(left), TermKind::I30(right)) => left
+                        .checked_sub(right)
+                        .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+                    _ => None,
                 };
+                let bounded = self.options.numbers == NumberMode::BoundedI30;
+                self.output.push(if bounded || result.is_some() {
+                    Opcode::SubtractI30
+                } else {
+                    Opcode::SubtractNumber
+                } as u8);
+                kind = result.map_or(TermKind::General, TermKind::I30);
             } else {
                 break;
             }
@@ -889,12 +930,19 @@ impl Parser<'_> {
         let (used_binding, mut kind) = self.term(binding)?;
         while self.consume(b'*') {
             let (_, right) = self.term(None)?;
-            self.output.push(Opcode::MultiplyI30 as u8);
-            kind = if kind == TermKind::I30 && right == TermKind::I30 {
-                TermKind::I30
-            } else {
-                TermKind::General
+            let result = match (kind, right) {
+                (TermKind::I30(left), TermKind::I30(right)) => left
+                    .checked_mul(right)
+                    .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+                _ => None,
             };
+            let bounded = self.options.numbers == NumberMode::BoundedI30;
+            self.output.push(if bounded || result.is_some() {
+                Opcode::MultiplyI30
+            } else {
+                Opcode::MultiplyNumber
+            } as u8);
+            kind = result.map_or(TermKind::General, TermKind::I30);
         }
         Ok((used_binding, kind))
     }
@@ -984,7 +1032,7 @@ impl Parser<'_> {
                 loop {
                     self.output.push(Opcode::ConstI30 as u8);
                     self.output.extend_from_slice(&index.to_le_bytes());
-                    self.number()?;
+                    let _ = self.number()?;
                     self.output.push(Opcode::SetIndex as u8);
                     index = index
                         .checked_add(1)
@@ -1008,7 +1056,7 @@ impl Parser<'_> {
                         return Err(self.error(":"));
                     }
                     self.output_atom_range(start, end);
-                    self.number()?;
+                    let _ = self.number()?;
                     self.output.push(Opcode::SetProperty as u8);
                     if self.consume(b'}') {
                         break;
@@ -1025,14 +1073,7 @@ impl Parser<'_> {
             (false, TermKind::General)
         } else {
             let immediate = self.number()?;
-            (
-                false,
-                if immediate {
-                    TermKind::I30
-                } else {
-                    TermKind::General
-                },
-            )
+            (false, immediate.map_or(TermKind::General, TermKind::I30))
         };
         loop {
             if self.consume(b'.') {
@@ -1127,7 +1168,7 @@ impl Parser<'_> {
         None
     }
 
-    fn number(&mut self) -> Result<bool, CompileError> {
+    fn number(&mut self) -> Result<Option<i32>, CompileError> {
         self.whitespace();
         let start = self.offset;
         self.consume_raw(b'-');
@@ -1169,7 +1210,7 @@ impl Parser<'_> {
                 if (-(1 << 29)..(1 << 29)).contains(&value) {
                     self.output.push(Opcode::ConstI30 as u8);
                     self.output.extend_from_slice(&value.to_le_bytes());
-                    return Ok(true);
+                    return Ok(Some(value));
                 }
             }
         }
@@ -1177,7 +1218,7 @@ impl Parser<'_> {
         self.output.push(Opcode::ConstF64 as u8);
         self.output
             .extend_from_slice(&value.to_bits().to_le_bytes());
-        Ok(false)
+        Ok(None)
     }
 
     fn identifier(&mut self) -> Result<(usize, usize), CompileError> {
@@ -1369,6 +1410,26 @@ mod tests {
 
         let exponent = compile_script("return .5e2;").unwrap();
         assert!(exponent.contains(&(Opcode::ConstF64 as u8)));
+    }
+
+    #[test]
+    fn promotes_only_when_the_selected_numeric_target_requires_it() {
+        let overflow = compile_script("return 536870911 + 1;").unwrap();
+        assert!(overflow.contains(&(Opcode::AddNumber as u8)));
+        assert!(!overflow.contains(&(Opcode::AddI30 as u8)));
+
+        let bounded = compile_script_with_options(
+            "let value = 536870911; return value + 1;",
+            CompileOptions {
+                numbers: NumberMode::BoundedI30,
+            },
+        )
+        .unwrap();
+        assert!(bounded.contains(&(Opcode::AddI30 as u8)));
+        assert!(!bounded.contains(&(Opcode::AddNumber as u8)));
+
+        let promoted = compile_script("let value = 536870911; return value * 2;").unwrap();
+        assert!(promoted.contains(&(Opcode::MultiplyNumber as u8)));
     }
 
     #[test]

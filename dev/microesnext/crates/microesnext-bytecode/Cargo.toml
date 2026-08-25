@@ -26,6 +26,7 @@ functions = []
 function-arguments = ["functions", "locals"]
 integer-operations = []
 numbers = []
+number-operations = ["numbers"]
 objects = ["atoms"]
 strings = []
 

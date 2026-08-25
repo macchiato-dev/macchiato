@@ -63,6 +63,11 @@ numbers = [
   "microesnext-equality?/numbers",
   "microesnext-logical-operations?/numbers",
 ]
+number-operations = [
+  "numbers",
+  "dep:microesnext-number-operations",
+  "microesnext-vm/number-operations",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
@@ -149,6 +154,7 @@ microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
+microesnext-number-operations = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }
@@ -241,7 +247,7 @@ required-features = ["arrays"]
 [[test]]
 name = "numbers"
 path = "tests/numbers.rs"
-required-features = ["numbers"]
+required-features = ["locals", "number-operations"]
 
 [[test]]
 name = "symbols"

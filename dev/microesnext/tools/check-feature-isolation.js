@@ -47,6 +47,7 @@ const thenables = "microesnext-thenables";
 const integerOperations = "microesnext-integer-operations";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
+const numberOperations = "microesnext-number-operations";
 
 assertPresence(
   [],
@@ -59,6 +60,7 @@ assertPresence(
     equality,
     integerOperations,
     logicalOperations,
+    numberOperations,
     parameters,
     promiseResolution,
     promiseResolvers,
@@ -83,7 +85,17 @@ assertPresence(
 assertPresence(
   ["equality", "numbers"],
   [equality, "microesnext-numbers"],
-  ["microesnext-atoms", "microesnext-objects", "microesnext-strings"],
+  [
+    "microesnext-atoms",
+    numberOperations,
+    "microesnext-objects",
+    "microesnext-strings",
+  ],
+);
+assertPresence(
+  ["number-operations"],
+  [numberOperations, "microesnext-numbers"],
+  [integerOperations, "microesnext-strings"],
 );
 assertPresence(
   ["minimal-program"],

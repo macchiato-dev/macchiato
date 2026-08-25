@@ -29,6 +29,7 @@ dependencies = [
  "microesnext-iterators",
  "microesnext-locals",
  "microesnext-logical-operations",
+ "microesnext-number-operations",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -289,6 +290,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-number-operations"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
@@ -442,6 +452,7 @@ dependencies = [
  "microesnext-integer-operations",
  "microesnext-locals",
  "microesnext-logical-operations",
+ "microesnext-number-operations",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",

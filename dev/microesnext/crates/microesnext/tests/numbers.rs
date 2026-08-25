@@ -30,3 +30,23 @@ fn number_bytecode_promotes_arithmetic_and_compares_it() {
         Ok(Outcome::Complete(microesnext::Value::TRUE))
     );
 }
+
+#[test]
+fn source_arithmetic_promotes_past_i30() {
+    for (source, expected) in [
+        ("return 536870911 + 1;", 536_870_912.0),
+        ("let value = 536870911; return value * 2;", 1_073_741_822.0),
+        ("let value = -536870912; return value - 1;", -536_870_913.0),
+    ] {
+        let code = compile_script(source).unwrap();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected number completion")
+        };
+        assert_eq!(
+            microesnext::numbers::get(machine.arena(), value),
+            Ok(expected)
+        );
+    }
+}

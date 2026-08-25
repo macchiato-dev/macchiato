@@ -73,9 +73,12 @@ an explicit relational stopping condition.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.
-- `microesnext-numbers` supplies heap-backed IEEE-754 values and promoted
-  arithmetic. Small i30 values and their direct addition remain in the base VM;
-  integer-only builds do not link floating-point parsing or storage.
+- `microesnext-numbers` supplies heap-backed IEEE-754 representation.
+  Integer-only builds do not link floating-point parsing or storage, while
+  equality-only number builds do not acquire arithmetic.
+- `microesnext-number-operations` adds promoted arithmetic and relational
+  comparison. Its i30 fast paths remain direct; overflow falls through to the
+  number representation only in builds selecting this crate.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.

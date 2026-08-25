@@ -65,33 +65,6 @@ fn read(arena: &Arena<'_>, reference: microesnext_types::HeapRef) -> Result<f64,
     Ok(f64::from_bits(*low as u64 | (*high as u64) << 32))
 }
 
-pub fn add(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
-    let result = get(arena, left)? + get(arena, right)?;
-    new(arena, result)
-}
-
-pub fn subtract(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
-    let result = get(arena, left)? - get(arena, right)?;
-    new(arena, result)
-}
-
-pub fn multiply(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
-    let result = get(arena, left)? * get(arena, right)?;
-    new(arena, result)
-}
-
-pub fn less_than(arena: &Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
-    boolean(get(arena, left)? < get(arena, right)?)
-}
-
-pub fn greater_than(arena: &Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
-    boolean(get(arena, left)? > get(arena, right)?)
-}
-
-fn boolean(value: bool) -> Result<Value, Error> {
-    Ok(if value { Value::TRUE } else { Value::FALSE })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,24 +101,5 @@ mod tests {
         assert!(!is_safe_integer(boundary));
         assert_eq!(boundary, boundary + 1.0);
         assert_ne!(boundary, boundary + 2.0);
-    }
-
-    #[test]
-    fn arithmetic_promotes_beyond_the_immediate_range() {
-        let mut memory = [0; 32];
-        let mut arena = Arena::new(&mut memory);
-        let maximum = Value::from_i30((1 << 29) - 1).unwrap();
-        let two = Value::from_i30(2).unwrap();
-
-        let sum = add(&mut arena, maximum, two).unwrap();
-        assert_eq!(get(&arena, sum), Ok((1 << 29) as f64 + 1.0));
-
-        let product = multiply(&mut arena, maximum, two).unwrap();
-        assert_eq!(get(&arena, product), Ok(((1 << 29) - 1) as f64 * 2.0));
-
-        let difference = subtract(&mut arena, maximum, two).unwrap();
-        assert_eq!(difference.as_i30(), Some((1 << 29) - 3));
-        assert_eq!(less_than(&arena, two, maximum), Ok(Value::TRUE));
-        assert_eq!(greater_than(&arena, two, maximum), Ok(Value::FALSE));
     }
 }

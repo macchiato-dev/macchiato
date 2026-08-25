@@ -52,6 +52,8 @@ pub use microesnext_iterable_protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;
+#[cfg(feature = "number-operations")]
+pub use microesnext_number_operations as number_operations;
 #[cfg(feature = "numbers")]
 pub use microesnext_numbers as numbers;
 #[cfg(feature = "function-arguments")]
