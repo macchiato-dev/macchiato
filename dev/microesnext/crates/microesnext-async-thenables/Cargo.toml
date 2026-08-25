@@ -9,6 +9,7 @@ version.workspace = true
 
 [dependencies]
 microesnext-async = { workspace = true, features = ["functions"] }
+microesnext-objects.workspace = true
 microesnext-promises.workspace = true
 microesnext-thenables.workspace = true
 microesnext-types.workspace = true
@@ -18,7 +19,6 @@ microesnext-vm.workspace = true
 microesnext-async-functions.workspace = true
 microesnext-bytecode.workspace = true
 microesnext-functions.workspace = true
-microesnext-objects.workspace = true
 
 [lib]
 path = "src/lib.rs"

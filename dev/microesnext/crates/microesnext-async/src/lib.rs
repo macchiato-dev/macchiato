@@ -42,6 +42,15 @@ pub trait Resolver {
         promise: Value,
         value: Value,
     ) -> Result<(), Error>;
+
+    fn park(
+        &mut self,
+        machine: &mut Machine<'_, '_>,
+        queue: &mut JobQueue<'_>,
+        destination: RootId,
+        awaited: Value,
+        continuation: RootId,
+    ) -> Result<(), Error>;
 }
 
 #[cfg(feature = "promises")]
@@ -68,6 +77,18 @@ impl Resolver for NativeResolver {
             value,
         )?;
         Ok(())
+    }
+
+    #[inline]
+    fn park(
+        &mut self,
+        machine: &mut Machine<'_, '_>,
+        queue: &mut JobQueue<'_>,
+        destination: RootId,
+        awaited: Value,
+        continuation: RootId,
+    ) -> Result<(), Error> {
+        park_continuation(machine, queue, destination, awaited, continuation)
     }
 }
 
@@ -200,7 +221,7 @@ fn drive_functions<R: Resolver>(
                         continuation,
                     }));
                 };
-                park_continuation(machine, queue, frame.promise, value, continuation)?;
+                resolver.park(machine, queue, frame.promise, value, continuation)?;
                 machine.restore_caller(frame.caller)?;
                 machine.run()?
             }
@@ -346,7 +367,7 @@ fn finish_progress<R: Resolver>(
             Ok(())
         }
         Progress::Suspended(suspended) => {
-            park_continuation(
+            resolver.park(
                 machine,
                 queue,
                 destination,
@@ -388,7 +409,7 @@ fn finish_reaction<R: Resolver>(
             value,
             continuation,
         } => {
-            park_continuation(machine, queue, destination, value, continuation)?;
+            resolver.park(machine, queue, destination, value, continuation)?;
             Ok(())
         }
         Outcome::AsyncCall { .. } => Err(Error::Type),
