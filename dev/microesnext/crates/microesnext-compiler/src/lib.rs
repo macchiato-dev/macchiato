@@ -3792,4 +3792,15 @@ mod tests {
             1
         );
     }
+
+    #[cfg(all(feature = "classes", not(feature = "class-default-constructors")))]
+    #[test]
+    fn explicit_class_builds_reject_an_omitted_constructor() {
+        assert_eq!(
+            compile_script("class Empty {} return new Empty();")
+                .unwrap_err()
+                .expected,
+            "{ constructor"
+        );
+    }
 }
