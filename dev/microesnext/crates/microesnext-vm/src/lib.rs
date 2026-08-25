@@ -295,6 +295,34 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(function)?;
                 Ok(None)
             }
+            #[cfg(feature = "class-constructors")]
+            Opcode::ToClassConstructor => {
+                self.atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let constructor_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"constructor")?;
+                let prototype_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let closure = self.core.arena_mut().pop()?;
+                let constructor = microesnext_class_constructors::new(
+                    self.core.arena_mut(),
+                    closure,
+                    Value::NULL,
+                    Value::NULL,
+                    prototype_key,
+                    constructor_key,
+                )?;
+                self.core.arena_mut().push(constructor)?;
+                Ok(None)
+            }
             #[cfg(feature = "recursive-constructors")]
             Opcode::RebindConstructorSelf => {
                 let constructor = self.core.arena().stack_value(0)?;
@@ -1534,6 +1562,40 @@ mod tests {
             machine.arena(),
             function
         ));
+    }
+
+    #[cfg(feature = "class-constructors")]
+    #[test]
+    fn class_opcode_creates_a_distinct_prototype_cycle() {
+        let code = Builder::new()
+            .closure(9, 0)
+            .op(Opcode::ToClassConstructor)
+            .op(Opcode::Return)
+            .const_i30(42)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 224];
+        let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
+        let Outcome::Complete(constructor) = machine.run().unwrap() else {
+            panic!("expected a class constructor value")
+        };
+        let prototype_key = machine.intern_atom(b"prototype").unwrap();
+        let constructor_key = machine.intern_atom(b"constructor").unwrap();
+        let prototype =
+            microesnext_objects::get(machine.arena(), constructor, prototype_key).unwrap();
+
+        assert!(microesnext_class_constructors::is_class_constructor(
+            machine.arena(),
+            constructor
+        ));
+        assert_eq!(
+            microesnext_objects::get(machine.arena(), prototype, constructor_key),
+            Ok(constructor)
+        );
+        assert_eq!(
+            microesnext_callable_objects::callable(machine.arena(), constructor),
+            Err(Error::Type)
+        );
     }
 
     #[cfg(feature = "instanceof")]

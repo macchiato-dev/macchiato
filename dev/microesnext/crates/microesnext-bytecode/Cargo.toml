@@ -40,6 +40,7 @@ string-operations = ["strings"]
 typeof = ["strings"]
 instanceof = []
 constructors = []
+class-constructors = ["constructors"]
 construction = ["constructors", "receivers"]
 
 [dependencies]

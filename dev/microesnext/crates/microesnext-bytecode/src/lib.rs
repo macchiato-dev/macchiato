@@ -144,6 +144,8 @@ pub enum Opcode {
     RebindConstructorSelf = 106,
     #[cfg(feature = "property-assignment")]
     SetPropertyStatement = 107,
+    #[cfg(feature = "class-constructors")]
+    ToClassConstructor = 108,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -279,6 +281,8 @@ impl TryFrom<u8> for Opcode {
             106 => Ok(Self::RebindConstructorSelf),
             #[cfg(feature = "property-assignment")]
             107 => Ok(Self::SetPropertyStatement),
+            #[cfg(feature = "class-constructors")]
+            108 => Ok(Self::ToClassConstructor),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -533,6 +537,18 @@ mod tests {
     #[test]
     fn omitted_recursive_constructor_opcode_is_invalid() {
         assert!(Opcode::try_from(106).is_err());
+    }
+
+    #[cfg(feature = "class-constructors")]
+    #[test]
+    fn enabled_class_constructor_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(108), Ok(Opcode::ToClassConstructor));
+    }
+
+    #[cfg(not(feature = "class-constructors"))]
+    #[test]
+    fn omitted_class_constructor_opcode_is_invalid() {
+        assert!(Opcode::try_from(108).is_err());
     }
 
     #[cfg(feature = "property-assignment")]
