@@ -507,6 +507,54 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "resolution")]
+    #[test]
+    fn callback_promise_result_is_adopted_by_its_destination() {
+        let code = [Opcode::Return as u8];
+        let mut memory = [0; 256];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 24);
+        let returned = pending(machine.arena_mut()).unwrap();
+        let callback = capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let source = pending(machine.arena_mut()).unwrap();
+        let destination = pending(machine.arena_mut()).unwrap();
+        let mut slots: [Option<JobSlot>; 4] = [None; 4];
+        let mut queue = JobQueue::new(&mut slots);
+        then(
+            machine.arena_mut(),
+            &mut queue,
+            source,
+            callback,
+            Value::UNDEFINED,
+            destination,
+        )
+        .unwrap();
+        settle(
+            machine.arena_mut(),
+            &mut queue,
+            source,
+            Settlement::Fulfilled,
+            returned,
+        )
+        .unwrap();
+
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
+        assert_eq!(settled_result(machine.arena(), destination), Ok(None));
+        let answer = Value::from_i30(42).unwrap();
+        settle(
+            machine.arena_mut(),
+            &mut queue,
+            returned,
+            Settlement::Fulfilled,
+            answer,
+        )
+        .unwrap();
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
+        assert_eq!(
+            settled_result(machine.arena(), destination),
+            Ok(Some((Settlement::Fulfilled, answer)))
+        );
+    }
+
     #[test]
     fn suspended_callback_resumes_through_the_same_job_queue() {
         let code = [Opcode::Await as u8, Opcode::Return as u8];
