@@ -62,6 +62,10 @@ an explicit relational stopping condition.
   multiplication, and relational comparisons. The `minimal-program` feature
   composes it with locals and control flow without adding floating-point
   storage or changing the invariant interpreter loop.
+- `microesnext-equality` supplies strict equality and SameValueZero as distinct
+  operations. Identity-only builds remain small; optional number and string
+  features add their JavaScript value semantics without making equality depend
+  on either representation unconditionally.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.

@@ -45,6 +45,7 @@ const errors = "microesnext-errors";
 const receivers = "microesnext-receivers";
 const thenables = "microesnext-thenables";
 const integerOperations = "microesnext-integer-operations";
+const equality = "microesnext-equality";
 
 assertPresence(
   [],
@@ -54,6 +55,7 @@ assertPresence(
     asyncThenables,
     environments,
     errors,
+    equality,
     integerOperations,
     parameters,
     promiseResolution,
@@ -63,6 +65,17 @@ assertPresence(
     receivers,
     suspension,
     thenables,
+  ],
+);
+assertPresence(
+  ["equality"],
+  [equality],
+  [
+    asyncFunctions,
+    environments,
+    integerOperations,
+    "microesnext-numbers",
+    "microesnext-strings",
   ],
 );
 assertPresence(

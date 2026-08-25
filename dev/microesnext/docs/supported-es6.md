@@ -22,6 +22,14 @@ linking boxed IEEE-754 numbers. Results outside the i30 range currently fail
 rather than promote, so this is a deliberately bounded programming subset, not
 yet full JavaScript numeric semantics.
 
+Strict equality and inequality (`===` and `!==`) are a separate removable
+capability. Immediate values, objects, and symbols compare by identity. When
+composed with strings, independently allocated equal strings compare by
+content; when composed with numbers, `+0` equals `-0` and `NaN` remains unequal
+to itself. This is deliberately separate from the SameValueZero operation used
+by Map and Set, where `NaN` keys compare equal. Coercive `==` and `!=` are not
+yet included.
+
 Arrow functions support expression and block bodies. Lexical `this` and
 `arguments`, and rejection as constructors, remain compiler work. Untagged
 template literals support cooked text, escapes, multiline text, and

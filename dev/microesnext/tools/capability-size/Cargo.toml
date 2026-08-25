@@ -26,6 +26,7 @@ collection-entry-iterators = [
 ]
 exceptions = ["microesnext/exceptions"]
 environments = ["microesnext/environments"]
+equality = ["microesnext/equality"]
 errors = ["microesnext/errors"]
 functions = ["microesnext/functions"]
 recursive-functions = ["functions", "environments", "microesnext/recursive-functions"]

@@ -5,6 +5,7 @@
     target_arch = "wasm32",
     any(
         feature = "async",
+        feature = "equality",
         feature = "promise-resolution",
         feature = "promise-resolvers",
         feature = "receivers"
@@ -24,6 +25,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "control-flow",
         feature = "exceptions",
         feature = "environments",
+        feature = "equality",
         feature = "function-arguments",
         feature = "functions",
         feature = "locals",
@@ -188,6 +190,82 @@ pub extern "C" fn minimal_program_probe() -> i32 {
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
+    }
+}
+
+#[cfg(all(feature = "equality", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn equality_probe() -> i32 {
+    let code = [
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::True as u8,
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::True as u8,
+        Opcode::StrictEqual as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(Value::TRUE)) => 1,
+        _ => 0,
+    }
+}
+
+#[cfg(all(
+    feature = "equality",
+    feature = "numbers",
+    feature = "strings",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn scalar_equality_probe() -> i32 {
+    let nan = f64::NAN.to_bits().to_le_bytes();
+    let number_code = [
+        Opcode::ConstF64 as u8,
+        nan[0],
+        nan[1],
+        nan[2],
+        nan[3],
+        nan[4],
+        nan[5],
+        nan[6],
+        nan[7],
+        Opcode::ConstF64 as u8,
+        nan[0],
+        nan[1],
+        nan[2],
+        nan[3],
+        nan[4],
+        nan[5],
+        nan[6],
+        nan[7],
+        Opcode::StrictEqual as u8,
+        Opcode::Return as u8,
+    ];
+    let mut number_memory = [0; 48];
+    let mut number_machine = Machine::new(&number_code, &mut number_memory);
+    if number_machine.run() != Ok(Outcome::Complete(Value::FALSE)) {
+        return 0;
+    }
+
+    let string_code = [
+        Opcode::ConstString as u8,
+        1,
+        0,
+        b'x',
+        Opcode::ConstString as u8,
+        1,
+        0,
+        b'x',
+        Opcode::StrictEqual as u8,
+        Opcode::Return as u8,
+    ];
+    let mut string_memory = [0; 48];
+    let mut string_machine = Machine::new(&string_code, &mut string_memory);
+    match string_machine.run() {
+        Ok(Outcome::Complete(Value::TRUE)) => 1,
+        _ => 0,
     }
 }
 

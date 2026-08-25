@@ -74,6 +74,18 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
     ["environment cells", "environments", [core, ["environments_probe", 42]]],
+    ["strict equality", "equality", [core, ["equality_probe", 1]]],
+    [
+      "strict equality with scalar values",
+      "equality,numbers,strings",
+      [
+        core,
+        ["equality_probe", 1],
+        ["numbers_probe", 3.25],
+        ["strings_probe", "nonzero"],
+        ["scalar_equality_probe", 1],
+      ],
+    ],
     ["guest errors", "errors", [core, ["errors_probe", 42]]],
     [
       "closures with shared environments",
@@ -191,7 +203,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -209,6 +221,8 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["exceptions_probe", 42],
         ["errors_probe", 42],
         ["environments_probe", 42],
+        ["equality_probe", 1],
+        ["scalar_equality_probe", 1],
         ["closure_environments_probe", 42],
         ["functions_probe", "nonzero"],
         ["recursive_functions_probe", 42],

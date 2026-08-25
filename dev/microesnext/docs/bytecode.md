@@ -45,6 +45,16 @@ Ordinary closures and bytecode remain unchanged. The optional thenable driver
 uses these instructions to invoke a guest `then` function with the source
 object as its receiver; it schedules chained thenables as separate jobs.
 
+## Strict equality
+
+The optional `strict_equal` and `strict_not_equal` instructions each consume
+two values and produce a tagged boolean. Their implementation is statically
+composed with the enabled value representations: the identity-only build does
+not link number or string storage, while scalar builds compare numbers and
+string contents according to JavaScript strict-equality semantics. Collection
+SameValueZero remains a distinct operation because its treatment of `NaN`
+differs.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

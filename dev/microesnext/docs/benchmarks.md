@@ -44,6 +44,19 @@ build omitting `minimal-program` neither resolves that crate nor decodes its
 opcodes. This figure is a practical capability checkpoint, while the kernel
 figure remains useful for measuring the fixed interpreter mechanism itself.
 
+## Strict equality, 2026-08-25
+
+The identity-only strict-equality build is 2,890 bytes (1,337 gzip). Its live
+probe compares tagged booleans and its dependency graph omits string and number
+storage. Composing both scalar representations produces a 10,043-byte (4,181
+gzip) artifact whose probes verify separately allocated equal strings, unequal
+boxed NaNs, and the existing numeric and string operations.
+
+`microesnext-equality` also retains SameValueZero for collection keys, but the
+VM's `===` and `!==` instructions call the strict operation. This avoids the
+subtle but observable mistake of treating `NaN === NaN` as true while still
+sharing the scalar decoding and string-content comparison machinery.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
