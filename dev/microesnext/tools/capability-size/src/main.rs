@@ -328,24 +328,32 @@ pub extern "C" fn well_known_symbols_probe() -> u32 {
 #[cfg(all(feature = "iterator-results", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn iterator_results_probe() -> i32 {
-    let mut memory = [0; 128];
+    let mut memory = [0; 192];
     let mut arena = microesnext_arena::Arena::with_root_capacity(&mut memory, 3);
     let mut atoms = microesnext::atoms::Atoms::new(&mut arena).unwrap();
     let keys =
         microesnext::iterator_results::IteratorResultKeys::new(&mut arena, &mut atoms).unwrap();
     let result = keys
-        .create(
+        .create_next(
             &mut arena,
             microesnext::Value::NULL,
-            microesnext::Value::from_i30(42).unwrap(),
-            false,
+            microesnext::Value::from_i30(42),
         )
         .unwrap();
     let value = atoms.intern(&mut arena, b"value").unwrap();
-    microesnext::objects::get(&arena, result, value)
+    let answer = microesnext::objects::get(&arena, result, value)
         .unwrap()
         .as_i30()
-        .unwrap_or(-1)
+        .unwrap_or(-1);
+    let exhausted = keys
+        .create_next(&mut arena, microesnext::Value::NULL, None)
+        .unwrap();
+    let done = atoms.intern(&mut arena, b"done").unwrap();
+    if microesnext::objects::get(&arena, exhausted, done) == Ok(microesnext::Value::TRUE) {
+        answer
+    } else {
+        -1
+    }
 }
 
 #[cfg(all(feature = "iterable-protocol", target_arch = "wasm32"))]

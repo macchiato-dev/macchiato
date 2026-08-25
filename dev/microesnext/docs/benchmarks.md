@@ -70,7 +70,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Exceptions | 3,894 | 1,714 |
 | Functions | 7,010 | 2,973 |
 | Iterator cursor | 3,647 | 1,577 |
-| Iterator result objects | 13,555 | 5,212 |
+| Iterator result objects | 13,992 | 5,390 |
 | Iterable protocol binding | 10,323 | 4,138 |
 | Numbers | 6,029 | 2,565 |
 | Objects with atoms and strings | 14,711 | 5,798 |
@@ -79,7 +79,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,573 | 2,392 |
 | Promises | 4,888 | 2,183 |
 | Weak collections | 2,099 | 951 |
-| All capabilities | 37,988 | 13,210 |
+| All capabilities | 38,262 | 13,301 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -119,10 +119,11 @@ collection row executes a Set value step. Enabling either adapter leaves the
 other source crate out of its graph, and the original non-iterator array and
 collection artifacts remain byte-for-byte unchanged.
 
-The 13,555-byte result-object row constructs and reads a live `{ value, done }`
-object. It includes ordinary objects, cached atoms, and strings, but not an
-iterator cursor or either source adapter. Conversely, all three cursor rows
-remain byte-for-byte unchanged. This pays the object cost only at the
+The 13,992-byte result-object row constructs and reads both a live and an
+exhausted `{ value, done }` object through the source-neutral adapter boundary.
+It includes ordinary objects, cached atoms, and strings, but not an iterator
+cursor or either source adapter. Conversely, all three cursor rows remain
+byte-for-byte unchanged. This pays the object cost only at the
 ECMAScript-facing result boundary rather than in low-level iteration.
 
 Iterative prototype lookup and prototype validation add 194 raw bytes to the

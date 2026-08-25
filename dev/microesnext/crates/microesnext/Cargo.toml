@@ -104,3 +104,12 @@ required-features = ["numbers"]
 name = "symbols"
 path = "tests/symbols.rs"
 required-features = ["objects", "symbols"]
+
+[[test]]
+name = "iteration"
+path = "tests/iteration.rs"
+required-features = [
+  "array-iterators",
+  "collection-iterators",
+  "iterator-results",
+]

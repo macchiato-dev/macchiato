@@ -48,7 +48,8 @@ not link to that C implementation.
   iteration does not pull in Map/Set storage, or the reverse.
 - `microesnext-iterator-results` allocates ordinary `{ value, done }` objects
   with cached property identities. It is separate so cursor and adapter builds
-  do not acquire object, atom, or string storage.
+  do not acquire object, atom, or string storage. Its source-neutral boundary
+  converts an adapter's `Option<Value>` into live or exhausted result objects.
 - `microesnext-iterable-protocol` defines and resolves realm-local
   `[Symbol.iterator]` bindings through object prototypes. Function validation
   and invocation remain independently composable.

@@ -55,7 +55,9 @@ The Rust engine keeps iterator cursors in the guest arena, so they relocate and
 retain their source without a native allocation. Array-value iteration and
 Map/Set key/value iteration are independent adapters. A separate result-object
 capability creates relocatable `{ value, done }` objects using cached atom
-identities. Cursor-only builds omit its object, atom, and string dependencies.
+identities. It accepts the same allocation-free `Option<Value>` returned by
+either source adapter. Cursor-only builds omit its object, atom, and string
+dependencies.
 Entry-pair allocation and guest calls remain above this layer. Binding and
 inherited lookup of the realm-local `Symbol.iterator` are available separately
 from function validation and invocation; this keeps the protocol identity
