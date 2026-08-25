@@ -87,6 +87,23 @@ assertCompilerFeatures(
 );
 assertCompilerFeatures(
   ["functions"],
+  ["function-arguments", "functions", "locals"],
+  [
+    "async",
+    "async-functions",
+    "environments",
+    "receivers",
+    "recursive-async-functions",
+    "recursive-functions",
+  ],
+);
+assertCompilerFeatures(
+  ["environments"],
+  ["environments", "function-arguments", "functions", "locals"],
+  ["async", "recursive-async-functions", "recursive-functions"],
+);
+assertCompilerFeatures(
+  ["recursive-functions"],
   [
     "environments",
     "function-arguments",
@@ -94,7 +111,7 @@ assertCompilerFeatures(
     "locals",
     "recursive-functions",
   ],
-  ["async", "async-functions", "receivers"],
+  ["async", "async-functions", "recursive-async-functions"],
 );
 assertCompilerFeatures(
   [],
@@ -106,6 +123,7 @@ assertCompilerFeatures(
     "atoms",
     "control-flow",
     "equality",
+    "environments",
     "exceptions",
     "functions",
     "function-arguments",
@@ -117,13 +135,35 @@ assertCompilerFeatures(
     "objects",
     "receivers",
     "recursive-functions",
+    "recursive-async-functions",
     "strings",
   ],
 );
 assertCompilerFeatures(
   ["async-functions"],
-  ["async", "async-functions", "recursive-async-functions"],
-  ["arrays", "control-flow", "equality", "numbers", "objects"],
+  ["async", "async-functions", "function-arguments", "functions", "locals"],
+  [
+    "arrays",
+    "control-flow",
+    "environments",
+    "equality",
+    "numbers",
+    "objects",
+    "recursive-async-functions",
+  ],
+);
+assertCompilerFeatures(
+  ["recursive-async-functions"],
+  [
+    "async",
+    "async-functions",
+    "environments",
+    "function-arguments",
+    "functions",
+    "locals",
+    "recursive-async-functions",
+  ],
+  ["recursive-functions"],
 );
 assertCompilerFeatures(
   ["exceptions"],

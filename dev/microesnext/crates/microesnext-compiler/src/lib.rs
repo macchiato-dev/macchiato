@@ -185,19 +185,19 @@ impl Builder {
         self
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     pub fn new_environment_cell(mut self) -> Self {
         self.code.push(Opcode::NewEnvironmentCell as u8);
         self
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     pub fn load_environment_cell(mut self) -> Self {
         self.code.push(Opcode::LoadEnvironmentCell as u8);
         self
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     pub fn store_environment_cell(mut self) -> Self {
         self.code.push(Opcode::StoreEnvironmentCell as u8);
         self
@@ -243,9 +243,9 @@ pub fn compile_script_with_options(
         output: Vec::new(),
         #[cfg(feature = "locals")]
         locals: Vec::new(),
-        #[cfg(feature = "functions")]
+        #[cfg(feature = "environments")]
         outer_bindings: Vec::new(),
-        #[cfg(feature = "functions")]
+        #[cfg(feature = "environments")]
         captures: Vec::new(),
         #[cfg(feature = "functions")]
         functions: Vec::new(),
@@ -281,9 +281,9 @@ struct Parser<'source> {
     output: Vec<u8>,
     #[cfg(feature = "locals")]
     locals: Vec<Binding>,
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     outer_bindings: Vec<Binding>,
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     captures: Vec<Binding>,
     #[cfg(feature = "functions")]
     functions: Vec<PendingFunction>,
@@ -301,11 +301,11 @@ struct Binding {
     start: usize,
     end: usize,
     slot: u16,
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     captured: bool,
 }
 
-#[cfg(feature = "functions")]
+#[cfg(feature = "environments")]
 fn same_binding(left: Binding, right: Binding) -> bool {
     left.start == right.start && left.end == right.end
 }
@@ -323,7 +323,7 @@ enum TermKind {
     General,
 }
 
-#[cfg(feature = "functions")]
+#[cfg(feature = "environments")]
 #[derive(Clone, Copy)]
 enum CaptureSource {
     Local(usize),
@@ -537,7 +537,7 @@ impl Parser<'_> {
             start,
             end,
             slot,
-            #[cfg(feature = "functions")]
+            #[cfg(feature = "environments")]
             captured: false,
         });
         if !self.consume(b';') {
@@ -571,6 +571,7 @@ impl Parser<'_> {
             start: name_start,
             end: name_end,
             slot,
+            #[cfg(feature = "environments")]
             captured: false,
         });
         let parameters = self.function_parameters()?;
@@ -608,6 +609,7 @@ impl Parser<'_> {
                 start,
                 end,
                 slot,
+                #[cfg(feature = "environments")]
                 captured: false,
             });
             if self.consume(b')') {
@@ -636,6 +638,7 @@ impl Parser<'_> {
                 start: name_start,
                 end: name_end,
                 slot: 0,
+                #[cfg(feature = "environments")]
                 captured: false,
             }]
         };
@@ -662,9 +665,13 @@ impl Parser<'_> {
         }
         let parameter_count = u16::try_from(parameters.len())
             .map_err(|_| self.error("fewer than 65536 parameters"))?;
-        let mut outer_bindings = self.outer_bindings.clone();
-        outer_bindings.extend_from_slice(&self.locals);
-        outer_bindings.extend(expression_name);
+        #[cfg(feature = "environments")]
+        let outer_bindings = {
+            let mut bindings = self.outer_bindings.clone();
+            bindings.extend_from_slice(&self.locals);
+            bindings.extend(expression_name);
+            bindings
+        };
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
@@ -672,7 +679,9 @@ impl Parser<'_> {
                 .init_frame(parameter_count, parameter_count)
                 .finish(),
             locals: parameters,
+            #[cfg(feature = "environments")]
             outer_bindings,
+            #[cfg(feature = "environments")]
             captures: expression_name.into_iter().collect(),
             functions: Vec::new(),
             relocations: Vec::new(),
@@ -703,7 +712,44 @@ impl Parser<'_> {
         body.append_function_bodies()?;
         self.offset = body.offset;
 
-        let mut capture_sources = Vec::with_capacity(body.captures.len());
+        #[cfg(feature = "environments")]
+        let (capture_count, self_captured) =
+            self.emit_capture_sources(&body, expression_name, destination)?;
+        #[cfg(not(feature = "environments"))]
+        let capture_count = 0_u16;
+        self.output
+            .push(self.closure_opcode(expression_name.is_some(), asynchronous) as u8);
+        let target_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.extend_from_slice(&capture_count.to_le_bytes());
+        #[cfg(feature = "environments")]
+        if self_captured {
+            self.output.push(Opcode::StoreEnvironmentCell as u8);
+        } else if let Some(slot) = destination {
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+        }
+        #[cfg(not(feature = "environments"))]
+        if let Some(slot) = destination {
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+        }
+        self.functions.push(PendingFunction {
+            target_patch,
+            code: body.output,
+            relocations: body.relocations,
+        });
+        Ok(())
+    }
+
+    #[cfg(feature = "environments")]
+    fn emit_capture_sources(
+        &mut self,
+        body: &Parser<'_>,
+        expression_name: Option<Binding>,
+        destination: Option<u16>,
+    ) -> Result<(u16, bool), CompileError> {
+        let mut sources = Vec::with_capacity(body.captures.len());
         for capture in &body.captures {
             if expression_name.is_some_and(|name| same_binding(name, *capture)) {
                 continue;
@@ -722,14 +768,13 @@ impl Parser<'_> {
                     self.output.extend_from_slice(&binding.slot.to_le_bytes());
                     binding.captured = true;
                 }
-                capture_sources.push(CaptureSource::Local(index));
+                sources.push(CaptureSource::Local(index));
             } else if self
                 .outer_bindings
                 .iter()
                 .any(|binding| same_binding(*binding, *capture))
             {
-                let index = self.intern_capture(*capture)?;
-                capture_sources.push(CaptureSource::Outer(index));
+                sources.push(CaptureSource::Outer(self.intern_capture(*capture)?));
             } else {
                 return Err(self.error("an enclosing binding"));
             }
@@ -740,9 +785,9 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
-        let capture_count = u16::try_from(capture_sources.len())
-            .map_err(|_| self.error("fewer than 65536 captures"))?;
-        for source in capture_sources {
+        let count =
+            u16::try_from(sources.len()).map_err(|_| self.error("fewer than 65536 captures"))?;
+        for source in sources {
             match source {
                 CaptureSource::Local(index) => {
                     self.output.push(Opcode::LoadLocal as u8);
@@ -755,45 +800,31 @@ impl Parser<'_> {
                 }
             }
         }
-        self.output
-            .push(self.closure_opcode(expression_name.is_some(), asynchronous) as u8);
-        let target_patch = self.output.len();
-        self.output.extend_from_slice(&0_u32.to_le_bytes());
-        self.output.extend_from_slice(&capture_count.to_le_bytes());
-        if self_captured {
-            self.output.push(Opcode::StoreEnvironmentCell as u8);
-        } else if let Some(slot) = destination {
-            self.output.push(Opcode::StoreLocal as u8);
-            self.output.extend_from_slice(&slot.to_le_bytes());
-        }
-        self.functions.push(PendingFunction {
-            target_patch,
-            code: body.output,
-            relocations: body.relocations,
-        });
-        Ok(())
-    }
-
-    #[cfg(all(feature = "functions", feature = "async-functions"))]
-    fn closure_opcode(&self, named: bool, asynchronous: bool) -> Opcode {
-        match (named, asynchronous) {
-            (true, true) => Opcode::RecursiveAsyncClosure,
-            (true, false) => Opcode::RecursiveClosure,
-            (false, true) => Opcode::AsyncClosure,
-            (false, false) => Opcode::Closure,
-        }
-    }
-
-    #[cfg(all(feature = "functions", not(feature = "async-functions")))]
-    fn closure_opcode(&self, named: bool, _asynchronous: bool) -> Opcode {
-        if named {
-            Opcode::RecursiveClosure
-        } else {
-            Opcode::Closure
-        }
+        Ok((count, self_captured))
     }
 
     #[cfg(feature = "functions")]
+    fn closure_opcode(&self, named: bool, asynchronous: bool) -> Opcode {
+        #[cfg(feature = "async-functions")]
+        if asynchronous {
+            #[cfg(feature = "recursive-async-functions")]
+            if named {
+                return Opcode::RecursiveAsyncClosure;
+            }
+            return Opcode::AsyncClosure;
+        }
+        #[cfg(not(feature = "async-functions"))]
+        let _ = asynchronous;
+        #[cfg(feature = "recursive-functions")]
+        if named {
+            return Opcode::RecursiveClosure;
+        }
+        #[cfg(not(feature = "recursive-functions"))]
+        let _ = named;
+        Opcode::Closure
+    }
+
+    #[cfg(feature = "environments")]
     fn local_assignments(&mut self) -> Result<(), CompileError> {
         loop {
             self.whitespace();
@@ -826,6 +857,28 @@ impl Parser<'_> {
                 self.output.push(Opcode::StoreLocal as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
+    }
+
+    #[cfg(all(feature = "functions", not(feature = "environments")))]
+    fn local_assignments(&mut self) -> Result<(), CompileError> {
+        loop {
+            self.whitespace();
+            let start = self.offset;
+            let Some(binding) = self.local_at_offset() else {
+                return Ok(());
+            };
+            self.offset += binding.end - binding.start;
+            if !self.consume(b'=') {
+                self.offset = start;
+                return Ok(());
+            }
+            self.expression(None)?;
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
             if !self.consume(b';') {
                 return Err(self.error(";"));
             }
@@ -1354,28 +1407,41 @@ impl Parser<'_> {
             self.offset += local.end - local.start;
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&local.slot.to_le_bytes());
+            #[cfg(feature = "environments")]
             if local.captured {
                 self.output.push(Opcode::LoadEnvironmentCell as u8);
             }
             (false, TermKind::General)
-        } else if let Some((capture, binding)) = self.capture_at_offset()? {
-            self.offset += binding.end - binding.start;
-            self.output.push(Opcode::LoadCapture as u8);
-            self.output.extend_from_slice(&capture.to_le_bytes());
-            self.output.push(Opcode::LoadEnvironmentCell as u8);
-            (false, TermKind::General)
+        } else if let Some(captured) = self.capture_at_offset()? {
+            #[cfg(feature = "environments")]
+            {
+                let (capture, binding) = captured;
+                self.offset += binding.end - binding.start;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+                (false, TermKind::General)
+            }
+            #[cfg(not(feature = "environments"))]
+            {
+                let _ = captured;
+                unreachable!()
+            }
         } else if async_function || self.try_word(b"function") {
             self.whitespace();
             let expression_name = if self.source.get(self.offset) == Some(&b'(') {
                 None
-            } else {
+            } else if self.allows_named_function(asynchronous) {
                 let (start, end) = self.identifier()?;
                 Some(Binding {
                     start,
                     end,
                     slot: 0,
+                    #[cfg(feature = "environments")]
                     captured: true,
                 })
+            } else {
+                None
             };
             let parameters = self.function_parameters()?;
             self.function_value(
@@ -1501,6 +1567,36 @@ impl Parser<'_> {
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
     }
 
+    #[cfg(all(feature = "recursive-async-functions", feature = "recursive-functions"))]
+    fn allows_named_function(&self, _asynchronous: bool) -> bool {
+        true
+    }
+
+    #[cfg(all(
+        feature = "recursive-async-functions",
+        not(feature = "recursive-functions")
+    ))]
+    fn allows_named_function(&self, asynchronous: bool) -> bool {
+        asynchronous
+    }
+
+    #[cfg(all(
+        not(feature = "recursive-async-functions"),
+        feature = "recursive-functions"
+    ))]
+    fn allows_named_function(&self, asynchronous: bool) -> bool {
+        !asynchronous
+    }
+
+    #[cfg(all(
+        feature = "functions",
+        not(feature = "recursive-async-functions"),
+        not(feature = "recursive-functions")
+    ))]
+    fn allows_named_function(&self, _asynchronous: bool) -> bool {
+        false
+    }
+
     #[cfg(feature = "locals")]
     fn local_at_offset(&self) -> Option<Binding> {
         self.locals.iter().rev().copied().find(|binding| {
@@ -1510,7 +1606,7 @@ impl Parser<'_> {
         })
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     fn capture_at_offset(&mut self) -> Result<Option<(u16, Binding)>, CompileError> {
         let Some(binding) = self.outer_bindings.iter().rev().copied().find(|binding| {
             let name = &self.source[binding.start..binding.end];
@@ -1523,7 +1619,12 @@ impl Parser<'_> {
         Ok(Some((index, binding)))
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(all(feature = "functions", not(feature = "environments")))]
+    fn capture_at_offset(&mut self) -> Result<Option<(u16, Binding)>, CompileError> {
+        Ok(None)
+    }
+
+    #[cfg(feature = "environments")]
     fn intern_capture(&mut self, binding: Binding) -> Result<u16, CompileError> {
         let index = if let Some(index) = self
             .captures
@@ -1947,6 +2048,49 @@ mod tests {
         assert_eq!(compile_script("return 1();").unwrap_err().offset, 8);
     }
 
+    #[cfg(all(
+        feature = "functions",
+        not(feature = "environments"),
+        feature = "source-positions"
+    ))]
+    #[test]
+    fn basic_functions_leave_outer_bindings_as_ordinary_unexpected_tokens() {
+        let source = "let value = 1; function read() { return value; } return read();";
+        let error = compile_script(source).unwrap_err();
+        assert_eq!(error.expected, "a number");
+        assert_eq!(error.offset, source.find("value; }").unwrap());
+    }
+
+    #[cfg(all(
+        feature = "functions",
+        not(feature = "recursive-functions"),
+        feature = "source-positions"
+    ))]
+    #[test]
+    fn basic_functions_leave_named_expressions_as_unexpected_tokens() {
+        assert_eq!(
+            compile_script("return function named() { return 1; };")
+                .unwrap_err()
+                .offset,
+            16
+        );
+    }
+
+    #[cfg(all(
+        feature = "async-functions",
+        not(feature = "recursive-async-functions"),
+        feature = "source-positions"
+    ))]
+    #[test]
+    fn basic_async_functions_leave_named_expressions_as_unexpected_tokens() {
+        assert_eq!(
+            compile_script("return async function named() { return 1; };")
+                .unwrap_err()
+                .offset,
+            22
+        );
+    }
+
     #[cfg(feature = "number-operations")]
     #[test]
     fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
@@ -2086,7 +2230,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "async-functions")]
+    #[cfg(feature = "recursive-async-functions")]
     #[test]
     fn compiles_named_async_expressions_with_a_private_self_capture() {
         let code =
@@ -2127,7 +2271,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "recursive-functions")]
     #[test]
     fn compiles_a_named_expression_with_a_private_self_capture() {
         let code = compile_script(
@@ -2209,7 +2353,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     #[test]
     fn boxes_only_a_binding_captured_by_a_source_function() {
         let code =
@@ -2228,7 +2372,7 @@ mod tests {
         assert!(code.contains(&(Opcode::LoadEnvironmentCell as u8)));
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     #[test]
     fn sibling_closures_reuse_one_environment_cell() {
         let code = compile_script(
@@ -2249,7 +2393,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     #[test]
     fn self_referential_function_initializes_its_own_cell() {
         let code = compile_script(
@@ -2273,7 +2417,7 @@ mod tests {
     #[test]
     fn relocates_a_nested_function_body_when_appending_its_parent() {
         let code = compile_script(
-            "function outer(value) { function inner() { return value; } return inner(); } return outer(42);",
+            "function outer() { function inner() { return 42; } return inner(); } return outer();",
         )
         .unwrap();
         let closure_targets: Vec<_> = code
@@ -2294,7 +2438,7 @@ mod tests {
         assert_ne!(closure_targets[0], closure_targets[1]);
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "environments")]
     #[test]
     fn forwards_a_capture_through_an_intermediate_function() {
         let code = compile_script(
