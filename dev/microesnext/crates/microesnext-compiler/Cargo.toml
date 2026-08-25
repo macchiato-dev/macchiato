@@ -23,6 +23,7 @@ default = [
   "number-division",
   "number-remainder",
   "string-number-coercion",
+  "typeof",
   "number-operations",
   "objects",
   "receivers",
@@ -77,6 +78,7 @@ recursive-functions = [
 source-positions = []
 strings = ["microesnext-bytecode/strings"]
 string-operations = ["strings", "microesnext-bytecode/string-operations"]
+typeof = ["strings", "microesnext-bytecode/typeof"]
 
 [dependencies]
 microesnext-bytecode.workspace = true

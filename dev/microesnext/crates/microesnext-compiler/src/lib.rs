@@ -331,6 +331,25 @@ enum TermKind {
     General,
 }
 
+#[cfg(all(
+    feature = "typeof",
+    any(
+        feature = "integer-negation",
+        feature = "logical-operations",
+        feature = "number-coercion"
+    )
+))]
+#[derive(Clone, Copy)]
+enum UnaryOperator {
+    TypeOf,
+    #[cfg(feature = "logical-operations")]
+    LogicalNot,
+    #[cfg(feature = "integer-negation")]
+    Negate,
+    #[cfg(feature = "number-coercion")]
+    ToNumber,
+}
+
 #[cfg(feature = "strings")]
 const fn string_term_kind() -> TermKind {
     TermKind::String
@@ -1296,7 +1315,8 @@ impl Parser<'_> {
     #[cfg(all(
         feature = "logical-operations",
         not(feature = "integer-negation"),
-        not(feature = "number-coercion")
+        not(feature = "number-coercion"),
+        not(feature = "typeof")
     ))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let mut negations = 0_usize;
@@ -1319,7 +1339,8 @@ impl Parser<'_> {
     #[cfg(all(
         feature = "integer-negation",
         not(feature = "logical-operations"),
-        not(feature = "number-coercion")
+        not(feature = "number-coercion"),
+        not(feature = "typeof")
     ))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let mut negations = 0_usize;
@@ -1336,7 +1357,8 @@ impl Parser<'_> {
     #[cfg(all(
         feature = "number-coercion",
         not(feature = "integer-negation"),
-        not(feature = "logical-operations")
+        not(feature = "logical-operations"),
+        not(feature = "typeof")
     ))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let mut coercions = 0_usize;
@@ -1350,10 +1372,13 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(any(
-        all(feature = "integer-negation", feature = "logical-operations"),
-        all(feature = "integer-negation", feature = "number-coercion"),
-        all(feature = "logical-operations", feature = "number-coercion")
+    #[cfg(all(
+        not(feature = "typeof"),
+        any(
+            all(feature = "integer-negation", feature = "logical-operations"),
+            all(feature = "integer-negation", feature = "number-coercion"),
+            all(feature = "logical-operations", feature = "number-coercion")
+        )
     ))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let operators_start = self.offset;
@@ -1398,10 +1423,93 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(all(
+        feature = "typeof",
+        not(feature = "integer-negation"),
+        not(feature = "logical-operations"),
+        not(feature = "number-coercion")
+    ))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut operators = 0_usize;
+        while self.consume_typeof() {
+            operators += 1;
+        }
+        let (used_binding, kind) = self.term(binding)?;
+        self.output
+            .extend(core::iter::repeat_n(Opcode::TypeOf as u8, operators));
+        Ok((
+            used_binding,
+            if operators == 0 {
+                kind
+            } else {
+                TermKind::String
+            },
+        ))
+    }
+
+    #[cfg(all(
+        feature = "typeof",
+        any(
+            feature = "integer-negation",
+            feature = "logical-operations",
+            feature = "number-coercion"
+        )
+    ))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut operators = Vec::new();
+        loop {
+            if self.consume_typeof() {
+                operators.push(UnaryOperator::TypeOf);
+                continue;
+            }
+            #[cfg(feature = "logical-operations")]
+            if self.consume(b'!') {
+                operators.push(UnaryOperator::LogicalNot);
+                continue;
+            }
+            #[cfg(feature = "integer-negation")]
+            if self.consume_unary_minus() {
+                operators.push(UnaryOperator::Negate);
+                continue;
+            }
+            #[cfg(feature = "number-coercion")]
+            if self.consume_unary_plus() {
+                operators.push(UnaryOperator::ToNumber);
+                continue;
+            }
+            break;
+        }
+        let (used_binding, mut kind) = self.term(binding)?;
+        for operator in operators.into_iter().rev() {
+            match operator {
+                UnaryOperator::TypeOf => {
+                    self.output.push(Opcode::TypeOf as u8);
+                    kind = TermKind::String;
+                }
+                #[cfg(feature = "logical-operations")]
+                UnaryOperator::LogicalNot => {
+                    self.output.push(Opcode::LogicalNot as u8);
+                    kind = TermKind::General;
+                }
+                #[cfg(feature = "integer-negation")]
+                UnaryOperator::Negate => kind = self.emit_numeric_negation(kind),
+                #[cfg(feature = "number-coercion")]
+                UnaryOperator::ToNumber if !matches!(kind, TermKind::I30(_)) => {
+                    self.output.push(Opcode::ToNumber as u8);
+                    kind = TermKind::General;
+                }
+                #[cfg(feature = "number-coercion")]
+                UnaryOperator::ToNumber => {}
+            }
+        }
+        Ok((used_binding, kind))
+    }
+
     #[cfg(not(any(
         feature = "integer-negation",
         feature = "logical-operations",
-        feature = "number-coercion"
+        feature = "number-coercion",
+        feature = "typeof"
     )))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.term(binding)
@@ -1428,6 +1536,12 @@ impl Parser<'_> {
             return false;
         }
         self.consume_raw(b'+')
+    }
+
+    #[cfg(feature = "typeof")]
+    fn consume_typeof(&mut self) -> bool {
+        self.whitespace();
+        self.try_word(b"typeof")
     }
 
     #[cfg(feature = "integer-negation")]
@@ -2557,6 +2671,43 @@ mod tests {
         assert!(!integer.contains(&(Opcode::ToNumber as u8)));
         let boolean = compile_script("return +true;").unwrap();
         assert!(boolean.contains(&(Opcode::ToNumber as u8)));
+    }
+
+    #[cfg(feature = "typeof")]
+    #[test]
+    fn compiles_typeof_as_a_repeatable_unary_operator() {
+        let single = compile_script("return typeof true;").unwrap();
+        assert!(single.contains(&(Opcode::TypeOf as u8)));
+        let repeated = compile_script("return typeof typeof true;").unwrap();
+        assert_eq!(
+            repeated
+                .iter()
+                .filter(|opcode| **opcode == Opcode::TypeOf as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(all(feature = "typeof", feature = "number-coercion"))]
+    #[test]
+    fn preserves_mixed_unary_operator_order() {
+        let code = compile_script("return typeof +true;").unwrap();
+        assert!(
+            code.windows(2)
+                .any(|operations| { operations == [Opcode::ToNumber as u8, Opcode::TypeOf as u8] })
+        );
+    }
+
+    #[cfg(all(not(feature = "typeof"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_typeof_as_an_unexpected_word() {
+        assert_eq!(compile_script("return typeof true;").unwrap_err().offset, 7);
+    }
+
+    #[cfg(all(feature = "typeof", feature = "source-positions"))]
+    #[test]
+    fn does_not_parse_a_typeof_identifier_prefix_as_the_operator() {
+        assert_eq!(compile_script("return typeofValue;").unwrap_err().offset, 7);
     }
 
     #[cfg(feature = "integer-negation")]
