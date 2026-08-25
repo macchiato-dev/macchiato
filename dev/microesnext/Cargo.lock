@@ -285,6 +285,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-promise-resolvers"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-promises",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-promises"
 version = "0.0.0"
 dependencies = [

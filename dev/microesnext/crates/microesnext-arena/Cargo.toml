@@ -15,6 +15,7 @@ errors = []
 async-functions = []
 iterators = []
 numbers = []
+promise-resolvers = []
 symbols = []
 
 [dependencies]

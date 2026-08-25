@@ -41,6 +41,10 @@ pub enum BlockKind {
     AsyncInvocation = 24,
     #[cfg(feature = "errors")]
     Error = 25,
+    #[cfg(feature = "promise-resolvers")]
+    PromiseResolutionCell = 26,
+    #[cfg(feature = "promise-resolvers")]
+    PromiseResolver = 27,
 }
 
 #[inline(always)]
@@ -677,6 +681,10 @@ impl<'memory> Arena<'memory> {
             24 => Ok(BlockKind::AsyncInvocation),
             #[cfg(feature = "errors")]
             25 => Ok(BlockKind::Error),
+            #[cfg(feature = "promise-resolvers")]
+            26 => Ok(BlockKind::PromiseResolutionCell),
+            #[cfg(feature = "promise-resolvers")]
+            27 => Ok(BlockKind::PromiseResolver),
             _ => Err(Error::DanglingReference),
         }
     }

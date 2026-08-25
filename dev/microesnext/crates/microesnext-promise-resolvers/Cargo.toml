@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-promise-resolvers"
+description = "Compact one-shot resolving functions for MicroESNext Promises"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["promise-resolvers"] }
+microesnext-promises.workspace = true
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"
