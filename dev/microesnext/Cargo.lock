@@ -373,6 +373,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-method-calls"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-objects",
+ "microesnext-parameters",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-number-coercion"
 version = "0.0.0"
 dependencies = [
