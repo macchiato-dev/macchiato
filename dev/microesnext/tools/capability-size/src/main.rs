@@ -9,7 +9,12 @@ use microesnext::bytecode::Opcode;
 use microesnext::{Core, CoreOutcome};
 #[cfg(all(
     target_arch = "wasm32",
-    any(feature = "async", feature = "exceptions", feature = "strings")
+    any(
+        feature = "async",
+        feature = "exceptions",
+        feature = "functions",
+        feature = "strings"
+    )
 ))]
 use microesnext::{Machine, Outcome};
 
@@ -101,12 +106,31 @@ pub extern "C" fn collections_probe() -> usize {
 
 #[cfg(all(feature = "functions", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
-pub extern "C" fn functions_probe() -> u32 {
-    let mut memory = [0; 32];
-    let mut arena = microesnext_arena::Arena::new(&mut memory);
-    microesnext::functions::capture_stack(&mut arena, 7, 0)
-        .unwrap()
-        .raw()
+pub extern "C" fn functions_probe() -> i32 {
+    const BODY: u32 = 9;
+    let code = [
+        Opcode::Closure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::CallValue as u8,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
 }
 
 #[cfg(all(feature = "objects", target_arch = "wasm32"))]

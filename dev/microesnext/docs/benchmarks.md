@@ -65,18 +65,23 @@ LTO from merely discarding an enabled but unused dependency.
 | Async suspension | 6,356 | 2,766 |
 | Collections | 3,193 | 1,420 |
 | Exceptions | 3,753 | 1,674 |
-| Functions | 1,916 | 892 |
+| Functions | 6,869 | 2,935 |
 | Objects with atoms and strings | 14,751 | 5,824 |
 | Strings only | 4,867 | 2,205 |
 | Promises | 4,748 | 2,145 |
 | Weak collections | 1,959 | 919 |
-| All capabilities | 27,234 | 9,820 |
+| All capabilities | 27,312 | 9,853 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
 the Cargo feature but accidentally ran only `Core`, allowing LTO to discard
 the handler implementation, and an “all” row that omitted exceptions. The
 current exception and combined figures supersede those undercounts.
+
+The functions probe likewise executes closure creation and an indirect guest
+call through `Machine`, rather than merely returning a freshly allocated
+closure reference. That correction raises the honest live feature measurement
+from 1,916 to 6,869 bytes; the smaller result was mostly an LTO artifact.
 
 The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode
