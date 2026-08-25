@@ -88,6 +88,7 @@ assertCompilerFeatures(
     "atoms",
     "control-flow",
     "equality",
+    "exceptions",
     "integer-operations",
     "logical-operations",
     "numbers",
@@ -95,6 +96,11 @@ assertCompilerFeatures(
     "objects",
     "strings",
   ],
+);
+assertCompilerFeatures(
+  ["exceptions"],
+  ["exceptions"],
+  ["arrays", "control-flow", "equality", "logical-operations", "objects"],
 );
 assertCompilerFeatures(
   ["control-flow"],

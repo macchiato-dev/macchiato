@@ -12,6 +12,7 @@ default = [
   "arrays",
   "control-flow",
   "equality",
+  "exceptions",
   "logical-operations",
   "number-operations",
   "objects",
@@ -21,6 +22,7 @@ arrays = ["microesnext-bytecode/arrays"]
 atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 equality = ["microesnext-bytecode/equality"]
+exceptions = ["microesnext-bytecode/exceptions"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 numbers = ["microesnext-bytecode/numbers"]
@@ -37,7 +39,6 @@ strings = ["microesnext-bytecode/strings"]
 microesnext-bytecode = { workspace = true, features = [
   "async",
   "async-functions",
-  "exceptions",
   "environments",
   "functions",
   "function-arguments",

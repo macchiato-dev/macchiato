@@ -129,6 +129,7 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "exceptions")]
     pub fn try_at(mut self, catch_offset: u32) -> Self {
         self.code.push(Opcode::Try as u8);
         self.code.extend_from_slice(&catch_offset.to_le_bytes());
@@ -305,9 +306,11 @@ impl Parser<'_> {
             self.if_else()
         } else if self.try_word_after_whitespace(b"while") {
             self.while_loop()
-        } else if self.try_word_after_whitespace(b"try") {
-            self.try_catch()
         } else {
+            #[cfg(feature = "exceptions")]
+            if self.try_word_after_whitespace(b"try") {
+                return self.try_catch();
+            }
             self.completion(None, false, false)
         }
     }
@@ -315,11 +318,11 @@ impl Parser<'_> {
     #[cfg(not(feature = "control-flow"))]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
         self.local_assignments()?;
+        #[cfg(feature = "exceptions")]
         if self.try_word_after_whitespace(b"try") {
-            self.try_catch()
-        } else {
-            self.completion(None, false, false)
+            return self.try_catch();
         }
+        self.completion(None, false, false)
     }
 
     fn append_function_bodies(&mut self) -> Result<(), CompileError> {
@@ -742,6 +745,7 @@ impl Parser<'_> {
         }
     }
 
+    #[cfg(feature = "exceptions")]
     fn try_catch(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
@@ -784,6 +788,8 @@ impl Parser<'_> {
         close_handler: bool,
         pending_exception: bool,
     ) -> Result<(), CompileError> {
+        #[cfg(not(feature = "exceptions"))]
+        let _ = (close_handler, pending_exception);
         self.whitespace();
         let returning = if self.try_word(b"return") {
             true
@@ -792,14 +798,20 @@ impl Parser<'_> {
         } else {
             return Err(self.error("return or throw"));
         };
-        let expression_start = self.output.len();
-        let used_binding = self.expression(binding)?;
-        if pending_exception && !used_binding {
-            self.output.insert(expression_start, Opcode::Drop as u8);
+        #[cfg(feature = "exceptions")]
+        {
+            let expression_start = self.output.len();
+            let used_binding = self.expression(binding)?;
+            if pending_exception && !used_binding {
+                self.output.insert(expression_start, Opcode::Drop as u8);
+            }
         }
+        #[cfg(not(feature = "exceptions"))]
+        self.expression(binding)?;
         if self.consume(b';') {
             self.whitespace();
         }
+        #[cfg(feature = "exceptions")]
         if close_handler && returning {
             self.output.push(Opcode::EndTry as u8);
         }
@@ -1436,6 +1448,7 @@ impl Parser<'_> {
         true
     }
 
+    #[cfg(any(feature = "control-flow", feature = "exceptions"))]
     fn try_word_after_whitespace(&mut self, word: &[u8]) -> bool {
         self.whitespace();
         self.try_word(word)
@@ -1542,6 +1555,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "exceptions")]
     #[test]
     fn backpatches_a_directly_emitted_catch_target() {
         let code = compile_script("try { throw 17; } catch (error) { return error; }").unwrap();
@@ -1551,6 +1565,7 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
+    #[cfg(feature = "exceptions")]
     #[test]
     fn closes_a_handler_before_a_normal_return() {
         let code = compile_script("try { return await 2; } catch { return 17; }").unwrap();
@@ -1654,6 +1669,17 @@ mod tests {
         );
         assert_eq!(
             compile_script("while (true) { return 1; } return 2;")
+                .unwrap_err()
+                .offset,
+            0
+        );
+    }
+
+    #[cfg(all(not(feature = "exceptions"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_try_as_an_unexpected_token() {
+        assert_eq!(
+            compile_script("try { return 1; } catch { return 2; }")
                 .unwrap_err()
                 .offset,
             0
