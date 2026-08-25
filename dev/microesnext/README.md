@@ -114,6 +114,7 @@ cargo run --release -p microesnext-core-loop --no-default-features \
   --features function-arguments -- --calls
 cargo run --release -p microesnext-core-loop --no-default-features \
   --features environments,functions,locals -- --captures
+npm run check:features
 ```
 
 It is a regression signal rather than a claim that noisy wall-clock timings can
@@ -125,6 +126,8 @@ Only an extension byte crosses into the typed capability wrapper. Local and
 control-flow instructions use that same static boundary. This keeps the raw
 base loop byte-for-byte independent of those optional instruction families;
 there is no trait object, registry, or runtime feature lookup.
+`check:features` inspects Cargo's resolved graph and fails if representative
+minimal or narrowly composed builds acquire unrelated capability crates.
 
 This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
 Macchiato repository are consumers and comparison points, not source
