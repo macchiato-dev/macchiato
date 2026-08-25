@@ -55,6 +55,12 @@ integer-negation = [
   "dep:microesnext-integer-negation",
   "microesnext-bytecode/integer-negation",
 ]
+instanceof = [
+  "callable-objects",
+  "dep:microesnext-instanceof",
+  "dep:microesnext-prototype-chain",
+  "microesnext-bytecode/instanceof",
+]
 equality = ["dep:microesnext-equality", "microesnext-bytecode/equality"]
 logical-operations = [
   "dep:microesnext-logical-operations",
@@ -141,6 +147,7 @@ microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-integer-negation = { workspace = true, optional = true }
+microesnext-instanceof = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-number-operations = { workspace = true, optional = true }
 microesnext-number-negation = { workspace = true, optional = true }
@@ -155,6 +162,7 @@ microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }
+microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }

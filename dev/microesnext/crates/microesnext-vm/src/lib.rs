@@ -676,6 +676,26 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .push(if equal { Value::FALSE } else { Value::TRUE })?;
                 Ok(None)
             }
+            #[cfg(feature = "instanceof")]
+            Opcode::InstanceOf => {
+                let prototype_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let constructor = self.core.arena_mut().pop()?;
+                let value = self.core.arena_mut().pop()?;
+                let result = microesnext_instanceof::ordinary(
+                    self.core.arena(),
+                    value,
+                    constructor,
+                    prototype_key,
+                )?;
+                self.core
+                    .arena_mut()
+                    .push(if result { Value::TRUE } else { Value::FALSE })?;
+                Ok(None)
+            }
             #[cfg(feature = "logical-operations")]
             Opcode::JumpIfFalsyOrPop => {
                 let target = self.core.next_u32()? as usize;
@@ -1369,6 +1389,35 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
+    }
+
+    #[cfg(feature = "instanceof")]
+    #[test]
+    fn instanceof_uses_the_callable_objects_prototype_property() {
+        let code = Builder::new()
+            .op(Opcode::InstanceOf)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 224];
+        let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
+        let prototype_key = machine
+            .atoms
+            .as_mut()
+            .unwrap()
+            .intern(machine.core.arena_mut(), b"prototype")
+            .unwrap();
+        let prototype = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+        let instance = microesnext_objects::new_object(machine.arena_mut(), prototype).unwrap();
+        let closure = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let constructor =
+            microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
+        let constructor =
+            microesnext_objects::set(machine.arena_mut(), constructor, prototype_key, prototype)
+                .unwrap();
+        machine.arena_mut().push(instance).unwrap();
+        machine.arena_mut().push(constructor).unwrap();
+
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
     }
 
     #[cfg(feature = "functions")]
