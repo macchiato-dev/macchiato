@@ -53,6 +53,11 @@ method and base, appends the base as the hidden receiver only for a callable
 object, and enters the otherwise ordinary argument frame. Omitting method calls
 leaves `get_property` and ordinary call bytecode unchanged.
 
+Static methods require no fourth method opcode. The compiler selects the class
+record rather than its `prototype`, applies `to_method`, and stores the result;
+subsequent member calls use the same `get_method` and `call_method_arguments`
+sequence as instance methods.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

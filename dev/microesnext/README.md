@@ -81,6 +81,10 @@ an explicit relational stopping condition.
   receiver-aware body and class-record opcode sequence when a base class omits
   `constructor`. Explicit-constructor compiler builds do not retain that parser
   branch or synthesis code, and the runtime has no corresponding feature.
+- `class-static-methods` is also compiler-only. It installs the same
+  non-constructible method wrapper directly on the class record instead of its
+  prototype, so static calls reuse receiver-preserving method bytecode and
+  observe the class as `this` without another runtime dispatch path.
 - `microesnext-recursive-constructors` allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not link this cross-composition.

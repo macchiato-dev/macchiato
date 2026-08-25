@@ -213,6 +213,11 @@ raw / 8,147 gzip bytes. Omitting the feature leaves the explicit constructor
 compiler exactly 19,560 / 7,706 and changes no runtime artifact. The default
 compiler slice including implicit constructors is 40,254 / 15,074.
 
+Static methods are another compiler-only selection over the existing method
+runtime. Their focused compiler is 20,525 raw / 7,999 gzip bytes. Omitting them
+leaves instance methods exactly 20,408 / 7,953. The default compiler including
+static methods is 40,365 / 15,109.
+
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
 its compiler is 18,134 / 7,571. Its allocation-free opcode changes capture zero
@@ -587,6 +592,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | classes | 19,560 | 7,706 |
 | class methods | 20,408 | 7,953 |
 | implicit class constructors | 20,339 | 8,147 |
+| static class methods | 20,525 | 7,999 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -610,7 +616,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,134 | 7,571 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 40,254 | 15,074 |
+| default language slice | 40,365 | 15,109 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric
