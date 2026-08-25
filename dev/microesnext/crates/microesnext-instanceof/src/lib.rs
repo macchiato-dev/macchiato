@@ -13,11 +13,22 @@ pub fn ordinary(
     constructor: Value,
     prototype_key: Value,
 ) -> Result<bool, Error> {
-    if !microesnext_callable_objects::is_callable_object(arena, constructor) {
+    if !is_constructor(arena, constructor) {
         return Err(Error::Type);
     }
     let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
     microesnext_prototype_chain::contains(arena, value, prototype)
+}
+
+#[cfg(not(feature = "class-constructors"))]
+fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
+    microesnext_callable_objects::is_callable_object(arena, constructor)
+}
+
+#[cfg(feature = "class-constructors")]
+fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
+    microesnext_callable_objects::is_callable_object(arena, constructor)
+        || microesnext_class_constructors::is_class_constructor(arena, constructor)
 }
 
 #[cfg(test)]

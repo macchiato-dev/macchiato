@@ -48,6 +48,8 @@ class-constructors = [
   "dep:microesnext-class-constructors",
   "microesnext-bytecode/class-constructors",
   "microesnext-construction?/class-constructors",
+  "microesnext-instanceof?/class-constructors",
+  "microesnext-typeof?/class-constructors",
 ]
 construction = [
   "constructors",

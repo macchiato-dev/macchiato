@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 async-functions = ["microesnext-arena/async-functions"]
 callable-objects = ["microesnext-arena/callable-objects"]
+class-constructors = ["microesnext-arena/class-constructors"]
 numbers = ["microesnext-arena/numbers"]
 promise-resolvers = ["microesnext-arena/promise-resolvers"]
 symbols = ["microesnext-arena/symbols"]

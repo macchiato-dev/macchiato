@@ -14,6 +14,8 @@ constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
   "dep:microesnext-class-constructors",
+  "microesnext-instanceof?/class-constructors",
+  "microesnext-typeof?/class-constructors",
   "microesnext-vm/class-constructors",
 ]
 construction = ["constructors", "receivers", "microesnext-vm/construction"]
@@ -375,7 +377,7 @@ required-features = [
 [[test]]
 name = "classes"
 path = "tests/classes.rs"
-required-features = ["classes", "locals", "objects"]
+required-features = ["classes", "instanceof", "locals", "objects", "typeof"]
 
 [[test]]
 name = "recursive-constructors"
