@@ -3,7 +3,7 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 
-#[cfg(not(feature = "callable-objects"))]
+#[cfg(not(any(feature = "callable-objects", feature = "class-constructors")))]
 pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
     value
         .as_ref()
@@ -11,7 +11,7 @@ pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
         == Some(BlockKind::Object)
 }
 
-#[cfg(feature = "callable-objects")]
+#[cfg(any(feature = "callable-objects", feature = "class-constructors"))]
 pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
     value
         .as_ref()
@@ -97,11 +97,11 @@ pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
 fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object_ref(arena, object)?;
     let fields = arena.values(object)?;
-    #[cfg(not(feature = "callable-objects"))]
+    #[cfg(not(any(feature = "callable-objects", feature = "class-constructors")))]
     if fields.len() != 2 {
         return Err(Error::DanglingReference);
     }
-    #[cfg(feature = "callable-objects")]
+    #[cfg(any(feature = "callable-objects", feature = "class-constructors"))]
     if fields.len() != object_field_count(arena.kind(object)?) {
         return Err(Error::DanglingReference);
     }
@@ -110,29 +110,39 @@ fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
 
 fn object_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object.as_ref().ok_or(Error::Type)?;
-    #[cfg(not(feature = "callable-objects"))]
+    #[cfg(not(any(feature = "callable-objects", feature = "class-constructors")))]
     if arena.kind(object)? != BlockKind::Object {
         return Err(Error::Type);
     }
-    #[cfg(feature = "callable-objects")]
+    #[cfg(any(feature = "callable-objects", feature = "class-constructors"))]
     if !is_object_kind(arena.kind(object)?) {
         return Err(Error::Type);
     }
     Ok(object)
 }
 
-#[cfg(feature = "callable-objects")]
+#[cfg(any(feature = "callable-objects", feature = "class-constructors"))]
 #[inline]
 const fn is_object_kind(kind: BlockKind) -> bool {
-    matches!(kind, BlockKind::Object | BlockKind::CallableObject)
+    match kind {
+        BlockKind::Object => true,
+        #[cfg(feature = "callable-objects")]
+        BlockKind::CallableObject => true,
+        #[cfg(feature = "class-constructors")]
+        BlockKind::ClassConstructor => true,
+        _ => false,
+    }
 }
 
-#[cfg(feature = "callable-objects")]
+#[cfg(any(feature = "callable-objects", feature = "class-constructors"))]
 #[inline]
 const fn object_field_count(kind: BlockKind) -> usize {
     match kind {
         BlockKind::Object => 2,
+        #[cfg(feature = "callable-objects")]
         BlockKind::CallableObject => 3,
+        #[cfg(feature = "class-constructors")]
+        BlockKind::ClassConstructor => 3,
         _ => 0,
     }
 }

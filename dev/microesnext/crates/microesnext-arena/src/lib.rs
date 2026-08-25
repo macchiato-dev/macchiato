@@ -47,6 +47,8 @@ pub enum BlockKind {
     PromiseResolver = 27,
     #[cfg(feature = "callable-objects")]
     CallableObject = 28,
+    #[cfg(feature = "class-constructors")]
+    ClassConstructor = 29,
 }
 
 #[inline(always)]
@@ -749,6 +751,8 @@ impl<'memory> Arena<'memory> {
             27 => Ok(BlockKind::PromiseResolver),
             #[cfg(feature = "callable-objects")]
             28 => Ok(BlockKind::CallableObject),
+            #[cfg(feature = "class-constructors")]
+            29 => Ok(BlockKind::ClassConstructor),
             _ => Err(Error::DanglingReference),
         }
     }

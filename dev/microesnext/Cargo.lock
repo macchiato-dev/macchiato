@@ -166,6 +166,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-class-constructors"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-collection-entry-iterators"
 version = "0.0.0"
 dependencies = [
