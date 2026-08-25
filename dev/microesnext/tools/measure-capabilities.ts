@@ -156,13 +156,29 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["promises_probe", "nonzero"], ["promise_resolution_probe", 42]],
     ],
     [
+      "one-shot promise resolvers",
+      "promise-resolvers",
+      [core, ["promises_probe", "nonzero"], ["promise_resolution_probe", 42], [
+        "promise_resolvers_probe",
+        42,
+      ]],
+    ],
+    [
+      "object thenable assimilation",
+      "thenables",
+      [core, ["objects_probe", 42], ["promises_probe", "nonzero"], [
+        "promise_resolvers_probe",
+        42,
+      ], ["receivers_probe", 42], ["thenables_probe", 42]],
+    ],
+    [
       "weak collections",
       "weak-collections",
       [core, ["weak_collections_probe", "nonzero"]],
     ],
     [
       "all",
-      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,promise-resolution,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,thenables,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -195,7 +211,9 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["well_known_symbols_probe", "nonzero"],
         ["promises_probe", "nonzero"],
         ["promise_resolution_probe", 42],
+        ["promise_resolvers_probe", 42],
         ["receivers_probe", 42],
+        ["thenables_probe", 42],
         ["weak_collections_probe", "nonzero"],
       ],
     ],

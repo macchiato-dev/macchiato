@@ -6,6 +6,7 @@
     any(
         feature = "async",
         feature = "promise-resolution",
+        feature = "promise-resolvers",
         feature = "receivers"
     )
 ))]
@@ -28,10 +29,12 @@ use microesnext::{Core, CoreOutcome};
         feature = "locals",
         feature = "numbers",
         feature = "objects",
+        feature = "promise-resolvers",
         feature = "recursive-functions",
         feature = "recursive-async-functions",
         feature = "receivers",
-        feature = "strings"
+        feature = "strings",
+        feature = "thenables"
     )
 ))]
 use microesnext::{Machine, Outcome};
@@ -872,6 +875,90 @@ pub extern "C" fn promise_resolution_probe() -> i32 {
         return -1;
     }
     match microesnext::promises::settled_result(&arena, destination) {
+        Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
+            value.as_i30().unwrap_or(-1)
+        }
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "promise-resolvers", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn promise_resolvers_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::CallValueArguments as u8,
+        1,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 128];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 4);
+    let destination = microesnext::promises::pending(machine.arena_mut()).unwrap();
+    let pair = microesnext::promise_resolvers::new(machine.arena_mut(), destination).unwrap();
+    machine.arena_mut().push(pair.resolve).unwrap();
+    let Ok(Outcome::PromiseResolverCall) = machine.run() else {
+        return -1;
+    };
+    let call = machine.take_resolver_call().unwrap();
+    let mut slots = [None; 0];
+    let mut queue = microesnext::promises::JobQueue::new(&mut slots);
+    microesnext::promise_resolvers::settle_call(machine.arena_mut(), &mut queue, call).unwrap();
+    let Ok(Outcome::Complete(_)) = machine.resume_resolver_call() else {
+        return -1;
+    };
+    match microesnext::promises::settled_result(machine.arena(), destination) {
+        Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
+            value.as_i30().unwrap_or(-1)
+        }
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "thenables", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn thenables_probe() -> i32 {
+    let code = [
+        Opcode::InitReceiverFrame as u8,
+        2,
+        0,
+        2,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::CallValueArguments as u8,
+        1,
+        0,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 192];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 8);
+    let then = microesnext::functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+    let key = Value::TRUE;
+    let object = microesnext::objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+    let object = microesnext::objects::set(machine.arena_mut(), object, key, then).unwrap();
+    let destination = microesnext::promises::pending(machine.arena_mut()).unwrap();
+    let mut slots = [None; 0];
+    let mut queue = microesnext::promises::JobQueue::new(&mut slots);
+    let Ok(microesnext::thenables::Prepared::Job(job)) =
+        microesnext::thenables::prepare(&mut machine, &mut queue, destination, object, key)
+    else {
+        return -1;
+    };
+    if microesnext::thenables::run(&mut machine, &mut queue, job).is_err() {
+        return -1;
+    }
+    match microesnext::promises::settled_result(machine.arena(), destination) {
         Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
             value.as_i30().unwrap_or(-1)
         }
