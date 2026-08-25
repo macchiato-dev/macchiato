@@ -314,6 +314,11 @@ path = "tests/string_number_coercion.rs"
 required-features = ["number-negation", "string-number-coercion"]
 
 [[test]]
+name = "typeof"
+path = "tests/typeof.rs"
+required-features = ["functions", "numbers", "objects", "typeof"]
+
+[[test]]
 name = "symbols"
 path = "tests/symbols.rs"
 required-features = ["objects", "symbols"]
