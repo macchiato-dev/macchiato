@@ -186,6 +186,11 @@ path = "tests/source.rs"
 required-features = ["async", "exceptions", "locals"]
 
 [[test]]
+name = "source_strings"
+path = "tests/source_strings.rs"
+required-features = ["strings"]
+
+[[test]]
 name = "immediates"
 path = "tests/immediates.rs"
 

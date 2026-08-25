@@ -1474,7 +1474,7 @@ impl Parser<'_> {
                 asynchronous,
             )?;
             (false, TermKind::General)
-        } else if self.array_literal()? || self.object_literal()? {
+        } else if self.string_literal()? || self.array_literal()? || self.object_literal()? {
             (false, TermKind::General)
         } else if let Some(immediate) = self.immediate() {
             self.output.push(Opcode::ConstImmediate as u8);
@@ -1555,7 +1555,7 @@ impl Parser<'_> {
         } else if let Some(local) = self.non_function_local_term() {
             local
         } else {
-            if self.array_literal()? || self.object_literal()? {
+            if self.string_literal()? || self.array_literal()? || self.object_literal()? {
                 (false, TermKind::General)
             } else if let Some(immediate) = self.immediate() {
                 self.output.push(Opcode::ConstImmediate as u8);
@@ -1595,6 +1595,63 @@ impl Parser<'_> {
     #[cfg(all(not(feature = "functions"), not(feature = "locals")))]
     fn non_function_local_term(&mut self) -> Option<(bool, TermKind)> {
         None
+    }
+
+    #[cfg(feature = "strings")]
+    fn string_literal(&mut self) -> Result<bool, CompileError> {
+        let Some(delimiter @ (b'\'' | b'"' | b'`')) = self.source.get(self.offset).copied() else {
+            return Ok(false);
+        };
+        self.offset += 1;
+        self.output.push(Opcode::ConstString as u8);
+        let length_patch = self.output.len();
+        self.output.extend_from_slice(&0_u16.to_le_bytes());
+        let content_start = self.output.len();
+        loop {
+            let Some(byte) = self.source.get(self.offset).copied() else {
+                return Err(self.error("a closing string delimiter"));
+            };
+            if byte == delimiter {
+                self.offset += 1;
+                break;
+            }
+            if delimiter != b'`' && matches!(byte, b'\n' | b'\r') {
+                return Err(self.error("a closing string delimiter"));
+            }
+            if delimiter == b'`' && self.source[self.offset..].starts_with(b"${") {
+                return Err(self.error("a template literal without substitutions"));
+            }
+            self.offset += 1;
+            if byte != b'\\' {
+                self.output.push(byte);
+                continue;
+            }
+            let Some(escaped) = self.source.get(self.offset).copied() else {
+                return Err(self.error("a string escape"));
+            };
+            self.offset += 1;
+            self.output.push(match escaped {
+                b'b' => 0x08,
+                b'f' => 0x0c,
+                b'n' => b'\n',
+                b'r' => b'\r',
+                b't' => b'\t',
+                b'v' => 0x0b,
+                b'0' => 0,
+                b'\'' | b'"' | b'`' | b'\\' => escaped,
+                _ => return Err(self.error("a supported string escape")),
+            });
+        }
+        let length = self.output.len() - content_start;
+        let length =
+            u16::try_from(length).map_err(|_| self.error("a string shorter than 64 KiB"))?;
+        self.output[length_patch..length_patch + 2].copy_from_slice(&length.to_le_bytes());
+        Ok(true)
+    }
+
+    #[cfg(not(feature = "strings"))]
+    fn string_literal(&mut self) -> Result<bool, CompileError> {
+        Ok(false)
     }
 
     fn identifier_end(&self, offset: usize) -> bool {
@@ -2027,6 +2084,13 @@ mod tests {
         );
     }
 
+    #[cfg(all(not(feature = "strings"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_string_literals_as_unexpected_tokens() {
+        assert_eq!(compile_script("return 'value';").unwrap_err().offset, 7);
+        assert_eq!(compile_script("return `value`; ").unwrap_err().offset, 7);
+    }
+
     #[cfg(all(not(feature = "control-flow"), feature = "source-positions"))]
     #[test]
     fn reduced_parser_leaves_control_flow_as_an_unexpected_token() {
@@ -2207,6 +2271,47 @@ mod tests {
                 .op(Opcode::GetProperty)
                 .op(Opcode::Return)
                 .finish()
+        );
+    }
+
+    #[cfg(feature = "strings")]
+    #[test]
+    fn compiles_quoted_strings_directly_to_string_bytecode() {
+        assert_eq!(
+            compile_script("return \"hello\\nworld\";").unwrap(),
+            Builder::new()
+                .string(b"hello\nworld")
+                .op(Opcode::Return)
+                .finish()
+        );
+        assert_eq!(
+            compile_script("return 'it\\'s compact';").unwrap(),
+            Builder::new()
+                .string(b"it's compact")
+                .op(Opcode::Return)
+                .finish()
+        );
+    }
+
+    #[cfg(feature = "strings")]
+    #[test]
+    fn compiles_no_substitution_templates_and_rejects_unknown_forms() {
+        assert_eq!(
+            compile_script("return `first\nsecond`;").unwrap(),
+            Builder::new()
+                .string(b"first\nsecond")
+                .op(Opcode::Return)
+                .finish()
+        );
+        assert_eq!(
+            compile_script("return `value: ${value}`;")
+                .unwrap_err()
+                .expected,
+            "a template literal without substitutions"
+        );
+        assert_eq!(
+            compile_script("return '\\x41';").unwrap_err().expected,
+            "a supported string escape"
         );
     }
 

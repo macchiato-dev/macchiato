@@ -191,6 +191,11 @@ assertCompilerFeatures(
   ["equality", "logical-operations"],
 );
 assertCompilerFeatures(
+  ["strings"],
+  ["strings"],
+  ["arrays", "atoms", "numbers", "objects"],
+);
+assertCompilerFeatures(
   ["objects"],
   ["atoms", "objects", "strings"],
   ["arrays", "numbers", "number-operations"],
