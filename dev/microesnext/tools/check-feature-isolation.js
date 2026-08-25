@@ -81,6 +81,22 @@ const logicalOperations = "microesnext-logical-operations";
 const numberOperations = "microesnext-number-operations";
 
 assertCompilerFeatures(
+  ["locals"],
+  ["locals"],
+  ["environments", "function-arguments", "functions", "receivers"],
+);
+assertCompilerFeatures(
+  ["functions"],
+  [
+    "environments",
+    "function-arguments",
+    "functions",
+    "locals",
+    "recursive-functions",
+  ],
+  ["async", "async-functions", "receivers"],
+);
+assertCompilerFeatures(
   [],
   [],
   [
@@ -91,11 +107,16 @@ assertCompilerFeatures(
     "control-flow",
     "equality",
     "exceptions",
+    "functions",
+    "function-arguments",
     "integer-operations",
     "logical-operations",
+    "locals",
     "numbers",
     "number-operations",
     "objects",
+    "receivers",
+    "recursive-functions",
     "strings",
   ],
 );

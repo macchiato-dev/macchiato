@@ -14,15 +14,18 @@ default = [
   "control-flow",
   "equality",
   "exceptions",
+  "functions",
   "logical-operations",
   "number-operations",
   "objects",
+  "receivers",
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
 async = ["microesnext-bytecode/async"]
 async-functions = [
   "async",
+  "functions",
   "microesnext-bytecode/async-functions",
   "microesnext-bytecode/recursive-async-functions",
 ]
@@ -30,7 +33,15 @@ atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
+functions = [
+  "locals",
+  "microesnext-bytecode/environments",
+  "microesnext-bytecode/function-arguments",
+  "microesnext-bytecode/functions",
+  "microesnext-bytecode/recursive-functions",
+]
 integer-operations = ["microesnext-bytecode/integer-operations"]
+locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 numbers = ["microesnext-bytecode/numbers"]
 number-operations = [
@@ -39,18 +50,12 @@ number-operations = [
   "microesnext-bytecode/number-operations",
 ]
 objects = ["atoms", "microesnext-bytecode/objects"]
+receivers = ["functions", "microesnext-bytecode/receivers"]
 source-positions = []
 strings = ["microesnext-bytecode/strings"]
 
 [dependencies]
-microesnext-bytecode = { workspace = true, features = [
-  "environments",
-  "functions",
-  "function-arguments",
-  "locals",
-  "recursive-functions",
-  "receivers",
-] }
+microesnext-bytecode.workspace = true
 
 [lib]
 path = "src/lib.rs"
