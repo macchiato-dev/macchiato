@@ -331,6 +331,13 @@ enum TermKind {
     General,
 }
 
+#[cfg(all(feature = "integer-operations", feature = "logical-operations"))]
+#[derive(Clone, Copy)]
+enum UnaryOperator {
+    LogicalNot,
+    NumericNegation,
+}
+
 #[cfg(feature = "strings")]
 const fn string_term_kind() -> TermKind {
     TermKind::String
@@ -1260,7 +1267,7 @@ impl Parser<'_> {
         self.unary(binding)
     }
 
-    #[cfg(feature = "logical-operations")]
+    #[cfg(all(feature = "logical-operations", not(feature = "integer-operations")))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let mut negations = 0_usize;
         while self.consume(b'!') {
@@ -1279,9 +1286,82 @@ impl Parser<'_> {
         ))
     }
 
-    #[cfg(not(feature = "logical-operations"))]
+    #[cfg(all(feature = "integer-operations", not(feature = "logical-operations")))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut negations = 0_usize;
+        while self.consume_unary_minus() {
+            negations += 1;
+        }
+        let (used_binding, mut kind) = self.term(binding)?;
+        for _ in 0..negations {
+            kind = self.emit_numeric_negation(kind);
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(feature = "integer-operations", feature = "logical-operations"))]
+    fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let mut operators = Vec::new();
+        loop {
+            if self.consume(b'!') {
+                operators.push(UnaryOperator::LogicalNot);
+            } else if self.consume_unary_minus() {
+                operators.push(UnaryOperator::NumericNegation);
+            } else {
+                break;
+            }
+        }
+        let (used_binding, mut kind) = self.term(binding)?;
+        for operator in operators.into_iter().rev() {
+            match operator {
+                UnaryOperator::LogicalNot => {
+                    self.output.push(Opcode::LogicalNot as u8);
+                    kind = TermKind::General;
+                }
+                UnaryOperator::NumericNegation => kind = self.emit_numeric_negation(kind),
+            }
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(not(any(feature = "integer-operations", feature = "logical-operations")))]
     fn unary(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.term(binding)
+    }
+
+    #[cfg(feature = "integer-operations")]
+    fn consume_unary_minus(&mut self) -> bool {
+        self.whitespace();
+        if self.source[self.offset..].starts_with(b"--")
+            || self
+                .source
+                .get(self.offset + 1)
+                .is_some_and(u8::is_ascii_digit)
+        {
+            return false;
+        }
+        self.consume_raw(b'-')
+    }
+
+    #[cfg(feature = "integer-operations")]
+    fn emit_numeric_negation(&mut self, kind: TermKind) -> TermKind {
+        let result = match kind {
+            TermKind::I30(value) => value
+                .checked_neg()
+                .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+            _ => None,
+        };
+        #[cfg(feature = "number-operations")]
+        let immediate = result.is_some()
+            && (self.options.numbers == NumberMode::BoundedI30 || result != Some(0));
+        #[cfg(not(feature = "number-operations"))]
+        let immediate = result.is_some();
+        self.output.push(self.negate_opcode(immediate) as u8);
+        if immediate {
+            TermKind::I30(result.unwrap())
+        } else {
+            TermKind::General
+        }
     }
 
     #[cfg(feature = "number-operations")]
@@ -1296,6 +1376,20 @@ impl Parser<'_> {
     #[cfg(not(feature = "number-operations"))]
     fn add_opcode(&self, _proven_i30: bool) -> Opcode {
         Opcode::AddI30
+    }
+
+    #[cfg(feature = "number-operations")]
+    fn negate_opcode(&self, proven_i30: bool) -> Opcode {
+        if self.options.numbers == NumberMode::JavaScript && !proven_i30 {
+            Opcode::NegateNumber
+        } else {
+            Opcode::NegateI30
+        }
+    }
+
+    #[cfg(all(feature = "integer-operations", not(feature = "number-operations")))]
+    fn negate_opcode(&self, _proven_i30: bool) -> Opcode {
+        Opcode::NegateI30
     }
 
     #[cfg(feature = "number-operations")]
@@ -1838,7 +1932,13 @@ impl Parser<'_> {
             .map_err(|_| self.error("a number"))?;
         if !fractional {
             if let Ok(value) = source.parse::<i32>() {
-                if (-(1 << 29)..(1 << 29)).contains(&value) {
+                #[cfg(feature = "number-operations")]
+                let preserve_negative_zero = self.options.numbers == NumberMode::JavaScript
+                    && value == 0
+                    && source.starts_with('-');
+                #[cfg(not(feature = "number-operations"))]
+                let preserve_negative_zero = false;
+                if !preserve_negative_zero && (-(1 << 29)..(1 << 29)).contains(&value) {
                     self.output.push(Opcode::ConstI30 as u8);
                     self.output.extend_from_slice(&value.to_le_bytes());
                     return Ok(Some(value));
@@ -2130,6 +2230,7 @@ mod tests {
     #[test]
     fn reduced_parser_leaves_integer_operators_as_unexpected_tokens() {
         assert_eq!(compile_script("return 2 * 3;").unwrap_err().offset, 9);
+        assert_eq!(compile_script("return - true;").unwrap_err().offset, 7);
     }
 
     #[cfg(all(not(feature = "arrays"), feature = "source-positions"))]
@@ -2304,6 +2405,39 @@ mod tests {
 
         let exponent = compile_script("return .5e2;").unwrap();
         assert!(exponent.contains(&(Opcode::ConstF64 as u8)));
+
+        let negative = compile_script("return - 42;").unwrap();
+        assert!(negative.contains(&(Opcode::NegateI30 as u8)));
+        assert!(!negative.contains(&(Opcode::NegateNumber as u8)));
+
+        for source in ["return -0;", "return - 0;"] {
+            let negative_zero = compile_script(source).unwrap();
+            assert!(
+                negative_zero.contains(&(Opcode::ConstF64 as u8))
+                    || negative_zero.contains(&(Opcode::NegateNumber as u8))
+            );
+        }
+    }
+
+    #[cfg(feature = "integer-operations")]
+    #[test]
+    fn compiles_numeric_negation_without_native_parser_recursion() {
+        let mut source = alloc::string::String::from("return ");
+        source.extend(core::iter::repeat_n("- ", 20_000));
+        source.push_str("1;");
+        let code = compile_script_with_options(
+            &source,
+            CompileOptions {
+                numbers: NumberMode::BoundedI30,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::NegateI30 as u8)
+                .count(),
+            20_000
+        );
     }
 
     #[cfg(all(feature = "locals", feature = "number-operations"))]

@@ -50,3 +50,27 @@ fn source_arithmetic_promotes_past_i30() {
         );
     }
 }
+
+#[test]
+fn source_negation_preserves_fast_integers_and_negative_zero() {
+    let code = compile_script("let value = 42; return - value;").unwrap();
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(
+            microesnext::Value::from_i30(-42).unwrap()
+        ))
+    );
+
+    for source in ["return -0;", "return - 0;"] {
+        let code = compile_script(source).unwrap();
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected number completion")
+        };
+        let value = microesnext::numbers::get(machine.arena(), value).unwrap();
+        assert_eq!(value, 0.0);
+        assert!(value.is_sign_negative());
+    }
+}

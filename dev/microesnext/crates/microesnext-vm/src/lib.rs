@@ -561,6 +561,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 Ok(None)
             }
             #[cfg(feature = "integer-operations")]
+            Opcode::NegateI30 => {
+                let operand = self.core.arena_mut().pop()?;
+                let value = microesnext_integer_operations::negate(operand)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "number-operations")]
+            Opcode::NegateNumber => {
+                let operand = self.core.arena_mut().pop()?;
+                let value = microesnext_number_operations::negate(self.core.arena_mut(), operand)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "integer-operations")]
             Opcode::SubtractI30 => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
