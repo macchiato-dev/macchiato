@@ -122,6 +122,22 @@ coercion is still exactly 6,371 bytes, Number negation is still exactly 6,912
 bytes, and builds without decimal literals or string coercion neither resolve
 the conversion crate nor execute a dispatch branch for it.
 
+## Division and remainder, 2026-08-25
+
+The division-only runtime is 6,494 bytes (2,878 gzip), compared with 5,311
+bytes (2,422 gzip) for number storage alone. Remainder is independently 9,311
+bytes (4,240 gzip). An initial combined implementation measured 9,786 bytes
+(4,363 gzip): linked measurement revealed that `%` retained a much larger
+floating helper and would make `/` pay for it. The final design therefore uses
+two leaf crates, two bytecode gates, and compile-time VM arms.
+
+Compiler probes are 9,478 bytes for each isolated token family (4,401 gzip for
+division and 4,402 for remainder); most of that build is their shared decimal
+literal parser. Feature-graph checks prove that either compiler gate includes
+`numbers` but neither integer operations nor the other quotient operation.
+The existing number-operations runtime remains exactly 9,382 bytes and the
+minimal runtime remains exactly 1,984 bytes.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -184,6 +200,8 @@ LTO from merely discarding an enabled but unused dependency.
 | Primitive Number coercion | 6,371 | 2,823 |
 | String Number coercion | 14,599 | 6,608 |
 | Promoted number operations | 9,382 | 3,309 |
+| Number division | 6,494 | 2,878 |
+| Number remainder | 9,311 | 4,240 |
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Strings only | 4,903 | 2,270 |
@@ -195,12 +213,12 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 89,167 | 28,939 |
+| All capabilities | 93,614 | 30,634 |
 
-The all-capabilities row now actually selects string concatenation, primitive
-and string Number coercion, and Number negation. The earlier 78,513-byte row
-was a broad composition but omitted those independently gated paths; it was
-therefore mislabeled rather than a valid before/after size comparison.
+The all-capabilities row selects string concatenation, primitive and string
+Number coercion, Number negation, division, and remainder. The earlier
+78,513-byte row was a broad composition but omitted independently gated paths;
+it was therefore mislabeled rather than a valid before/after size comparison.
 
 The negation rows are intentionally separate. Adding unary instructions to the
 existing integer and promoted-arithmetic crates initially grew the minimal
@@ -451,6 +469,8 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | bounded integer operations | 6,632 | 2,728 |
 | bounded numeric negation | 5,791 | 2,503 |
 | decimal number literals | 9,088 | 4,254 |
+| number division | 9,478 | 4,401 |
+| number remainder | 9,478 | 4,402 |
 | primitive Number coercion | 5,690 | 2,466 |
 | string Number coercion | 6,553 | 2,932 |
 | JavaScript Number negation | 6,072 | 2,597 |
@@ -463,7 +483,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 34,057 | 13,284 |
+| default language slice | 34,325 | 13,354 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

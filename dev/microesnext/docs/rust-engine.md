@@ -98,6 +98,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   from binary arithmetic. The promoted path preserves negative zero, while a
   build needing only multiplication or comparison retains neither negation
   crate nor either negation opcode.
+- Division and remainder are separate from each other and from ordinary
+  arithmetic. This is not only taxonomy: linked Wasm showed that floating `%`
+  retains a substantially larger helper than `/`. A division-only machine has
+  no remainder opcode, crate, or dispatch branch.
 - Primitive Number coercion is a further capability boundary. Its typed result
   lets promoted negation consume a coercion result once, while its pre-existing
   i30 branch remains ahead of coercion. Unary plus materializes a boxed value

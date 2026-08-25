@@ -105,6 +105,10 @@ an explicit relational stopping condition.
 - `microesnext-number-operations` adds promoted arithmetic and relational
   comparison. Its i30 fast paths remain direct; overflow falls through to the
   number representation only in builds selecting this crate.
+- `microesnext-number-division` adds `/` without pulling in the larger
+  floating-point remainder helper. `microesnext-number-remainder` separately
+  adds `%` and keeps safe i30 results immediate. Either feature can be omitted
+  without adding an opcode case to the other arithmetic paths.
 - `microesnext-number-negation` composes the integer fast path with boxed
   IEEE-754 results and primitive coercion, including negative zero. Its i30
   path still enters integer negation directly. It does not make the compiler
