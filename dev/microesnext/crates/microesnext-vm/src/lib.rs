@@ -192,6 +192,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
+            #[cfg(feature = "stack-operations")]
+            Opcode::DuplicateTop => {
+                microesnext_stack_operations::duplicate_top(self.core.arena_mut())?;
+                Ok(None)
+            }
             #[cfg(feature = "async")]
             Opcode::Await => {
                 let handler_depth = self.current_handler_depth();

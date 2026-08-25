@@ -60,6 +60,10 @@ strings = [
   "microesnext-equality?/strings",
   "microesnext-logical-operations?/strings",
 ]
+stack-operations = [
+  "dep:microesnext-stack-operations",
+  "microesnext-vm/stack-operations",
+]
 string-operations = [
   "strings",
   "dep:microesnext-string-operations",
@@ -261,6 +265,7 @@ microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-stack-operations = { workspace = true, optional = true }
 microesnext-string-operations = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
 microesnext-thenables = { workspace = true, optional = true }

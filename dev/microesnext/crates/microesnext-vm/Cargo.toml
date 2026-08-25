@@ -27,6 +27,10 @@ strings = [
   "microesnext-logical-operations?/strings",
   "microesnext-truthiness?/strings",
 ]
+stack-operations = [
+  "dep:microesnext-stack-operations",
+  "microesnext-bytecode/stack-operations",
+]
 string-operations = [
   "strings",
   "dep:microesnext-string-operations",
@@ -200,6 +204,7 @@ microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-stack-operations = { workspace = true, optional = true }
 microesnext-string-operations = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }
 microesnext-typeof = { workspace = true, optional = true }

@@ -117,6 +117,9 @@ pub use microesnext_objects as objects;
 #[cfg(feature = "strings")]
 pub use microesnext_strings as strings;
 
+#[cfg(feature = "stack-operations")]
+pub use microesnext_stack_operations as stack_operations;
+
 #[cfg(feature = "string-operations")]
 pub use microesnext_string_operations as string_operations;
 
