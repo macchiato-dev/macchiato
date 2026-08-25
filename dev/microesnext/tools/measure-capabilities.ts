@@ -22,6 +22,17 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["collections", "collections", [core, ["collections_probe", 0]]],
     ["control flow", "control-flow", [core, ["control_flow_probe", 42]]],
     [
+      "control flow with scalar truthiness",
+      "control-flow,numbers,strings",
+      [
+        core,
+        ["control_flow_probe", 42],
+        ["numbers_probe", 3.25],
+        ["strings_probe", "nonzero"],
+        ["scalar_truthiness_probe", 1],
+      ],
+    ],
+    [
       "collection iterators",
       "collection-iterators",
       [core, ["collections_probe", 0], ["iterators_probe", 11], [
@@ -108,6 +119,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["collection_entry_iterators_probe", 42],
         ["collection_equality_probe", 1],
         ["control_flow_probe", 42],
+        ["scalar_truthiness_probe", 1],
         ["exceptions_probe", 42],
         ["functions_probe", "nonzero"],
         ["iterators_probe", 11],

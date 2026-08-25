@@ -96,6 +96,45 @@ pub extern "C" fn control_flow_probe() -> i32 {
     }
 }
 
+#[cfg(all(
+    feature = "control-flow",
+    feature = "numbers",
+    feature = "strings",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn scalar_truthiness_probe() -> i32 {
+    let nan = f64::NAN.to_bits();
+    let number = [
+        Opcode::ConstF64 as u8,
+        nan as u8,
+        (nan >> 8) as u8,
+        (nan >> 16) as u8,
+        (nan >> 24) as u8,
+        (nan >> 32) as u8,
+        (nan >> 40) as u8,
+        (nan >> 48) as u8,
+        (nan >> 56) as u8,
+        Opcode::ToBoolean as u8,
+        Opcode::Return as u8,
+    ];
+    let string = [
+        Opcode::ConstString as u8,
+        0,
+        0,
+        Opcode::ToBoolean as u8,
+        Opcode::Return as u8,
+    ];
+    let mut number_memory = [0; 32];
+    let mut string_memory = [0; 32];
+    let mut number_machine = Machine::new(&number, &mut number_memory);
+    let mut string_machine = Machine::new(&string, &mut string_memory);
+    i32::from(
+        number_machine.run() == Ok(Outcome::Complete(microesnext::Value::FALSE))
+            && string_machine.run() == Ok(Outcome::Complete(microesnext::Value::FALSE)),
+    )
+}
+
 #[cfg(all(feature = "async", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn async_probe() -> i32 {

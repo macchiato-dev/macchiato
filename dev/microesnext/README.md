@@ -33,6 +33,12 @@ not link to that C implementation.
   crate can also use already-interned or non-string keys.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
+- `microesnext-locals` supplies validated lexical stack slots. Local loads and
+  stores use bottom-relative positions, so temporary operands and suspension
+  cannot move them; literal-only machines omit the crate entirely.
+- `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
+  storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
+  strings correct without making control-flow-only builds depend on them.
 - `microesnext-numbers` supplies heap-backed IEEE-754 values and promoted
   arithmetic. Small i30 values and their direct addition remain in the base VM;
   integer-only builds do not link floating-point parsing or storage.
@@ -106,7 +112,10 @@ prove identical performance. The structural performance gate is stronger: the
 minimal dependency graph excludes capability crates, and the hot loop reads
 raw opcode bytes from `microesnext-bytecode-core`. It uses a direct match with
 no feature-dependent enum, trait objects, registries, or dynamic callbacks.
-Only an extension byte crosses into the typed capability wrapper.
+Only an extension byte crosses into the typed capability wrapper. Local and
+control-flow instructions use that same static boundary. This keeps the raw
+base loop byte-for-byte independent of those optional instruction families;
+there is no trait object, registry, or runtime feature lookup.
 
 This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
 Macchiato repository are consumers and comparison points, not source

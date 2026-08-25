@@ -59,28 +59,31 @@ LTO from merely discarding an enabled but unused dependency.
 
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| Minimal | 2,032 | 910 |
-| Arrays | 8,816 | 3,471 |
-| Array iterators | 10,804 | 4,152 |
-| Atoms with strings | 10,017 | 4,148 |
-| Async suspension | 6,503 | 2,805 |
-| Collections | 3,333 | 1,460 |
-| Collection iterators | 10,218 | 4,042 |
-| Collection entry iterators | 13,590 | 4,922 |
-| Collections with number/string equality | 15,186 | 5,783 |
-| Exceptions | 3,894 | 1,714 |
-| Functions | 7,010 | 2,973 |
-| Iterator cursor | 3,647 | 1,577 |
-| Iterator result objects | 13,992 | 5,390 |
-| Iterable protocol binding | 10,323 | 4,138 |
-| Numbers | 6,029 | 2,565 |
-| Objects with atoms and strings | 14,711 | 5,798 |
-| Strings only | 5,008 | 2,243 |
-| Symbols | 5,043 | 2,198 |
-| Well-known symbols | 5,573 | 2,392 |
-| Promises | 4,888 | 2,183 |
-| Weak collections | 2,099 | 951 |
-| All capabilities | 39,234 | 13,616 |
+| Minimal | 1,984 | 961 |
+| Arrays | 8,768 | 3,532 |
+| Array iterators | 10,756 | 4,205 |
+| Atoms with strings | 9,969 | 4,208 |
+| Async suspension | 6,455 | 2,856 |
+| Collections | 3,285 | 1,507 |
+| Control flow and base truthiness | 3,486 | 1,657 |
+| Control flow with number/string truthiness | 9,380 | 3,962 |
+| Collection iterators | 10,170 | 4,091 |
+| Collection entry iterators | 13,542 | 4,979 |
+| Collections with number/string equality | 15,138 | 5,840 |
+| Exceptions | 3,846 | 1,761 |
+| Functions | 6,962 | 3,034 |
+| Iterator cursor | 3,599 | 1,630 |
+| Lexical locals | 4,008 | 1,820 |
+| Iterator result objects | 13,944 | 5,448 |
+| Iterable protocol binding | 10,275 | 4,197 |
+| Numbers | 5,981 | 2,627 |
+| Objects with atoms and strings | 14,663 | 5,859 |
+| Strings only | 4,960 | 2,299 |
+| Symbols | 4,995 | 2,254 |
+| Well-known symbols | 5,525 | 2,448 |
+| Promises | 4,840 | 2,237 |
+| Weak collections | 2,051 | 1,001 |
+| All capabilities | 42,664 | 14,723 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -100,7 +103,7 @@ opcodes.
 
 The number probe parses live `ConstF64` and `AddNumber` instructions and reads
 the resulting arena value. Its 6,029-byte artifact includes floating-point
-storage and promotion. With `numbers` omitted, the 2,032-byte minimal artifact
+storage and promotion. With `numbers` omitted, the 1,984-byte minimal artifact
 contains no floating-point implementation.
 
 The symbol probe creates two undescribed symbols, verifies distinct identity,
@@ -164,8 +167,32 @@ The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode
 through Cargo feature unification. Optional opcodes are themselves gated, and
 the minimal decoder rejects their bytes. Together those changes keep the
-minimal artifact at 2,032 bytes while its instruction loop remains independent
+minimal artifact at 1,984 bytes while its instruction loop remains independent
 of the typed capability decoder.
+
+Lexical storage was first added directly to the invariant opcode match. That
+made the minimal Wasm grow from 2,032 to 3,553 bytes even when no local opcode
+was executed. Adding direct branch arms raised it again to 3,819 bytes. More
+importantly, five alternating native samples showed a consistent 15–25%
+slowdown in the unrelated integer loop. This failed both the size and
+performance gates.
+
+The replacement puts bottom-relative slot operations in
+`microesnext-locals`, gates their typed opcodes, and handles them through the
+same statically composed extension boundary as other optional capabilities.
+Control flow uses that boundary too, with `microesnext-truthiness` composing
+boxed-number and string coercion only when those scalar features are enabled.
+The resulting live Wasm probes are 4,008 bytes for locals and 3,486 bytes for
+control flow, while the minimal artifact is 1,984 bytes. Five alternating
+native samples measured 3.22–3.31 ns/instruction for the minimal core and
+3.23–3.37 with locals and control flow enabled; the first composed warm-up was
+the sole 3.37 sample. The `Machine` ranges were 3.23–3.25 and 3.22–3.26. These
+overlap, and structurally both configurations execute exactly the same
+feature-free `Core` loop until an optional opcode is actually encountered.
+The 9,380-byte scalar-truthiness composition executes `ToBoolean` on a boxed
+NaN and an empty ordinary string. This ensures the measurement retains the
+optional false-value paths rather than reporting a control-flow build that
+only ever sees invariant immediates.
 
 Ordinary `ConstString` now allocates an unrooted string and no longer creates
 or populates an atom table. The 5,008-byte string row therefore excludes both
