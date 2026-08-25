@@ -1,7 +1,11 @@
 #![no_std]
 
 use microesnext_arena::Arena;
+#[cfg(feature = "objects")]
+use microesnext_bytecode::read_bytes;
 use microesnext_bytecode::{Opcode, read_i30, read_opcode, read_u32};
+#[cfg(feature = "objects")]
+use microesnext_objects::{Atoms, get, new_object, set};
 use microesnext_types::{Error, RootId, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -19,6 +23,8 @@ pub struct Machine<'code, 'memory> {
     code: &'code [u8],
     pc: usize,
     frame_depth: Option<usize>,
+    #[cfg(feature = "objects")]
+    atoms: Option<Atoms>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -36,7 +42,26 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             code,
             pc: 0,
             frame_depth: None,
+            #[cfg(feature = "objects")]
+            atoms: None,
         }
+    }
+
+    #[cfg(feature = "objects")]
+    pub fn with_objects(
+        code: &'code [u8],
+        memory: &'memory mut [u32],
+        root_capacity: usize,
+    ) -> Result<Self, Error> {
+        let mut arena = Arena::with_root_capacity(memory, root_capacity);
+        let atoms = Atoms::new(&mut arena)?;
+        Ok(Self {
+            arena,
+            code,
+            pc: 0,
+            frame_depth: None,
+            atoms: Some(atoms),
+        })
     }
 
     #[inline(always)]
@@ -65,6 +90,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             code: self.code,
             pc: self.pc,
             frame_depth: self.frame_depth,
+            #[cfg(feature = "objects")]
+            atoms: self.atoms,
         })
     }
 
@@ -127,6 +154,48 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         .push(Value::from_i30(previous_frame).ok_or(Error::BadBytecode)?)?;
                     self.frame_depth = Some(self.arena.stack_len());
                     self.pc = target;
+                }
+                Opcode::ConstString => {
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "objects")]
+                    {
+                        let bytes = read_bytes(self.code, &mut self.pc)?;
+                        let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
+                        let value = atoms.intern(&mut self.arena, bytes)?;
+                        self.arena.push(value)?;
+                    }
+                }
+                Opcode::NewObject => {
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "objects")]
+                    {
+                        let object = new_object(&mut self.arena, Value::NULL)?;
+                        self.arena.push(object)?;
+                    }
+                }
+                Opcode::GetProperty => {
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "objects")]
+                    {
+                        let key = self.arena.pop()?;
+                        let object = self.arena.pop()?;
+                        self.arena.push(get(&self.arena, object, key)?)?;
+                    }
+                }
+                Opcode::SetProperty => {
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "objects")]
+                    {
+                        let value = self.arena.pop()?;
+                        let key = self.arena.pop()?;
+                        let object = self.arena.pop()?;
+                        let object = set(&mut self.arena, object, key, value)?;
+                        self.arena.push(object)?;
+                    }
                 }
             }
         }
@@ -224,6 +293,26 @@ mod tests {
             .finish();
         let mut memory = [0; 64];
         let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run().unwrap(),
+            Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[cfg(feature = "objects")]
+    #[test]
+    fn executes_interned_property_bytecode() {
+        let code = Builder::new()
+            .object()
+            .string(b"answer")
+            .const_i30(42)
+            .op(Opcode::SetProperty)
+            .string(b"answer")
+            .op(Opcode::GetProperty)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 128];
+        let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
         assert_eq!(
             machine.run().unwrap(),
             Outcome::Complete(Value::from_i30(42).unwrap())

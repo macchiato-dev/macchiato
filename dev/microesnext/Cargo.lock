@@ -61,5 +61,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-bytecode",
  "microesnext-compiler",
+ "microesnext-objects",
  "microesnext-types",
 ]

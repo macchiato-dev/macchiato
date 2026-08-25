@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = []
 async = ["dep:microesnext-async"]
+objects = ["microesnext-vm/objects"]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
@@ -27,3 +28,8 @@ microesnext-compiler.workspace = true
 name = "source"
 path = "tests/source.rs"
 required-features = ["async"]
+
+[[test]]
+name = "objects"
+path = "tests/objects.rs"
+required-features = ["objects"]

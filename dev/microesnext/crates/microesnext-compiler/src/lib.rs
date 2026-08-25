@@ -40,6 +40,24 @@ impl Builder {
         self
     }
 
+    pub fn string(mut self, bytes: &[u8]) -> Self {
+        assert!(u16::try_from(bytes.len()).is_ok());
+        self.output_string(bytes);
+        self
+    }
+
+    pub fn object(mut self) -> Self {
+        self.code.push(Opcode::NewObject as u8);
+        self
+    }
+
+    fn output_string(&mut self, bytes: &[u8]) {
+        self.code.push(Opcode::ConstString as u8);
+        self.code
+            .extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+        self.code.extend_from_slice(bytes);
+    }
+
     pub fn finish(self) -> Vec<u8> {
         self.code
     }
@@ -81,6 +99,43 @@ impl Parser<'_> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
+        if self.consume_raw(b'{') {
+            self.output.push(Opcode::NewObject as u8);
+            if !self.consume(b'}') {
+                loop {
+                    self.whitespace();
+                    let (start, end) = self.identifier()?;
+                    if !self.consume(b':') {
+                        return Err(self.error(":"));
+                    }
+                    self.output_string_range(start, end);
+                    self.integer()?;
+                    self.output.push(Opcode::SetProperty as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                }
+            }
+        } else {
+            self.integer()?;
+        }
+        while self.consume(b'.') {
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            self.output_string_range(start, end);
+            self.output.push(Opcode::GetProperty as u8);
+        }
+        if awaiting {
+            self.output.push(Opcode::Await as u8);
+        }
+        Ok(())
+    }
+
+    fn integer(&mut self) -> Result<(), CompileError> {
+        self.whitespace();
         let start = self.offset;
         let negative = self.consume_raw(b'-');
         let mut value = 0_i32;
@@ -105,10 +160,35 @@ impl Parser<'_> {
         }
         self.output.push(Opcode::ConstI30 as u8);
         self.output.extend_from_slice(&value.to_le_bytes());
-        if awaiting {
-            self.output.push(Opcode::Await as u8);
-        }
         Ok(())
+    }
+
+    fn identifier(&mut self) -> Result<(usize, usize), CompileError> {
+        let start = self.offset;
+        let Some(first) = self.source.get(self.offset).copied() else {
+            return Err(self.error("an identifier"));
+        };
+        if !first.is_ascii_alphabetic() && first != b'_' && first != b'$' {
+            return Err(self.error("an identifier"));
+        }
+        self.offset += 1;
+        while self
+            .source
+            .get(self.offset)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
+        {
+            self.offset += 1;
+        }
+        Ok((start, self.offset))
+    }
+
+    fn output_string_range(&mut self, start: usize, end: usize) {
+        let length = end - start;
+        debug_assert!(u16::try_from(length).is_ok());
+        self.output.push(Opcode::ConstString as u8);
+        self.output
+            .extend_from_slice(&(length as u16).to_le_bytes());
+        self.output.extend_from_slice(&self.source[start..end]);
     }
 
     fn word(&mut self, word: &[u8]) -> Result<(), CompileError> {
@@ -194,6 +274,22 @@ mod tests {
                 offset: 11,
                 expected: "an integer",
             }
+        );
+    }
+
+    #[test]
+    fn compiles_an_object_without_recursive_parsing() {
+        assert_eq!(
+            compile_script("return { answer: 42 }.answer;").unwrap(),
+            Builder::new()
+                .object()
+                .string(b"answer")
+                .const_i30(42)
+                .op(Opcode::SetProperty)
+                .string(b"answer")
+                .op(Opcode::GetProperty)
+                .op(Opcode::Return)
+                .finish()
         );
     }
 }
