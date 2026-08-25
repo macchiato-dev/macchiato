@@ -15,6 +15,7 @@ default = [
   "constructors",
   "construction",
   "class-methods",
+  "class-default-constructors",
   "equality",
   "exceptions",
   "function-arguments",
@@ -52,6 +53,7 @@ classes = [
   "microesnext-bytecode/class-constructors",
 ]
 class-methods = ["classes", "method-calls"]
+class-default-constructors = ["classes"]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 environments = ["functions", "microesnext-bytecode/environments"]

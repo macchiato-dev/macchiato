@@ -636,7 +636,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "classes")]
+    #[cfg(all(feature = "classes", not(feature = "class-default-constructors")))]
     fn class_declaration(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
         if count_patch.is_none() {
             self.output.push(Opcode::InitLocals as u8);
@@ -686,6 +686,83 @@ impl Parser<'_> {
         self.consume(b';');
         self.whitespace();
         Ok(())
+    }
+
+    #[cfg(feature = "class-default-constructors")]
+    fn class_declaration(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+        if count_patch.is_none() {
+            self.output.push(Opcode::InitLocals as u8);
+            *count_patch = Some(self.output.len());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+        }
+        self.whitespace();
+        let (name_start, name_end) = self.identifier()?;
+        if self.locals.iter().any(|binding| {
+            self.source[binding.start..binding.end] == self.source[name_start..name_end]
+        }) {
+            return Err(self.error("a unique local binding"));
+        }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.locals.push(Binding {
+            start: name_start,
+            end: name_end,
+            slot,
+            #[cfg(feature = "environments")]
+            captured: false,
+        });
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        if self.try_word_after_whitespace(b"constructor") {
+            let parameters = self.function_parameters()?;
+            self.function_value(
+                parameters,
+                Some(slot),
+                FunctionBody::ClassConstructor,
+                None,
+                false,
+                true,
+            )?;
+        } else {
+            self.default_class_constructor(slot);
+        }
+        #[cfg(not(feature = "class-methods"))]
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        #[cfg(feature = "class-methods")]
+        loop {
+            self.whitespace();
+            if self.consume_raw(b'}') {
+                break;
+            }
+            self.class_method(slot)?;
+        }
+        self.consume(b';');
+        self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "class-default-constructors")]
+    fn default_class_constructor(&mut self, destination: u16) {
+        self.output.push(Opcode::Closure as u8);
+        let target_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.extend_from_slice(&0_u16.to_le_bytes());
+        self.output.push(Opcode::ToClassConstructor as u8);
+        self.output.push(Opcode::StoreLocal as u8);
+        self.output.extend_from_slice(&destination.to_le_bytes());
+        let code = self
+            .initial_function_frame(0, true)
+            .into_iter()
+            .chain([Opcode::LoadThis as u8, Opcode::ReturnReceiverLocals as u8])
+            .collect();
+        self.functions.push(PendingFunction {
+            target_patch,
+            code,
+            relocations: Vec::new(),
+        });
     }
 
     #[cfg(feature = "class-methods")]
@@ -3690,5 +3767,29 @@ mod tests {
         assert!(code.contains(&(Opcode::ToMethod as u8)));
         assert!(code.contains(&(Opcode::GetMethod as u8)));
         assert!(code.contains(&(Opcode::CallMethodArguments as u8)));
+    }
+
+    #[cfg(feature = "class-default-constructors")]
+    #[test]
+    fn synthesizes_only_the_missing_base_constructor() {
+        let implicit = compile_script("class Empty {} return new Empty();").unwrap();
+        let explicit =
+            compile_script("class Empty { constructor() {} } return new Empty();").unwrap();
+
+        assert!(implicit.contains(&(Opcode::ToClassConstructor as u8)));
+        assert_eq!(
+            implicit
+                .iter()
+                .filter(|byte| **byte == Opcode::ToClassConstructor as u8)
+                .count(),
+            1
+        );
+        assert_eq!(
+            explicit
+                .iter()
+                .filter(|byte| **byte == Opcode::ToClassConstructor as u8)
+                .count(),
+            1
+        );
     }
 }

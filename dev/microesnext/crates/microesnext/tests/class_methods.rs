@@ -55,3 +55,20 @@ fn methods_do_not_gain_constructor_prototypes() {
 
     assert_eq!(machine.run(), Err(microesnext::Error::Type));
 }
+
+#[test]
+fn a_method_only_class_uses_the_implicit_constructor() {
+    let code = compile_script(
+        "class Answer { read() { return 42; } } \
+         let answer = new Answer(); \
+         return answer.read();",
+    )
+    .unwrap();
+    let mut memory = [0; 1024];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

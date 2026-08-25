@@ -50,3 +50,11 @@ fn classes_are_functions_for_typeof_and_constructors_for_instanceof() {
             .unwrap()
     );
 }
+
+#[test]
+fn an_empty_class_receives_an_implicit_base_constructor() {
+    let outcome =
+        run("class Empty {} let value = new Empty(); return value instanceof Empty;").unwrap();
+
+    assert_eq!(outcome, Outcome::Complete(Value::TRUE));
+}
