@@ -10,6 +10,8 @@ use microesnext_exceptions::Handlers;
 use microesnext_functions::{capture, capture_stack, entry};
 #[cfg(feature = "objects")]
 use microesnext_objects::{Atoms, get, new_object, set};
+#[cfg(feature = "async")]
+use microesnext_suspension::{restore, restore_value, resume, resume_value, suspend};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::{Core, CoreOutcome};
 
@@ -132,9 +134,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 return Err(Error::BadBytecode);
                 #[cfg(feature = "async")]
                 {
-                    let (value, continuation) = self
-                        .core
-                        .suspend_with_handler(self.current_handler_depth())?;
+                    let handler_depth = self.current_handler_depth();
+                    let (value, continuation) = suspend(&mut self.core, handler_depth)?;
                     Ok(Some(Outcome::Await {
                         value,
                         continuation,
@@ -328,14 +329,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         self.run()
     }
 
+    #[cfg(feature = "async")]
     pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<Outcome, Error> {
-        let handler_depth = self.core.resume_with_handler(continuation, value)?;
+        let handler_depth = resume(&mut self.core, continuation, value)?;
         self.set_handler_depth(handler_depth);
         self.run()
     }
 
+    #[cfg(feature = "async")]
     pub fn resume_value(&mut self, continuation: Value, value: Value) -> Result<Outcome, Error> {
-        let handler_depth = self.core.resume_value_with_handler(continuation, value)?;
+        let handler_depth = resume_value(&mut self.core, continuation, value)?;
         self.set_handler_depth(handler_depth);
         self.run()
     }
@@ -349,7 +352,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         continuation: RootId,
         reason: Value,
     ) -> Result<Outcome, Error> {
-        let handler_depth = self.core.restore(continuation)?;
+        let handler_depth = restore(&mut self.core, continuation)?;
         self.set_handler_depth(handler_depth);
         match self.handle_throw(reason)? {
             Some(outcome) => Ok(outcome),
@@ -363,7 +366,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         continuation: Value,
         reason: Value,
     ) -> Result<Outcome, Error> {
-        let handler_depth = self.core.restore_value(continuation)?;
+        let handler_depth = restore_value(&mut self.core, continuation)?;
         self.set_handler_depth(handler_depth);
         match self.handle_throw(reason)? {
             Some(outcome) => Ok(outcome),
@@ -381,6 +384,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     }
 
     #[inline(always)]
+    #[cfg(feature = "async")]
     fn set_handler_depth(&mut self, handler_depth: Option<usize>) {
         #[cfg(feature = "exceptions")]
         {

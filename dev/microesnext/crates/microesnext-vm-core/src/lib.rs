@@ -2,7 +2,7 @@
 
 use microesnext_arena::Arena;
 use microesnext_bytecode::{Opcode, read_bytes, read_i30, read_opcode, read_u16, read_u32};
-use microesnext_types::{Error, RootId, Value};
+use microesnext_types::{Error, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CoreOutcome {
@@ -186,66 +186,6 @@ impl<'code, 'memory> Core<'code, 'memory> {
         self.arena.push(argument)?;
         self.pc = target;
         Ok(())
-    }
-
-    pub fn suspend(&mut self) -> Result<(Value, RootId), Error> {
-        self.suspend_with_handler(None)
-    }
-
-    pub fn suspend_with_handler(
-        &mut self,
-        handler_depth: Option<usize>,
-    ) -> Result<(Value, RootId), Error> {
-        let mut roots = [self.arena.pop()?];
-        let continuation = self.arena.suspend_stack(
-            self.pc as u32,
-            self.frame_depth,
-            handler_depth,
-            &mut roots,
-        )?;
-        let continuation = self.arena.retain(Value::from_ref(continuation))?;
-        Ok((roots[0], continuation))
-    }
-
-    pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<(), Error> {
-        self.resume_with_handler(continuation, value).map(|_| ())
-    }
-
-    pub fn resume_with_handler(
-        &mut self,
-        continuation: RootId,
-        value: Value,
-    ) -> Result<Option<usize>, Error> {
-        let continuation = self.arena.release(continuation)?;
-        self.resume_value_with_handler(continuation, value)
-    }
-
-    pub fn resume_value(&mut self, continuation: Value, value: Value) -> Result<(), Error> {
-        self.resume_value_with_handler(continuation, value)
-            .map(|_| ())
-    }
-
-    pub fn resume_value_with_handler(
-        &mut self,
-        continuation: Value,
-        value: Value,
-    ) -> Result<Option<usize>, Error> {
-        let handler_depth = self.restore_value(continuation)?;
-        self.arena.push(value)?;
-        Ok(handler_depth)
-    }
-
-    pub fn restore(&mut self, continuation: RootId) -> Result<Option<usize>, Error> {
-        let continuation = self.arena.release(continuation)?;
-        self.restore_value(continuation)
-    }
-
-    pub fn restore_value(&mut self, continuation: Value) -> Result<Option<usize>, Error> {
-        let continuation = continuation.as_ref().ok_or(Error::Type)?;
-        let (pc, frame_depth, handler_depth) = self.arena.resume_stack(continuation)?;
-        self.pc = pc as usize;
-        self.frame_depth = frame_depth;
-        Ok(handler_depth)
     }
 
     pub fn abandon(&mut self) {

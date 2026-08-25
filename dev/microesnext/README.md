@@ -36,6 +36,9 @@ not link to that C implementation.
   stack unwinding only for builds enabling the `exceptions` feature. Handler
   records remain guest-stack words; the invariant opcode core has no exception
   state.
+- `microesnext-suspension` turns a running guest stack into a rooted,
+  relocatable continuation and restores it for fulfilled or rejected `await`.
+  It enters the graph only through the VM's `async` feature.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.

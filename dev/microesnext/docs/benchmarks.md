@@ -57,22 +57,26 @@ LTO from merely discarding an enabled but unused dependency.
 | --- | ---: | ---: |
 | Minimal | 1,900 | 874 |
 | Arrays | 6,801 | 2,835 |
+| Async suspension | 6,590 | 2,807 |
 | Collections | 3,201 | 1,416 |
-| Exceptions | 2,126 | 936 |
+| Exceptions | 3,734 | 1,589 |
 | Functions | 1,924 | 892 |
 | Objects | 4,745 | 2,135 |
 | Promises | 4,756 | 2,144 |
 | Weak collections | 1,967 | 918 |
-| All capabilities | 10,113 | 4,030 |
+| All capabilities | 25,230 | 9,157 |
 
-After adding source-level catches and explicit guest handler records, the
-minimal probe is 1,900 bytes (874 gzip), while the exception probe is 2,126
-bytes (936 gzip). Handler state belongs to the optional `Machine` wrapper;
-`Core` has one layout and one opcode loop in every feature configuration.
-Extracting that state into `microesnext-exceptions` left every measured Wasm
-size unchanged. `cargo tree -p microesnext --no-default-features` contains no
-exception crate, while adding `--features exceptions` links it through the
-facade and VM wrapper.
+The harness now instantiates every built artifact and invokes the export for
+each claimed capability. This corrected an older exception row that enabled
+the Cargo feature but accidentally ran only `Core`, allowing LTO to discard
+the handler implementation, and an “all” row that omitted exceptions. The
+current exception and combined figures supersede those undercounts.
+
+Handler state belongs to the optional `Machine` wrapper; `Core` has one layout
+and one opcode loop in every feature configuration. `cargo tree -p
+microesnext --no-default-features` contains neither the exception nor
+suspension crate. Adding the corresponding feature links the implementation
+through the VM wrapper.
 
 Five alternating direct-loop samples after the extraction measured
 3.35–3.49 ns/instruction for the minimal build and 3.36–3.45 ns/instruction
@@ -83,6 +87,13 @@ identical timing.
 These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the
 final Wasm, while enabled rows contain live exported calls into that crate.
+Moving suspend/resume/restore out of `microesnext-vm-core` and into the optional
+`microesnext-suspension` crate leaves the minimal probe at 1,900 bytes. The
+live async probe is 6,590 bytes (2,807 gzip). Enabling `async` adds the crate
+through the VM; disabling it also removes resume operations from the public
+surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
+for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
+cost from the optional crate.
 Re-run them with:
 
 ```sh

@@ -9,7 +9,7 @@ version.workspace = true
 
 [features]
 default = []
-async = []
+async = ["dep:microesnext-suspension"]
 arrays = ["dep:microesnext-arrays"]
 objects = ["dep:microesnext-objects"]
 functions = ["dep:microesnext-functions"]
@@ -24,6 +24,7 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
+microesnext-suspension = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

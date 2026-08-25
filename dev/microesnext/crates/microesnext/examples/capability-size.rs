@@ -1,10 +1,14 @@
 #![cfg_attr(target_arch = "wasm32", no_std)]
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
+#[cfg(all(target_arch = "wasm32", feature = "async"))]
+use microesnext::Value;
 #[cfg(target_arch = "wasm32")]
 use microesnext::bytecode::Opcode;
 #[cfg(target_arch = "wasm32")]
 use microesnext::{Core, CoreOutcome};
+#[cfg(all(target_arch = "wasm32", any(feature = "async", feature = "exceptions")))]
+use microesnext::{Machine, Outcome};
 
 #[cfg(all(not(test), target_arch = "wasm32"))]
 #[panic_handler]
@@ -20,6 +24,29 @@ pub extern "C" fn core_probe() -> i32 {
     let mut core = Core::new(&code, &mut memory, 0);
     match core.run() {
         Ok(CoreOutcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "async", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn async_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Await as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 1);
+    let Ok(Outcome::Await { continuation, .. }) = machine.run() else {
+        return -1;
+    };
+    match machine.resume(continuation, Value::from_i30(7).unwrap()) {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
 }
@@ -43,9 +70,9 @@ pub extern "C" fn exceptions_probe() -> i32 {
         Opcode::Return as u8,
     ];
     let mut memory = [0; 32];
-    let mut core = Core::new(&code, &mut memory, 0);
-    match core.run() {
-        Ok(CoreOutcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
 }

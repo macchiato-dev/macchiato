@@ -29,6 +29,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
+- The optional `microesnext-suspension` crate owns conversion between a live
+  VM stack and a rooted continuation. The arena supplies generic stack-snapshot
+  storage, but `microesnext-vm-core` contains no suspend, resume, or restore
+  algorithm. Builds without `async` do not expose those machine operations.
 - Guest exception handlers are explicit records in the guest stack. The
   optional `microesnext-exceptions` crate owns the handler-chain pointer and
   stack operations; `microesnext-vm` composes it only behind the `exceptions`

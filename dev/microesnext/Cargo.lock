@@ -106,6 +106,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-suspension"
+version = "0.0.0"
+dependencies = [
+ "microesnext-types",
+ "microesnext-vm-core",
+]
+
+[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 
@@ -120,6 +128,7 @@ dependencies = [
  "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-objects",
+ "microesnext-suspension",
  "microesnext-types",
  "microesnext-vm-core",
 ]

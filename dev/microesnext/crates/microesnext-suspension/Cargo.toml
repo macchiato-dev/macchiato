@@ -1,0 +1,15 @@
+[package]
+name = "microesnext-suspension"
+description = "Removable guest stack suspension for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-types.workspace = true
+microesnext-vm-core.workspace = true
+
+[lib]
+path = "src/lib.rs"
