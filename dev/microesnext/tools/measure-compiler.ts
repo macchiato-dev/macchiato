@@ -7,6 +7,7 @@ const builds = [
   ["class methods", "class-methods"],
   ["implicit class constructors", "class-default-constructors"],
   ["static class methods", "class-static-methods"],
+  ["anonymous class expressions", "class-expressions"],
   ["exceptions", "exceptions"],
   ["logical operations", "logical-operations"],
   ["bounded integer operations", "integer-operations"],
@@ -32,7 +33,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,class-default-constructors,class-methods,class-static-methods,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,class-default-constructors,class-expressions,class-methods,class-static-methods,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -64,7 +65,9 @@ for (const [name, features] of builds) {
     `${target}/wasm32-unknown-unknown/release/microesnext-compiler-size.wasm`,
   );
   const { instance } = await WebAssembly.instantiate(bytes);
-  const source = features === "class-static-methods"
+  const source = features === "class-expressions"
+    ? "let C = class { constructor(value) { this.value = value; } read() { return this.value; } }; let value = new C(1); return value.read();"
+    : features === "class-static-methods"
     ? "class C { constructor() {} static read(value) { return value; } } return C.read(1);"
     : features === "class-default-constructors"
     ? "class Empty {} return new Empty();"

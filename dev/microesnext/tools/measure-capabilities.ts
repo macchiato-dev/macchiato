@@ -276,6 +276,14 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["atoms_probe", "nonzero"], ["class_methods_probe", 1]],
     ],
     [
+      "class expression runtime",
+      "class-expressions",
+      [core, ["atoms_probe", "nonzero"], ["class_methods_probe", 1], [
+        "stack_operations_probe",
+        1,
+      ]],
+    ],
+    [
       "recursive constructors",
       "recursive-constructors",
       [core, ["atoms_probe", "nonzero"], ["recursive_constructors_probe", 1]],
@@ -339,7 +347,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,class-methods,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,class-expressions,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -357,6 +365,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["construction_probe", 1],
         ["classes_probe", 1],
         ["class_methods_probe", 1],
+        ["stack_operations_probe", 1],
         ["scalar_truthiness_probe", 1],
         ["exceptions_probe", 42],
         ["errors_probe", 42],
