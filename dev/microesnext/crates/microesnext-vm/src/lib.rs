@@ -447,6 +447,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "typeof")]
+            Opcode::TypeOf => {
+                let value = self.core.arena_mut().pop()?;
+                let result = microesnext_typeof::type_of(self.core.arena_mut(), value)?;
+                self.core.arena_mut().push(result)?;
+                Ok(None)
+            }
             #[cfg(feature = "locals")]
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
@@ -1242,6 +1249,27 @@ mod tests {
             machine
                 .arena()
                 .bytes_equal(value.as_ref().unwrap(), b"microesnext")
+                .unwrap()
+        );
+    }
+
+    #[cfg(feature = "typeof")]
+    #[test]
+    fn executes_optional_typeof_and_returns_an_ordinary_string() {
+        let code = Builder::new()
+            .immediate(microesnext_bytecode::Immediate::True)
+            .op(Opcode::TypeOf)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 48];
+        let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected string completion")
+        };
+        assert!(
+            machine
+                .arena()
+                .bytes_equal(value.as_ref().unwrap(), b"boolean")
                 .unwrap()
         );
     }

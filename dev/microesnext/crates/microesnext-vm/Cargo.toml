@@ -17,6 +17,7 @@ async-functions = [
   "functions",
   "dep:microesnext-async-functions",
   "microesnext-bytecode/async-functions",
+  "microesnext-typeof?/async-functions",
 ]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = [
@@ -59,6 +60,7 @@ numbers = [
   "microesnext-equality?/numbers",
   "microesnext-logical-operations?/numbers",
   "microesnext-truthiness?/numbers",
+  "microesnext-typeof?/numbers",
 ]
 number-operations = [
   "numbers",
@@ -114,7 +116,9 @@ receivers = [
 promise-resolvers = [
   "function-arguments",
   "dep:microesnext-promise-resolvers",
+  "microesnext-typeof?/promise-resolvers",
 ]
+typeof = ["strings", "dep:microesnext-typeof", "microesnext-bytecode/typeof"]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -149,6 +153,7 @@ microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-string-operations = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }
+microesnext-typeof = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true
