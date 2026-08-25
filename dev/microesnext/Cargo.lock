@@ -425,6 +425,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-prototype-chain"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-receivers"
 version = "0.0.0"
 dependencies = [

@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-prototype-chain"
+description = "Removable ordinary-object prototype traversal for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-objects.workspace = true
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"
