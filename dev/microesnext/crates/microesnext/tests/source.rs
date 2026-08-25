@@ -21,3 +21,14 @@ fn source_compiles_suspends_and_resumes() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn source_throw_is_a_guest_rejection_not_an_engine_error() {
+    let code = microesnext_compiler::compile_script("throw 17;").unwrap();
+    let mut memory = [0; 32];
+    let mut machine = microesnext::Machine::new(&code, &mut memory);
+    assert_eq!(
+        machine.run().unwrap(),
+        microesnext::Outcome::Throw(microesnext::Value::from_i30(17).unwrap())
+    );
+}

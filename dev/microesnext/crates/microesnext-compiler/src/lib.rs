@@ -85,7 +85,14 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         offset: 0,
         output: Vec::new(),
     };
-    parser.word(b"return")?;
+    parser.whitespace();
+    let completion = if parser.try_word(b"return") {
+        Opcode::Return
+    } else if parser.try_word(b"throw") {
+        Opcode::Throw
+    } else {
+        return Err(parser.error("return or throw"));
+    };
     parser.term()?;
     while parser.consume(b'+') {
         parser.term()?;
@@ -97,7 +104,7 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
     if parser.offset != parser.source.len() {
         return Err(parser.error("end of input"));
     }
-    parser.output.push(Opcode::Return as u8);
+    parser.output.push(completion as u8);
     Ok(parser.output)
 }
 
@@ -204,15 +211,6 @@ impl Parser<'_> {
         self.output.extend_from_slice(&self.source[start..end]);
     }
 
-    fn word(&mut self, word: &[u8]) -> Result<(), CompileError> {
-        self.whitespace();
-        if self.try_word(word) {
-            Ok(())
-        } else {
-            Err(self.error("return"))
-        }
-    }
-
     fn try_word(&mut self, word: &[u8]) -> bool {
         if !self.source[self.offset..].starts_with(word) {
             return false;
@@ -276,6 +274,14 @@ mod tests {
                 .op(Opcode::AddI30)
                 .op(Opcode::Return)
                 .finish()
+        );
+    }
+
+    #[test]
+    fn compiles_throw_as_an_abrupt_completion() {
+        assert_eq!(
+            compile_script("throw 17;").unwrap(),
+            [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
         );
     }
 
