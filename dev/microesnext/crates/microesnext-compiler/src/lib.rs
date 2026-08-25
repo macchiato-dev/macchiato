@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use microesnext_bytecode::{Immediate, Opcode};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -485,14 +485,12 @@ impl Parser<'_> {
                 return Ok(None);
             }
             let (name_start, name_end) = self.identifier()?;
-            let mut parameters = Vec::with_capacity(1);
-            parameters.push(Binding {
+            vec![Binding {
                 start: name_start,
                 end: name_end,
                 slot: 0,
                 captured: false,
-            });
-            parameters
+            }]
         };
         self.whitespace();
         if !self.source[self.offset..].starts_with(b"=>") {
