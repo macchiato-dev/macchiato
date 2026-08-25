@@ -37,6 +37,7 @@ strings = []
 string-operations = ["strings"]
 typeof = ["strings"]
 instanceof = []
+constructors = []
 
 [dependencies]
 microesnext-bytecode-core.workspace = true

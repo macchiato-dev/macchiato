@@ -181,6 +181,13 @@ containing both preserves left-associative relational order. Builds omitting
 `instanceof` retain their prior specialized parser, and the objects-only Wasm
 remains exactly 14,473 / 5,775.
 
+Constructible function records are separately gated. Adding their opcode,
+interned `prototype` and `constructor` keys, fixed cyclic allocation, and live
+probe to callable objects produces 20,106 raw / 7,695 gzip bytes—2,294 raw /
+588 gzip incremental. The compiler's constructor form is 13,267 / 5,628,
+only 80 raw / 49 gzip beyond basic functions. Source-to-VM tests verify the
+prototype cycle and that arrows do not acquire the constructor opcode.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -248,6 +255,7 @@ LTO from merely discarding an enabled but unused dependency.
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Callable objects | 17,812 | 7,107 |
+| Constructible function objects | 20,106 | 7,695 |
 | Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
 | `typeof` | 6,642 | 3,024 |
@@ -259,7 +267,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 97,521 | 31,789 |
+| All capabilities | 99,075 | 32,165 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -529,6 +537,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | --- | ---: | ---: |
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
+| constructors | 13,267 | 5,628 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -550,7 +559,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 34,881 | 13,460 |
+| default language slice | 34,952 | 13,498 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

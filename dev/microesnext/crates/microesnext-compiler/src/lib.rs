@@ -618,6 +618,7 @@ impl Parser<'_> {
             FunctionBody::Block,
             None,
             asynchronous,
+            !asynchronous,
         )?;
         Ok(())
     }
@@ -707,6 +708,7 @@ impl Parser<'_> {
         body_kind: FunctionBody,
         expression_name: Option<Binding>,
         asynchronous: bool,
+        constructible: bool,
     ) -> Result<(), CompileError> {
         if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
             return Err(self.error("{"));
@@ -768,6 +770,12 @@ impl Parser<'_> {
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
+        #[cfg(feature = "constructors")]
+        if constructible {
+            self.output.push(Opcode::ToConstructor as u8);
+        }
+        #[cfg(not(feature = "constructors"))]
+        let _ = constructible;
         #[cfg(feature = "environments")]
         if self_captured {
             self.output.push(Opcode::StoreEnvironmentCell as u8);
@@ -1814,7 +1822,7 @@ impl Parser<'_> {
             } else {
                 FunctionBody::Expression
             };
-            self.function_value(parameters, None, body, None, asynchronous)?;
+            self.function_value(parameters, None, body, None, asynchronous, false)?;
             (false, TermKind::General)
         } else if let Some((start, end)) = binding {
             self.offset += end - start;
@@ -1866,6 +1874,7 @@ impl Parser<'_> {
                 FunctionBody::Block,
                 expression_name,
                 asynchronous,
+                !asynchronous,
             )?;
             (false, TermKind::General)
         } else if self.string_literal()? {
@@ -3072,6 +3081,23 @@ mod tests {
                 code.windows(3)
                     .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
             );
+        }
+    }
+
+    #[cfg(feature = "constructors")]
+    #[test]
+    fn wraps_ordinary_functions_but_not_arrows_as_constructors() {
+        let function = compile_script("return function () { return true; };").unwrap();
+        assert!(function.contains(&(Opcode::ToConstructor as u8)));
+
+        let arrow = compile_script("return () => true;").unwrap();
+        assert!(!arrow.contains(&(Opcode::ToConstructor as u8)));
+
+        #[cfg(feature = "async-functions")]
+        {
+            let asynchronous =
+                compile_script("return async function () { return true; };").unwrap();
+            assert!(!asynchronous.contains(&(Opcode::ToConstructor as u8)));
         }
     }
 

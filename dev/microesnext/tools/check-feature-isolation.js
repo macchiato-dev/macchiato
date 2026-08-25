@@ -244,6 +244,11 @@ assertCompilerFeatures(
   ["functions", "integer-operations", "objects", "typeof"],
 );
 assertCompilerFeatures(
+  ["constructors"],
+  ["constructors", "functions", "locals"],
+  ["instanceof", "objects", "typeof"],
+);
+assertCompilerFeatures(
   ["strings"],
   ["strings"],
   ["arrays", "atoms", "numbers", "objects", "string-operations"],
@@ -364,6 +369,17 @@ assertPresence(
     "microesnext-strings",
   ],
   [prototypeChain, typeOf, "microesnext-numbers"],
+);
+assertPresence(
+  ["constructors"],
+  [
+    callableObjects,
+    "microesnext-functions",
+    "microesnext-objects",
+    "microesnext-atoms",
+    "microesnext-strings",
+  ],
+  [instanceOf, prototypeChain, typeOf],
 );
 assertPresence(
   ["instanceof"],

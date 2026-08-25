@@ -41,6 +41,7 @@ callable-objects = [
   "dep:microesnext-callable-objects",
   "microesnext-typeof?/callable-objects",
 ]
+constructors = ["callable-objects", "microesnext-bytecode/constructors"]
 function-arguments = [
   "functions",
   "locals",

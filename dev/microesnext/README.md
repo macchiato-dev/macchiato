@@ -59,8 +59,9 @@ an explicit relational stopping condition.
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-callable-objects` optionally wraps a compact closure in an
   ordinary property-bearing object. Calls unwrap it at a statically selected
-  boundary; closure-only and object-only machines retain their specialized
-  paths and layouts.
+  boundary. Its constructor path creates the `.prototype` / `.constructor`
+  cycle in fixed arena records; closure-only and object-only machines retain
+  their specialized paths and layouts.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
 - `microesnext-receivers` adds hidden `this` values to selected call frames.

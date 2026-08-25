@@ -241,6 +241,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["atoms_probe", "nonzero"], ["callable_objects_probe", 42]],
     ],
     [
+      "constructors",
+      "constructors",
+      [core, ["atoms_probe", "nonzero"], ["constructors_probe", 1]],
+    ],
+    [
       "instanceof",
       "instanceof",
       [core, ["atoms_probe", "nonzero"], ["instanceof_probe", 1]],
@@ -299,7 +304,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -313,6 +318,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["collection_entry_iterators_probe", 42],
         ["collection_equality_probe", 1],
         ["control_flow_probe", 42],
+        ["constructors_probe", 1],
         ["scalar_truthiness_probe", 1],
         ["exceptions_probe", 42],
         ["errors_probe", 42],

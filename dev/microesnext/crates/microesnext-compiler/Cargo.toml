@@ -12,6 +12,7 @@ default = [
   "arrays",
   "async-functions",
   "control-flow",
+  "constructors",
   "equality",
   "exceptions",
   "function-arguments",
@@ -39,6 +40,7 @@ async-functions = [
 ]
 atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
+constructors = ["functions", "microesnext-bytecode/constructors"]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 environments = ["functions", "microesnext-bytecode/environments"]

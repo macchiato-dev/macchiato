@@ -1,6 +1,7 @@
 const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
+  ["constructors", "constructors"],
   ["exceptions", "exceptions"],
   ["logical operations", "logical-operations"],
   ["bounded integer operations", "integer-operations"],
@@ -24,7 +25,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -68,6 +69,8 @@ for (const [name, features] of builds) {
     ? "function identity(value) { return value; } return identity(1);"
     : features.includes("functions")
     ? "function value() { return 1; } return value();"
+    : features.includes("constructors")
+    ? "return function () { return true; };"
     : features.includes("exceptions")
     ? "try { throw 1; } catch (error) { return error; }"
     : features.includes("logical-operations")

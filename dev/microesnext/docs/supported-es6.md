@@ -105,10 +105,15 @@ lookup, and allocation-free prototype traversal. The operator has its own
 bytecode, compiler, VM, and facade gates; omitting it leaves the keyword
 unconsumed and preserves the pre-existing relational parser. Its current
 runtime accepts callable objects with an ordinary object-valued `prototype`
-property. Source compilation can emit the operator, while wrapping ordinary
-function syntax and constructing instances remain the next compiler/runtime
-layers. `Symbol.hasInstance`, bound functions, and host constructors are not
-implied by this initial ordinary path.
+property. With the independent `constructors` gate, synchronous `function`
+declarations and expressions are wrapped in ordinary callable objects with a
+cyclic `.prototype.constructor`; arrows and async functions remain compact,
+non-constructible closure records. Constructing instances remains a separate
+compiler/runtime layer. `Symbol.hasInstance`, bound functions, and host
+constructors are not implied by this initial ordinary path. A named function's
+private recursive binding still refers to its compact closure rather than its
+constructor wrapper, so identity observed through that binding is not yet full
+ECMAScript constructor identity.
 
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing

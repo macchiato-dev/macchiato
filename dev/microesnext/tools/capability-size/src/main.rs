@@ -24,6 +24,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "async",
         feature = "async-functions",
         feature = "control-flow",
+        feature = "constructors",
         feature = "exceptions",
         feature = "environments",
         feature = "equality",
@@ -113,6 +114,48 @@ pub extern "C" fn callable_objects_probe() -> i32 {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
+}
+
+#[cfg(all(feature = "constructors", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn constructors_probe() -> i32 {
+    let code = [
+        Opcode::Closure as u8,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ToConstructor as u8,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 224];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    let Ok(Outcome::Complete(function)) = machine.run() else {
+        return 0;
+    };
+    let Ok(prototype_key) = machine.intern_atom(b"prototype") else {
+        return 0;
+    };
+    let Ok(constructor_key) = machine.intern_atom(b"constructor") else {
+        return 0;
+    };
+    let Ok(prototype) = microesnext::objects::get(machine.arena(), function, prototype_key) else {
+        return 0;
+    };
+    matches!(
+        microesnext::objects::get(machine.arena(), prototype, constructor_key),
+        Ok(value) if value == function
+    ) as i32
 }
 
 #[cfg(all(feature = "instanceof", target_arch = "wasm32"))]

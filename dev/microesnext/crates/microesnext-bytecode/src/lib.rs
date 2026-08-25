@@ -134,6 +134,8 @@ pub enum Opcode {
     TypeOf = 101,
     #[cfg(feature = "instanceof")]
     InstanceOf = 102,
+    #[cfg(feature = "constructors")]
+    ToConstructor = 103,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -259,6 +261,8 @@ impl TryFrom<u8> for Opcode {
             101 => Ok(Self::TypeOf),
             #[cfg(feature = "instanceof")]
             102 => Ok(Self::InstanceOf),
+            #[cfg(feature = "constructors")]
+            103 => Ok(Self::ToConstructor),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -475,6 +479,18 @@ mod tests {
     #[test]
     fn omitted_instanceof_opcode_is_invalid() {
         assert!(Opcode::try_from(102).is_err());
+    }
+
+    #[cfg(feature = "constructors")]
+    #[test]
+    fn enabled_constructor_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(103), Ok(Opcode::ToConstructor));
+    }
+
+    #[cfg(not(feature = "constructors"))]
+    #[test]
+    fn omitted_constructor_opcode_is_invalid() {
+        assert!(Opcode::try_from(103).is_err());
     }
 
     #[cfg(feature = "locals")]

@@ -259,6 +259,34 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(closure)?;
                 Ok(None)
             }
+            #[cfg(feature = "constructors")]
+            Opcode::ToConstructor => {
+                self.atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let constructor_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"constructor")?;
+                let prototype_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let closure = self.core.arena_mut().pop()?;
+                let function = microesnext_callable_objects::new_constructor(
+                    self.core.arena_mut(),
+                    closure,
+                    Value::NULL,
+                    Value::NULL,
+                    prototype_key,
+                    constructor_key,
+                )?;
+                self.core.arena_mut().push(function)?;
+                Ok(None)
+            }
             #[cfg(feature = "async-functions")]
             Opcode::AsyncClosure => {
                 let target = self.core.next_u32()?;
@@ -1397,6 +1425,35 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
+    }
+
+    #[cfg(feature = "constructors")]
+    #[test]
+    fn constructor_opcode_creates_an_ordinary_prototype_cycle() {
+        let code = Builder::new()
+            .closure(9, 0)
+            .op(Opcode::ToConstructor)
+            .op(Opcode::Return)
+            .const_i30(42)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 224];
+        let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
+        let Outcome::Complete(function) = machine.run().unwrap() else {
+            panic!("expected a constructor value")
+        };
+        let prototype_key = machine.intern_atom(b"prototype").unwrap();
+        let constructor_key = machine.intern_atom(b"constructor").unwrap();
+        let prototype = microesnext_objects::get(machine.arena(), function, prototype_key).unwrap();
+
+        assert_eq!(
+            microesnext_objects::get(machine.arena(), prototype, constructor_key),
+            Ok(function)
+        );
+        assert!(microesnext_callable_objects::is_callable_object(
+            machine.arena(),
+            function
+        ));
     }
 
     #[cfg(feature = "instanceof")]
