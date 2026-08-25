@@ -69,6 +69,49 @@ fn nested_async_calls_restore_each_caller_and_chain_their_promises() {
 }
 
 #[test]
+fn resumed_async_body_can_enter_and_await_an_async_function() {
+    let code = compile_script(
+        "async function inner() { return await 42; } async function outer() { let first = await 1; return await inner(); } return outer();",
+    )
+    .unwrap();
+    let mut memory = [0; 512];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 32);
+    let mut jobs: [Option<microesnext::promises::JobSlot>; 6] = [None; 6];
+    let mut queue = microesnext::promises::JobQueue::new(&mut jobs);
+    let mut frame_slots = [None; 2];
+    let mut frames = microesnext::async_functions::Frames::new(&mut frame_slots);
+
+    let microesnext::r#async::Progress::Complete(promise) =
+        microesnext::r#async::run_functions(&mut machine, &mut queue, &mut frames).unwrap()
+    else {
+        panic!("expected the top-level caller to return")
+    };
+    assert!(
+        microesnext::r#async::run_one_function_reaction(&mut machine, &mut queue, &mut frames,)
+            .unwrap()
+    );
+    assert_eq!(
+        microesnext::promises::settled_result(machine.arena(), promise),
+        Ok(None)
+    );
+    assert!(
+        microesnext::r#async::run_one_function_reaction(&mut machine, &mut queue, &mut frames,)
+            .unwrap()
+    );
+    assert!(
+        microesnext::r#async::run_one_function_reaction(&mut machine, &mut queue, &mut frames,)
+            .unwrap()
+    );
+    assert_eq!(
+        microesnext::promises::settled_result(machine.arena(), promise),
+        Ok(Some((
+            microesnext::promises::Settlement::Fulfilled,
+            Value::from_i30(42).unwrap(),
+        )))
+    );
+}
+
+#[test]
 fn async_closure_can_capture_another_async_closure() {
     let code = compile_script(
         "async function inner() { return 42; } async function outer() { return inner; } return outer();",

@@ -64,7 +64,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,969 | 4,208 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 22,306 | 8,515 |
+| Async functions | 22,342 | 8,557 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 9,380 | 3,962 |
@@ -88,7 +88,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 55,447 | 18,332 |
+| All capabilities | 55,365 | 18,352 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -262,7 +262,7 @@ surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
 
-The 22,306-byte (8,515 gzip) async-functions row executes async closure entry,
+The 22,342-byte (8,557 gzip) async-functions row executes async closure entry,
 returns a pending outer Promise, parks an `await`, runs its queued reaction,
 and verifies fulfillment. The dependency check also proves that selecting
 plain `async` does not resolve `microesnext-async-functions`, while selecting

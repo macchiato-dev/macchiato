@@ -69,7 +69,17 @@ pub fn run_functions(
     queue: &mut JobQueue<'_>,
     frames: &mut microesnext_async_functions::Frames<'_>,
 ) -> Result<Progress, Error> {
-    let mut outcome = machine.run()?;
+    let outcome = machine.run()?;
+    drive_functions(machine, queue, frames, outcome)
+}
+
+#[cfg(feature = "functions")]
+fn drive_functions(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    frames: &mut microesnext_async_functions::Frames<'_>,
+    mut outcome: Outcome,
+) -> Result<Progress, Error> {
     loop {
         outcome = match outcome {
             Outcome::AsyncCall {
@@ -142,6 +152,49 @@ pub fn run_functions(
     }
 }
 
+/// Run one queued reaction while allowing the resumed body or callback to
+/// enter nested async functions. Frame storage remains bounded and belongs to
+/// the scheduler.
+#[cfg(all(feature = "promises", feature = "functions"))]
+pub fn run_one_function_reaction(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    frames: &mut microesnext_async_functions::Frames<'_>,
+) -> Result<bool, Error> {
+    let Some(job) = queue.pop(machine.arena_mut())? else {
+        return Ok(false);
+    };
+
+    if job.callback == Value::UNDEFINED {
+        settle(
+            machine.arena_mut(),
+            queue,
+            job.destination,
+            job.settlement,
+            job.argument,
+        )?;
+        return Ok(true);
+    }
+
+    let destination = machine.retain(job.destination)?;
+    let outcome = match start_reaction(machine, job) {
+        Ok(outcome) => outcome,
+        Err(error) => {
+            machine.release(destination)?;
+            return Err(error);
+        }
+    };
+    let progress = match drive_functions(machine, queue, frames, outcome) {
+        Ok(progress) => progress,
+        Err(error) => {
+            machine.release(destination)?;
+            return Err(error);
+        }
+    };
+    finish_progress(machine, queue, destination, progress)?;
+    Ok(true)
+}
+
 #[cfg(feature = "promises")]
 pub fn run_one_reaction(
     machine: &mut Machine<'_, '_>,
@@ -163,20 +216,7 @@ pub fn run_one_reaction(
     }
 
     let destination = machine.retain(job.destination)?;
-    let continuation = job
-        .callback
-        .as_ref()
-        .and_then(|reference| machine.arena().kind(reference).ok())
-        == Some(BlockKind::Continuation);
-    let outcome = match if continuation {
-        if job.settlement == Settlement::Fulfilled {
-            machine.resume_value(job.callback, job.argument)
-        } else {
-            machine.resume_value_rejected(job.callback, job.argument)
-        }
-    } else {
-        machine.call_closure(job.callback, job.argument)
-    } {
+    let outcome = match start_reaction(machine, job) {
         Ok(outcome) => outcome,
         Err(error) => {
             machine.release(destination)?;
@@ -185,6 +225,68 @@ pub fn run_one_reaction(
     };
     finish_reaction(machine, queue, destination, outcome)?;
     Ok(true)
+}
+
+#[cfg(feature = "promises")]
+fn start_reaction(machine: &mut Machine<'_, '_>, job: Job) -> Result<Outcome, Error> {
+    let continuation = job
+        .callback
+        .as_ref()
+        .and_then(|reference| machine.arena().kind(reference).ok())
+        == Some(BlockKind::Continuation);
+    if continuation {
+        if job.settlement == Settlement::Fulfilled {
+            machine.resume_value(job.callback, job.argument)
+        } else {
+            machine.resume_value_rejected(job.callback, job.argument)
+        }
+    } else {
+        machine.call_closure(job.callback, job.argument)
+    }
+}
+
+#[cfg(all(feature = "promises", feature = "functions"))]
+fn finish_progress(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    destination: RootId,
+    progress: Progress,
+) -> Result<(), Error> {
+    match progress {
+        Progress::Complete(value) => {
+            let destination = machine.release(destination)?;
+            settle(
+                machine.arena_mut(),
+                queue,
+                destination,
+                Settlement::Fulfilled,
+                value,
+            )?;
+            Ok(())
+        }
+        Progress::Rejected(reason) => {
+            let destination = machine.release(destination)?;
+            settle(
+                machine.arena_mut(),
+                queue,
+                destination,
+                Settlement::Rejected,
+                reason,
+            )?;
+            Ok(())
+        }
+        Progress::Suspended(suspended) => {
+            park_continuation(
+                machine,
+                queue,
+                destination,
+                suspended.awaited,
+                suspended.continuation,
+            )?;
+            Ok(())
+        }
+        Progress::AsyncCall { .. } => Err(Error::Type),
+    }
 }
 
 #[cfg(feature = "promises")]
