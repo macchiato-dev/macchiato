@@ -154,8 +154,11 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
     };
     parser.whitespace();
     let locals_patch = parser.local_declarations()?;
+    parser.local_assignments()?;
     if parser.try_word(b"if") {
         parser.if_else()?;
+    } else if parser.try_word(b"while") {
+        parser.while_loop()?;
     } else if parser.try_word(b"try") {
         parser.try_catch()?;
     } else {
@@ -193,6 +196,36 @@ enum TermKind {
 }
 
 impl Parser<'_> {
+    fn while_loop(&mut self) -> Result<(), CompileError> {
+        let loop_start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        self.local_assignments()?;
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        self.output.push(Opcode::Jump as u8);
+        self.output.extend_from_slice(&loop_start.to_le_bytes());
+        let exit = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        self.local_assignments()?;
+        self.completion(None, false, false)
+    }
+
     fn if_else(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
@@ -258,6 +291,27 @@ impl Parser<'_> {
             self.whitespace();
         }
         Ok(count_patch)
+    }
+
+    fn local_assignments(&mut self) -> Result<(), CompileError> {
+        loop {
+            self.whitespace();
+            let start = self.offset;
+            let Some(binding) = self.local_at_offset() else {
+                return Ok(());
+            };
+            self.offset += binding.end - binding.start;
+            if !self.consume(b'=') {
+                self.offset = start;
+                return Ok(());
+            }
+            self.expression(None)?;
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
     }
 
     fn try_catch(&mut self) -> Result<(), CompileError> {
@@ -761,5 +815,22 @@ mod tests {
         let alternate = u32::from_le_bytes(code[branch + 1..branch + 5].try_into().unwrap());
         assert_eq!(code[alternate as usize], Opcode::ConstI30 as u8);
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
+    }
+
+    #[test]
+    fn compiles_assignment_and_while_without_native_recursion() {
+        let code = compile_script(
+            "let running = true; let answer = 0; while (running) { answer = 42; running = false; } return answer;",
+        )
+        .unwrap();
+        assert!(code.contains(&(Opcode::JumpIfFalseBoolean as u8)));
+        assert!(code.contains(&(Opcode::Jump as u8)));
+        assert_eq!(
+            code.iter()
+                .filter(|byte| **byte == Opcode::StoreLocal as u8)
+                .count(),
+            4
+        );
+        assert_eq!(*code.last().unwrap(), Opcode::ReturnLocals as u8);
     }
 }
