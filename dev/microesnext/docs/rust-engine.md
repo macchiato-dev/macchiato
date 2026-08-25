@@ -80,6 +80,11 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   Guest `then` code is never invoked inline while resolving a value. If its
   resolving function receives another thenable, execution returns a new job to
   the controller, preserving ECMAScript deferral without native recursion.
+- Async completion is generic over a statically dispatched resolution policy.
+  Its ordinary public entry points monomorphize with native Promise resolution;
+  `microesnext-async-thenables` supplies a separate policy holding a bounded,
+  caller-owned thenable-job queue. This adds no trait object, callback, or
+  branch to a build that omits the composition.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.

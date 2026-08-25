@@ -64,7 +64,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,969 | 4,208 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 23,263 | 8,904 |
+| Async functions | 23,191 | 8,866 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 9,380 | 3,962 |
@@ -77,7 +77,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 25,869 | 9,571 |
+| Recursive async functions | 25,797 | 9,529 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
@@ -92,9 +92,10 @@ LTO from merely discarding an enabled but unused dependency.
 | Promises | 4,840 | 2,237 |
 | Native Promise resolution | 12,664 | 5,239 |
 | One-shot Promise resolvers | 20,479 | 7,910 |
-| Object thenable assimilation | 34,431 | 12,626 |
+| Object thenable assimilation | 34,528 | 12,642 |
+| Async return thenable assimilation | 45,893 | 16,224 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 66,872 | 21,955 |
+| All capabilities | 70,428 | 23,211 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -273,14 +274,14 @@ surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
 
-The 23,263-byte (8,904 gzip) async-functions row executes async closure entry,
+The 23,191-byte (8,866 gzip) async-functions row executes async closure entry,
 returns a pending outer Promise, parks an `await`, runs its queued reaction,
 and verifies fulfillment. The dependency check also proves that selecting
 plain `async` does not resolve `microesnext-async-functions`, while selecting
 `async-functions` does not pull in environment cells, parameter frames, or
 recursive-function storage. The minimal artifact remains 1,984 bytes.
 
-The 25,869-byte (9,571 gzip) recursive-async row adds and exercises only the
+The 25,797-byte (9,529 gzip) recursive-async row adds and exercises only the
 composition that initializes an async closure's private self cell. Its graph
 contains neither `microesnext-recursive-functions` nor parameter-frame
 storage; conversely, ordinary async and ordinary recursive rows exclude
@@ -296,13 +297,22 @@ Promise-storage row remains unchanged and its dependency graph excludes
 The 20,479-byte (7,910 gzip) resolver row invokes a compact resolving function
 through guest call bytecode, handles its payload outside the invariant core,
 resumes the caller with `undefined`, and verifies that the destination settles.
-The 34,431-byte (12,626 gzip) thenable row additionally performs ordinary
+The 34,528-byte (12,642 gzip) thenable row additionally performs ordinary
 property lookup, invokes a real guest closure with its receiver, and fulfills
 through the one-shot pair. Unit tests cover deferred execution, receiver
 identity, rejection before resolution, ignored throws after resolution, and a
 thenable resolving to another separately scheduled thenable. Minimal,
 Promise-storage, native-resolution, and receiver-only artifacts remain
 byte-for-byte unchanged.
+
+The 45,893-byte (16,224 gzip) async-thenable composition runs an async closure
+that returns an ordinary object thenable, observes its outer Promise remain
+pending, executes the separately queued assimilation job, and verifies final
+fulfillment. Refactoring async completion behind its generic static resolver
+reduced the isolated async-functions artifact by 72 raw bytes rather than
+adding dispatch overhead. The facade dependency check proves that ordinary
+`async-functions` includes neither `microesnext-thenables` nor
+`microesnext-async-thenables`.
 Re-run them with:
 
 ```sh
