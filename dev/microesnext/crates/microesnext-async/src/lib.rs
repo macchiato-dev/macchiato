@@ -30,6 +30,47 @@ pub enum Progress {
     PromiseResolverCall,
 }
 
+/// Statically selected Promise resolution policy. Drivers are generic over
+/// this trait, so a smaller build pays neither a trait object nor a runtime
+/// branch for policies it does not include.
+#[cfg(feature = "promises")]
+pub trait Resolver {
+    fn resolve(
+        &mut self,
+        machine: &mut Machine<'_, '_>,
+        queue: &mut JobQueue<'_>,
+        promise: Value,
+        value: Value,
+    ) -> Result<(), Error>;
+}
+
+#[cfg(feature = "promises")]
+pub struct NativeResolver;
+
+#[cfg(feature = "promises")]
+impl Resolver for NativeResolver {
+    #[inline]
+    fn resolve(
+        &mut self,
+        machine: &mut Machine<'_, '_>,
+        queue: &mut JobQueue<'_>,
+        promise: Value,
+        value: Value,
+    ) -> Result<(), Error> {
+        #[cfg(feature = "resolution")]
+        resolve_native(machine.arena_mut(), queue, promise, value)?;
+        #[cfg(not(feature = "resolution"))]
+        settle(
+            machine.arena_mut(),
+            queue,
+            promise,
+            Settlement::Fulfilled,
+            value,
+        )?;
+        Ok(())
+    }
+}
+
 impl From<Outcome> for Progress {
     fn from(outcome: Outcome) -> Self {
         match outcome {
@@ -73,15 +114,26 @@ pub fn run_functions(
     queue: &mut JobQueue<'_>,
     frames: &mut microesnext_async_functions::Frames<'_>,
 ) -> Result<Progress, Error> {
-    let outcome = machine.run()?;
-    drive_functions(machine, queue, frames, outcome)
+    run_functions_with(machine, queue, frames, &mut NativeResolver)
 }
 
 #[cfg(feature = "functions")]
-fn drive_functions(
+pub fn run_functions_with<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     frames: &mut microesnext_async_functions::Frames<'_>,
+    resolver: &mut R,
+) -> Result<Progress, Error> {
+    let outcome = machine.run()?;
+    drive_functions(machine, queue, frames, resolver, outcome)
+}
+
+#[cfg(feature = "functions")]
+fn drive_functions<R: Resolver>(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    frames: &mut microesnext_async_functions::Frames<'_>,
+    resolver: &mut R,
     mut outcome: Outcome,
 ) -> Result<Progress, Error> {
     loop {
@@ -123,7 +175,7 @@ fn drive_functions(
                     return Ok(Progress::Complete(value));
                 };
                 let promise = machine.root(frame.promise)?;
-                resolve_value(machine, queue, promise, value)?;
+                resolver.resolve(machine, queue, promise, value)?;
                 machine.restore_caller(frame.caller)?;
                 machine.release(frame.promise)?;
                 machine.run()?
@@ -166,44 +218,15 @@ pub fn run_one_function_reaction(
     queue: &mut JobQueue<'_>,
     frames: &mut microesnext_async_functions::Frames<'_>,
 ) -> Result<bool, Error> {
-    let Some(job) = queue.pop(machine.arena_mut())? else {
-        return Ok(false);
-    };
-
-    if job.callback == Value::UNDEFINED {
-        settle(
-            machine.arena_mut(),
-            queue,
-            job.destination,
-            job.settlement,
-            job.argument,
-        )?;
-        return Ok(true);
-    }
-
-    let destination = machine.retain(job.destination)?;
-    let outcome = match start_reaction(machine, job) {
-        Ok(outcome) => outcome,
-        Err(error) => {
-            machine.release(destination)?;
-            return Err(error);
-        }
-    };
-    let progress = match drive_functions(machine, queue, frames, outcome) {
-        Ok(progress) => progress,
-        Err(error) => {
-            machine.release(destination)?;
-            return Err(error);
-        }
-    };
-    finish_progress(machine, queue, destination, progress)?;
-    Ok(true)
+    run_one_function_reaction_with(machine, queue, frames, &mut NativeResolver)
 }
 
-#[cfg(feature = "promises")]
-pub fn run_one_reaction(
+#[cfg(all(feature = "promises", feature = "functions"))]
+pub fn run_one_function_reaction_with<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
+    frames: &mut microesnext_async_functions::Frames<'_>,
+    resolver: &mut R,
 ) -> Result<bool, Error> {
     let Some(job) = queue.pop(machine.arena_mut())? else {
         return Ok(false);
@@ -228,7 +251,55 @@ pub fn run_one_reaction(
             return Err(error);
         }
     };
-    finish_reaction(machine, queue, destination, outcome)?;
+    let progress = match drive_functions(machine, queue, frames, resolver, outcome) {
+        Ok(progress) => progress,
+        Err(error) => {
+            machine.release(destination)?;
+            return Err(error);
+        }
+    };
+    finish_progress(machine, queue, destination, resolver, progress)?;
+    Ok(true)
+}
+
+#[cfg(feature = "promises")]
+pub fn run_one_reaction(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+) -> Result<bool, Error> {
+    run_one_reaction_with(machine, queue, &mut NativeResolver)
+}
+
+#[cfg(feature = "promises")]
+pub fn run_one_reaction_with<R: Resolver>(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    resolver: &mut R,
+) -> Result<bool, Error> {
+    let Some(job) = queue.pop(machine.arena_mut())? else {
+        return Ok(false);
+    };
+
+    if job.callback == Value::UNDEFINED {
+        settle(
+            machine.arena_mut(),
+            queue,
+            job.destination,
+            job.settlement,
+            job.argument,
+        )?;
+        return Ok(true);
+    }
+
+    let destination = machine.retain(job.destination)?;
+    let outcome = match start_reaction(machine, job) {
+        Ok(outcome) => outcome,
+        Err(error) => {
+            machine.release(destination)?;
+            return Err(error);
+        }
+    };
+    finish_reaction(machine, queue, destination, resolver, outcome)?;
     Ok(true)
 }
 
@@ -251,15 +322,16 @@ fn start_reaction(machine: &mut Machine<'_, '_>, job: Job) -> Result<Outcome, Er
 }
 
 #[cfg(all(feature = "promises", feature = "functions"))]
-fn finish_progress(
+fn finish_progress<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     destination: RootId,
+    resolver: &mut R,
     progress: Progress,
 ) -> Result<(), Error> {
     match progress {
         Progress::Complete(value) => {
-            fulfill_destination(machine, queue, destination, value)?;
+            fulfill_destination(machine, queue, destination, resolver, value)?;
             Ok(())
         }
         Progress::Rejected(reason) => {
@@ -289,15 +361,16 @@ fn finish_progress(
 }
 
 #[cfg(feature = "promises")]
-fn finish_reaction(
+fn finish_reaction<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     destination: RootId,
+    resolver: &mut R,
     outcome: Outcome,
 ) -> Result<(), Error> {
     match outcome {
         Outcome::Complete(value) => {
-            fulfill_destination(machine, queue, destination, value)?;
+            fulfill_destination(machine, queue, destination, resolver, value)?;
             Ok(())
         }
         Outcome::Throw(reason) => {
@@ -328,32 +401,11 @@ fn fulfill_destination(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     destination: RootId,
+    resolver: &mut impl Resolver,
     value: Value,
 ) -> Result<(), Error> {
     let destination = machine.release(destination)?;
-    resolve_value(machine, queue, destination, value)
-}
-
-#[cfg(feature = "promises")]
-fn resolve_value(
-    machine: &mut Machine<'_, '_>,
-    queue: &mut JobQueue<'_>,
-    promise: Value,
-    value: Value,
-) -> Result<(), Error> {
-    #[cfg(feature = "resolution")]
-    {
-        resolve_native(machine.arena_mut(), queue, promise, value)?;
-    }
-    #[cfg(not(feature = "resolution"))]
-    settle(
-        machine.arena_mut(),
-        queue,
-        promise,
-        Settlement::Fulfilled,
-        value,
-    )?;
-    Ok(())
+    resolver.resolve(machine, queue, destination, value)
 }
 
 #[cfg(feature = "promises")]
