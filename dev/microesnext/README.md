@@ -98,6 +98,10 @@ an explicit relational stopping condition.
   `StringNumericLiteral` parsing, including current ECMAScript whitespace and
   power-of-two radix forms. Its decimal parser and string dependency disappear
   together when the composition is omitted.
+- `microesnext-decimal-to-f64` is the shared, `no_std` decimal conversion
+  boundary for source literals and string coercion. A small exact path handles
+  common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
+  Builds omitting both consumers do not link the crate.
 - `microesnext-number-operations` adds promoted arithmetic and relational
   comparison. Its i30 fast paths remain direct; overflow falls through to the
   number representation only in builds selecting this crate.

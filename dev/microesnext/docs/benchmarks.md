@@ -94,19 +94,33 @@ and minimal-program artifacts are byte-for-byte unchanged.
 
 ## String Number coercion, 2026-08-25
 
-The string composition is 29,262 bytes (20,113 gzip), while its compiler gate
+The string composition is 14,599 bytes (6,608 gzip), while its compiler gate
 is 6,553 bytes (2,932 gzip). The runtime parses the complete decimal shape,
 signed `Infinity`, binary/octal/hex integer forms, negative zero, and the
 current ECMAScript whitespace set without a temporary allocation. Power-of-two
 radices retain guard and sticky bits for ties-to-even conversion rather than
 repeatedly rounding a growing float. Invalid strings produce NaN.
 
-Most of this first runtime checkpoint is Rust's correctly-rounded decimal
-`f64` parser. That cost is confined to `microesnext-string-number-coercion`:
-primitive coercion remains exactly 6,371 bytes, Number negation remains exactly
-6,912 bytes, and builds without string coercion neither resolve its crate nor
-compile its parser. A future compact decimal algorithm can therefore be
-measured and replaced inside this boundary without perturbing its callers.
+`microesnext-decimal-to-f64` now supplies an allocation-free, `no_std`, compact
+correctly-rounded conversion shared by source literals and string coercion.
+It uses an exact common-input path and a 768-digit bounded fallback based on
+Nigel Tao's Simple Decimal Conversion. Differential tests cover 40,000 random
+decimal strings, 100,000 finite-float display round trips, long truncated
+inputs, subnormal boundaries, overflow, and ties. This replaced Rust core's
+larger generic parser: before the replacement the same string composition was
+29,262 bytes (20,113 gzip).
+
+Five native release runs put the common path at a median 7.5 ns per conversion,
+versus 6.6 ns for `str::parse::<f64>` on this machine. The deliberately compact
+fallback is much slower—about 4.04 us versus 21.5 ns—so ordinary literals avoid
+it when their mantissa is exactly representable and their decimal exponent is
+within ±22. Run `cargo run --release -p microesnext-decimal-speed` to reproduce
+the directional comparison; it is a microbenchmark, not a cross-machine claim.
+
+The cost remains confined to its static capability boundary. Primitive
+coercion is still exactly 6,371 bytes, Number negation is still exactly 6,912
+bytes, and builds without decimal literals or string coercion neither resolve
+the conversion crate nor execute a dispatch branch for it.
 
 ## Feature-independent core, 2026-08-25
 
@@ -168,7 +182,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
 | Primitive Number coercion | 6,371 | 2,823 |
-| String Number coercion | 29,262 | 20,113 |
+| String Number coercion | 14,599 | 6,608 |
 | Promoted number operations | 9,382 | 3,309 |
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
@@ -181,7 +195,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 103,841 | 42,322 |
+| All capabilities | 89,167 | 28,939 |
 
 The all-capabilities row now actually selects string concatenation, primitive
 and string Number coercion, and Number negation. The earlier 78,513-byte row
@@ -436,6 +450,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
 | bounded numeric negation | 5,791 | 2,503 |
+| decimal number literals | 9,088 | 4,254 |
 | primitive Number coercion | 5,690 | 2,466 |
 | string Number coercion | 6,553 | 2,932 |
 | JavaScript Number negation | 6,072 | 2,597 |
@@ -448,7 +463,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 48,585 | 26,609 |
+| default language slice | 34,057 | 13,284 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

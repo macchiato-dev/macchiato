@@ -108,6 +108,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   only the resulting boxed number when an immediate i30 cannot represent it.
   Power-of-two integer parsing keeps explicit guard/sticky bits; no temporary
   guest string participates in those paths.
+- Decimal conversion is a separate leaf crate shared by compiler literals and
+  string coercion. Its exact fast path and bounded correctly-rounded fallback
+  contain no allocator or runtime policy. Static Cargo composition removes the
+  code and its call sites when neither consumer is selected.
 - Ordinary strings, atom interning, and objects form three boundaries. A string
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine

@@ -66,7 +66,9 @@ instructions to string operands. It trims the ECMAScript whitespace and line
 terminator set, accepts decimal `StringNumericLiteral`, signed `Infinity`, and
 unsigned binary/octal/hex integer forms, preserves negative zero, and returns
 NaN for invalid input. It does not add object conversion or make every
-string-enabled runtime retain numeric parsing.
+string-enabled runtime retain numeric parsing. Decimal source literals and
+this coercion share `microesnext-decimal-to-f64`; omitting both removes its
+exact fast path and bounded correctly-rounded fallback from the linked build.
 
 Strict equality and inequality (`===` and `!==`) are a separate removable
 capability. Immediate values, objects, and symbols compare by identity. When
