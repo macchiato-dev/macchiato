@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 ephemerons = []
 environments = []
+async-functions = []
 iterators = []
 numbers = []
 symbols = []

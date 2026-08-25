@@ -253,6 +253,28 @@ impl<'code, 'memory> Core<'code, 'memory> {
         Ok(())
     }
 
+    pub fn enter_external_call_with_arguments(
+        &mut self,
+        function: Value,
+        target: usize,
+        argument_count: usize,
+    ) -> Result<(), Error> {
+        if self.frame_depth.is_some()
+            || self.arena.stack_len() != argument_count
+            || target >= self.code.len()
+        {
+            return Err(Error::Type);
+        }
+        self.arena
+            .insert_stack_value_from_bottom(0, Value::from_i30(-1).ok_or(Error::BadBytecode)?)?;
+        self.arena
+            .insert_stack_value_from_bottom(1, Value::from_i30(-1).ok_or(Error::BadBytecode)?)?;
+        self.arena.insert_stack_value_from_bottom(2, function)?;
+        self.frame_depth = Some(3);
+        self.pc = target;
+        Ok(())
+    }
+
     pub fn abandon(&mut self) {
         self.arena.clear_stack();
         self.frame_depth = None;

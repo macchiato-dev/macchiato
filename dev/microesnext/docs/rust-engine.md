@@ -40,6 +40,12 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   VM stack and a rooted continuation. The arena supplies generic stack-snapshot
   storage, but `microesnext-vm-core` contains no suspend, resume, or restore
   algorithm. Builds without `async` do not expose those machine operations.
+- An async JavaScript call cannot suspend its ordinary caller at the first
+  `await`. The optional `microesnext-async-functions` layer therefore packages
+  the closure and evaluated arguments, snapshots the caller, and starts the
+  body in an independent guest context over the same arena. The scheduler can
+  restore the caller with the outer promise while the body continuation enters
+  that promise's reaction path.
 - Guest exception handlers are explicit records in the guest stack. The
   optional `microesnext-exceptions` crate owns the handler-chain pointer and
   stack operations; `microesnext-vm` composes it only behind the `exceptions`

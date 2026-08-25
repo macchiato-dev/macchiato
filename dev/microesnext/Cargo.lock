@@ -75,6 +75,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-async-functions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+ "microesnext-vm-core",
+]
+
+[[package]]
 name = "microesnext-atoms"
 version = "0.0.0"
 dependencies = [

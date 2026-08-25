@@ -5,6 +5,7 @@ members = [
   "crates/microesnext-arena",
   "crates/microesnext-arrays",
   "crates/microesnext-async",
+  "crates/microesnext-async-functions",
   "crates/microesnext-bytecode",
   "crates/microesnext-bytecode-core",
   "crates/microesnext-compiler",
@@ -52,6 +53,7 @@ microesnext-atoms = { path = "crates/microesnext-atoms", version = "0.0.0" }
 microesnext-arena = { path = "crates/microesnext-arena", version = "0.0.0" }
 microesnext-arrays = { path = "crates/microesnext-arrays", version = "0.0.0" }
 microesnext-async = { path = "crates/microesnext-async", version = "0.0.0" }
+microesnext-async-functions = { path = "crates/microesnext-async-functions", version = "0.0.0" }
 microesnext-bytecode = { path = "crates/microesnext-bytecode", version = "0.0.0" }
 microesnext-bytecode-core = { path = "crates/microesnext-bytecode-core", version = "0.0.0" }
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }

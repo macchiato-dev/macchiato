@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-async-functions"
+description = "Optional async closures and invocation contexts for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["async-functions"] }
+microesnext-types.workspace = true
+microesnext-vm-core.workspace = true
+
+[lib]
+path = "src/lib.rs"

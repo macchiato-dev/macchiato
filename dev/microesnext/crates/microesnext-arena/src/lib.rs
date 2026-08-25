@@ -35,6 +35,10 @@ pub enum BlockKind {
     Iterator = 21,
     #[cfg(feature = "environments")]
     EnvironmentCell = 22,
+    #[cfg(feature = "async-functions")]
+    AsyncClosure = 23,
+    #[cfg(feature = "async-functions")]
+    AsyncInvocation = 24,
 }
 
 #[inline(always)]
@@ -665,6 +669,10 @@ impl<'memory> Arena<'memory> {
             21 => Ok(BlockKind::Iterator),
             #[cfg(feature = "environments")]
             22 => Ok(BlockKind::EnvironmentCell),
+            #[cfg(feature = "async-functions")]
+            23 => Ok(BlockKind::AsyncClosure),
+            #[cfg(feature = "async-functions")]
+            24 => Ok(BlockKind::AsyncInvocation),
             _ => Err(Error::DanglingReference),
         }
     }
