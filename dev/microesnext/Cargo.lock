@@ -35,6 +35,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-compiler"
+version = "0.0.0"
+dependencies = [
+ "microesnext-bytecode",
+]
+
+[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 
@@ -44,5 +51,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-bytecode",
+ "microesnext-compiler",
  "microesnext-types",
 ]

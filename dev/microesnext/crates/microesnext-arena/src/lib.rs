@@ -1,9 +1,5 @@
 #![no_std]
 
-extern crate alloc;
-
-use alloc::vec;
-use alloc::vec::Vec;
 use microesnext_types::{Error, HeapRef, Value};
 
 const HEADER_WORDS: usize = 2;
@@ -19,16 +15,17 @@ pub enum BlockKind {
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
-pub struct Arena {
-    words: Vec<u32>,
+pub struct Arena<'memory> {
+    words: &'memory mut [u32],
     heap_end: usize,
     stack_start: usize,
 }
 
-impl Arena {
-    pub fn new(word_capacity: usize) -> Self {
-        assert!(word_capacity > HEADER_WORDS + 1);
-        let words = vec![0; word_capacity];
+impl<'memory> Arena<'memory> {
+    pub fn new(words: &'memory mut [u32]) -> Self {
+        let word_capacity = words.len();
+        assert!(word_capacity > HEADER_WORDS + 1 && word_capacity < (1 << 30));
+        words.fill(0);
         Self {
             heap_end: 1,
             stack_start: word_capacity,
@@ -109,8 +106,35 @@ impl Arena {
         self.stack_start = self.words.len();
     }
 
-    pub fn suspend_stack(&mut self, pc: u32, roots: &mut [Value]) -> Result<HeapRef, Error> {
-        let length = HEADER_WORDS + 1 + self.stack_len();
+    /// Move the complete guest address space into caller-provided storage.
+    /// Heap offsets stay stable; only the downward-growing stack changes its
+    /// physical base. No guest value contains that physical stack address.
+    pub fn grow_into<'next>(self, words: &'next mut [u32]) -> Result<Arena<'next>, Error> {
+        if words.len() <= self.words.len() || words.len() >= (1 << 30) {
+            return Err(Error::OutOfMemory);
+        }
+        let stack_length = self.stack_len();
+        if self.heap_end + stack_length > words.len() {
+            return Err(Error::OutOfMemory);
+        }
+        words.fill(0);
+        words[..self.heap_end].copy_from_slice(&self.words[..self.heap_end]);
+        let next_stack_start = words.len() - stack_length;
+        words[next_stack_start..].copy_from_slice(&self.words[self.stack_start..]);
+        Ok(Arena {
+            words,
+            heap_end: self.heap_end,
+            stack_start: next_stack_start,
+        })
+    }
+
+    pub fn suspend_stack(
+        &mut self,
+        pc: u32,
+        frame_depth: Option<usize>,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        let length = HEADER_WORDS + 2 + self.stack_len();
         if self.heap_end + length > self.stack_start {
             self.compact(roots)?;
         }
@@ -122,14 +146,18 @@ impl Arena {
         self.words[start + 1] = BlockKind::Continuation as u32;
         self.words[start + HEADER_WORDS] =
             Value::from_i30(pc as i32).ok_or(Error::BadBytecode)?.raw();
+        let frame_depth = frame_depth.map_or(-1, |depth| depth as i32);
+        self.words[start + HEADER_WORDS + 1] = Value::from_i30(frame_depth)
+            .ok_or(Error::BadBytecode)?
+            .raw();
         let source = self.stack_start..self.words.len();
-        self.words.copy_within(source, start + HEADER_WORDS + 1);
+        self.words.copy_within(source, start + HEADER_WORDS + 2);
         self.heap_end += length;
         self.clear_stack();
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
-    pub fn resume_stack(&mut self, continuation: HeapRef) -> Result<u32, Error> {
+    pub fn resume_stack(&mut self, continuation: HeapRef) -> Result<(u32, Option<usize>), Error> {
         if self.kind(continuation)? != BlockKind::Continuation {
             return Err(Error::Type);
         }
@@ -138,14 +166,18 @@ impl Arena {
         let pc = Value::from_raw(self.words[start + HEADER_WORDS])
             .as_i30()
             .ok_or(Error::BadBytecode)? as u32;
-        let stack_length = length - HEADER_WORDS - 1;
+        let frame_depth = Value::from_raw(self.words[start + HEADER_WORDS + 1])
+            .as_i30()
+            .ok_or(Error::BadBytecode)?;
+        let frame_depth = (frame_depth >= 0).then_some(frame_depth as usize);
+        let stack_length = length - HEADER_WORDS - 2;
         if self.heap_end + stack_length > self.words.len() {
             return Err(Error::OutOfMemory);
         }
         self.stack_start = self.words.len() - stack_length;
-        let source = start + HEADER_WORDS + 1..start + length;
+        let source = start + HEADER_WORDS + 2..start + length;
         self.words.copy_within(source, self.stack_start);
-        Ok(pc)
+        Ok((pc, frame_depth))
     }
 
     pub fn values(&self, reference: HeapRef) -> Result<&[u32], Error> {
@@ -266,18 +298,31 @@ impl Arena {
 
     fn block_start(&self, reference: HeapRef) -> Result<usize, Error> {
         let target = reference.word_index() as usize;
+        if target == 0 || target >= self.heap_end {
+            return Err(Error::DanglingReference);
+        }
+        debug_assert!(self.is_block_start(target));
+        let length = (self.words[target] & LENGTH_MASK) as usize;
+        if length < HEADER_WORDS || target + length > self.heap_end {
+            return Err(Error::DanglingReference);
+        }
+        Ok(target)
+    }
+
+    #[cfg(debug_assertions)]
+    fn is_block_start(&self, target: usize) -> bool {
         let mut cursor = 1;
         while cursor < self.heap_end {
             if cursor == target {
-                return Ok(cursor);
+                return true;
             }
             let length = (self.words[cursor] & LENGTH_MASK) as usize;
             if length < HEADER_WORDS {
-                return Err(Error::DanglingReference);
+                return false;
             }
             cursor += length;
         }
-        Err(Error::DanglingReference)
+        false
     }
 }
 
@@ -287,7 +332,8 @@ mod tests {
 
     #[test]
     fn compaction_moves_live_graph_and_stack_references() {
-        let mut arena = Arena::new(32);
+        let mut memory = [0; 32];
+        let mut arena = Arena::new(&mut memory);
         let mut no_roots = [];
         let _dead = arena
             .allocate_values(BlockKind::Values, &[Value::TRUE], &mut no_roots)
@@ -319,19 +365,21 @@ mod tests {
 
     #[test]
     fn suspension_round_trips_the_vm_stack() {
-        let mut arena = Arena::new(32);
+        let mut memory = [0; 32];
+        let mut arena = Arena::new(&mut memory);
         arena.push(Value::from_i30(4).unwrap()).unwrap();
         arena.push(Value::from_i30(9).unwrap()).unwrap();
-        let continuation = arena.suspend_stack(17, &mut []).unwrap();
+        let continuation = arena.suspend_stack(17, None, &mut []).unwrap();
         assert_eq!(arena.stack_len(), 0);
-        assert_eq!(arena.resume_stack(continuation).unwrap(), 17);
+        assert_eq!(arena.resume_stack(continuation).unwrap(), (17, None));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(9));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(4));
     }
 
     #[test]
     fn suspension_relocates_external_and_stack_roots() {
-        let mut arena = Arena::new(18);
+        let mut memory = [0; 18];
+        let mut arena = Arena::new(&mut memory);
         let mut no_roots = [];
         let _dead = arena
             .allocate_values(BlockKind::Values, &[Value::FALSE], &mut no_roots)
@@ -350,15 +398,32 @@ mod tests {
         arena.push(Value::from_i30(5).unwrap()).unwrap();
         let mut roots = [Value::from_ref(live)];
 
-        let continuation = arena.suspend_stack(11, &mut roots).unwrap();
+        let continuation = arena.suspend_stack(11, Some(2), &mut roots).unwrap();
 
         assert_eq!(roots[0].as_ref().unwrap().word_index(), 1);
         assert_eq!(
             arena.values(roots[0].as_ref().unwrap()).unwrap(),
             &[Value::TRUE.raw()]
         );
-        assert_eq!(arena.resume_stack(continuation).unwrap(), 11);
+        assert_eq!(arena.resume_stack(continuation).unwrap(), (11, Some(2)));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(5));
         assert_eq!(arena.pop().unwrap().as_i30(), Some(3));
+    }
+
+    #[test]
+    fn caller_can_grow_the_machine_without_changing_heap_offsets() {
+        let mut initial = [0; 12];
+        let mut arena = Arena::new(&mut initial);
+        let reference = arena
+            .allocate_values(BlockKind::Values, &[Value::TRUE], &mut [])
+            .unwrap();
+        arena.push(Value::from_ref(reference)).unwrap();
+        let mut larger = [0; 24];
+
+        let mut arena = arena.grow_into(&mut larger).unwrap();
+
+        assert_eq!(arena.pop().unwrap().as_ref(), Some(reference));
+        assert_eq!(arena.values(reference).unwrap(), &[Value::TRUE.raw()]);
+        assert_eq!(arena.capacity_words(), 24);
     }
 }

@@ -6,6 +6,13 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 
 - Every guest `Value` and heap reference is exactly four bytes on Wasm32 and
   native targets.
+- Runtime crates are `no_std`, receive their memory from the caller, and do not
+  require libc or a global allocator. Compiler tooling may use `alloc` in a
+  separate crate.
+- Capacity is not permanently fixed. A caller can move a machine into a larger
+  word slice. Heap offsets remain unchanged and the stack is copied against the
+  new upper boundary. A Wasm controller can grow linear memory and rebind the
+  same offset-based machine state.
 - Durable relationships use word offsets. A Rust reference into the arena may
   not survive a call that can allocate or collect.
 - The guest heap grows upward and its operand/frame stack grows downward in one

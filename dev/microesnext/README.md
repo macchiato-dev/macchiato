@@ -18,10 +18,15 @@ not link to that C implementation.
   references without a forwarding-table allocation.
 - `microesnext-bytecode` defines the compact instruction stream independently
   of execution.
+- `microesnext-compiler` contains allocation-using source and bytecode tooling;
+  the runtime crates do not depend on it.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.
 - `microesnext` is a small facade; its `async` feature is disabled by default.
+
+The runtime is `no_std` and has no global-allocator or libc dependency. Its
+arena borrows a caller-supplied word slice; only compiler tooling uses `alloc`.
 
 These are static Rust crate boundaries, not runtime plugins. Release builds use
 fat LTO and one code-generation unit, so hot functions can inline across them.

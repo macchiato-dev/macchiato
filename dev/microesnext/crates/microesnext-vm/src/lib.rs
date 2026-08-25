@@ -10,24 +10,35 @@ pub enum Outcome {
     Await { value: Value, continuation: HeapRef },
 }
 
-pub struct Machine<'code> {
-    arena: Arena,
+pub struct Machine<'code, 'memory> {
+    arena: Arena<'memory>,
     code: &'code [u8],
     pc: usize,
 }
 
-impl<'code> Machine<'code> {
-    pub fn new(code: &'code [u8], memory_words: usize) -> Self {
+impl<'code, 'memory> Machine<'code, 'memory> {
+    pub fn new(code: &'code [u8], memory: &'memory mut [u32]) -> Self {
         Self {
-            arena: Arena::new(memory_words),
+            arena: Arena::new(memory),
             code,
             pc: 0,
         }
     }
 
     #[inline(always)]
-    pub fn arena(&self) -> &Arena {
+    pub fn arena(&self) -> &Arena<'_> {
         &self.arena
+    }
+
+    pub fn grow_into<'next>(
+        self,
+        memory: &'next mut [u32],
+    ) -> Result<Machine<'code, 'next>, Error> {
+        Ok(Machine {
+            arena: self.arena.grow_into(memory)?,
+            code: self.code,
+            pc: self.pc,
+        })
     }
 
     pub fn run(&mut self) -> Result<Outcome, Error> {
@@ -47,7 +58,8 @@ impl<'code> Machine<'code> {
                 }
                 Opcode::Await => {
                     let mut roots = [self.arena.pop()?];
-                    let continuation = self.arena.suspend_stack(self.pc as u32, &mut roots)?;
+                    let continuation =
+                        self.arena.suspend_stack(self.pc as u32, None, &mut roots)?;
                     let value = roots[0];
                     return Ok(Outcome::Await {
                         value,
@@ -60,7 +72,7 @@ impl<'code> Machine<'code> {
     }
 
     pub fn resume(&mut self, continuation: HeapRef, value: Value) -> Result<Outcome, Error> {
-        self.pc = self.arena.resume_stack(continuation)? as usize;
+        self.pc = self.arena.resume_stack(continuation)?.0 as usize;
         self.arena.push(value)?;
         self.run()
     }
@@ -71,7 +83,7 @@ mod tests {
     extern crate alloc;
 
     use alloc::vec::Vec;
-    use microesnext_bytecode::Builder;
+    use microesnext_compiler::Builder;
 
     use super::*;
 
@@ -88,7 +100,8 @@ mod tests {
     #[test]
     fn suspends_and_resumes_without_a_native_frame() {
         let code = awaiting_program();
-        let mut machine = Machine::new(&code, 64);
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
         let Outcome::Await {
             value,
             continuation,

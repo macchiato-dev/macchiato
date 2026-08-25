@@ -12,6 +12,8 @@ microesnext-arena.workspace = true
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 
+[dev-dependencies]
+microesnext-compiler.workspace = true
+
 [lib]
 path = "src/lib.rs"
-

@@ -32,7 +32,7 @@ impl From<Outcome> for Progress {
 }
 
 pub fn resume(
-    machine: &mut Machine<'_>,
+    machine: &mut Machine<'_, '_>,
     suspended: Suspended,
     fulfilled: Value,
 ) -> Result<Progress, Error> {
