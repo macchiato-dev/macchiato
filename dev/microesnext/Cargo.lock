@@ -6,6 +6,7 @@ version = 4
 name = "microesnext"
 version = "0.0.0"
 dependencies = [
+ "microesnext-arrays",
  "microesnext-async",
  "microesnext-bytecode",
  "microesnext-collections",
@@ -21,6 +22,14 @@ dependencies = [
 name = "microesnext-arena"
 version = "0.0.0"
 dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-arrays"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 

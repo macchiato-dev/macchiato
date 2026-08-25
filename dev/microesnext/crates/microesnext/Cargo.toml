@@ -9,6 +9,7 @@ version.workspace = true
 
 [features]
 default = []
+arrays = ["dep:microesnext-arrays"]
 async = ["dep:microesnext-async"]
 objects = ["microesnext-vm/objects"]
 functions = ["microesnext-vm/functions"]
@@ -19,6 +20,7 @@ promise-jobs = ["async", "functions", "promises", "microesnext-async/promises"]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
+microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }

@@ -26,6 +26,8 @@ not link to that C implementation.
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set
   storage with live cursor semantics.
+- `microesnext-arrays` contains dense and sparse indexed storage with geometric
+  growth, holes, and JavaScript length behavior.
 - `microesnext-weak-collections` contains WeakMap and WeakSet storage as a
   separate capability because ephemerons alter collector tracing.
 - `microesnext-promises` contains compact promise records and a caller-owned,
