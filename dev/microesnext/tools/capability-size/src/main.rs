@@ -14,6 +14,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "async",
         feature = "exceptions",
         feature = "functions",
+        feature = "numbers",
         feature = "objects",
         feature = "strings"
     )
@@ -155,6 +156,36 @@ pub extern "C" fn functions_probe() -> i32 {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
+}
+
+#[cfg(all(feature = "numbers", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn numbers_probe() -> f64 {
+    let left = 1.25_f64.to_bits();
+    let code = [
+        Opcode::ConstF64 as u8,
+        left as u8,
+        (left >> 8) as u8,
+        (left >> 16) as u8,
+        (left >> 24) as u8,
+        (left >> 32) as u8,
+        (left >> 40) as u8,
+        (left >> 48) as u8,
+        (left >> 56) as u8,
+        Opcode::ConstI30 as u8,
+        2,
+        0,
+        0,
+        0,
+        Opcode::AddNumber as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(Outcome::Complete(value)) = machine.run() else {
+        return f64::NAN;
+    };
+    microesnext::numbers::get(machine.arena(), value).unwrap_or(f64::NAN)
 }
 
 #[cfg(all(feature = "objects", target_arch = "wasm32"))]

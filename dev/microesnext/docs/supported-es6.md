@@ -5,6 +5,12 @@ not a general claim of ECMAScript conformance.
 
 ## Syntax and async execution
 
+Decimal and exponent literals compile to the optional `numbers` capability.
+It preserves IEEE-754 values, including negative zero and NaN, while keeping
+small integers as immediate i30 words. Addition of statically small integer
+terms stays on the invariant opcode path; expressions requiring promotion use
+the removable numeric path.
+
 Arrow functions support expression and block bodies, lexical `this` and
 `arguments`, and rejection as constructors. Untagged template literals support
 cooked text, escapes, multiline text, and substitutions. Tagged templates are

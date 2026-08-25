@@ -15,6 +15,7 @@ strings = ["dep:microesnext-strings", "microesnext-vm/strings"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
+numbers = ["dep:microesnext-numbers", "microesnext-vm/numbers"]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 collections = ["dep:microesnext-collections"]
 weak-collections = ["dep:microesnext-weak-collections"]
@@ -29,6 +30,7 @@ microesnext-collections = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
@@ -58,3 +60,8 @@ required-features = ["objects"]
 name = "arrays"
 path = "tests/arrays.rs"
 required-features = ["arrays"]
+
+[[test]]
+name = "numbers"
+path = "tests/numbers.rs"
+required-features = ["numbers"]

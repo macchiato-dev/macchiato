@@ -19,6 +19,8 @@ pub use microesnext_collections as collections;
 
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;
+#[cfg(feature = "numbers")]
+pub use microesnext_numbers as numbers;
 
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;

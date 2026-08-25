@@ -61,16 +61,17 @@ LTO from merely discarding an enabled but unused dependency.
 | --- | ---: | ---: |
 | Minimal | 1,892 | 876 |
 | Arrays | 8,675 | 3,440 |
-| Atoms with strings | 9,845 | 4,096 |
+| Atoms with strings | 9,843 | 4,095 |
 | Async suspension | 6,356 | 2,766 |
 | Collections | 3,193 | 1,420 |
 | Exceptions | 3,753 | 1,674 |
 | Functions | 6,869 | 2,935 |
-| Objects with atoms and strings | 14,379 | 5,700 |
+| Numbers | 5,889 | 2,545 |
+| Objects with atoms and strings | 14,377 | 5,696 |
 | Strings only | 4,867 | 2,205 |
 | Promises | 4,748 | 2,145 |
 | Weak collections | 1,959 | 919 |
-| All capabilities | 27,067 | 9,860 |
+| All capabilities | 29,021 | 10,490 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -86,6 +87,12 @@ Array and object probes also execute create, set, and get instructions through
 `Machine`. Low-level storage-only probes remain appropriate for collections,
 promises, and weak collections because those capabilities do not yet expose VM
 opcodes.
+
+The number probe parses live `ConstF64` and `AddNumber` instructions and reads
+the resulting arena value. Its 5,889-byte artifact includes floating-point
+storage and promotion. With `numbers` omitted, the minimal artifact remains
+1,892 bytes; every pre-existing capability is unchanged or two bytes smaller
+than its preceding measurement.
 
 The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode

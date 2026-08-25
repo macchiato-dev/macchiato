@@ -57,6 +57,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.
+- Small integers remain immediate i30 values in the invariant core. Optional
+  IEEE-754 numbers use opaque two-word payloads from `microesnext-numbers`, so
+  arbitrary floating-point bits are never traced as guest references. Builds
+  without `numbers` omit the arena block kind, typed opcodes, and implementation.
 - Ordinary strings, atom interning, and objects form three boundaries. A string
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine

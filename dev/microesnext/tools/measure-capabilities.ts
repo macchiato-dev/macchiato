@@ -14,6 +14,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["collections", "collections", [core, ["collections_probe", 0]]],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
     ["functions", "functions", [core, ["functions_probe", "nonzero"]]],
+    ["numbers", "numbers", [core, ["numbers_probe", 3.25]]],
     [
       "objects",
       "objects",
@@ -33,7 +34,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "arrays,async,collections,exceptions,functions,objects,promises,weak-collections",
+      "arrays,async,collections,exceptions,functions,numbers,objects,promises,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -42,6 +43,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["collections_probe", 0],
         ["exceptions_probe", 42],
         ["functions_probe", "nonzero"],
+        ["numbers_probe", 3.25],
         ["objects_probe", 42],
         ["strings_probe", "nonzero"],
         ["promises_probe", "nonzero"],

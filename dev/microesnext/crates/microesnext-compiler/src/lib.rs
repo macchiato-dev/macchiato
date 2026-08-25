@@ -29,6 +29,12 @@ impl Builder {
         self
     }
 
+    pub fn const_f64(mut self, value: f64) -> Self {
+        self.code.push(Opcode::ConstF64 as u8);
+        self.code.extend_from_slice(&value.to_bits().to_le_bytes());
+        self
+    }
+
     pub fn op(mut self, opcode: Opcode) -> Self {
         self.code.push(opcode as u8);
         self
@@ -122,6 +128,12 @@ struct Parser<'source> {
     output: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum TermKind {
+    I30,
+    General,
+}
+
 impl Parser<'_> {
     fn try_catch(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'{') {
@@ -188,15 +200,21 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
-        let used_binding = self.term(binding)?;
+        let (used_binding, mut kind) = self.term(binding)?;
         while self.consume(b'+') {
-            self.term(None)?;
-            self.output.push(Opcode::AddI30 as u8);
+            let (_, right) = self.term(None)?;
+            self.output
+                .push(if kind == TermKind::I30 && right == TermKind::I30 {
+                    Opcode::AddI30 as u8
+                } else {
+                    Opcode::AddNumber as u8
+                });
+            kind = TermKind::General;
         }
         Ok(used_binding)
     }
 
-    fn term(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
+    fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
@@ -204,9 +222,9 @@ impl Parser<'_> {
             self.source[self.offset..].starts_with(&self.source[*start..*end])
                 && self.identifier_end(self.offset + end - start)
         });
-        let used_binding = if let Some((start, end)) = binding {
+        let (used_binding, mut kind) = if let Some((start, end)) = binding {
             self.offset += end - start;
-            true
+            (true, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
             let mut index = 0_i32;
@@ -214,7 +232,7 @@ impl Parser<'_> {
                 loop {
                     self.output.push(Opcode::ConstI30 as u8);
                     self.output.extend_from_slice(&index.to_le_bytes());
-                    self.integer()?;
+                    self.number()?;
                     self.output.push(Opcode::SetIndex as u8);
                     index = index
                         .checked_add(1)
@@ -227,7 +245,7 @@ impl Parser<'_> {
                     }
                 }
             }
-            false
+            (false, TermKind::General)
         } else if self.consume_raw(b'{') {
             self.output.push(Opcode::NewObject as u8);
             if !self.consume(b'}') {
@@ -238,7 +256,7 @@ impl Parser<'_> {
                         return Err(self.error(":"));
                     }
                     self.output_atom_range(start, end);
-                    self.integer()?;
+                    self.number()?;
                     self.output.push(Opcode::SetProperty as u8);
                     if self.consume(b'}') {
                         break;
@@ -248,21 +266,29 @@ impl Parser<'_> {
                     }
                 }
             }
-            false
+            (false, TermKind::General)
         } else {
-            self.integer()?;
-            false
+            let immediate = self.number()?;
+            (
+                false,
+                if immediate {
+                    TermKind::I30
+                } else {
+                    TermKind::General
+                },
+            )
         };
         while self.consume(b'.') {
             self.whitespace();
             let (start, end) = self.identifier()?;
             self.output_atom_range(start, end);
             self.output.push(Opcode::GetProperty as u8);
+            kind = TermKind::General;
         }
         if awaiting {
             self.output.push(Opcode::Await as u8);
         }
-        Ok(used_binding)
+        Ok((used_binding, kind))
     }
 
     fn identifier_end(&self, offset: usize) -> bool {
@@ -272,33 +298,57 @@ impl Parser<'_> {
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
     }
 
-    fn integer(&mut self) -> Result<(), CompileError> {
+    fn number(&mut self) -> Result<bool, CompileError> {
         self.whitespace();
         let start = self.offset;
-        let negative = self.consume_raw(b'-');
-        let mut value = 0_i32;
-        let mut digits = 0;
-        while let Some(digit @ b'0'..=b'9') = self.source.get(self.offset).copied() {
-            value = value
-                .checked_mul(10)
-                .and_then(|value| value.checked_add((digit - b'0') as i32))
-                .ok_or_else(|| self.error("an i30 integer"))?;
+        self.consume_raw(b'-');
+        let mut digits = 0_usize;
+        while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
             self.offset += 1;
             digits += 1;
         }
+        let mut fractional = false;
+        if self.consume_raw(b'.') {
+            fractional = true;
+            while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
+                self.offset += 1;
+                digits += 1;
+            }
+        }
         if digits == 0 {
             self.offset = start;
-            return Err(self.error("an integer"));
+            return Err(self.error("a number"));
         }
-        if negative {
-            value = -value;
+        if matches!(self.source.get(self.offset), Some(b'e' | b'E')) {
+            fractional = true;
+            self.offset += 1;
+            if matches!(self.source.get(self.offset), Some(b'+' | b'-')) {
+                self.offset += 1;
+            }
+            let exponent = self.offset;
+            while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
+                self.offset += 1;
+            }
+            if self.offset == exponent {
+                return Err(self.error("an exponent"));
+            }
         }
-        if !(-(1 << 29)..(1 << 29)).contains(&value) {
-            return Err(self.error("an i30 integer"));
+        let source = core::str::from_utf8(&self.source[start..self.offset])
+            .map_err(|_| self.error("a number"))?;
+        if !fractional {
+            if let Ok(value) = source.parse::<i32>() {
+                if (-(1 << 29)..(1 << 29)).contains(&value) {
+                    self.output.push(Opcode::ConstI30 as u8);
+                    self.output.extend_from_slice(&value.to_le_bytes());
+                    return Ok(true);
+                }
+            }
         }
-        self.output.push(Opcode::ConstI30 as u8);
-        self.output.extend_from_slice(&value.to_le_bytes());
-        Ok(())
+        let value = source.parse::<f64>().map_err(|_| self.error("a number"))?;
+        self.output.push(Opcode::ConstF64 as u8);
+        self.output
+            .extend_from_slice(&value.to_bits().to_le_bytes());
+        Ok(false)
     }
 
     fn identifier(&mut self) -> Result<(usize, usize), CompileError> {
@@ -447,9 +497,23 @@ mod tests {
             compile_script("return 1 + nope").unwrap_err(),
             CompileError {
                 offset: 11,
-                expected: "an integer",
+                expected: "a number",
             }
         );
+    }
+
+    #[test]
+    fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
+        let integer = compile_script("return 1 + 2;").unwrap();
+        assert!(integer.contains(&(Opcode::AddI30 as u8)));
+        assert!(!integer.contains(&(Opcode::AddNumber as u8)));
+
+        let fractional = compile_script("return 1.25 + 2;").unwrap();
+        assert!(fractional.contains(&(Opcode::ConstF64 as u8)));
+        assert!(fractional.contains(&(Opcode::AddNumber as u8)));
+
+        let exponent = compile_script("return .5e2;").unwrap();
+        assert!(exponent.contains(&(Opcode::ConstF64 as u8)));
     }
 
     #[test]

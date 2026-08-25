@@ -15,6 +15,7 @@ strings = ["dep:microesnext-strings", "microesnext-bytecode/strings"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 functions = ["dep:microesnext-functions", "microesnext-bytecode/functions"]
+numbers = ["dep:microesnext-numbers", "microesnext-bytecode/numbers"]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 
 [dependencies]
@@ -26,6 +27,7 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }

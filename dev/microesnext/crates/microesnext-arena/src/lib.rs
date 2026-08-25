@@ -27,6 +27,22 @@ pub enum BlockKind {
     Reactions = 16,
     Array = 17,
     ArrayStorage = 18,
+    #[cfg(feature = "numbers")]
+    Number = 19,
+}
+
+#[inline(always)]
+#[cfg(not(feature = "numbers"))]
+const fn opaque_kind(kind: u32) -> bool {
+    kind == BlockKind::Bytes as u32 || kind == BlockKind::String as u32
+}
+
+#[inline(always)]
+#[cfg(feature = "numbers")]
+const fn opaque_kind(kind: u32) -> bool {
+    kind == BlockKind::Bytes as u32
+        || kind == BlockKind::String as u32
+        || kind == BlockKind::Number as u32
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
@@ -140,6 +156,34 @@ impl<'memory> Arena<'memory> {
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
+    /// Allocate untraced machine words. Numeric payloads and similar scalar
+    /// data must not be mistaken for compact guest references by collection.
+    #[cfg(feature = "numbers")]
+    pub fn allocate_opaque(
+        &mut self,
+        kind: BlockKind,
+        words: &[u32],
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
+        if !opaque_kind(kind as u32) || matches!(kind, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let length = HEADER_WORDS + words.len();
+        if self.heap_end + length > self.stack_start {
+            self.compact(roots)?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        self.words[start + HEADER_WORDS..start + length].copy_from_slice(words);
+        self.heap_end += length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
     pub fn extend_values(
         &mut self,
         source: HeapRef,
@@ -148,7 +192,7 @@ impl<'memory> Arena<'memory> {
     ) -> Result<HeapRef, Error> {
         let kind = self.kind(source)?;
         self.ensure_kind_supported(kind)?;
-        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+        if opaque_kind(kind as u32) {
             return Err(Error::Type);
         }
         let mut source_root = [Value::from_ref(source)];
@@ -187,7 +231,7 @@ impl<'memory> Arena<'memory> {
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
         self.ensure_kind_supported(kind)?;
-        if stack_count > self.stack_len() || matches!(kind, BlockKind::Bytes | BlockKind::String) {
+        if stack_count > self.stack_len() || opaque_kind(kind as u32) {
             return Err(Error::StackUnderflow);
         }
         let length = HEADER_WORDS + prefix.len() + stack_count;
@@ -224,7 +268,7 @@ impl<'memory> Arena<'memory> {
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
         self.ensure_kind_supported(kind)?;
-        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+        if opaque_kind(kind as u32) {
             return Err(Error::Type);
         }
         let length = HEADER_WORDS + prefix.len() + repeated;
@@ -257,7 +301,7 @@ impl<'memory> Arena<'memory> {
     ) -> Result<HeapRef, Error> {
         let kind = self.kind(source)?;
         self.ensure_kind_supported(kind)?;
-        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+        if opaque_kind(kind as u32) {
             return Err(Error::Type);
         }
         let mut source_root = [Value::from_ref(source)];
@@ -455,6 +499,25 @@ impl<'memory> Arena<'memory> {
 
     pub fn values(&self, reference: HeapRef) -> Result<&[u32], Error> {
         let start = self.block_start(reference)?;
+        #[cfg(feature = "numbers")]
+        if self.words[start + 1] == BlockKind::Number as u32 {
+            return Err(Error::Type);
+        }
+        let length = (self.words[start] & LENGTH_MASK) as usize;
+        Ok(&self.words[start + HEADER_WORDS..start + length])
+    }
+
+    #[cfg(feature = "numbers")]
+    pub fn opaque_words(&self, reference: HeapRef) -> Result<&[u32], Error> {
+        let start = self.block_start(reference)?;
+        if !opaque_kind(self.words[start + 1])
+            || matches!(
+                self.words[start + 1],
+                value if value == BlockKind::Bytes as u32 || value == BlockKind::String as u32
+            )
+        {
+            return Err(Error::Type);
+        }
         let length = (self.words[start] & LENGTH_MASK) as usize;
         Ok(&self.words[start + HEADER_WORDS..start + length])
     }
@@ -465,7 +528,7 @@ impl<'memory> Arena<'memory> {
         index: usize,
         value: Value,
     ) -> Result<(), Error> {
-        if matches!(self.kind(reference)?, BlockKind::Bytes | BlockKind::String) {
+        if opaque_kind(self.kind(reference)? as u32) {
             return Err(Error::Type);
         }
         let start = self.block_start(reference)?;
@@ -528,6 +591,8 @@ impl<'memory> Arena<'memory> {
             16 => Ok(BlockKind::Reactions),
             17 => Ok(BlockKind::Array),
             18 => Ok(BlockKind::ArrayStorage),
+            #[cfg(feature = "numbers")]
+            19 => Ok(BlockKind::Number),
             _ => Err(Error::DanglingReference),
         }
     }
@@ -561,22 +626,16 @@ impl<'memory> Arena<'memory> {
             let mut cursor = self.heap_base;
             while cursor < self.heap_end {
                 let length = (self.words[cursor] & LENGTH_MASK) as usize;
-                if self.words[cursor] & MARK != 0
-                    && !matches!(
-                        self.words[cursor + 1],
-                        value if value == BlockKind::Bytes as u32 || value == BlockKind::String as u32
-                    )
-                    && {
-                        #[cfg(feature = "ephemerons")]
-                        {
-                            self.words[cursor + 1] != BlockKind::WeakTable as u32
-                        }
-                        #[cfg(not(feature = "ephemerons"))]
-                        {
-                            true
-                        }
+                if self.words[cursor] & MARK != 0 && !opaque_kind(self.words[cursor + 1]) && {
+                    #[cfg(feature = "ephemerons")]
+                    {
+                        self.words[cursor + 1] != BlockKind::WeakTable as u32
                     }
-                {
+                    #[cfg(not(feature = "ephemerons"))]
+                    {
+                        true
+                    }
+                } {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         if let Some(reference) = Value::from_raw(self.words[index]).as_ref() {
                             let child = self.block_start(reference)?;
@@ -623,18 +682,14 @@ impl<'memory> Arena<'memory> {
                 #[cfg(feature = "ephemerons")]
                 if self.words[cursor + 1] == BlockKind::WeakTable as u32 {
                     self.rewrite_ephemeron_table(cursor, length)?;
-                } else if self.words[cursor + 1] != BlockKind::Bytes as u32
-                    && self.words[cursor + 1] != BlockKind::String as u32
-                {
+                } else if !opaque_kind(self.words[cursor + 1]) {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         let value = Value::from_raw(self.words[index]);
                         self.words[index] = self.forward_value(value)?.raw();
                     }
                 }
                 #[cfg(not(feature = "ephemerons"))]
-                if self.words[cursor + 1] != BlockKind::Bytes as u32
-                    && self.words[cursor + 1] != BlockKind::String as u32
-                {
+                if !opaque_kind(self.words[cursor + 1]) {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         let value = Value::from_raw(self.words[index]);
                         self.words[index] = self.forward_value(value)?.raw();

@@ -32,6 +32,9 @@ not link to that C implementation.
   crate can also use already-interned or non-string keys.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
+- `microesnext-numbers` supplies heap-backed IEEE-754 values and promoted
+  arithmetic. Small i30 values and their direct addition remain in the base VM;
+  integer-only builds do not link floating-point parsing or storage.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set
   storage with live cursor semantics.
 - `microesnext-arrays` contains dense and sparse indexed storage with geometric
@@ -72,7 +75,7 @@ instruction-loop check without compiler dev-feature unification:
 ```sh
 cargo run --release -p microesnext-core-loop --no-default-features
 cargo run --release -p microesnext-core-loop --no-default-features \
-  --features async,objects,functions -- --machine
+  --features async,objects,functions,numbers -- --machine
 ```
 
 It is a regression signal rather than a claim that noisy wall-clock timings can

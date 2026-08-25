@@ -10,6 +10,7 @@ members = [
   "crates/microesnext-compiler",
   "crates/microesnext-collections",
   "crates/microesnext-functions",
+  "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
   "crates/microesnext-promises",
@@ -42,6 +43,7 @@ microesnext-bytecode-core = { path = "crates/microesnext-bytecode-core", version
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
 microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.0" }
+microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0" }

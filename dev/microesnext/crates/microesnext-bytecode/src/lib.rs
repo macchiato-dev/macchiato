@@ -42,6 +42,10 @@ pub enum Opcode {
     Drop = 19,
     #[cfg(feature = "atoms")]
     ConstAtom = 20,
+    #[cfg(feature = "numbers")]
+    ConstF64 = 21,
+    #[cfg(feature = "numbers")]
+    AddNumber = 22,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -84,6 +88,10 @@ impl TryFrom<u8> for Opcode {
             19 => Ok(Self::Drop),
             #[cfg(feature = "atoms")]
             20 => Ok(Self::ConstAtom),
+            #[cfg(feature = "numbers")]
+            21 => Ok(Self::ConstF64),
+            #[cfg(feature = "numbers")]
+            22 => Ok(Self::AddNumber),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -120,5 +128,19 @@ mod tests {
     #[test]
     fn enabled_atom_opcode_is_decodable() {
         assert_eq!(Opcode::try_from(20), Ok(Opcode::ConstAtom));
+    }
+
+    #[cfg(not(feature = "numbers"))]
+    #[test]
+    fn omitted_number_opcodes_are_invalid_bytecode() {
+        assert!(Opcode::try_from(21).is_err());
+        assert!(Opcode::try_from(22).is_err());
+    }
+
+    #[cfg(feature = "numbers")]
+    #[test]
+    fn enabled_number_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(21), Ok(Opcode::ConstF64));
+        assert_eq!(Opcode::try_from(22), Ok(Opcode::AddNumber));
     }
 }

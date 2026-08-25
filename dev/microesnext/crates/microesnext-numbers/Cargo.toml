@@ -1,0 +1,15 @@
+[package]
+name = "microesnext-numbers"
+description = "Optional heap-backed numeric values for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["numbers"] }
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"

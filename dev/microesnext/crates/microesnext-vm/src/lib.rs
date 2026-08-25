@@ -148,6 +148,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "numbers",
         feature = "exceptions"
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
@@ -227,6 +228,25 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "numbers")]
+            Opcode::ConstF64 => {
+                let low = self.core.next_u32()? as u64;
+                let high = self.core.next_u32()? as u64;
+                let value = microesnext_numbers::new(
+                    self.core.arena_mut(),
+                    f64::from_bits(low | high << 32),
+                )?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "numbers")]
+            Opcode::AddNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_numbers::add(self.core.arena_mut(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -290,6 +310,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "numbers",
         feature = "exceptions"
     )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
@@ -599,6 +620,23 @@ mod tests {
                 .bytes_equal(value.as_ref().unwrap(), b"hello")
                 .unwrap()
         );
+    }
+
+    #[cfg(feature = "numbers")]
+    #[test]
+    fn promotes_optional_fractional_arithmetic_without_changing_i30_addition() {
+        let code = Builder::new()
+            .const_f64(1.25)
+            .const_i30(2)
+            .op(Opcode::AddNumber)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 48];
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected number completion")
+        };
+        assert_eq!(microesnext_numbers::get(machine.arena(), value), Ok(3.25));
     }
 
     #[cfg(feature = "functions")]
