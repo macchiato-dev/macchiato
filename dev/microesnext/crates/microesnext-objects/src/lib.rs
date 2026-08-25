@@ -7,7 +7,7 @@ pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
     value
         .as_ref()
         .and_then(|reference| arena.kind(reference).ok())
-        == Some(BlockKind::Object)
+        .is_some_and(is_object_kind)
 }
 
 /// Ordinary objects contain only a prototype and a property-table reference.
@@ -88,7 +88,7 @@ pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
 fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object_ref(arena, object)?;
     let fields = arena.values(object)?;
-    if fields.len() != 2 {
+    if fields.len() != object_field_count(arena.kind(object)?) {
         return Err(Error::DanglingReference);
     }
     Value::from_raw(fields[1]).as_ref().ok_or(Error::Type)
@@ -96,10 +96,30 @@ fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
 
 fn object_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
     let object = object.as_ref().ok_or(Error::Type)?;
-    if arena.kind(object)? != BlockKind::Object {
+    if !is_object_kind(arena.kind(object)?) {
         return Err(Error::Type);
     }
     Ok(object)
+}
+
+#[inline]
+const fn is_object_kind(kind: BlockKind) -> bool {
+    match kind {
+        BlockKind::Object => true,
+        #[cfg(feature = "callable-objects")]
+        BlockKind::CallableObject => true,
+        _ => false,
+    }
+}
+
+#[inline]
+const fn object_field_count(kind: BlockKind) -> usize {
+    match kind {
+        BlockKind::Object => 2,
+        #[cfg(feature = "callable-objects")]
+        BlockKind::CallableObject => 3,
+        _ => 0,
+    }
 }
 
 #[cfg(test)]

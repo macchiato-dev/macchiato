@@ -146,6 +146,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-callable-objects"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-capability-size"
 version = "0.0.0"
 dependencies = [

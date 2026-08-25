@@ -7,6 +7,10 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+callable-objects = ["microesnext-arena/callable-objects"]
+
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-types.workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "microesnext-callable-objects"
+description = "Removable ordinary object wrappers for MicroESNext callables"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["callable-objects"] }
+microesnext-functions.workspace = true
+microesnext-objects = { workspace = true, features = ["callable-objects"] }
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"

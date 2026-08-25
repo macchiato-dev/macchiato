@@ -45,6 +45,8 @@ pub enum BlockKind {
     PromiseResolutionCell = 26,
     #[cfg(feature = "promise-resolvers")]
     PromiseResolver = 27,
+    #[cfg(feature = "callable-objects")]
+    CallableObject = 28,
 }
 
 #[inline(always)]
@@ -745,6 +747,8 @@ impl<'memory> Arena<'memory> {
             26 => Ok(BlockKind::PromiseResolutionCell),
             #[cfg(feature = "promise-resolvers")]
             27 => Ok(BlockKind::PromiseResolver),
+            #[cfg(feature = "callable-objects")]
+            28 => Ok(BlockKind::CallableObject),
             _ => Err(Error::DanglingReference),
         }
     }
