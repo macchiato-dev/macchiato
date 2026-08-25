@@ -27,14 +27,20 @@ pub fn resolve_native(
         return Ok(Resolution::Rejected(live[0]));
     }
     if is_promise(arena, resolution) {
-        then(
+        let promise = arena.retain(promise)?;
+        let destination = arena.root(promise)?;
+        if let Err(error) = then(
             arena,
             queue,
             resolution,
             Value::UNDEFINED,
             Value::UNDEFINED,
-            promise,
-        )?;
+            destination,
+        ) {
+            arena.release(promise)?;
+            return Err(error);
+        }
+        let promise = arena.release(promise)?;
         return Ok(Resolution::Adopted(promise));
     }
     settle(arena, queue, promise, Settlement::Fulfilled, resolution)?;
@@ -43,6 +49,7 @@ pub fn resolve_native(
 
 #[cfg(test)]
 mod tests {
+    use microesnext_arena::BlockKind;
     use microesnext_promises::{JobSlot, pending, settled_result};
 
     use super::*;
@@ -88,6 +95,52 @@ mod tests {
         .unwrap();
         let job = queue.pop(&mut arena).unwrap().unwrap();
         assert_eq!(job.callback, Value::UNDEFINED);
+        settle(
+            &mut arena,
+            &mut queue,
+            job.destination,
+            job.settlement,
+            job.argument,
+        )
+        .unwrap();
+        assert_eq!(
+            settled_result(&arena, destination),
+            Ok(Some((Settlement::Fulfilled, answer)))
+        );
+    }
+
+    #[test]
+    fn adopted_destination_follows_compaction_while_reaction_is_installed() {
+        let mut memory = [0; 40];
+        let mut arena = Arena::with_root_capacity(&mut memory, 8);
+        let _dead = arena
+            .allocate_values(BlockKind::Values, &mut [Value::NULL; 4], &mut [])
+            .unwrap();
+        let source = pending(&mut arena).unwrap();
+        let original_destination = pending(&mut arena).unwrap();
+        let source_root = arena.retain(source).unwrap();
+        let mut slots: [Option<JobSlot>; 1] = [None; 1];
+        let mut queue = JobQueue::new(&mut slots);
+
+        let Resolution::Adopted(destination) =
+            resolve_native(&mut arena, &mut queue, original_destination, source).unwrap()
+        else {
+            panic!("expected native Promise adoption")
+        };
+        assert_ne!(arena.root(source_root).unwrap(), source);
+        assert_ne!(destination, original_destination);
+
+        let source = arena.release(source_root).unwrap();
+        let answer = Value::from_i30(42).unwrap();
+        settle(
+            &mut arena,
+            &mut queue,
+            source,
+            Settlement::Fulfilled,
+            answer,
+        )
+        .unwrap();
+        let job = queue.pop(&mut arena).unwrap().unwrap();
         settle(
             &mut arena,
             &mut queue,
