@@ -34,6 +34,7 @@ members = [
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
   "crates/microesnext-symbols",
+  "crates/microesnext-thenables",
   "crates/microesnext-well-known-symbols",
   "crates/microesnext-types",
   "crates/microesnext-truthiness",
@@ -87,6 +88,7 @@ microesnext-promise-resolvers = { path = "crates/microesnext-promise-resolvers",
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
+microesnext-thenables = { path = "crates/microesnext-thenables", version = "0.0.0" }
 microesnext-well-known-symbols = { path = "crates/microesnext-well-known-symbols", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-truthiness = { path = "crates/microesnext-truthiness", version = "0.0.0" }

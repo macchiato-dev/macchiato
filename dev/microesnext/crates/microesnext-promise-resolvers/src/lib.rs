@@ -67,6 +67,24 @@ pub fn take_call(
     };
     arena.truncate_stack(base)?;
 
+    claim(arena, resolver, argument)
+}
+
+/// Rejects after the called `then` function throws, unless either resolving
+/// function already won the shared cell.
+pub fn reject_if_open(
+    arena: &mut Arena<'_>,
+    reject: Value,
+    reason: Value,
+) -> Result<Option<Call>, Error> {
+    let call = claim(arena, reject, reason)?;
+    if call.is_some_and(|call| call.settlement != Settlement::Rejected) {
+        return Err(Error::Type);
+    }
+    Ok(call)
+}
+
+fn claim(arena: &mut Arena<'_>, resolver: Value, argument: Value) -> Result<Option<Call>, Error> {
     let resolver = checked(arena, resolver, BlockKind::PromiseResolver)?;
     let fields = arena.values(resolver)?;
     let [destination, cell, reject] = fields else {

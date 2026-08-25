@@ -36,6 +36,7 @@ dependencies = [
  "microesnext-recursive-functions",
  "microesnext-strings",
  "microesnext-symbols",
+ "microesnext-thenables",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -357,6 +358,21 @@ dependencies = [
  "microesnext-arena",
  "microesnext-strings",
  "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-thenables"
+version = "0.0.0"
+dependencies = [
+ "microesnext-bytecode",
+ "microesnext-compiler",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-promise-resolution",
+ "microesnext-promise-resolvers",
+ "microesnext-promises",
+ "microesnext-types",
+ "microesnext-vm",
 ]
 
 [[package]]

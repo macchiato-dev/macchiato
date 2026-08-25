@@ -3,6 +3,13 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
+pub fn is_function(arena: &Arena<'_>, value: Value) -> bool {
+    value
+        .as_ref()
+        .and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::Closure)
+}
+
 pub fn capture_stack(
     arena: &mut Arena<'_>,
     entry: u32,

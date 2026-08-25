@@ -1,0 +1,27 @@
+[package]
+name = "microesnext-thenables"
+description = "Optional object thenable assimilation for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-functions.workspace = true
+microesnext-objects.workspace = true
+microesnext-promise-resolution.workspace = true
+microesnext-promise-resolvers.workspace = true
+microesnext-promises.workspace = true
+microesnext-types.workspace = true
+microesnext-vm = { workspace = true, features = [
+  "promise-resolvers",
+  "receivers",
+] }
+
+[dev-dependencies]
+microesnext-bytecode.workspace = true
+microesnext-compiler.workspace = true
+
+[lib]
+path = "src/lib.rs"

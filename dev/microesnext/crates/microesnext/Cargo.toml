@@ -94,6 +94,12 @@ promise-resolvers = [
   "dep:microesnext-promise-resolvers",
   "microesnext-vm/promise-resolvers",
 ]
+thenables = [
+  "objects",
+  "promise-resolvers",
+  "receivers",
+  "dep:microesnext-thenables",
+]
 promise-jobs = [
   "async",
   "functions",
@@ -130,6 +136,7 @@ microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
+microesnext-thenables = { workspace = true, optional = true }
 microesnext-well-known-symbols = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true

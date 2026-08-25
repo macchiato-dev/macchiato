@@ -3,6 +3,13 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 
+pub fn is_object(arena: &Arena<'_>, value: Value) -> bool {
+    value
+        .as_ref()
+        .and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::Object)
+}
+
 /// Ordinary objects contain only a prototype and a property-table reference.
 /// Property tables store interned-key/value pairs and can be replaced as they
 /// grow without changing the object reference.
