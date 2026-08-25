@@ -12,16 +12,23 @@ pub enum PrimitiveNumber {
 
 /// Coerce a primitive while retaining the immediate-integer fast path.
 #[inline]
-pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
+pub fn try_coerce(arena: &Arena<'_>, value: Value) -> Result<Option<PrimitiveNumber>, Error> {
     if let Some(value) = value.as_i30() {
-        return Ok(PrimitiveNumber::I30(value));
+        return Ok(Some(PrimitiveNumber::I30(value)));
     }
     match value {
-        Value::UNDEFINED => Ok(PrimitiveNumber::F64(f64::NAN)),
-        Value::NULL | Value::FALSE => Ok(PrimitiveNumber::I30(0)),
-        Value::TRUE => Ok(PrimitiveNumber::I30(1)),
-        _ => microesnext_numbers::get(arena, value).map(PrimitiveNumber::F64),
+        Value::UNDEFINED => Ok(Some(PrimitiveNumber::F64(f64::NAN))),
+        Value::NULL | Value::FALSE => Ok(Some(PrimitiveNumber::I30(0))),
+        Value::TRUE => Ok(Some(PrimitiveNumber::I30(1))),
+        _ => {
+            microesnext_numbers::try_get(arena, value).map(|value| value.map(PrimitiveNumber::F64))
+        }
     }
+}
+
+#[inline]
+pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
+    try_coerce(arena, value)?.ok_or(Error::Type)
 }
 
 /// Apply the allocation-free portion of JavaScript `ToNumber`.

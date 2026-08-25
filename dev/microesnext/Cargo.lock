@@ -421,6 +421,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-string-number-coercion"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-number-coercion",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-string-operations"
 version = "0.0.0"
 dependencies = [
