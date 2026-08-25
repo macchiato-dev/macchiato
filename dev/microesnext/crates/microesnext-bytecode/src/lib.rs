@@ -70,6 +70,8 @@ pub enum Opcode {
     JumpIfFalseBoolean = 69,
     #[cfg(feature = "control-flow")]
     ToBoolean = 70,
+    #[cfg(feature = "functions")]
+    CallValueArguments = 71,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -131,6 +133,8 @@ impl TryFrom<u8> for Opcode {
             69 => Ok(Self::JumpIfFalseBoolean),
             #[cfg(feature = "control-flow")]
             70 => Ok(Self::ToBoolean),
+            #[cfg(feature = "functions")]
+            71 => Ok(Self::CallValueArguments),
             _ => Err(Error::BadBytecode),
         }
     }

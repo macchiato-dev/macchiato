@@ -161,6 +161,36 @@ impl<'code, 'memory> Core<'code, 'memory> {
     }
 
     #[inline(always)]
+    pub fn enter_call_with_arguments(
+        &mut self,
+        function: Value,
+        target: usize,
+        argument_count: usize,
+    ) -> Result<(), Error> {
+        if target >= self.code.len() {
+            return Err(Error::BadBytecode);
+        }
+        if argument_count > self.arena.stack_len() {
+            return Err(Error::StackUnderflow);
+        }
+        let frame_base = self.arena.stack_len() - argument_count;
+        let previous_frame = self.frame_depth.map_or(-1, |depth| depth as i32);
+        self.arena.insert_stack_value_from_bottom(
+            frame_base,
+            Value::from_i30(self.pc as i32).ok_or(Error::BadBytecode)?,
+        )?;
+        self.arena.insert_stack_value_from_bottom(
+            frame_base + 1,
+            Value::from_i30(previous_frame).ok_or(Error::BadBytecode)?,
+        )?;
+        self.arena
+            .insert_stack_value_from_bottom(frame_base + 2, function)?;
+        self.frame_depth = Some(frame_base + 3);
+        self.pc = target;
+        Ok(())
+    }
+
+    #[inline(always)]
     pub fn frame_base(&self) -> usize {
         self.frame_depth.unwrap_or(0)
     }

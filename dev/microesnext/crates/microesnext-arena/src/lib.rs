@@ -413,6 +413,20 @@ impl<'memory> Arena<'memory> {
         Ok(())
     }
 
+    /// Remove a value while retaining operands above it. Calls use this to
+    /// take a function from immediately below its already-evaluated arguments.
+    pub fn remove_stack_value_from_bottom(&mut self, index: usize) -> Result<Value, Error> {
+        if index >= self.stack_len() {
+            return Err(Error::StackUnderflow);
+        }
+        let removal = self.words.len() - 1 - index;
+        let value = Value::from_raw(self.words[removal]);
+        self.words
+            .copy_within(self.stack_start..removal, self.stack_start + 1);
+        self.stack_start += 1;
+        Ok(value)
+    }
+
     pub fn clear_stack(&mut self) {
         self.stack_start = self.words.len();
     }
@@ -1052,6 +1066,21 @@ mod tests {
         assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(20));
         assert_eq!(arena.stack_value_from_bottom(2).unwrap().as_i30(), Some(2));
         assert_eq!(arena.stack_value_from_bottom(3).unwrap().as_i30(), Some(30));
+    }
+
+    #[test]
+    fn removes_a_callable_below_evaluated_arguments() {
+        let mut memory = [0; 16];
+        let mut arena = Arena::new(&mut memory);
+        arena.push(Value::from_i30(10).unwrap()).unwrap();
+        arena.push(Value::from_i30(20).unwrap()).unwrap();
+        arena.push(Value::from_i30(30).unwrap()).unwrap();
+        assert_eq!(
+            arena.remove_stack_value_from_bottom(1).unwrap().as_i30(),
+            Some(20)
+        );
+        assert_eq!(arena.stack_value_from_bottom(0).unwrap().as_i30(), Some(10));
+        assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(30));
     }
 
     #[test]

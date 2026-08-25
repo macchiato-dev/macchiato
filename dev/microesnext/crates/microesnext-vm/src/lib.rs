@@ -221,6 +221,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 Ok(None)
             }
             #[cfg(feature = "functions")]
+            Opcode::CallValueArguments => {
+                let argument_count = self.core.next_u16()? as usize;
+                let stack_len = self.core.arena().stack_len();
+                let function_index = stack_len
+                    .checked_sub(argument_count + 1)
+                    .ok_or(Error::StackUnderflow)?;
+                let function = self
+                    .core
+                    .arena_mut()
+                    .remove_stack_value_from_bottom(function_index)?;
+                let target = entry(self.core.arena(), function)?;
+                self.core
+                    .enter_call_with_arguments(function, target, argument_count)?;
+                Ok(None)
+            }
+            #[cfg(feature = "functions")]
             Opcode::LoadCapture => {
                 let index = self.core.next_u16()? as usize;
                 let frame_depth = self.core.frame_depth().ok_or(Error::BadBytecode)?;
@@ -760,6 +776,26 @@ mod tests {
         assert_eq!(
             machine.call_closure(function, argument),
             Ok(Outcome::Complete(argument))
+        );
+    }
+
+    #[cfg(all(feature = "functions", feature = "locals"))]
+    #[test]
+    fn guest_calls_pass_evaluated_arguments_into_local_frames() {
+        let code = Builder::new()
+            .closure(16, 0)
+            .const_i30(42)
+            .call_value_arguments(1)
+            .op(Opcode::Return)
+            .init_frame(1, 1)
+            .load_local(0)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 80];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
     }
 

@@ -133,6 +133,12 @@ impl Builder {
         self
     }
 
+    pub fn call_value_arguments(mut self, count: u16) -> Self {
+        self.code.push(Opcode::CallValueArguments as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
+        self
+    }
+
     fn output_string(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstString as u8);
         self.code
