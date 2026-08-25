@@ -522,6 +522,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-typeof"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-strings",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 
