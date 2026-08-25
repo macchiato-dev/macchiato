@@ -103,3 +103,13 @@ fn deeply_nested_function_receives_a_forwarded_grandparent_capture() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn recursive_source_calls_use_guest_frames_and_a_self_cell() {
+    assert_eq!(
+        run(
+            "let first = true; function takeFirst() { let previous = first; first = false; return previous; } function recurse() { if (takeFirst()) { return recurse(); } else { return 42; } } return recurse();"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

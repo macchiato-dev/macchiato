@@ -303,10 +303,13 @@ impl Parser<'_> {
             return Err(self.error("}"));
         }
         self.output.push(Opcode::Jump as u8);
+        let loop_patch = self.output.len();
         self.output.extend_from_slice(&loop_start.to_le_bytes());
         let exit = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        self.relocations.push(exit_patch);
+        self.relocations.push(loop_patch);
         self.local_assignments()?;
         self.completion(None, false, false)
     }
@@ -336,6 +339,7 @@ impl Parser<'_> {
         let alternate = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[alternate_patch..alternate_patch + 4].copy_from_slice(&alternate.to_le_bytes());
+        self.relocations.push(alternate_patch);
         self.completion(None, false, false)?;
         if !self.consume(b'}') {
             return Err(self.error("}"));
@@ -618,6 +622,7 @@ impl Parser<'_> {
         let catch_offset = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
+        self.relocations.push(catch_patch);
         self.completion(binding, false, true)?;
         if !self.consume(b'}') {
             return Err(self.error("}"));

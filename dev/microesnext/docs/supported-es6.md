@@ -39,7 +39,9 @@ support closures. A self-referential declaration initializes its closure into
 that same cell, providing the identity needed by recursive calls. Nested
 function declarations are appended with explicit bytecode relocation records;
 captures can be forwarded through intermediate functions without allocating a
-second cell for the same binding.
+second cell for the same binding. Branch, loop, catch, and nested-function
+targets share that relocation path. Recursive source calls therefore stay on
+guest VM frames rather than consuming the native Rust stack.
 
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
