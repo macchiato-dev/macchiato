@@ -2081,20 +2081,21 @@ impl Parser<'_> {
         #[cfg(feature = "construction")]
         if self.try_word(b"new") {
             self.whitespace();
-            let constructor_start = self.offset;
-            let output_start = self.output.len();
-            let _ = self.term(None)?;
-            if let Some(call) = self.output.len().checked_sub(3).filter(|index| {
-                *index >= output_start && self.output[*index] == Opcode::CallValueArguments as u8
-            }) {
+            self.construction_reference()?;
+            if self.consume(b'(') {
+                #[cfg(feature = "method-calls")]
+                self.call_suffix(false)?;
+                #[cfg(not(feature = "method-calls"))]
+                self.call_suffix()?;
+                let call = self.output.len() - 3;
+                debug_assert_eq!(self.output[call], Opcode::CallValueArguments as u8);
                 self.output[call] = Opcode::ConstructValueArguments as u8;
-            } else if !self.source[constructor_start..self.offset].contains(&b'(') {
+            } else {
                 self.output.push(Opcode::ConstructValueArguments as u8);
                 self.output.extend_from_slice(&0_u16.to_le_bytes());
-            } else {
-                return Err(self.error("a direct constructor call"));
             }
             self.output.push(Opcode::SelectConstructedResult as u8);
+            self.post_construction_suffixes()?;
             return Ok((false, TermKind::General));
         }
         #[cfg(feature = "async")]
@@ -2260,6 +2261,84 @@ impl Parser<'_> {
             self.output.push(Opcode::Await as u8);
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "construction")]
+    fn construction_reference(&mut self) -> Result<(), CompileError> {
+        if let Some(local) = self.local_at_offset() {
+            self.offset += local.end - local.start;
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+            #[cfg(feature = "environments")]
+            if local.captured {
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+            }
+        } else if let Some(captured) = self.capture_at_offset()? {
+            #[cfg(feature = "environments")]
+            {
+                let (capture, binding) = captured;
+                self.offset += binding.end - binding.start;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+            }
+            #[cfg(not(feature = "environments"))]
+            {
+                let _ = captured;
+                unreachable!()
+            }
+        } else {
+            return Err(self.error("a constructor binding"));
+        }
+
+        #[cfg(feature = "objects")]
+        while self.consume(b'.') {
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            self.output_atom_range(start, end);
+            self.output.push(Opcode::GetProperty as u8);
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "construction")]
+    fn post_construction_suffixes(&mut self) -> Result<(), CompileError> {
+        #[cfg(feature = "method-calls")]
+        let mut method_call = false;
+        loop {
+            #[cfg(feature = "objects")]
+            if self.consume(b'.') {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                self.output_atom_range(start, end);
+                #[cfg(feature = "method-calls")]
+                {
+                    self.whitespace();
+                    method_call = self.source.get(self.offset) == Some(&b'(');
+                    self.output.push(if method_call {
+                        Opcode::GetMethod
+                    } else {
+                        Opcode::GetProperty
+                    } as u8);
+                }
+                #[cfg(not(feature = "method-calls"))]
+                self.output.push(Opcode::GetProperty as u8);
+                continue;
+            }
+            if self.consume(b'(') {
+                #[cfg(feature = "method-calls")]
+                self.call_suffix(method_call)?;
+                #[cfg(not(feature = "method-calls"))]
+                self.call_suffix()?;
+                #[cfg(feature = "method-calls")]
+                {
+                    method_call = false;
+                }
+                continue;
+            }
+            break;
+        }
+        Ok(())
     }
 
     #[cfg(all(feature = "functions", feature = "receivers"))]
@@ -3589,6 +3668,33 @@ mod tests {
             without_parentheses
                 .windows(3)
                 .any(|bytes| { bytes == [Opcode::ConstructValueArguments as u8, 0, 0] })
+        );
+
+        #[cfg(feature = "objects")]
+        {
+            let continued = compile_script(
+                "let Constructor = function () { return this; }; \
+                 return new Constructor().answer;",
+            )
+            .unwrap();
+            let construct = continued
+                .iter()
+                .position(|byte| *byte == Opcode::ConstructValueArguments as u8)
+                .unwrap();
+            let property = continued
+                .iter()
+                .rposition(|byte| *byte == Opcode::GetProperty as u8)
+                .unwrap();
+            assert!(construct < property);
+        }
+
+        #[cfg(feature = "method-calls")]
+        assert!(
+            compile_script(
+                "class Type { constructor() {} read() { return 42; } } \
+             return new Type().read();"
+            )
+            .is_ok()
         );
     }
 

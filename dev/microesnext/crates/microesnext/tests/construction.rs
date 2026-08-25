@@ -47,3 +47,12 @@ fn constructor_arguments_can_initialize_receiver_properties() {
     );
     assert_eq!(outcome, Outcome::Complete(Value::from_i30(42).unwrap()));
 }
+
+#[test]
+fn a_property_can_be_read_directly_from_a_constructed_value() {
+    let outcome = run(
+        "let Constructor = function (value) { this.answer = value; return 0; }; \
+         return new Constructor(42).answer;",
+    );
+    assert_eq!(outcome, Outcome::Complete(Value::from_i30(42).unwrap()));
+}

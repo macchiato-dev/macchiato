@@ -35,6 +35,21 @@ fn an_empty_class_expression_uses_the_implicit_constructor() {
 }
 
 #[test]
+fn a_method_can_be_called_directly_on_a_constructed_class_expression_value() {
+    let code = compile_script(
+        "let Type = class { constructor(value) { this.value = value; } \
+         read() { return this.value; } }; return new Type(42).read();",
+    )
+    .unwrap();
+    let mut memory = [0; 1024];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
+
+#[test]
 fn a_class_expression_itself_evaluates_to_the_class_record() {
     let code = compile_script("return class {};").unwrap();
     let mut memory = [0; 512];
