@@ -5,6 +5,7 @@ const builds = [
   ["logical operations", "logical-operations"],
   ["bounded integer operations", "integer-operations"],
   ["bounded numeric negation", "integer-negation"],
+  ["decimal number literals", "numbers"],
   ["primitive Number coercion", "number-coercion"],
   ["string Number coercion", "string-number-coercion"],
   ["JavaScript Number negation", "number-negation"],
@@ -75,6 +76,8 @@ for (const [name, features] of builds) {
     ? "return +true;"
     : features.includes("integer-negation")
     ? "return - 42;"
+    : features === "numbers"
+    ? "return 1.25;"
     : features.includes("integer-operations")
     ? "return 6 * 7;"
     : features.includes("control-flow")
