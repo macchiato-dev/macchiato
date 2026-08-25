@@ -45,4 +45,41 @@ mod tests {
             .unwrap();
         assert!(arena.bytes_equal(joined, b"microesnext").unwrap());
     }
+
+    #[test]
+    fn roots_both_inputs_when_concatenation_compacts() {
+        let mut memory = [0; 24];
+        let mut arena = Arena::new(&mut memory);
+        arena
+            .allocate_bytes(BlockKind::String, b"discarded allocation", &mut [])
+            .unwrap();
+        let left = arena
+            .allocate_bytes(BlockKind::String, b"left", &mut [])
+            .map(Value::from_ref)
+            .unwrap();
+        let right = arena
+            .allocate_bytes(BlockKind::String, b"right", &mut [])
+            .map(Value::from_ref)
+            .unwrap();
+
+        let joined = concatenate(&mut arena, left, right)
+            .unwrap()
+            .as_ref()
+            .unwrap();
+        assert!(arena.bytes_equal(joined, b"leftright").unwrap());
+    }
+
+    #[test]
+    fn rejects_non_string_values() {
+        let mut memory = [0; 16];
+        let mut arena = Arena::new(&mut memory);
+        let string = arena
+            .allocate_bytes(BlockKind::String, b"value", &mut [])
+            .map(Value::from_ref)
+            .unwrap();
+        assert_eq!(
+            concatenate(&mut arena, Value::TRUE, string),
+            Err(Error::Type)
+        );
+    }
 }
