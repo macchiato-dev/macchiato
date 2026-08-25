@@ -50,7 +50,7 @@ The identity-only strict-equality build is 2,890 bytes (1,337 gzip). Its live
 probe compares tagged booleans and its dependency graph omits string and number
 storage. A number-only build is 7,484 bytes (3,261 gzip); its graph contains no
 string, atom, or object crate and its live probe verifies that boxed NaNs remain
-unequal. Composing both scalar representations produces a 9,487-byte (3,978
+unequal. Composing both scalar representations produces a 9,480-byte (3,948
 gzip) artifact whose additional probe verifies separately allocated equal
 strings.
 
@@ -71,7 +71,7 @@ independent:
 | Logical operations | 3,428 | 1,647 |
 | Bounded numeric negation | 2,587 | 1,279 |
 | Logical operations with numbers only | 7,502 | 3,268 |
-| Logical operations with strings only | 7,208 | 3,121 |
+| Logical operations with strings only | 7,151 | 3,096 |
 
 The number-only dependency graph contains no string crate, and the string-only
 build contains no number crate. Macro-generated crate tests exercise each side
@@ -90,7 +90,23 @@ Number negation now composes the same coercion crate, making `-true`, `-null`,
 and `-undefined` follow primitive JavaScript semantics. Its linked artifact is
 6,912 bytes (3,050 gzip). The pre-existing i30 branch remains a direct fast
 path, and the interpreter kernel, bounded-negation, promoted-operations,
-minimal-program, and all-capabilities artifacts are byte-for-byte unchanged.
+and minimal-program artifacts are byte-for-byte unchanged.
+
+## String Number coercion, 2026-08-25
+
+The string composition is 29,262 bytes (20,113 gzip), while its compiler gate
+is 6,553 bytes (2,932 gzip). The runtime parses the complete decimal shape,
+signed `Infinity`, binary/octal/hex integer forms, negative zero, and the
+current ECMAScript whitespace set without a temporary allocation. Power-of-two
+radices retain guard and sticky bits for ties-to-even conversion rather than
+repeatedly rounding a growing float. Invalid strings produce NaN.
+
+Most of this first runtime checkpoint is Rust's correctly-rounded decimal
+`f64` parser. That cost is confined to `microesnext-string-number-coercion`:
+primitive coercion remains exactly 6,371 bytes, Number negation remains exactly
+6,912 bytes, and builds without string coercion neither resolve its crate nor
+compile its parser. A future compact decimal algorithm can therefore be
+measured and replaced inside this boundary without perturbing its callers.
 
 ## Feature-independent core, 2026-08-25
 
@@ -128,15 +144,15 @@ LTO from merely discarding an enabled but unused dependency.
 | Minimal | 1,984 | 961 |
 | Arrays | 8,768 | 3,532 |
 | Array iterators | 10,756 | 4,205 |
-| Atoms with strings | 9,969 | 4,208 |
+| Atoms with strings | 9,779 | 4,219 |
 | Async suspension | 6,455 | 2,856 |
 | Async functions | 23,191 | 8,866 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
-| Control flow with number/string truthiness | 8,765 | 3,771 |
+| Control flow with number/string truthiness | 8,708 | 3,736 |
 | Collection iterators | 10,170 | 4,091 |
 | Collection entry iterators | 13,542 | 4,979 |
-| Collections with number/string equality | 14,622 | 5,682 |
+| Collections with number/string equality | 14,617 | 5,655 |
 | Exceptions | 3,846 | 1,761 |
 | Shared environment cells | 6,285 | 2,728 |
 | Guest errors | 2,520 | 1,195 |
@@ -148,23 +164,29 @@ LTO from merely discarding an enabled but unused dependency.
 | Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
-| Iterator result objects | 13,944 | 5,441 |
+| Iterator result objects | 13,778 | 5,360 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
 | Primitive Number coercion | 6,371 | 2,823 |
+| String Number coercion | 29,262 | 20,113 |
 | Promoted number operations | 9,382 | 3,309 |
 | JavaScript Number negation | 6,912 | 3,050 |
-| Objects with atoms and strings | 14,663 | 5,859 |
-| Strings only | 4,960 | 2,299 |
+| Objects with atoms and strings | 14,473 | 5,775 |
+| Strings only | 4,903 | 2,270 |
 | Symbols | 4,995 | 2,254 |
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Native Promise resolution | 12,664 | 5,239 |
 | One-shot Promise resolvers | 20,479 | 7,910 |
-| Object thenable assimilation | 34,528 | 12,642 |
-| Async return thenable assimilation | 46,604 | 16,397 |
+| Object thenable assimilation | 34,353 | 12,618 |
+| Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 78,513 | 24,760 |
+| All capabilities | 103,841 | 42,322 |
+
+The all-capabilities row now actually selects string concatenation, primitive
+and string Number coercion, and Number negation. The earlier 78,513-byte row
+was a broad composition but omitted those independently gated paths; it was
+therefore mislabeled rather than a valid before/after size comparison.
 
 The negation rows are intentionally separate. Adding unary instructions to the
 existing integer and promoted-arithmetic crates initially grew the minimal
@@ -374,7 +396,7 @@ Promise-storage row remains unchanged and its dependency graph excludes
 The 20,479-byte (7,910 gzip) resolver row invokes a compact resolving function
 through guest call bytecode, handles its payload outside the invariant core,
 resumes the caller with `undefined`, and verifies that the destination settles.
-The 34,528-byte (12,642 gzip) thenable row additionally performs ordinary
+The 34,353-byte (12,618 gzip) thenable row additionally performs ordinary
 property lookup, invokes a real guest closure with its receiver, and fulfills
 through the one-shot pair. Unit tests cover deferred execution, receiver
 identity, rejection before resolution, ignored throws after resolution, and a
@@ -415,6 +437,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | bounded integer operations | 6,632 | 2,728 |
 | bounded numeric negation | 5,791 | 2,503 |
 | primitive Number coercion | 5,690 | 2,466 |
+| string Number coercion | 6,553 | 2,932 |
 | JavaScript Number negation | 6,072 | 2,597 |
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |

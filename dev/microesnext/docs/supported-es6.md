@@ -61,6 +61,13 @@ selecting only `number-negation` can emit the promoted instruction without
 also retaining decimal and exponent literal parsing; selecting `numbers` adds
 those literal forms.
 
+The independent `string-number-coercion` composition extends those same unary
+instructions to string operands. It trims the ECMAScript whitespace and line
+terminator set, accepts decimal `StringNumericLiteral`, signed `Infinity`, and
+unsigned binary/octal/hex integer forms, preserves negative zero, and returns
+NaN for invalid input. It does not add object conversion or make every
+string-enabled runtime retain numeric parsing.
+
 Strict equality and inequality (`===` and `!==`) are a separate removable
 capability. Immediate values, objects, and symbols compare by identity. When
 composed with strings, independently allocated equal strings compare by

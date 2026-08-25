@@ -94,6 +94,10 @@ an explicit relational stopping condition.
   `ToNumber`. Immediate integers, booleans, and null stay allocation-free;
   undefined becomes boxed NaN. String parsing and object `ToPrimitive` remain
   separate future compositions rather than hidden dependencies.
+- `microesnext-string-number-coercion` adds allocation-free
+  `StringNumericLiteral` parsing, including current ECMAScript whitespace and
+  power-of-two radix forms. Its decimal parser and string dependency disappear
+  together when the composition is omitted.
 - `microesnext-number-operations` adds promoted arithmetic and relational
   comparison. Its i30 fast paths remain direct; overflow falls through to the
   number representation only in builds selecting this crate.

@@ -103,6 +103,11 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   i30 branch remains ahead of coercion. Unary plus materializes a boxed value
   only for NaN. String parsing and object coercion are deliberately absent
   rather than host-defined.
+- String Number coercion is layered above that primitive crate. It borrows the
+  packed arena payload directly, validates the whole grammar, and allocates
+  only the resulting boxed number when an immediate i30 cannot represent it.
+  Power-of-two integer parsing keeps explicit guard/sticky bits; no temporary
+  guest string participates in those paths.
 - Ordinary strings, atom interning, and objects form three boundaries. A string
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine
