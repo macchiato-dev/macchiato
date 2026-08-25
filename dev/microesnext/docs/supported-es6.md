@@ -73,6 +73,14 @@ Arrow functions support expression and block bodies. Lexical `this` and
 template literals support cooked text, escapes, multiline text, and
 substitutions. Tagged templates are not included.
 
+The Rust compiler currently emits single-quoted, double-quoted, and
+no-substitution template strings directly into the removable string bytecode.
+It accepts the compact escape set used by the current examples and preserves
+UTF-8 source bytes. `${...}` substitution remains in the C behavioral oracle
+until general JavaScript addition/coercion is composed in Rust; a string-only
+compiler rejects it at the dollar sign rather than silently changing its
+meaning.
+
 The current compiler accepts `async function` declarations, anonymous async
 function expressions, and async arrows with expression or block bodies.
 Runtime async closures return their outer Promise before an awaited body

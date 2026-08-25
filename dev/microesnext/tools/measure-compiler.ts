@@ -2,6 +2,7 @@ const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
   ["exceptions", "exceptions"],
+  ["strings", "strings"],
   ["locals", "locals"],
   ["basic functions", "functions"],
   ["function arguments", "function-arguments"],
@@ -59,6 +60,8 @@ for (const [name, features] of builds) {
     ? "try { throw 1; } catch (error) { return error; }"
     : features.includes("control-flow")
     ? "if (true) { return 1; } else { return 2; }"
+    : features.includes("strings")
+    ? "return `UTF-8: café`;"
     : features.includes("locals")
     ? "let value = 1; return value;"
     : "return true;";

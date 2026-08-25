@@ -28,6 +28,7 @@ receivers = ["microesnext-compiler/receivers"]
 recursive-async-functions = ["microesnext-compiler/recursive-async-functions"]
 recursive-functions = ["microesnext-compiler/recursive-functions"]
 source-positions = ["microesnext-compiler/source-positions"]
+strings = ["microesnext-compiler/strings"]
 
 [dependencies]
 microesnext-compiler = { path = "../../crates/microesnext-compiler", default-features = false }

@@ -36,7 +36,8 @@ an explicit relational stopping condition.
   Source positions are a separate authoring feature. Zero-argument functions,
   parameter/argument frames, captured-environment analysis, synchronous named
   recursion, and asynchronous named recursion are independently selectable,
-  mirroring their runtime instruction groups.
+  mirroring their runtime instruction groups. Quoted and no-substitution
+  template strings enter only with the string bytecode capability.
 - `microesnext-strings` supplies ordinary packed byte strings without retained
   global state.
 - `microesnext-atoms` adds rooted interning for property names and other keys;
