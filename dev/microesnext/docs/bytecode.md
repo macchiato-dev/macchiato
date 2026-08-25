@@ -40,6 +40,13 @@ Constructor-only class declarations otherwise reuse receiver frames, argument
 calls, property stores, and return selection rather than adding a parallel
 execution model.
 
+The compiler emits `construct_value_arguments` and
+`select_constructed_result` before compiling any later property or call
+suffixes. Constructor-member lookup uses ordinary `get_property`, because
+`new namespace.Type()` constructs the resolved value rather than calling it as
+a method of `namespace`. The selected instance or explicit object result then
+enters the unchanged postfix path, allowing forms such as `new Type().read()`.
+
 An omitted base constructor needs no bytecode extension. When enabled, the
 compiler synthesizes an ordinary zero-parameter receiver frame ending in
 `load_this` and `return_receiver_locals`, then applies `to_class_constructor`.

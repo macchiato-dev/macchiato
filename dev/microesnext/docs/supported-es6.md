@@ -123,9 +123,11 @@ receiver whose prototype is the constructor's current object-valued
 object-return rule. The preserved receiver stays below the ordinary call frame,
 so construction adds no persistent VM field. A direct identifier or member
 constructor may omit parentheses and then uses the same zero-argument opcode.
-Parenthesized constructor expressions, post-call member access,
-`Symbol.hasInstance`, bound functions, and host constructors are not implied by
-this initial path. A named function's
+Parenthesized constructor expressions, `Symbol.hasInstance`, bound functions,
+and host constructors are not implied by this initial path. The constructed
+result does support ordinary property and method suffixes, and a direct member
+constructor such as `new namespace.Type()` resolves without retaining the
+namespace as a method receiver. A named function's
 private self cell is rebound to the wrapper by the independent
 `recursive-constructors` composition, so calls and construction observe the
 same function identity. Function declarations already reuse their ordinary
