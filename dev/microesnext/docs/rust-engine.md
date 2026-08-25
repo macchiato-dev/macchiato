@@ -29,6 +29,11 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
+- Scheduler and host references use O(1), generation-checked root slots. Raw
+  moving heap offsets are not exposed as durable asynchronous handles.
+- Packed byte strings, atom tables, objects, and closures remain arena blocks;
+  they do not become Rust allocations merely because their implementations are
+  split across crates.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

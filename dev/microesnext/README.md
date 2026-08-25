@@ -20,6 +20,10 @@ not link to that C implementation.
   of execution.
 - `microesnext-compiler` contains allocation-using source and bytecode tooling;
   the runtime crates do not depend on it.
+- `microesnext-objects` supplies packed strings, interned keys, and ordinary
+  objects only to builds enabling the `objects` feature.
+- `microesnext-functions` supplies heap closures and captured values only to
+  builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.
@@ -32,6 +36,19 @@ These are static Rust crate boundaries, not runtime plugins. Release builds use
 fat LTO and one code-generation unit, so hot functions can inline across them.
 Leaving out a capability removes its crate without adding indirect dispatch to
 the base interpreter.
+
+The `core-loop` example provides a repeatable native instruction-loop check:
+
+```sh
+cargo run --release -p microesnext --example core-loop
+cargo run --release -p microesnext --example core-loop \
+  --features async,objects,functions
+```
+
+It is a regression signal rather than a claim that noisy wall-clock timings can
+prove identical performance. The structural performance gate is stronger: the
+minimal dependency graph excludes capability crates, and the hot loop uses a
+direct opcode match with no trait objects, registries, or dynamic callbacks.
 
 This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
 Macchiato repository are consumers and comparison points, not source
