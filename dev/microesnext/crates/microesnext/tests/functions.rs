@@ -31,3 +31,11 @@ fn source_function_receives_multiple_arguments_in_order() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn source_function_keeps_parameters_and_lexical_locals_in_one_frame() {
+    assert_eq!(
+        run("function addBase(value) { let base = 40; return base + value; } return addBase(2);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

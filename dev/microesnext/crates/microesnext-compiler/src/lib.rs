@@ -298,10 +298,16 @@ impl Parser<'_> {
         while self.try_word(b"function") {
             self.function_declaration(&mut count_patch)?;
         }
+        self.let_declarations(&mut count_patch)?;
+        Ok(count_patch)
+    }
+
+    fn let_declarations(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+        self.whitespace();
         while self.try_word(b"let") {
             if count_patch.is_none() {
                 self.output.push(Opcode::InitLocals as u8);
-                count_patch = Some(self.output.len());
+                *count_patch = Some(self.output.len());
                 self.output.extend_from_slice(&0_u16.to_le_bytes());
             }
             self.whitespace();
@@ -327,7 +333,7 @@ impl Parser<'_> {
             }
             self.whitespace();
         }
-        Ok(count_patch)
+        Ok(())
     }
 
     fn function_declaration(
@@ -386,6 +392,11 @@ impl Parser<'_> {
             functions: Vec::new(),
             function_frame: true,
         };
+        let mut body_count_patch = Some(1);
+        body.let_declarations(&mut body_count_patch)?;
+        let body_local_count = u16::try_from(body.locals.len())
+            .map_err(|_| body.error("fewer than 65536 local bindings"))?;
+        body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
         body.completion(None, false, false)?;
         if !body.consume(b'}') {
             return Err(body.error("}"));
@@ -984,6 +995,24 @@ mod tests {
                 .unwrap_err()
                 .expected,
             "a unique parameter binding"
+        );
+    }
+
+    #[test]
+    fn compiles_function_local_bindings_into_the_parameter_frame() {
+        let code = compile_script(
+            "function addBase(value) { let base = 40; return base + value; } return addBase(2);",
+        )
+        .unwrap();
+        let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
+        assert_eq!(
+            &code[target..target + 5],
+            &[Opcode::InitFrame as u8, 2, 0, 1, 0]
+        );
+        assert!(
+            code[target..]
+                .windows(3)
+                .any(|bytes| { bytes == [Opcode::StoreLocal as u8, 1, 0] })
         );
     }
 
