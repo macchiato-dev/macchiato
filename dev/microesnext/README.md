@@ -46,6 +46,8 @@ not link to that C implementation.
   relocatable guest object. `microesnext-array-iterators` and
   `microesnext-collection-iterators` are separate adapters, so adding array
   iteration does not pull in Map/Set storage, or the reverse.
+- `microesnext-collection-entry-iterators` adds pair-array allocation only for
+  `Map.entries`; collection key/value and Set iteration do not link arrays.
 - `microesnext-iterator-results` allocates ordinary `{ value, done }` objects
   with cached property identities. It is separate so cursor and adapter builds
   do not acquire object, atom, or string storage. Its source-neutral boundary

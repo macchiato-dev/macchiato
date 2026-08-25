@@ -3,8 +3,8 @@
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
-const KEYS: u16 = 0;
-const VALUES: u16 = 1;
+const KEYS: u16 = microesnext_iterators::kind::COLLECTION_KEYS;
+const VALUES: u16 = microesnext_iterators::kind::COLLECTION_VALUES;
 
 pub fn new_keys(arena: &mut Arena<'_>, collection: Value) -> Result<Value, Error> {
     new(arena, collection, KEYS)
@@ -16,6 +16,9 @@ pub fn new_values(arena: &mut Arena<'_>, collection: Value) -> Result<Value, Err
 
 pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Error> {
     let (collection, mut index, kind) = microesnext_iterators::state(arena, iterator)?;
+    if kind != KEYS && kind != VALUES {
+        return Err(Error::Type);
+    }
     let entry = microesnext_collections::next_from(arena, collection, &mut index)?;
     microesnext_iterators::set_index(arena, iterator, index)?;
     let Some((key, value)) = entry else {
@@ -24,7 +27,7 @@ pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Err
     match kind {
         KEYS => Ok(Some(key)),
         VALUES => Ok(Some(value)),
-        _ => Err(Error::Type),
+        _ => unreachable!(),
     }
 }
 

@@ -29,6 +29,17 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       ]],
     ],
     [
+      "collection entry iterators",
+      "collection-entry-iterators",
+      [
+        core,
+        ["arrays_probe", 42],
+        ["collections_probe", 0],
+        ["iterators_probe", 11],
+        ["collection_entry_iterators_probe", 42],
+      ],
+    ],
+    [
       "collection value equality",
       "collections,numbers,strings",
       [
@@ -83,7 +94,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async,collection-iterators,exceptions,functions,iterable-protocol,iterator-results,numbers,objects,promises,well-known-symbols,weak-collections",
+      "array-iterators,async,collection-entry-iterators,collection-iterators,exceptions,functions,iterable-protocol,iterator-results,numbers,objects,promises,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -92,6 +103,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["async_probe", 7],
         ["collections_probe", 0],
         ["collection_iterators_probe", 1],
+        ["collection_entry_iterators_probe", 42],
         ["collection_equality_probe", 1],
         ["exceptions_probe", 42],
         ["functions_probe", "nonzero"],

@@ -65,7 +65,8 @@ LTO from merely discarding an enabled but unused dependency.
 | Atoms with strings | 10,017 | 4,148 |
 | Async suspension | 6,503 | 2,805 |
 | Collections | 3,333 | 1,460 |
-| Collection iterators | 10,223 | 4,049 |
+| Collection iterators | 10,218 | 4,042 |
+| Collection entry iterators | 13,590 | 4,922 |
 | Collections with number/string equality | 15,186 | 5,783 |
 | Exceptions | 3,894 | 1,714 |
 | Functions | 7,010 | 2,973 |
@@ -79,7 +80,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,573 | 2,392 |
 | Promises | 4,888 | 2,183 |
 | Weak collections | 2,099 | 951 |
-| All capabilities | 38,262 | 13,301 |
+| All capabilities | 39,234 | 13,616 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -114,10 +115,16 @@ standard description. Adding this realm capability leaves the symbol-only and
 all other isolated artifacts byte-for-byte unchanged.
 
 The iterator probes keep the 3,647-byte cursor separate from their sources.
-The 10,804-byte array row executes a live value step; the 10,223-byte
+The 10,804-byte array row executes a live value step; the 10,218-byte
 collection row executes a Set value step. Enabling either adapter leaves the
 other source crate out of its graph, and the original non-iterator array and
 collection artifacts remain byte-for-byte unchanged.
+
+The 13,590-byte collection-entry adapter executes a live `Map.entries()` step
+and allocates its two-element pair. Adapter tags share a small central numeric
+namespace, so a key/value adapter rejects an entry cursor before advancing it.
+The entry build includes arrays; the key/value build excludes them and becomes
+five raw bytes smaller after the tag validation was moved before mutation.
 
 The 13,992-byte result-object row constructs and reads both a live and an
 exhausted `{ value, done }` object through the source-neutral adapter boundary.

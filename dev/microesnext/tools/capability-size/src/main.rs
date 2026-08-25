@@ -169,6 +169,34 @@ pub extern "C" fn collection_iterators_probe() -> i32 {
     )
 }
 
+#[cfg(all(feature = "collection-entry-iterators", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn collection_entry_iterators_probe() -> i32 {
+    let mut memory = [0; 128];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let map = microesnext::collections::new_map(&mut arena).unwrap();
+    let map = microesnext::collections::set(
+        &mut arena,
+        map,
+        microesnext::Value::from_i30(4).unwrap(),
+        microesnext::Value::from_i30(2).unwrap(),
+    )
+    .unwrap();
+    let iterator = microesnext::collection_entry_iterators::new(&mut arena, map).unwrap();
+    let pair = microesnext::collection_entry_iterators::next(&mut arena, iterator)
+        .unwrap()
+        .unwrap();
+    let key = microesnext::arrays::get(&arena, pair, 0)
+        .unwrap()
+        .as_i30()
+        .unwrap_or(-1);
+    let value = microesnext::arrays::get(&arena, pair, 1)
+        .unwrap()
+        .as_i30()
+        .unwrap_or(-1);
+    key * 10 + value
+}
+
 #[cfg(all(
     feature = "collections",
     feature = "numbers",

@@ -15,6 +15,12 @@ async = ["microesnext/async"]
 atoms = ["microesnext/atoms"]
 collections = ["microesnext/collections"]
 collection-iterators = ["collections", "iterators", "microesnext/collection-iterators"]
+collection-entry-iterators = [
+  "arrays",
+  "collections",
+  "iterators",
+  "microesnext/collection-entry-iterators",
+]
 exceptions = ["microesnext/exceptions"]
 functions = ["microesnext/functions"]
 iterators = ["microesnext/iterators"]

@@ -12,6 +12,7 @@ dependencies = [
  "microesnext-async",
  "microesnext-atoms",
  "microesnext-bytecode",
+ "microesnext-collection-entry-iterators",
  "microesnext-collection-iterators",
  "microesnext-collections",
  "microesnext-compiler",
@@ -99,6 +100,18 @@ version = "0.0.0"
 dependencies = [
  "microesnext",
  "microesnext-arena",
+]
+
+[[package]]
+name = "microesnext-collection-entry-iterators"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-arrays",
+ "microesnext-collection-iterators",
+ "microesnext-collections",
+ "microesnext-iterators",
+ "microesnext-types",
 ]
 
 [[package]]

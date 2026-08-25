@@ -5,6 +5,15 @@ use microesnext_types::{Error, HeapRef, Value};
 
 const INDEX: usize = 1;
 
+/// Shared adapter tags prevent a cursor from being consumed by another
+/// adapter for the same source type. Adding a source does not add code here.
+pub mod kind {
+    pub const ARRAY_VALUES: u16 = 0;
+    pub const COLLECTION_KEYS: u16 = 1;
+    pub const COLLECTION_VALUES: u16 = 2;
+    pub const COLLECTION_ENTRIES: u16 = 3;
+}
+
 pub fn new(arena: &mut Arena<'_>, source: Value, kind: u16) -> Result<Value, Error> {
     let iterator = arena.allocate_values(
         BlockKind::Iterator,

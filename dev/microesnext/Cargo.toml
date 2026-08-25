@@ -16,6 +16,7 @@ members = [
   "crates/microesnext-iterable-protocol",
   "crates/microesnext-array-iterators",
   "crates/microesnext-collection-iterators",
+  "crates/microesnext-collection-entry-iterators",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -57,6 +58,7 @@ microesnext-iterator-results = { path = "crates/microesnext-iterator-results", v
 microesnext-iterable-protocol = { path = "crates/microesnext-iterable-protocol", version = "0.0.0" }
 microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
 microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }
+microesnext-collection-entry-iterators = { path = "crates/microesnext-collection-entry-iterators", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }

@@ -3,7 +3,7 @@
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
-const VALUES: u16 = 0;
+const VALUES: u16 = microesnext_iterators::kind::ARRAY_VALUES;
 
 pub fn new_values(arena: &mut Arena<'_>, array: Value) -> Result<Value, Error> {
     microesnext_arrays::len(arena, array)?;

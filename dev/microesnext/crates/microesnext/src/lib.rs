@@ -23,6 +23,9 @@ pub use microesnext_collections as collections;
 #[cfg(feature = "collection-iterators")]
 pub use microesnext_collection_iterators as collection_iterators;
 
+#[cfg(feature = "collection-entry-iterators")]
+pub use microesnext_collection_entry_iterators as collection_entry_iterators;
+
 #[cfg(feature = "iterators")]
 pub use microesnext_iterators as iterators;
 

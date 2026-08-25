@@ -30,6 +30,12 @@ numbers = [
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]
+collection-entry-iterators = [
+  "arrays",
+  "collections",
+  "iterators",
+  "dep:microesnext-collection-entry-iterators",
+]
 iterators = ["dep:microesnext-iterators"]
 iterator-results = [
   "dep:microesnext-atoms",
@@ -52,6 +58,7 @@ microesnext-array-iterators = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-collection-iterators = { workspace = true, optional = true }
+microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
