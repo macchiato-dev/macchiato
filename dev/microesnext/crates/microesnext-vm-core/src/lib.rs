@@ -1,8 +1,8 @@
 #![no_std]
 
 use microesnext_arena::Arena;
-use microesnext_bytecode::{Opcode, read_i30, read_opcode, read_u32};
-use microesnext_types::{Error, Value};
+use microesnext_bytecode::{Opcode, read_bytes, read_i30, read_opcode, read_u16, read_u32};
+use microesnext_types::{Error, RootId, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CoreOutcome {
@@ -48,6 +48,15 @@ impl<'code, 'memory> Core<'code, 'memory> {
         (self.arena, self.pc, self.frame_depth)
     }
 
+    pub fn grow_into<'next>(self, memory: &'next mut [u32]) -> Result<Core<'code, 'next>, Error> {
+        Ok(Core {
+            arena: self.arena.grow_into(memory)?,
+            code: self.code,
+            pc: self.pc,
+            frame_depth: self.frame_depth,
+        })
+    }
+
     #[inline(always)]
     pub fn arena(&self) -> &Arena<'_> {
         &self.arena
@@ -80,6 +89,18 @@ impl<'code, 'memory> Core<'code, 'memory> {
 
     pub fn set_frame_depth(&mut self, frame_depth: Option<usize>) {
         self.frame_depth = frame_depth;
+    }
+
+    pub fn next_u32(&mut self) -> Result<u32, Error> {
+        read_u32(self.code, &mut self.pc)
+    }
+
+    pub fn next_u16(&mut self) -> Result<u16, Error> {
+        read_u16(self.code, &mut self.pc)
+    }
+
+    pub fn next_bytes(&mut self) -> Result<&'code [u8], Error> {
+        read_bytes(self.code, &mut self.pc)
     }
 
     /// Run only invariant opcodes. Capability opcodes return to the wrapper
@@ -165,6 +186,36 @@ impl<'code, 'memory> Core<'code, 'memory> {
         self.frame_depth = Some(self.arena.stack_len());
         self.arena.push(argument)?;
         self.pc = target;
+        Ok(())
+    }
+
+    pub fn suspend(&mut self) -> Result<(Value, RootId), Error> {
+        let mut roots = [self.arena.pop()?];
+        let continuation =
+            self.arena
+                .suspend_stack(self.pc as u32, self.frame_depth, &mut roots)?;
+        let continuation = self.arena.retain(Value::from_ref(continuation))?;
+        Ok((roots[0], continuation))
+    }
+
+    pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<(), Error> {
+        self.restore(continuation)?;
+        self.arena.push(value)
+    }
+
+    pub fn reject(&mut self, continuation: RootId, reason: Value) -> Result<CoreOutcome, Error> {
+        self.restore(continuation)?;
+        self.arena.clear_stack();
+        self.frame_depth = None;
+        Ok(CoreOutcome::Throw(reason))
+    }
+
+    fn restore(&mut self, continuation: RootId) -> Result<(), Error> {
+        let continuation = self.arena.release(continuation)?;
+        let continuation = continuation.as_ref().ok_or(Error::Type)?;
+        let (pc, frame_depth) = self.arena.resume_stack(continuation)?;
+        self.pc = pc as usize;
+        self.frame_depth = frame_depth;
         Ok(())
     }
 }
