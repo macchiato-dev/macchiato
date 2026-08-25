@@ -10,50 +10,17 @@ pub enum PrimitiveNumber {
     F64(f64),
 }
 
-/// Distinguishes an existing numeric value from a converted primitive.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum PrimitiveCoercion {
-    Original(Value),
-    Converted(PrimitiveNumber),
-}
-
 /// Coerce a primitive while retaining the immediate-integer fast path.
 #[inline]
-pub fn try_coerce(arena: &Arena<'_>, value: Value) -> Result<Option<PrimitiveCoercion>, Error> {
-    if value.as_i30().is_some() {
-        return Ok(Some(PrimitiveCoercion::Original(value)));
+pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
+    if let Some(value) = value.as_i30() {
+        return Ok(PrimitiveNumber::I30(value));
     }
     match value {
-        Value::UNDEFINED => Ok(Some(PrimitiveCoercion::Converted(PrimitiveNumber::F64(
-            f64::NAN,
-        )))),
-        Value::NULL | Value::FALSE => {
-            Ok(Some(PrimitiveCoercion::Converted(PrimitiveNumber::I30(0))))
-        }
-        Value::TRUE => Ok(Some(PrimitiveCoercion::Converted(PrimitiveNumber::I30(1)))),
-        _ => microesnext_numbers::try_get(arena, value)
-            .map(|number| number.map(|_| PrimitiveCoercion::Original(value))),
-    }
-}
-
-#[inline]
-pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
-    match try_coerce(arena, value)?.ok_or(Error::Type)? {
-        PrimitiveCoercion::Original(value) => {
-            if let Some(value) = value.as_i30() {
-                Ok(PrimitiveNumber::I30(value))
-            } else {
-                microesnext_numbers::get(arena, value).map(PrimitiveNumber::F64)
-            }
-        }
-        PrimitiveCoercion::Converted(number) => Ok(number),
-    }
-}
-
-pub fn materialize(arena: &mut Arena<'_>, number: PrimitiveNumber) -> Result<Value, Error> {
-    match number {
-        PrimitiveNumber::I30(number) => Ok(Value::from_i30(number).unwrap()),
-        PrimitiveNumber::F64(number) => microesnext_numbers::new(arena, number),
+        Value::UNDEFINED => Ok(PrimitiveNumber::F64(f64::NAN)),
+        Value::NULL | Value::FALSE => Ok(PrimitiveNumber::I30(0)),
+        Value::TRUE => Ok(PrimitiveNumber::I30(1)),
+        _ => microesnext_numbers::get(arena, value).map(PrimitiveNumber::F64),
     }
 }
 
@@ -62,9 +29,21 @@ pub fn materialize(arena: &mut Arena<'_>, number: PrimitiveNumber) -> Result<Val
 /// String parsing and object `ToPrimitive` are separate compositions; values
 /// requiring either are rejected rather than silently receiving host rules.
 pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    match try_coerce(arena, value)?.ok_or(Error::Type)? {
-        PrimitiveCoercion::Original(value) => Ok(value),
-        PrimitiveCoercion::Converted(number) => materialize(arena, number),
+    match coerce(arena, value)? {
+        PrimitiveNumber::I30(number) => {
+            if value.as_i30().is_some() {
+                Ok(value)
+            } else {
+                Ok(Value::from_i30(number).unwrap())
+            }
+        }
+        PrimitiveNumber::F64(number) => {
+            if value == Value::UNDEFINED {
+                microesnext_numbers::new(arena, number)
+            } else {
+                Ok(value)
+            }
+        }
     }
 }
 

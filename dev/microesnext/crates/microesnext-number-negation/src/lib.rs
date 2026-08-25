@@ -16,6 +16,7 @@ pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
     negate_coerced(arena, number)
 }
 
+#[inline(always)]
 pub fn negate_coerced(
     arena: &mut Arena<'_>,
     number: microesnext_number_coercion::PrimitiveNumber,

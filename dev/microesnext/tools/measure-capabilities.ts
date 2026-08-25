@@ -196,6 +196,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["numbers_probe", 1.25], ["number_coercion_probe", 1]],
     ],
     [
+      "string Number coercion",
+      "string-number-coercion",
+      [core, ["number_coercion_probe", 1], ["string_number_coercion_probe", 42]],
+    ],
+    [
       "number operations",
       "number-operations",
       [core, ["numbers_probe", 1.25], ["number_operations_probe", 3.25]],
@@ -259,7 +264,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-operations,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -293,7 +298,10 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["iterator_results_probe", 42],
         ["iterable_protocol_probe", 1],
         ["numbers_probe", 1.25],
+        ["number_coercion_probe", 1],
+        ["string_number_coercion_probe", 42],
         ["number_operations_probe", 3.25],
+        ["number_negation_probe", 1],
         ["objects_probe", 42],
         ["strings_probe", "nonzero"],
         ["symbols_probe", 1],

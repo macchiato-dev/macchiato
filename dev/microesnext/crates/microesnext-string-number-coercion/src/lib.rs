@@ -1,22 +1,15 @@
 #![no_std]
 
 use microesnext_arena::{Arena, BlockKind};
-use microesnext_number_coercion::{PrimitiveCoercion, PrimitiveNumber};
+use microesnext_number_coercion::PrimitiveNumber;
 use microesnext_types::{Error, Value};
 
 /// Apply `ToNumber` through the primitive and string-only compositions.
 pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
-    if let Some(coercion) = microesnext_number_coercion::try_coerce(arena, value)? {
-        return match coercion {
-            PrimitiveCoercion::Original(value) => {
-                if let Some(value) = value.as_i30() {
-                    Ok(PrimitiveNumber::I30(value))
-                } else {
-                    microesnext_numbers::get(arena, value).map(PrimitiveNumber::F64)
-                }
-            }
-            PrimitiveCoercion::Converted(number) => Ok(number),
-        };
+    match microesnext_number_coercion::coerce(arena, value) {
+        Ok(number) => return Ok(number),
+        Err(Error::Type) => {}
+        Err(error) => return Err(error),
     }
     let reference = value.as_ref().ok_or(Error::Type)?;
     if arena.kind(reference)? != BlockKind::String {
@@ -26,16 +19,25 @@ pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error>
 }
 
 pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    if let Some(coercion) = microesnext_number_coercion::try_coerce(arena, value)? {
-        return match coercion {
-            PrimitiveCoercion::Original(value) => Ok(value),
-            PrimitiveCoercion::Converted(number) => {
-                microesnext_number_coercion::materialize(arena, number)
+    match microesnext_number_coercion::coerce(arena, value) {
+        Ok(number) => {
+            if value.as_i30().is_some() || value.as_ref().is_some() {
+                return Ok(value);
             }
-        };
+            return materialize(arena, number);
+        }
+        Err(Error::Type) => {}
+        Err(error) => return Err(error),
     }
     let number = coerce(arena, value)?;
-    microesnext_number_coercion::materialize(arena, number)
+    materialize(arena, number)
+}
+
+fn materialize(arena: &mut Arena<'_>, number: PrimitiveNumber) -> Result<Value, Error> {
+    match number {
+        PrimitiveNumber::I30(number) => Ok(Value::from_i30(number).unwrap()),
+        PrimitiveNumber::F64(number) => microesnext_numbers::new(arena, number),
+    }
 }
 
 /// Parse the ECMAScript StringNumericLiteral grammar without allocating.

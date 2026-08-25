@@ -82,6 +82,7 @@ const logicalOperations = "microesnext-logical-operations";
 const numberOperations = "microesnext-number-operations";
 const numberNegation = "microesnext-number-negation";
 const numberCoercion = "microesnext-number-coercion";
+const stringNumberCoercion = "microesnext-string-number-coercion";
 
 assertCompilerFeatures(
   ["locals"],
@@ -212,6 +213,11 @@ assertCompilerFeatures(
   ["integer-negation", "integer-operations", "numbers", "number-negation", "number-operations"],
 );
 assertCompilerFeatures(
+  ["string-number-coercion"],
+  ["number-coercion", "strings"],
+  ["integer-negation", "integer-operations", "numbers", "number-negation", "number-operations", "string-operations"],
+);
+assertCompilerFeatures(
   ["strings"],
   ["strings"],
   ["arrays", "atoms", "numbers", "objects", "string-operations"],
@@ -242,6 +248,7 @@ assertPresence(
     numberOperations,
     numberNegation,
     numberCoercion,
+    stringNumberCoercion,
     parameters,
     promiseResolution,
     promiseResolvers,
@@ -291,7 +298,12 @@ assertPresence(
 assertPresence(
   ["number-coercion"],
   [numberCoercion, "microesnext-numbers"],
-  [integerNegation, integerOperations, numberNegation, numberOperations, "microesnext-strings"],
+  [integerNegation, integerOperations, numberNegation, numberOperations, stringNumberCoercion, "microesnext-strings"],
+);
+assertPresence(
+  ["string-number-coercion"],
+  [numberCoercion, stringNumberCoercion, "microesnext-numbers", "microesnext-strings"],
+  [integerNegation, integerOperations, numberNegation, numberOperations],
 );
 assertPresence(
   ["minimal-program"],

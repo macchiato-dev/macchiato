@@ -6,6 +6,7 @@ const builds = [
   ["bounded integer operations", "integer-operations"],
   ["bounded numeric negation", "integer-negation"],
   ["primitive Number coercion", "number-coercion"],
+  ["string Number coercion", "string-number-coercion"],
   ["JavaScript Number negation", "number-negation"],
   ["strings", "strings"],
   ["strict string concatenation", "string-operations"],
@@ -18,7 +19,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations",
   ],
 ] as const;
 
@@ -68,6 +69,8 @@ for (const [name, features] of builds) {
     ? "return !false && true;"
     : features.includes("number-negation")
     ? "return - 0;"
+    : features.includes("string-number-coercion")
+    ? "return +' 42 ';"
     : features.includes("number-coercion")
     ? "return +true;"
     : features.includes("integer-negation")

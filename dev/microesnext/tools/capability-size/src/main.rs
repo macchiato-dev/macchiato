@@ -35,6 +35,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "minimal-program",
         feature = "numbers",
         feature = "number-coercion",
+        feature = "string-number-coercion",
         feature = "number-negation",
         feature = "objects",
         feature = "promise-resolvers",
@@ -971,6 +972,28 @@ pub extern "C" fn number_coercion_probe() -> i32 {
         Opcode::Return as u8,
     ];
     let mut memory = [0; 16];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+#[cfg(all(feature = "string-number-coercion", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn string_number_coercion_probe() -> i32 {
+    let code = [
+        Opcode::ConstString as u8,
+        4,
+        0,
+        b' ',
+        b'4',
+        b'2',
+        b' ',
+        Opcode::ToNumber as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(0),
