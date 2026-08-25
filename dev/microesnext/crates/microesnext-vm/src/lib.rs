@@ -165,6 +165,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "atoms",
         feature = "control-flow",
         feature = "strings",
+        feature = "string-operations",
         feature = "objects",
         feature = "functions",
         feature = "function-arguments",
@@ -193,6 +194,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::ConstString => {
                 let bytes = self.core.next_bytes()?;
                 let value = microesnext_strings::new(self.core.arena_mut(), bytes)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "string-operations")]
+            Opcode::ConcatenateStrings => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value =
+                    microesnext_string_operations::concatenate(self.core.arena_mut(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -1132,6 +1142,28 @@ mod tests {
             machine
                 .arena()
                 .bytes_equal(value.as_ref().unwrap(), b"hello")
+                .unwrap()
+        );
+    }
+
+    #[cfg(feature = "string-operations")]
+    #[test]
+    fn executes_strict_string_concatenation() {
+        let code = Builder::new()
+            .string(b"micro")
+            .string(b"esnext")
+            .op(Opcode::ConcatenateStrings)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 48];
+        let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected string completion")
+        };
+        assert!(
+            machine
+                .arena()
+                .bytes_equal(value.as_ref().unwrap(), b"microesnext")
                 .unwrap()
         );
     }

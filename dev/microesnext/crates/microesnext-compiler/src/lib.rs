@@ -150,6 +150,12 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "string-operations")]
+    pub fn concatenate_strings(mut self) -> Self {
+        self.code.push(Opcode::ConcatenateStrings as u8);
+        self
+    }
+
     #[cfg(feature = "atoms")]
     pub fn atom(mut self, bytes: &[u8]) -> Self {
         assert!(u16::try_from(bytes.len()).is_ok());
@@ -320,7 +326,19 @@ struct PendingFunction {
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum TermKind {
     I30(i32),
+    #[cfg(feature = "strings")]
+    String,
     General,
+}
+
+#[cfg(feature = "strings")]
+const fn string_term_kind() -> TermKind {
+    TermKind::String
+}
+
+#[cfg(not(feature = "strings"))]
+const fn string_term_kind() -> TermKind {
+    TermKind::General
 }
 
 #[cfg(feature = "environments")]
@@ -1195,6 +1213,12 @@ impl Parser<'_> {
         let (used_binding, mut kind) = self.product(binding)?;
         while self.consume(b'+') {
             let (_, right) = self.product(None)?;
+            #[cfg(feature = "string-operations")]
+            if kind == TermKind::String && right == TermKind::String {
+                self.output.push(Opcode::ConcatenateStrings as u8);
+                kind = TermKind::String;
+                continue;
+            }
             let result = match (kind, right) {
                 (TermKind::I30(left), TermKind::I30(right)) => left
                     .checked_add(right)
@@ -1474,7 +1498,9 @@ impl Parser<'_> {
                 asynchronous,
             )?;
             (false, TermKind::General)
-        } else if self.string_literal()? || self.array_literal()? || self.object_literal()? {
+        } else if self.string_literal()? {
+            (false, string_term_kind())
+        } else if self.array_literal()? || self.object_literal()? {
             (false, TermKind::General)
         } else if let Some(immediate) = self.immediate() {
             self.output.push(Opcode::ConstImmediate as u8);
@@ -1555,7 +1581,9 @@ impl Parser<'_> {
         } else if let Some(local) = self.non_function_local_term() {
             local
         } else {
-            if self.string_literal()? || self.array_literal()? || self.object_literal()? {
+            if self.string_literal()? {
+                (false, string_term_kind())
+            } else if self.array_literal()? || self.object_literal()? {
                 (false, TermKind::General)
             } else if let Some(immediate) = self.immediate() {
                 self.output.push(Opcode::ConstImmediate as u8);
@@ -2313,6 +2341,16 @@ mod tests {
             compile_script("return '\\x41';").unwrap_err().expected,
             "a supported string escape"
         );
+    }
+
+    #[cfg(feature = "string-operations")]
+    #[test]
+    fn emits_strict_concatenation_only_for_proven_strings() {
+        let code = compile_script("return 'micro' + `esnext`;").unwrap();
+        assert!(code.contains(&(Opcode::ConcatenateStrings as u8)));
+
+        let numeric = compile_script("return 1 + 2;").unwrap();
+        assert!(!numeric.contains(&(Opcode::ConcatenateStrings as u8)));
     }
 
     #[test]

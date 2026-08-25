@@ -116,6 +116,8 @@ pub enum Opcode {
     LessThanNumber = 92,
     #[cfg(feature = "number-operations")]
     GreaterThanNumber = 93,
+    #[cfg(feature = "string-operations")]
+    ConcatenateStrings = 94,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -223,6 +225,8 @@ impl TryFrom<u8> for Opcode {
             92 => Ok(Self::LessThanNumber),
             #[cfg(feature = "number-operations")]
             93 => Ok(Self::GreaterThanNumber),
+            #[cfg(feature = "string-operations")]
+            94 => Ok(Self::ConcatenateStrings),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -247,6 +251,18 @@ mod tests {
     #[test]
     fn enabled_string_opcode_is_decodable() {
         assert_eq!(Opcode::try_from(6), Ok(Opcode::ConstString));
+    }
+
+    #[cfg(not(feature = "string-operations"))]
+    #[test]
+    fn omitted_string_operation_opcode_is_invalid_bytecode() {
+        assert!(Opcode::try_from(94).is_err());
+    }
+
+    #[cfg(feature = "string-operations")]
+    #[test]
+    fn enabled_string_operation_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(94), Ok(Opcode::ConcatenateStrings));
     }
 
     #[cfg(not(feature = "atoms"))]

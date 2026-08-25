@@ -26,6 +26,11 @@ strings = [
   "microesnext-logical-operations?/strings",
   "microesnext-truthiness?/strings",
 ]
+string-operations = [
+  "strings",
+  "dep:microesnext-string-operations",
+  "microesnext-bytecode/string-operations",
+]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 functions = ["dep:microesnext-functions", "microesnext-bytecode/functions"]
@@ -106,6 +111,7 @@ microesnext-promise-resolvers = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-string-operations = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }
 
 [dev-dependencies]

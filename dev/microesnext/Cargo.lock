@@ -39,6 +39,7 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-symbols",
  "microesnext-thenables",
@@ -390,6 +391,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-string-operations"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-strings"
 version = "0.0.0"
 dependencies = [
@@ -468,6 +477,7 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-suspension",
  "microesnext-truthiness",

@@ -29,6 +29,7 @@ numbers = []
 number-operations = ["numbers"]
 objects = ["atoms"]
 strings = []
+string-operations = ["strings"]
 
 [dependencies]
 microesnext-bytecode-core.workspace = true

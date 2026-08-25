@@ -90,6 +90,9 @@ pub use microesnext_objects as objects;
 #[cfg(feature = "strings")]
 pub use microesnext_strings as strings;
 
+#[cfg(feature = "string-operations")]
+pub use microesnext_string_operations as string_operations;
+
 #[cfg(feature = "symbols")]
 pub use microesnext_symbols as symbols;
 

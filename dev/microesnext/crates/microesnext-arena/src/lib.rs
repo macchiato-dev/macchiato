@@ -172,6 +172,54 @@ impl<'memory> Arena<'memory> {
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
+    /// Join two byte blocks directly into a new arena block. Source handles
+    /// are rooted across compaction, so callers need no temporary allocator.
+    pub fn concatenate_bytes(
+        &mut self,
+        kind: BlockKind,
+        left: HeapRef,
+        right: HeapRef,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        self.ensure_kind_supported(kind)?;
+        if !matches!(kind, BlockKind::Bytes | BlockKind::String)
+            || self.kind(left)? != kind
+            || self.kind(right)? != kind
+        {
+            return Err(Error::Type);
+        }
+        let left_length = self.byte_len(left)?;
+        let right_length = self.byte_len(right)?;
+        let byte_length = left_length
+            .checked_add(right_length)
+            .ok_or(Error::OutOfMemory)?;
+        let length = HEADER_WORDS + 1 + byte_length.div_ceil(4);
+        let mut sources = [Value::from_ref(left), Value::from_ref(right)];
+        if self.heap_end + length > self.stack_start {
+            self.compact_groups(&mut [roots, &mut sources])?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let left = sources[0].as_ref().ok_or(Error::DanglingReference)?;
+        let right = sources[1].as_ref().ok_or(Error::DanglingReference)?;
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        self.words[start + HEADER_WORDS] = byte_length as u32;
+        self.words[start + HEADER_WORDS + 1..start + length].fill(0);
+        for index in 0..byte_length {
+            let byte = if index < left_length {
+                self.byte(left, index)?
+            } else {
+                self.byte(right, index - left_length)?
+            };
+            self.words[start + HEADER_WORDS + 1 + index / 4] |= (byte as u32) << ((index % 4) * 8);
+        }
+        self.heap_end += length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
     /// Allocate untraced machine words. Numeric payloads and similar scalar
     /// data must not be mistaken for compact guest references by collection.
     #[cfg(feature = "numbers")]

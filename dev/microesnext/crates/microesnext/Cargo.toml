@@ -35,6 +35,11 @@ strings = [
   "microesnext-equality?/strings",
   "microesnext-logical-operations?/strings",
 ]
+string-operations = [
+  "strings",
+  "dep:microesnext-string-operations",
+  "microesnext-vm/string-operations",
+]
 symbols = ["dep:microesnext-symbols"]
 well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
@@ -165,6 +170,7 @@ microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-string-operations = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
 microesnext-thenables = { workspace = true, optional = true }
 microesnext-well-known-symbols = { workspace = true, optional = true }

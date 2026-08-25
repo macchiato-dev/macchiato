@@ -62,6 +62,7 @@ recursive-functions = [
 ]
 source-positions = []
 strings = ["microesnext-bytecode/strings"]
+string-operations = ["strings", "microesnext-bytecode/string-operations"]
 
 [dependencies]
 microesnext-bytecode.workspace = true
