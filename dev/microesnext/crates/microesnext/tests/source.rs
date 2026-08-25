@@ -23,6 +23,27 @@ fn source_compiles_suspends_and_resumes() {
 }
 
 #[test]
+fn local_slots_survive_suspension() {
+    let code = compile_script("let base = 40; let delta = await 2; return base + delta;").unwrap();
+    let mut memory = [0; 96];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
+    let Outcome::Await {
+        value,
+        continuation,
+    } = machine.run().unwrap()
+    else {
+        panic!("expected suspension")
+    };
+    assert_eq!(value.as_i30(), Some(2));
+    assert_eq!(
+        machine
+            .resume(continuation, Value::from_i30(2).unwrap())
+            .unwrap(),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_throw_is_a_guest_rejection_not_an_engine_error() {
     let code = microesnext_compiler::compile_script("throw 17;").unwrap();
     let mut memory = [0; 32];

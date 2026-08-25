@@ -93,6 +93,10 @@ name = "immediates"
 path = "tests/immediates.rs"
 
 [[test]]
+name = "locals"
+path = "tests/locals.rs"
+
+[[test]]
 name = "objects"
 path = "tests/objects.rs"
 required-features = ["objects"]

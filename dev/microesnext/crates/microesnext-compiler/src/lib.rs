@@ -133,8 +133,10 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         source: source.as_bytes(),
         offset: 0,
         output: Vec::new(),
+        locals: Vec::new(),
     };
     parser.whitespace();
+    let locals_patch = parser.local_declarations()?;
     if parser.try_word(b"try") {
         parser.try_catch()?;
     } else {
@@ -143,6 +145,11 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
     if parser.offset != parser.source.len() {
         return Err(parser.error("end of input"));
     }
+    if let Some(patch) = locals_patch {
+        let count = u16::try_from(parser.locals.len())
+            .map_err(|_| parser.error("fewer than 65536 local bindings"))?;
+        parser.output[patch..patch + 2].copy_from_slice(&count.to_le_bytes());
+    }
     Ok(parser.output)
 }
 
@@ -150,6 +157,14 @@ struct Parser<'source> {
     source: &'source [u8],
     offset: usize,
     output: Vec<u8>,
+    locals: Vec<Binding>,
+}
+
+#[derive(Clone, Copy)]
+struct Binding {
+    start: usize,
+    end: usize,
+    slot: u16,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -159,6 +174,40 @@ enum TermKind {
 }
 
 impl Parser<'_> {
+    fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
+        let mut count_patch = None;
+        while self.try_word(b"let") {
+            if count_patch.is_none() {
+                self.output.push(Opcode::InitLocals as u8);
+                count_patch = Some(self.output.len());
+                self.output.extend_from_slice(&0_u16.to_le_bytes());
+            }
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            if self
+                .locals
+                .iter()
+                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
+            {
+                return Err(self.error("a unique local binding"));
+            }
+            if !self.consume(b'=') {
+                return Err(self.error("="));
+            }
+            self.expression(None)?;
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.locals.push(Binding { start, end, slot });
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            self.whitespace();
+        }
+        Ok(count_patch)
+    }
+
     fn try_catch(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
@@ -201,10 +250,10 @@ impl Parser<'_> {
         pending_exception: bool,
     ) -> Result<(), CompileError> {
         self.whitespace();
-        let completion = if self.try_word(b"return") {
-            Opcode::Return
+        let returning = if self.try_word(b"return") {
+            true
         } else if self.try_word(b"throw") {
-            Opcode::Throw
+            false
         } else {
             return Err(self.error("return or throw"));
         };
@@ -216,10 +265,18 @@ impl Parser<'_> {
         if self.consume(b';') {
             self.whitespace();
         }
-        if close_handler && completion == Opcode::Return {
+        if close_handler && returning {
             self.output.push(Opcode::EndTry as u8);
         }
-        self.output.push(completion as u8);
+        self.output.push(if returning {
+            if self.locals.is_empty() {
+                Opcode::Return as u8
+            } else {
+                Opcode::ReturnLocals as u8
+            }
+        } else {
+            Opcode::Throw as u8
+        });
         Ok(())
     }
 
@@ -249,6 +306,11 @@ impl Parser<'_> {
         let (used_binding, mut kind) = if let Some((start, end)) = binding {
             self.offset += end - start;
             (true, TermKind::General)
+        } else if let Some(local) = self.local_at_offset() {
+            self.offset += local.end - local.start;
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+            (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
             let mut index = 0_i32;
@@ -324,6 +386,14 @@ impl Parser<'_> {
             .source
             .get(offset)
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
+    }
+
+    fn local_at_offset(&self) -> Option<Binding> {
+        self.locals.iter().rev().copied().find(|binding| {
+            let name = &self.source[binding.start..binding.end];
+            self.source[self.offset..].starts_with(name)
+                && self.identifier_end(self.offset + name.len())
+        })
     }
 
     fn immediate(&mut self) -> Option<Immediate> {
@@ -592,5 +662,39 @@ mod tests {
     fn does_not_parse_a_keyword_prefix_as_an_immediate() {
         assert_eq!(compile_script("return trueValue;").unwrap_err().offset, 7);
         assert_eq!(compile_script("return true$value;").unwrap_err().offset, 7);
+    }
+
+    #[test]
+    fn compiles_lexical_bindings_to_stable_local_slots() {
+        assert_eq!(
+            compile_script("let forty = 40; let answer = forty + 2; return answer;").unwrap(),
+            Builder::new()
+                .init_locals(2)
+                .const_i30(40)
+                .store_local(0)
+                .load_local(0)
+                .const_i30(2)
+                .op(Opcode::AddNumber)
+                .store_local(1)
+                .load_local(1)
+                .op(Opcode::ReturnLocals)
+                .finish()
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_and_forward_local_bindings() {
+        assert_eq!(
+            compile_script("let value = 1; let value = 2; return value;")
+                .unwrap_err()
+                .expected,
+            "a unique local binding"
+        );
+        assert_eq!(
+            compile_script("let answer = later; let later = 42; return answer;")
+                .unwrap_err()
+                .offset,
+            13
+        );
     }
 }
