@@ -87,6 +87,10 @@ an explicit relational stopping condition.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.
+- `microesnext-typeof` classifies immediate and arena values and returns an
+  ordinary guest string. Optional number, symbol, async-closure, and resolver
+  classifications are statically forwarded only when those representations
+  coexist with `typeof`.
 - `microesnext-numbers` supplies heap-backed IEEE-754 representation.
   Integer-only builds do not link floating-point parsing or storage, while
   equality-only number builds do not acquire arithmetic.

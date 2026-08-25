@@ -92,6 +92,14 @@ equality path. Guest code in that build has no operation that can create a
 string value or place one in a variable; adding numeric equality does not imply
 a general dynamically typed scalar bundle.
 
+`typeof` is independently removable and returns the standard strings for
+undefined, booleans, numbers, strings, symbols, functions, and objects,
+including JavaScript's `typeof null === "object"` rule. Boxed numbers, symbols,
+async closures, and Promise resolver functions participate only when their
+separate representation features are composed. Repeated and mixed unary forms
+such as `typeof typeof value` and `typeof +value` preserve right-to-left unary
+evaluation. A build without `typeof` does not consume the keyword.
+
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
 it to a boolean. Unary `!` uses the same selected truthiness policy and returns

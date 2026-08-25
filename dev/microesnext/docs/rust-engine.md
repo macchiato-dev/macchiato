@@ -116,6 +116,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   string coercion. Its exact fast path and bounded correctly-rounded fallback
   contain no allocator or runtime policy. Static Cargo composition removes the
   code and its call sites when neither consumer is selected.
+- `typeof` is another leaf policy rather than a method on the VM. Its base
+  build recognizes immediates, strings, ordinary objects, and closures;
+  optional arena kinds extend the same direct match through Cargo feature
+  unification. It allocates an ordinary string and requires no atom table.
 - Ordinary strings, atom interning, and objects form three boundaries. A string
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine

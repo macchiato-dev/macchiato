@@ -145,6 +145,27 @@ remainder, arrays, control flow, functions, and objects enabled. The typed
 does not prove identical timing, but it detects no regression; more
 importantly, the omitted build has neither crate nor typed match arm.
 
+## `typeof`, 2026-08-25
+
+The isolated runtime is 6,642 bytes (3,024 gzip), including ordinary string
+storage and a live probe that checks `typeof true === "boolean"` by content.
+The compiler is 6,554 bytes (2,940 gzip), only 201 raw bytes above its
+string-literal build. Its optimized keyword-only unary scanner remains
+separate from the mixed-operator scanner; builds omitting `typeof` preserve
+their pre-existing parser paths.
+
+The base classifier recognizes immediates, strings, ordinary objects, and
+closures. Cargo weak-feature forwarding adds boxed numbers, symbols, async
+closures, and Promise resolvers only when those representations coexist.
+Feature-graph checks show that `typeof` alone includes neither numbers,
+objects, arithmetic, atoms, nor string concatenation.
+
+Four alternating native runs measured minimal `Core` at 3.07–3.08
+ns/instruction and a broad build including `typeof` at 3.04–3.33 (one broad
+outlier; the other samples were 3.04–3.05). `Machine` measured 3.06–3.07
+minimal and 3.06–3.12 broad. As with the other timing gate, the structural
+evidence is definitive: omitted builds have no classifier crate or opcode arm.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -212,6 +233,7 @@ LTO from merely discarding an enabled but unused dependency.
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Strings only | 4,903 | 2,270 |
+| `typeof` | 6,642 | 3,024 |
 | Symbols | 4,995 | 2,254 |
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
@@ -220,10 +242,10 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 93,614 | 30,634 |
+| All capabilities | 94,609 | 30,988 |
 
 The all-capabilities row selects string concatenation, primitive and string
-Number coercion, Number negation, division, and remainder. The earlier
+Number coercion, Number negation, division, remainder, and `typeof`. The earlier
 78,513-byte row was a broad composition but omitted independently gated paths;
 it was therefore mislabeled rather than a valid before/after size comparison.
 
@@ -483,6 +505,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | JavaScript Number negation | 6,072 | 2,597 |
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |
+| `typeof` | 6,554 | 2,940 |
 | locals | 8,346 | 3,519 |
 | basic functions | 13,187 | 5,579 |
 | function arguments | 14,151 | 5,963 |
@@ -490,7 +513,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 34,325 | 13,354 |
+| default language slice | 34,682 | 13,397 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric
