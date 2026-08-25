@@ -353,4 +353,24 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn round_trips_generated_finite_f64_values() {
+        let mut state = 0x1319_8a2e_0370_7344_u64;
+        for _ in 0..100_000 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let value = f64::from_bits(state);
+            if !value.is_finite() {
+                continue;
+            }
+            let source = format!("{value}");
+            assert_eq!(
+                parse(source.as_bytes()).unwrap().to_bits(),
+                value.to_bits(),
+                "{source}"
+            );
+        }
+    }
 }
