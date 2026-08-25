@@ -17,6 +17,63 @@ pub fn new(arena: &mut Arena<'_>, callable: Value, prototype: Value) -> Result<V
     Ok(Value::from_ref(object))
 }
 
+/// Create an ordinary constructible function and its `.prototype` cycle.
+///
+/// The caller supplies realm-interned property keys. All live values stay in
+/// one mutable root group, so compaction during any allocation updates them
+/// without permanent root slots.
+pub fn new_constructor(
+    arena: &mut Arena<'_>,
+    callable: Value,
+    function_prototype: Value,
+    object_prototype: Value,
+    prototype_key: Value,
+    constructor_key: Value,
+) -> Result<Value, Error> {
+    if !microesnext_functions::is_function(arena, callable)
+        || (function_prototype != Value::NULL
+            && !microesnext_objects::is_object(arena, function_prototype))
+        || (object_prototype != Value::NULL
+            && !microesnext_objects::is_object(arena, object_prototype))
+    {
+        return Err(Error::Type);
+    }
+
+    let mut roots = [
+        callable,
+        function_prototype,
+        object_prototype,
+        prototype_key,
+        constructor_key,
+        Value::UNDEFINED,
+        Value::UNDEFINED,
+        Value::UNDEFINED,
+    ];
+    let properties = arena.allocate_values(
+        BlockKind::Properties,
+        &mut [roots[3], Value::UNDEFINED],
+        &mut roots,
+    )?;
+    roots[5] = Value::from_ref(properties);
+    let function = arena.allocate_values(
+        BlockKind::CallableObject,
+        &mut [roots[1], roots[5], roots[0]],
+        &mut roots,
+    )?;
+    roots[6] = Value::from_ref(function);
+    let properties =
+        arena.allocate_values(BlockKind::Properties, &mut [roots[4], roots[6]], &mut roots)?;
+    roots[7] = Value::from_ref(properties);
+    let instance_prototype =
+        arena.allocate_values(BlockKind::Object, &mut [roots[2], roots[7]], &mut roots)?;
+    arena.set_value(
+        roots[5].as_ref().ok_or(Error::DanglingReference)?,
+        1,
+        Value::from_ref(instance_prototype),
+    )?;
+    Ok(roots[6])
+}
+
 /// Return the compact closure stored in a callable object.
 pub fn callable(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
     let object = object.as_ref().ok_or(Error::Type)?;
@@ -87,5 +144,37 @@ mod tests {
 
         assert_eq!(new(&mut arena, Value::TRUE, Value::NULL), Err(Error::Type));
         assert_eq!(new(&mut arena, closure, Value::TRUE), Err(Error::Type));
+    }
+
+    #[test]
+    fn creates_the_constructor_and_prototype_cycle() {
+        let mut memory = [0; 192];
+        let mut arena = Arena::with_root_capacity(&mut memory, 1);
+        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let prototype_key = Value::from_i30(1).unwrap();
+        let constructor_key = Value::from_i30(2).unwrap();
+        let function = new_constructor(
+            &mut arena,
+            closure,
+            Value::NULL,
+            Value::NULL,
+            prototype_key,
+            constructor_key,
+        )
+        .unwrap();
+        let root = arena.retain(function).unwrap();
+        arena.compact(&mut []).unwrap();
+        let function = arena.root(root).unwrap();
+        let prototype = microesnext_objects::get(&arena, function, prototype_key).unwrap();
+
+        assert!(microesnext_objects::is_object(&arena, prototype));
+        assert_eq!(
+            microesnext_objects::get(&arena, prototype, constructor_key),
+            Ok(function)
+        );
+        assert!(microesnext_functions::is_function(
+            &arena,
+            callable(&arena, function).unwrap()
+        ));
     }
 }
