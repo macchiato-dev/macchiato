@@ -47,7 +47,9 @@ an explicit relational stopping condition.
   ordinary string literals neither link nor populate it.
 - `microesnext-objects` supplies prototype and property-table storage. Its VM
   feature composes strings for JavaScript property names, while the low-level
-  crate can also use already-interned or non-string keys.
+  crate can also use already-interned or non-string keys. A separate
+  `property-assignment` bytecode/compiler gate adds source statement writes;
+  read-only object builds retain no write dispatch beyond literal assembly.
 - `microesnext-prototype-chain` performs allocation-free ordinary-object
   prototype traversal. It is the shared semantic core for future `instanceof`
   and `Object.prototype.isPrototypeOf` support, without making object-only

@@ -203,6 +203,13 @@ from the compact recursive closure to the wrapper; declarations continue to use
 their existing captured destination cell. Builds selecting ordinary recursive
 functions or non-recursive constructors do not link this bridge crate.
 
+Property-assignment statements reuse the ordinary object store behind one
+independently decoded opcode. The live runtime composition is 16,352 raw /
+6,302 gzip bytes; its compiler is 11,317 / 4,571. The end-to-end constructor
+test passes an argument into `this.answer = value`, returns a primitive, and
+reads the initialized property from the preserved receiver. Object builds that
+omit this source operation do not decode its opcode.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -269,6 +276,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Number remainder | 9,311 | 4,240 |
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
+| Property assignment | 16,352 | 6,302 |
 | Callable objects | 17,812 | 7,107 |
 | Constructible function objects | 20,106 | 7,695 |
 | Constructor receivers | 26,845 | 9,886 |
@@ -285,7 +293,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 102,036 | 33,009 |
+| All capabilities | 102,955 | 33,266 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -571,6 +579,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | strict string concatenation | 6,528 | 2,936 |
 | `typeof` | 6,554 | 2,940 |
 | `instanceof` | 5,956 | 2,586 |
+| property assignment | 11,317 | 4,571 |
 | locals | 8,346 | 3,519 |
 | basic functions | 13,187 | 5,579 |
 | function arguments | 14,151 | 5,963 |
@@ -579,7 +588,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,134 | 7,571 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 35,987 | 13,788 |
+| default language slice | 37,035 | 14,111 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

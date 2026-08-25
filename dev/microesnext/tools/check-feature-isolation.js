@@ -256,6 +256,11 @@ assertCompilerFeatures(
   ["instanceof", "objects", "typeof"],
 );
 assertCompilerFeatures(
+  ["property-assignment"],
+  ["atoms", "locals", "objects", "property-assignment", "strings"],
+  ["functions", "receivers", "string-operations"],
+);
+assertCompilerFeatures(
   ["recursive-constructors"],
   [
     "constructors",
@@ -410,6 +415,11 @@ assertPresence(
     "microesnext-objects",
   ],
   [instanceOf, prototypeChain, typeOf],
+);
+assertPresence(
+  ["property-assignment"],
+  ["microesnext-objects", "microesnext-atoms", "microesnext-strings"],
+  [construction, receivers, "microesnext-functions"],
 );
 assertPresence(
   ["recursive-constructors"],

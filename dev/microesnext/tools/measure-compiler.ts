@@ -17,6 +17,7 @@ const builds = [
   ["strict string concatenation", "string-operations"],
   ["typeof", "typeof"],
   ["instanceof", "instanceof"],
+  ["property assignment", "property-assignment"],
   ["locals", "locals"],
   ["basic functions", "functions"],
   ["function arguments", "function-arguments"],
@@ -27,7 +28,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -73,6 +74,8 @@ for (const [name, features] of builds) {
     ? "let C = function () { return this; }; return new C();"
     : features.includes("function-arguments")
     ? "function identity(value) { return value; } return identity(1);"
+    : features.includes("property-assignment")
+    ? "let value = {}; value.answer = 42; return value.answer;"
     : features.includes("functions")
     ? "function value() { return 1; } return value();"
     : features.includes("constructors")

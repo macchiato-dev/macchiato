@@ -73,7 +73,7 @@ number-division = ["numbers", "microesnext-bytecode/number-division"]
 number-remainder = ["numbers", "microesnext-bytecode/number-remainder"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
-property-assignment = ["objects", "microesnext-bytecode/property-assignment"]
+property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]
 recursive-async-functions = [
   "async-functions",

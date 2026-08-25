@@ -38,6 +38,14 @@ independent parser feature. Object literals and property access compose the
 object, atom, and string bytecode vocabulary, without adding those paths to an
 array-only or scalar-only generator.
 
+Property-assignment statements are separately gated from object literals and
+reads. The current source form accepts `local.name = value;` and constructor
+receiver initialization such as `this.name = value;`. Its opcode consumes the
+object, interned key, and value without leaving an unused expression result, so
+it needs no general stack-cleanup feature. Assignment expressions, computed
+keys, chained assignment, and direct writes through an outer capture remain
+separate work.
+
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational
 precedence. Together with local assignment and `while`, it can run a

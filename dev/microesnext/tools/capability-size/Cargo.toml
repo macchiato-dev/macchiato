@@ -57,6 +57,7 @@ string-number-coercion = ["number-coercion", "strings", "microesnext/string-numb
 number-operations = ["numbers", "microesnext/number-operations"]
 number-negation = ["numbers", "integer-negation", "microesnext/number-negation"]
 objects = ["atoms", "microesnext/objects"]
+property-assignment = ["objects", "microesnext/property-assignment"]
 promises = ["microesnext/promises"]
 prototype-chain = ["objects", "microesnext/prototype-chain"]
 promise-resolution = ["errors", "promises", "microesnext/promise-resolution"]

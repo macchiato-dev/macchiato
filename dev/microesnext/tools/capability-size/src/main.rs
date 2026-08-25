@@ -9,6 +9,7 @@
         feature = "logical-operations",
         feature = "promise-resolution",
         feature = "promise-resolvers",
+        feature = "property-assignment",
         feature = "receivers"
     )
 ))]
@@ -44,6 +45,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "number-negation",
         feature = "objects",
         feature = "promise-resolvers",
+        feature = "property-assignment",
         feature = "recursive-functions",
         feature = "recursive-constructors",
         feature = "recursive-async-functions",
@@ -190,6 +192,51 @@ pub extern "C" fn construction_probe() -> i32 {
         return 0;
     };
     matches!(machine.run(), Ok(Outcome::Complete(value)) if microesnext::objects::is_object(machine.arena(), value))
+        as i32
+}
+
+#[cfg(all(feature = "property-assignment", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn property_assignment_probe() -> i32 {
+    let code = [
+        Opcode::SetPropertyStatement as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 128];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 2) else {
+        return 0;
+    };
+    let Ok(key) = machine.intern_atom(b"answer") else {
+        return 0;
+    };
+    let Ok(object) = microesnext::objects::new_object(machine.arena_mut(), Value::NULL) else {
+        return 0;
+    };
+    let Ok(root) = machine.retain(object) else {
+        return 0;
+    };
+    if machine.arena_mut().push(object).is_err()
+        || machine.arena_mut().push(key).is_err()
+        || machine
+            .arena_mut()
+            .push(Value::from_i30(42).unwrap())
+            .is_err()
+    {
+        return 0;
+    }
+    let Ok(Outcome::Complete(value)) = machine.run() else {
+        return 0;
+    };
+    let Ok(object) = machine.root(root) else {
+        return 0;
+    };
+    (value.as_i30() == Some(42)
+        && matches!(microesnext::objects::get(machine.arena(), object, key), Ok(found) if found.as_i30() == Some(42)))
         as i32
 }
 
