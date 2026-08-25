@@ -20,6 +20,9 @@ pub use microesnext_instanceof as r#instanceof;
 #[cfg(feature = "logical-operations")]
 pub use microesnext_logical_operations as logical_operations;
 
+#[cfg(feature = "method-calls")]
+pub use microesnext_method_calls as method_calls;
+
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
 

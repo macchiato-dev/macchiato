@@ -24,6 +24,15 @@ classes = [
   "construction",
   "property-assignment",
 ]
+method-calls = [
+  "callable-objects",
+  "function-arguments",
+  "objects",
+  "receivers",
+  "dep:microesnext-method-calls",
+  "microesnext-vm/method-calls",
+]
+class-methods = ["classes", "method-calls"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
@@ -224,6 +233,7 @@ microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-method-calls = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }
@@ -378,6 +388,11 @@ required-features = [
 name = "classes"
 path = "tests/classes.rs"
 required-features = ["classes", "instanceof", "locals", "objects", "typeof"]
+
+[[test]]
+name = "class-methods"
+path = "tests/class_methods.rs"
+required-features = ["class-methods", "locals", "objects"]
 
 [[test]]
 name = "recursive-constructors"

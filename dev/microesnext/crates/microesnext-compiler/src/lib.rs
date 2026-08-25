@@ -378,6 +378,8 @@ enum FunctionBody {
     Expression,
     #[cfg(feature = "classes")]
     ClassConstructor,
+    #[cfg(feature = "class-methods")]
+    Method,
 }
 
 impl Parser<'_> {
@@ -669,11 +671,35 @@ impl Parser<'_> {
             false,
             true,
         )?;
-        if !self.consume(b'}') {
+        loop {
+            self.whitespace();
+            if self.consume_raw(b'}') {
+                break;
+            }
+            #[cfg(feature = "class-methods")]
+            self.class_method(slot)?;
+            #[cfg(not(feature = "class-methods"))]
             return Err(self.error("}"));
         }
         self.consume(b';');
         self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "class-methods")]
+    fn class_method(&mut self, class_slot: u16) -> Result<(), CompileError> {
+        let (name_start, name_end) = self.identifier()?;
+        let parameters = self.function_parameters()?;
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&class_slot.to_le_bytes());
+        self.output.push(Opcode::ConstAtom as u8);
+        self.output
+            .extend_from_slice(&(b"prototype".len() as u16).to_le_bytes());
+        self.output.extend_from_slice(b"prototype");
+        self.output.push(Opcode::GetProperty as u8);
+        self.output_atom_range(name_start, name_end);
+        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
 
@@ -765,6 +791,8 @@ impl Parser<'_> {
         constructible: bool,
     ) -> Result<(), CompileError> {
         let receiver_frame = constructible && cfg!(feature = "constructors");
+        #[cfg(feature = "class-methods")]
+        let receiver_frame = receiver_frame || matches!(body_kind, FunctionBody::Method);
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -827,6 +855,13 @@ impl Parser<'_> {
                     return Err(body.error("}"));
                 }
             }
+            #[cfg(feature = "class-methods")]
+            FunctionBody::Method => {
+                body.terminal_statement()?;
+                if !body.consume(b'}') {
+                    return Err(body.error("}"));
+                }
+            }
         }
         body.whitespace();
         body.append_function_bodies()?;
@@ -842,6 +877,10 @@ impl Parser<'_> {
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
+        #[cfg(feature = "class-methods")]
+        if matches!(body_kind, FunctionBody::Method) {
+            self.output.push(Opcode::ToMethod as u8);
+        }
         #[cfg(feature = "constructors")]
         if constructible {
             #[cfg(feature = "classes")]
@@ -2073,18 +2112,38 @@ impl Parser<'_> {
             let immediate = self.number()?;
             (false, immediate.map_or(TermKind::General, TermKind::I30))
         };
+        #[cfg(feature = "method-calls")]
+        let mut method_call = false;
         loop {
             #[cfg(feature = "objects")]
             if self.consume(b'.') {
                 self.whitespace();
                 let (start, end) = self.identifier()?;
                 self.output_atom_range(start, end);
+                #[cfg(feature = "method-calls")]
+                {
+                    self.whitespace();
+                    method_call = self.source.get(self.offset) == Some(&b'(');
+                    self.output.push(if method_call {
+                        Opcode::GetMethod as u8
+                    } else {
+                        Opcode::GetProperty as u8
+                    });
+                }
+                #[cfg(not(feature = "method-calls"))]
                 self.output.push(Opcode::GetProperty as u8);
                 kind = TermKind::General;
                 continue;
             }
             if self.consume(b'(') {
+                #[cfg(feature = "method-calls")]
+                self.call_suffix(method_call)?;
+                #[cfg(not(feature = "method-calls"))]
                 self.call_suffix()?;
+                #[cfg(feature = "method-calls")]
+                {
+                    method_call = false;
+                }
                 kind = TermKind::General;
                 continue;
             }
@@ -2112,7 +2171,10 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "function-arguments")]
-    fn call_suffix(&mut self) -> Result<(), CompileError> {
+    fn call_suffix(
+        &mut self,
+        #[cfg(feature = "method-calls")] method: bool,
+    ) -> Result<(), CompileError> {
         let mut count = 0_u16;
         if !self.consume(b')') {
             loop {
@@ -2128,16 +2190,36 @@ impl Parser<'_> {
                 }
             }
         }
+        #[cfg(feature = "method-calls")]
+        self.output.push(if method {
+            Opcode::CallMethodArguments as u8
+        } else {
+            Opcode::CallValueArguments as u8
+        });
+        #[cfg(not(feature = "method-calls"))]
         self.output.push(Opcode::CallValueArguments as u8);
         self.output.extend_from_slice(&count.to_le_bytes());
         Ok(())
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
-    fn call_suffix(&mut self) -> Result<(), CompileError> {
+    fn call_suffix(
+        &mut self,
+        #[cfg(feature = "method-calls")] method: bool,
+    ) -> Result<(), CompileError> {
         if !self.consume(b')') {
             return Err(self.error(")"));
         }
+        #[cfg(feature = "method-calls")]
+        {
+            if method {
+                self.output.push(Opcode::CallMethodArguments as u8);
+                self.output.extend_from_slice(&0_u16.to_le_bytes());
+            } else {
+                self.output.push(Opcode::CallValue as u8);
+            }
+        }
+        #[cfg(not(feature = "method-calls"))]
         self.output.push(Opcode::CallValue as u8);
         Ok(())
     }
@@ -3591,5 +3673,20 @@ mod tests {
         assert!(code.contains(&(Opcode::ConstructValueArguments as u8)));
         assert!(code.contains(&(Opcode::LoadThis as u8)));
         assert!(code.contains(&(Opcode::SetPropertyStatement as u8)));
+    }
+
+    #[cfg(feature = "class-methods")]
+    #[test]
+    fn compiles_class_methods_with_explicit_receiver_calls() {
+        let code = compile_script(
+            "class Counter { constructor(value) { this.value = value; } \
+             read() { return this.value; } } \
+             let counter = new Counter(42); return counter.read();",
+        )
+        .unwrap();
+
+        assert!(code.contains(&(Opcode::ToMethod as u8)));
+        assert!(code.contains(&(Opcode::GetMethod as u8)));
+        assert!(code.contains(&(Opcode::CallMethodArguments as u8)));
     }
 }

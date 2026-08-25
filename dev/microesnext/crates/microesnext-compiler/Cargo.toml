@@ -14,7 +14,7 @@ default = [
   "control-flow",
   "constructors",
   "construction",
-  "classes",
+  "class-methods",
   "equality",
   "exceptions",
   "function-arguments",
@@ -51,6 +51,7 @@ classes = [
   "property-assignment",
   "microesnext-bytecode/class-constructors",
 ]
+class-methods = ["classes", "method-calls"]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 environments = ["functions", "microesnext-bytecode/environments"]
@@ -64,6 +65,12 @@ integer-negation = ["microesnext-bytecode/integer-negation"]
 instanceof = ["microesnext-bytecode/instanceof"]
 locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
+method-calls = [
+  "function-arguments",
+  "objects",
+  "receivers",
+  "microesnext-bytecode/method-calls",
+]
 numbers = ["dep:microesnext-decimal-to-f64", "microesnext-bytecode/numbers"]
 number-operations = [
   "integer-operations",
