@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-number-division"
+description = "Removable JavaScript division and remainder for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-numbers.workspace = true
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"

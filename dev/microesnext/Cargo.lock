@@ -330,6 +330,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-number-division"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-number-negation"
 version = "0.0.0"
 dependencies = [
