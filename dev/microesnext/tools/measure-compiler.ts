@@ -13,6 +13,7 @@ const builds = [
   ["JavaScript Number negation", "number-negation"],
   ["strings", "strings"],
   ["strict string concatenation", "string-operations"],
+  ["typeof", "typeof"],
   ["locals", "locals"],
   ["basic functions", "functions"],
   ["function arguments", "function-arguments"],
@@ -22,7 +23,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -90,6 +91,8 @@ for (const [name, features] of builds) {
     ? "if (true) { return 1; } else { return 2; }"
     : features.includes("string-operations")
     ? "return 'micro' + `esnext`;"
+    : features === "typeof"
+    ? "return typeof true;"
     : features.includes("strings")
     ? "return `UTF-8: café`;"
     : features.includes("locals")

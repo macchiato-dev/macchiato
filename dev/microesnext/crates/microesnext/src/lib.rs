@@ -71,6 +71,8 @@ pub use microesnext_numbers as numbers;
 pub use microesnext_parameters as parameters;
 #[cfg(feature = "string-number-coercion")]
 pub use microesnext_string_number_coercion as string_number_coercion;
+#[cfg(feature = "typeof")]
+pub use microesnext_typeof as r#typeof;
 
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;

@@ -49,6 +49,7 @@ dependencies = [
  "microesnext-strings",
  "microesnext-symbols",
  "microesnext-thenables",
+ "microesnext-typeof",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -570,6 +571,7 @@ dependencies = [
  "microesnext-strings",
  "microesnext-suspension",
  "microesnext-truthiness",
+ "microesnext-typeof",
  "microesnext-types",
  "microesnext-vm-core",
 ]

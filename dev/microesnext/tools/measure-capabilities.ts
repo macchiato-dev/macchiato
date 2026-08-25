@@ -231,6 +231,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       ],
     ],
     ["strings", "strings", [core, ["strings_probe", "nonzero"]]],
+    [
+      "typeof",
+      "typeof",
+      [core, ["strings_probe", "nonzero"], ["typeof_probe", 1]],
+    ],
     ["symbols", "symbols", [core, ["symbols_probe", 1]]],
     [
       "well-known symbols",
@@ -274,7 +279,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -316,6 +321,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["number_negation_probe", 1],
         ["objects_probe", 42],
         ["strings_probe", "nonzero"],
+        ["typeof_probe", 1],
         ["symbols_probe", 1],
         ["well_known_symbols_probe", "nonzero"],
         ["promises_probe", "nonzero"],

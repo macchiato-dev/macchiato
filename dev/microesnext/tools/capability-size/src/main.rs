@@ -45,7 +45,8 @@ use microesnext::{Core, CoreOutcome};
         feature = "recursive-async-functions",
         feature = "receivers",
         feature = "strings",
-        feature = "thenables"
+        feature = "thenables",
+        feature = "typeof"
     )
 ))]
 use microesnext::{Machine, Outcome};
@@ -1121,6 +1122,30 @@ pub extern "C" fn strings_probe() -> u32 {
     let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.raw(),
+        _ => 0,
+    }
+}
+
+#[cfg(all(feature = "typeof", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn typeof_probe() -> i32 {
+    let code = [
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::True as u8,
+        Opcode::TypeOf as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
+    match machine.run() {
+        Ok(Outcome::Complete(value))
+            if machine
+                .arena()
+                .bytes_equal(value.as_ref().unwrap(), b"boolean")
+                .unwrap_or(false) =>
+        {
+            1
+        }
         _ => 0,
     }
 }

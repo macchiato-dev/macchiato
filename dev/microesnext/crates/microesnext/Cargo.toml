@@ -22,6 +22,7 @@ async-functions = [
   "dep:microesnext-async-functions",
   "microesnext-async/functions",
   "microesnext-vm/async-functions",
+  "microesnext-typeof?/async-functions",
 ]
 async-thenables = [
   "async-functions",
@@ -40,7 +41,7 @@ string-operations = [
   "dep:microesnext-string-operations",
   "microesnext-vm/string-operations",
 ]
-symbols = ["dep:microesnext-symbols"]
+symbols = ["dep:microesnext-symbols", "microesnext-typeof?/symbols"]
 well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
@@ -71,6 +72,7 @@ numbers = [
   "microesnext-collections?/number-keys",
   "microesnext-equality?/numbers",
   "microesnext-logical-operations?/numbers",
+  "microesnext-typeof?/numbers",
 ]
 number-operations = [
   "numbers",
@@ -105,6 +107,7 @@ string-number-coercion = [
   "dep:microesnext-string-number-coercion",
   "microesnext-vm/string-number-coercion",
 ]
+typeof = ["strings", "dep:microesnext-typeof", "microesnext-vm/typeof"]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
@@ -154,6 +157,7 @@ promise-resolvers = [
   "promise-resolution",
   "dep:microesnext-promise-resolvers",
   "microesnext-vm/promise-resolvers",
+  "microesnext-typeof?/promise-resolvers",
 ]
 thenables = [
   "objects",
@@ -198,6 +202,7 @@ microesnext-number-coercion = { workspace = true, optional = true }
 microesnext-number-division = { workspace = true, optional = true }
 microesnext-number-remainder = { workspace = true, optional = true }
 microesnext-string-number-coercion = { workspace = true, optional = true }
+microesnext-typeof = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }

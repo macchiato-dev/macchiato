@@ -85,6 +85,7 @@ const numberCoercion = "microesnext-number-coercion";
 const numberDivision = "microesnext-number-division";
 const numberRemainder = "microesnext-number-remainder";
 const stringNumberCoercion = "microesnext-string-number-coercion";
+const typeOf = "microesnext-typeof";
 
 assertCompilerFeatures(
   ["locals"],
@@ -230,6 +231,11 @@ assertCompilerFeatures(
   ["integer-negation", "integer-operations", "numbers", "number-negation", "number-operations", "string-operations"],
 );
 assertCompilerFeatures(
+  ["typeof"],
+  ["strings", "typeof"],
+  ["numbers", "objects", "string-operations"],
+);
+assertCompilerFeatures(
   ["strings"],
   ["strings"],
   ["arrays", "atoms", "numbers", "objects", "string-operations"],
@@ -271,6 +277,7 @@ assertPresence(
     receivers,
     suspension,
     thenables,
+    typeOf,
   ],
 );
 assertPresence(
@@ -328,6 +335,11 @@ assertPresence(
   ["string-number-coercion"],
   [numberCoercion, stringNumberCoercion, "microesnext-numbers", "microesnext-strings"],
   [integerNegation, integerOperations, numberNegation, numberOperations],
+);
+assertPresence(
+  ["typeof"],
+  [typeOf, "microesnext-strings"],
+  [integerOperations, numberOperations, "microesnext-numbers", "microesnext-objects"],
 );
 assertPresence(
   ["minimal-program"],
