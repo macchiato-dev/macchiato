@@ -205,6 +205,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-decimal-speed"
+version = "0.0.0"
+dependencies = [
+ "microesnext-decimal-to-f64",
+]
+
+[[package]]
 name = "microesnext-decimal-to-f64"
 version = "0.0.0"
 
