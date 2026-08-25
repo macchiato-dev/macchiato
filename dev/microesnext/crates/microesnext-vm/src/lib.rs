@@ -292,6 +292,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let frame_depth = self.core.frame_depth().ok_or(Error::BadBytecode)?;
                 let function_index = self.core.arena().stack_len() - frame_depth;
                 let function = self.core.arena().stack_value(function_index)?;
+                #[cfg(feature = "async-functions")]
+                let value = if microesnext_async_functions::is_async(self.core.arena(), function) {
+                    microesnext_async_functions::capture(self.core.arena(), function, index)?
+                } else {
+                    capture(self.core.arena(), function, index)?
+                };
+                #[cfg(not(feature = "async-functions"))]
                 let value = capture(self.core.arena(), function, index)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)

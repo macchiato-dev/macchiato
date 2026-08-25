@@ -17,7 +17,9 @@ async = ["dep:microesnext-async"]
 async-functions = [
   "async",
   "functions",
+  "promises",
   "dep:microesnext-async-functions",
+  "microesnext-async/functions",
   "microesnext-vm/async-functions",
 ]
 strings = [
@@ -133,6 +135,11 @@ required-features = [
   "numbers",
   "recursive-functions",
 ]
+
+[[test]]
+name = "async-functions"
+path = "tests/async_functions.rs"
+required-features = ["async-functions", "environments", "function-arguments"]
 
 [[test]]
 name = "control-flow"

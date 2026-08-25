@@ -364,7 +364,9 @@ impl Parser<'_> {
         loop {
             self.whitespace();
             if self.try_word(b"function") {
-                self.function_declaration(count_patch)?;
+                self.function_declaration(count_patch, false)?;
+            } else if self.try_async_function() {
+                self.function_declaration(count_patch, true)?;
             } else if self.try_word(b"let") {
                 self.let_declaration(count_patch)?;
             } else {
@@ -413,6 +415,7 @@ impl Parser<'_> {
     fn function_declaration(
         &mut self,
         count_patch: &mut Option<usize>,
+        asynchronous: bool,
     ) -> Result<(), CompileError> {
         if count_patch.is_none() {
             self.output.push(Opcode::InitLocals as u8);
@@ -435,7 +438,13 @@ impl Parser<'_> {
             captured: false,
         });
         let parameters = self.function_parameters()?;
-        self.function_value(parameters, Some(slot), FunctionBody::Block, None)?;
+        self.function_value(
+            parameters,
+            Some(slot),
+            FunctionBody::Block,
+            None,
+            asynchronous,
+        )?;
         Ok(())
     }
 
@@ -507,6 +516,7 @@ impl Parser<'_> {
         destination: Option<u16>,
         body_kind: FunctionBody,
         expression_name: Option<Binding>,
+        asynchronous: bool,
     ) -> Result<(), CompileError> {
         if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
             return Err(self.error("{"));
@@ -606,6 +616,8 @@ impl Parser<'_> {
         }
         self.output.push(if expression_name.is_some() {
             Opcode::RecursiveClosure as u8
+        } else if asynchronous {
+            Opcode::AsyncClosure as u8
         } else {
             Opcode::Closure as u8
         });
@@ -768,7 +780,7 @@ impl Parser<'_> {
             } else {
                 FunctionBody::Expression
             };
-            self.function_value(parameters, None, body, None)?;
+            self.function_value(parameters, None, body, None, false)?;
             (false, TermKind::General)
         } else if let Some((start, end)) = binding {
             self.offset += end - start;
@@ -801,7 +813,13 @@ impl Parser<'_> {
                 })
             };
             let parameters = self.function_parameters()?;
-            self.function_value(parameters, None, FunctionBody::Block, expression_name)?;
+            self.function_value(
+                parameters,
+                None,
+                FunctionBody::Block,
+                expression_name,
+                false,
+            )?;
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
@@ -1051,6 +1069,26 @@ impl Parser<'_> {
         self.try_word(word)
     }
 
+    fn try_async_function(&mut self) -> bool {
+        let start = self.offset;
+        if !self.try_word(b"async")
+            || !self
+                .source
+                .get(self.offset)
+                .is_some_and(u8::is_ascii_whitespace)
+        {
+            self.offset = start;
+            return false;
+        }
+        self.whitespace();
+        if self.try_word(b"function") {
+            true
+        } else {
+            self.offset = start;
+            false
+        }
+    }
+
     fn consume(&mut self, byte: u8) -> bool {
         self.whitespace();
         self.consume_raw(byte)
@@ -1240,6 +1278,15 @@ mod tests {
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
         );
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
+    }
+
+    #[test]
+    fn compiles_async_declarations_to_the_async_closure_capability() {
+        let code = compile_script("async function answer() { return await 42; } return answer();")
+            .unwrap();
+        assert!(code.contains(&(Opcode::AsyncClosure as u8)));
+        assert!(code.contains(&(Opcode::Await as u8)));
+        assert!(!code.contains(&(Opcode::Closure as u8)));
     }
 
     #[test]

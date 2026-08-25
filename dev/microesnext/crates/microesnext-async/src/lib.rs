@@ -4,6 +4,8 @@
 use microesnext_arena::BlockKind;
 #[cfg(feature = "promises")]
 use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
+#[cfg(feature = "functions")]
+use microesnext_promises::{pending, settle_unobserved};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
@@ -56,6 +58,88 @@ pub fn reject(
     machine
         .resume_rejected(suspended.continuation, reason)
         .map(Into::into)
+}
+
+/// Drive ordinary and async guest calls until the current caller completes or
+/// reaches a top-level await. Nested async bodies use caller-supplied frame
+/// storage and return their outer promise without suspending the caller.
+#[cfg(feature = "functions")]
+pub fn run_functions(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    frames: &mut microesnext_async_functions::Frames<'_>,
+) -> Result<Progress, Error> {
+    let mut outcome = machine.run()?;
+    loop {
+        outcome = match outcome {
+            Outcome::AsyncCall {
+                function,
+                argument_count,
+            } => {
+                // Creating the outer promise may compact the arena. Keep the
+                // callee relocatable until both allocations are complete.
+                let function = machine.retain(function)?;
+                let promise = match pending(machine.arena_mut()) {
+                    Ok(promise) => promise,
+                    Err(error) => {
+                        machine.release(function)?;
+                        return Err(error);
+                    }
+                };
+                let promise = machine.retain(promise)?;
+                let function = machine.release(function)?;
+                let caller = match machine.switch_to_async_call(function, argument_count, promise) {
+                    Ok(caller) => caller,
+                    Err(error) => {
+                        machine.release(promise)?;
+                        return Err(error);
+                    }
+                };
+                if let Err(error) =
+                    frames.push(microesnext_async_functions::Frame { caller, promise })
+                {
+                    machine.restore_caller(caller)?;
+                    machine.release(promise)?;
+                    return Err(error);
+                }
+                machine.run()?
+            }
+            Outcome::Complete(value) => {
+                let Some(frame) = frames.pop()? else {
+                    return Ok(Progress::Complete(value));
+                };
+                let promise = machine.root(frame.promise)?;
+                settle_unobserved(machine.arena_mut(), promise, Settlement::Fulfilled, value)?;
+                machine.restore_caller(frame.caller)?;
+                machine.release(frame.promise)?;
+                machine.run()?
+            }
+            Outcome::Throw(reason) => {
+                let Some(frame) = frames.pop()? else {
+                    return Ok(Progress::Rejected(reason));
+                };
+                let promise = machine.root(frame.promise)?;
+                settle_unobserved(machine.arena_mut(), promise, Settlement::Rejected, reason)?;
+                machine.restore_caller(frame.caller)?;
+                machine.release(frame.promise)?;
+                machine.run()?
+            }
+            Outcome::Await {
+                value,
+                continuation,
+            } => {
+                let Some(frame) = frames.pop()? else {
+                    return Ok(Progress::Suspended(Suspended {
+                        awaited: value,
+                        continuation,
+                    }));
+                };
+                park_continuation(machine, queue, frame.promise, value, continuation)?;
+                machine.restore_caller(frame.caller)?;
+                machine.run()?
+            }
+        };
+    }
 }
 
 #[cfg(feature = "promises")]
@@ -137,7 +221,7 @@ fn finish_reaction(
             value,
             continuation,
         } => {
-            park_reaction(machine, queue, destination, value, continuation)?;
+            park_continuation(machine, queue, destination, value, continuation)?;
             Ok(())
         }
         Outcome::AsyncCall { .. } => Err(Error::Type),
@@ -145,7 +229,7 @@ fn finish_reaction(
 }
 
 #[cfg(feature = "promises")]
-fn park_reaction(
+pub fn park_continuation(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     destination: RootId,
@@ -184,6 +268,85 @@ mod tests {
     use microesnext_promises::{JobSlot, pending, settled_result, then};
 
     use super::*;
+
+    #[cfg(feature = "functions")]
+    #[test]
+    fn async_call_returns_a_fulfilled_outer_promise_to_its_caller() {
+        const BODY: u32 = 9;
+        let code = [
+            Opcode::AsyncClosure as u8,
+            BODY as u8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            Opcode::CallValue as u8,
+            Opcode::Return as u8,
+            Opcode::ConstI30 as u8,
+            42,
+            0,
+            0,
+            0,
+            Opcode::Return as u8,
+        ];
+        let mut memory = [0; 192];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
+        let mut jobs = [None; 2];
+        let mut queue = JobQueue::new(&mut jobs);
+        let mut frame_slots = [None; 1];
+        let mut frames = microesnext_async_functions::Frames::new(&mut frame_slots);
+        let Progress::Complete(promise) =
+            run_functions(&mut machine, &mut queue, &mut frames).unwrap()
+        else {
+            panic!("expected the caller to complete")
+        };
+        assert_eq!(
+            settled_result(machine.arena(), promise),
+            Ok(Some((Settlement::Fulfilled, Value::from_i30(42).unwrap())))
+        );
+    }
+
+    #[cfg(feature = "functions")]
+    #[test]
+    fn first_await_restores_the_caller_and_parks_the_async_body() {
+        const BODY: u32 = 9;
+        let code = [
+            Opcode::AsyncClosure as u8,
+            BODY as u8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            Opcode::CallValue as u8,
+            Opcode::Return as u8,
+            Opcode::ConstI30 as u8,
+            42,
+            0,
+            0,
+            0,
+            Opcode::Await as u8,
+            Opcode::Return as u8,
+        ];
+        let mut memory = [0; 224];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
+        let mut jobs = [None; 2];
+        let mut queue = JobQueue::new(&mut jobs);
+        let mut frame_slots = [None; 1];
+        let mut frames = microesnext_async_functions::Frames::new(&mut frame_slots);
+        let Progress::Complete(promise) =
+            run_functions(&mut machine, &mut queue, &mut frames).unwrap()
+        else {
+            panic!("expected the restored caller to complete")
+        };
+        assert_eq!(settled_result(machine.arena(), promise), Ok(None));
+        assert!(run_one_reaction(&mut machine, &mut queue).unwrap());
+        assert_eq!(
+            settled_result(machine.arena(), promise),
+            Ok(Some((Settlement::Fulfilled, Value::from_i30(42).unwrap())))
+        );
+    }
 
     #[test]
     fn callback_result_fulfills_its_destination() {

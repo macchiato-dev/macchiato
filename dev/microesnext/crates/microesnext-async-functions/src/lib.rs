@@ -1,8 +1,53 @@
 #![no_std]
 
 use microesnext_arena::{Arena, BlockKind};
-use microesnext_types::{Error, Value};
+use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::Core;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Frame {
+    pub caller: RootId,
+    pub promise: RootId,
+}
+
+#[derive(Clone, Copy)]
+pub struct FrameSlot(Frame);
+
+/// Caller-supplied storage for synchronously nested async invocations.
+pub struct Frames<'slots> {
+    slots: &'slots mut [Option<FrameSlot>],
+    len: usize,
+}
+
+impl<'slots> Frames<'slots> {
+    pub fn new(slots: &'slots mut [Option<FrameSlot>]) -> Self {
+        slots.fill(None);
+        Self { slots, len: 0 }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn push(&mut self, frame: Frame) -> Result<(), Error> {
+        let slot = self.slots.get_mut(self.len).ok_or(Error::OutOfMemory)?;
+        *slot = Some(FrameSlot(frame));
+        self.len += 1;
+        Ok(())
+    }
+
+    pub fn pop(&mut self) -> Result<Option<Frame>, Error> {
+        if self.len == 0 {
+            return Ok(None);
+        }
+        self.len -= 1;
+        self.slots[self.len]
+            .take()
+            .map(|slot| slot.0)
+            .ok_or(Error::DanglingReference)
+            .map(Some)
+    }
+}
 
 /// Captures values from the guest stack into an async closure.
 pub fn capture_stack(
@@ -120,5 +165,19 @@ mod tests {
             core.arena().stack_value_from_bottom(4).unwrap().as_i30(),
             Some(2)
         );
+    }
+
+    #[test]
+    fn frame_storage_is_bounded_and_lifo() {
+        let mut slots = [None; 1];
+        let mut frames = Frames::new(&mut slots);
+        let frame = Frame {
+            caller: RootId::new(0, 1),
+            promise: RootId::new(1, 1),
+        };
+        frames.push(frame).unwrap();
+        assert_eq!(frames.push(frame), Err(Error::OutOfMemory));
+        assert_eq!(frames.pop(), Ok(Some(frame)));
+        assert!(frames.is_empty());
     }
 }

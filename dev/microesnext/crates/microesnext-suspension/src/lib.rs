@@ -13,7 +13,11 @@ pub fn suspend_context(
     let continuation = core
         .arena_mut()
         .suspend_stack(pc, frame_depth, handler_depth, &mut [])?;
-    core.arena_mut().retain(Value::from_ref(continuation))
+    let continuation = core.arena_mut().retain(Value::from_ref(continuation))?;
+    // A complete context switch leaves no active native-side frame metadata.
+    // The continuation owns it until `resume_context` restores the caller.
+    core.abandon();
+    Ok(continuation)
 }
 
 /// Restore a complete execution context without adding an operand.
@@ -84,6 +88,22 @@ mod tests {
     use microesnext_vm_core::Core;
 
     use super::{resume, resume_context, suspend, suspend_context};
+
+    #[test]
+    fn complete_context_switch_deactivates_and_restores_frame_metadata() {
+        let code = [4];
+        let mut memory = [0; 32];
+        let mut core = Core::new(&code, &mut memory, 1);
+        core.enter_external_call(Value::TRUE, 0, Value::UNDEFINED)
+            .unwrap();
+
+        let continuation = suspend_context(&mut core, None).unwrap();
+        assert_eq!(core.frame_depth(), None);
+        assert_eq!(core.arena().stack_len(), 0);
+
+        assert_eq!(resume_context(&mut core, continuation), Ok(None));
+        assert_eq!(core.frame_depth(), Some(3));
+    }
 
     #[test]
     fn round_trips_stack_and_awaited_operand() {

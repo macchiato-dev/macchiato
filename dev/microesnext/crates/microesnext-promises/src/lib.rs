@@ -234,6 +234,26 @@ pub fn settle(
     Ok(promise)
 }
 
+/// Settle a promise that has not yet escaped to code that can attach a
+/// reaction. Async-function entry uses this while its caller is snapshotted.
+pub fn settle_unobserved(
+    arena: &mut Arena<'_>,
+    promise: Value,
+    settlement: Settlement,
+    result: Value,
+) -> Result<Value, Error> {
+    let (promise_state, _, reactions) = fields(arena, promise)?;
+    if promise_state != PENDING {
+        return Ok(promise);
+    }
+    if !arena.values(reactions)?.is_empty() {
+        return Err(Error::Type);
+    }
+    let mut slots = [];
+    let mut queue = JobQueue::new(&mut slots);
+    settle(arena, &mut queue, promise, settlement, result)
+}
+
 pub fn status(arena: &Arena<'_>, promise: Value) -> Result<Option<Settlement>, Error> {
     Ok(match fields(arena, promise)?.0 {
         PENDING => None,
@@ -299,6 +319,19 @@ mod tests {
     use microesnext_objects::new_object;
 
     use super::*;
+
+    #[test]
+    fn an_unobserved_promise_settles_without_a_job_queue() {
+        let mut memory = [0; 48];
+        let mut arena = Arena::new(&mut memory);
+        let promise = pending(&mut arena).unwrap();
+        let answer = Value::from_i30(42).unwrap();
+        settle_unobserved(&mut arena, promise, Settlement::Fulfilled, answer).unwrap();
+        assert_eq!(
+            settled_result(&arena, promise),
+            Ok(Some((Settlement::Fulfilled, answer)))
+        );
+    }
 
     #[test]
     fn reactions_are_fifo_and_choose_the_settlement_handler() {
