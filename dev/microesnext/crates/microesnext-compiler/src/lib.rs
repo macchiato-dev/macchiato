@@ -376,6 +376,8 @@ enum CaptureSource {
 enum FunctionBody {
     Block,
     Expression,
+    #[cfg(feature = "classes")]
+    ClassConstructor,
 }
 
 impl Parser<'_> {
@@ -524,6 +526,9 @@ impl Parser<'_> {
             self.whitespace();
             if self.try_word(b"function") {
                 self.function_declaration(count_patch, false)?;
+            } else if cfg!(feature = "classes") && self.try_word(b"class") {
+                #[cfg(feature = "classes")]
+                self.class_declaration(count_patch)?;
             } else if cfg!(feature = "async-functions") && self.try_async_function() {
                 self.function_declaration(count_patch, true)?;
             } else if self.try_word(b"let") {
@@ -629,6 +634,49 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "classes")]
+    fn class_declaration(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+        if count_patch.is_none() {
+            self.output.push(Opcode::InitLocals as u8);
+            *count_patch = Some(self.output.len());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+        }
+        self.whitespace();
+        let (name_start, name_end) = self.identifier()?;
+        if self.locals.iter().any(|binding| {
+            self.source[binding.start..binding.end] == self.source[name_start..name_end]
+        }) {
+            return Err(self.error("a unique local binding"));
+        }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.locals.push(Binding {
+            start: name_start,
+            end: name_end,
+            slot,
+            #[cfg(feature = "environments")]
+            captured: false,
+        });
+        if !self.consume(b'{') || !self.try_word_after_whitespace(b"constructor") {
+            return Err(self.error("{ constructor"));
+        }
+        let parameters = self.function_parameters()?;
+        self.function_value(
+            parameters,
+            Some(slot),
+            FunctionBody::ClassConstructor,
+            None,
+            false,
+            true,
+        )?;
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        self.consume(b';');
+        self.whitespace();
+        Ok(())
+    }
+
     #[cfg(feature = "function-arguments")]
     fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
         if !self.consume(b'(') {
@@ -717,7 +765,7 @@ impl Parser<'_> {
         constructible: bool,
     ) -> Result<(), CompileError> {
         let receiver_frame = constructible && cfg!(feature = "constructors");
-        if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
+        if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
         let parameter_count = u16::try_from(parameters.len())
@@ -747,7 +795,7 @@ impl Parser<'_> {
             options: self.options,
         };
         let mut body_count_patch = Some(1);
-        if matches!(body_kind, FunctionBody::Block) {
+        if !matches!(body_kind, FunctionBody::Expression) {
             body.frame_declarations(&mut body_count_patch)?;
         }
         let body_local_count = u16::try_from(body.locals.len())
@@ -763,6 +811,21 @@ impl Parser<'_> {
             FunctionBody::Expression => {
                 body.expression(None)?;
                 body.output.push(Opcode::ReturnLocals as u8);
+            }
+            #[cfg(feature = "classes")]
+            FunctionBody::ClassConstructor => {
+                body.property_assignments()?;
+                body.local_assignments()?;
+                body.whitespace();
+                if body.source.get(body.offset) == Some(&b'}') {
+                    body.output.push(Opcode::LoadThis as u8);
+                    body.output.push(Opcode::ReturnReceiverLocals as u8);
+                } else {
+                    body.terminal_statement()?;
+                }
+                if !body.consume(b'}') {
+                    return Err(body.error("}"));
+                }
             }
         }
         body.whitespace();
@@ -781,7 +844,15 @@ impl Parser<'_> {
         self.output.extend_from_slice(&capture_count.to_le_bytes());
         #[cfg(feature = "constructors")]
         if constructible {
-            self.output.push(Opcode::ToConstructor as u8);
+            #[cfg(feature = "classes")]
+            let constructor_opcode = if matches!(body_kind, FunctionBody::ClassConstructor) {
+                Opcode::ToClassConstructor
+            } else {
+                Opcode::ToConstructor
+            };
+            #[cfg(not(feature = "classes"))]
+            let constructor_opcode = Opcode::ToConstructor;
+            self.output.push(constructor_opcode as u8);
             #[cfg(feature = "recursive-constructors")]
             if expression_name.is_some() {
                 self.output.push(Opcode::RebindConstructorSelf as u8);
@@ -3505,5 +3576,20 @@ mod tests {
             .op(Opcode::Return)
             .finish();
         assert_eq!(code, expected);
+    }
+
+    #[cfg(feature = "classes")]
+    #[test]
+    fn compiles_a_focused_class_constructor_without_lowering_it_to_a_function() {
+        let code = compile_script(
+            "class Rectangle { constructor(width) { this.width = width; } } \
+             let rectangle = new Rectangle(42); return rectangle.width;",
+        )
+        .unwrap();
+
+        assert!(code.contains(&(Opcode::ToClassConstructor as u8)));
+        assert!(code.contains(&(Opcode::ConstructValueArguments as u8)));
+        assert!(code.contains(&(Opcode::LoadThis as u8)));
+        assert!(code.contains(&(Opcode::SetPropertyStatement as u8)));
     }
 }

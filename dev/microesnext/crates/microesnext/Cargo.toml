@@ -11,7 +11,13 @@ version.workspace = true
 default = []
 control-flow = ["microesnext-vm/control-flow"]
 constructors = ["callable-objects", "microesnext-vm/constructors"]
+class-constructors = ["constructors", "microesnext-vm/class-constructors"]
 construction = ["constructors", "receivers", "microesnext-vm/construction"]
+classes = [
+  "class-constructors",
+  "construction",
+  "property-assignment",
+]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
@@ -360,6 +366,11 @@ required-features = [
   "objects",
   "property-assignment",
 ]
+
+[[test]]
+name = "classes"
+path = "tests/classes.rs"
+required-features = ["classes", "locals", "objects"]
 
 [[test]]
 name = "recursive-constructors"

@@ -615,6 +615,7 @@ dependencies = [
  "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
+ "microesnext-class-constructors",
  "microesnext-compiler",
  "microesnext-construction",
  "microesnext-environments",

@@ -14,6 +14,7 @@ default = [
   "control-flow",
   "constructors",
   "construction",
+  "classes",
   "equality",
   "exceptions",
   "function-arguments",
@@ -45,6 +46,11 @@ atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 constructors = ["functions", "microesnext-bytecode/constructors"]
 construction = ["constructors", "receivers", "microesnext-bytecode/construction"]
+classes = [
+  "construction",
+  "property-assignment",
+  "microesnext-bytecode/class-constructors",
+]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 environments = ["functions", "microesnext-bytecode/environments"]
