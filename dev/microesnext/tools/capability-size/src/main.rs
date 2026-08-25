@@ -1,7 +1,10 @@
 #![cfg_attr(target_arch = "wasm32", no_std)]
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-#[cfg(all(target_arch = "wasm32", feature = "async"))]
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "async", feature = "promise-resolution")
+))]
 use microesnext::Value;
 #[cfg(target_arch = "wasm32")]
 use microesnext::bytecode::Opcode;
@@ -758,6 +761,58 @@ pub extern "C" fn promises_probe() -> u32 {
     let mut memory = [0; 48];
     let mut arena = microesnext_arena::Arena::new(&mut memory);
     microesnext::promises::pending(&mut arena).unwrap().raw()
+}
+
+#[cfg(all(feature = "promise-resolution", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn promise_resolution_probe() -> i32 {
+    let mut memory = [0; 192];
+    let mut arena = microesnext_arena::Arena::with_root_capacity(&mut memory, 8);
+    let Ok(source) = microesnext::promises::pending(&mut arena) else {
+        return -1;
+    };
+    let Ok(destination) = microesnext::promises::pending(&mut arena) else {
+        return -1;
+    };
+    let mut slots = [None; 1];
+    let mut queue = microesnext::promises::JobQueue::new(&mut slots);
+    if microesnext::promise_resolution::resolve_native(&mut arena, &mut queue, destination, source)
+        .is_err()
+    {
+        return -1;
+    }
+    let answer = Value::from_i30(42).unwrap();
+    if microesnext::promises::settle(
+        &mut arena,
+        &mut queue,
+        source,
+        microesnext::promises::Settlement::Fulfilled,
+        answer,
+    )
+    .is_err()
+    {
+        return -1;
+    }
+    let Ok(Some(job)) = queue.pop(&mut arena) else {
+        return -1;
+    };
+    if microesnext::promises::settle(
+        &mut arena,
+        &mut queue,
+        job.destination,
+        job.settlement,
+        job.argument,
+    )
+    .is_err()
+    {
+        return -1;
+    }
+    match microesnext::promises::settled_result(&arena, destination) {
+        Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
+            value.as_i30().unwrap_or(-1)
+        }
+        _ => -1,
+    }
 }
 
 #[cfg(all(feature = "weak-collections", target_arch = "wasm32"))]

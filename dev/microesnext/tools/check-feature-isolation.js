@@ -38,6 +38,7 @@ const suspension = "microesnext-suspension";
 const recursiveFunctions = "microesnext-recursive-functions";
 const asyncFunctions = "microesnext-async-functions";
 const recursiveAsyncFunctions = "microesnext-recursive-async-functions";
+const promiseResolution = "microesnext-promise-resolution";
 
 assertPresence(
   [],
@@ -46,6 +47,7 @@ assertPresence(
     asyncFunctions,
     environments,
     parameters,
+    promiseResolution,
     recursiveAsyncFunctions,
     recursiveFunctions,
     suspension,
@@ -58,6 +60,7 @@ assertPresence(
     asyncFunctions,
     environments,
     parameters,
+    promiseResolution,
     recursiveAsyncFunctions,
     recursiveFunctions,
   ],
@@ -69,6 +72,7 @@ assertPresence(
     asyncFunctions,
     environments,
     parameters,
+    promiseResolution,
     recursiveAsyncFunctions,
     recursiveFunctions,
   ],
@@ -76,16 +80,40 @@ assertPresence(
 assertPresence(
   ["function-arguments"],
   [parameters],
-  [asyncFunctions, environments, recursiveAsyncFunctions, recursiveFunctions],
+  [
+    asyncFunctions,
+    environments,
+    promiseResolution,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+  ],
 );
 assertPresence(
   ["async"],
   [suspension],
-  [asyncFunctions, environments, parameters, recursiveAsyncFunctions],
+  [
+    asyncFunctions,
+    environments,
+    parameters,
+    promiseResolution,
+    recursiveAsyncFunctions,
+  ],
+);
+assertPresence(["promises"], ["microesnext-promises"], [promiseResolution]);
+assertPresence(
+  ["promise-resolution"],
+  ["microesnext-promises", promiseResolution],
+  [asyncFunctions, environments, parameters, recursiveAsyncFunctions, suspension],
 );
 assertPresence(
   ["async-functions"],
-  [asyncFunctions, "microesnext-functions", "microesnext-promises", suspension],
+  [
+    asyncFunctions,
+    "microesnext-functions",
+    "microesnext-promises",
+    promiseResolution,
+    suspension,
+  ],
   [environments, parameters, recursiveAsyncFunctions, recursiveFunctions],
 );
 assertPresence(
@@ -95,6 +123,7 @@ assertPresence(
     environments,
     "microesnext-functions",
     "microesnext-promises",
+    promiseResolution,
     recursiveAsyncFunctions,
     suspension,
   ],
@@ -103,7 +132,7 @@ assertPresence(
 assertPresence(
   ["recursive-functions"],
   [environments, "microesnext-functions", recursiveFunctions],
-  [parameters, recursiveAsyncFunctions, suspension],
+  [parameters, promiseResolution, recursiveAsyncFunctions, suspension],
 );
 assertPresence(
   ["environments", "functions", "locals"],
@@ -111,6 +140,7 @@ assertPresence(
   [
     asyncFunctions,
     parameters,
+    promiseResolution,
     recursiveAsyncFunctions,
     recursiveFunctions,
     suspension,

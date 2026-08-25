@@ -142,13 +142,18 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["promises", "promises", [core, ["promises_probe", "nonzero"]]],
     [
+      "native promise resolution",
+      "promise-resolution",
+      [core, ["promises_probe", "nonzero"], ["promise_resolution_probe", 42]],
+    ],
+    [
       "weak collections",
       "weak-collections",
       [core, ["weak_collections_probe", "nonzero"]],
     ],
     [
       "all",
-      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,promise-resolution,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -179,6 +184,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["symbols_probe", 1],
         ["well_known_symbols_probe", "nonzero"],
         ["promises_probe", "nonzero"],
+        ["promise_resolution_probe", 42],
         ["weak_collections_probe", "nonzero"],
       ],
     ],

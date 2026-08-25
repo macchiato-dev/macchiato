@@ -61,6 +61,9 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   may catch and rethrow opaque host or foreign-Wasm exceptions unchanged.
 - Scheduler and host references use O(1), generation-checked root slots. Raw
   moving heap offsets are not exposed as durable asynchronous handles.
+- Native Promise adoption is an optional composition over compact Promise
+  storage. It registers an identity reaction in the caller-owned queue rather
+  than recursively following a chain on the Rust or WebAssembly stack.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.

@@ -84,6 +84,9 @@ not link to that C implementation.
   separate capability because ephemerons alter collector tracing.
 - `microesnext-promises` contains compact promise records and a caller-owned,
   rooted FIFO job ring; it does not require a native allocator or Rust futures.
+- `microesnext-promise-resolution` optionally adopts native Promise results.
+  Plain Promise storage does not link the resolver, and object-based thenable
+  assimilation will compose at a separate boundary.
 - `microesnext-exceptions` owns explicit guest handler-chain bookkeeping and
   stack unwinding only for builds enabling the `exceptions` feature. Handler
   records remain guest-stack words; the invariant opcode core has no exception

@@ -102,14 +102,16 @@ while a collection alone does not retain its keys.
 
 ## Promise
 
-`Promise` provides the constructor, `then`, `catch`, `finally`, `resolve`,
-`reject`, `all`, and `race`. Reactions run through a native FIFO job queue after
-the current JavaScript turn. Resolution adopts native promises and ordinary
-thenables, protects against self-resolution, and ignores repeated settlement.
+The current runtime slice provides compact pending/fulfilled/rejected records,
+reaction lists, and a caller-owned FIFO job ring. Optional native resolution
+adopts another engine Promise, including its eventual rejection, without
+linking object property lookup. Async function return uses this path.
 
-For this milestone, `all` and `race` accept arrays. General iterables depend on
-future symbol and iterable support. Subclass constructors, species, and
-unhandled-rejection reporting are also outside the current surface.
+Self-resolution is detected but still awaits the realm error-value capability
+needed to reject with a guest TypeError. Object thenables, source-visible
+`Promise`, `then`, `catch`, `finally`, `resolve`, `reject`, `all`, and `race`,
+subclass constructors, species, and unhandled-rejection reporting remain work
+rather than claimed support.
 
 ## Editor-driven scope
 

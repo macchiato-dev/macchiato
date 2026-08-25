@@ -64,7 +64,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,969 | 4,208 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 22,342 | 8,557 |
+| Async functions | 22,892 | 8,820 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 9,380 | 3,962 |
@@ -76,7 +76,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 24,959 | 9,216 |
+| Recursive async functions | 25,509 | 9,480 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
@@ -88,8 +88,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Symbols | 4,995 | 2,254 |
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
+| Native Promise resolution | 11,291 | 4,577 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 56,348 | 18,503 |
+| All capabilities | 57,768 | 19,016 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -263,18 +264,23 @@ surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
 
-The 22,342-byte (8,557 gzip) async-functions row executes async closure entry,
+The 22,892-byte (8,820 gzip) async-functions row executes async closure entry,
 returns a pending outer Promise, parks an `await`, runs its queued reaction,
 and verifies fulfillment. The dependency check also proves that selecting
 plain `async` does not resolve `microesnext-async-functions`, while selecting
 `async-functions` does not pull in environment cells, parameter frames, or
 recursive-function storage. The minimal artifact remains 1,984 bytes.
 
-The 24,959-byte (9,216 gzip) recursive-async row adds and exercises only the
+The 25,509-byte (9,480 gzip) recursive-async row adds and exercises only the
 composition that initializes an async closure's private self cell. Its graph
 contains neither `microesnext-recursive-functions` nor parameter-frame
 storage; conversely, ordinary async and ordinary recursive rows exclude
 `microesnext-recursive-async-functions`.
+
+The 11,291-byte (4,577 gzip) native-resolution row creates two Promises,
+attaches an identity reaction, settles the source, forwards its queued result,
+and verifies the destination. The 4,840-byte Promise-storage row remains
+unchanged and its dependency graph excludes `microesnext-promise-resolution`.
 Re-run them with:
 
 ```sh
