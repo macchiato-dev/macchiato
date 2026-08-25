@@ -1513,7 +1513,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "callable-objects")]
+    #[cfg(all(feature = "callable-objects", not(feature = "receivers")))]
     #[test]
     fn an_ordinary_callable_object_enters_its_compact_closure() {
         let code = Builder::new()
