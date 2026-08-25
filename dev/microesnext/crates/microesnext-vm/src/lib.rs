@@ -438,12 +438,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "number-division")]
+            #[cfg(feature = "number-remainder")]
             Opcode::RemainderNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
                 let value =
-                    microesnext_number_division::remainder(self.core.arena_mut(), left, right)?;
+                    microesnext_number_remainder::remainder(self.core.arena_mut(), left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -1263,7 +1263,7 @@ mod tests {
         assert_eq!(microesnext_numbers::get(machine.arena(), value), Ok(3.25));
     }
 
-    #[cfg(feature = "number-division")]
+    #[cfg(all(feature = "number-division", feature = "number-remainder"))]
     #[test]
     fn executes_optional_division_without_the_arithmetic_feature() {
         let code = Builder::new()

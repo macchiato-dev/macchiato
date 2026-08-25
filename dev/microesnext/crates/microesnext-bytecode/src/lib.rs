@@ -128,7 +128,7 @@ pub enum Opcode {
     ToNumber = 98,
     #[cfg(feature = "number-division")]
     DivideNumber = 99,
-    #[cfg(feature = "number-division")]
+    #[cfg(feature = "number-remainder")]
     RemainderNumber = 100,
 }
 
@@ -249,7 +249,7 @@ impl TryFrom<u8> for Opcode {
             98 => Ok(Self::ToNumber),
             #[cfg(feature = "number-division")]
             99 => Ok(Self::DivideNumber),
-            #[cfg(feature = "number-division")]
+            #[cfg(feature = "number-remainder")]
             100 => Ok(Self::RemainderNumber),
             _ => Err(Error::BadBytecode),
         }
@@ -425,13 +425,23 @@ mod tests {
     #[test]
     fn enabled_number_division_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(99), Ok(Opcode::DivideNumber));
-        assert_eq!(Opcode::try_from(100), Ok(Opcode::RemainderNumber));
     }
 
     #[cfg(not(feature = "number-division"))]
     #[test]
     fn omitted_number_division_opcodes_are_invalid() {
         assert!(Opcode::try_from(99).is_err());
+    }
+
+    #[cfg(feature = "number-remainder")]
+    #[test]
+    fn enabled_number_remainder_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(100), Ok(Opcode::RemainderNumber));
+    }
+
+    #[cfg(not(feature = "number-remainder"))]
+    #[test]
+    fn omitted_number_remainder_opcode_is_invalid() {
         assert!(Opcode::try_from(100).is_err());
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "microesnext-number-division"
-description = "Removable JavaScript division and remainder for MicroESNext"
+description = "Removable JavaScript division for MicroESNext"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

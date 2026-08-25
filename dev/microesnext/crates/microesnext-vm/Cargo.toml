@@ -82,6 +82,11 @@ number-division = [
   "dep:microesnext-number-division",
   "microesnext-bytecode/number-division",
 ]
+number-remainder = [
+  "numbers",
+  "dep:microesnext-number-remainder",
+  "microesnext-bytecode/number-remainder",
+]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -130,6 +135,7 @@ microesnext-number-operations = { workspace = true, optional = true }
 microesnext-number-negation = { workspace = true, optional = true }
 microesnext-number-coercion = { workspace = true, optional = true }
 microesnext-number-division = { workspace = true, optional = true }
+microesnext-number-remainder = { workspace = true, optional = true }
 microesnext-string-number-coercion = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }

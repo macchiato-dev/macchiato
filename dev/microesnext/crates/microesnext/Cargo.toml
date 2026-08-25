@@ -89,6 +89,16 @@ number-coercion = [
   "dep:microesnext-number-coercion",
   "microesnext-vm/number-coercion",
 ]
+number-division = [
+  "numbers",
+  "dep:microesnext-number-division",
+  "microesnext-vm/number-division",
+]
+number-remainder = [
+  "numbers",
+  "dep:microesnext-number-remainder",
+  "microesnext-vm/number-remainder",
+]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -185,6 +195,8 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-number-operations = { workspace = true, optional = true }
 microesnext-number-negation = { workspace = true, optional = true }
 microesnext-number-coercion = { workspace = true, optional = true }
+microesnext-number-division = { workspace = true, optional = true }
+microesnext-number-remainder = { workspace = true, optional = true }
 microesnext-string-number-coercion = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }

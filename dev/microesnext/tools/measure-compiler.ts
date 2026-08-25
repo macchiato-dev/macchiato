@@ -6,6 +6,8 @@ const builds = [
   ["bounded integer operations", "integer-operations"],
   ["bounded numeric negation", "integer-negation"],
   ["decimal number literals", "numbers"],
+  ["number division", "number-division"],
+  ["number remainder", "number-remainder"],
   ["primitive Number coercion", "number-coercion"],
   ["string Number coercion", "string-number-coercion"],
   ["JavaScript Number negation", "number-negation"],
@@ -20,7 +22,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations",
   ],
 ] as const;
 
@@ -78,6 +80,10 @@ for (const [name, features] of builds) {
     ? "return - 42;"
     : features === "numbers"
     ? "return 1.25;"
+    : features === "number-division"
+    ? "return 7 / 2;"
+    : features === "number-remainder"
+    ? "return 7 % 2;"
     : features.includes("integer-operations")
     ? "return 6 * 7;"
     : features.includes("control-flow")

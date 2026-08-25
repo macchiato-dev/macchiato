@@ -35,6 +35,8 @@ use microesnext::{Core, CoreOutcome};
         feature = "minimal-program",
         feature = "numbers",
         feature = "number-coercion",
+        feature = "number-division",
+        feature = "number-remainder",
         feature = "string-number-coercion",
         feature = "number-negation",
         feature = "objects",
@@ -940,6 +942,56 @@ pub extern "C" fn number_operations_probe() -> f64 {
         return f64::NAN;
     };
     microesnext::numbers::get(machine.arena(), value).unwrap_or(f64::NAN)
+}
+
+#[cfg(all(feature = "number-division", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn number_division_probe() -> f64 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        7,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        2,
+        0,
+        0,
+        0,
+        Opcode::DivideNumber as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 64];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(Outcome::Complete(value)) = machine.run() else {
+        return f64::NAN;
+    };
+    microesnext::numbers::get(machine.arena(), value).unwrap_or(f64::NAN)
+}
+
+#[cfg(all(feature = "number-remainder", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn number_remainder_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        7,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        2,
+        0,
+        0,
+        0,
+        Opcode::RemainderNumber as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
 }
 
 #[cfg(all(feature = "integer-negation", target_arch = "wasm32"))]

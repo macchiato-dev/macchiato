@@ -82,6 +82,8 @@ const logicalOperations = "microesnext-logical-operations";
 const numberOperations = "microesnext-number-operations";
 const numberNegation = "microesnext-number-negation";
 const numberCoercion = "microesnext-number-coercion";
+const numberDivision = "microesnext-number-division";
+const numberRemainder = "microesnext-number-remainder";
 const stringNumberCoercion = "microesnext-string-number-coercion";
 
 assertCompilerFeatures(
@@ -198,6 +200,16 @@ assertCompilerFeatures(
   ["equality", "integer-negation", "logical-operations", "number-negation"],
 );
 assertCompilerFeatures(
+  ["number-division"],
+  ["numbers", "number-division"],
+  ["integer-operations", "number-operations"],
+);
+assertCompilerFeatures(
+  ["number-remainder"],
+  ["numbers", "number-remainder"],
+  ["integer-operations", "number-division", "number-operations"],
+);
+assertCompilerFeatures(
   ["integer-negation"],
   ["integer-negation"],
   ["integer-operations", "numbers", "number-negation", "number-operations"],
@@ -248,6 +260,8 @@ assertPresence(
     numberOperations,
     numberNegation,
     numberCoercion,
+    numberDivision,
+    numberRemainder,
     stringNumberCoercion,
     parameters,
     promiseResolution,
@@ -283,7 +297,17 @@ assertPresence(
 assertPresence(
   ["number-operations"],
   [integerOperations, numberOperations, "microesnext-numbers"],
-  [integerNegation, numberNegation, "microesnext-strings"],
+  [integerNegation, numberDivision, numberNegation, numberRemainder, "microesnext-strings"],
+);
+assertPresence(
+  ["number-division"],
+  [numberDivision, "microesnext-numbers"],
+  [integerOperations, numberOperations, numberRemainder, "microesnext-strings"],
+);
+assertPresence(
+  ["number-remainder"],
+  [numberRemainder, "microesnext-numbers"],
+  [integerOperations, numberDivision, numberOperations, "microesnext-strings"],
 );
 assertPresence(
   ["integer-negation"],

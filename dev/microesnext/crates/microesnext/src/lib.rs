@@ -57,10 +57,14 @@ pub use microesnext_iterable_protocol as iterable_protocol;
 pub use microesnext_functions as functions;
 #[cfg(feature = "number-coercion")]
 pub use microesnext_number_coercion as number_coercion;
+#[cfg(feature = "number-division")]
+pub use microesnext_number_division as number_division;
 #[cfg(feature = "number-negation")]
 pub use microesnext_number_negation as number_negation;
 #[cfg(feature = "number-operations")]
 pub use microesnext_number_operations as number_operations;
+#[cfg(feature = "number-remainder")]
+pub use microesnext_number_remainder as number_remainder;
 #[cfg(feature = "numbers")]
 pub use microesnext_numbers as numbers;
 #[cfg(feature = "function-arguments")]

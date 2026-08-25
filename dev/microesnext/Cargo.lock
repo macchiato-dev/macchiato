@@ -31,8 +31,10 @@ dependencies = [
  "microesnext-locals",
  "microesnext-logical-operations",
  "microesnext-number-coercion",
+ "microesnext-number-division",
  "microesnext-number-negation",
  "microesnext-number-operations",
+ "microesnext-number-remainder",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -359,6 +361,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-number-remainder"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
@@ -533,8 +544,10 @@ dependencies = [
  "microesnext-locals",
  "microesnext-logical-operations",
  "microesnext-number-coercion",
+ "microesnext-number-division",
  "microesnext-number-negation",
  "microesnext-number-operations",
+ "microesnext-number-remainder",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",

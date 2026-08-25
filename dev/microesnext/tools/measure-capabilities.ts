@@ -206,6 +206,16 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["numbers_probe", 1.25], ["number_operations_probe", 3.25]],
     ],
     [
+      "number division",
+      "number-division",
+      [core, ["numbers_probe", 1.25], ["number_division_probe", 3.5]],
+    ],
+    [
+      "number remainder",
+      "number-remainder",
+      [core, ["numbers_probe", 1.25], ["number_remainder_probe", 1]],
+    ],
+    [
       "JavaScript Number negation",
       "number-negation",
       [core, ["numbers_probe", 1.25], ["number_negation_probe", 1]],
@@ -264,7 +274,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-negation,number-operations,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -301,6 +311,8 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["number_coercion_probe", 1],
         ["string_number_coercion_probe", 42],
         ["number_operations_probe", 3.25],
+        ["number_division_probe", 3.5],
+        ["number_remainder_probe", 1],
         ["number_negation_probe", 1],
         ["objects_probe", 42],
         ["strings_probe", "nonzero"],
