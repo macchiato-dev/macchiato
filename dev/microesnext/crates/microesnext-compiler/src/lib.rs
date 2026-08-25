@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use microesnext_bytecode::Opcode;
+use microesnext_bytecode::{Immediate, Opcode};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CompileError {
@@ -26,6 +26,12 @@ impl Builder {
     pub fn const_i30(mut self, value: i32) -> Self {
         self.code.push(Opcode::ConstI30 as u8);
         self.code.extend_from_slice(&value.to_le_bytes());
+        self
+    }
+
+    pub fn immediate(mut self, value: Immediate) -> Self {
+        self.code.push(Opcode::ConstImmediate as u8);
+        self.code.push(value as u8);
         self
     }
 
@@ -267,6 +273,10 @@ impl Parser<'_> {
                 }
             }
             (false, TermKind::General)
+        } else if let Some(immediate) = self.immediate() {
+            self.output.push(Opcode::ConstImmediate as u8);
+            self.output.push(immediate as u8);
+            (false, TermKind::General)
         } else {
             let immediate = self.number()?;
             (
@@ -296,6 +306,20 @@ impl Parser<'_> {
             .source
             .get(offset)
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
+    }
+
+    fn immediate(&mut self) -> Option<Immediate> {
+        for (word, immediate) in [
+            (&b"undefined"[..], Immediate::Undefined),
+            (&b"null"[..], Immediate::Null),
+            (&b"false"[..], Immediate::False),
+            (&b"true"[..], Immediate::True),
+        ] {
+            if self.try_word(word) {
+                return Some(immediate);
+            }
+        }
+        None
     }
 
     fn number(&mut self) -> Result<bool, CompileError> {
@@ -384,11 +408,7 @@ impl Parser<'_> {
             return false;
         }
         let end = self.offset + word.len();
-        if self
-            .source
-            .get(end)
-            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
-        {
+        if !self.identifier_end(end) {
             return false;
         }
         self.offset = end;
@@ -530,5 +550,29 @@ mod tests {
                 .op(Opcode::Return)
                 .finish()
         );
+    }
+
+    #[test]
+    fn compiles_base_language_immediates_without_capabilities() {
+        for (source, immediate) in [
+            ("return undefined;", Immediate::Undefined),
+            ("return null;", Immediate::Null),
+            ("return false;", Immediate::False),
+            ("return true;", Immediate::True),
+        ] {
+            assert_eq!(
+                compile_script(source).unwrap(),
+                Builder::new()
+                    .immediate(immediate)
+                    .op(Opcode::Return)
+                    .finish()
+            );
+        }
+    }
+
+    #[test]
+    fn does_not_parse_a_keyword_prefix_as_an_immediate() {
+        assert_eq!(compile_script("return trueValue;").unwrap_err().offset, 7);
+        assert_eq!(compile_script("return true$value;").unwrap_err().offset, 7);
     }
 }

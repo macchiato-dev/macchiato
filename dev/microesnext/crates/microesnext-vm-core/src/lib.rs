@@ -2,7 +2,8 @@
 
 use microesnext_arena::Arena;
 use microesnext_bytecode_core::{
-    ADD_I30, CALL, CONST_I30, RETURN, THROW, read_byte, read_bytes, read_i30, read_u16, read_u32,
+    ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, RETURN, THROW, read_byte, read_bytes, read_i30,
+    read_immediate, read_u16, read_u32,
 };
 use microesnext_types::{Error, Value};
 
@@ -116,6 +117,7 @@ impl<'code, 'memory> Core<'code, 'memory> {
                         .ok_or(Error::BadBytecode)?;
                     self.arena.push(value)?;
                 }
+                CONST_IMMEDIATE => self.arena.push(read_immediate(self.code, &mut self.pc)?)?,
                 ADD_I30 => {
                     let right = self.arena.pop()?.as_i30().ok_or(Error::Type)?;
                     let left = self.arena.pop()?.as_i30().ok_or(Error::Type)?;
@@ -230,5 +232,13 @@ mod tests {
             CoreOutcome::Extension(Opcode::Await as u8)
         );
         assert_eq!(core.pc(), 1);
+    }
+
+    #[test]
+    fn rejects_unknown_immediate_tags() {
+        let code = [Opcode::ConstImmediate as u8, 4, Opcode::Return as u8];
+        let mut memory = [0; 8];
+        let mut core = Core::new(&code, &mut memory, 0);
+        assert_eq!(core.run(), Err(Error::BadBytecode));
     }
 }

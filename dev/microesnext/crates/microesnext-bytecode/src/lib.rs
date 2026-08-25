@@ -6,6 +6,15 @@ pub use microesnext_bytecode_core::{read_byte, read_bytes, read_i30, read_u16, r
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
+pub enum Immediate {
+    Undefined = microesnext_bytecode_core::IMMEDIATE_UNDEFINED,
+    Null = microesnext_bytecode_core::IMMEDIATE_NULL,
+    False = microesnext_bytecode_core::IMMEDIATE_FALSE,
+    True = microesnext_bytecode_core::IMMEDIATE_TRUE,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum Opcode {
     ConstI30 = 1,
     AddI30 = 2,
@@ -46,6 +55,7 @@ pub enum Opcode {
     ConstF64 = 21,
     #[cfg(feature = "numbers")]
     AddNumber = 22,
+    ConstImmediate = 23,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -92,6 +102,7 @@ impl TryFrom<u8> for Opcode {
             21 => Ok(Self::ConstF64),
             #[cfg(feature = "numbers")]
             22 => Ok(Self::AddNumber),
+            23 => Ok(Self::ConstImmediate),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -142,5 +153,10 @@ mod tests {
     fn enabled_number_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(21), Ok(Opcode::ConstF64));
         assert_eq!(Opcode::try_from(22), Ok(Opcode::AddNumber));
+    }
+
+    #[test]
+    fn immediate_opcode_is_part_of_every_build() {
+        assert_eq!(Opcode::try_from(23), Ok(Opcode::ConstImmediate));
     }
 }

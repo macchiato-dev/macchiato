@@ -68,6 +68,10 @@ path = "tests/source.rs"
 required-features = ["async", "exceptions"]
 
 [[test]]
+name = "immediates"
+path = "tests/immediates.rs"
+
+[[test]]
 name = "objects"
 path = "tests/objects.rs"
 required-features = ["objects"]

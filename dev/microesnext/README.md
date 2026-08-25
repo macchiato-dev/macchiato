@@ -17,7 +17,8 @@ not link to that C implementation.
 - `microesnext-arena` owns the fixed-capacity heap and VM stack and compacts
   references without a forwarding-table allocation.
 - `microesnext-bytecode-core` defines the raw opcodes and readers used by the
-  invariant interpreter loop. It has no capability features.
+  invariant interpreter loop. It has no capability features; its immediate
+  opcode covers `undefined`, `null`, and booleans in every build.
 - `microesnext-bytecode` adds the typed instruction vocabulary used by tools
   and the capability wrapper. Its optional opcode groups follow the runtime
   capabilities, so an omitted feature does not enlarge its valid enum surface.

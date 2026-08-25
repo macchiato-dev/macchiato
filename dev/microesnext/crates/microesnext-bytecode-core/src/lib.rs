@@ -7,12 +7,53 @@ pub const ADD_I30: u8 = 2;
 pub const RETURN: u8 = 4;
 pub const CALL: u8 = 5;
 pub const THROW: u8 = 13;
+pub const CONST_IMMEDIATE: u8 = 23;
+
+pub const IMMEDIATE_UNDEFINED: u8 = 0;
+pub const IMMEDIATE_NULL: u8 = 1;
+pub const IMMEDIATE_FALSE: u8 = 2;
+pub const IMMEDIATE_TRUE: u8 = 3;
 
 #[inline(always)]
 pub fn read_byte(code: &[u8], pc: &mut usize) -> Result<u8, Error> {
     let byte = *code.get(*pc).ok_or(Error::BadBytecode)?;
     *pc += 1;
     Ok(byte)
+}
+
+#[inline(always)]
+pub fn read_immediate(code: &[u8], pc: &mut usize) -> Result<microesnext_types::Value, Error> {
+    match read_byte(code, pc)? {
+        IMMEDIATE_UNDEFINED => Ok(microesnext_types::Value::UNDEFINED),
+        IMMEDIATE_NULL => Ok(microesnext_types::Value::NULL),
+        IMMEDIATE_FALSE => Ok(microesnext_types::Value::FALSE),
+        IMMEDIATE_TRUE => Ok(microesnext_types::Value::TRUE),
+        _ => Err(Error::BadBytecode),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use microesnext_types::{Error, Value};
+
+    use super::*;
+
+    #[test]
+    fn decodes_only_public_language_immediates() {
+        for (tag, expected) in [
+            (IMMEDIATE_UNDEFINED, Value::UNDEFINED),
+            (IMMEDIATE_NULL, Value::NULL),
+            (IMMEDIATE_FALSE, Value::FALSE),
+            (IMMEDIATE_TRUE, Value::TRUE),
+        ] {
+            let mut pc = 0;
+            assert_eq!(read_immediate(&[tag], &mut pc), Ok(expected));
+            assert_eq!(pc, 1);
+        }
+
+        let mut pc = 0;
+        assert_eq!(read_immediate(&[4], &mut pc), Err(Error::BadBytecode));
+    }
 }
 
 #[inline(always)]

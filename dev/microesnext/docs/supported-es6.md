@@ -5,6 +5,9 @@ not a general claim of ECMAScript conformance.
 
 ## Syntax and async execution
 
+`undefined`, `null`, `false`, and `true` compile to tagged values in the
+invariant VM. They require no heap allocation and no optional capability.
+
 Decimal and exponent literals compile to the optional `numbers` capability.
 It preserves IEEE-754 values, including negative zero and NaN, while keeping
 small integers as immediate i30 words. Addition of statically small integer
