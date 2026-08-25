@@ -60,6 +60,8 @@ pub enum Opcode {
     LoadLocal = 25,
     StoreLocal = 26,
     ReturnLocals = 27,
+    Jump = 28,
+    JumpIfFalseBoolean = 29,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -111,6 +113,8 @@ impl TryFrom<u8> for Opcode {
             25 => Ok(Self::LoadLocal),
             26 => Ok(Self::StoreLocal),
             27 => Ok(Self::ReturnLocals),
+            28 => Ok(Self::Jump),
+            29 => Ok(Self::JumpIfFalseBoolean),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -174,5 +178,11 @@ mod tests {
         assert_eq!(Opcode::try_from(25), Ok(Opcode::LoadLocal));
         assert_eq!(Opcode::try_from(26), Ok(Opcode::StoreLocal));
         assert_eq!(Opcode::try_from(27), Ok(Opcode::ReturnLocals));
+    }
+
+    #[test]
+    fn control_flow_opcodes_are_part_of_every_build() {
+        assert_eq!(Opcode::try_from(28), Ok(Opcode::Jump));
+        assert_eq!(Opcode::try_from(29), Ok(Opcode::JumpIfFalseBoolean));
     }
 }

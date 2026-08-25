@@ -12,6 +12,8 @@ pub const INIT_LOCALS: u8 = 24;
 pub const LOAD_LOCAL: u8 = 25;
 pub const STORE_LOCAL: u8 = 26;
 pub const RETURN_LOCALS: u8 = 27;
+pub const JUMP: u8 = 28;
+pub const JUMP_IF_FALSE_BOOLEAN: u8 = 29;
 
 pub const IMMEDIATE_UNDEFINED: u8 = 0;
 pub const IMMEDIATE_NULL: u8 = 1;

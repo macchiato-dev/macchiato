@@ -70,6 +70,18 @@ impl Builder {
         self
     }
 
+    pub fn jump(mut self, bytecode_offset: u32) -> Self {
+        self.code.push(Opcode::Jump as u8);
+        self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
+        self
+    }
+
+    pub fn jump_if_false_boolean(mut self, bytecode_offset: u32) -> Self {
+        self.code.push(Opcode::JumpIfFalseBoolean as u8);
+        self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
+        self
+    }
+
     pub fn try_at(mut self, catch_offset: u32) -> Self {
         self.code.push(Opcode::Try as u8);
         self.code.extend_from_slice(&catch_offset.to_le_bytes());
