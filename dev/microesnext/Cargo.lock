@@ -266,6 +266,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-truthiness"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 
@@ -285,6 +294,7 @@ dependencies = [
  "microesnext-objects",
  "microesnext-strings",
  "microesnext-suspension",
+ "microesnext-truthiness",
  "microesnext-types",
  "microesnext-vm-core",
 ]

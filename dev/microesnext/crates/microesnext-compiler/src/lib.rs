@@ -82,6 +82,11 @@ impl Builder {
         self
     }
 
+    pub fn to_boolean(mut self) -> Self {
+        self.code.push(Opcode::ToBoolean as u8);
+        self
+    }
+
     pub fn try_at(mut self, catch_offset: u32) -> Self {
         self.code.push(Opcode::Try as u8);
         self.code.extend_from_slice(&catch_offset.to_le_bytes());
@@ -149,7 +154,9 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
     };
     parser.whitespace();
     let locals_patch = parser.local_declarations()?;
-    if parser.try_word(b"try") {
+    if parser.try_word(b"if") {
+        parser.if_else()?;
+    } else if parser.try_word(b"try") {
         parser.try_catch()?;
     } else {
         parser.completion(None, false, false)?;
@@ -186,6 +193,39 @@ enum TermKind {
 }
 
 impl Parser<'_> {
+    fn if_else(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let alternate_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        self.completion(None, false, false)?;
+        if !self.consume(b'}') || !self.try_word_after_whitespace(b"else") {
+            return Err(self.error("} else"));
+        }
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let alternate = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[alternate_patch..alternate_patch + 4].copy_from_slice(&alternate.to_le_bytes());
+        self.completion(None, false, false)?;
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        self.whitespace();
+        Ok(())
+    }
+
     fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
         let mut count_patch = None;
         while self.try_word(b"let") {
@@ -708,5 +748,18 @@ mod tests {
                 .offset,
             13
         );
+    }
+
+    #[test]
+    fn compiles_terminal_if_else_without_an_ast() {
+        let code = compile_script("if (0) { return 1; } else { return 42; }").unwrap();
+        assert!(code.contains(&(Opcode::ToBoolean as u8)));
+        let branch = code
+            .iter()
+            .position(|byte| *byte == Opcode::JumpIfFalseBoolean as u8)
+            .unwrap();
+        let alternate = u32::from_le_bytes(code[branch + 1..branch + 5].try_into().unwrap());
+        assert_eq!(code[alternate as usize], Opcode::ConstI30 as u8);
+        assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 }

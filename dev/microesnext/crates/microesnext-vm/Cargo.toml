@@ -9,15 +9,23 @@ version.workspace = true
 
 [features]
 default = []
-control-flow = ["microesnext-bytecode/control-flow"]
+control-flow = ["dep:microesnext-truthiness", "microesnext-bytecode/control-flow"]
 locals = ["dep:microesnext-locals", "microesnext-bytecode/locals"]
 async = ["dep:microesnext-suspension", "microesnext-bytecode/async"]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
-strings = ["dep:microesnext-strings", "microesnext-bytecode/strings"]
+strings = [
+  "dep:microesnext-strings",
+  "microesnext-bytecode/strings",
+  "microesnext-truthiness?/strings",
+]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 functions = ["dep:microesnext-functions", "microesnext-bytecode/functions"]
-numbers = ["dep:microesnext-numbers", "microesnext-bytecode/numbers"]
+numbers = [
+  "dep:microesnext-numbers",
+  "microesnext-bytecode/numbers",
+  "microesnext-truthiness?/numbers",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 
 [dependencies]
@@ -34,6 +42,7 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-truthiness = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

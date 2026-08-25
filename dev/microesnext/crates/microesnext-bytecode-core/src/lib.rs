@@ -14,6 +14,7 @@ pub const STORE_LOCAL: u8 = 66;
 pub const RETURN_LOCALS: u8 = 67;
 pub const JUMP: u8 = 68;
 pub const JUMP_IF_FALSE_BOOLEAN: u8 = 69;
+pub const TO_BOOLEAN: u8 = 70;
 
 pub const IMMEDIATE_UNDEFINED: u8 = 0;
 pub const IMMEDIATE_NULL: u8 = 1;

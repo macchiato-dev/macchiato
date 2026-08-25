@@ -101,6 +101,11 @@ path = "tests/locals.rs"
 required-features = ["locals"]
 
 [[test]]
+name = "control-flow"
+path = "tests/control_flow.rs"
+required-features = ["control-flow", "locals"]
+
+[[test]]
 name = "objects"
 path = "tests/objects.rs"
 required-features = ["objects"]

@@ -299,6 +299,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 }
                 Ok(None)
             }
+            #[cfg(feature = "control-flow")]
+            Opcode::ToBoolean => {
+                let value = self.core.arena_mut().pop()?;
+                let value = if microesnext_truthiness::to_boolean(self.core.arena(), value)? {
+                    Value::TRUE
+                } else {
+                    Value::FALSE
+                };
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -762,8 +773,9 @@ mod tests {
     #[test]
     fn branches_only_on_explicit_booleans() {
         let code = Builder::new()
-            .immediate(microesnext_bytecode::Immediate::False)
-            .jump_if_false_boolean(13)
+            .const_i30(0)
+            .to_boolean()
+            .jump_if_false_boolean(17)
             .const_i30(1)
             .op(Opcode::Return)
             .const_i30(42)
@@ -784,5 +796,29 @@ mod tests {
             .finish();
         let mut machine = Machine::new(&malformed, &mut memory);
         assert_eq!(machine.run(), Err(Error::Type));
+    }
+
+    #[cfg(all(feature = "control-flow", feature = "numbers"))]
+    #[test]
+    fn coerces_optional_boxed_values_before_branching() {
+        let number = Builder::new()
+            .const_f64(f64::NAN)
+            .to_boolean()
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 48];
+        let mut machine = Machine::new(&number, &mut memory);
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::FALSE)));
+
+        #[cfg(feature = "strings")]
+        {
+            let string = Builder::new()
+                .string(b"")
+                .to_boolean()
+                .op(Opcode::Return)
+                .finish();
+            let mut machine = Machine::new(&string, &mut memory);
+            assert_eq!(machine.run(), Ok(Outcome::Complete(Value::FALSE)));
+        }
     }
 }

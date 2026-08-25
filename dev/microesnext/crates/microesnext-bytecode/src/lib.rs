@@ -68,6 +68,8 @@ pub enum Opcode {
     Jump = 68,
     #[cfg(feature = "control-flow")]
     JumpIfFalseBoolean = 69,
+    #[cfg(feature = "control-flow")]
+    ToBoolean = 70,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -127,6 +129,8 @@ impl TryFrom<u8> for Opcode {
             68 => Ok(Self::Jump),
             #[cfg(feature = "control-flow")]
             69 => Ok(Self::JumpIfFalseBoolean),
+            #[cfg(feature = "control-flow")]
+            70 => Ok(Self::ToBoolean),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -198,5 +202,6 @@ mod tests {
     fn enabled_control_flow_opcodes_are_decodable() {
         assert_eq!(Opcode::try_from(68), Ok(Opcode::Jump));
         assert_eq!(Opcode::try_from(69), Ok(Opcode::JumpIfFalseBoolean));
+        assert_eq!(Opcode::try_from(70), Ok(Opcode::ToBoolean));
     }
 }
