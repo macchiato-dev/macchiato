@@ -277,6 +277,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-logical-operations"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-strings",
+ "microesnext-truthiness",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
