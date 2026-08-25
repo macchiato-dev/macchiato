@@ -68,7 +68,7 @@ impl Builder {
         self
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     pub fn init_frame(mut self, count: u16, parameter_count: u16) -> Self {
         self.code.push(Opcode::InitFrame as u8);
         self.code.extend_from_slice(&count.to_le_bytes());
@@ -178,7 +178,7 @@ impl Builder {
         self
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     pub fn call_value_arguments(mut self, count: u16) -> Self {
         self.code.push(Opcode::CallValueArguments as u8);
         self.code.extend_from_slice(&count.to_le_bytes());
@@ -585,7 +585,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
@@ -619,6 +619,17 @@ impl Parser<'_> {
                 return Err(self.error(", or )"));
             }
         }
+    }
+
+    #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
+    fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        Ok(Vec::new())
     }
 
     #[cfg(feature = "functions")]
@@ -675,9 +686,7 @@ impl Parser<'_> {
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
-            output: Builder::new()
-                .init_frame(parameter_count, parameter_count)
-                .finish(),
+            output: self.initial_function_frame(parameter_count),
             locals: parameters,
             #[cfg(feature = "environments")]
             outer_bindings,
@@ -740,6 +749,19 @@ impl Parser<'_> {
             relocations: body.relocations,
         });
         Ok(())
+    }
+
+    #[cfg(feature = "function-arguments")]
+    fn initial_function_frame(&self, parameter_count: u16) -> Vec<u8> {
+        Builder::new()
+            .init_frame(parameter_count, parameter_count)
+            .finish()
+    }
+
+    #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
+    fn initial_function_frame(&self, parameter_count: u16) -> Vec<u8> {
+        debug_assert_eq!(parameter_count, 0);
+        Builder::new().init_locals(0).finish()
     }
 
     #[cfg(feature = "environments")]
@@ -1473,23 +1495,7 @@ impl Parser<'_> {
                 continue;
             }
             if self.consume(b'(') {
-                let mut count = 0_u16;
-                if !self.consume(b')') {
-                    loop {
-                        self.expression(None)?;
-                        count = count
-                            .checked_add(1)
-                            .ok_or_else(|| self.error("fewer than 65536 arguments"))?;
-                        if self.consume(b')') {
-                            break;
-                        }
-                        if !self.consume(b',') {
-                            return Err(self.error(", or )"));
-                        }
-                    }
-                }
-                self.output.push(Opcode::CallValueArguments as u8);
-                self.output.extend_from_slice(&count.to_le_bytes());
+                self.call_suffix()?;
                 kind = TermKind::General;
                 continue;
             }
@@ -1500,6 +1506,37 @@ impl Parser<'_> {
             self.output.push(Opcode::Await as u8);
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "function-arguments")]
+    fn call_suffix(&mut self) -> Result<(), CompileError> {
+        let mut count = 0_u16;
+        if !self.consume(b')') {
+            loop {
+                self.expression(None)?;
+                count = count
+                    .checked_add(1)
+                    .ok_or_else(|| self.error("fewer than 65536 arguments"))?;
+                if self.consume(b')') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or )"));
+                }
+            }
+        }
+        self.output.push(Opcode::CallValueArguments as u8);
+        self.output.extend_from_slice(&count.to_le_bytes());
+        Ok(())
+    }
+
+    #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
+    fn call_suffix(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::CallValue as u8);
+        Ok(())
     }
 
     #[cfg(not(feature = "functions"))]
@@ -1853,6 +1890,16 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "function-arguments")]
+    fn function_frame_opcode() -> Opcode {
+        Opcode::InitFrame
+    }
+
+    #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
+    fn function_frame_opcode() -> Opcode {
+        Opcode::InitLocals
+    }
+
     #[cfg(feature = "async")]
     #[test]
     fn compiles_directly_to_stack_bytecode() {
@@ -2077,6 +2124,25 @@ mod tests {
     }
 
     #[cfg(all(
+        feature = "functions",
+        not(feature = "function-arguments"),
+        feature = "source-positions"
+    ))]
+    #[test]
+    fn basic_functions_leave_parameters_and_arguments_as_unexpected_tokens() {
+        let parameters = "function value(input) { return 1; } return value();";
+        assert_eq!(
+            compile_script(parameters).unwrap_err().offset,
+            parameters.find("input").unwrap()
+        );
+        let arguments = "function value() { return 1; } return value(1);";
+        assert_eq!(
+            compile_script(arguments).unwrap_err().offset,
+            arguments.find("1);").unwrap()
+        );
+    }
+
+    #[cfg(all(
         feature = "async-functions",
         not(feature = "recursive-async-functions"),
         feature = "source-positions"
@@ -2188,7 +2254,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn appends_source_functions_and_backpatches_their_entry() {
         let code =
@@ -2220,14 +2286,24 @@ mod tests {
     #[test]
     fn compiles_async_expressions_and_arrows_to_async_closures() {
         for source in [
-            "return async function (value) { return await value; }(42);",
+            "return async function () { return await 42; }();",
             "let answer = async () => await 42; return answer();",
-            "let identity = async value => { return await value; }; return identity(42);",
         ] {
             let code = compile_script(source).unwrap();
             assert!(code.contains(&(Opcode::AsyncClosure as u8)));
             assert!(code.contains(&(Opcode::Await as u8)));
         }
+    }
+
+    #[cfg(all(feature = "async-functions", feature = "function-arguments"))]
+    #[test]
+    fn compiles_async_parameters_and_arguments() {
+        let code = compile_script(
+            "let identity = async value => { return await value; }; return identity(42);",
+        )
+        .unwrap();
+        assert!(code.contains(&(Opcode::AsyncClosure as u8)));
+        assert!(code.contains(&(Opcode::CallValueArguments as u8)));
     }
 
     #[cfg(feature = "recursive-async-functions")]
@@ -2246,7 +2322,7 @@ mod tests {
         assert!(!code.contains(&(Opcode::AsyncClosure as u8)));
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_zero_parameter_calls_with_a_function_frame() {
         let code = compile_script("function answer() { return 42; } return answer();").unwrap();
@@ -2258,7 +2334,16 @@ mod tests {
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
+    #[test]
+    fn compiles_zero_parameter_calls_without_an_argument_frame() {
+        let code = compile_script("function answer() { return 42; } return answer();").unwrap();
+        let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
+        assert_eq!(&code[target..target + 3], &[Opcode::InitLocals as u8, 0, 0]);
+        assert!(code.contains(&(Opcode::CallValue as u8)));
+    }
+
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_an_anonymous_function_expression_as_a_value() {
         let code = compile_script("return function (value) { return value; }(42);").unwrap();
@@ -2290,7 +2375,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_arrow_expression_and_block_bodies_as_closures() {
         for source in [
@@ -2306,7 +2391,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_multiple_parameters_and_arguments() {
         let code =
@@ -2323,7 +2408,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn rejects_duplicate_parameters() {
         assert_eq!(
@@ -2334,7 +2419,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "functions")]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_function_local_bindings_into_the_parameter_frame() {
         let code = compile_script(
@@ -2433,7 +2518,7 @@ mod tests {
         assert!(
             closure_targets
                 .iter()
-                .all(|target| { code[*target] == Opcode::InitFrame as u8 })
+                .all(|target| { code[*target] == function_frame_opcode() as u8 })
         );
         assert_ne!(closure_targets[0], closure_targets[1]);
     }
@@ -2442,7 +2527,7 @@ mod tests {
     #[test]
     fn forwards_a_capture_through_an_intermediate_function() {
         let code = compile_script(
-            "function outer(value) { function middle() { function inner() { return value; } return inner(); } return middle(); } return outer(42);",
+            "function outer() { let value = 42; function middle() { function inner() { return value; } return inner(); } return middle(); } return outer();",
         )
         .unwrap();
         assert_eq!(
