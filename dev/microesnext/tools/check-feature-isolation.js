@@ -88,6 +88,7 @@ const stringNumberCoercion = "microesnext-string-number-coercion";
 const typeOf = "microesnext-typeof";
 const prototypeChain = "microesnext-prototype-chain";
 const callableObjects = "microesnext-callable-objects";
+const instanceOf = "microesnext-instanceof";
 
 assertCompilerFeatures(
   ["locals"],
@@ -238,6 +239,11 @@ assertCompilerFeatures(
   ["numbers", "objects", "string-operations"],
 );
 assertCompilerFeatures(
+  ["instanceof"],
+  ["instanceof"],
+  ["functions", "integer-operations", "objects", "typeof"],
+);
+assertCompilerFeatures(
   ["strings"],
   ["strings"],
   ["arrays", "atoms", "numbers", "objects", "string-operations"],
@@ -358,6 +364,17 @@ assertPresence(
     "microesnext-strings",
   ],
   [prototypeChain, typeOf, "microesnext-numbers"],
+);
+assertPresence(
+  ["instanceof"],
+  [
+    instanceOf,
+    prototypeChain,
+    callableObjects,
+    "microesnext-functions",
+    "microesnext-objects",
+  ],
+  [typeOf, "microesnext-numbers"],
 );
 assertPresence(
   ["minimal-program"],

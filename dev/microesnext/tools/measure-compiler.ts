@@ -14,6 +14,7 @@ const builds = [
   ["strings", "strings"],
   ["strict string concatenation", "string-operations"],
   ["typeof", "typeof"],
+  ["instanceof", "instanceof"],
   ["locals", "locals"],
   ["basic functions", "functions"],
   ["function arguments", "function-arguments"],
@@ -23,7 +24,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -93,6 +94,8 @@ for (const [name, features] of builds) {
     ? "return 'micro' + `esnext`;"
     : features === "typeof"
     ? "return typeof true;"
+    : features === "instanceof"
+    ? "return null instanceof true;"
     : features.includes("strings")
     ? "return `UTF-8: café`;"
     : features.includes("locals")

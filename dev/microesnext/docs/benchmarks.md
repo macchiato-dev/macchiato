@@ -166,6 +166,21 @@ outlier; the other samples were 3.04–3.05). `Machine` measured 3.06–3.07
 minimal and 3.06–3.12 broad. As with the other timing gate, the structural
 evidence is definitive: omitted builds have no classifier crate or opcode arm.
 
+## Ordinary `instanceof`, 2026-08-25
+
+The checked editor bundles contain 30–136 `instanceof` occurrences each. Its
+semantic path is consequently composed from separately removable callable
+objects, property lookup, and prototype traversal rather than folded into the
+object representation. A callable-object artifact is 17,812 raw / 7,107 gzip
+bytes; adding the operator, its interned `prototype` key, and an executed probe
+is 20,311 / 7,791, an increment of 2,499 raw / 684 gzip bytes.
+
+The standalone compiler is 5,956 raw / 2,586 gzip bytes. Its keyword-only
+relational parser remains independent of numeric comparisons, while a build
+containing both preserves left-associative relational order. Builds omitting
+`instanceof` retain their prior specialized parser, and the objects-only Wasm
+remains exactly 14,473 / 5,775.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -232,6 +247,8 @@ LTO from merely discarding an enabled but unused dependency.
 | Number remainder | 9,311 | 4,240 |
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
+| Callable objects | 17,812 | 7,107 |
+| Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
 | `typeof` | 6,642 | 3,024 |
 | Symbols | 4,995 | 2,254 |
@@ -242,12 +259,13 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 94,609 | 30,988 |
+| All capabilities | 97,521 | 31,789 |
 
 The all-capabilities row selects string concatenation, primitive and string
-Number coercion, Number negation, division, remainder, and `typeof`. The earlier
-78,513-byte row was a broad composition but omitted independently gated paths;
-it was therefore mislabeled rather than a valid before/after size comparison.
+Number coercion, Number negation, division, remainder, `typeof`, callable
+objects, and ordinary `instanceof`. The earlier 78,513-byte row was a broad
+composition but omitted independently gated paths; it was therefore mislabeled
+rather than a valid before/after size comparison.
 
 The negation rows are intentionally separate. Adding unary instructions to the
 existing integer and promoted-arithmetic crates initially grew the minimal
@@ -524,6 +542,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |
 | `typeof` | 6,554 | 2,940 |
+| `instanceof` | 5,956 | 2,586 |
 | locals | 8,346 | 3,519 |
 | basic functions | 13,187 | 5,579 |
 | function arguments | 14,151 | 5,963 |
@@ -531,7 +550,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 34,682 | 13,397 |
+| default language slice | 34,881 | 13,460 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

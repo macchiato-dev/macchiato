@@ -14,6 +14,9 @@ pub use microesnext_integer_operations as integer_operations;
 #[cfg(feature = "integer-negation")]
 pub use microesnext_integer_negation as integer_negation;
 
+#[cfg(feature = "instanceof")]
+pub use microesnext_instanceof as r#instanceof;
+
 #[cfg(feature = "logical-operations")]
 pub use microesnext_logical_operations as logical_operations;
 

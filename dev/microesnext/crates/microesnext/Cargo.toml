@@ -68,6 +68,12 @@ integer-negation = [
   "dep:microesnext-integer-negation",
   "microesnext-vm/integer-negation",
 ]
+instanceof = [
+  "callable-objects",
+  "prototype-chain",
+  "dep:microesnext-instanceof",
+  "microesnext-vm/instanceof",
+]
 minimal-program = ["control-flow", "integer-operations", "locals"]
 equality = ["dep:microesnext-equality", "microesnext-vm/equality"]
 logical-operations = [
@@ -203,6 +209,7 @@ microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-integer-negation = { workspace = true, optional = true }
+microesnext-instanceof = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }

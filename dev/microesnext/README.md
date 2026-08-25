@@ -52,6 +52,9 @@ an explicit relational stopping condition.
   prototype traversal. It is the shared semantic core for future `instanceof`
   and `Object.prototype.isPrototypeOf` support, without making object-only
   builds retain either operation.
+- `microesnext-instanceof` composes callable-object validation, ordinary
+  `prototype` lookup, and prototype traversal without allocation. Custom
+  `Symbol.hasInstance` dispatch remains a higher optional layer.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-callable-objects` optionally wraps a compact closure in an

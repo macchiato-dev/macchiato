@@ -101,6 +101,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Self::with_atoms(code, memory, root_capacity)
     }
 
+    #[cfg(feature = "atoms")]
+    pub fn intern_atom(&mut self, bytes: &[u8]) -> Result<Value, Error> {
+        self.atoms
+            .as_mut()
+            .ok_or(Error::Type)?
+            .intern(self.core.arena_mut(), bytes)
+    }
+
     #[inline(always)]
     pub fn arena(&self) -> &Arena<'_> {
         self.core.arena()
@@ -1400,12 +1408,7 @@ mod tests {
             .finish();
         let mut memory = [0; 224];
         let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
-        let prototype_key = machine
-            .atoms
-            .as_mut()
-            .unwrap()
-            .intern(machine.core.arena_mut(), b"prototype")
-            .unwrap();
+        let prototype_key = machine.intern_atom(b"prototype").unwrap();
         let prototype = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let instance = microesnext_objects::new_object(machine.arena_mut(), prototype).unwrap();
         let closure = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();

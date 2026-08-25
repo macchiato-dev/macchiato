@@ -100,6 +100,16 @@ separate representation features are composed. Repeated and mixed unary forms
 such as `typeof typeof value` and `typeof +value` preserve right-to-left unary
 evaluation. A build without `typeof` does not consume the keyword.
 
+Ordinary `instanceof` is split across callable-object records, property
+lookup, and allocation-free prototype traversal. The operator has its own
+bytecode, compiler, VM, and facade gates; omitting it leaves the keyword
+unconsumed and preserves the pre-existing relational parser. Its current
+runtime accepts callable objects with an ordinary object-valued `prototype`
+property. Source compilation can emit the operator, while wrapping ordinary
+function syntax and constructing instances remain the next compiler/runtime
+layers. `Symbol.hasInstance`, bound functions, and host constructors are not
+implied by this initial ordinary path.
+
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
 it to a boolean. Unary `!` uses the same selected truthiness policy and returns

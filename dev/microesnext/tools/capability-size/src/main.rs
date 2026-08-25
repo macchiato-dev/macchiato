@@ -32,6 +32,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "locals",
         feature = "logical-operations",
         feature = "integer-negation",
+        feature = "instanceof",
         feature = "minimal-program",
         feature = "numbers",
         feature = "number-coercion",
@@ -112,6 +113,48 @@ pub extern "C" fn callable_objects_probe() -> i32 {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
+}
+
+#[cfg(all(feature = "instanceof", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn instanceof_probe() -> i32 {
+    let code = [Opcode::InstanceOf as u8, Opcode::Return as u8];
+    let mut memory = [0; 224];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    let Ok(key) = machine.intern_atom(b"prototype") else {
+        return 0;
+    };
+    let Ok(prototype) =
+        microesnext::objects::new_object(machine.arena_mut(), microesnext::Value::NULL)
+    else {
+        return 0;
+    };
+    let Ok(instance) = microesnext::objects::new_object(machine.arena_mut(), prototype) else {
+        return 0;
+    };
+    let Ok(closure) = microesnext::functions::capture_stack(machine.arena_mut(), 0, 0) else {
+        return 0;
+    };
+    let Ok(constructor) =
+        microesnext::callable_objects::new(machine.arena_mut(), closure, microesnext::Value::NULL)
+    else {
+        return 0;
+    };
+    let Ok(constructor) =
+        microesnext::objects::set(machine.arena_mut(), constructor, key, prototype)
+    else {
+        return 0;
+    };
+    if machine.arena_mut().push(instance).is_err() || machine.arena_mut().push(constructor).is_err()
+    {
+        return 0;
+    }
+    matches!(
+        machine.run(),
+        Ok(Outcome::Complete(microesnext::Value::TRUE))
+    ) as i32
 }
 
 #[cfg(all(feature = "locals", target_arch = "wasm32"))]

@@ -15,6 +15,7 @@ default = [
   "equality",
   "exceptions",
   "function-arguments",
+  "instanceof",
   "recursive-async-functions",
   "recursive-functions",
   "logical-operations",
