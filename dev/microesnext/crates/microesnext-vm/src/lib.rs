@@ -336,6 +336,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
                 #[cfg(feature = "callable-objects")]
+                let receiver_aware =
+                    microesnext_callable_objects::is_callable_object(self.core.arena(), function);
+                #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
+                let receiver_aware = false;
+                #[cfg(feature = "callable-objects")]
                 let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
                 if microesnext_promise_resolvers::is_resolver(self.core.arena(), function) {
@@ -360,6 +365,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }));
                 }
                 let target = entry(self.core.arena(), function)?;
+                #[cfg(feature = "receivers")]
+                if receiver_aware {
+                    microesnext_receivers::append(self.core.arena_mut(), 0, Value::UNDEFINED)?;
+                    self.core.enter_call_with_arguments(function, target, 1)?;
+                } else {
+                    self.core.enter_call(function, target)?;
+                }
+                #[cfg(not(feature = "receivers"))]
                 self.core.enter_call(function, target)?;
                 Ok(None)
             }
@@ -368,6 +381,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let argument_count = self.core.next_u16()? as usize;
                 let function =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                #[cfg(feature = "callable-objects")]
+                let receiver_aware =
+                    microesnext_callable_objects::is_callable_object(self.core.arena(), function);
+                #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
+                let receiver_aware = false;
                 #[cfg(feature = "callable-objects")]
                 let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
@@ -393,8 +411,56 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }));
                 }
                 let target = entry(self.core.arena(), function)?;
+                #[cfg(feature = "receivers")]
+                if receiver_aware {
+                    microesnext_receivers::append(
+                        self.core.arena_mut(),
+                        argument_count,
+                        Value::UNDEFINED,
+                    )?;
+                    self.core
+                        .enter_call_with_arguments(function, target, argument_count + 1)?;
+                } else {
+                    self.core
+                        .enter_call_with_arguments(function, target, argument_count)?;
+                }
+                #[cfg(not(feature = "receivers"))]
                 self.core
                     .enter_call_with_arguments(function, target, argument_count)?;
+                Ok(None)
+            }
+            #[cfg(feature = "construction")]
+            Opcode::ConstructValueArguments => {
+                let argument_count = self.core.next_u16()? as usize;
+                let prototype_key = self
+                    .atoms
+                    .as_mut()
+                    .ok_or(Error::Type)?
+                    .intern(self.core.arena_mut(), b"prototype")?;
+                let constructor =
+                    microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                let (function, receiver) = microesnext_construction::prepare(
+                    self.core.arena_mut(),
+                    constructor,
+                    prototype_key,
+                )?;
+                let preserved_index = self.core.arena().stack_len() - argument_count;
+                self.core
+                    .arena_mut()
+                    .insert_stack_value_from_bottom(preserved_index, receiver)?;
+                microesnext_receivers::append(self.core.arena_mut(), argument_count, receiver)?;
+                let target = entry(self.core.arena(), function)?;
+                self.core
+                    .enter_call_with_arguments(function, target, argument_count + 1)?;
+                Ok(None)
+            }
+            #[cfg(feature = "construction")]
+            Opcode::SelectConstructedResult => {
+                let returned = self.core.arena_mut().pop()?;
+                let receiver = self.core.arena_mut().pop()?;
+                let result =
+                    microesnext_construction::select(self.core.arena(), receiver, returned);
+                self.core.arena_mut().push(result)?;
                 Ok(None)
             }
             #[cfg(feature = "functions")]

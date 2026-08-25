@@ -593,6 +593,7 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-callable-objects",
  "microesnext-compiler",
+ "microesnext-construction",
  "microesnext-environments",
  "microesnext-equality",
  "microesnext-exceptions",

@@ -259,6 +259,8 @@ pub fn compile_script_with_options(
         relocations: Vec::new(),
         #[cfg(feature = "functions")]
         function_frame: false,
+        #[cfg(feature = "receivers")]
+        receiver_frame: false,
         #[cfg(any(feature = "number-negation", feature = "number-operations"))]
         options,
     };
@@ -297,6 +299,8 @@ struct Parser<'source> {
     relocations: Vec<usize>,
     #[cfg(feature = "functions")]
     function_frame: bool,
+    #[cfg(feature = "receivers")]
+    receiver_frame: bool,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
     options: CompileOptions,
 }
@@ -710,6 +714,7 @@ impl Parser<'_> {
         asynchronous: bool,
         constructible: bool,
     ) -> Result<(), CompileError> {
+        let receiver_frame = constructible && cfg!(feature = "constructors");
         if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -725,7 +730,7 @@ impl Parser<'_> {
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
-            output: self.initial_function_frame(parameter_count),
+            output: self.initial_function_frame(parameter_count, receiver_frame),
             locals: parameters,
             #[cfg(feature = "environments")]
             outer_bindings,
@@ -734,6 +739,8 @@ impl Parser<'_> {
             functions: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
+            #[cfg(feature = "receivers")]
+            receiver_frame,
             #[cfg(any(feature = "number-negation", feature = "number-operations"))]
             options: self.options,
         };
@@ -797,15 +804,24 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "function-arguments")]
-    fn initial_function_frame(&self, parameter_count: u16) -> Vec<u8> {
+    fn initial_function_frame(&self, parameter_count: u16, constructible: bool) -> Vec<u8> {
+        #[cfg(feature = "receivers")]
+        if constructible {
+            return Builder::new()
+                .init_receiver_frame(parameter_count, parameter_count)
+                .finish();
+        }
+        #[cfg(not(feature = "receivers"))]
+        let _ = constructible;
         Builder::new()
             .init_frame(parameter_count, parameter_count)
             .finish()
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
-    fn initial_function_frame(&self, parameter_count: u16) -> Vec<u8> {
+    fn initial_function_frame(&self, parameter_count: u16, constructible: bool) -> Vec<u8> {
         debug_assert_eq!(parameter_count, 0);
+        let _ = constructible;
         Builder::new().init_locals(0).finish()
     }
 
@@ -1051,6 +1067,11 @@ impl Parser<'_> {
             self.output.push(Opcode::EndTry as u8);
         }
         if returning {
+            #[cfg(feature = "receivers")]
+            if self.receiver_frame {
+                self.output.push(Opcode::ReturnReceiverLocals as u8);
+                return Ok(());
+            }
             #[cfg(feature = "locals")]
             let plain_return = self.locals.is_empty() && {
                 #[cfg(feature = "functions")]
@@ -1774,6 +1795,24 @@ impl Parser<'_> {
     #[cfg(feature = "functions")]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "construction")]
+        if self.try_word(b"new") {
+            self.whitespace();
+            let output_start = self.output.len();
+            let _ = self.term(None)?;
+            let call = self
+                .output
+                .len()
+                .checked_sub(3)
+                .filter(|index| {
+                    *index >= output_start
+                        && self.output[*index] == Opcode::CallValueArguments as u8
+                })
+                .ok_or_else(|| self.error("a direct constructor call"))?;
+            self.output[call] = Opcode::ConstructValueArguments as u8;
+            self.output.push(Opcode::SelectConstructedResult as u8);
+            return Ok((false, TermKind::General));
+        }
         #[cfg(feature = "async")]
         let awaiting = self.try_word(b"await");
         self.whitespace();
@@ -1851,6 +1890,8 @@ impl Parser<'_> {
                 let _ = captured;
                 unreachable!()
             }
+        } else if self.receiver_term() {
+            (false, TermKind::General)
         } else if async_function || self.try_word(b"function") {
             self.whitespace();
             let expression_name = if self.source.get(self.offset) == Some(&b'(') {
@@ -1911,6 +1952,20 @@ impl Parser<'_> {
             self.output.push(Opcode::Await as u8);
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "receivers")]
+    fn receiver_term(&mut self) -> bool {
+        if !self.receiver_frame || !self.try_word(b"this") {
+            return false;
+        }
+        self.output.push(Opcode::LoadThis as u8);
+        true
+    }
+
+    #[cfg(not(feature = "receivers"))]
+    fn receiver_term(&mut self) -> bool {
+        false
     }
 
     #[cfg(feature = "function-arguments")]
@@ -2361,7 +2416,12 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "function-arguments")]
+    #[cfg(feature = "receivers")]
+    fn function_frame_opcode() -> Opcode {
+        Opcode::InitReceiverFrame
+    }
+
+    #[cfg(all(feature = "function-arguments", not(feature = "receivers")))]
     fn function_frame_opcode() -> Opcode {
         Opcode::InitFrame
     }
@@ -2957,11 +3017,14 @@ mod tests {
         assert_eq!(code[3], Opcode::Closure as u8);
         let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert!(target < code.len());
-        assert_eq!(code[target], Opcode::InitFrame as u8);
+        assert_eq!(code[target], function_frame_opcode() as u8);
         assert!(
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
         );
+        #[cfg(feature = "receivers")]
+        assert_eq!(code.last(), Some(&(Opcode::ReturnReceiverLocals as u8)));
+        #[cfg(not(feature = "receivers"))]
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }
 
@@ -3022,8 +3085,11 @@ mod tests {
         let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert_eq!(
             &code[target..target + 5],
-            &[Opcode::InitFrame as u8, 0, 0, 0, 0]
+            &[function_frame_opcode() as u8, 0, 0, 0, 0]
         );
+        #[cfg(feature = "receivers")]
+        assert_eq!(code.last(), Some(&(Opcode::ReturnReceiverLocals as u8)));
+        #[cfg(not(feature = "receivers"))]
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }
 
@@ -3042,7 +3108,7 @@ mod tests {
         let code = compile_script("return function (value) { return value; }(42);").unwrap();
         assert_eq!(code[0], Opcode::Closure as u8);
         let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
-        assert_eq!(code[target], Opcode::InitFrame as u8);
+        assert_eq!(code[target], function_frame_opcode() as u8);
         assert!(
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
@@ -3101,6 +3167,21 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "construction")]
+    #[test]
+    fn compiles_direct_new_calls_as_construct_and_result_selection() {
+        let code = compile_script(
+            "let Constructor = function () { return this; }; return new Constructor();",
+        )
+        .unwrap();
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::ConstructValueArguments as u8, 0, 0] })
+        );
+        assert!(code.contains(&(Opcode::SelectConstructedResult as u8)));
+        assert!(code.contains(&(Opcode::LoadThis as u8)));
+    }
+
     #[cfg(feature = "function-arguments")]
     #[test]
     fn compiles_multiple_parameters_and_arguments() {
@@ -3114,7 +3195,7 @@ mod tests {
         let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert_eq!(
             &code[target..target + 5],
-            &[Opcode::InitFrame as u8, 2, 0, 2, 0]
+            &[function_frame_opcode() as u8, 2, 0, 2, 0]
         );
     }
 
@@ -3139,7 +3220,7 @@ mod tests {
         let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert_eq!(
             &code[target..target + 5],
-            &[Opcode::InitFrame as u8, 2, 0, 1, 0]
+            &[function_frame_opcode() as u8, 2, 0, 1, 0]
         );
         assert!(
             code[target..]

@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 control-flow = ["microesnext-vm/control-flow"]
 constructors = ["callable-objects", "microesnext-vm/constructors"]
+construction = ["constructors", "receivers", "microesnext-vm/construction"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
@@ -340,6 +341,18 @@ required-features = ["functions", "numbers", "objects", "typeof"]
 name = "constructors"
 path = "tests/constructors.rs"
 required-features = ["constructors", "equality", "locals", "objects", "typeof"]
+
+[[test]]
+name = "construction"
+path = "tests/construction.rs"
+required-features = [
+  "construction",
+  "environments",
+  "equality",
+  "instanceof",
+  "locals",
+  "objects",
+]
 
 [[test]]
 name = "symbols"

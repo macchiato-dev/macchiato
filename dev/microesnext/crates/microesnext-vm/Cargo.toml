@@ -42,6 +42,12 @@ callable-objects = [
   "microesnext-typeof?/callable-objects",
 ]
 constructors = ["callable-objects", "microesnext-bytecode/constructors"]
+construction = [
+  "constructors",
+  "receivers",
+  "dep:microesnext-construction",
+  "microesnext-bytecode/construction",
+]
 function-arguments = [
   "functions",
   "locals",
@@ -140,6 +146,7 @@ microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
+microesnext-construction = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }

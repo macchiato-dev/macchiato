@@ -136,6 +136,10 @@ pub enum Opcode {
     InstanceOf = 102,
     #[cfg(feature = "constructors")]
     ToConstructor = 103,
+    #[cfg(feature = "construction")]
+    ConstructValueArguments = 104,
+    #[cfg(feature = "construction")]
+    SelectConstructedResult = 105,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -263,6 +267,10 @@ impl TryFrom<u8> for Opcode {
             102 => Ok(Self::InstanceOf),
             #[cfg(feature = "constructors")]
             103 => Ok(Self::ToConstructor),
+            #[cfg(feature = "construction")]
+            104 => Ok(Self::ConstructValueArguments),
+            #[cfg(feature = "construction")]
+            105 => Ok(Self::SelectConstructedResult),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -491,6 +499,20 @@ mod tests {
     #[test]
     fn omitted_constructor_opcode_is_invalid() {
         assert!(Opcode::try_from(103).is_err());
+    }
+
+    #[cfg(feature = "construction")]
+    #[test]
+    fn enabled_construction_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(104), Ok(Opcode::ConstructValueArguments));
+        assert_eq!(Opcode::try_from(105), Ok(Opcode::SelectConstructedResult));
+    }
+
+    #[cfg(not(feature = "construction"))]
+    #[test]
+    fn omitted_construction_opcodes_are_invalid() {
+        assert!(Opcode::try_from(104).is_err());
+        assert!(Opcode::try_from(105).is_err());
     }
 
     #[cfg(feature = "locals")]
