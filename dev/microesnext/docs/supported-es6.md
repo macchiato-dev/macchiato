@@ -26,8 +26,9 @@ finishes, and nested async calls restore each ordinary caller in order—even
 when the nested call begins after its caller has resumed. `await` on a value or
 engine Promise resumes through the Promise job queue; synchronous throws
 reject the outer Promise. Rejections after suspension propagate through nested
-awaits and enter restored guest `catch` handlers. Named recursive async
-expressions, Promise assimilation, thenables, async methods, and async
+awaits and enter restored guest `catch` handlers. Named async expressions
+retain a private self-binding through the removable recursive-async
+composition. Promise assimilation, thenables, async methods, and async
 generators remain compiler/runtime work rather than implied support.
 
 The current Rust compiler slice also emits function declarations, anonymous

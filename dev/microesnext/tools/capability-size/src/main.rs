@@ -22,6 +22,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "numbers",
         feature = "objects",
         feature = "recursive-functions",
+        feature = "recursive-async-functions",
         feature = "strings"
     )
 ))]
@@ -423,6 +424,40 @@ pub extern "C" fn recursive_functions_probe() -> i32 {
     };
     match microesnext::functions::entry(machine.arena(), function) {
         Ok(entry) if entry == BODY as usize => 42,
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "recursive-async-functions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn recursive_async_functions_probe() -> i32 {
+    const BODY: u32 = 9;
+    let code = [
+        Opcode::RecursiveAsyncClosure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+        Opcode::Return as u8,
+        Opcode::LoadCapture as u8,
+        0,
+        0,
+        Opcode::LoadEnvironmentCell as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 64];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(Outcome::Complete(function)) = machine.run() else {
+        return -1;
+    };
+    let Ok(cell) = microesnext::async_functions::capture(machine.arena(), function, 0) else {
+        return -1;
+    };
+    match microesnext::environments::get(machine.arena(), cell) {
+        Ok(identity) if identity == function => 42,
         _ => -1,
     }
 }

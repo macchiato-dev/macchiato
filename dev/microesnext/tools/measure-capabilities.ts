@@ -90,6 +90,17 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       ]],
     ],
     [
+      "recursive async functions",
+      "recursive-async-functions",
+      [
+        core,
+        ["async_probe", 7],
+        ["async_functions_probe", 42],
+        ["environments_probe", 42],
+        ["recursive_async_functions_probe", 42],
+      ],
+    ],
+    [
       "functions with local parameters",
       "function-arguments",
       [core, ["functions_probe", "nonzero"], ["function_arguments_probe", 42]],
@@ -137,7 +148,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -156,6 +167,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["closure_environments_probe", 42],
         ["functions_probe", "nonzero"],
         ["recursive_functions_probe", 42],
+        ["recursive_async_functions_probe", 42],
         ["function_arguments_probe", 42],
         ["iterators_probe", 11],
         ["locals_probe", 42],

@@ -37,46 +37,84 @@ const parameters = "microesnext-parameters";
 const suspension = "microesnext-suspension";
 const recursiveFunctions = "microesnext-recursive-functions";
 const asyncFunctions = "microesnext-async-functions";
+const recursiveAsyncFunctions = "microesnext-recursive-async-functions";
 
 assertPresence(
   [],
   [],
-  [asyncFunctions, environments, parameters, recursiveFunctions, suspension],
+  [
+    asyncFunctions,
+    environments,
+    parameters,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+    suspension,
+  ],
 );
 assertPresence(
   ["functions"],
   ["microesnext-functions"],
-  [asyncFunctions, environments, parameters, recursiveFunctions],
+  [
+    asyncFunctions,
+    environments,
+    parameters,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+  ],
 );
 assertPresence(
   ["locals"],
   ["microesnext-locals"],
-  [environments, parameters, recursiveFunctions],
+  [
+    asyncFunctions,
+    environments,
+    parameters,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+  ],
 );
 assertPresence(
   ["function-arguments"],
   [parameters],
-  [environments, recursiveFunctions],
+  [asyncFunctions, environments, recursiveAsyncFunctions, recursiveFunctions],
 );
 assertPresence(
   ["async"],
   [suspension],
-  [asyncFunctions, environments, parameters],
+  [asyncFunctions, environments, parameters, recursiveAsyncFunctions],
 );
 assertPresence(
   ["async-functions"],
   [asyncFunctions, "microesnext-functions", "microesnext-promises", suspension],
-  [environments, parameters, recursiveFunctions],
+  [environments, parameters, recursiveAsyncFunctions, recursiveFunctions],
+);
+assertPresence(
+  ["recursive-async-functions"],
+  [
+    asyncFunctions,
+    environments,
+    "microesnext-functions",
+    "microesnext-promises",
+    recursiveAsyncFunctions,
+    suspension,
+  ],
+  [parameters, recursiveFunctions],
 );
 assertPresence(
   ["recursive-functions"],
   [environments, "microesnext-functions", recursiveFunctions],
-  [parameters, suspension],
+  [parameters, recursiveAsyncFunctions, suspension],
 );
 assertPresence(
   ["environments", "functions", "locals"],
   [environments, "microesnext-functions", "microesnext-locals"],
-  [parameters, recursiveFunctions, suspension],
+  [
+    asyncFunctions,
+    parameters,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+    suspension,
+  ],
 );
 
 console.log("feature dependency isolation verified");

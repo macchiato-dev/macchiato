@@ -41,6 +41,10 @@ not link to that C implementation.
 - `microesnext-recursive-functions` composes closures with environment cells
   only for private self-bindings in named function expressions. Ordinary
   function builds do not resolve the crate or decode its constructor opcode.
+- `microesnext-recursive-async-functions` performs the corresponding
+  composition for named async expressions. It reuses async closure storage and
+  an environment cell without entering either non-recursive async builds or
+  ordinary recursive-function builds.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely.

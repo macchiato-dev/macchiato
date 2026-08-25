@@ -76,6 +76,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
+| Recursive async functions | 24,959 | 9,216 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
@@ -88,7 +89,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 55,365 | 18,352 |
+| All capabilities | 56,348 | 18,503 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -268,6 +269,12 @@ and verifies fulfillment. The dependency check also proves that selecting
 plain `async` does not resolve `microesnext-async-functions`, while selecting
 `async-functions` does not pull in environment cells, parameter frames, or
 recursive-function storage. The minimal artifact remains 1,984 bytes.
+
+The 24,959-byte (9,216 gzip) recursive-async row adds and exercises only the
+composition that initializes an async closure's private self cell. Its graph
+contains neither `microesnext-recursive-functions` nor parameter-frame
+storage; conversely, ordinary async and ordinary recursive rows exclude
+`microesnext-recursive-async-functions`.
 Re-run them with:
 
 ```sh
