@@ -287,6 +287,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(function)?;
                 Ok(None)
             }
+            #[cfg(feature = "recursive-constructors")]
+            Opcode::RebindConstructorSelf => {
+                let constructor = self.core.arena().stack_value(0)?;
+                microesnext_recursive_constructors::rebind(self.core.arena_mut(), constructor)?;
+                Ok(None)
+            }
             #[cfg(feature = "async-functions")]
             Opcode::AsyncClosure => {
                 let target = self.core.next_u32()?;

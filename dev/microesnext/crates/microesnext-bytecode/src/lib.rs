@@ -140,6 +140,8 @@ pub enum Opcode {
     ConstructValueArguments = 104,
     #[cfg(feature = "construction")]
     SelectConstructedResult = 105,
+    #[cfg(feature = "recursive-constructors")]
+    RebindConstructorSelf = 106,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -271,6 +273,8 @@ impl TryFrom<u8> for Opcode {
             104 => Ok(Self::ConstructValueArguments),
             #[cfg(feature = "construction")]
             105 => Ok(Self::SelectConstructedResult),
+            #[cfg(feature = "recursive-constructors")]
+            106 => Ok(Self::RebindConstructorSelf),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -513,6 +517,18 @@ mod tests {
     fn omitted_construction_opcodes_are_invalid() {
         assert!(Opcode::try_from(104).is_err());
         assert!(Opcode::try_from(105).is_err());
+    }
+
+    #[cfg(feature = "recursive-constructors")]
+    #[test]
+    fn enabled_recursive_constructor_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(106), Ok(Opcode::RebindConstructorSelf));
+    }
+
+    #[cfg(not(feature = "recursive-constructors"))]
+    #[test]
+    fn omitted_recursive_constructor_opcode_is_invalid() {
+        assert!(Opcode::try_from(106).is_err());
     }
 
     #[cfg(feature = "locals")]

@@ -121,6 +121,12 @@ recursive-functions = [
   "dep:microesnext-recursive-functions",
   "microesnext-bytecode/recursive-functions",
 ]
+recursive-constructors = [
+  "constructors",
+  "recursive-functions",
+  "dep:microesnext-recursive-constructors",
+  "microesnext-bytecode/recursive-constructors",
+]
 recursive-async-functions = [
   "async-functions",
   "environments",
@@ -167,6 +173,7 @@ microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
+microesnext-recursive-constructors = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }

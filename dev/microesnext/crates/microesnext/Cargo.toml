@@ -133,6 +133,11 @@ recursive-functions = [
   "dep:microesnext-recursive-functions",
   "microesnext-vm/recursive-functions",
 ]
+recursive-constructors = [
+  "constructors",
+  "recursive-functions",
+  "microesnext-vm/recursive-constructors",
+]
 recursive-async-functions = [
   "async-functions",
   "environments",
@@ -352,6 +357,17 @@ required-features = [
   "instanceof",
   "locals",
   "objects",
+]
+
+[[test]]
+name = "recursive-constructors"
+path = "tests/recursive_constructors.rs"
+required-features = [
+  "construction",
+  "equality",
+  "locals",
+  "objects",
+  "recursive-constructors",
 ]
 
 [[test]]

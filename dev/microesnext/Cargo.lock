@@ -628,6 +628,7 @@ dependencies = [
  "microesnext-prototype-chain",
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
+ "microesnext-recursive-constructors",
  "microesnext-recursive-functions",
  "microesnext-string-number-coercion",
  "microesnext-string-operations",

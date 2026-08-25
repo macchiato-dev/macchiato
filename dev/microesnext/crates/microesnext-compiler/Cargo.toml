@@ -20,6 +20,7 @@ default = [
   "instanceof",
   "recursive-async-functions",
   "recursive-functions",
+  "recursive-constructors",
   "logical-operations",
   "number-negation",
   "number-coercion",
@@ -80,6 +81,11 @@ recursive-async-functions = [
 recursive-functions = [
   "environments",
   "microesnext-bytecode/recursive-functions",
+]
+recursive-constructors = [
+  "constructors",
+  "recursive-functions",
+  "microesnext-bytecode/recursive-constructors",
 ]
 source-positions = []
 strings = ["microesnext-bytecode/strings"]
