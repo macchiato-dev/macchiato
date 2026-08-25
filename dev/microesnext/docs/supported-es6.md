@@ -107,9 +107,9 @@ reaction lists, and a caller-owned FIFO job ring. Optional native resolution
 adopts another engine Promise, including its eventual rejection, without
 linking object property lookup. Async function return uses this path.
 
-Self-resolution is detected but still awaits the realm error-value capability
-needed to reject with a guest TypeError. Object thenables, source-visible
-`Promise`, `then`, `catch`, `finally`, `resolve`, `reject`, `all`, and `race`,
+Self-resolution rejects with a compact guest TypeError value. Object thenables,
+source-visible `Promise`, `then`, `catch`, `finally`, `resolve`, `reject`,
+`all`, and `race`,
 subclass constructors, species, and unhandled-rejection reporting remain work
 rather than claimed support.
 

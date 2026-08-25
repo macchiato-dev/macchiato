@@ -69,6 +69,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
     ["environment cells", "environments", [core, ["environments_probe", 42]]],
+    ["guest errors", "errors", [core, ["errors_probe", 42]]],
     [
       "closures with shared environments",
       "environments,functions,locals",
@@ -168,6 +169,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["control_flow_probe", 42],
         ["scalar_truthiness_probe", 1],
         ["exceptions_probe", 42],
+        ["errors_probe", 42],
         ["environments_probe", 42],
         ["closure_environments_probe", 42],
         ["functions_probe", "nonzero"],

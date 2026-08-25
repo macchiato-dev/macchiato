@@ -486,6 +486,22 @@ pub extern "C" fn environments_probe() -> i32 {
     }
 }
 
+#[cfg(all(feature = "errors", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn errors_probe() -> i32 {
+    let mut memory = [0; 32];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let Ok(error) =
+        microesnext::errors::new(&mut arena, microesnext::errors::ErrorKind::Type, &mut [])
+    else {
+        return -1;
+    };
+    match microesnext::errors::kind(&arena, error) {
+        Ok(microesnext::errors::ErrorKind::Type) => 42,
+        _ => -1,
+    }
+}
+
 #[cfg(all(
     feature = "environments",
     feature = "functions",
@@ -686,7 +702,7 @@ pub extern "C" fn well_known_symbols_probe() -> u32 {
 #[cfg(all(feature = "iterator-results", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn iterator_results_probe() -> i32 {
-    let mut memory = [0; 192];
+    let mut memory = [0; 256];
     let mut arena = microesnext_arena::Arena::with_root_capacity(&mut memory, 3);
     let mut atoms = microesnext::atoms::Atoms::new(&mut arena).unwrap();
     let keys =
@@ -805,6 +821,27 @@ pub extern "C" fn promise_resolution_probe() -> i32 {
     )
     .is_err()
     {
+        return -1;
+    }
+    let Ok(self_reference) = microesnext::promises::pending(&mut arena) else {
+        return -1;
+    };
+    if microesnext::promise_resolution::resolve_native(
+        &mut arena,
+        &mut queue,
+        self_reference,
+        self_reference,
+    )
+    .is_err()
+    {
+        return -1;
+    }
+    let Ok(Some((microesnext::promises::Settlement::Rejected, reason))) =
+        microesnext::promises::settled_result(&arena, self_reference)
+    else {
+        return -1;
+    };
+    if microesnext::errors::kind(&arena, reason) != Ok(microesnext::errors::ErrorKind::Type) {
         return -1;
     }
     match microesnext::promises::settled_result(&arena, destination) {

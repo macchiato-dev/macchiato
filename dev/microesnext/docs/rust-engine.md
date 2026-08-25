@@ -63,7 +63,9 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   moving heap offsets are not exposed as durable asynchronous handles.
 - Native Promise adoption is an optional composition over compact Promise
   storage. It registers an identity reaction in the caller-owned queue rather
-  than recursively following a chain on the Rust or WebAssembly stack.
+  than recursively following a chain on the Rust or WebAssembly stack. Its
+  compact error dependency turns self-resolution into a guest TypeError
+  rejection rather than an engine-control error.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.
