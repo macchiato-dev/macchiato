@@ -14,6 +14,8 @@ use microesnext_functions::{capture, capture_stack, entry};
 use microesnext_objects::{get, new_object, set};
 #[cfg(feature = "async")]
 use microesnext_suspension::{restore, restore_value, resume, resume_value, suspend};
+#[cfg(feature = "async-functions")]
+use microesnext_suspension::{resume_context, suspend_context};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::{Core, CoreOutcome};
 
@@ -21,7 +23,14 @@ use microesnext_vm_core::{Core, CoreOutcome};
 pub enum Outcome {
     Complete(Value),
     Throw(Value),
-    Await { value: Value, continuation: RootId },
+    Await {
+        value: Value,
+        continuation: RootId,
+    },
+    AsyncCall {
+        function: Value,
+        argument_count: usize,
+    },
 }
 
 pub struct Machine<'code, 'memory> {
@@ -153,7 +162,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "locals",
         feature = "numbers",
         feature = "exceptions",
-        feature = "environments"
+        feature = "environments",
+        feature = "async-functions"
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
@@ -215,6 +225,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(closure)?;
                 Ok(None)
             }
+            #[cfg(feature = "async-functions")]
+            Opcode::AsyncClosure => {
+                let target = self.core.next_u32()?;
+                let capture_count = self.core.next_u16()? as usize;
+                if target as usize >= self.core.code().len() {
+                    return Err(Error::BadBytecode);
+                }
+                let closure = microesnext_async_functions::capture_stack(
+                    self.core.arena_mut(),
+                    target,
+                    capture_count,
+                )?;
+                self.core.arena_mut().push(closure)?;
+                Ok(None)
+            }
             #[cfg(feature = "recursive-functions")]
             Opcode::RecursiveClosure => {
                 let target = self.core.next_u32()?;
@@ -233,6 +258,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
+                #[cfg(feature = "async-functions")]
+                if microesnext_async_functions::is_async(self.core.arena(), function) {
+                    return Ok(Some(Outcome::AsyncCall {
+                        function,
+                        argument_count: 0,
+                    }));
+                }
                 let target = entry(self.core.arena(), function)?;
                 self.core.enter_call(function, target)?;
                 Ok(None)
@@ -242,6 +274,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let argument_count = self.core.next_u16()? as usize;
                 let function =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                #[cfg(feature = "async-functions")]
+                if microesnext_async_functions::is_async(self.core.arena(), function) {
+                    return Ok(Some(Outcome::AsyncCall {
+                        function,
+                        argument_count,
+                    }));
+                }
                 let target = entry(self.core.arena(), function)?;
                 self.core
                     .enter_call_with_arguments(function, target, argument_count)?;
@@ -438,7 +477,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "locals",
         feature = "numbers",
         feature = "exceptions",
-        feature = "environments"
+        feature = "environments",
+        feature = "async-functions"
     )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
         Err(Error::BadBytecode)
@@ -451,6 +491,48 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let target = entry(self.core.arena(), function)?;
         self.core.enter_external_call(function, target, argument)?;
         self.run()
+    }
+
+    /// Replace the current caller with an independent async invocation. The
+    /// supplied root keeps its outer promise current across compaction; the
+    /// caller snapshot already contains that promise as the call result.
+    #[cfg(feature = "async-functions")]
+    pub fn switch_to_async_call(
+        &mut self,
+        function: Value,
+        argument_count: usize,
+        promise: RootId,
+    ) -> Result<RootId, Error> {
+        let invocation = microesnext_async_functions::take_invocation(
+            self.core.arena_mut(),
+            function,
+            argument_count,
+        )?;
+        let invocation = self.core.arena_mut().retain(invocation)?;
+        let promise_value = self.core.arena().root(promise)?;
+        if let Err(error) = self.core.arena_mut().push(promise_value) {
+            self.core.arena_mut().release(invocation)?;
+            return Err(error);
+        }
+        let handler_depth = self.current_handler_depth();
+        let caller = match suspend_context(&mut self.core, handler_depth) {
+            Ok(caller) => caller,
+            Err(error) => {
+                self.core.arena_mut().release(invocation)?;
+                return Err(error);
+            }
+        };
+        let invocation = self.core.arena_mut().release(invocation)?;
+        microesnext_async_functions::start_invocation(&mut self.core, invocation)?;
+        self.set_handler_depth(None);
+        Ok(caller)
+    }
+
+    #[cfg(feature = "async-functions")]
+    pub fn restore_caller(&mut self, caller: RootId) -> Result<(), Error> {
+        let handler_depth = resume_context(&mut self.core, caller)?;
+        self.set_handler_depth(handler_depth);
+        Ok(())
     }
 
     #[cfg(feature = "async")]
@@ -537,6 +619,48 @@ mod tests {
     use microesnext_compiler::Builder;
 
     use super::*;
+
+    #[cfg(feature = "async-functions")]
+    #[test]
+    fn async_closure_call_yields_a_context_switch_request() {
+        const BODY: u32 = 9;
+        let code = [
+            Opcode::AsyncClosure as u8,
+            BODY as u8,
+            0,
+            0,
+            0,
+            0,
+            0,
+            Opcode::CallValue as u8,
+            Opcode::Return as u8,
+            Opcode::ConstImmediate as u8,
+            microesnext_bytecode::Immediate::True as u8,
+            Opcode::Return as u8,
+        ];
+        let mut memory = [0; 48];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 4);
+        let Outcome::AsyncCall {
+            function,
+            argument_count,
+        } = machine.run().unwrap()
+        else {
+            panic!("expected an async call")
+        };
+        assert_eq!(argument_count, 0);
+        assert_eq!(
+            microesnext_async_functions::entry(machine.arena(), function),
+            Ok(9)
+        );
+        let promise = machine.retain(Value::TRUE).unwrap();
+        let caller = machine
+            .switch_to_async_call(function, argument_count, promise)
+            .unwrap();
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
+        machine.restore_caller(caller).unwrap();
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
+        machine.release(promise).unwrap();
+    }
 
     #[cfg(feature = "async")]
     fn awaiting_program() -> Vec<u8> {

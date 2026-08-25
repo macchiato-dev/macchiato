@@ -12,6 +12,12 @@ default = []
 control-flow = ["dep:microesnext-truthiness", "microesnext-bytecode/control-flow"]
 locals = ["dep:microesnext-locals", "microesnext-bytecode/locals"]
 async = ["dep:microesnext-suspension", "microesnext-bytecode/async"]
+async-functions = [
+  "async",
+  "functions",
+  "dep:microesnext-async-functions",
+  "microesnext-bytecode/async-functions",
+]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = [
   "dep:microesnext-strings",
@@ -57,6 +63,7 @@ microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
+microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }
 

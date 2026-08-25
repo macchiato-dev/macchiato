@@ -82,6 +82,8 @@ pub enum Opcode {
     StoreEnvironmentCell = 75,
     #[cfg(feature = "recursive-functions")]
     RecursiveClosure = 76,
+    #[cfg(feature = "async-functions")]
+    AsyncClosure = 77,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -155,6 +157,8 @@ impl TryFrom<u8> for Opcode {
             75 => Ok(Self::StoreEnvironmentCell),
             #[cfg(feature = "recursive-functions")]
             76 => Ok(Self::RecursiveClosure),
+            #[cfg(feature = "async-functions")]
+            77 => Ok(Self::AsyncClosure),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -261,5 +265,17 @@ mod tests {
     #[test]
     fn omitted_recursive_closure_opcode_is_invalid() {
         assert!(Opcode::try_from(76).is_err());
+    }
+
+    #[cfg(feature = "async-functions")]
+    #[test]
+    fn enabled_async_closure_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(77), Ok(Opcode::AsyncClosure));
+    }
+
+    #[cfg(not(feature = "async-functions"))]
+    #[test]
+    fn omitted_async_closure_opcode_is_invalid() {
+        assert!(Opcode::try_from(77).is_err());
     }
 }

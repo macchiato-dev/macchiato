@@ -20,6 +20,9 @@ pub use microesnext_atoms as atoms;
 #[cfg(feature = "async")]
 pub use microesnext_async as r#async;
 
+#[cfg(feature = "async-functions")]
+pub use microesnext_async_functions as async_functions;
+
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
 

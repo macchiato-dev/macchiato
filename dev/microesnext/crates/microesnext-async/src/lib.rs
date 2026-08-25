@@ -19,6 +19,10 @@ pub enum Progress {
     Complete(Value),
     Rejected(Value),
     Suspended(Suspended),
+    AsyncCall {
+        function: Value,
+        argument_count: usize,
+    },
 }
 
 impl From<Outcome> for Progress {
@@ -33,6 +37,13 @@ impl From<Outcome> for Progress {
                 awaited: value,
                 continuation,
             }),
+            Outcome::AsyncCall {
+                function,
+                argument_count,
+            } => Self::AsyncCall {
+                function,
+                argument_count,
+            },
         }
     }
 }
@@ -129,6 +140,7 @@ fn finish_reaction(
             park_reaction(machine, queue, destination, value, continuation)?;
             Ok(())
         }
+        Outcome::AsyncCall { .. } => Err(Error::Type),
     }
 }
 
