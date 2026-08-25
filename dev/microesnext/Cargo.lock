@@ -293,6 +293,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-receivers"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-locals",
+ "microesnext-parameters",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-recursive-async-functions"
 version = "0.0.0"
 dependencies = [
