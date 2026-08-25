@@ -27,6 +27,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "function-arguments",
         feature = "functions",
         feature = "locals",
+        feature = "minimal-program",
         feature = "numbers",
         feature = "objects",
         feature = "promise-resolvers",
@@ -105,6 +106,78 @@ pub extern "C" fn control_flow_probe() -> i32 {
         Opcode::Return as u8,
     ];
     let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "minimal-program", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn minimal_program_probe() -> i32 {
+    let code = [
+        Opcode::InitLocals as u8,
+        2,
+        0,
+        Opcode::ConstI30 as u8,
+        6,
+        0,
+        0,
+        0,
+        Opcode::StoreLocal as u8,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        1,
+        0,
+        0,
+        0,
+        Opcode::StoreLocal as u8,
+        1,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ToBoolean as u8,
+        Opcode::JumpIfFalseBoolean as u8,
+        55,
+        0,
+        0,
+        0,
+        Opcode::LoadLocal as u8,
+        1,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::MultiplyI30 as u8,
+        Opcode::StoreLocal as u8,
+        1,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        1,
+        0,
+        0,
+        0,
+        Opcode::SubtractI30 as u8,
+        Opcode::StoreLocal as u8,
+        0,
+        0,
+        Opcode::Jump as u8,
+        19,
+        0,
+        0,
+        0,
+        Opcode::LoadLocal as u8,
+        1,
+        0,
+        Opcode::ReturnLocals as u8,
+    ];
+    let mut memory = [0; 64];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),

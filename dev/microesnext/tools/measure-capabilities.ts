@@ -27,6 +27,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["collections", "collections", [core, ["collections_probe", 0]]],
     ["control flow", "control-flow", [core, ["control_flow_probe", 42]]],
     [
+      "minimal programmable runtime",
+      "minimal-program",
+      [core, ["minimal_program_probe", 720]],
+    ],
+    [
       "control flow with scalar truthiness",
       "control-flow,numbers,strings",
       [
@@ -233,7 +238,13 @@ const artifact =
 
 console.log("| Build | Wasm bytes | Gzip bytes |");
 console.log("| --- | ---: | ---: |");
-for (const [name, features, probes] of configurations) {
+const selected = Deno.args.length === 0
+  ? configurations
+  : configurations.filter(([name]) => Deno.args.includes(name));
+if (selected.length !== (Deno.args.length || configurations.length)) {
+  throw new Error("unknown or duplicate capability build name");
+}
+for (const [name, features, probes] of selected) {
   const args = [
     "build",
     "--quiet",

@@ -26,6 +26,23 @@ and suspension workloads and compare peak arena usage against upstream
 MicroQuickJS. A faster synthetic addition loop cannot excuse regressions in
 those workloads.
 
+## Minimal programmable runtime, 2026-08-25
+
+The smallest artifact remains a 1,984-byte (961 gzip) interpreter kernel. A
+more useful minimum composes lexical locals, boolean control flow, and checked
+i30 subtraction and multiplication. Its live probe executes the bytecode for a
+six-iteration factorial loop and verifies the result `720`.
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Interpreter kernel | 1,984 | 961 |
+| Minimal programmable runtime | 5,905 | 2,460 |
+
+The arithmetic implementation lives in `microesnext-integer-operations`; a
+build omitting `minimal-program` neither resolves that crate nor decodes its
+opcodes. This figure is a practical capability checkpoint, while the kernel
+figure remains useful for measuring the fixed interpreter mechanism itself.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled

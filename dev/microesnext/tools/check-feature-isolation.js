@@ -44,6 +44,7 @@ const promiseResolvers = "microesnext-promise-resolvers";
 const errors = "microesnext-errors";
 const receivers = "microesnext-receivers";
 const thenables = "microesnext-thenables";
+const integerOperations = "microesnext-integer-operations";
 
 assertPresence(
   [],
@@ -53,6 +54,7 @@ assertPresence(
     asyncThenables,
     environments,
     errors,
+    integerOperations,
     parameters,
     promiseResolution,
     promiseResolvers,
@@ -61,6 +63,16 @@ assertPresence(
     receivers,
     suspension,
     thenables,
+  ],
+);
+assertPresence(
+  ["minimal-program"],
+  [integerOperations, "microesnext-locals", "microesnext-truthiness"],
+  [
+    asyncFunctions,
+    environments,
+    "microesnext-numbers",
+    "microesnext-strings",
   ],
 );
 assertPresence(
