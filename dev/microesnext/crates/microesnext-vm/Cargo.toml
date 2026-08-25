@@ -82,6 +82,14 @@ logical-operations = [
   "dep:microesnext-logical-operations",
   "microesnext-bytecode/logical-operations",
 ]
+method-calls = [
+  "callable-objects",
+  "function-arguments",
+  "objects",
+  "receivers",
+  "dep:microesnext-method-calls",
+  "microesnext-bytecode/method-calls",
+]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-bytecode/numbers",
@@ -169,6 +177,7 @@ microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
+microesnext-method-calls = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-instanceof = { workspace = true, optional = true }

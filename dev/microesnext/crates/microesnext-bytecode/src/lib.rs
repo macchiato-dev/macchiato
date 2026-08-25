@@ -146,6 +146,12 @@ pub enum Opcode {
     SetPropertyStatement = 107,
     #[cfg(feature = "class-constructors")]
     ToClassConstructor = 108,
+    #[cfg(feature = "method-calls")]
+    ToMethod = 109,
+    #[cfg(feature = "method-calls")]
+    GetMethod = 110,
+    #[cfg(feature = "method-calls")]
+    CallMethodArguments = 111,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -283,6 +289,12 @@ impl TryFrom<u8> for Opcode {
             107 => Ok(Self::SetPropertyStatement),
             #[cfg(feature = "class-constructors")]
             108 => Ok(Self::ToClassConstructor),
+            #[cfg(feature = "method-calls")]
+            109 => Ok(Self::ToMethod),
+            #[cfg(feature = "method-calls")]
+            110 => Ok(Self::GetMethod),
+            #[cfg(feature = "method-calls")]
+            111 => Ok(Self::CallMethodArguments),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -549,6 +561,22 @@ mod tests {
     #[test]
     fn omitted_class_constructor_opcode_is_invalid() {
         assert!(Opcode::try_from(108).is_err());
+    }
+
+    #[cfg(feature = "method-calls")]
+    #[test]
+    fn enabled_method_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(109), Ok(Opcode::ToMethod));
+        assert_eq!(Opcode::try_from(110), Ok(Opcode::GetMethod));
+        assert_eq!(Opcode::try_from(111), Ok(Opcode::CallMethodArguments));
+    }
+
+    #[cfg(not(feature = "method-calls"))]
+    #[test]
+    fn omitted_method_opcodes_are_invalid() {
+        assert!(Opcode::try_from(109).is_err());
+        assert!(Opcode::try_from(110).is_err());
+        assert!(Opcode::try_from(111).is_err());
     }
 
     #[cfg(feature = "property-assignment")]
