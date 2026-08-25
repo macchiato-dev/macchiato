@@ -55,6 +55,19 @@ string contents according to JavaScript strict-equality semantics. Collection
 SameValueZero remains a distinct operation because its treatment of `NaN`
 differs.
 
+## Short-circuit logical operations
+
+`jump_if_falsy_or_pop` implements `&&`; `jump_if_truthy_or_pop` implements
+`||`. Each reads the top operand without copying it. When the operand selects
+the expression result, the instruction jumps and leaves it in place. Otherwise
+it pops that operand and falls through to the right expression. Forward targets
+are ordinary relocation entries, so the same representation works inside
+nested function bodies without native callbacks or an AST at runtime.
+
+These instructions belong to `logical-operations`, not basic `control-flow`.
+Consequently a machine needing loops and `if` but no logical expressions does
+not decode them or link their truthiness composition.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

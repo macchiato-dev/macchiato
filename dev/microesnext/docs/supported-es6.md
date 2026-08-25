@@ -36,6 +36,14 @@ equality path. Guest code in that build has no operation that can create a
 string value or place one in a variable; adding numeric equality does not imply
 a general dynamically typed scalar bundle.
 
+Logical AND and OR (`&&` and `||`) are another removable composition. They
+short-circuit evaluation and return the selected operand rather than coercing
+it to a boolean. Their branch instructions retain the left operand when it
+wins and pop it before evaluating the right operand otherwise. `&&` binds more
+tightly than `||`, while strict equality and relational arithmetic bind above
+both. Number-only and string-only truthiness are tested as separate Cargo
+feature combinations.
+
 Arrow functions support expression and block bodies. Lexical `this` and
 `arguments`, and rejection as constructors, remain compiler work. Untagged
 template literals support cooked text, escapes, multiline text, and

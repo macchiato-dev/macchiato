@@ -66,6 +66,10 @@ an explicit relational stopping condition.
   operations. Identity-only builds remain small; optional number and string
   features add their JavaScript value semantics without making equality depend
   on either representation unconditionally.
+- `microesnext-logical-operations` supplies operand-preserving `&&` and `||`
+  truthiness without enlarging the basic control-flow build. Number and string
+  truthiness compose independently, including builds that permit numbers but
+  have no guest operation capable of creating a string.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.

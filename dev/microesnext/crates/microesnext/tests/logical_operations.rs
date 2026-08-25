@@ -31,3 +31,11 @@ fn skips_the_unselected_expression() {
         Outcome::Complete(Value::TRUE)
     );
 }
+
+#[test]
+fn relocates_short_circuit_targets_inside_a_function() {
+    assert_eq!(
+        run("let choose = (left, right) => left || right; return choose(0, 42);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

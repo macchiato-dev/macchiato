@@ -59,6 +59,24 @@ VM's `===` and `!==` instructions call the strict operation. This avoids the
 subtle but observable mistake of treating `NaN === NaN` as true while still
 sharing the scalar decoding and string-content comparison machinery.
 
+## Short-circuit logical operations, 2026-08-25
+
+The immediate-only `&&`/`||` composition is 3,220 bytes (1,552 gzip). Its live
+probe short-circuits over a throwing right operand and verifies that the left
+operand, not a coerced boolean, is returned. Optional scalar truthiness remains
+independent:
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Logical operations | 3,220 | 1,552 |
+| Logical operations with numbers only | 7,909 | 3,350 |
+| Logical operations with strings only | 6,982 | 3,033 |
+
+The number-only dependency graph contains no string crate, and the string-only
+build contains no number crate. Macro-generated crate tests exercise each side
+alone and together. Adding the capability leaves both the 1,984-byte kernel and
+the 6,506-byte minimal programmable runtime byte-for-byte unchanged.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled

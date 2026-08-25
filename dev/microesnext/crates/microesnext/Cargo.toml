@@ -226,7 +226,7 @@ required-features = ["equality", "locals", "numbers", "objects", "strings"]
 [[test]]
 name = "logical-operations"
 path = "tests/logical_operations.rs"
-required-features = ["functions", "locals", "logical-operations"]
+required-features = ["function-arguments", "logical-operations"]
 
 [[test]]
 name = "objects"

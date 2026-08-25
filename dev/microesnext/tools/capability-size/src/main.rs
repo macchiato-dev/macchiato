@@ -6,6 +6,7 @@
     any(
         feature = "async",
         feature = "equality",
+        feature = "logical-operations",
         feature = "promise-resolution",
         feature = "promise-resolvers",
         feature = "receivers"
@@ -29,6 +30,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "function-arguments",
         feature = "functions",
         feature = "locals",
+        feature = "logical-operations",
         feature = "minimal-program",
         feature = "numbers",
         feature = "objects",
@@ -266,6 +268,102 @@ pub extern "C" fn string_equality_probe() -> i32 {
     match string_machine.run() {
         Ok(Outcome::Complete(Value::TRUE)) => 1,
         _ => 0,
+    }
+}
+
+#[cfg(all(feature = "logical-operations", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn logical_operations_probe() -> i32 {
+    let code = [
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::False as u8,
+        Opcode::JumpIfFalsyOrPop as u8,
+        13,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        9,
+        0,
+        0,
+        0,
+        Opcode::Throw as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(Value::FALSE)) => 1,
+        _ => 0,
+    }
+}
+
+#[cfg(all(
+    feature = "logical-operations",
+    feature = "numbers",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn number_logical_operations_probe() -> i32 {
+    let nan = f64::NAN.to_bits().to_le_bytes();
+    let code = [
+        Opcode::ConstF64 as u8,
+        nan[0],
+        nan[1],
+        nan[2],
+        nan[3],
+        nan[4],
+        nan[5],
+        nan[6],
+        nan[7],
+        Opcode::JumpIfTruthyOrPop as u8,
+        19,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(
+    feature = "logical-operations",
+    feature = "strings",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn string_logical_operations_probe() -> i32 {
+    let code = [
+        Opcode::ConstString as u8,
+        0,
+        0,
+        Opcode::JumpIfTruthyOrPop as u8,
+        13,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
     }
 }
 

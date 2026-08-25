@@ -145,6 +145,31 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["iterators", "iterators", [core, ["iterators_probe", 11]]],
     ["locals", "locals", [core, ["locals_probe", 42]]],
     [
+      "logical operations",
+      "logical-operations",
+      [core, ["logical_operations_probe", 1]],
+    ],
+    [
+      "logical operations with numbers only",
+      "logical-operations,numbers",
+      [
+        core,
+        ["logical_operations_probe", 1],
+        ["number_logical_operations_probe", 42],
+        ["numbers_probe", 3.25],
+      ],
+    ],
+    [
+      "logical operations with strings only",
+      "logical-operations,strings",
+      [
+        core,
+        ["logical_operations_probe", 1],
+        ["string_logical_operations_probe", 42],
+        ["strings_probe", "nonzero"],
+      ],
+    ],
+    [
       "iterator results",
       "iterator-results",
       [core, ["iterator_results_probe", 42]],
@@ -214,7 +239,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,equality,exceptions,function-arguments,iterable-protocol,iterator-results,logical-operations,numbers,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -242,6 +267,9 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["function_arguments_probe", 42],
         ["iterators_probe", 11],
         ["locals_probe", 42],
+        ["logical_operations_probe", 1],
+        ["number_logical_operations_probe", 42],
+        ["string_logical_operations_probe", 42],
         ["iterator_results_probe", 42],
         ["iterable_protocol_probe", 1],
         ["numbers_probe", 3.25],
