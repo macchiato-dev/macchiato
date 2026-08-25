@@ -1,10 +1,12 @@
 [workspace]
 members = [
+  "crates/microesnext-atoms",
   "crates/microesnext",
   "crates/microesnext-arena",
   "crates/microesnext-arrays",
   "crates/microesnext-async",
   "crates/microesnext-bytecode",
+  "crates/microesnext-bytecode-core",
   "crates/microesnext-compiler",
   "crates/microesnext-collections",
   "crates/microesnext-functions",
@@ -17,6 +19,8 @@ members = [
   "crates/microesnext-vm",
   "crates/microesnext-vm-core",
   "crates/microesnext-weak-collections",
+  "tools/capability-size",
+  "tools/core-loop",
 ]
 resolver = "2"
 
@@ -28,10 +32,13 @@ rust-version = "1.85"
 version = "0.0.0"
 
 [workspace.dependencies]
+microesnext = { path = "crates/microesnext", version = "0.0.0", default-features = false }
+microesnext-atoms = { path = "crates/microesnext-atoms", version = "0.0.0" }
 microesnext-arena = { path = "crates/microesnext-arena", version = "0.0.0" }
 microesnext-arrays = { path = "crates/microesnext-arrays", version = "0.0.0" }
 microesnext-async = { path = "crates/microesnext-async", version = "0.0.0" }
 microesnext-bytecode = { path = "crates/microesnext-bytecode", version = "0.0.0" }
+microesnext-bytecode-core = { path = "crates/microesnext-bytecode-core", version = "0.0.0" }
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
 microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.0" }

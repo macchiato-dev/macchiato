@@ -2,28 +2,46 @@
 
 use microesnext_types::Error;
 
+pub use microesnext_bytecode_core::{read_byte, read_bytes, read_i30, read_u16, read_u32};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Opcode {
     ConstI30 = 1,
     AddI30 = 2,
+    #[cfg(feature = "async")]
     Await = 3,
     Return = 4,
     Call = 5,
+    #[cfg(feature = "strings")]
     ConstString = 6,
+    #[cfg(feature = "objects")]
     NewObject = 7,
+    #[cfg(feature = "objects")]
     GetProperty = 8,
+    #[cfg(feature = "objects")]
     SetProperty = 9,
+    #[cfg(feature = "functions")]
     Closure = 10,
+    #[cfg(feature = "functions")]
     CallValue = 11,
+    #[cfg(feature = "functions")]
     LoadCapture = 12,
     Throw = 13,
+    #[cfg(feature = "arrays")]
     NewArray = 14,
+    #[cfg(feature = "arrays")]
     GetIndex = 15,
+    #[cfg(feature = "arrays")]
     SetIndex = 16,
+    #[cfg(feature = "exceptions")]
     Try = 17,
+    #[cfg(feature = "exceptions")]
     EndTry = 18,
+    #[cfg(feature = "exceptions")]
     Drop = 19,
+    #[cfg(feature = "atoms")]
+    ConstAtom = 20,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -33,23 +51,39 @@ impl TryFrom<u8> for Opcode {
         match value {
             1 => Ok(Self::ConstI30),
             2 => Ok(Self::AddI30),
+            #[cfg(feature = "async")]
             3 => Ok(Self::Await),
             4 => Ok(Self::Return),
             5 => Ok(Self::Call),
+            #[cfg(feature = "strings")]
             6 => Ok(Self::ConstString),
+            #[cfg(feature = "objects")]
             7 => Ok(Self::NewObject),
+            #[cfg(feature = "objects")]
             8 => Ok(Self::GetProperty),
+            #[cfg(feature = "objects")]
             9 => Ok(Self::SetProperty),
+            #[cfg(feature = "functions")]
             10 => Ok(Self::Closure),
+            #[cfg(feature = "functions")]
             11 => Ok(Self::CallValue),
+            #[cfg(feature = "functions")]
             12 => Ok(Self::LoadCapture),
             13 => Ok(Self::Throw),
+            #[cfg(feature = "arrays")]
             14 => Ok(Self::NewArray),
+            #[cfg(feature = "arrays")]
             15 => Ok(Self::GetIndex),
+            #[cfg(feature = "arrays")]
             16 => Ok(Self::SetIndex),
+            #[cfg(feature = "exceptions")]
             17 => Ok(Self::Try),
+            #[cfg(feature = "exceptions")]
             18 => Ok(Self::EndTry),
+            #[cfg(feature = "exceptions")]
             19 => Ok(Self::Drop),
+            #[cfg(feature = "atoms")]
+            20 => Ok(Self::ConstAtom),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -57,59 +91,34 @@ impl TryFrom<u8> for Opcode {
 
 #[inline(always)]
 pub fn read_opcode(code: &[u8], pc: &mut usize) -> Result<Opcode, Error> {
-    let byte = *code.get(*pc).ok_or(Error::BadBytecode)?;
-    *pc += 1;
-    Opcode::try_from(byte)
+    Opcode::try_from(read_byte(code, pc)?)
 }
 
-#[inline(always)]
-pub fn read_i30(code: &[u8], pc: &mut usize) -> Result<i32, Error> {
-    let bytes: [u8; 4] = code
-        .get(*pc..*pc + 4)
-        .ok_or(Error::BadBytecode)?
-        .try_into()
-        .map_err(|_| Error::BadBytecode)?;
-    *pc += 4;
-    let value = i32::from_le_bytes(bytes);
-    if (-(1 << 29)..(1 << 29)).contains(&value) {
-        Ok(value)
-    } else {
-        Err(Error::BadBytecode)
+#[cfg(test)]
+mod tests {
+    use super::Opcode;
+
+    #[cfg(not(feature = "strings"))]
+    #[test]
+    fn omitted_string_opcode_is_invalid_bytecode() {
+        assert!(Opcode::try_from(6).is_err());
     }
-}
 
-#[inline(always)]
-pub fn read_u32(code: &[u8], pc: &mut usize) -> Result<u32, Error> {
-    let bytes: [u8; 4] = code
-        .get(*pc..*pc + 4)
-        .ok_or(Error::BadBytecode)?
-        .try_into()
-        .map_err(|_| Error::BadBytecode)?;
-    *pc += 4;
-    Ok(u32::from_le_bytes(bytes))
-}
+    #[cfg(feature = "strings")]
+    #[test]
+    fn enabled_string_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(6), Ok(Opcode::ConstString));
+    }
 
-#[inline(always)]
-pub fn read_bytes<'code>(code: &'code [u8], pc: &mut usize) -> Result<&'code [u8], Error> {
-    let length_bytes: [u8; 2] = code
-        .get(*pc..*pc + 2)
-        .ok_or(Error::BadBytecode)?
-        .try_into()
-        .map_err(|_| Error::BadBytecode)?;
-    *pc += 2;
-    let length = u16::from_le_bytes(length_bytes) as usize;
-    let bytes = code.get(*pc..*pc + length).ok_or(Error::BadBytecode)?;
-    *pc += length;
-    Ok(bytes)
-}
+    #[cfg(not(feature = "atoms"))]
+    #[test]
+    fn omitted_atom_opcode_is_invalid_bytecode() {
+        assert!(Opcode::try_from(20).is_err());
+    }
 
-#[inline(always)]
-pub fn read_u16(code: &[u8], pc: &mut usize) -> Result<u16, Error> {
-    let bytes: [u8; 2] = code
-        .get(*pc..*pc + 2)
-        .ok_or(Error::BadBytecode)?
-        .try_into()
-        .map_err(|_| Error::BadBytecode)?;
-    *pc += 2;
-    Ok(u16::from_le_bytes(bytes))
+    #[cfg(feature = "atoms")]
+    #[test]
+    fn enabled_atom_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(20), Ok(Opcode::ConstAtom));
+    }
 }

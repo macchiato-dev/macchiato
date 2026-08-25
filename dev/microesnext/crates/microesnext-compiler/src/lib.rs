@@ -52,6 +52,12 @@ impl Builder {
         self
     }
 
+    pub fn atom(mut self, bytes: &[u8]) -> Self {
+        assert!(u16::try_from(bytes.len()).is_ok());
+        self.output_atom(bytes);
+        self
+    }
+
     pub fn object(mut self) -> Self {
         self.code.push(Opcode::NewObject as u8);
         self
@@ -72,6 +78,13 @@ impl Builder {
 
     fn output_string(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstString as u8);
+        self.code
+            .extend_from_slice(&(bytes.len() as u16).to_le_bytes());
+        self.code.extend_from_slice(bytes);
+    }
+
+    fn output_atom(&mut self, bytes: &[u8]) {
+        self.code.push(Opcode::ConstAtom as u8);
         self.code
             .extend_from_slice(&(bytes.len() as u16).to_le_bytes());
         self.code.extend_from_slice(bytes);
@@ -224,7 +237,7 @@ impl Parser<'_> {
                     if !self.consume(b':') {
                         return Err(self.error(":"));
                     }
-                    self.output_string_range(start, end);
+                    self.output_atom_range(start, end);
                     self.integer()?;
                     self.output.push(Opcode::SetProperty as u8);
                     if self.consume(b'}') {
@@ -243,7 +256,7 @@ impl Parser<'_> {
         while self.consume(b'.') {
             self.whitespace();
             let (start, end) = self.identifier()?;
-            self.output_string_range(start, end);
+            self.output_atom_range(start, end);
             self.output.push(Opcode::GetProperty as u8);
         }
         if awaiting {
@@ -307,10 +320,10 @@ impl Parser<'_> {
         Ok((start, self.offset))
     }
 
-    fn output_string_range(&mut self, start: usize, end: usize) {
+    fn output_atom_range(&mut self, start: usize, end: usize) {
         let length = end - start;
         debug_assert!(u16::try_from(length).is_ok());
-        self.output.push(Opcode::ConstString as u8);
+        self.output.push(Opcode::ConstAtom as u8);
         self.output
             .extend_from_slice(&(length as u16).to_le_bytes());
         self.output.extend_from_slice(&self.source[start..end]);
@@ -445,10 +458,10 @@ mod tests {
             compile_script("return { answer: 42 }.answer;").unwrap(),
             Builder::new()
                 .object()
-                .string(b"answer")
+                .atom(b"answer")
                 .const_i30(42)
                 .op(Opcode::SetProperty)
-                .string(b"answer")
+                .atom(b"answer")
                 .op(Opcode::GetProperty)
                 .op(Opcode::Return)
                 .finish()

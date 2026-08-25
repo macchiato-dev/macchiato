@@ -8,6 +8,9 @@ pub use microesnext_vm_core::{Core, CoreOutcome};
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
 
+#[cfg(feature = "atoms")]
+pub use microesnext_atoms as atoms;
+
 #[cfg(feature = "async")]
 pub use microesnext_async as r#async;
 

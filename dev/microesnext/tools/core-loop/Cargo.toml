@@ -1,0 +1,24 @@
+[package]
+name = "microesnext-core-loop"
+description = "Isolated native MicroESNext interpreter benchmark"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = []
+arrays = ["microesnext/arrays"]
+async = ["microesnext/async"]
+atoms = ["microesnext/atoms"]
+collections = ["microesnext/collections"]
+exceptions = ["microesnext/exceptions"]
+functions = ["microesnext/functions"]
+objects = ["microesnext/objects"]
+promises = ["microesnext/promises"]
+strings = ["microesnext/strings"]
+weak-collections = ["microesnext/weak-collections"]
+
+[dependencies]
+microesnext.workspace = true

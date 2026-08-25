@@ -9,10 +9,11 @@ version.workspace = true
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-bytecode.workspace = true
+microesnext-bytecode-core.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
+microesnext-bytecode = { workspace = true, features = ["async"] }
 microesnext-compiler.workspace = true
 
 [lib]

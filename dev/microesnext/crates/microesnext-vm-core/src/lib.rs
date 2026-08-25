@@ -1,14 +1,16 @@
 #![no_std]
 
 use microesnext_arena::Arena;
-use microesnext_bytecode::{Opcode, read_bytes, read_i30, read_opcode, read_u16, read_u32};
+use microesnext_bytecode_core::{
+    ADD_I30, CALL, CONST_I30, RETURN, THROW, read_byte, read_bytes, read_i30, read_u16, read_u32,
+};
 use microesnext_types::{Error, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CoreOutcome {
     Complete(Value),
     Throw(Value),
-    Extension(Opcode),
+    Extension(u8),
 }
 
 /// State used by the invariant interpreter loop. Optional capabilities live
@@ -108,20 +110,20 @@ impl<'code, 'memory> Core<'code, 'memory> {
     #[inline(never)]
     pub fn run(&mut self) -> Result<CoreOutcome, Error> {
         loop {
-            match read_opcode(self.code, &mut self.pc)? {
-                Opcode::ConstI30 => {
+            match read_byte(self.code, &mut self.pc)? {
+                CONST_I30 => {
                     let value = Value::from_i30(read_i30(self.code, &mut self.pc)?)
                         .ok_or(Error::BadBytecode)?;
                     self.arena.push(value)?;
                 }
-                Opcode::AddI30 => {
+                ADD_I30 => {
                     let right = self.arena.pop()?.as_i30().ok_or(Error::Type)?;
                     let left = self.arena.pop()?.as_i30().ok_or(Error::Type)?;
                     let value = Value::from_i30(left.checked_add(right).ok_or(Error::Type)?)
                         .ok_or(Error::Type)?;
                     self.arena.push(value)?;
                 }
-                Opcode::Return => {
+                RETURN => {
                     let result = self.arena.pop()?;
                     let Some(frame_depth) = self.frame_depth else {
                         return Ok(CoreOutcome::Complete(result));
@@ -140,11 +142,11 @@ impl<'code, 'memory> Core<'code, 'memory> {
                     self.pc = return_pc as usize;
                     self.arena.push(result)?;
                 }
-                Opcode::Call => {
+                CALL => {
                     let target = read_u32(self.code, &mut self.pc)? as usize;
                     self.enter_call(Value::UNDEFINED, target)?;
                 }
-                Opcode::Throw => {
+                THROW => {
                     let reason = self.arena.pop()?;
                     return Ok(CoreOutcome::Throw(reason));
                 }
@@ -153,6 +155,7 @@ impl<'code, 'memory> Core<'code, 'memory> {
         }
     }
 
+    #[inline(always)]
     pub fn enter_call(&mut self, function: Value, target: usize) -> Result<(), Error> {
         if target >= self.code.len() {
             return Err(Error::BadBytecode);
@@ -196,6 +199,7 @@ impl<'code, 'memory> Core<'code, 'memory> {
 
 #[cfg(test)]
 mod tests {
+    use microesnext_bytecode::Opcode;
     use microesnext_compiler::Builder;
 
     use super::*;
@@ -221,7 +225,10 @@ mod tests {
         let code = [Opcode::Await as u8];
         let mut memory = [0; 8];
         let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(core.run().unwrap(), CoreOutcome::Extension(Opcode::Await));
+        assert_eq!(
+            core.run().unwrap(),
+            CoreOutcome::Extension(Opcode::Await as u8)
+        );
         assert_eq!(core.pc(), 1);
     }
 }

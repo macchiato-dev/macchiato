@@ -12,7 +12,8 @@ default = []
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 async = ["dep:microesnext-async"]
 strings = ["dep:microesnext-strings", "microesnext-vm/strings"]
-objects = ["dep:microesnext-objects", "strings", "microesnext-vm/objects"]
+atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
+objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 collections = ["dep:microesnext-collections"]
@@ -23,6 +24,7 @@ promise-jobs = ["async", "functions", "promises", "microesnext-async/promises"]
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
+microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }

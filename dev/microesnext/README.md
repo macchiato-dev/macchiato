@@ -16,12 +16,17 @@ not link to that C implementation.
 - `microesnext-types` defines the four-byte `Value` and `HeapRef` words.
 - `microesnext-arena` owns the fixed-capacity heap and VM stack and compacts
   references without a forwarding-table allocation.
-- `microesnext-bytecode` defines the compact instruction stream independently
-  of execution.
+- `microesnext-bytecode-core` defines the raw opcodes and readers used by the
+  invariant interpreter loop. It has no capability features.
+- `microesnext-bytecode` adds the typed instruction vocabulary used by tools
+  and the capability wrapper. Its optional opcode groups follow the runtime
+  capabilities, so an omitted feature does not enlarge its valid enum surface.
 - `microesnext-compiler` contains allocation-using source and bytecode tooling;
   the runtime crates do not depend on it.
-- `microesnext-strings` supplies packed byte strings and rooted atom interning
-  without requiring ordinary objects.
+- `microesnext-strings` supplies ordinary packed byte strings without retained
+  global state.
+- `microesnext-atoms` adds rooted interning for property names and other keys;
+  ordinary string literals neither link nor populate it.
 - `microesnext-objects` supplies prototype and property-table storage. Its VM
   feature composes strings for JavaScript property names, while the low-level
   crate can also use already-interned or non-string keys.
@@ -55,22 +60,27 @@ fat LTO and one code-generation unit, so hot functions can inline across them.
 Leaving out a capability removes its crate without adding indirect dispatch to
 the base interpreter.
 
-`tools/measure-capabilities.ts` builds final Wasm probes which call into each
-enabled crate, then reports raw and gzip sizes. This catches accidental
-capability linkage that a dependency-tree check alone would miss.
+`tools/measure-capabilities.ts` builds the isolated
+`microesnext-capability-size` package, instantiates its final Wasm, calls every
+claimed export, then reports raw and gzip sizes. The separate package has no
+compiler dev-dependency whose Cargo features could contaminate production
+measurements.
 
-The `core-loop` example provides a repeatable native instruction-loop check:
+The isolated `microesnext-core-loop` package provides a repeatable native
+instruction-loop check without compiler dev-feature unification:
 
 ```sh
-cargo run --release -p microesnext --example core-loop
-cargo run --release -p microesnext --example core-loop \
-  --features async,objects,functions
+cargo run --release -p microesnext-core-loop --no-default-features
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features async,objects,functions -- --machine
 ```
 
 It is a regression signal rather than a claim that noisy wall-clock timings can
 prove identical performance. The structural performance gate is stronger: the
-minimal dependency graph excludes capability crates, and the hot loop uses a
-direct opcode match with no trait objects, registries, or dynamic callbacks.
+minimal dependency graph excludes capability crates, and the hot loop reads
+raw opcode bytes from `microesnext-bytecode-core`. It uses a direct match with
+no feature-dependent enum, trait objects, registries, or dynamic callbacks.
+Only an extension byte crosses into the typed capability wrapper.
 
 This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
 Macchiato repository are consumers and comparison points, not source

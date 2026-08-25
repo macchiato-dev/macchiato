@@ -30,22 +30,26 @@ those workloads.
 
 After Promise jobs were added, the facade benchmark began varying with enabled
 features even though it executed only integer opcodes. The hot interpreter was
-therefore extracted into `microesnext-vm-core`; capability opcodes return to an
-out-of-line wrapper, while base bytecodes stay in a state type whose layout is
-independent of Cargo features.
+therefore extracted into `microesnext-vm-core`, and its byte readers and raw
+base-opcode constants into `microesnext-bytecode-core`. Neither crate has
+capability features. Optional opcode bytes return to the typed VM wrapper;
+base bytecodes remain in a state type and dispatch loop whose compiled Rust
+surface does not vary with the selected capabilities.
 
-`core-loop-direct` runs the same 20,020,000-instruction workload directly on
-that boundary. Alternating minimal and full builds produced 3.31–3.34
-ns/instruction before the final out-of-line adjustment, and 3.49–3.50
-ns/instruction with the core function kept out of the capability wrapper by an
-inlining boundary. The minimal and full direct-core samples were effectively
-identical within each configuration.
+An isolated `microesnext-core-loop` package prevents the compiler dev
+dependency from unifying all facade features into the benchmark. That exposed
+a real 10–30% regression hidden by the earlier setup. Disassembly showed fat
+LTO declining to inline base call-frame setup in the larger build, which added
+register spills to unrelated arithmetic dispatch. Keeping that small base
+operation always-inline restored overlapping minimal and full measurements.
 
-The facade-level `core-loop` still shows noisier binary-layout and return-path
-variation across separately linked executables. It remains a regression gate,
-not evidence that optional code affects the core dispatch loop. A future
-benchmark runner should sample both configurations in one process where
-possible and report distributions rather than isolated wall-clock readings.
+Eight alternating samples in the latest run measured 3.30–3.47 ns/instruction
+for minimal `Core` and 3.47–3.51 for full `Core`; `Machine` measured 3.29–3.81
+for minimal and 3.29–3.53 for full. Process startup, frequency scaling, and
+separately linked layouts make these samples noisy. They detect no consistent
+capability penalty, but do not prove mathematical equality. The stronger gate
+is structural: optional crates and their typed opcodes cannot enter the raw
+base loop.
 
 ## Final Wasm capability sizes, 2026-08-25
 
@@ -55,17 +59,18 @@ LTO from merely discarding an enabled but unused dependency.
 
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| Minimal | 1,900 | 874 |
-| Arrays | 6,801 | 2,835 |
-| Async suspension | 6,590 | 2,807 |
-| Collections | 3,201 | 1,416 |
-| Exceptions | 3,734 | 1,589 |
-| Functions | 1,924 | 892 |
-| Objects with strings | 13,993 | 5,578 |
-| Strings only | 9,110 | 3,574 |
-| Promises | 4,756 | 2,144 |
-| Weak collections | 1,967 | 918 |
-| All capabilities | 25,873 | 9,407 |
+| Minimal | 1,892 | 876 |
+| Arrays | 6,793 | 2,839 |
+| Atoms with strings | 9,845 | 4,096 |
+| Async suspension | 6,356 | 2,766 |
+| Collections | 3,193 | 1,420 |
+| Exceptions | 3,753 | 1,674 |
+| Functions | 1,916 | 892 |
+| Objects with atoms and strings | 14,751 | 5,824 |
+| Strings only | 4,867 | 2,205 |
+| Promises | 4,748 | 2,145 |
+| Weak collections | 1,959 | 919 |
+| All capabilities | 27,234 | 9,820 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -73,12 +78,18 @@ the Cargo feature but accidentally ran only `Core`, allowing LTO to discard
 the handler implementation, and an “all” row that omitted exceptions. The
 current exception and combined figures supersede those undercounts.
 
-The object row now exercises property insertion and lookup and includes the
-string VM required for JavaScript property names. The separate string row
-executes `ConstString` and atom interning through `Machine` without linking
-`microesnext-objects`; its dependency graph contains no object crate. Earlier
-object figures measured only direct allocation of an empty low-level object
-and are not comparable to this fuller VM capability probe.
+The probes now build in a dedicated package rather than as facade examples.
+That prevents the facade's compiler dev-dependency from enabling every opcode
+through Cargo feature unification. Optional opcodes are themselves gated, and
+the minimal decoder rejects their bytes. Together those changes reduce the
+minimal artifact to 1,892 bytes while keeping its instruction loop independent
+of the typed capability decoder.
+
+Ordinary `ConstString` now allocates an unrooted string and no longer creates
+or populates an atom table. The 4,867-byte string row therefore excludes both
+`microesnext-atoms` and `microesnext-objects`. The atom row adds retained
+interning; source-level objects compose both capabilities and use the distinct
+`ConstAtom` instruction for property names.
 
 Handler state belongs to the optional `Machine` wrapper; `Core` has one layout
 and one opcode loop in every feature configuration. `cargo tree -p
@@ -96,8 +107,8 @@ These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the
 final Wasm, while enabled rows contain live exported calls into that crate.
 Moving suspend/resume/restore out of `microesnext-vm-core` and into the optional
-`microesnext-suspension` crate leaves the minimal probe at 1,900 bytes. The
-live async probe is 6,590 bytes (2,807 gzip). Enabling `async` adds the crate
+`microesnext-suspension` crate leaves the invariant core untouched. The
+isolated live async probe is 6,356 bytes (2,766 gzip). Enabling `async` adds the crate
 through the VM; disabling it also removes resume operations from the public
 surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop

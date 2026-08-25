@@ -5,6 +5,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
   [
     ["minimal", "", [core]],
     ["arrays", "arrays", [core, ["arrays_probe", 1]]],
+    [
+      "atoms",
+      "atoms",
+      [core, ["atoms_probe", "nonzero"], ["strings_probe", "nonzero"]],
+    ],
     ["async suspension", "async", [core, ["async_probe", 7]]],
     ["collections", "collections", [core, ["collections_probe", 0]]],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
@@ -12,7 +17,12 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     [
       "objects",
       "objects",
-      [core, ["objects_probe", 42], ["strings_probe", "nonzero"]],
+      [
+        core,
+        ["atoms_probe", "nonzero"],
+        ["objects_probe", 42],
+        ["strings_probe", "nonzero"],
+      ],
     ],
     ["strings", "strings", [core, ["strings_probe", "nonzero"]]],
     ["promises", "promises", [core, ["promises_probe", "nonzero"]]],
@@ -27,6 +37,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [
         core,
         ["arrays_probe", 1],
+        ["atoms_probe", "nonzero"],
         ["async_probe", 7],
         ["collections_probe", 0],
         ["exceptions_probe", 42],
@@ -40,7 +51,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
   ];
 
 const artifact =
-  "target/wasm32-unknown-unknown/release/examples/capability-size.wasm";
+  "target/wasm32-unknown-unknown/release/microesnext-capability-size.wasm";
 
 console.log("| Build | Wasm bytes | Gzip bytes |");
 console.log("| --- | ---: | ---: |");
@@ -52,9 +63,7 @@ for (const [name, features, probes] of configurations) {
     "--target",
     "wasm32-unknown-unknown",
     "-p",
-    "microesnext",
-    "--example",
-    "capability-size",
+    "microesnext-capability-size",
     "--no-default-features",
   ];
   if (features) args.push("--features", features);

@@ -26,6 +26,13 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Bytecode and immutable built-ins may be shared outside the mutable arena.
 - Capabilities are separate crates linked statically. The base opcode loop does
   not use trait objects, dynamic registries, or callbacks for omitted features.
+- Capability bytecodes are feature-gated at decoding as well as execution.
+  Bytes assigned to an omitted capability are invalid rather than accepted by
+  a larger universal enum and rejected later by the VM wrapper.
+- `microesnext-vm-core` reads raw bytes and depends only on the invariant
+  `microesnext-bytecode-core` vocabulary. It returns any non-core byte to the
+  feature-gated typed decoder in `microesnext-vm`; the raw core is deliberately
+  not an independent validator for extension opcodes.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
@@ -50,9 +57,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.
-- Strings and atom interning are independent of ordinary objects. An object VM
-  composes the string capability for property names, but a string-only machine
-  does not link prototype or property-table operations.
+- Ordinary strings, atom interning, and objects form three boundaries. A string
+  value is not automatically retained or interned. Atoms add a rooted table;
+  objects compose atoms for source-level property names. A string-only machine
+  links neither atom nor property-table operations.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

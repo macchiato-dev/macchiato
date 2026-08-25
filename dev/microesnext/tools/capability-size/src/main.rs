@@ -150,6 +150,26 @@ pub extern "C" fn strings_probe() -> u32 {
     }
 }
 
+#[cfg(all(feature = "atoms", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn atoms_probe() -> u32 {
+    let code = [
+        Opcode::ConstAtom as u8,
+        3,
+        0,
+        b'k',
+        b'e',
+        b'y',
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 1).unwrap();
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.raw(),
+        _ => 0,
+    }
+}
+
 #[cfg(all(feature = "promises", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn promises_probe() -> u32 {

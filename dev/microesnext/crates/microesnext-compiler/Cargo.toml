@@ -8,8 +8,15 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-microesnext-bytecode.workspace = true
+microesnext-bytecode = { workspace = true, features = [
+  "arrays",
+  "async",
+  "atoms",
+  "exceptions",
+  "functions",
+  "objects",
+  "strings",
+] }
 
 [lib]
 path = "src/lib.rs"
-

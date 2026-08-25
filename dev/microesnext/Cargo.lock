@@ -9,6 +9,7 @@ dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
  "microesnext-async",
+ "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
@@ -51,10 +52,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-atoms"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-strings",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-bytecode"
 version = "0.0.0"
 dependencies = [
+ "microesnext-bytecode-core",
  "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-bytecode-core"
+version = "0.0.0"
+dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-capability-size"
+version = "0.0.0"
+dependencies = [
+ "microesnext",
+ "microesnext-arena",
 ]
 
 [[package]]
@@ -70,6 +96,13 @@ name = "microesnext-compiler"
 version = "0.0.0"
 dependencies = [
  "microesnext-bytecode",
+]
+
+[[package]]
+name = "microesnext-core-loop"
+version = "0.0.0"
+dependencies = [
+ "microesnext",
 ]
 
 [[package]]
@@ -94,7 +127,7 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-strings",
+ "microesnext-atoms",
  "microesnext-types",
 ]
 
@@ -133,6 +166,7 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
+ "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-compiler",
  "microesnext-exceptions",
@@ -150,6 +184,7 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-bytecode",
+ "microesnext-bytecode-core",
  "microesnext-compiler",
  "microesnext-types",
 ]

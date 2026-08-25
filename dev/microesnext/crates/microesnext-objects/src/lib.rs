@@ -79,7 +79,7 @@ fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_strings::Atoms;
+    use microesnext_atoms::Atoms;
 
     use super::*;
 
@@ -101,5 +101,27 @@ mod tests {
         assert_eq!(get(&arena, object, title).unwrap().as_i30(), Some(42));
         assert_eq!(prototype(&arena, object).unwrap(), Value::NULL);
         atoms.release(&mut arena).unwrap();
+    }
+
+    #[test]
+    fn stack_roots_keep_an_interned_property_key_current() {
+        let mut memory = [0; 80];
+        let mut arena = Arena::with_root_capacity(&mut memory, 4);
+        let mut atoms = Atoms::new(&mut arena).unwrap();
+        let object = new_object(&mut arena, Value::NULL).unwrap();
+        arena.push(object).unwrap();
+        let key = atoms.intern(&mut arena, b"answer").unwrap();
+        arena.push(key).unwrap();
+        arena.push(Value::from_i30(42).unwrap()).unwrap();
+
+        let value = arena.pop().unwrap();
+        let key = arena.pop().unwrap();
+        let object = arena.pop().unwrap();
+        let object = set(&mut arena, object, key, value).unwrap();
+        arena.push(object).unwrap();
+        let key = atoms.intern(&mut arena, b"answer").unwrap();
+        let object = arena.pop().unwrap();
+
+        assert_eq!(get(&arena, object, key).unwrap().as_i30(), Some(42));
     }
 }
