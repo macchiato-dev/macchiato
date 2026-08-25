@@ -25,6 +25,82 @@ pub struct Job {
     then_key: RootId,
 }
 
+pub struct JobSlot(Job);
+
+/// Caller-owned FIFO storage for rooted thenable jobs. The queue itself never
+/// allocates and moving a slot cannot stale its generation-checked roots.
+pub struct Jobs<'slots> {
+    slots: &'slots mut [Option<JobSlot>],
+    head: usize,
+    len: usize,
+}
+
+impl<'slots> Jobs<'slots> {
+    pub fn new(slots: &'slots mut [Option<JobSlot>]) -> Self {
+        for slot in slots.iter_mut() {
+            *slot = None;
+        }
+        Self {
+            slots,
+            head: 0,
+            len: 0,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    pub fn push(&mut self, machine: &mut Machine<'_, '_>, job: Job) -> Result<(), Error> {
+        if self.len == self.slots.len() {
+            release(machine, job)?;
+            return Err(Error::OutOfMemory);
+        }
+        let index = (self.head + self.len) % self.slots.len();
+        self.slots[index] = Some(JobSlot(job));
+        self.len += 1;
+        Ok(())
+    }
+
+    pub fn pop(&mut self) -> Result<Option<Job>, Error> {
+        if self.len == 0 {
+            return Ok(None);
+        }
+        let job = self.slots[self.head]
+            .take()
+            .map(|slot| slot.0)
+            .ok_or(Error::DanglingReference)?;
+        self.head = (self.head + 1) % self.slots.len();
+        self.len -= 1;
+        Ok(Some(job))
+    }
+
+    pub fn run_one(
+        &mut self,
+        machine: &mut Machine<'_, '_>,
+        queue: &mut JobQueue<'_>,
+    ) -> Result<bool, Error> {
+        let Some(job) = self.pop()? else {
+            return Ok(false);
+        };
+        if let Finished::Job(job) = run(machine, queue, job)? {
+            self.push(machine, job)?;
+        }
+        Ok(true)
+    }
+
+    pub fn discard_all(&mut self, machine: &mut Machine<'_, '_>) -> Result<(), Error> {
+        while let Some(job) = self.pop()? {
+            release(machine, job)?;
+        }
+        Ok(())
+    }
+}
+
 /// Applies the synchronous part of Promise resolution and returns a rooted job
 /// when an ordinary object has a callable `then` property.
 pub fn prepare(
@@ -341,17 +417,18 @@ mod tests {
             panic!("expected the outer job")
         };
 
-        let Finished::Job(inner_job) = run(&mut machine, &mut queue, outer_job).unwrap() else {
-            panic!("expected a separately scheduled inner job")
-        };
+        let mut thenable_slots = [const { None }; 2];
+        let mut jobs = Jobs::new(&mut thenable_slots);
+        jobs.push(&mut machine, outer_job).unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs.run_one(&mut machine, &mut queue), Ok(true));
+        assert_eq!(jobs.len(), 1);
         assert_eq!(
             settled_result(machine.arena(), machine.root(destination_root).unwrap()),
             Ok(None)
         );
-        assert!(matches!(
-            run(&mut machine, &mut queue, inner_job),
-            Ok(Finished::Complete)
-        ));
+        assert_eq!(jobs.run_one(&mut machine, &mut queue), Ok(true));
+        assert!(jobs.is_empty());
         assert_eq!(
             settled_result(machine.arena(), machine.root(destination_root).unwrap()),
             Ok(Some((Settlement::Fulfilled, Value::from_i30(42).unwrap())))
