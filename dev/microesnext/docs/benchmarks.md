@@ -188,6 +188,14 @@ probe to callable objects produces 20,106 raw / 7,695 gzip bytes—2,294 raw /
 only 80 raw / 49 gzip beyond basic functions. Source-to-VM tests verify the
 prototype cycle and that arrows do not acquire the constructor opcode.
 
+Ordinary instance construction is another composition rather than constructor
+baseline code. Its live Wasm probe, receiver-aware call path, receiver creation,
+and return selection total 27,444 raw / 9,825 gzip bytes. The corresponding
+compiler slice is 15,099 / 6,232 and accepts direct calls with arguments. The
+source-to-VM tests exercise `this`, primitive fallback, explicit object returns,
+and the resulting prototype chain. Builds omitting `construction` do not decode
+its two opcodes or link `microesnext-construction`.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -256,6 +264,8 @@ LTO from merely discarding an enabled but unused dependency.
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Callable objects | 17,812 | 7,107 |
 | Constructible function objects | 20,106 | 7,695 |
+| Constructor receivers | 26,845 | 9,886 |
+| Ordinary construction | 27,444 | 9,825 |
 | Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
 | `typeof` | 6,642 | 3,024 |
@@ -267,7 +277,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 99,075 | 32,165 |
+| All capabilities | 101,471 | 32,868 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -538,6 +548,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
 | constructors | 13,267 | 5,628 |
+| construction | 15,099 | 6,232 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -559,7 +570,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 34,952 | 13,498 |
+| default language slice | 35,927 | 13,762 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

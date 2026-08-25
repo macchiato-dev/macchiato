@@ -2,6 +2,7 @@ const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
   ["constructors", "constructors"],
+  ["construction", "construction"],
   ["exceptions", "exceptions"],
   ["logical operations", "logical-operations"],
   ["bounded integer operations", "integer-operations"],
@@ -25,7 +26,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -65,6 +66,8 @@ for (const [name, features] of builds) {
     ? "return function named() { return named; };"
     : features.includes("environments")
     ? "let value = 1; function read() { return value; } return read();"
+    : features.includes("construction")
+    ? "let C = function () { return this; }; return new C();"
     : features.includes("function-arguments")
     ? "function identity(value) { return value; } return identity(1);"
     : features.includes("functions")

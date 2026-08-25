@@ -62,6 +62,10 @@ an explicit relational stopping condition.
   boundary. Its constructor path creates the `.prototype` / `.constructor`
   cycle in fixed arena records; closure-only and object-only machines retain
   their specialized paths and layouts.
+- `microesnext-construction` creates an ordinary receiver from a constructor's
+  current prototype and applies the object-return rule. The VM composes it with
+  receiver frames using two gated opcodes, without adding persistent machine
+  state or changing the invariant call frame.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
 - `microesnext-receivers` adds hidden `this` values to selected call frames.

@@ -1954,7 +1954,7 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(feature = "receivers")]
+    #[cfg(all(feature = "functions", feature = "receivers"))]
     fn receiver_term(&mut self) -> bool {
         if !self.receiver_frame || !self.try_word(b"this") {
             return false;
@@ -1963,7 +1963,7 @@ impl Parser<'_> {
         true
     }
 
-    #[cfg(not(feature = "receivers"))]
+    #[cfg(all(feature = "functions", not(feature = "receivers")))]
     fn receiver_term(&mut self) -> bool {
         false
     }

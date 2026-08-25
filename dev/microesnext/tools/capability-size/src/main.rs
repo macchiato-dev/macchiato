@@ -24,6 +24,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "async",
         feature = "async-functions",
         feature = "control-flow",
+        feature = "construction",
         feature = "constructors",
         feature = "exceptions",
         feature = "environments",
@@ -156,6 +157,39 @@ pub extern "C" fn constructors_probe() -> i32 {
         microesnext::objects::get(machine.arena(), prototype, constructor_key),
         Ok(value) if value == function
     ) as i32
+}
+
+#[cfg(all(feature = "construction", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn construction_probe() -> i32 {
+    let code = [
+        Opcode::Closure as u8,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ToConstructor as u8,
+        Opcode::ConstructValueArguments as u8,
+        0,
+        0,
+        Opcode::SelectConstructedResult as u8,
+        Opcode::Return as u8,
+        Opcode::InitReceiverFrame as u8,
+        0,
+        0,
+        0,
+        0,
+        Opcode::LoadThis as u8,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 256];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    matches!(machine.run(), Ok(Outcome::Complete(value)) if microesnext::objects::is_object(machine.arena(), value))
+        as i32
 }
 
 #[cfg(all(feature = "instanceof", target_arch = "wasm32"))]

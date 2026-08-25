@@ -335,7 +335,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
-                #[cfg(feature = "callable-objects")]
+                #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
                     microesnext_callable_objects::is_callable_object(self.core.arena(), function);
                 #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
@@ -381,7 +381,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let argument_count = self.core.next_u16()? as usize;
                 let function =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
-                #[cfg(feature = "callable-objects")]
+                #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
                     microesnext_callable_objects::is_callable_object(self.core.arena(), function);
                 #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]

@@ -108,9 +108,14 @@ runtime accepts callable objects with an ordinary object-valued `prototype`
 property. With the independent `constructors` gate, synchronous `function`
 declarations and expressions are wrapped in ordinary callable objects with a
 cyclic `.prototype.constructor`; arrows and async functions remain compact,
-non-constructible closure records. Constructing instances remains a separate
-compiler/runtime layer. `Symbol.hasInstance`, bound functions, and host
-constructors are not implied by this initial ordinary path. A named function's
+non-constructible closure records. The separately removable `construction`
+gate compiles direct `new Constructor(arguments)` expressions, creates a
+receiver whose prototype is the constructor's current object-valued
+`prototype`, exposes it as `this`, and implements the ordinary primitive- versus
+object-return rule. The preserved receiver stays below the ordinary call frame,
+so construction adds no persistent VM field. Parenthesized/member constructor
+forms, `new` without parentheses, `Symbol.hasInstance`, bound functions, and
+host constructors are not implied by this initial path. A named function's
 private recursive binding still refers to its compact closure rather than its
 constructor wrapper, so identity observed through that binding is not yet full
 ECMAScript constructor identity.
