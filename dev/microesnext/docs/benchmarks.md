@@ -184,17 +184,23 @@ remains exactly 14,473 / 5,775.
 Constructible function records are separately gated. Adding their opcode,
 interned `prototype` and `constructor` keys, fixed cyclic allocation, and live
 probe to callable objects produces 20,106 raw / 7,695 gzip bytes—2,294 raw /
-588 gzip incremental. The compiler's constructor form is 13,267 / 5,628,
-only 80 raw / 49 gzip beyond basic functions. Source-to-VM tests verify the
+588 gzip incremental. The compiler's constructor form is 13,264 / 5,620.
+Source-to-VM tests verify the
 prototype cycle and that arrows do not acquire the constructor opcode.
 
 Ordinary instance construction is another composition rather than constructor
 baseline code. Its live Wasm probe, receiver-aware call path, receiver creation,
 and return selection total 27,444 raw / 9,825 gzip bytes. The corresponding
-compiler slice is 15,099 / 6,232 and accepts direct calls with arguments. The
+compiler slice is 15,515 / 6,416 and accepts direct calls with arguments. The
 source-to-VM tests exercise `this`, primitive fallback, explicit object returns,
 and the resulting prototype chain. Builds omitting `construction` do not decode
 its two opcodes or link `microesnext-construction`.
+
+The constructor-only `classes` composition uses a distinct class record while
+reusing receiver frames and ordinary construction. Its live runtime is 30,301
+raw / 10,377 gzip bytes and its compiler is 19,560 / 7,706. The object-only
+probe remains exactly 14,473 / 5,775 and ordinary construction remains exactly
+27,444 / 9,825 when class support is omitted.
 
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
@@ -281,6 +287,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Constructible function objects | 20,106 | 7,695 |
 | Constructor receivers | 26,845 | 9,886 |
 | Ordinary construction | 27,444 | 9,825 |
+| Constructor-only classes | 30,301 | 10,377 |
 | Recursive constructors | 23,517 | 8,554 |
 | Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
@@ -293,7 +300,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 102,955 | 33,266 |
+| All capabilities | 104,612 | 33,494 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -563,8 +570,9 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | --- | ---: | ---: |
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
-| constructors | 13,267 | 5,628 |
-| construction | 15,099 | 6,232 |
+| constructors | 13,264 | 5,620 |
+| construction | 15,515 | 6,416 |
+| classes | 19,560 | 7,706 |
 | exceptions | 7,004 | 2,947 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -588,7 +596,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,134 | 7,571 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 37,035 | 14,111 |
+| default language slice | 38,550 | 14,438 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

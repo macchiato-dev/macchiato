@@ -68,6 +68,10 @@ an explicit relational stopping condition.
   current prototype and applies the object-return rule. The VM composes it with
   receiver frames using two gated opcodes, without adding persistent machine
   state or changing the invariant call frame.
+- `microesnext-class-constructors` gives classes a distinct object record. A
+  class can use the same removable construction path, but ordinary call
+  unwrapping does not accept it. The initial `classes` compiler slice supports
+  constructor-only declarations; methods and inheritance remain separate.
 - `microesnext-recursive-constructors` allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not link this cross-composition.

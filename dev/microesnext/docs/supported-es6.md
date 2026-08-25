@@ -131,6 +131,14 @@ private self cell is rebound to the wrapper by the independent
 same function identity. Function declarations already reuse their ordinary
 captured declaration cell and do not need that opcode.
 
+The `classes` slice initially accepts a named declaration containing exactly
+one `constructor`. It emits a distinct class-constructor record rather than
+lowering the declaration to an ordinary function, so calling it without `new`
+is a type error. Constructor parameters, `this` property initialization,
+explicit returns, and the implicit `this` result compose with existing receiver
+and construction rules. Methods, `extends`, fields, class expressions, and
+static initialization are not included by this focused gate.
+
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
 it to a boolean. Unary `!` uses the same selected truthiness policy and returns

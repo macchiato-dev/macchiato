@@ -31,6 +31,15 @@ the cell with that closure. Unnamed expressions, arrows, and declarations do
 not pay for this constructor, and builds omitting `recursive-functions` reject
 its opcode.
 
+## Class constructors
+
+`to_class_constructor` wraps a compact closure in a distinct property-bearing
+record and creates its `.prototype.constructor` cycle. The ordinary call path
+does not unwrap this record; the independently gated construction path does.
+Constructor-only class declarations otherwise reuse receiver frames, argument
+calls, property stores, and return selection rather than adding a parallel
+execution model.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and
