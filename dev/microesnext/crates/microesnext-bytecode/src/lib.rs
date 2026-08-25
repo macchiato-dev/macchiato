@@ -132,6 +132,8 @@ pub enum Opcode {
     RemainderNumber = 100,
     #[cfg(feature = "typeof")]
     TypeOf = 101,
+    #[cfg(feature = "instanceof")]
+    InstanceOf = 102,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -255,6 +257,8 @@ impl TryFrom<u8> for Opcode {
             100 => Ok(Self::RemainderNumber),
             #[cfg(feature = "typeof")]
             101 => Ok(Self::TypeOf),
+            #[cfg(feature = "instanceof")]
+            102 => Ok(Self::InstanceOf),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -459,6 +463,18 @@ mod tests {
     #[test]
     fn omitted_typeof_opcode_is_invalid() {
         assert!(Opcode::try_from(101).is_err());
+    }
+
+    #[cfg(feature = "instanceof")]
+    #[test]
+    fn enabled_instanceof_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(102), Ok(Opcode::InstanceOf));
+    }
+
+    #[cfg(not(feature = "instanceof"))]
+    #[test]
+    fn omitted_instanceof_opcode_is_invalid() {
+        assert!(Opcode::try_from(102).is_err());
     }
 
     #[cfg(feature = "locals")]

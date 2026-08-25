@@ -36,6 +36,7 @@ objects = ["atoms"]
 strings = []
 string-operations = ["strings"]
 typeof = ["strings"]
+instanceof = []
 
 [dependencies]
 microesnext-bytecode-core.workspace = true
