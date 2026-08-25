@@ -9,6 +9,7 @@ version.workspace = true
 
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-decimal-to-f64.workspace = true
 microesnext-number-coercion.workspace = true
 microesnext-numbers.workspace = true
 microesnext-types.workspace = true

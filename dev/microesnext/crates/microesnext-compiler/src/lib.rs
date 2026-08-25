@@ -1179,6 +1179,12 @@ impl Parser<'_> {
         loop {
             if self.consume(b'+') {
                 let (_, right) = self.product(None)?;
+                #[cfg(feature = "string-operations")]
+                if kind == TermKind::String && right == TermKind::String {
+                    self.output.push(Opcode::ConcatenateStrings as u8);
+                    kind = TermKind::String;
+                    continue;
+                }
                 let result = match (kind, right) {
                     (TermKind::I30(left), TermKind::I30(right)) => left
                         .checked_add(right)
@@ -2006,7 +2012,8 @@ impl Parser<'_> {
         }
         #[cfg(feature = "numbers")]
         {
-            let value = source.parse::<f64>().map_err(|_| self.error("a number"))?;
+            let value = microesnext_decimal_to_f64::parse(source.as_bytes())
+                .ok_or_else(|| self.error("a number"))?;
             self.output.push(Opcode::ConstF64 as u8);
             self.output
                 .extend_from_slice(&value.to_bits().to_le_bytes());

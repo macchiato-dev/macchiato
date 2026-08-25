@@ -60,7 +60,7 @@ pub fn parse(bytes: &[u8]) -> f64 {
     if !decimal_grammar(source.as_bytes()) {
         return f64::NAN;
     }
-    source.parse::<f64>().unwrap_or(f64::NAN)
+    microesnext_decimal_to_f64::parse(source.as_bytes()).unwrap_or(f64::NAN)
 }
 
 fn is_javascript_whitespace(character: char) -> bool {
