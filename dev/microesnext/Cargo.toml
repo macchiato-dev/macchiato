@@ -11,6 +11,7 @@ members = [
   "crates/microesnext-promises",
   "crates/microesnext-types",
   "crates/microesnext-vm",
+  "crates/microesnext-vm-core",
   "crates/microesnext-weak-collections",
 ]
 resolver = "2"
@@ -33,6 +34,7 @@ microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
+microesnext-vm-core = { path = "crates/microesnext-vm-core", version = "0.0.0" }
 microesnext-weak-collections = { path = "crates/microesnext-weak-collections", version = "0.0.0" }
 
 [profile.release]

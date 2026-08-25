@@ -98,6 +98,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-vm-core"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-bytecode",
+ "microesnext-compiler",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-weak-collections"
 version = "0.0.0"
 dependencies = [
