@@ -13,6 +13,10 @@ fn main() {
         call_loop();
         return;
     }
+    if arguments.iter().any(|argument| argument == "--captures") {
+        capture_loop();
+        return;
+    }
     let machine = arguments.iter().any(|argument| argument == "--machine");
     let code = program();
     let started = Instant::now();
@@ -101,6 +105,77 @@ fn call_program() -> Vec<u8> {
     code.push(Opcode::LoadLocal as u8);
     code.extend_from_slice(&0_u16.to_le_bytes());
     code.push(Opcode::ReturnLocals as u8);
+    code
+}
+
+#[cfg(all(feature = "environments", feature = "functions", feature = "locals"))]
+fn capture_loop() {
+    let code = capture_program();
+    let started = Instant::now();
+    for _ in 0..RUNS {
+        let mut memory = [0; 96];
+        let mut machine = Machine::new(black_box(&code), black_box(&mut memory));
+        let Outcome::Complete(value) = black_box(machine.run().unwrap()) else {
+            unreachable!()
+        };
+        assert_eq!(value.as_i30(), Some(ADDITIONS as i32));
+    }
+    let elapsed = started.elapsed();
+    let calls = RUNS * ADDITIONS;
+    println!(
+        "machine {calls} shared-capture guest calls in {elapsed:?}: {:.2} ns/call",
+        elapsed.as_nanos() as f64 / calls as f64,
+    );
+}
+
+#[cfg(not(all(feature = "environments", feature = "functions", feature = "locals")))]
+fn capture_loop() {
+    panic!("--captures requires --features environments,functions,locals");
+}
+
+#[cfg(all(feature = "environments", feature = "functions", feature = "locals"))]
+fn capture_program() -> Vec<u8> {
+    let mut code = Vec::with_capacity(32 + ADDITIONS * 7);
+    code.push(Opcode::InitLocals as u8);
+    code.extend_from_slice(&3_u16.to_le_bytes());
+    code.push(Opcode::ConstI30 as u8);
+    code.extend_from_slice(&0_i32.to_le_bytes());
+    code.push(Opcode::NewEnvironmentCell as u8);
+    code.push(Opcode::StoreLocal as u8);
+    code.extend_from_slice(&0_u16.to_le_bytes());
+    code.push(Opcode::LoadLocal as u8);
+    code.extend_from_slice(&0_u16.to_le_bytes());
+    code.push(Opcode::Closure as u8);
+    let target_patch = code.len();
+    code.extend_from_slice(&0_u32.to_le_bytes());
+    code.extend_from_slice(&1_u16.to_le_bytes());
+    code.push(Opcode::StoreLocal as u8);
+    code.extend_from_slice(&1_u16.to_le_bytes());
+    for _ in 0..ADDITIONS {
+        code.push(Opcode::LoadLocal as u8);
+        code.extend_from_slice(&1_u16.to_le_bytes());
+        code.push(Opcode::CallValue as u8);
+        code.push(Opcode::StoreLocal as u8);
+        code.extend_from_slice(&2_u16.to_le_bytes());
+    }
+    code.push(Opcode::LoadLocal as u8);
+    code.extend_from_slice(&2_u16.to_le_bytes());
+    code.push(Opcode::ReturnLocals as u8);
+    let target = u32::try_from(code.len()).unwrap();
+    code[target_patch..target_patch + 4].copy_from_slice(&target.to_le_bytes());
+    code.push(Opcode::LoadCapture as u8);
+    code.extend_from_slice(&0_u16.to_le_bytes());
+    code.push(Opcode::LoadCapture as u8);
+    code.extend_from_slice(&0_u16.to_le_bytes());
+    code.push(Opcode::LoadEnvironmentCell as u8);
+    code.push(Opcode::ConstI30 as u8);
+    code.extend_from_slice(&1_i32.to_le_bytes());
+    code.push(Opcode::AddI30 as u8);
+    code.push(Opcode::StoreEnvironmentCell as u8);
+    code.push(Opcode::LoadCapture as u8);
+    code.extend_from_slice(&0_u16.to_le_bytes());
+    code.push(Opcode::LoadEnvironmentCell as u8);
+    code.push(Opcode::Return as u8);
     code
 }
 

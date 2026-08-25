@@ -72,6 +72,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Collections with number/string equality | 15,138 | 5,840 |
 | Exceptions | 3,846 | 1,761 |
 | Shared environment cells | 6,285 | 2,728 |
+| Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Iterator cursor | 3,599 | 1,630 |
@@ -85,7 +86,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 45,806 | 15,430 |
+| All capabilities | 46,099 | 15,569 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -109,6 +110,17 @@ through live VM opcodes. Its arena block kind and decoder arms are feature
 gated. Adding it leaves the 1,984-byte minimal, 6,962-byte functions-only, and
 4,012-byte locals-only artifacts unchanged; only captured mutable bindings
 will need this storage.
+The 11,173-byte composed row mutates a cell through a captured reference and
+returns the new value through an indirect guest call. Ten million repeated
+calls that increment and read one shared capture took 1.234 seconds, or
+123.38 ns/call. This includes closure dispatch, three capture loads, two cell
+reads, and one cell write per call.
+
+Two alternating invariant-loop samples measured 3.20–3.23 ns/instruction for
+minimal `Core` and 3.22–3.26 with environments, functions, and locals enabled.
+`Machine` measured 3.20–3.67 and 3.21–3.26 respectively; 3.67 was an isolated
+minimal-process outlier. The overlapping ranges detect no unrelated hot-loop
+penalty, and the raw `Core` remains structurally feature independent.
 Array and object probes also execute create, set, and get instructions through
 `Machine`. Low-level storage-only probes remain appropriate for collections,
 promises, and weak collections because those capabilities do not yet expose VM

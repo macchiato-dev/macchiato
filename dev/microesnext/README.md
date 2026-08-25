@@ -112,6 +112,8 @@ cargo run --release -p microesnext-core-loop --no-default-features \
   --features async,objects,functions,numbers -- --machine
 cargo run --release -p microesnext-core-loop --no-default-features \
   --features function-arguments -- --calls
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features environments,functions,locals -- --captures
 ```
 
 It is a regression signal rather than a claim that noisy wall-clock timings can

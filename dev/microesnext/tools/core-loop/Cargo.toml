@@ -23,6 +23,7 @@ collection-entry-iterators = [
   "microesnext/collection-entry-iterators",
 ]
 exceptions = ["microesnext/exceptions"]
+environments = ["microesnext/environments"]
 functions = ["microesnext/functions"]
 function-arguments = ["microesnext/function-arguments"]
 iterators = ["microesnext/iterators"]

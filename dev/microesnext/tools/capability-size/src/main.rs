@@ -371,6 +371,63 @@ pub extern "C" fn environments_probe() -> i32 {
     }
 }
 
+#[cfg(all(
+    feature = "environments",
+    feature = "functions",
+    feature = "locals",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn closure_environments_probe() -> i32 {
+    const BODY: u32 = 24;
+    let code = [
+        Opcode::InitLocals as u8,
+        1,
+        0,
+        Opcode::ConstI30 as u8,
+        40,
+        0,
+        0,
+        0,
+        Opcode::NewEnvironmentCell as u8,
+        Opcode::StoreLocal as u8,
+        0,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::Closure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        1,
+        0,
+        Opcode::CallValue as u8,
+        Opcode::ReturnLocals as u8,
+        Opcode::LoadCapture as u8,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::StoreEnvironmentCell as u8,
+        Opcode::LoadCapture as u8,
+        0,
+        0,
+        Opcode::LoadEnvironmentCell as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 64];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
 #[cfg(all(feature = "function-arguments", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn function_arguments_probe() -> i32 {
