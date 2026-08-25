@@ -17,6 +17,7 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-iterable-protocol",
  "microesnext-iterator-results",
  "microesnext-iterators",
  "microesnext-numbers",
@@ -160,6 +161,17 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-iterable-protocol"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-functions",
+ "microesnext-objects",
+ "microesnext-types",
+ "microesnext-well-known-symbols",
 ]
 
 [[package]]

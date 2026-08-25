@@ -56,8 +56,10 @@ retain their source without a native allocation. Array-value iteration and
 Map/Set key/value iteration are independent adapters. A separate result-object
 capability creates relocatable `{ value, done }` objects using cached atom
 identities. Cursor-only builds omit its object, atom, and string dependencies.
-Entry-pair allocation and guest calls through the well-known `Symbol.iterator`
-binding will be composed above this layer.
+Entry-pair allocation and guest calls remain above this layer. Binding and
+inherited lookup of the realm-local `Symbol.iterator` are available separately
+from function validation and invocation; this keeps the protocol identity
+useful without forcing closures into every iterable build.
 
 `WeakMap` and `WeakSet` provide constructors from arrays and their usual
 `get`, `set`, `add`, `has`, and `delete` operations. Keys must be objects. The

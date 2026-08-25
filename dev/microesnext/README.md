@@ -49,6 +49,9 @@ not link to that C implementation.
 - `microesnext-iterator-results` allocates ordinary `{ value, done }` objects
   with cached property identities. It is separate so cursor and adapter builds
   do not acquire object, atom, or string storage.
+- `microesnext-iterable-protocol` defines and resolves realm-local
+  `[Symbol.iterator]` bindings through object prototypes. Function validation
+  and invocation remain independently composable.
 - `microesnext-equality` composes SameValueZero for enabled scalar types.
   Collections use raw compact identity in their standalone build; number and
   string comparison enters only when those capabilities are selected too.

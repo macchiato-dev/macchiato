@@ -348,6 +348,27 @@ pub extern "C" fn iterator_results_probe() -> i32 {
         .unwrap_or(-1)
 }
 
+#[cfg(all(feature = "iterable-protocol", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn iterable_protocol_probe() -> u32 {
+    let mut memory = [0; 96];
+    let mut arena = microesnext_arena::Arena::with_root_capacity(&mut memory, 1);
+    let symbols = microesnext::well_known_symbols::WellKnownSymbols::new(&mut arena).unwrap();
+    let prototype = microesnext::objects::new_object(&mut arena, microesnext::Value::NULL).unwrap();
+    let prototype = microesnext::iterable_protocol::define(
+        &mut arena,
+        prototype,
+        &symbols,
+        microesnext::Value::TRUE,
+    )
+    .unwrap();
+    let iterable = microesnext::objects::new_object(&mut arena, prototype).unwrap();
+    u32::from(
+        microesnext::iterable_protocol::get(&arena, iterable, &symbols).unwrap()
+            == Some(microesnext::Value::TRUE),
+    )
+}
+
 #[cfg(all(feature = "atoms", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn atoms_probe() -> u32 {

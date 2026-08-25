@@ -36,6 +36,11 @@ iterator-results = [
   "dep:microesnext-iterator-results",
   "dep:microesnext-objects",
 ]
+iterable-protocol = [
+  "dep:microesnext-iterable-protocol",
+  "dep:microesnext-objects",
+  "well-known-symbols",
+]
 weak-collections = ["dep:microesnext-weak-collections"]
 promises = ["dep:microesnext-promises"]
 promise-jobs = ["async", "functions", "promises", "microesnext-async/promises"]
@@ -52,6 +57,7 @@ microesnext-promises = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }
+microesnext-iterable-protocol = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }

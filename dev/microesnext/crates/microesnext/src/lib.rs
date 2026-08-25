@@ -29,6 +29,9 @@ pub use microesnext_iterators as iterators;
 #[cfg(feature = "iterator-results")]
 pub use microesnext_iterator_results as iterator_results;
 
+#[cfg(feature = "iterable-protocol")]
+pub use microesnext_iterable_protocol as iterable_protocol;
+
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;
 #[cfg(feature = "numbers")]
@@ -37,7 +40,11 @@ pub use microesnext_numbers as numbers;
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;
 
-#[cfg(any(feature = "objects", feature = "iterator-results"))]
+#[cfg(any(
+    feature = "objects",
+    feature = "iterator-results",
+    feature = "iterable-protocol"
+))]
 pub use microesnext_objects as objects;
 
 #[cfg(feature = "strings")]

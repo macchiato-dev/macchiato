@@ -71,6 +71,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Functions | 7,010 | 2,973 |
 | Iterator cursor | 3,647 | 1,577 |
 | Iterator result objects | 13,555 | 5,212 |
+| Iterable protocol binding | 10,323 | 4,138 |
 | Numbers | 6,029 | 2,565 |
 | Objects with atoms and strings | 14,711 | 5,798 |
 | Strings only | 5,008 | 2,243 |
@@ -78,7 +79,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,573 | 2,392 |
 | Promises | 4,888 | 2,183 |
 | Weak collections | 2,099 | 951 |
-| All capabilities | 37,398 | 13,034 |
+| All capabilities | 37,988 | 13,210 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -129,6 +130,12 @@ object probe. The result-object probe rises by 201 bytes because it uses the
 same ordinary-object path. All non-object rows remain byte-for-byte unchanged;
 this is the semantic cost required for inherited methods such as
 `[Symbol.iterator]`, not a cost paid by the invariant VM.
+
+The 10,323-byte iterable-protocol probe defines a realm-local
+`[Symbol.iterator]` method on a prototype and resolves it from a descendant.
+Its production graph includes objects, symbols, and realm identity, but no
+functions, atoms, or strings. Callable validation can therefore compose at the
+guest-call boundary without burdening data-only protocol users.
 
 The 15,186-byte composed equality probe performs lookups with independently
 boxed NaNs and independently allocated equal strings. Collection-only remains

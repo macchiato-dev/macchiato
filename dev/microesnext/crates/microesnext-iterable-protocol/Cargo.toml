@@ -1,0 +1,20 @@
+[package]
+name = "microesnext-iterable-protocol"
+description = "Removable Symbol.iterator property binding for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-objects.workspace = true
+microesnext-types.workspace = true
+microesnext-well-known-symbols.workspace = true
+
+[dev-dependencies]
+microesnext-functions.workspace = true
+
+[lib]
+path = "src/lib.rs"
