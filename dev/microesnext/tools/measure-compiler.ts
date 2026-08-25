@@ -4,13 +4,14 @@ const builds = [
   ["exceptions", "exceptions"],
   ["locals", "locals"],
   ["basic functions", "functions"],
+  ["function arguments", "function-arguments"],
   ["captured environments", "environments"],
   ["recursive named functions", "recursive-functions"],
   ["async functions", "async-functions"],
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,environments,exceptions,functions,logical-operations,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions",
+    "arrays,async-functions,control-flow,equality,environments,exceptions,function-arguments,functions,logical-operations,number-operations,objects,receivers,recursive-async-functions,recursive-functions,source-positions",
   ],
 ] as const;
 
@@ -43,13 +44,15 @@ for (const [name, features] of builds) {
   );
   const { instance } = await WebAssembly.instantiate(bytes);
   const source = features.includes("recursive-async-functions")
-    ? "return async function named(value) { return await named(value); };"
+    ? "return async function named() { return await named(); };"
     : features.includes("async-functions")
-    ? "return async function (value) { return await value; };"
+    ? "return async function () { return await 1; };"
     : features.includes("recursive-functions")
     ? "return function named() { return named; };"
     : features.includes("environments")
     ? "let value = 1; function read() { return value; } return read();"
+    : features.includes("function-arguments")
+    ? "function identity(value) { return value; } return identity(1);"
     : features.includes("functions")
     ? "function value() { return 1; } return value();"
     : features.includes("exceptions")

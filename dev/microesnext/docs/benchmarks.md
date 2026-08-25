@@ -387,16 +387,19 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | control flow | 7,506 | 2,941 |
 | exceptions | 7,004 | 2,947 |
 | locals | 8,346 | 3,519 |
-| basic functions | 14,151 | 5,962 |
-| captured environments | 18,879 | 7,825 |
-| recursive named functions | 18,994 | 7,885 |
-| async functions | 15,206 | 6,312 |
-| recursive async functions | 19,958 | 8,232 |
-| default language slice | 46,558 | 25,654 |
+| basic functions | 13,187 | 5,574 |
+| function arguments | 14,151 | 5,963 |
+| captured environments | 17,884 | 7,441 |
+| recursive named functions | 17,998 | 7,494 |
+| async functions | 14,227 | 5,947 |
+| recursive async functions | 18,970 | 7,865 |
+| default language slice | 46,606 | 25,715 |
 
 The minimal row links neither lexical binding nor function/capture parsing.
-The locals row adds stable slots without closures. Basic functions compose
-locals and argument frames, but neither captured environments nor either
+The locals row adds stable slots without closures. Basic functions use
+zero-argument `CallValue` and ordinary local frames; parameter parsing,
+evaluated argument lists, `CallValueArguments`, and `InitFrame` are a separate
+compiler capability. Neither build acquires captured environments or a
 recursive constructor. Captures add environment-cell analysis; named function
 expressions add only their matching synchronous or asynchronous recursive
 constructor. The default row additionally retains all currently supported
