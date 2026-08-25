@@ -10,6 +10,14 @@ pub fn multiply(left: Value, right: Value) -> Result<Value, Error> {
     binary_i30(left, right, i32::checked_mul)
 }
 
+pub fn less_than(left: Value, right: Value) -> Result<Value, Error> {
+    compare_i30(left, right, i32::lt)
+}
+
+pub fn greater_than(left: Value, right: Value) -> Result<Value, Error> {
+    compare_i30(left, right, i32::gt)
+}
+
 fn binary_i30(
     left: Value,
     right: Value,
@@ -22,6 +30,20 @@ fn binary_i30(
         .ok_or(Error::Type)
 }
 
+fn compare_i30(
+    left: Value,
+    right: Value,
+    comparison: fn(&i32, &i32) -> bool,
+) -> Result<Value, Error> {
+    let left = left.as_i30().ok_or(Error::Type)?;
+    let right = right.as_i30().ok_or(Error::Type)?;
+    Ok(if comparison(&left, &right) {
+        Value::TRUE
+    } else {
+        Value::FALSE
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -32,6 +54,8 @@ mod tests {
         let seven = Value::from_i30(7).unwrap();
         assert_eq!(multiply(six, seven).unwrap().as_i30(), Some(42));
         assert_eq!(subtract(seven, six).unwrap().as_i30(), Some(1));
+        assert_eq!(less_than(six, seven), Ok(Value::TRUE));
+        assert_eq!(greater_than(six, seven), Ok(Value::FALSE));
     }
 
     #[test]
