@@ -24,9 +24,10 @@ closures return their outer Promise before an awaited body finishes, and
 nested async calls restore each ordinary caller in order—even when the nested
 call begins after its caller has resumed. `await` on a value or engine Promise
 resumes through the Promise job queue; synchronous throws reject the outer
-Promise. Promise assimilation, thenables, async expressions, async arrows,
-async methods, and async generators remain compiler/runtime work rather than
-implied support.
+Promise. Rejections after suspension propagate through nested awaits and enter
+restored guest `catch` handlers. Promise assimilation, thenables, async
+expressions, async arrows, async methods, and async generators remain
+compiler/runtime work rather than implied support.
 
 The current Rust compiler slice also emits function declarations, anonymous
 function expressions, single- or parenthesized-parameter arrows, postfix calls,
