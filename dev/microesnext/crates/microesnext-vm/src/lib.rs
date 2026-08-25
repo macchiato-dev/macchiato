@@ -429,6 +429,24 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "number-division")]
+            Opcode::DivideNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value =
+                    microesnext_number_division::divide(self.core.arena_mut(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "number-division")]
+            Opcode::RemainderNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value =
+                    microesnext_number_division::remainder(self.core.arena_mut(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "locals")]
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
@@ -1243,6 +1261,25 @@ mod tests {
             panic!("expected number completion")
         };
         assert_eq!(microesnext_numbers::get(machine.arena(), value), Ok(3.25));
+    }
+
+    #[cfg(feature = "number-division")]
+    #[test]
+    fn executes_optional_division_without_the_arithmetic_feature() {
+        let code = Builder::new()
+            .const_i30(7)
+            .const_i30(2)
+            .op(Opcode::DivideNumber)
+            .const_i30(1)
+            .op(Opcode::RemainderNumber)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected number completion")
+        };
+        assert_eq!(microesnext_numbers::get(machine.arena(), value), Ok(0.5));
     }
 
     #[cfg(feature = "functions")]
