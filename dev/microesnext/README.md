@@ -205,7 +205,8 @@ instruction-loop check without compiler dev-feature unification:
 ```sh
 cargo run --release -p microesnext-core-loop --no-default-features
 cargo run --release -p microesnext-core-loop --no-default-features \
-  --features async,objects,functions,numbers -- --machine
+  --features arrays,control-flow,functions,number-division,number-remainder,objects \
+  -- --machine
 cargo run --release -p microesnext-core-loop --no-default-features \
   --features function-arguments -- --calls
 cargo run --release -p microesnext-core-loop --no-default-features \

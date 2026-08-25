@@ -138,6 +138,13 @@ literal parser. Feature-graph checks prove that either compiler gate includes
 The existing number-operations runtime remains exactly 9,382 bytes and the
 minimal runtime remains exactly 1,984 bytes.
 
+Four alternating native runs after the split measured the invariant `Core` at
+3.05–3.37 ns/instruction in the minimal build and 3.04–3.07 with division,
+remainder, arrays, control flow, functions, and objects enabled. The typed
+`Machine` path measured 3.05–3.22 minimal and 3.04–3.23 composed. The overlap
+does not prove identical timing, but it detects no regression; more
+importantly, the omitted build has neither crate nor typed match arm.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
