@@ -197,6 +197,11 @@ path = "tests/source_strings.rs"
 required-features = ["strings"]
 
 [[test]]
+name = "source_logical"
+path = "tests/source_logical.rs"
+required-features = ["logical-operations", "strings"]
+
+[[test]]
 name = "immediates"
 path = "tests/immediates.rs"
 

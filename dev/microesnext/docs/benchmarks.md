@@ -61,16 +61,16 @@ sharing the scalar decoding and string-content comparison machinery.
 
 ## Short-circuit logical operations, 2026-08-25
 
-The immediate-only `&&`/`||` composition is 3,220 bytes (1,552 gzip). Its live
-probe short-circuits over a throwing right operand and verifies that the left
-operand, not a coerced boolean, is returned. Optional scalar truthiness remains
+The immediate-only `&&`/`||`/`!` composition is 3,428 bytes (1,647 gzip). Its
+live probe short-circuits over a throwing right operand, verifies that the left
+operand is preserved, and then negates it. Optional scalar truthiness remains
 independent:
 
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| Logical operations | 3,220 | 1,552 |
-| Logical operations with numbers only | 7,284 | 3,190 |
-| Logical operations with strings only | 6,982 | 3,033 |
+| Logical operations | 3,428 | 1,647 |
+| Logical operations with numbers only | 7,502 | 3,268 |
+| Logical operations with strings only | 7,208 | 3,121 |
 
 The number-only dependency graph contains no string crate, and the string-only
 build contains no number crate. Macro-generated crate tests exercise each side
@@ -386,16 +386,17 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
 | exceptions | 7,004 | 2,947 |
+| logical operations | 7,293 | 3,256 |
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |
 | locals | 8,346 | 3,519 |
-| basic functions | 13,187 | 5,574 |
+| basic functions | 13,187 | 5,579 |
 | function arguments | 14,151 | 5,963 |
-| captured environments | 17,884 | 7,441 |
-| recursive named functions | 17,998 | 7,494 |
-| async functions | 14,227 | 5,947 |
-| recursive async functions | 18,970 | 7,865 |
-| default language slice | 47,691 | 26,202 |
+| captured environments | 17,881 | 7,442 |
+| recursive named functions | 17,995 | 7,500 |
+| async functions | 14,227 | 5,948 |
+| recursive async functions | 18,969 | 7,854 |
+| default language slice | 47,716 | 26,293 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

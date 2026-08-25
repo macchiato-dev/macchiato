@@ -40,6 +40,9 @@ an explicit relational stopping condition.
   template strings enter only with the string bytecode capability.
 - `microesnext-strings` supplies ordinary packed byte strings without retained
   global state.
+- `microesnext-string-operations` adds strict concatenation without a temporary
+  Rust allocation. It remains separate from storage and from future general
+  JavaScript coercion.
 - `microesnext-atoms` adds rooted interning for property names and other keys;
   ordinary string literals neither link nor populate it.
 - `microesnext-objects` supplies prototype and property-table storage. Its VM
@@ -74,9 +77,10 @@ an explicit relational stopping condition.
   features add their JavaScript value semantics without making equality depend
   on either representation unconditionally.
 - `microesnext-logical-operations` supplies operand-preserving `&&` and `||`
-  truthiness without enlarging the basic control-flow build. Number and string
-  truthiness compose independently, including builds that permit numbers but
-  have no guest operation capable of creating a string.
+  truthiness plus unary `!` without enlarging the basic control-flow build.
+  Repeated negation is parsed iteratively rather than recursively. Number and
+  string truthiness compose independently, including builds that permit
+  numbers but have no guest operation capable of creating a string.
 - `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
   storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
   strings correct without making control-flow-only builds depend on them.

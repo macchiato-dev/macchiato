@@ -62,7 +62,10 @@ a general dynamically typed scalar bundle.
 
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
-it to a boolean. Their branch instructions retain the left operand when it
+it to a boolean. Unary `!` uses the same selected truthiness policy and returns
+a tagged boolean. The compiler counts repeated negations before parsing their
+operand, avoiding native recursion for inputs such as `!!!!!!!!value`. Their
+branch instructions retain the left operand when it
 wins and pop it before evaluating the right operand otherwise. `&&` binds more
 tightly than `||`, while strict equality and relational arithmetic bind above
 both. Number-only and string-only truthiness are tested as separate Cargo

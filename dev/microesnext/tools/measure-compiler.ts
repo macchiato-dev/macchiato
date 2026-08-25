@@ -2,6 +2,7 @@ const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
   ["exceptions", "exceptions"],
+  ["logical operations", "logical-operations"],
   ["strings", "strings"],
   ["strict string concatenation", "string-operations"],
   ["locals", "locals"],
@@ -59,6 +60,8 @@ for (const [name, features] of builds) {
     ? "function value() { return 1; } return value();"
     : features.includes("exceptions")
     ? "try { throw 1; } catch (error) { return error; }"
+    : features.includes("logical-operations")
+    ? "return !false && true;"
     : features.includes("control-flow")
     ? "if (true) { return 1; } else { return 2; }"
     : features.includes("string-operations")

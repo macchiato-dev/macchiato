@@ -288,12 +288,13 @@ pub extern "C" fn logical_operations_probe() -> i32 {
         0,
         0,
         Opcode::Throw as u8,
+        Opcode::LogicalNot as u8,
         Opcode::Return as u8,
     ];
     let mut memory = [0; 32];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
-        Ok(Outcome::Complete(Value::FALSE)) => 1,
+        Ok(Outcome::Complete(Value::TRUE)) => 1,
         _ => 0,
     }
 }
