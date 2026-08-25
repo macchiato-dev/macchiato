@@ -31,6 +31,7 @@ pub enum Outcome {
         function: Value,
         argument_count: usize,
     },
+    PromiseResolverCall,
 }
 
 pub struct Machine<'code, 'memory> {
@@ -39,6 +40,8 @@ pub struct Machine<'code, 'memory> {
     handlers: Handlers,
     #[cfg(feature = "atoms")]
     atoms: Option<Atoms>,
+    #[cfg(feature = "promise-resolvers")]
+    resolver_call: Option<microesnext_promise_resolvers::Call>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -57,6 +60,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             handlers: Handlers::new(),
             #[cfg(feature = "atoms")]
             atoms: None,
+            #[cfg(feature = "promise-resolvers")]
+            resolver_call: None,
         }
     }
 
@@ -82,6 +87,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "exceptions")]
             handlers: Handlers::new(),
             atoms: Some(atoms),
+            #[cfg(feature = "promise-resolvers")]
+            resolver_call: None,
         })
     }
 
@@ -126,6 +133,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             handlers: self.handlers,
             #[cfg(feature = "atoms")]
             atoms: self.atoms,
+            #[cfg(feature = "promise-resolvers")]
+            resolver_call: self.resolver_call,
         })
     }
 
@@ -163,7 +172,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "numbers",
         feature = "exceptions",
         feature = "environments",
-        feature = "async-functions"
+        feature = "async-functions",
+        feature = "promise-resolvers"
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
@@ -273,6 +283,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
+                #[cfg(feature = "promise-resolvers")]
+                if microesnext_promise_resolvers::is_resolver(self.core.arena(), function) {
+                    if let Some(call) = microesnext_promise_resolvers::take_call(
+                        self.core.arena_mut(),
+                        function,
+                        0,
+                    )? {
+                        if self.resolver_call.replace(call).is_some() {
+                            return Err(Error::Type);
+                        }
+                        return Ok(Some(Outcome::PromiseResolverCall));
+                    }
+                    self.core.arena_mut().push(Value::UNDEFINED)?;
+                    return Ok(None);
+                }
                 #[cfg(feature = "async-functions")]
                 if microesnext_async_functions::is_async(self.core.arena(), function) {
                     return Ok(Some(Outcome::AsyncCall {
@@ -289,6 +314,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let argument_count = self.core.next_u16()? as usize;
                 let function =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                #[cfg(feature = "promise-resolvers")]
+                if microesnext_promise_resolvers::is_resolver(self.core.arena(), function) {
+                    if let Some(call) = microesnext_promise_resolvers::take_call(
+                        self.core.arena_mut(),
+                        function,
+                        argument_count,
+                    )? {
+                        if self.resolver_call.replace(call).is_some() {
+                            return Err(Error::Type);
+                        }
+                        return Ok(Some(Outcome::PromiseResolverCall));
+                    }
+                    self.core.arena_mut().push(Value::UNDEFINED)?;
+                    return Ok(None);
+                }
                 #[cfg(feature = "async-functions")]
                 if microesnext_async_functions::is_async(self.core.arena(), function) {
                     return Ok(Some(Outcome::AsyncCall {
@@ -532,6 +572,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "exceptions",
         feature = "environments",
         feature = "async-functions",
+        feature = "promise-resolvers",
         feature = "receivers"
     )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
@@ -579,6 +620,23 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             self.core.abandon();
             return Err(error);
         }
+        self.run()
+    }
+
+    /// Continue the suspended caller after a one-shot resolving function has
+    /// been handled by the Promise driver. JavaScript resolving functions
+    /// return `undefined` regardless of whether they won the shared cell.
+    #[cfg(feature = "promise-resolvers")]
+    pub fn take_resolver_call(&mut self) -> Result<microesnext_promise_resolvers::Call, Error> {
+        self.resolver_call.take().ok_or(Error::Type)
+    }
+
+    #[cfg(feature = "promise-resolvers")]
+    pub fn resume_resolver_call(&mut self) -> Result<Outcome, Error> {
+        if self.resolver_call.is_some() {
+            return Err(Error::Type);
+        }
+        self.core.arena_mut().push(Value::UNDEFINED)?;
         self.run()
     }
 
@@ -1029,6 +1087,41 @@ mod tests {
         assert_eq!(
             machine.call_closure(function, argument),
             Ok(Outcome::Complete(argument))
+        );
+    }
+
+    #[cfg(feature = "promise-resolvers")]
+    #[test]
+    fn guest_resolver_call_yields_once_and_resumes_with_undefined() {
+        let code = Builder::new()
+            .init_frame(1, 1)
+            .load_local(0)
+            .const_i30(42)
+            .call_value_arguments(1)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 128];
+        let mut machine = Machine::new(&code, &mut memory);
+        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let destination = microesnext_promises::pending(machine.arena_mut()).unwrap();
+        let pair = microesnext_promise_resolvers::new(machine.arena_mut(), destination).unwrap();
+
+        let Outcome::PromiseResolverCall = machine.call_closure(function, pair.resolve).unwrap()
+        else {
+            panic!("expected a resolving-function call")
+        };
+        let call = machine.take_resolver_call().unwrap();
+        assert_eq!(call.destination, destination);
+        assert_eq!(call.settlement, microesnext_promises::Settlement::Fulfilled);
+        assert_eq!(call.argument.as_i30(), Some(42));
+        assert_eq!(
+            machine.resume_resolver_call(),
+            Ok(Outcome::Complete(Value::UNDEFINED))
+        );
+
+        assert_eq!(
+            machine.call_closure(function, pair.reject),
+            Ok(Outcome::Complete(Value::UNDEFINED))
         );
     }
 

@@ -27,6 +27,7 @@ pub enum Progress {
         function: Value,
         argument_count: usize,
     },
+    PromiseResolverCall,
 }
 
 impl From<Outcome> for Progress {
@@ -48,6 +49,7 @@ impl From<Outcome> for Progress {
                 function,
                 argument_count,
             },
+            Outcome::PromiseResolverCall => Self::PromiseResolverCall,
         }
     }
 }
@@ -150,6 +152,7 @@ fn drive_functions(
                 machine.restore_caller(frame.caller)?;
                 machine.run()?
             }
+            Outcome::PromiseResolverCall => return Ok(Progress::PromiseResolverCall),
         };
     }
 }
@@ -281,6 +284,7 @@ fn finish_progress(
             Ok(())
         }
         Progress::AsyncCall { .. } => Err(Error::Type),
+        Progress::PromiseResolverCall => Err(Error::Type),
     }
 }
 
@@ -315,6 +319,7 @@ fn finish_reaction(
             Ok(())
         }
         Outcome::AsyncCall { .. } => Err(Error::Type),
+        Outcome::PromiseResolverCall => Err(Error::Type),
     }
 }
 

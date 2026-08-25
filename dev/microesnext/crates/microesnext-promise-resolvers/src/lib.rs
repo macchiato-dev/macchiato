@@ -1,7 +1,7 @@
 #![no_std]
 
 use microesnext_arena::{Arena, BlockKind};
-use microesnext_promises::Settlement;
+use microesnext_promises::{JobQueue, Settlement, settle};
 use microesnext_types::{Error, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -98,6 +98,35 @@ pub fn take_call(
     }))
 }
 
+/// Applies the winning resolver call. Fulfillment uses the native resolution
+/// procedure so a returned engine Promise is adopted rather than nested.
+pub fn settle_call(
+    arena: &mut Arena<'_>,
+    queue: &mut JobQueue<'_>,
+    call: Call,
+) -> Result<(), Error> {
+    match call.settlement {
+        Settlement::Fulfilled => {
+            microesnext_promise_resolution::resolve_native(
+                arena,
+                queue,
+                call.destination,
+                call.argument,
+            )?;
+        }
+        Settlement::Rejected => {
+            settle(
+                arena,
+                queue,
+                call.destination,
+                Settlement::Rejected,
+                call.argument,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 fn checked(
     arena: &Arena<'_>,
     value: Value,
@@ -113,7 +142,7 @@ fn checked(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use microesnext_promises::pending;
+    use microesnext_promises::{JobSlot, pending, settled_result};
 
     #[test]
     fn either_resolver_wins_exactly_once() {
@@ -124,13 +153,21 @@ mod tests {
         let answer = Value::from_i30(42).unwrap();
         arena.push(answer).unwrap();
 
+        let call = take_call(&mut arena, pair.resolve, 1).unwrap().unwrap();
         assert_eq!(
-            take_call(&mut arena, pair.resolve, 1),
-            Ok(Some(Call {
+            call,
+            Call {
                 destination,
                 settlement: Settlement::Fulfilled,
                 argument: answer,
-            }))
+            }
+        );
+        let mut slots: [Option<JobSlot>; 0] = [];
+        let mut queue = JobQueue::new(&mut slots);
+        settle_call(&mut arena, &mut queue, call).unwrap();
+        assert_eq!(
+            settled_result(&arena, destination),
+            Ok(Some((Settlement::Fulfilled, answer)))
         );
         arena.push(Value::FALSE).unwrap();
         assert_eq!(take_call(&mut arena, pair.reject, 1), Ok(None));

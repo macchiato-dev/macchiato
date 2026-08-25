@@ -10,6 +10,7 @@ version.workspace = true
 [dependencies]
 microesnext-arena = { workspace = true, features = ["promise-resolvers"] }
 microesnext-promises.workspace = true
+microesnext-promise-resolution.workspace = true
 microesnext-types.workspace = true
 
 [lib]

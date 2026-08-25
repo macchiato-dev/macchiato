@@ -89,6 +89,11 @@ promise-resolution = [
   "promises",
   "dep:microesnext-promise-resolution",
 ]
+promise-resolvers = [
+  "promise-resolution",
+  "dep:microesnext-promise-resolvers",
+  "microesnext-vm/promise-resolvers",
+]
 promise-jobs = [
   "async",
   "functions",
@@ -108,6 +113,7 @@ microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
+microesnext-promise-resolvers = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
