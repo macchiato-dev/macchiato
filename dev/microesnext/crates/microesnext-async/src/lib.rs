@@ -1,6 +1,6 @@
 #![no_std]
 
-use microesnext_types::{Error, HeapRef, Value};
+use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
 /// A scheduler-owned suspension. It contains handles, never Rust references
@@ -8,7 +8,7 @@ use microesnext_vm::{Machine, Outcome};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Suspended {
     pub awaited: Value,
-    pub continuation: HeapRef,
+    pub continuation: RootId,
 }
 
 pub enum Progress {

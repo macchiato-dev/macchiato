@@ -5,7 +5,7 @@ use microesnext_compiler::compile_script;
 fn source_compiles_suspends_and_resumes() {
     let code = compile_script("return 40 + await 2;").unwrap();
     let mut memory = [0; 64];
-    let mut machine = Machine::new(&code, &mut memory);
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
     let Outcome::Await {
         value,
         continuation,

@@ -2,7 +2,7 @@
 
 use microesnext_arena::Arena;
 use microesnext_bytecode::{Opcode, read_i30, read_opcode, read_u32};
-use microesnext_types::{Error, HeapRef, Value};
+use microesnext_types::{Error, RootId, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Outcome {
@@ -10,7 +10,7 @@ pub enum Outcome {
     #[cfg(feature = "async")]
     Await {
         value: Value,
-        continuation: HeapRef,
+        continuation: RootId,
     },
 }
 
@@ -23,8 +23,16 @@ pub struct Machine<'code, 'memory> {
 
 impl<'code, 'memory> Machine<'code, 'memory> {
     pub fn new(code: &'code [u8], memory: &'memory mut [u32]) -> Self {
+        Self::with_root_capacity(code, memory, 0)
+    }
+
+    pub fn with_root_capacity(
+        code: &'code [u8],
+        memory: &'memory mut [u32],
+        root_capacity: usize,
+    ) -> Self {
         Self {
-            arena: Arena::new(memory),
+            arena: Arena::with_root_capacity(memory, root_capacity),
             code,
             pc: 0,
             frame_depth: None,
@@ -34,6 +42,18 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[inline(always)]
     pub fn arena(&self) -> &Arena<'_> {
         &self.arena
+    }
+
+    pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
+        self.arena.retain(value)
+    }
+
+    pub fn root(&self, root: RootId) -> Result<Value, Error> {
+        self.arena.root(root)
+    }
+
+    pub fn release(&mut self, root: RootId) -> Result<Value, Error> {
+        self.arena.release(root)
     }
 
     pub fn grow_into<'next>(
@@ -74,6 +94,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                             self.frame_depth,
                             &mut roots,
                         )?;
+                        let continuation = self.arena.retain(Value::from_ref(continuation))?;
                         return Ok(Outcome::Await {
                             value: roots[0],
                             continuation,
@@ -111,7 +132,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
     }
 
-    pub fn resume(&mut self, continuation: HeapRef, value: Value) -> Result<Outcome, Error> {
+    pub fn resume(&mut self, continuation: RootId, value: Value) -> Result<Outcome, Error> {
+        let continuation = self.arena.release(continuation)?;
+        let continuation = continuation.as_ref().ok_or(Error::Type)?;
         let (pc, frame_depth) = self.arena.resume_stack(continuation)?;
         self.pc = pc as usize;
         self.frame_depth = frame_depth;
@@ -146,7 +169,7 @@ mod tests {
     fn suspends_and_resumes_without_a_native_frame() {
         let code = awaiting_program();
         let mut memory = [0; 64];
-        let mut machine = Machine::new(&code, &mut memory);
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
         let Outcome::Await {
             value,
             continuation,
@@ -177,7 +200,7 @@ mod tests {
             .op(Opcode::Return)
             .finish();
         let mut memory = [0; 64];
-        let mut machine = Machine::new(&code, &mut memory);
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 2);
         let Outcome::Await { continuation, .. } = machine.run().unwrap() else {
             panic!("expected suspension")
         };

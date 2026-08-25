@@ -1,6 +1,6 @@
 #![no_std]
 
-use microesnext_types::{Error, HeapRef, Value};
+use microesnext_types::{Error, HeapRef, RootId, Value};
 
 const HEADER_WORDS: usize = 2;
 const MARK: u32 = 1 << 31;
@@ -12,22 +12,47 @@ pub enum BlockKind {
     Values = 1,
     Bytes = 2,
     Continuation = 3,
+    String = 4,
+    Object = 5,
+    Properties = 6,
+    Atoms = 7,
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
 pub struct Arena<'memory> {
     words: &'memory mut [u32],
+    root_capacity: usize,
+    root_free_head: Option<usize>,
+    heap_base: usize,
     heap_end: usize,
     stack_start: usize,
 }
 
 impl<'memory> Arena<'memory> {
     pub fn new(words: &'memory mut [u32]) -> Self {
+        Self::with_root_capacity(words, 0)
+    }
+
+    pub fn with_root_capacity(words: &'memory mut [u32], root_capacity: usize) -> Self {
         let word_capacity = words.len();
-        assert!(word_capacity > HEADER_WORDS + 1 && word_capacity < (1 << 30));
+        assert!(root_capacity <= u16::MAX as usize);
+        let bitmap_words = root_capacity.div_ceil(32);
+        let heap_base = 1 + bitmap_words + root_capacity * 2;
+        assert!(word_capacity > heap_base + HEADER_WORDS && word_capacity < (1 << 30));
         words.fill(0);
+        let values_start = 1 + bitmap_words;
+        for slot in 0..root_capacity {
+            words[values_start + slot] = if slot + 1 < root_capacity {
+                (slot + 1) as u32
+            } else {
+                u32::MAX
+            };
+        }
         Self {
-            heap_end: 1,
+            root_capacity,
+            root_free_head: (root_capacity > 0).then_some(0),
+            heap_base,
+            heap_end: heap_base,
             stack_start: word_capacity,
             words,
         }
@@ -40,7 +65,7 @@ impl<'memory> Arena<'memory> {
 
     #[inline(always)]
     pub fn heap_words(&self) -> usize {
-        self.heap_end - 1
+        self.heap_end - self.heap_base
     }
 
     #[inline(always)]
@@ -57,7 +82,7 @@ impl<'memory> Arena<'memory> {
         debug_assert!(kind != BlockKind::Bytes);
         let length = HEADER_WORDS + values.len();
         if self.heap_end + length > self.stack_start {
-            self.compact_groups(roots, values)?;
+            self.compact_groups(&mut [roots, values])?;
         }
         if self.heap_end + length > self.stack_start {
             return Err(Error::OutOfMemory);
@@ -68,6 +93,71 @@ impl<'memory> Arena<'memory> {
         for (slot, value) in self.words[start + HEADER_WORDS..start + length]
             .iter_mut()
             .zip(values)
+        {
+            *slot = value.raw();
+        }
+        self.heap_end += length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
+    pub fn allocate_bytes(
+        &mut self,
+        kind: BlockKind,
+        bytes: &[u8],
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        debug_assert!(matches!(kind, BlockKind::Bytes | BlockKind::String));
+        let data_words = bytes.len().div_ceil(4);
+        let length = HEADER_WORDS + 1 + data_words;
+        if self.heap_end + length > self.stack_start {
+            self.compact(roots)?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        self.words[start + HEADER_WORDS] = bytes.len() as u32;
+        self.words[start + HEADER_WORDS + 1..start + length].fill(0);
+        for (index, byte) in bytes.iter().copied().enumerate() {
+            self.words[start + HEADER_WORDS + 1 + index / 4] |= (byte as u32) << ((index % 4) * 8);
+        }
+        self.heap_end += length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
+    pub fn extend_values(
+        &mut self,
+        source: HeapRef,
+        extra: &mut [Value],
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        let kind = self.kind(source)?;
+        if matches!(kind, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let mut source_root = [Value::from_ref(source)];
+        let old_length = self.values(source)?.len();
+        let length = HEADER_WORDS + old_length + extra.len();
+        if self.heap_end + length > self.stack_start {
+            self.compact_groups(&mut [roots, &mut source_root, extra])?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let source = source_root[0].as_ref().ok_or(Error::DanglingReference)?;
+        let source_start = self.block_start(source)? + HEADER_WORDS;
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        self.words.copy_within(
+            source_start..source_start + old_length,
+            start + HEADER_WORDS,
+        );
+        for (slot, value) in self.words[start + HEADER_WORDS + old_length..start + length]
+            .iter_mut()
+            .zip(extra)
         {
             *slot = value.raw();
         }
@@ -106,6 +196,39 @@ impl<'memory> Arena<'memory> {
         self.stack_start = self.words.len();
     }
 
+    pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
+        let slot = self.root_free_head.ok_or(Error::OutOfMemory)?;
+        let next = self.words[self.root_values_start() + slot];
+        self.root_free_head = (next != u32::MAX).then_some(next as usize);
+        self.set_root_allocated(slot, true);
+        self.words[self.root_values_start() + slot] = value.raw();
+        Ok(RootId::new(slot as u16, self.root_generation(slot)))
+    }
+
+    pub fn root(&self, id: RootId) -> Result<Value, Error> {
+        let slot = self.checked_root(id)?;
+        Ok(Value::from_raw(self.words[self.root_values_start() + slot]))
+    }
+
+    pub fn set_root(&mut self, id: RootId, value: Value) -> Result<(), Error> {
+        let slot = self.checked_root(id)?;
+        let index = self.root_values_start() + slot;
+        self.words[index] = value.raw();
+        Ok(())
+    }
+
+    pub fn release(&mut self, id: RootId) -> Result<Value, Error> {
+        let slot = self.checked_root(id)?;
+        let index = self.root_values_start() + slot;
+        let value = Value::from_raw(self.words[index]);
+        self.set_root_allocated(slot, false);
+        let generation_index = self.root_generations_start() + slot;
+        self.words[generation_index] = (self.words[generation_index] as u16).wrapping_add(1) as u32;
+        self.words[index] = self.root_free_head.map_or(u32::MAX, |next| next as u32);
+        self.root_free_head = Some(slot);
+        Ok(value)
+    }
+
     /// Move the complete guest address space into caller-provided storage.
     /// Heap offsets stay stable; only the downward-growing stack changes its
     /// physical base. No guest value contains that physical stack address.
@@ -123,6 +246,9 @@ impl<'memory> Arena<'memory> {
         words[next_stack_start..].copy_from_slice(&self.words[self.stack_start..]);
         Ok(Arena {
             words,
+            root_capacity: self.root_capacity,
+            root_free_head: self.root_free_head,
+            heap_base: self.heap_base,
             heap_end: self.heap_end,
             stack_start: next_stack_start,
         })
@@ -186,12 +312,64 @@ impl<'memory> Arena<'memory> {
         Ok(&self.words[start + HEADER_WORDS..start + length])
     }
 
+    pub fn set_value(
+        &mut self,
+        reference: HeapRef,
+        index: usize,
+        value: Value,
+    ) -> Result<(), Error> {
+        if matches!(self.kind(reference)?, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let start = self.block_start(reference)?;
+        let length = (self.words[start] & LENGTH_MASK) as usize;
+        let slot = start + HEADER_WORDS + index;
+        if slot >= start + length {
+            return Err(Error::BadBytecode);
+        }
+        self.words[slot] = value.raw();
+        Ok(())
+    }
+
+    pub fn byte_len(&self, reference: HeapRef) -> Result<usize, Error> {
+        if !matches!(self.kind(reference)?, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::Type);
+        }
+        let start = self.block_start(reference)?;
+        Ok(self.words[start + HEADER_WORDS] as usize)
+    }
+
+    pub fn byte(&self, reference: HeapRef, index: usize) -> Result<u8, Error> {
+        if index >= self.byte_len(reference)? {
+            return Err(Error::BadBytecode);
+        }
+        let start = self.block_start(reference)?;
+        let word = self.words[start + HEADER_WORDS + 1 + index / 4];
+        Ok((word >> ((index % 4) * 8)) as u8)
+    }
+
+    pub fn bytes_equal(&self, reference: HeapRef, bytes: &[u8]) -> Result<bool, Error> {
+        if self.byte_len(reference)? != bytes.len() {
+            return Ok(false);
+        }
+        for (index, expected) in bytes.iter().copied().enumerate() {
+            if self.byte(reference, index)? != expected {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
     pub fn kind(&self, reference: HeapRef) -> Result<BlockKind, Error> {
         let start = self.block_start(reference)?;
         match self.words[start + 1] {
             1 => Ok(BlockKind::Values),
             2 => Ok(BlockKind::Bytes),
             3 => Ok(BlockKind::Continuation),
+            4 => Ok(BlockKind::String),
+            5 => Ok(BlockKind::Object),
+            6 => Ok(BlockKind::Properties),
+            7 => Ok(BlockKind::Atoms),
             _ => Err(Error::DanglingReference),
         }
     }
@@ -199,16 +377,22 @@ impl<'memory> Arena<'memory> {
     /// Compact without a side allocation. Forwarding offsets are recomputed by
     /// scanning earlier blocks; this favors a tiny bounded implementation first.
     pub fn compact(&mut self, roots: &mut [Value]) -> Result<(), Error> {
-        self.compact_groups(roots, &mut [])
+        self.compact_groups(&mut [roots])
     }
 
-    fn compact_groups(
+    fn compact_groups<const N: usize>(
         &mut self,
-        roots: &mut [Value],
-        additional_roots: &mut [Value],
+        groups: &mut [&mut [Value]; N],
     ) -> Result<(), Error> {
-        for root in roots.iter().chain(additional_roots.iter()).copied() {
-            self.mark_value(root)?;
+        for group in groups.iter() {
+            for root in group.iter().copied() {
+                self.mark_value(root)?;
+            }
+        }
+        for slot in 0..self.root_capacity {
+            if self.root_allocated(slot) {
+                self.mark_value(Value::from_raw(self.words[self.root_values_start() + slot]))?;
+            }
         }
         for index in self.stack_start..self.words.len() {
             self.mark_value(Value::from_raw(self.words[index]))?;
@@ -216,11 +400,14 @@ impl<'memory> Arena<'memory> {
 
         loop {
             let mut changed = false;
-            let mut cursor = 1;
+            let mut cursor = self.heap_base;
             while cursor < self.heap_end {
                 let length = (self.words[cursor] & LENGTH_MASK) as usize;
                 if self.words[cursor] & MARK != 0
-                    && self.words[cursor + 1] != BlockKind::Bytes as u32
+                    && !matches!(
+                        self.words[cursor + 1],
+                        value if value == BlockKind::Bytes as u32 || value == BlockKind::String as u32
+                    )
                 {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         if let Some(reference) = Value::from_raw(self.words[index]).as_ref() {
@@ -239,21 +426,31 @@ impl<'memory> Arena<'memory> {
             }
         }
 
-        for root in roots {
-            *root = self.forward_value(*root)?;
+        for group in groups.iter_mut() {
+            for root in group.iter_mut() {
+                *root = self.forward_value(*root)?;
+            }
         }
-        for root in additional_roots {
-            *root = self.forward_value(*root)?;
+        for slot in 0..self.root_capacity {
+            if self.root_allocated(slot) {
+                let index = self.root_values_start() + slot;
+                self.words[index] = self
+                    .forward_value(Value::from_raw(self.words[index]))?
+                    .raw();
+            }
         }
         for index in self.stack_start..self.words.len() {
             let value = Value::from_raw(self.words[index]);
             self.words[index] = self.forward_value(value)?.raw();
         }
 
-        let mut cursor = 1;
+        let mut cursor = self.heap_base;
         while cursor < self.heap_end {
             let length = (self.words[cursor] & LENGTH_MASK) as usize;
-            if self.words[cursor] & MARK != 0 && self.words[cursor + 1] != BlockKind::Bytes as u32 {
+            if self.words[cursor] & MARK != 0
+                && self.words[cursor + 1] != BlockKind::Bytes as u32
+                && self.words[cursor + 1] != BlockKind::String as u32
+            {
                 for index in cursor + HEADER_WORDS..cursor + length {
                     let value = Value::from_raw(self.words[index]);
                     self.words[index] = self.forward_value(value)?.raw();
@@ -262,8 +459,8 @@ impl<'memory> Arena<'memory> {
             cursor += length;
         }
 
-        let mut read = 1;
-        let mut write = 1;
+        let mut read = self.heap_base;
+        let mut write = self.heap_base;
         while read < self.heap_end {
             let length = (self.words[read] & LENGTH_MASK) as usize;
             if self.words[read] & MARK != 0 {
@@ -293,8 +490,8 @@ impl<'memory> Arena<'memory> {
         if self.words[old] & MARK == 0 {
             return Err(Error::DanglingReference);
         }
-        let mut read = 1;
-        let mut forwarded = 1;
+        let mut read = self.heap_base;
+        let mut forwarded = self.heap_base;
         while read < old {
             let length = (self.words[read] & LENGTH_MASK) as usize;
             if self.words[read] & MARK != 0 {
@@ -309,7 +506,7 @@ impl<'memory> Arena<'memory> {
 
     fn block_start(&self, reference: HeapRef) -> Result<usize, Error> {
         let target = reference.word_index() as usize;
-        if target == 0 || target >= self.heap_end {
+        if target < self.heap_base || target >= self.heap_end {
             return Err(Error::DanglingReference);
         }
         debug_assert!(self.is_block_start(target));
@@ -321,7 +518,7 @@ impl<'memory> Arena<'memory> {
     }
 
     fn is_block_start(&self, target: usize) -> bool {
-        let mut cursor = 1;
+        let mut cursor = self.heap_base;
         while cursor < self.heap_end {
             if cursor == target {
                 return true;
@@ -333,6 +530,53 @@ impl<'memory> Arena<'memory> {
             cursor += length;
         }
         false
+    }
+
+    #[inline(always)]
+    fn root_bitmap_words(&self) -> usize {
+        self.root_capacity.div_ceil(32)
+    }
+
+    #[inline(always)]
+    fn root_values_start(&self) -> usize {
+        1 + self.root_bitmap_words()
+    }
+
+    #[inline(always)]
+    fn root_generations_start(&self) -> usize {
+        self.root_values_start() + self.root_capacity
+    }
+
+    #[inline(always)]
+    fn root_allocated(&self, slot: usize) -> bool {
+        self.words[1 + slot / 32] & (1 << (slot % 32)) != 0
+    }
+
+    #[inline(always)]
+    fn set_root_allocated(&mut self, slot: usize, allocated: bool) {
+        let index = 1 + slot / 32;
+        let mask = 1 << (slot % 32);
+        if allocated {
+            self.words[index] |= mask;
+        } else {
+            self.words[index] &= !mask;
+        }
+    }
+
+    #[inline(always)]
+    fn root_generation(&self, slot: usize) -> u16 {
+        self.words[self.root_generations_start() + slot] as u16
+    }
+
+    fn checked_root(&self, id: RootId) -> Result<usize, Error> {
+        let slot = id.slot();
+        if slot >= self.root_capacity
+            || !self.root_allocated(slot)
+            || self.root_generation(slot) != id.generation()
+        {
+            return Err(Error::InvalidRoot);
+        }
+        Ok(slot)
     }
 }
 
@@ -439,5 +683,28 @@ mod tests {
         assert_eq!(arena.pop().unwrap().as_ref(), Some(reference));
         assert_eq!(arena.values(reference).unwrap(), &[Value::TRUE.raw()]);
         assert_eq!(arena.capacity_words(), 24);
+    }
+
+    #[test]
+    fn stable_roots_follow_compaction_and_reject_released_handles() {
+        let mut memory = [0; 32];
+        let mut arena = Arena::with_root_capacity(&mut memory, 2);
+        let _dead = arena
+            .allocate_values(BlockKind::Values, &mut [Value::FALSE], &mut [])
+            .unwrap();
+        let live = arena
+            .allocate_values(BlockKind::Values, &mut [Value::TRUE], &mut [])
+            .unwrap();
+        let root = arena.retain(Value::from_ref(live)).unwrap();
+
+        arena.compact(&mut []).unwrap();
+
+        let moved = arena.root(root).unwrap().as_ref().unwrap();
+        assert_eq!(arena.values(moved).unwrap(), &[Value::TRUE.raw()]);
+        assert_eq!(arena.release(root).unwrap(), Value::from_ref(moved));
+        assert_eq!(arena.root(root), Err(Error::InvalidRoot));
+        let reused = arena.retain(Value::NULL).unwrap();
+        assert_eq!(reused.slot(), root.slot());
+        assert_ne!(reused.generation(), root.generation());
     }
 }

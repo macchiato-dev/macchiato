@@ -43,6 +43,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-objects"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 

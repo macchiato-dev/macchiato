@@ -28,6 +28,28 @@ impl HeapRef {
     }
 }
 
+/// A generation-checked slot retaining a value across guest collections.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[repr(transparent)]
+pub struct RootId(u32);
+
+impl RootId {
+    #[inline(always)]
+    pub const fn new(slot: u16, generation: u16) -> Self {
+        Self((generation as u32) << 16 | slot as u32)
+    }
+
+    #[inline(always)]
+    pub const fn slot(self) -> usize {
+        (self.0 & 0xffff) as usize
+    }
+
+    #[inline(always)]
+    pub const fn generation(self) -> u16 {
+        (self.0 >> 16) as u16
+    }
+}
+
 /// A compact guest value. Arrays, frames, and operand stacks store four-byte values.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 #[repr(transparent)]
@@ -101,6 +123,7 @@ impl fmt::Debug for Value {
 }
 
 const _: () = assert!(core::mem::size_of::<HeapRef>() == 4);
+const _: () = assert!(core::mem::size_of::<RootId>() == 4);
 const _: () = assert!(core::mem::size_of::<Value>() == 4);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -108,6 +131,7 @@ pub enum Error {
     BadBytecode,
     DanglingReference,
     OutOfMemory,
+    InvalidRoot,
     StackUnderflow,
     Type,
 }
