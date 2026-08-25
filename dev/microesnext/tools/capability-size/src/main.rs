@@ -966,6 +966,85 @@ pub extern "C" fn thenables_probe() -> i32 {
     }
 }
 
+#[cfg(all(feature = "async-thenables", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn async_thenables_probe() -> i32 {
+    const BODY: u32 = 9;
+    const THEN: u32 = 13;
+    let code = [
+        Opcode::AsyncClosure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        1,
+        0,
+        Opcode::CallValue as u8,
+        Opcode::Return as u8,
+        Opcode::LoadCapture as u8,
+        0,
+        0,
+        Opcode::Return as u8,
+        Opcode::InitReceiverFrame as u8,
+        2,
+        0,
+        2,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::CallValueArguments as u8,
+        1,
+        0,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 320];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 20);
+    let then = microesnext::functions::capture_stack(machine.arena_mut(), THEN, 0).unwrap();
+    let then_key = Value::TRUE;
+    let object = microesnext::objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+    let object = microesnext::objects::set(machine.arena_mut(), object, then_key, then).unwrap();
+    machine.arena_mut().push(object).unwrap();
+    let mut promise_slots = [None; 2];
+    let mut promise_jobs = microesnext::promises::JobQueue::new(&mut promise_slots);
+    let mut frame_slots = [None; 1];
+    let mut frames = microesnext::async_functions::Frames::new(&mut frame_slots);
+    let mut thenable_slots = [const { None }; 2];
+    let mut thenable_jobs = microesnext::thenables::Jobs::new(&mut thenable_slots);
+    let mut resolver =
+        microesnext::async_thenables::Resolver::new(&mut machine, &mut thenable_jobs, then_key)
+            .unwrap();
+    let Ok(microesnext::r#async::Progress::Complete(promise)) =
+        microesnext::r#async::run_functions_with(
+            &mut machine,
+            &mut promise_jobs,
+            &mut frames,
+            &mut resolver,
+        )
+    else {
+        return -1;
+    };
+    let promise = machine.retain(promise).unwrap();
+    resolver.release(&mut machine).unwrap();
+    if thenable_jobs
+        .run_one(&mut machine, &mut promise_jobs)
+        .is_err()
+    {
+        return -1;
+    }
+    match microesnext::promises::settled_result(machine.arena(), machine.root(promise).unwrap()) {
+        Ok(Some((microesnext::promises::Settlement::Fulfilled, value))) => {
+            value.as_i30().unwrap_or(-1)
+        }
+        _ => -1,
+    }
+}
+
 #[cfg(all(feature = "weak-collections", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn weak_collections_probe() -> u32 {

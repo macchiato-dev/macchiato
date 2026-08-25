@@ -172,13 +172,21 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       ], ["receivers_probe", 42], ["thenables_probe", 42]],
     ],
     [
+      "async return thenable assimilation",
+      "async-thenables",
+      [core, ["async_functions_probe", 42], ["thenables_probe", 42], [
+        "async_thenables_probe",
+        42,
+      ]],
+    ],
+    [
       "weak collections",
       "weak-collections",
       [core, ["weak_collections_probe", "nonzero"]],
     ],
     [
       "all",
-      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,thenables,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -186,6 +194,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["atoms_probe", "nonzero"],
         ["async_probe", 7],
         ["async_functions_probe", 42],
+        ["async_thenables_probe", 42],
         ["collections_probe", 0],
         ["collection_iterators_probe", 1],
         ["collection_entry_iterators_probe", 42],
