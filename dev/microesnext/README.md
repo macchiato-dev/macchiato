@@ -66,6 +66,9 @@ an explicit relational stopping condition.
   current prototype and applies the object-return rule. The VM composes it with
   receiver frames using two gated opcodes, without adding persistent machine
   state or changing the invariant call frame.
+- `microesnext-recursive-constructors` allocation-freely rebinds a named
+  function expression's private self cell to its constructor wrapper. Ordinary
+  constructors and recursive closures do not link this cross-composition.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
 - `microesnext-receivers` adds hidden `this` values to selected call frames.

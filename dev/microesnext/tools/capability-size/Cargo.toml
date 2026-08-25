@@ -33,6 +33,7 @@ equality = ["microesnext/equality"]
 errors = ["microesnext/errors"]
 functions = ["microesnext/functions"]
 recursive-functions = ["functions", "environments", "microesnext/recursive-functions"]
+recursive-constructors = ["constructors", "recursive-functions", "microesnext/recursive-constructors"]
 recursive-async-functions = [
   "async-functions",
   "environments",

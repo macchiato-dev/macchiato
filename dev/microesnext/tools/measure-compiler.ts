@@ -22,11 +22,12 @@ const builds = [
   ["function arguments", "function-arguments"],
   ["captured environments", "environments"],
   ["recursive named functions", "recursive-functions"],
+  ["recursive constructors", "recursive-constructors"],
   ["async functions", "async-functions"],
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -62,6 +63,8 @@ for (const [name, features] of builds) {
     ? "return async function named() { return await named(); };"
     : features.includes("async-functions")
     ? "return async function () { return await 1; };"
+    : features.includes("recursive-constructors")
+    ? "return function Named() { return Named; };"
     : features.includes("recursive-functions")
     ? "return function named() { return named; };"
     : features.includes("environments")

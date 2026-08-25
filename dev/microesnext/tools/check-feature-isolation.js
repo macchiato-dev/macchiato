@@ -89,6 +89,7 @@ const typeOf = "microesnext-typeof";
 const prototypeChain = "microesnext-prototype-chain";
 const callableObjects = "microesnext-callable-objects";
 const construction = "microesnext-construction";
+const recursiveConstructors = "microesnext-recursive-constructors";
 const instanceOf = "microesnext-instanceof";
 
 assertCompilerFeatures(
@@ -255,6 +256,18 @@ assertCompilerFeatures(
   ["instanceof", "objects", "typeof"],
 );
 assertCompilerFeatures(
+  ["recursive-constructors"],
+  [
+    "constructors",
+    "environments",
+    "functions",
+    "locals",
+    "recursive-constructors",
+    "recursive-functions",
+  ],
+  ["construction", "instanceof", "receivers", "typeof"],
+);
+assertCompilerFeatures(
   ["strings"],
   ["strings"],
   ["arrays", "atoms", "numbers", "objects", "string-operations"],
@@ -397,6 +410,16 @@ assertPresence(
     "microesnext-objects",
   ],
   [instanceOf, prototypeChain, typeOf],
+);
+assertPresence(
+  ["recursive-constructors"],
+  [
+    recursiveConstructors,
+    callableObjects,
+    "microesnext-recursive-functions",
+    "microesnext-environments",
+  ],
+  [construction, instanceOf, receivers, typeOf],
 );
 assertPresence(
   ["instanceof"],

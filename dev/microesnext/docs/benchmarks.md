@@ -196,6 +196,13 @@ source-to-VM tests exercise `this`, primitive fallback, explicit object returns,
 and the resulting prototype chain. Builds omitting `construction` do not decode
 its two opcodes or link `microesnext-construction`.
 
+Private identity for named constructor expressions is separately removable.
+The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
+its compiler is 18,134 / 7,571. Its allocation-free opcode changes capture zero
+from the compact recursive closure to the wrapper; declarations continue to use
+their existing captured destination cell. Builds selecting ordinary recursive
+functions or non-recursive constructors do not link this bridge crate.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -266,6 +273,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Constructible function objects | 20,106 | 7,695 |
 | Constructor receivers | 26,845 | 9,886 |
 | Ordinary construction | 27,444 | 9,825 |
+| Recursive constructors | 23,517 | 8,554 |
 | Ordinary `instanceof` | 20,311 | 7,791 |
 | Strings only | 4,903 | 2,270 |
 | `typeof` | 6,642 | 3,024 |
@@ -277,7 +285,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 101,471 | 32,868 |
+| All capabilities | 102,036 | 33,009 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -568,9 +576,10 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | function arguments | 14,151 | 5,963 |
 | captured environments | 17,881 | 7,442 |
 | recursive named functions | 17,995 | 7,500 |
+| recursive constructors | 18,134 | 7,571 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 35,927 | 13,762 |
+| default language slice | 35,987 | 13,788 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

@@ -45,6 +45,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "objects",
         feature = "promise-resolvers",
         feature = "recursive-functions",
+        feature = "recursive-constructors",
         feature = "recursive-async-functions",
         feature = "receivers",
         feature = "strings",
@@ -189,6 +190,44 @@ pub extern "C" fn construction_probe() -> i32 {
         return 0;
     };
     matches!(machine.run(), Ok(Outcome::Complete(value)) if microesnext::objects::is_object(machine.arena(), value))
+        as i32
+}
+
+#[cfg(all(feature = "recursive-constructors", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn recursive_constructors_probe() -> i32 {
+    let code = [
+        Opcode::RecursiveClosure as u8,
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ToConstructor as u8,
+        Opcode::RebindConstructorSelf as u8,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 256];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    let Ok(Outcome::Complete(constructor)) = machine.run() else {
+        return 0;
+    };
+    let Ok(closure) = microesnext::callable_objects::callable(machine.arena(), constructor) else {
+        return 0;
+    };
+    let Ok(cell) = microesnext::functions::capture(machine.arena(), closure, 0) else {
+        return 0;
+    };
+    matches!(microesnext::environments::get(machine.arena(), cell), Ok(value) if value == constructor)
         as i32
 }
 

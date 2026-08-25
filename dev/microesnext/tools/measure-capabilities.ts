@@ -261,6 +261,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["atoms_probe", "nonzero"], ["construction_probe", 1]],
     ],
     [
+      "recursive constructors",
+      "recursive-constructors",
+      [core, ["atoms_probe", "nonzero"], ["recursive_constructors_probe", 1]],
+    ],
+    [
       "instanceof",
       "instanceof",
       [core, ["atoms_probe", "nonzero"], ["instanceof_probe", 1]],
@@ -319,7 +324,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
+      "array-iterators,async-thenables,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -345,6 +350,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["closure_environments_probe", 42],
         ["functions_probe", "nonzero"],
         ["recursive_functions_probe", 42],
+        ["recursive_constructors_probe", 1],
         ["recursive_async_functions_probe", 42],
         ["function_arguments_probe", 42],
         ["iterators_probe", 11],

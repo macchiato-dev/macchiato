@@ -116,9 +116,10 @@ object-return rule. The preserved receiver stays below the ordinary call frame,
 so construction adds no persistent VM field. Parenthesized/member constructor
 forms, `new` without parentheses, `Symbol.hasInstance`, bound functions, and
 host constructors are not implied by this initial path. A named function's
-private recursive binding still refers to its compact closure rather than its
-constructor wrapper, so identity observed through that binding is not yet full
-ECMAScript constructor identity.
+private self cell is rebound to the wrapper by the independent
+`recursive-constructors` composition, so calls and construction observe the
+same function identity. Function declarations already reuse their ordinary
+captured declaration cell and do not need that opcode.
 
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
