@@ -357,6 +357,37 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 )?;
                 Ok(None)
             }
+            #[cfg(feature = "receivers")]
+            Opcode::InitReceiverFrame => {
+                let count = self.core.next_u16()? as usize;
+                let parameter_count = self.core.next_u16()? as usize;
+                let base = self.core.frame_base();
+                microesnext_receivers::init_frame(
+                    self.core.arena_mut(),
+                    base,
+                    count,
+                    parameter_count,
+                )?;
+                Ok(None)
+            }
+            #[cfg(feature = "receivers")]
+            Opcode::LoadThis => {
+                let receiver =
+                    microesnext_receivers::load(self.core.arena(), self.core.frame_base())?;
+                self.core.arena_mut().push(receiver)?;
+                Ok(None)
+            }
+            #[cfg(feature = "receivers")]
+            Opcode::ReturnReceiverLocals => {
+                let result = self.core.arena_mut().pop()?;
+                let base = self.core.frame_base();
+                microesnext_receivers::leave(self.core.arena_mut(), base)?;
+                match self.core.return_value(result)? {
+                    Some(CoreOutcome::Complete(value)) => Ok(Some(Outcome::Complete(value))),
+                    Some(_) => Err(Error::BadBytecode),
+                    None => Ok(None),
+                }
+            }
             #[cfg(feature = "environments")]
             Opcode::NewEnvironmentCell => {
                 let value = self.core.arena_mut().pop()?;
@@ -500,7 +531,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "numbers",
         feature = "exceptions",
         feature = "environments",
-        feature = "async-functions"
+        feature = "async-functions",
+        feature = "receivers"
     )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
         Err(Error::BadBytecode)
@@ -512,6 +544,41 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     pub fn call_closure(&mut self, function: Value, argument: Value) -> Result<Outcome, Error> {
         let target = entry(self.core.arena(), function)?;
         self.core.enter_external_call(function, target, argument)?;
+        self.run()
+    }
+
+    /// Enter a receiver-aware guest closure with already materialized values.
+    /// This is the call shape required by object thenable assimilation.
+    #[cfg(feature = "receivers")]
+    pub fn call_closure_with_receiver(
+        &mut self,
+        function: Value,
+        receiver: Value,
+        arguments: &[Value],
+    ) -> Result<Outcome, Error> {
+        if self.core.frame_depth().is_some() || self.core.arena().stack_len() != 0 {
+            return Err(Error::Type);
+        }
+        let target = entry(self.core.arena(), function)?;
+        for argument in arguments {
+            if let Err(error) = self.core.arena_mut().push(*argument) {
+                self.core.abandon();
+                return Err(error);
+            }
+        }
+        if let Err(error) =
+            microesnext_receivers::append(self.core.arena_mut(), arguments.len(), receiver)
+        {
+            self.core.abandon();
+            return Err(error);
+        }
+        if let Err(error) =
+            self.core
+                .enter_external_call_with_arguments(function, target, arguments.len() + 1)
+        {
+            self.core.abandon();
+            return Err(error);
+        }
         self.run()
     }
 
@@ -963,6 +1030,26 @@ mod tests {
             machine.call_closure(function, argument),
             Ok(Outcome::Complete(argument))
         );
+    }
+
+    #[cfg(feature = "receivers")]
+    #[test]
+    fn external_receiver_call_exposes_this_without_changing_parameters() {
+        let code = Builder::new()
+            .init_receiver_frame(1, 1)
+            .op(Opcode::LoadThis)
+            .op(Opcode::ReturnReceiverLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let argument = Value::from_i30(42).unwrap();
+
+        assert_eq!(
+            machine.call_closure_with_receiver(function, Value::TRUE, &[argument]),
+            Ok(Outcome::Complete(Value::TRUE))
+        );
+        assert_eq!(machine.arena().stack_len(), 0);
     }
 
     #[cfg(feature = "function-arguments")]

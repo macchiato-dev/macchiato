@@ -63,6 +63,9 @@ pub use microesnext_recursive_functions as recursive_functions;
 #[cfg(feature = "recursive-async-functions")]
 pub use microesnext_recursive_async_functions as recursive_async_functions;
 
+#[cfg(feature = "receivers")]
+pub use microesnext_receivers as receivers;
+
 #[cfg(any(
     feature = "objects",
     feature = "iterator-results",

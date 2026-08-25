@@ -106,6 +106,14 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       "function-arguments",
       [core, ["functions_probe", "nonzero"], ["function_arguments_probe", 42]],
     ],
+    [
+      "receiver-aware calls",
+      "receivers",
+      [core, ["functions_probe", "nonzero"], ["function_arguments_probe", 42], [
+        "receivers_probe",
+        42,
+      ]],
+    ],
     ["iterators", "iterators", [core, ["iterators_probe", 11]]],
     ["locals", "locals", [core, ["locals_probe", 42]]],
     [
@@ -154,7 +162,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,promise-resolution,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
+      "array-iterators,async-functions,collection-entry-iterators,collection-iterators,control-flow,environments,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,promise-resolution,receivers,recursive-async-functions,recursive-functions,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -187,6 +195,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["well_known_symbols_probe", "nonzero"],
         ["promises_probe", "nonzero"],
         ["promise_resolution_probe", 42],
+        ["receivers_probe", 42],
         ["weak_collections_probe", "nonzero"],
       ],
     ],

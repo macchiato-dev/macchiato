@@ -33,6 +33,7 @@ recursive-async-functions = [
   "environments",
   "microesnext/recursive-async-functions",
 ]
+receivers = ["function-arguments", "microesnext/receivers"]
 function-arguments = ["functions", "locals", "microesnext/function-arguments"]
 iterators = ["microesnext/iterators"]
 iterator-results = ["microesnext/iterator-results"]

@@ -48,6 +48,13 @@ impl Builder {
         self
     }
 
+    pub fn init_receiver_frame(mut self, count: u16, parameter_count: u16) -> Self {
+        self.code.push(Opcode::InitReceiverFrame as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
+        self.code.extend_from_slice(&parameter_count.to_le_bytes());
+        self
+    }
+
     pub fn load_local(mut self, slot: u16) -> Self {
         self.code.push(Opcode::LoadLocal as u8);
         self.code.extend_from_slice(&slot.to_le_bytes());

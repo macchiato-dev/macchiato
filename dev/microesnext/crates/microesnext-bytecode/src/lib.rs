@@ -86,6 +86,12 @@ pub enum Opcode {
     AsyncClosure = 77,
     #[cfg(feature = "recursive-async-functions")]
     RecursiveAsyncClosure = 78,
+    #[cfg(feature = "receivers")]
+    InitReceiverFrame = 79,
+    #[cfg(feature = "receivers")]
+    LoadThis = 80,
+    #[cfg(feature = "receivers")]
+    ReturnReceiverLocals = 81,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -163,6 +169,12 @@ impl TryFrom<u8> for Opcode {
             77 => Ok(Self::AsyncClosure),
             #[cfg(feature = "recursive-async-functions")]
             78 => Ok(Self::RecursiveAsyncClosure),
+            #[cfg(feature = "receivers")]
+            79 => Ok(Self::InitReceiverFrame),
+            #[cfg(feature = "receivers")]
+            80 => Ok(Self::LoadThis),
+            #[cfg(feature = "receivers")]
+            81 => Ok(Self::ReturnReceiverLocals),
             _ => Err(Error::BadBytecode),
         }
     }

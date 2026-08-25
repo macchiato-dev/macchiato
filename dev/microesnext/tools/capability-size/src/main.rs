@@ -3,7 +3,11 @@
 
 #[cfg(all(
     target_arch = "wasm32",
-    any(feature = "async", feature = "promise-resolution")
+    any(
+        feature = "async",
+        feature = "promise-resolution",
+        feature = "receivers"
+    )
 ))]
 use microesnext::Value;
 #[cfg(target_arch = "wasm32")]
@@ -26,6 +30,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "objects",
         feature = "recursive-functions",
         feature = "recursive-async-functions",
+        feature = "receivers",
         feature = "strings"
     )
 ))]
@@ -593,6 +598,28 @@ pub extern "C" fn function_arguments_probe() -> i32 {
     let mut memory = [0; 64];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "receivers", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn receivers_probe() -> i32 {
+    let code = [
+        Opcode::InitReceiverFrame as u8,
+        1,
+        0,
+        1,
+        0,
+        Opcode::LoadThis as u8,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 64];
+    let mut machine = Machine::new(&code, &mut memory);
+    let function = microesnext::functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+    match machine.call_closure_with_receiver(function, Value::from_i30(42).unwrap(), &[Value::TRUE])
+    {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }

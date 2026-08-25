@@ -59,6 +59,11 @@ recursive-async-functions = [
   "dep:microesnext-recursive-async-functions",
   "microesnext-vm/recursive-async-functions",
 ]
+receivers = [
+  "function-arguments",
+  "dep:microesnext-receivers",
+  "microesnext-vm/receivers",
+]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]
 collection-entry-iterators = [
@@ -115,6 +120,7 @@ microesnext-environments = { workspace = true, optional = true }
 microesnext-errors = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
+microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
