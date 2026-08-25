@@ -3,7 +3,7 @@
 #[cfg(feature = "promises")]
 use microesnext_arena::BlockKind;
 #[cfg(feature = "resolution")]
-use microesnext_promise_resolution::{Resolution, resolve_native};
+use microesnext_promise_resolution::resolve_native;
 #[cfg(feature = "promises")]
 use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 #[cfg(feature = "functions")]
@@ -338,10 +338,7 @@ fn resolve_value(
 ) -> Result<(), Error> {
     #[cfg(feature = "resolution")]
     {
-        if resolve_native(machine.arena_mut(), queue, promise, value)? == Resolution::SelfReference
-        {
-            return Err(Error::Type);
-        }
+        resolve_native(machine.arena_mut(), queue, promise, value)?;
     }
     #[cfg(not(feature = "resolution"))]
     settle(

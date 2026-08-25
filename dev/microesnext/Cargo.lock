@@ -18,6 +18,7 @@ dependencies = [
  "microesnext-collections",
  "microesnext-compiler",
  "microesnext-environments",
+ "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-iterable-protocol",
@@ -186,6 +187,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-errors"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-exceptions"
 version = "0.0.0"
 dependencies = [
@@ -269,6 +278,7 @@ name = "microesnext-promise-resolution"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-errors",
  "microesnext-promises",
  "microesnext-types",
 ]

@@ -51,6 +51,9 @@ pub use microesnext_parameters as parameters;
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;
 
+#[cfg(feature = "errors")]
+pub use microesnext_errors as errors;
+
 #[cfg(feature = "environments")]
 pub use microesnext_environments as environments;
 

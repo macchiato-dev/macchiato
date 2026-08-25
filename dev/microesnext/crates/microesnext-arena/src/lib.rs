@@ -39,6 +39,8 @@ pub enum BlockKind {
     AsyncClosure = 23,
     #[cfg(feature = "async-functions")]
     AsyncInvocation = 24,
+    #[cfg(feature = "errors")]
+    Error = 25,
 }
 
 #[inline(always)]
@@ -673,6 +675,8 @@ impl<'memory> Arena<'memory> {
             23 => Ok(BlockKind::AsyncClosure),
             #[cfg(feature = "async-functions")]
             24 => Ok(BlockKind::AsyncInvocation),
+            #[cfg(feature = "errors")]
+            25 => Ok(BlockKind::Error),
             _ => Err(Error::DanglingReference),
         }
     }

@@ -16,6 +16,7 @@ members = [
   "crates/microesnext-parameters",
   "crates/microesnext-equality",
   "crates/microesnext-environments",
+  "crates/microesnext-errors",
   "crates/microesnext-iterators",
   "crates/microesnext-iterator-results",
   "crates/microesnext-iterable-protocol",
@@ -66,6 +67,7 @@ microesnext-recursive-async-functions = { path = "crates/microesnext-recursive-a
 microesnext-parameters = { path = "crates/microesnext-parameters", version = "0.0.0" }
 microesnext-equality = { path = "crates/microesnext-equality", version = "0.0.0" }
 microesnext-environments = { path = "crates/microesnext-environments", version = "0.0.0" }
+microesnext-errors = { path = "crates/microesnext-errors", version = "0.0.0" }
 microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.0" }
 microesnext-iterator-results = { path = "crates/microesnext-iterator-results", version = "0.0.0" }
 microesnext-iterable-protocol = { path = "crates/microesnext-iterable-protocol", version = "0.0.0" }

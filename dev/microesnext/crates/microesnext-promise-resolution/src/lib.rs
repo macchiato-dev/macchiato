@@ -8,13 +8,11 @@ use microesnext_types::{Error, Value};
 pub enum Resolution {
     Fulfilled(Value),
     Adopted(Value),
-    SelfReference,
+    Rejected(Value),
 }
 
 /// Resolve a Promise with a plain guest value or another native Promise.
 ///
-/// Self-resolution is reported explicitly so a realm with an error-object
-/// capability can reject with its own TypeError value.
 pub fn resolve_native(
     arena: &mut Arena<'_>,
     queue: &mut JobQueue<'_>,
@@ -22,7 +20,11 @@ pub fn resolve_native(
     resolution: Value,
 ) -> Result<Resolution, Error> {
     if promise == resolution {
-        return Ok(Resolution::SelfReference);
+        let mut live = [promise];
+        let reason =
+            microesnext_errors::new(arena, microesnext_errors::ErrorKind::Type, &mut live)?;
+        settle(arena, queue, live[0], Settlement::Rejected, reason)?;
+        return Ok(Resolution::Rejected(live[0]));
     }
     if is_promise(arena, resolution) {
         then(
@@ -101,16 +103,22 @@ mod tests {
     }
 
     #[test]
-    fn reports_self_resolution_without_inventing_an_error_value() {
-        let mut memory = [0; 48];
+    fn self_resolution_rejects_with_a_guest_type_error() {
+        let mut memory = [0; 64];
         let mut arena = Arena::new(&mut memory);
         let promise = pending(&mut arena).unwrap();
         let mut slots: [Option<JobSlot>; 0] = [];
         let mut queue = JobQueue::new(&mut slots);
         assert_eq!(
             resolve_native(&mut arena, &mut queue, promise, promise),
-            Ok(Resolution::SelfReference)
+            Ok(Resolution::Rejected(promise))
         );
-        assert_eq!(settled_result(&arena, promise), Ok(None));
+        let Some((Settlement::Rejected, reason)) = settled_result(&arena, promise).unwrap() else {
+            panic!("expected rejection")
+        };
+        assert_eq!(
+            microesnext_errors::kind(&arena, reason),
+            Ok(microesnext_errors::ErrorKind::Type)
+        );
     }
 }

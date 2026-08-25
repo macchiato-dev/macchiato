@@ -45,6 +45,7 @@ numbers = [
   "microesnext-collections?/number-keys",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
+errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
 recursive-functions = [
   "functions",
@@ -111,6 +112,7 @@ microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
+microesnext-errors = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }

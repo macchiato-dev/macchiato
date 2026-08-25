@@ -9,6 +9,7 @@ version.workspace = true
 
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-errors.workspace = true
 microesnext-promises.workspace = true
 microesnext-types.workspace = true
 
