@@ -195,6 +195,32 @@ pub extern "C" fn construction_probe() -> i32 {
         as i32
 }
 
+#[cfg(all(feature = "classes", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn classes_probe() -> i32 {
+    let code = [
+        Opcode::Closure as u8,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ToClassConstructor as u8,
+        Opcode::Return as u8,
+        Opcode::LoadThis as u8,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 224];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    let Ok(Outcome::Complete(constructor)) = machine.run() else {
+        return 0;
+    };
+    microesnext::class_constructors::is_class_constructor(machine.arena(), constructor) as i32
+}
+
 #[cfg(all(feature = "property-assignment", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn property_assignment_probe() -> i32 {

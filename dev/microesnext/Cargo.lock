@@ -15,6 +15,7 @@ dependencies = [
  "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
+ "microesnext-class-constructors",
  "microesnext-collection-entry-iterators",
  "microesnext-collection-iterators",
  "microesnext-collections",

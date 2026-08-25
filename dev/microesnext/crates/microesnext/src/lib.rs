@@ -44,6 +44,9 @@ pub use microesnext_collections as collections;
 #[cfg(feature = "callable-objects")]
 pub use microesnext_callable_objects as callable_objects;
 
+#[cfg(feature = "class-constructors")]
+pub use microesnext_class_constructors as class_constructors;
+
 #[cfg(feature = "collection-iterators")]
 pub use microesnext_collection_iterators as collection_iterators;
 

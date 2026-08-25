@@ -11,7 +11,11 @@ version.workspace = true
 default = []
 control-flow = ["microesnext-vm/control-flow"]
 constructors = ["callable-objects", "microesnext-vm/constructors"]
-class-constructors = ["constructors", "microesnext-vm/class-constructors"]
+class-constructors = [
+  "constructors",
+  "dep:microesnext-class-constructors",
+  "microesnext-vm/class-constructors",
+]
 construction = ["constructors", "receivers", "microesnext-vm/construction"]
 classes = [
   "class-constructors",
@@ -209,6 +213,7 @@ microesnext-array-iterators = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
+microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-collection-iterators = { workspace = true, optional = true }
 microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }

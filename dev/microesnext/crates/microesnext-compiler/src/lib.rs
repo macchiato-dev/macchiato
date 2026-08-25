@@ -2467,7 +2467,7 @@ impl Parser<'_> {
         true
     }
 
-    #[cfg(any(feature = "control-flow", feature = "exceptions"))]
+    #[cfg(any(feature = "classes", feature = "control-flow", feature = "exceptions"))]
     fn try_word_after_whitespace(&mut self, word: &[u8]) -> bool {
         self.whitespace();
         self.try_word(word)

@@ -12,7 +12,9 @@ pub fn prepare(
     constructor: Value,
     prototype_key: Value,
 ) -> Result<(Value, Value), Error> {
-    constructor_callable(arena, constructor)?;
+    if !is_constructor(arena, constructor) {
+        return Err(Error::Type);
+    }
     let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
     if !microesnext_objects::is_object(arena, prototype) {
         return Err(Error::Type);
@@ -30,11 +32,26 @@ pub fn prepare(
 }
 
 #[cfg(not(feature = "class-constructors"))]
+#[inline(always)]
+fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
+    microesnext_callable_objects::is_callable_object(arena, constructor)
+}
+
+#[cfg(feature = "class-constructors")]
+#[inline(always)]
+fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
+    microesnext_callable_objects::is_callable_object(arena, constructor)
+        || microesnext_class_constructors::is_class_constructor(arena, constructor)
+}
+
+#[cfg(not(feature = "class-constructors"))]
+#[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
     microesnext_callable_objects::callable(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
+#[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
     if microesnext_class_constructors::is_class_constructor(arena, constructor) {
         microesnext_class_constructors::callable(arena, constructor)
