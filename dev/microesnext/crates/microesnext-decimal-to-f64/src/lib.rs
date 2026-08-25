@@ -8,6 +8,10 @@
 const MAX_DIGITS: usize = 768;
 const MAX_SHIFT: usize = 60;
 const MAX_SHIFT_DIGITS: usize = 19;
+const EXACT_POWERS_OF_TEN: [f64; 23] = [
+    1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16,
+    1e17, 1e18, 1e19, 1e20, 1e21, 1e22,
+];
 
 struct Decimal {
     digits: [u8; MAX_DIGITS],
@@ -270,15 +274,101 @@ fn shift_for(decimal_places: usize) -> usize {
 }
 
 pub fn parse(source: &[u8]) -> Option<f64> {
+    if let Some(value) = fast_path(source) {
+        return Some(value);
+    }
     let (decimal, negative) = Decimal::parse(source)?;
     Some(decimal.into_f64(negative))
+}
+
+fn fast_path(mut source: &[u8]) -> Option<f64> {
+    let negative = match source.first() {
+        Some(b'+') => {
+            source = &source[1..];
+            false
+        }
+        Some(b'-') => {
+            source = &source[1..];
+            true
+        }
+        _ => false,
+    };
+    let mut mantissa = 0_u64;
+    let mut significant_digits = 0_u32;
+    let mut fractional_digits = 0_i32;
+    let mut seen_dot = false;
+    let mut index = 0;
+    while let Some(&byte) = source.get(index) {
+        match byte {
+            b'0'..=b'9' => {
+                if seen_dot {
+                    fractional_digits += 1;
+                }
+                if significant_digits != 0 || byte != b'0' {
+                    significant_digits += 1;
+                    if significant_digits > 15 {
+                        return None;
+                    }
+                    mantissa = mantissa * 10 + (byte - b'0') as u64;
+                }
+                index += 1;
+            }
+            b'.' if !seen_dot => {
+                seen_dot = true;
+                index += 1;
+            }
+            _ => break,
+        }
+    }
+    if index == 0 || (index == 1 && seen_dot) {
+        return None;
+    }
+    let mut exponent = 0_i32;
+    if matches!(source.get(index), Some(b'e' | b'E')) {
+        index += 1;
+        let exponent_negative = match source.get(index) {
+            Some(b'+') => {
+                index += 1;
+                false
+            }
+            Some(b'-') => {
+                index += 1;
+                true
+            }
+            _ => false,
+        };
+        let start = index;
+        while let Some(digit @ b'0'..=b'9') = source.get(index).copied() {
+            exponent = exponent
+                .saturating_mul(10)
+                .saturating_add((digit - b'0') as i32);
+            index += 1;
+        }
+        if index == start {
+            return None;
+        }
+        if exponent_negative {
+            exponent = -exponent;
+        }
+    }
+    if index != source.len() {
+        return None;
+    }
+    let exponent = exponent - fractional_digits;
+    let power = *EXACT_POWERS_OF_TEN.get(exponent.unsigned_abs() as usize)?;
+    let value = if exponent < 0 {
+        mantissa as f64 / power
+    } else {
+        mantissa as f64 * power
+    };
+    Some(if negative { -value } else { value })
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
 
-    use super::parse;
+    use super::{fast_path, parse};
     use std::format;
 
     #[test]
@@ -302,6 +392,28 @@ mod tests {
                 expected.to_bits(),
                 "{source}"
             );
+        }
+    }
+
+    #[test]
+    fn uses_the_bounded_exact_fast_path_only_for_common_inputs() {
+        for source in ["0", "-0", ".5", "1.", "123.5", "1e22", "1e-22"] {
+            let expected = source.parse::<f64>().unwrap();
+            assert_eq!(
+                fast_path(source.as_bytes()).unwrap().to_bits(),
+                expected.to_bits(),
+                "{source}"
+            );
+        }
+        for source in [
+            "9007199254740993",
+            "1234567890123456",
+            "1e23",
+            "1e-23",
+            "1e",
+            ".",
+        ] {
+            assert!(fast_path(source.as_bytes()).is_none(), "{source}");
         }
     }
 
