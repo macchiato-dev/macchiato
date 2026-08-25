@@ -536,6 +536,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-stack-operations"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-string-number-coercion"
 version = "0.0.0"
 dependencies = [

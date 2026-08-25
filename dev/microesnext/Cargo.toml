@@ -50,6 +50,7 @@ members = [
   "crates/microesnext-promise-resolvers",
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
+  "crates/microesnext-stack-operations",
   "crates/microesnext-string-operations",
   "crates/microesnext-string-number-coercion",
   "crates/microesnext-symbols",
@@ -126,6 +127,7 @@ microesnext-promise-resolution = { path = "crates/microesnext-promise-resolution
 microesnext-promise-resolvers = { path = "crates/microesnext-promise-resolvers", version = "0.0.0" }
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
+microesnext-stack-operations = { path = "crates/microesnext-stack-operations", version = "0.0.0" }
 microesnext-string-operations = { path = "crates/microesnext-string-operations", version = "0.0.0" }
 microesnext-string-number-coercion = { path = "crates/microesnext-string-number-coercion", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
