@@ -49,11 +49,17 @@ yet full JavaScript numeric semantics.
 Unary numeric negation is independently removable from those binary
 operations. Its bounded build accepts i30 operands and reports overflow; the
 JavaScript Number composition keeps nonzero i30 results immediate, promotes
-the asymmetric minimum, and boxes `-0` so its sign remains observable. Prefix
-operators are collected iteratively before emission, so a long chain does not
-recurse on the native stack. A compiler selecting only `number-negation` can
-emit the promoted instruction without also retaining decimal and exponent
-literal parsing; selecting `numbers` adds those literal forms.
+the asymmetric minimum, boxes `-0` so its sign remains observable, and applies
+primitive Number coercion. Unary `+` is its own removable bytecode/compiler
+gate: booleans and null become immediate i30 values, undefined becomes boxed
+NaN, and existing i30 and boxed numbers are retained. Strings and objects are
+rejected until separately removable string parsing and `ToPrimitive`
+compositions exist. Prefix operators are collected iteratively before
+emission, so mixed chains do not recurse on the native stack. Compiler builds
+with only one unary family retain a smaller specialized scanner. A compiler
+selecting only `number-negation` can emit the promoted instruction without
+also retaining decimal and exponent literal parsing; selecting `numbers` adds
+those literal forms.
 
 Strict equality and inequality (`===` and `!==`) are a separate removable
 capability. Immediate values, objects, and symbols compare by identity. When

@@ -90,11 +90,16 @@ an explicit relational stopping condition.
 - `microesnext-numbers` supplies heap-backed IEEE-754 representation.
   Integer-only builds do not link floating-point parsing or storage, while
   equality-only number builds do not acquire arithmetic.
+- `microesnext-number-coercion` implements the primitive-only portion of
+  `ToNumber`. Immediate integers, booleans, and null stay allocation-free;
+  undefined becomes boxed NaN. String parsing and object `ToPrimitive` remain
+  separate future compositions rather than hidden dependencies.
 - `microesnext-number-operations` adds promoted arithmetic and relational
   comparison. Its i30 fast paths remain direct; overflow falls through to the
   number representation only in builds selecting this crate.
 - `microesnext-number-negation` composes the integer fast path with boxed
-  IEEE-754 results, including negative zero. It does not make the compiler
+  IEEE-754 results and primitive coercion, including negative zero. Its i30
+  path still enters integer negation directly. It does not make the compiler
   retain decimal/exponent literal parsing merely to emit `NegateNumber`.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the

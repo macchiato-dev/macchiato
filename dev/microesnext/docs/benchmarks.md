@@ -78,6 +78,20 @@ build contains no number crate. Macro-generated crate tests exercise each side
 alone and together. Adding the capability leaves both the 1,984-byte kernel and
 the 6,506-byte minimal programmable runtime byte-for-byte unchanged.
 
+## Primitive Number coercion, 2026-08-25
+
+The standalone primitive-coercion build is 6,371 bytes (2,823 gzip). Its live
+probe executes `+true` and verifies the immediate result `1`; runtime tests
+also cover false, null, undefined/NaN, i30 values, and existing boxed numbers.
+It contains number representation but neither arithmetic nor either negation
+crate. The compiler-only unary-plus build is 5,690 bytes (2,466 gzip).
+
+Number negation now composes the same coercion crate, making `-true`, `-null`,
+and `-undefined` follow primitive JavaScript semantics. Its linked artifact is
+6,912 bytes (3,050 gzip). The pre-existing i30 branch remains a direct fast
+path, and the interpreter kernel, bounded-negation, promoted-operations,
+minimal-program, and all-capabilities artifacts are byte-for-byte unchanged.
+
 ## Feature-independent core, 2026-08-25
 
 After Promise jobs were added, the facade benchmark began varying with enabled
@@ -137,8 +151,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Iterator result objects | 13,944 | 5,441 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
+| Primitive Number coercion | 6,371 | 2,823 |
 | Promoted number operations | 9,382 | 3,309 |
-| JavaScript Number negation | 6,784 | 2,991 |
+| JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,663 | 5,859 |
 | Strings only | 4,960 | 2,299 |
 | Symbols | 4,995 | 2,254 |
@@ -399,6 +414,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
 | bounded numeric negation | 5,791 | 2,503 |
+| primitive Number coercion | 5,690 | 2,466 |
 | JavaScript Number negation | 6,072 | 2,597 |
 | strings | 6,353 | 2,859 |
 | strict string concatenation | 6,528 | 2,936 |
@@ -409,7 +425,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive named functions | 17,995 | 7,500 |
 | async functions | 14,227 | 5,948 |
 | recursive async functions | 18,969 | 7,854 |
-| default language slice | 48,486 | 26,553 |
+| default language slice | 48,585 | 26,609 |
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric

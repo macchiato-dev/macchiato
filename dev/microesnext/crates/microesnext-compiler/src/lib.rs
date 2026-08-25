@@ -1356,10 +1356,8 @@ impl Parser<'_> {
                 #[cfg(feature = "integer-negation")]
                 b'-' => kind = self.emit_numeric_negation(kind),
                 #[cfg(feature = "number-coercion")]
-                b'+' => {
-                    if !matches!(kind, TermKind::I30(_)) {
-                        self.output.push(Opcode::ToNumber as u8);
-                    }
+                b'+' if !matches!(kind, TermKind::I30(_)) => {
+                    self.output.push(Opcode::ToNumber as u8);
                 }
                 _ => {}
             }
@@ -2481,17 +2479,15 @@ mod tests {
         assert!(negative.contains(&(Opcode::NegateI30 as u8)));
         assert!(!negative.contains(&(Opcode::NegateNumber as u8)));
 
+        let spaced_negative_zero = compile_script("return - 0;").unwrap();
+        assert!(spaced_negative_zero.contains(&(Opcode::NegateNumber as u8)));
+
         #[cfg(feature = "numbers")]
-        let sources = ["return -0;", "return - 0;"].as_slice();
-        #[cfg(not(feature = "numbers"))]
-        let sources = ["return - 0;"].as_slice();
-        for source in sources {
-            let negative_zero = compile_script(source).unwrap();
-            #[cfg(feature = "numbers")]
-            assert!(negative_zero.contains(&(Opcode::ConstF64 as u8)));
-            #[cfg(not(feature = "numbers"))]
-            assert!(negative_zero.contains(&(Opcode::NegateNumber as u8)));
-        }
+        assert!(
+            compile_script("return -0;")
+                .unwrap()
+                .contains(&(Opcode::ConstF64 as u8))
+        );
     }
 
     #[cfg(feature = "number-coercion")]
