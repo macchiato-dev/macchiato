@@ -9,6 +9,8 @@ version.workspace = true
 
 [features]
 default = []
+control-flow = ["microesnext-vm/control-flow"]
+locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
 async = ["dep:microesnext-async"]
@@ -65,6 +67,7 @@ microesnext-functions = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
+microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
@@ -86,7 +89,7 @@ microesnext-compiler.workspace = true
 [[test]]
 name = "source"
 path = "tests/source.rs"
-required-features = ["async", "exceptions"]
+required-features = ["async", "exceptions", "locals"]
 
 [[test]]
 name = "immediates"
@@ -95,6 +98,7 @@ path = "tests/immediates.rs"
 [[test]]
 name = "locals"
 path = "tests/locals.rs"
+required-features = ["locals"]
 
 [[test]]
 name = "objects"

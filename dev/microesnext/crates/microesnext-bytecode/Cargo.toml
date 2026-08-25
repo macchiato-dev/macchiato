@@ -9,6 +9,8 @@ version.workspace = true
 
 [features]
 default = []
+control-flow = []
+locals = []
 arrays = []
 async = []
 atoms = ["strings"]

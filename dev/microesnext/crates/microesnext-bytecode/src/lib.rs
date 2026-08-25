@@ -56,12 +56,18 @@ pub enum Opcode {
     #[cfg(feature = "numbers")]
     AddNumber = 22,
     ConstImmediate = 23,
-    InitLocals = 24,
-    LoadLocal = 25,
-    StoreLocal = 26,
-    ReturnLocals = 27,
-    Jump = 28,
-    JumpIfFalseBoolean = 29,
+    #[cfg(feature = "locals")]
+    InitLocals = 64,
+    #[cfg(feature = "locals")]
+    LoadLocal = 65,
+    #[cfg(feature = "locals")]
+    StoreLocal = 66,
+    #[cfg(feature = "locals")]
+    ReturnLocals = 67,
+    #[cfg(feature = "control-flow")]
+    Jump = 68,
+    #[cfg(feature = "control-flow")]
+    JumpIfFalseBoolean = 69,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -109,12 +115,18 @@ impl TryFrom<u8> for Opcode {
             #[cfg(feature = "numbers")]
             22 => Ok(Self::AddNumber),
             23 => Ok(Self::ConstImmediate),
-            24 => Ok(Self::InitLocals),
-            25 => Ok(Self::LoadLocal),
-            26 => Ok(Self::StoreLocal),
-            27 => Ok(Self::ReturnLocals),
-            28 => Ok(Self::Jump),
-            29 => Ok(Self::JumpIfFalseBoolean),
+            #[cfg(feature = "locals")]
+            64 => Ok(Self::InitLocals),
+            #[cfg(feature = "locals")]
+            65 => Ok(Self::LoadLocal),
+            #[cfg(feature = "locals")]
+            66 => Ok(Self::StoreLocal),
+            #[cfg(feature = "locals")]
+            67 => Ok(Self::ReturnLocals),
+            #[cfg(feature = "control-flow")]
+            68 => Ok(Self::Jump),
+            #[cfg(feature = "control-flow")]
+            69 => Ok(Self::JumpIfFalseBoolean),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -172,17 +184,19 @@ mod tests {
         assert_eq!(Opcode::try_from(23), Ok(Opcode::ConstImmediate));
     }
 
+    #[cfg(feature = "locals")]
     #[test]
-    fn local_opcodes_are_part_of_every_build() {
-        assert_eq!(Opcode::try_from(24), Ok(Opcode::InitLocals));
-        assert_eq!(Opcode::try_from(25), Ok(Opcode::LoadLocal));
-        assert_eq!(Opcode::try_from(26), Ok(Opcode::StoreLocal));
-        assert_eq!(Opcode::try_from(27), Ok(Opcode::ReturnLocals));
+    fn enabled_local_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(64), Ok(Opcode::InitLocals));
+        assert_eq!(Opcode::try_from(65), Ok(Opcode::LoadLocal));
+        assert_eq!(Opcode::try_from(66), Ok(Opcode::StoreLocal));
+        assert_eq!(Opcode::try_from(67), Ok(Opcode::ReturnLocals));
     }
 
+    #[cfg(feature = "control-flow")]
     #[test]
-    fn control_flow_opcodes_are_part_of_every_build() {
-        assert_eq!(Opcode::try_from(28), Ok(Opcode::Jump));
-        assert_eq!(Opcode::try_from(29), Ok(Opcode::JumpIfFalseBoolean));
+    fn enabled_control_flow_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(68), Ok(Opcode::Jump));
+        assert_eq!(Opcode::try_from(69), Ok(Opcode::JumpIfFalseBoolean));
     }
 }

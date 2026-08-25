@@ -9,6 +9,8 @@ version.workspace = true
 
 [features]
 default = []
+control-flow = ["microesnext-bytecode/control-flow"]
+locals = ["dep:microesnext-locals", "microesnext-bytecode/locals"]
 async = ["dep:microesnext-suspension", "microesnext-bytecode/async"]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = ["dep:microesnext-strings", "microesnext-bytecode/strings"]
@@ -27,6 +29,7 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }

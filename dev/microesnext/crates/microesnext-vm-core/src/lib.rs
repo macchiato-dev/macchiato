@@ -2,8 +2,7 @@
 
 use microesnext_arena::Arena;
 use microesnext_bytecode_core::{
-    ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, INIT_LOCALS, JUMP, JUMP_IF_FALSE_BOOLEAN,
-    LOAD_LOCAL, RETURN, RETURN_LOCALS, STORE_LOCAL, THROW, read_byte, read_bytes, read_i30,
+    ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, RETURN, THROW, read_byte, read_bytes, read_i30,
     read_immediate, read_u16, read_u32,
 };
 use microesnext_types::{Error, Value};
@@ -126,36 +125,8 @@ impl<'code, 'memory> Core<'code, 'memory> {
                         .ok_or(Error::Type)?;
                     self.arena.push(value)?;
                 }
-                INIT_LOCALS => {
-                    let count = read_u16(self.code, &mut self.pc)? as usize;
-                    self.init_locals(count)?;
-                }
-                LOAD_LOCAL => {
-                    let slot = read_u16(self.code, &mut self.pc)? as usize;
-                    let value = self.local(slot)?;
-                    self.arena.push(value)?;
-                }
-                STORE_LOCAL => {
-                    let slot = read_u16(self.code, &mut self.pc)? as usize;
-                    self.validate_local(slot)?;
-                    let value = self.arena.pop()?;
-                    self.arena
-                        .set_stack_value_from_bottom(self.local_base() + 1 + slot, value)?;
-                }
                 RETURN => {
                     let result = self.arena.pop()?;
-                    if let Some(outcome) = self.finish_return(result)? {
-                        return Ok(outcome);
-                    }
-                }
-                RETURN_LOCALS => {
-                    let result = self.arena.pop()?;
-                    let local_count = self.local_count()?;
-                    let base = self.local_base();
-                    if self.arena.stack_len() != base + 1 + local_count {
-                        return Err(Error::BadBytecode);
-                    }
-                    self.arena.truncate_stack(base)?;
                     if let Some(outcome) = self.finish_return(result)? {
                         return Ok(outcome);
                     }
@@ -163,19 +134,6 @@ impl<'code, 'memory> Core<'code, 'memory> {
                 CALL => {
                     let target = read_u32(self.code, &mut self.pc)? as usize;
                     self.enter_call(Value::UNDEFINED, target)?;
-                }
-                JUMP => {
-                    let target = read_u32(self.code, &mut self.pc)? as usize;
-                    self.jump(target)?;
-                }
-                JUMP_IF_FALSE_BOOLEAN => {
-                    let target = read_u32(self.code, &mut self.pc)? as usize;
-                    let condition = self.arena.pop()?;
-                    if condition == Value::FALSE {
-                        self.jump(target)?;
-                    } else if condition != Value::TRUE {
-                        return Err(Error::Type);
-                    }
                 }
                 THROW => {
                     let reason = self.arena.pop()?;
@@ -203,24 +161,12 @@ impl<'code, 'memory> Core<'code, 'memory> {
     }
 
     #[inline(always)]
-    fn local_base(&self) -> usize {
+    pub fn frame_base(&self) -> usize {
         self.frame_depth.unwrap_or(0)
     }
 
-    fn init_locals(&mut self, count: usize) -> Result<(), Error> {
-        if self.arena.stack_len() != self.local_base() {
-            return Err(Error::BadBytecode);
-        }
-        self.arena
-            .push(Value::from_i30(count as i32).ok_or(Error::BadBytecode)?)?;
-        for _ in 0..count {
-            self.arena.push(Value::UNDEFINED)?;
-        }
-        Ok(())
-    }
-
     #[inline(always)]
-    fn jump(&mut self, target: usize) -> Result<(), Error> {
+    pub fn jump(&mut self, target: usize) -> Result<(), Error> {
         if target >= self.code.len() {
             return Err(Error::BadBytecode);
         }
@@ -228,26 +174,9 @@ impl<'code, 'memory> Core<'code, 'memory> {
         Ok(())
     }
 
-    fn local_count(&self) -> Result<usize, Error> {
-        self.arena
-            .stack_value_from_bottom(self.local_base())?
-            .as_i30()
-            .and_then(|count| usize::try_from(count).ok())
-            .ok_or(Error::BadBytecode)
-    }
-
-    fn validate_local(&self, slot: usize) -> Result<(), Error> {
-        if slot < self.local_count()? {
-            Ok(())
-        } else {
-            Err(Error::BadBytecode)
-        }
-    }
-
-    fn local(&self, slot: usize) -> Result<Value, Error> {
-        self.validate_local(slot)?;
-        self.arena
-            .stack_value_from_bottom(self.local_base() + 1 + slot)
+    #[inline(always)]
+    pub fn return_value(&mut self, result: Value) -> Result<Option<CoreOutcome>, Error> {
+        self.finish_return(result)
     }
 
     #[inline(always)]
@@ -344,58 +273,6 @@ mod tests {
     }
 
     #[test]
-    fn stores_and_loads_top_level_locals() {
-        let code = Builder::new()
-            .init_locals(2)
-            .const_i30(40)
-            .store_local(0)
-            .const_i30(2)
-            .store_local(1)
-            .load_local(0)
-            .load_local(1)
-            .op(Opcode::AddI30)
-            .op(Opcode::ReturnLocals)
-            .finish();
-        let mut memory = [0; 64];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(42).unwrap())
-        );
-    }
-
-    #[test]
-    fn returns_from_a_called_local_frame() {
-        let code = Builder::new()
-            .call(6)
-            .op(Opcode::Return)
-            .init_locals(1)
-            .const_i30(42)
-            .store_local(0)
-            .load_local(0)
-            .op(Opcode::ReturnLocals)
-            .finish();
-        let mut memory = [0; 64];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run().unwrap(),
-            CoreOutcome::Complete(Value::from_i30(42).unwrap())
-        );
-    }
-
-    #[test]
-    fn rejects_local_slots_outside_the_declared_frame() {
-        let code = Builder::new()
-            .init_locals(1)
-            .load_local(1)
-            .op(Opcode::ReturnLocals)
-            .finish();
-        let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(core.run(), Err(Error::BadBytecode));
-    }
-
-    #[test]
     fn plain_return_rejects_unconsumed_operands() {
         let code = Builder::new()
             .const_i30(1)
@@ -403,53 +280,6 @@ mod tests {
             .op(Opcode::Return)
             .finish();
         let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(core.run(), Err(Error::BadBytecode));
-    }
-
-    #[test]
-    fn branches_only_on_explicit_booleans() {
-        let code = Builder::new()
-            .immediate(microesnext_bytecode::Immediate::False)
-            .jump_if_false_boolean(13)
-            .const_i30(1)
-            .op(Opcode::Return)
-            .const_i30(42)
-            .op(Opcode::Return)
-            .finish();
-        let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run(),
-            Ok(CoreOutcome::Complete(Value::from_i30(42).unwrap()))
-        );
-
-        let code = Builder::new()
-            .const_i30(0)
-            .jump_if_false_boolean(10)
-            .const_i30(1)
-            .op(Opcode::Return)
-            .finish();
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(core.run(), Err(Error::Type));
-    }
-
-    #[test]
-    fn jumps_to_valid_instruction_boundaries() {
-        let code = Builder::new()
-            .jump(10)
-            .const_i30(1)
-            .const_i30(42)
-            .op(Opcode::Return)
-            .finish();
-        let mut memory = [0; 32];
-        let mut core = Core::new(&code, &mut memory, 0);
-        assert_eq!(
-            core.run(),
-            Ok(CoreOutcome::Complete(Value::from_i30(42).unwrap()))
-        );
-
-        let code = Builder::new().jump(5).finish();
         let mut core = Core::new(&code, &mut memory, 0);
         assert_eq!(core.run(), Err(Error::BadBytecode));
     }

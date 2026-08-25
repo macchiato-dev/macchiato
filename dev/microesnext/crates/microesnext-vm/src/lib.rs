@@ -145,9 +145,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "async",
         feature = "arrays",
         feature = "atoms",
+        feature = "control-flow",
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "locals",
         feature = "numbers",
         feature = "exceptions"
     ))]
@@ -247,6 +249,56 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "locals")]
+            Opcode::InitLocals => {
+                let count = self.core.next_u16()? as usize;
+                let base = self.core.frame_base();
+                microesnext_locals::init(self.core.arena_mut(), base, count)?;
+                Ok(None)
+            }
+            #[cfg(feature = "locals")]
+            Opcode::LoadLocal => {
+                let slot = self.core.next_u16()? as usize;
+                let value =
+                    microesnext_locals::load(self.core.arena(), self.core.frame_base(), slot)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "locals")]
+            Opcode::StoreLocal => {
+                let slot = self.core.next_u16()? as usize;
+                let base = self.core.frame_base();
+                microesnext_locals::store(self.core.arena_mut(), base, slot)?;
+                Ok(None)
+            }
+            #[cfg(feature = "locals")]
+            Opcode::ReturnLocals => {
+                let result = self.core.arena_mut().pop()?;
+                let base = self.core.frame_base();
+                microesnext_locals::leave(self.core.arena_mut(), base)?;
+                match self.core.return_value(result)? {
+                    Some(CoreOutcome::Complete(value)) => Ok(Some(Outcome::Complete(value))),
+                    Some(_) => Err(Error::BadBytecode),
+                    None => Ok(None),
+                }
+            }
+            #[cfg(feature = "control-flow")]
+            Opcode::Jump => {
+                let target = self.core.next_u32()? as usize;
+                self.core.jump(target)?;
+                Ok(None)
+            }
+            #[cfg(feature = "control-flow")]
+            Opcode::JumpIfFalseBoolean => {
+                let target = self.core.next_u32()? as usize;
+                let condition = self.core.arena_mut().pop()?;
+                if condition == Value::FALSE {
+                    self.core.jump(target)?;
+                } else if condition != Value::TRUE {
+                    return Err(Error::Type);
+                }
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::NewArray => {
                 let array = new_array(self.core.arena_mut())?;
@@ -307,9 +359,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "async",
         feature = "arrays",
         feature = "atoms",
+        feature = "control-flow",
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "locals",
         feature = "numbers",
         feature = "exceptions"
     )))]
@@ -672,5 +726,63 @@ mod tests {
             machine.call_closure(function, argument).unwrap(),
             Outcome::Complete(argument)
         );
+    }
+
+    #[cfg(feature = "locals")]
+    #[test]
+    fn executes_optional_local_frames() {
+        let code = Builder::new()
+            .init_locals(2)
+            .const_i30(40)
+            .store_local(0)
+            .const_i30(2)
+            .store_local(1)
+            .load_local(0)
+            .load_local(1)
+            .op(Opcode::AddI30)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+        );
+
+        let malformed = Builder::new()
+            .init_locals(1)
+            .load_local(1)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut machine = Machine::new(&malformed, &mut memory);
+        assert_eq!(machine.run(), Err(Error::BadBytecode));
+    }
+
+    #[cfg(feature = "control-flow")]
+    #[test]
+    fn branches_only_on_explicit_booleans() {
+        let code = Builder::new()
+            .immediate(microesnext_bytecode::Immediate::False)
+            .jump_if_false_boolean(13)
+            .const_i30(1)
+            .op(Opcode::Return)
+            .const_i30(42)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 32];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+        );
+
+        let malformed = Builder::new()
+            .const_i30(0)
+            .jump_if_false_boolean(10)
+            .const_i30(1)
+            .op(Opcode::Return)
+            .finish();
+        let mut machine = Machine::new(&malformed, &mut memory);
+        assert_eq!(machine.run(), Err(Error::Type));
     }
 }

@@ -12,8 +12,10 @@ use microesnext::{Core, CoreOutcome};
     any(
         feature = "arrays",
         feature = "async",
+        feature = "control-flow",
         feature = "exceptions",
         feature = "functions",
+        feature = "locals",
         feature = "numbers",
         feature = "objects",
         feature = "strings"
@@ -35,6 +37,61 @@ pub extern "C" fn core_probe() -> i32 {
     let mut core = Core::new(&code, &mut memory, 0);
     match core.run() {
         Ok(CoreOutcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "locals", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn locals_probe() -> i32 {
+    let code = [
+        Opcode::InitLocals as u8,
+        1,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::StoreLocal as u8,
+        0,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ReturnLocals as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "control-flow", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn control_flow_probe() -> i32 {
+    let code = [
+        Opcode::ConstImmediate as u8,
+        microesnext::bytecode::Immediate::False as u8,
+        Opcode::JumpIfFalseBoolean as u8,
+        8,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
         _ => -1,
     }
 }

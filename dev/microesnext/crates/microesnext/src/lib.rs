@@ -5,6 +5,9 @@ pub use microesnext_types::{Error, HeapRef, Value};
 pub use microesnext_vm::{Machine, Outcome};
 pub use microesnext_vm_core::{Core, CoreOutcome};
 
+#[cfg(feature = "locals")]
+pub use microesnext_locals as locals;
+
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
 

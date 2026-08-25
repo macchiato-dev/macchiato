@@ -21,6 +21,7 @@ dependencies = [
  "microesnext-iterable-protocol",
  "microesnext-iterator-results",
  "microesnext-iterators",
+ "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-promises",
@@ -206,6 +207,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-locals"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
@@ -271,6 +280,7 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-strings",
