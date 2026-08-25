@@ -4,7 +4,7 @@ const core: Probe = ["core_probe", 42];
 const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
   [
     ["minimal", "", [core]],
-    ["arrays", "arrays", [core, ["arrays_probe", 1]]],
+    ["arrays", "arrays", [core, ["arrays_probe", 42]]],
     [
       "atoms",
       "atoms",
@@ -36,7 +36,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       "arrays,async,collections,exceptions,functions,objects,promises,weak-collections",
       [
         core,
-        ["arrays_probe", 1],
+        ["arrays_probe", 42],
         ["atoms_probe", "nonzero"],
         ["async_probe", 7],
         ["collections_probe", 0],

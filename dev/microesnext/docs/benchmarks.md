@@ -60,17 +60,17 @@ LTO from merely discarding an enabled but unused dependency.
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Minimal | 1,892 | 876 |
-| Arrays | 6,793 | 2,839 |
+| Arrays | 8,675 | 3,440 |
 | Atoms with strings | 9,845 | 4,096 |
 | Async suspension | 6,356 | 2,766 |
 | Collections | 3,193 | 1,420 |
 | Exceptions | 3,753 | 1,674 |
 | Functions | 6,869 | 2,935 |
-| Objects with atoms and strings | 14,751 | 5,824 |
+| Objects with atoms and strings | 14,379 | 5,700 |
 | Strings only | 4,867 | 2,205 |
 | Promises | 4,748 | 2,145 |
 | Weak collections | 1,959 | 919 |
-| All capabilities | 27,312 | 9,853 |
+| All capabilities | 27,067 | 9,860 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -82,6 +82,10 @@ The functions probe likewise executes closure creation and an indirect guest
 call through `Machine`, rather than merely returning a freshly allocated
 closure reference. That correction raises the honest live feature measurement
 from 1,916 to 6,869 bytes; the smaller result was mostly an LTO artifact.
+Array and object probes also execute create, set, and get instructions through
+`Machine`. Low-level storage-only probes remain appropriate for collections,
+promises, and weak collections because those capabilities do not yet expose VM
+opcodes.
 
 The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode

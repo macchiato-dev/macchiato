@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "wasm32", no_std)]
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-#[cfg(all(target_arch = "wasm32", any(feature = "async", feature = "objects")))]
+#[cfg(all(target_arch = "wasm32", feature = "async"))]
 use microesnext::Value;
 #[cfg(target_arch = "wasm32")]
 use microesnext::bytecode::Opcode;
@@ -10,9 +10,11 @@ use microesnext::{Core, CoreOutcome};
 #[cfg(all(
     target_arch = "wasm32",
     any(
+        feature = "arrays",
         feature = "async",
         feature = "exceptions",
         feature = "functions",
+        feature = "objects",
         feature = "strings"
     )
 ))]
@@ -88,11 +90,33 @@ pub extern "C" fn exceptions_probe() -> i32 {
 #[cfg(all(feature = "arrays", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn arrays_probe() -> usize {
+    let code = [
+        Opcode::NewArray as u8,
+        Opcode::ConstI30 as u8,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::SetIndex as u8,
+        Opcode::ConstI30 as u8,
+        0,
+        0,
+        0,
+        0,
+        Opcode::GetIndex as u8,
+        Opcode::Return as u8,
+    ];
     let mut memory = [0; 64];
-    let mut arena = microesnext_arena::Arena::new(&mut memory);
-    let array = microesnext::arrays::new(&mut arena).unwrap();
-    let array = microesnext::arrays::push(&mut arena, array, microesnext::Value::TRUE).unwrap();
-    microesnext::arrays::len(&arena, array).unwrap()
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1) as usize,
+        _ => usize::MAX,
+    }
 }
 
 #[cfg(all(feature = "collections", target_arch = "wasm32"))]
@@ -136,20 +160,31 @@ pub extern "C" fn functions_probe() -> i32 {
 #[cfg(all(feature = "objects", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn objects_probe() -> i32 {
-    let mut memory = [0; 64];
-    let mut arena = microesnext_arena::Arena::new(&mut memory);
-    let object = microesnext::objects::new_object(&mut arena, Value::NULL).unwrap();
-    let object = microesnext::objects::set(
-        &mut arena,
-        object,
-        Value::from_i30(1).unwrap(),
-        Value::from_i30(42).unwrap(),
-    )
-    .unwrap();
-    microesnext::objects::get(&arena, object, Value::from_i30(1).unwrap())
-        .unwrap()
-        .as_i30()
-        .unwrap_or(-1)
+    let code = [
+        Opcode::NewObject as u8,
+        Opcode::ConstAtom as u8,
+        1,
+        0,
+        b'x',
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::SetProperty as u8,
+        Opcode::ConstAtom as u8,
+        1,
+        0,
+        b'x',
+        Opcode::GetProperty as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 96];
+    let mut machine = Machine::with_objects(&code, &mut memory, 1).unwrap();
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
 }
 
 #[cfg(all(feature = "strings", target_arch = "wasm32"))]
