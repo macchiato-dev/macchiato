@@ -23,6 +23,11 @@ async-functions = [
   "microesnext-async/functions",
   "microesnext-vm/async-functions",
 ]
+async-thenables = [
+  "async-functions",
+  "thenables",
+  "dep:microesnext-async-thenables",
+]
 strings = [
   "dep:microesnext-strings",
   "microesnext-vm/strings",
@@ -110,6 +115,7 @@ promise-jobs = [
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
+microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-array-iterators = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }

@@ -37,6 +37,7 @@ const parameters = "microesnext-parameters";
 const suspension = "microesnext-suspension";
 const recursiveFunctions = "microesnext-recursive-functions";
 const asyncFunctions = "microesnext-async-functions";
+const asyncThenables = "microesnext-async-thenables";
 const recursiveAsyncFunctions = "microesnext-recursive-async-functions";
 const promiseResolution = "microesnext-promise-resolution";
 const promiseResolvers = "microesnext-promise-resolvers";
@@ -49,6 +50,7 @@ assertPresence(
   [],
   [
     asyncFunctions,
+    asyncThenables,
     environments,
     errors,
     parameters,
@@ -165,7 +167,7 @@ assertPresence(
     receivers,
     thenables,
   ],
-  [asyncFunctions, environments, recursiveAsyncFunctions, suspension],
+  [asyncFunctions, asyncThenables, environments, recursiveAsyncFunctions, suspension],
 );
 assertPresence(
   ["async-functions"],
@@ -177,7 +179,30 @@ assertPresence(
     promiseResolution,
     suspension,
   ],
-  [environments, parameters, recursiveAsyncFunctions, recursiveFunctions],
+  [
+    asyncThenables,
+    environments,
+    parameters,
+    recursiveAsyncFunctions,
+    recursiveFunctions,
+    thenables,
+  ],
+);
+assertPresence(
+  ["async-thenables"],
+  [
+    asyncFunctions,
+    asyncThenables,
+    "microesnext-functions",
+    "microesnext-objects",
+    "microesnext-promises",
+    promiseResolution,
+    promiseResolvers,
+    receivers,
+    suspension,
+    thenables,
+  ],
+  [environments, recursiveAsyncFunctions, recursiveFunctions],
 );
 assertPresence(
   ["recursive-async-functions"],

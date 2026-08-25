@@ -23,6 +23,9 @@ pub use microesnext_async as r#async;
 #[cfg(feature = "async-functions")]
 pub use microesnext_async_functions as async_functions;
 
+#[cfg(feature = "async-thenables")]
+pub use microesnext_async_thenables as async_thenables;
+
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
 
