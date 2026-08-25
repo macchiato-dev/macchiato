@@ -20,6 +20,7 @@ default = [
   "logical-operations",
   "number-negation",
   "number-coercion",
+  "number-division",
   "string-number-coercion",
   "number-operations",
   "objects",
@@ -58,6 +59,7 @@ number-negation = [
   "microesnext-bytecode/number-negation",
 ]
 number-coercion = ["microesnext-bytecode/number-coercion"]
+number-division = ["numbers", "microesnext-bytecode/number-division"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]

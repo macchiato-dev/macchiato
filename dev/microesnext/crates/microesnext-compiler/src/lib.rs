@@ -1237,7 +1237,7 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(feature = "integer-operations")]
+    #[cfg(all(feature = "integer-operations", not(feature = "number-division")))]
     fn product(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -1258,7 +1258,61 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(not(feature = "integer-operations"))]
+    #[cfg(all(feature = "integer-operations", feature = "number-division"))]
+    fn product(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.unary(binding)?;
+        loop {
+            if self.consume(b'*') {
+                let (_, right) = self.unary(None)?;
+                let result = match (kind, right) {
+                    (TermKind::I30(left), TermKind::I30(right)) => left
+                        .checked_mul(right)
+                        .filter(|value| (-(1 << 29)..(1 << 29)).contains(value)),
+                    _ => None,
+                };
+                self.output
+                    .push(self.multiply_opcode(result.is_some()) as u8);
+                kind = result.map_or(TermKind::General, TermKind::I30);
+            } else if self.consume(b'/') {
+                self.unary(None)?;
+                self.output.push(Opcode::DivideNumber as u8);
+                kind = TermKind::General;
+            } else if self.consume(b'%') {
+                self.unary(None)?;
+                self.output.push(Opcode::RemainderNumber as u8);
+                kind = TermKind::General;
+            } else {
+                break;
+            }
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(not(feature = "integer-operations"), feature = "number-division"))]
+    fn product(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.unary(binding)?;
+        loop {
+            let opcode = if self.consume(b'/') {
+                Opcode::DivideNumber
+            } else if self.consume(b'%') {
+                Opcode::RemainderNumber
+            } else {
+                break;
+            };
+            self.unary(None)?;
+            self.output.push(opcode as u8);
+            kind = TermKind::General;
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(not(feature = "integer-operations"), not(feature = "number-division")))]
     fn product(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -2477,6 +2531,20 @@ mod tests {
 
         let exponent = compile_script("return .5e2;").unwrap();
         assert!(exponent.contains(&(Opcode::ConstF64 as u8)));
+    }
+
+    #[cfg(feature = "number-division")]
+    #[test]
+    fn emits_division_and_remainder_as_an_independent_product_family() {
+        let code = compile_script("return 7 / 2 % 1;").unwrap();
+        assert!(code.contains(&(Opcode::DivideNumber as u8)));
+        assert!(code.contains(&(Opcode::RemainderNumber as u8)));
+    }
+
+    #[cfg(all(not(feature = "number-division"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_division_as_an_unexpected_token() {
+        assert_eq!(compile_script("return 7 / 2;").unwrap_err().offset, 9);
     }
 
     #[cfg(feature = "number-negation")]
