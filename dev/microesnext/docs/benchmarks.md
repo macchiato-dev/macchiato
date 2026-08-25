@@ -69,9 +69,16 @@ After adding source-level catches and explicit guest handler records, the
 minimal probe is 1,900 bytes (874 gzip), while the exception probe is 2,126
 bytes (936 gzip). Handler state belongs to the optional `Machine` wrapper;
 `Core` has one layout and one opcode loop in every feature configuration.
-Alternating direct-loop samples converged to 3.45–3.48 ns/instruction both with
-and without the exception feature after process warm-up. This run detects no
-capability cost in the invariant arithmetic loop.
+Extracting that state into `microesnext-exceptions` left every measured Wasm
+size unchanged. `cargo tree -p microesnext --no-default-features` contains no
+exception crate, while adding `--features exceptions` links it through the
+facade and VM wrapper.
+
+Five alternating direct-loop samples after the extraction measured
+3.35–3.49 ns/instruction for the minimal build and 3.36–3.45 ns/instruction
+with exceptions. The overlapping ranges detect no capability cost in the
+invariant arithmetic loop; they are a regression check rather than proof of
+identical timing.
 
 These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the

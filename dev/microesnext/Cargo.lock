@@ -12,6 +12,7 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
+ "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-objects",
  "microesnext-promises",
@@ -71,6 +72,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-exceptions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-bytecode",
+ "microesnext-types",
+ "microesnext-vm-core",
+]
+
+[[package]]
 name = "microesnext-functions"
 version = "0.0.0"
 dependencies = [
@@ -107,6 +117,7 @@ dependencies = [
  "microesnext-arrays",
  "microesnext-bytecode",
  "microesnext-compiler",
+ "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",

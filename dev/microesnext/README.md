@@ -32,6 +32,10 @@ not link to that C implementation.
   separate capability because ephemerons alter collector tracing.
 - `microesnext-promises` contains compact promise records and a caller-owned,
   rooted FIFO job ring; it does not require a native allocator or Rust futures.
+- `microesnext-exceptions` owns explicit guest handler-chain bookkeeping and
+  stack unwinding only for builds enabling the `exceptions` feature. Handler
+  records remain guest-stack words; the invariant opcode core has no exception
+  state.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.

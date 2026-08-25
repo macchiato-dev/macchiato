@@ -13,7 +13,7 @@ arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 async = ["dep:microesnext-async"]
 objects = ["dep:microesnext-objects", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
-exceptions = ["microesnext-vm/exceptions"]
+exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 collections = ["dep:microesnext-collections"]
 weak-collections = ["dep:microesnext-weak-collections"]
 promises = ["dep:microesnext-promises"]
@@ -26,6 +26,7 @@ microesnext-collections = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true

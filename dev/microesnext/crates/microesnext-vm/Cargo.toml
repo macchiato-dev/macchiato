@@ -13,7 +13,7 @@ async = []
 arrays = ["dep:microesnext-arrays"]
 objects = ["dep:microesnext-objects"]
 functions = ["dep:microesnext-functions"]
-exceptions = []
+exceptions = ["dep:microesnext-exceptions"]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -23,6 +23,7 @@ microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-exceptions = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

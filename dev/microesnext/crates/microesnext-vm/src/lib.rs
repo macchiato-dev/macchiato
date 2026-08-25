@@ -4,6 +4,8 @@ use microesnext_arena::Arena;
 #[cfg(feature = "arrays")]
 use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
 use microesnext_bytecode::Opcode;
+#[cfg(feature = "exceptions")]
+use microesnext_exceptions::Handlers;
 #[cfg(feature = "functions")]
 use microesnext_functions::{capture, capture_stack, entry};
 #[cfg(feature = "objects")]
@@ -21,7 +23,7 @@ pub enum Outcome {
 pub struct Machine<'code, 'memory> {
     core: Core<'code, 'memory>,
     #[cfg(feature = "exceptions")]
-    handler_depth: Option<usize>,
+    handlers: Handlers,
     #[cfg(feature = "objects")]
     atoms: Option<Atoms>,
 }
@@ -39,7 +41,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Self {
             core: Core::new(code, memory, root_capacity),
             #[cfg(feature = "exceptions")]
-            handler_depth: None,
+            handlers: Handlers::new(),
             #[cfg(feature = "objects")]
             atoms: None,
         }
@@ -56,7 +58,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Ok(Self {
             core: Core::from_parts(arena, code, 0, None),
             #[cfg(feature = "exceptions")]
-            handler_depth: None,
+            handlers: Handlers::new(),
             atoms: Some(atoms),
         })
     }
@@ -90,7 +92,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Ok(Machine {
             core: self.core.grow_into(memory)?,
             #[cfg(feature = "exceptions")]
-            handler_depth: self.handler_depth,
+            handlers: self.handlers,
             #[cfg(feature = "objects")]
             atoms: self.atoms,
         })
@@ -279,7 +281,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 #[cfg(feature = "exceptions")]
                 {
                     let catch_pc = self.core.next_u32()? as usize;
-                    self.push_handler(catch_pc)?;
+                    self.handlers.install(&mut self.core, catch_pc)?;
                     Ok(None)
                 }
             }
@@ -288,7 +290,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 return Err(Error::BadBytecode);
                 #[cfg(feature = "exceptions")]
                 {
-                    self.pop_handler()?;
+                    self.handlers.leave(&mut self.core)?;
                     Ok(None)
                 }
             }
@@ -373,7 +375,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(feature = "async")]
     fn current_handler_depth(&self) -> Option<usize> {
         #[cfg(feature = "exceptions")]
-        return self.handler_depth;
+        return self.handlers.depth();
         #[cfg(not(feature = "exceptions"))]
         None
     }
@@ -382,7 +384,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     fn set_handler_depth(&mut self, handler_depth: Option<usize>) {
         #[cfg(feature = "exceptions")]
         {
-            self.handler_depth = handler_depth;
+            self.handlers.restore(handler_depth);
         }
         #[cfg(not(feature = "exceptions"))]
         let _ = handler_depth;
@@ -390,84 +392,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     fn handle_throw(&mut self, reason: Value) -> Result<Option<Outcome>, Error> {
         #[cfg(feature = "exceptions")]
-        if self.unwind(reason)? {
+        if self.handlers.unwind(&mut self.core, reason)? {
             return Ok(None);
         }
         self.core.abandon();
         Ok(Some(Outcome::Throw(reason)))
-    }
-
-    #[cfg(feature = "exceptions")]
-    fn push_handler(&mut self, catch_pc: usize) -> Result<(), Error> {
-        if catch_pc >= self.core.code().len() {
-            return Err(Error::BadBytecode);
-        }
-        let previous = self.handler_depth.map_or(-1, |depth| depth as i32);
-        let frame = self.core.frame_depth().map_or(-1, |depth| depth as i32);
-        self.core
-            .arena_mut()
-            .push(Value::from_i30(previous).ok_or(Error::BadBytecode)?)?;
-        self.core
-            .arena_mut()
-            .push(Value::from_i30(frame).ok_or(Error::BadBytecode)?)?;
-        self.core
-            .arena_mut()
-            .push(Value::from_i30(catch_pc as i32).ok_or(Error::BadBytecode)?)?;
-        self.handler_depth = Some(self.core.arena().stack_len());
-        Ok(())
-    }
-
-    #[cfg(feature = "exceptions")]
-    fn pop_handler(&mut self) -> Result<(), Error> {
-        let depth = self.handler_depth.ok_or(Error::BadBytecode)?;
-        if self.core.arena().stack_len() != depth + 1 {
-            return Err(Error::BadBytecode);
-        }
-        let result = self.core.arena_mut().pop()?;
-        let _catch_pc = self.core.arena_mut().pop()?;
-        let _frame = self.core.arena_mut().pop()?;
-        let previous = self
-            .core
-            .arena_mut()
-            .pop()?
-            .as_i30()
-            .ok_or(Error::BadBytecode)?;
-        self.handler_depth = (previous >= 0).then_some(previous as usize);
-        self.core.arena_mut().push(result)?;
-        Ok(())
-    }
-
-    #[cfg(feature = "exceptions")]
-    fn unwind(&mut self, reason: Value) -> Result<bool, Error> {
-        let Some(depth) = self.handler_depth else {
-            return Ok(false);
-        };
-        self.core.arena_mut().truncate_stack(depth)?;
-        let catch_pc = self
-            .core
-            .arena_mut()
-            .pop()?
-            .as_i30()
-            .ok_or(Error::BadBytecode)?;
-        let frame = self
-            .core
-            .arena_mut()
-            .pop()?
-            .as_i30()
-            .ok_or(Error::BadBytecode)?;
-        let previous = self
-            .core
-            .arena_mut()
-            .pop()?
-            .as_i30()
-            .ok_or(Error::BadBytecode)?;
-        self.core
-            .set_pc(usize::try_from(catch_pc).map_err(|_| Error::BadBytecode)?)?;
-        self.core
-            .set_frame_depth((frame >= 0).then_some(frame as usize));
-        self.handler_depth = (previous >= 0).then_some(previous as usize);
-        self.core.arena_mut().push(reason)?;
-        Ok(true)
     }
 }
 
