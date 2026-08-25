@@ -3,6 +3,28 @@
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::Core;
 
+/// Snapshot a complete execution context without consuming an awaited value.
+pub fn suspend_context(
+    core: &mut Core<'_, '_>,
+    handler_depth: Option<usize>,
+) -> Result<RootId, Error> {
+    let pc = core.pc() as u32;
+    let frame_depth = core.frame_depth();
+    let continuation = core
+        .arena_mut()
+        .suspend_stack(pc, frame_depth, handler_depth, &mut [])?;
+    core.arena_mut().retain(Value::from_ref(continuation))
+}
+
+/// Restore a complete execution context without adding an operand.
+pub fn resume_context(
+    core: &mut Core<'_, '_>,
+    continuation: RootId,
+) -> Result<Option<usize>, Error> {
+    let continuation = core.arena_mut().release(continuation)?;
+    restore_value(core, continuation)
+}
+
 /// Remove an awaited operand and snapshot the remaining guest stack. The
 /// returned root keeps the relocatable continuation alive outside the VM.
 pub fn suspend(
@@ -61,7 +83,7 @@ mod tests {
     use microesnext_types::Value;
     use microesnext_vm_core::Core;
 
-    use super::{resume, suspend};
+    use super::{resume, resume_context, suspend, suspend_context};
 
     #[test]
     fn round_trips_stack_and_awaited_operand() {
@@ -78,5 +100,17 @@ mod tests {
             None
         );
         assert_eq!(core.arena().stack_len(), 2);
+    }
+
+    #[test]
+    fn round_trips_a_whole_caller_context_without_an_extra_operand() {
+        let code = [1, 0, 0, 0, 0];
+        let mut memory = [0; 32];
+        let mut core = Core::new(&code, &mut memory, 1);
+        core.arena_mut().push(Value::from_i30(42).unwrap()).unwrap();
+        let continuation = suspend_context(&mut core, None).unwrap();
+        assert_eq!(core.arena().stack_len(), 0);
+        assert_eq!(resume_context(&mut core, continuation).unwrap(), None);
+        assert_eq!(core.arena().stack_value(0).unwrap().as_i30(), Some(42));
     }
 }
