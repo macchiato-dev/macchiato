@@ -33,7 +33,10 @@ number operators, strict equality, and logical operators. When a gate is
 absent the parser does not consume that syntax, so callers receive the same
 ordinary grammar error they would get for another unexpected token. The
 `source-positions` feature controls whether `CompileError` retains the source
-offset; compact build-time uses can omit that field.
+offset; compact build-time uses can omit that field. Array literals are an
+independent parser feature. Object literals and property access compose the
+object, atom, and string bytecode vocabulary, without adding those paths to an
+array-only or scalar-only generator.
 
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational

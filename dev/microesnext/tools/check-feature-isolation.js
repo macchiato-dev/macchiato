@@ -84,17 +84,26 @@ assertCompilerFeatures(
   [],
   [],
   [
+    "arrays",
+    "atoms",
     "equality",
     "integer-operations",
     "logical-operations",
     "numbers",
     "number-operations",
+    "objects",
+    "strings",
   ],
 );
 assertCompilerFeatures(
   ["number-operations"],
   ["integer-operations", "numbers", "number-operations"],
   ["equality", "logical-operations"],
+);
+assertCompilerFeatures(
+  ["objects"],
+  ["atoms", "objects", "strings"],
+  ["arrays", "numbers", "number-operations"],
 );
 
 assertPresence(

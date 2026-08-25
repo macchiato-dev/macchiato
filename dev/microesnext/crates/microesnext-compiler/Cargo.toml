@@ -9,11 +9,15 @@ version.workspace = true
 
 [features]
 default = [
+  "arrays",
   "equality",
   "logical-operations",
   "number-operations",
+  "objects",
   "source-positions",
 ]
+arrays = ["microesnext-bytecode/arrays"]
+atoms = ["strings", "microesnext-bytecode/atoms"]
 equality = ["microesnext-bytecode/equality"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
@@ -23,25 +27,23 @@ number-operations = [
   "numbers",
   "microesnext-bytecode/number-operations",
 ]
+objects = ["atoms", "microesnext-bytecode/objects"]
 source-positions = []
+strings = ["microesnext-bytecode/strings"]
 
 [dependencies]
 microesnext-bytecode = { workspace = true, features = [
-  "arrays",
   "async",
   "async-functions",
-  "atoms",
   "control-flow",
   "exceptions",
   "environments",
   "functions",
   "function-arguments",
   "locals",
-  "objects",
   "recursive-functions",
   "recursive-async-functions",
   "receivers",
-  "strings",
 ] }
 
 [lib]

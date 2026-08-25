@@ -132,18 +132,21 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "strings")]
     pub fn string(mut self, bytes: &[u8]) -> Self {
         assert!(u16::try_from(bytes.len()).is_ok());
         self.output_string(bytes);
         self
     }
 
+    #[cfg(feature = "atoms")]
     pub fn atom(mut self, bytes: &[u8]) -> Self {
         assert!(u16::try_from(bytes.len()).is_ok());
         self.output_atom(bytes);
         self
     }
 
+    #[cfg(feature = "objects")]
     pub fn object(mut self) -> Self {
         self.code.push(Opcode::NewObject as u8);
         self
@@ -183,6 +186,7 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "strings")]
     fn output_string(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstString as u8);
         self.code
@@ -190,6 +194,7 @@ impl Builder {
         self.code.extend_from_slice(bytes);
     }
 
+    #[cfg(feature = "atoms")]
     fn output_atom(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstAtom as u8);
         self.code
@@ -1067,6 +1072,70 @@ impl Parser<'_> {
         }
     }
 
+    #[cfg(feature = "arrays")]
+    fn array_literal(&mut self) -> Result<bool, CompileError> {
+        if !self.consume_raw(b'[') {
+            return Ok(false);
+        }
+        self.output.push(Opcode::NewArray as u8);
+        let mut index = 0_i32;
+        if !self.consume(b']') {
+            loop {
+                self.output.push(Opcode::ConstI30 as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
+                let _ = self.number()?;
+                self.output.push(Opcode::SetIndex as u8);
+                index = index
+                    .checked_add(1)
+                    .ok_or_else(|| self.error("an array index"))?;
+                if self.consume(b']') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or ]"));
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    #[cfg(not(feature = "arrays"))]
+    fn array_literal(&mut self) -> Result<bool, CompileError> {
+        Ok(false)
+    }
+
+    #[cfg(feature = "objects")]
+    fn object_literal(&mut self) -> Result<bool, CompileError> {
+        if !self.consume_raw(b'{') {
+            return Ok(false);
+        }
+        self.output.push(Opcode::NewObject as u8);
+        if !self.consume(b'}') {
+            loop {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                if !self.consume(b':') {
+                    return Err(self.error(":"));
+                }
+                self.output_atom_range(start, end);
+                let _ = self.number()?;
+                self.output.push(Opcode::SetProperty as u8);
+                if self.consume(b'}') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or }"));
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    #[cfg(not(feature = "objects"))]
+    fn object_literal(&mut self) -> Result<bool, CompileError> {
+        Ok(false)
+    }
+
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
@@ -1145,47 +1214,7 @@ impl Parser<'_> {
                 asynchronous,
             )?;
             (false, TermKind::General)
-        } else if self.consume_raw(b'[') {
-            self.output.push(Opcode::NewArray as u8);
-            let mut index = 0_i32;
-            if !self.consume(b']') {
-                loop {
-                    self.output.push(Opcode::ConstI30 as u8);
-                    self.output.extend_from_slice(&index.to_le_bytes());
-                    let _ = self.number()?;
-                    self.output.push(Opcode::SetIndex as u8);
-                    index = index
-                        .checked_add(1)
-                        .ok_or_else(|| self.error("an array index"))?;
-                    if self.consume(b']') {
-                        break;
-                    }
-                    if !self.consume(b',') {
-                        return Err(self.error(", or ]"));
-                    }
-                }
-            }
-            (false, TermKind::General)
-        } else if self.consume_raw(b'{') {
-            self.output.push(Opcode::NewObject as u8);
-            if !self.consume(b'}') {
-                loop {
-                    self.whitespace();
-                    let (start, end) = self.identifier()?;
-                    if !self.consume(b':') {
-                        return Err(self.error(":"));
-                    }
-                    self.output_atom_range(start, end);
-                    let _ = self.number()?;
-                    self.output.push(Opcode::SetProperty as u8);
-                    if self.consume(b'}') {
-                        break;
-                    }
-                    if !self.consume(b',') {
-                        return Err(self.error(", or }"));
-                    }
-                }
-            }
+        } else if self.array_literal()? || self.object_literal()? {
             (false, TermKind::General)
         } else if let Some(immediate) = self.immediate() {
             self.output.push(Opcode::ConstImmediate as u8);
@@ -1196,6 +1225,7 @@ impl Parser<'_> {
             (false, immediate.map_or(TermKind::General, TermKind::I30))
         };
         loop {
+            #[cfg(feature = "objects")]
             if self.consume(b'.') {
                 self.whitespace();
                 let (start, end) = self.identifier()?;
@@ -1368,6 +1398,7 @@ impl Parser<'_> {
         Ok((start, self.offset))
     }
 
+    #[cfg(feature = "objects")]
     fn output_atom_range(&mut self, start: usize, end: usize) {
         let length = end - start;
         debug_assert!(u16::try_from(length).is_ok());
@@ -1515,6 +1546,7 @@ mod tests {
         assert_eq!(code[target], Opcode::Drop as u8);
     }
 
+    #[cfg(feature = "arrays")]
     #[test]
     fn compiles_array_literals_without_an_ast() {
         let code = compile_script("return [7, 9];").unwrap();
@@ -1574,6 +1606,27 @@ mod tests {
         assert_eq!(compile_script("return 2 * 3;").unwrap_err().offset, 9);
     }
 
+    #[cfg(all(not(feature = "arrays"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_array_literals_as_unexpected_tokens() {
+        assert_eq!(compile_script("return [1];").unwrap_err().offset, 7);
+    }
+
+    #[cfg(all(not(feature = "objects"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_object_syntax_as_unexpected_tokens() {
+        assert_eq!(
+            compile_script("return { value: 1 };").unwrap_err().offset,
+            7
+        );
+        assert_eq!(
+            compile_script("let value = 1; return value.name;")
+                .unwrap_err()
+                .offset,
+            27
+        );
+    }
+
     #[cfg(feature = "number-operations")]
     #[test]
     fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
@@ -1610,6 +1663,7 @@ mod tests {
         assert!(promoted.contains(&(Opcode::MultiplyNumber as u8)));
     }
 
+    #[cfg(feature = "objects")]
     #[test]
     fn compiles_an_object_without_recursive_parsing() {
         assert_eq!(
