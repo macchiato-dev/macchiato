@@ -40,6 +40,12 @@ Constructor-only class declarations otherwise reuse receiver frames, argument
 calls, property stores, and return selection rather than adding a parallel
 execution model.
 
+An omitted base constructor needs no bytecode extension. When enabled, the
+compiler synthesizes an ordinary zero-parameter receiver frame ending in
+`load_this` and `return_receiver_locals`, then applies `to_class_constructor`.
+This keeps implicit construction entirely out of runtimes that only consume
+explicitly authored bytecode.
+
 The separate method composition uses `to_method`, `get_method`, and
 `call_method_arguments`. `get_method` preserves the base immediately below the
 resolved value; evaluated arguments follow it. The call instruction removes the

@@ -77,6 +77,10 @@ an explicit relational stopping condition.
   `class-methods` composition stores receiver-aware, non-constructible callable
   objects on a class prototype; constructor-only class builds retain neither
   its stack operations nor its three opcodes.
+- `class-default-constructors` is compiler-only: it synthesizes the same compact
+  receiver-aware body and class-record opcode sequence when a base class omits
+  `constructor`. Explicit-constructor compiler builds do not retain that parser
+  branch or synthesis code, and the runtime has no corresponding feature.
 - `microesnext-recursive-constructors` allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not link this cross-composition.

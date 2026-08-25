@@ -143,6 +143,13 @@ one loses its receiver and attempting to construct one fails. `extends`, fields,
 class expressions, accessors, generators, async methods, computed names, and
 static initialization are not included by these focused gates.
 
+The compiler-only `class-default-constructors` feature also accepts empty and
+method-only base classes. It synthesizes a zero-argument receiver frame that
+returns `this`, then emits the same class-record operation as explicit source.
+There is deliberately no runtime feature or special default-constructor opcode.
+Derived default constructors await the separate `extends` composition because
+they must forward arguments through `super` rather than merely return `this`.
+
 Logical AND and OR (`&&` and `||`) are another removable composition. They
 short-circuit evaluation and return the selected operand rather than coercing
 it to a boolean. Unary `!` uses the same selected truthiness policy and returns
