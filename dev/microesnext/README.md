@@ -38,6 +38,10 @@ not link to that C implementation.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.
+- `microesnext-iterators` stores a source, cursor, and adapter tag in a
+  relocatable guest object. `microesnext-array-iterators` and
+  `microesnext-collection-iterators` are separate adapters, so adding array
+  iteration does not pull in Map/Set storage, or the reverse.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set
   storage with live cursor semantics.
 - `microesnext-arrays` contains dense and sparse indexed storage with geometric

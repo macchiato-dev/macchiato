@@ -7,14 +7,17 @@ name = "microesnext"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-array-iterators",
  "microesnext-arrays",
  "microesnext-async",
  "microesnext-atoms",
  "microesnext-bytecode",
+ "microesnext-collection-iterators",
  "microesnext-collections",
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-iterators",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-promises",
@@ -30,6 +33,16 @@ dependencies = [
 name = "microesnext-arena"
 version = "0.0.0"
 dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-array-iterators"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-arrays",
+ "microesnext-iterators",
  "microesnext-types",
 ]
 
@@ -86,6 +99,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-collection-iterators"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-collections",
+ "microesnext-iterators",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-collections"
 version = "0.0.0"
 dependencies = [
@@ -118,6 +141,14 @@ dependencies = [
 
 [[package]]
 name = "microesnext-functions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-iterators"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",

@@ -42,6 +42,12 @@ SameValueZero key comparison, `size`, `get`, `set`, `add`, `has`, `delete`,
 `clear`, `forEach`, and stateful `keys`, `values`, and `entries` iterators.
 Iterators remain live while entries are deleted or appended.
 
+The Rust engine keeps iterator cursors in the guest arena, so they relocate and
+retain their source without a native allocation. Array-value iteration and
+Map/Set key/value iteration are independent adapters. Iterator-result objects,
+entry-pair allocation, and the well-known `Symbol.iterator` binding will be
+composed above this cursor layer.
+
 `WeakMap` and `WeakSet` provide constructors from arrays and their usual
 `get`, `set`, `add`, `has`, and `delete` operations. Keys must be objects. The
 collector treats their entries as ephemerons: a live key retains its value,

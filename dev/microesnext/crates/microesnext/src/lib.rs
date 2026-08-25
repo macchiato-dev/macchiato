@@ -8,6 +8,9 @@ pub use microesnext_vm_core::{Core, CoreOutcome};
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
 
+#[cfg(feature = "array-iterators")]
+pub use microesnext_array_iterators as array_iterators;
+
 #[cfg(feature = "atoms")]
 pub use microesnext_atoms as atoms;
 
@@ -16,6 +19,12 @@ pub use microesnext_async as r#async;
 
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
+
+#[cfg(feature = "collection-iterators")]
+pub use microesnext_collection_iterators as collection_iterators;
+
+#[cfg(feature = "iterators")]
+pub use microesnext_iterators as iterators;
 
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;

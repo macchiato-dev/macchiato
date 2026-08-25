@@ -105,22 +105,30 @@ impl Cursor {
         arena: &Arena<'_>,
         collection: Value,
     ) -> Result<Option<(Value, Value)>, Error> {
-        let table = table_ref(arena, collection)?;
-        let (_, used, _) = table_state(arena, table)?;
-        let entries = arena.values(table)?;
-        while self.index < used {
-            let index = self.index;
-            self.index += 1;
-            let key = Value::from_raw(entries[TABLE_HEADER + index * 2]);
-            if key != Value::EMPTY {
-                return Ok(Some((
-                    key,
-                    Value::from_raw(entries[TABLE_HEADER + index * 2 + 1]),
-                )));
-            }
-        }
-        Ok(None)
+        next_from(arena, collection, &mut self.index)
     }
+}
+
+pub fn next_from(
+    arena: &Arena<'_>,
+    collection: Value,
+    index: &mut usize,
+) -> Result<Option<(Value, Value)>, Error> {
+    let table = table_ref(arena, collection)?;
+    let (_, used, _) = table_state(arena, table)?;
+    let entries = arena.values(table)?;
+    while *index < used {
+        let current = *index;
+        *index += 1;
+        let key = Value::from_raw(entries[TABLE_HEADER + current * 2]);
+        if key != Value::EMPTY {
+            return Ok(Some((
+                key,
+                Value::from_raw(entries[TABLE_HEADER + current * 2 + 1]),
+            )));
+        }
+    }
+    Ok(None)
 }
 
 fn new_collection(arena: &mut Arena<'_>, kind: BlockKind) -> Result<Value, Error> {

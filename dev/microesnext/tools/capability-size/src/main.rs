@@ -120,6 +120,32 @@ pub extern "C" fn arrays_probe() -> usize {
     }
 }
 
+#[cfg(all(feature = "iterators", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn iterators_probe() -> usize {
+    let mut memory = [0; 32];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let source = microesnext::Value::from_i30(42).unwrap();
+    let iterator = microesnext::iterators::new(&mut arena, source, 7).unwrap();
+    microesnext::iterators::set_index(&mut arena, iterator, 3).unwrap();
+    let (actual, index, kind) = microesnext::iterators::state(&arena, iterator).unwrap();
+    usize::from(actual == source) + index + kind as usize
+}
+
+#[cfg(all(feature = "array-iterators", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn array_iterators_probe() -> i32 {
+    let mut memory = [0; 64];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let array = microesnext::arrays::new(&mut arena).unwrap();
+    let array = microesnext::arrays::push(&mut arena, array, microesnext::Value::TRUE).unwrap();
+    let iterator = microesnext::array_iterators::new_values(&mut arena, array).unwrap();
+    i32::from(
+        microesnext::array_iterators::next(&mut arena, iterator).unwrap()
+            == Some(microesnext::Value::TRUE),
+    )
+}
+
 #[cfg(all(feature = "collections", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn collections_probe() -> usize {
@@ -127,6 +153,20 @@ pub extern "C" fn collections_probe() -> usize {
     let mut arena = microesnext_arena::Arena::new(&mut memory);
     let map = microesnext::collections::new_map(&mut arena).unwrap();
     microesnext::collections::len(&arena, map).unwrap()
+}
+
+#[cfg(all(feature = "collection-iterators", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn collection_iterators_probe() -> i32 {
+    let mut memory = [0; 80];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let set = microesnext::collections::new_set(&mut arena).unwrap();
+    let set = microesnext::collections::add(&mut arena, set, microesnext::Value::TRUE).unwrap();
+    let iterator = microesnext::collection_iterators::new_values(&mut arena, set).unwrap();
+    i32::from(
+        microesnext::collection_iterators::next(&mut arena, iterator).unwrap()
+            == Some(microesnext::Value::TRUE),
+    )
 }
 
 #[cfg(all(feature = "functions", target_arch = "wasm32"))]

@@ -69,6 +69,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   not participate in equality. Object and collection tables already compare
   compact `Value` identities, so symbols compose as keys without either table
   depending on `microesnext-symbols`. The arena symbol kind is feature-gated.
+- Iterator positions are guest-arena state rather than native Rust cursors.
+  The source-agnostic `microesnext-iterators` crate retains the iterable and
+  current index across collection. Array and Map/Set traversal live in separate
+  adapter crates, preserving both dependency and code-size isolation.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

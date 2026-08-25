@@ -6,14 +6,31 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["minimal", "", [core]],
     ["arrays", "arrays", [core, ["arrays_probe", 42]]],
     [
+      "array iterators",
+      "array-iterators",
+      [core, ["arrays_probe", 42], ["iterators_probe", 11], [
+        "array_iterators_probe",
+        1,
+      ]],
+    ],
+    [
       "atoms",
       "atoms",
       [core, ["atoms_probe", "nonzero"], ["strings_probe", "nonzero"]],
     ],
     ["async suspension", "async", [core, ["async_probe", 7]]],
     ["collections", "collections", [core, ["collections_probe", 0]]],
+    [
+      "collection iterators",
+      "collection-iterators",
+      [core, ["collections_probe", 0], ["iterators_probe", 11], [
+        "collection_iterators_probe",
+        1,
+      ]],
+    ],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
     ["functions", "functions", [core, ["functions_probe", "nonzero"]]],
+    ["iterators", "iterators", [core, ["iterators_probe", 11]]],
     ["numbers", "numbers", [core, ["numbers_probe", 3.25]]],
     [
       "objects",
@@ -35,15 +52,18 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "arrays,async,collections,exceptions,functions,numbers,objects,promises,symbols,weak-collections",
+      "array-iterators,async,collection-iterators,exceptions,functions,numbers,objects,promises,symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
+        ["array_iterators_probe", 1],
         ["atoms_probe", "nonzero"],
         ["async_probe", 7],
         ["collections_probe", 0],
+        ["collection_iterators_probe", 1],
         ["exceptions_probe", 42],
         ["functions_probe", "nonzero"],
+        ["iterators_probe", 11],
         ["numbers_probe", 3.25],
         ["objects_probe", 42],
         ["strings_probe", "nonzero"],

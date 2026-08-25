@@ -61,18 +61,21 @@ LTO from merely discarding an enabled but unused dependency.
 | --- | ---: | ---: |
 | Minimal | 1,892 | 876 |
 | Arrays | 8,675 | 3,440 |
+| Array iterators | 10,663 | 4,116 |
 | Atoms with strings | 9,843 | 4,095 |
 | Async suspension | 6,356 | 2,766 |
 | Collections | 3,193 | 1,420 |
+| Collection iterators | 10,083 | 4,003 |
 | Exceptions | 3,753 | 1,674 |
 | Functions | 6,869 | 2,935 |
+| Iterator cursor | 3,507 | 1,536 |
 | Numbers | 5,889 | 2,545 |
 | Objects with atoms and strings | 14,377 | 5,696 |
 | Strings only | 4,867 | 2,205 |
 | Symbols | 4,903 | 2,162 |
 | Promises | 4,748 | 2,145 |
 | Weak collections | 1,959 | 919 |
-| All capabilities | 29,462 | 10,654 |
+| All capabilities | 33,333 | 11,823 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -99,6 +102,12 @@ The symbol probe creates two undescribed symbols, verifies distinct identity,
 and reads a description. Its 4,903-byte artifact does not link strings, atoms,
 objects, or collections. Adding the feature leaves every previously measured
 isolated artifact byte-for-byte unchanged.
+
+The iterator probes keep the 3,507-byte cursor separate from their sources.
+The 10,663-byte array row executes a live value step; the 10,083-byte
+collection row executes a Set value step. Enabling either adapter leaves the
+other source crate out of its graph, and the original non-iterator array and
+collection artifacts remain byte-for-byte unchanged.
 
 The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode
