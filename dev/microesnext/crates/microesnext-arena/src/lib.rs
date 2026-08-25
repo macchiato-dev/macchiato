@@ -51,13 +51,13 @@ impl<'memory> Arena<'memory> {
     pub fn allocate_values(
         &mut self,
         kind: BlockKind,
-        values: &[Value],
+        values: &mut [Value],
         roots: &mut [Value],
     ) -> Result<HeapRef, Error> {
         debug_assert!(kind != BlockKind::Bytes);
         let length = HEADER_WORDS + values.len();
         if self.heap_end + length > self.stack_start {
-            self.compact(roots)?;
+            self.compact_groups(roots, values)?;
         }
         if self.heap_end + length > self.stack_start {
             return Err(Error::OutOfMemory);
@@ -199,7 +199,15 @@ impl<'memory> Arena<'memory> {
     /// Compact without a side allocation. Forwarding offsets are recomputed by
     /// scanning earlier blocks; this favors a tiny bounded implementation first.
     pub fn compact(&mut self, roots: &mut [Value]) -> Result<(), Error> {
-        for root in roots.iter().copied() {
+        self.compact_groups(roots, &mut [])
+    }
+
+    fn compact_groups(
+        &mut self,
+        roots: &mut [Value],
+        additional_roots: &mut [Value],
+    ) -> Result<(), Error> {
+        for root in roots.iter().chain(additional_roots.iter()).copied() {
             self.mark_value(root)?;
         }
         for index in self.stack_start..self.words.len() {
@@ -232,6 +240,9 @@ impl<'memory> Arena<'memory> {
         }
 
         for root in roots {
+            *root = self.forward_value(*root)?;
+        }
+        for root in additional_roots {
             *root = self.forward_value(*root)?;
         }
         for index in self.stack_start..self.words.len() {
@@ -336,17 +347,21 @@ mod tests {
         let mut arena = Arena::new(&mut memory);
         let mut no_roots = [];
         let _dead = arena
-            .allocate_values(BlockKind::Values, &[Value::TRUE], &mut no_roots)
+            .allocate_values(BlockKind::Values, &mut [Value::TRUE], &mut no_roots)
             .unwrap();
         let child = arena
             .allocate_values(
                 BlockKind::Values,
-                &[Value::from_i30(7).unwrap()],
+                &mut [Value::from_i30(7).unwrap()],
                 &mut no_roots,
             )
             .unwrap();
         let parent = arena
-            .allocate_values(BlockKind::Values, &[Value::from_ref(child)], &mut no_roots)
+            .allocate_values(
+                BlockKind::Values,
+                &mut [Value::from_ref(child)],
+                &mut no_roots,
+            )
             .unwrap();
         arena.push(Value::from_ref(parent)).unwrap();
 
@@ -382,15 +397,15 @@ mod tests {
         let mut arena = Arena::new(&mut memory);
         let mut no_roots = [];
         let _dead = arena
-            .allocate_values(BlockKind::Values, &[Value::FALSE], &mut no_roots)
+            .allocate_values(BlockKind::Values, &mut [Value::FALSE], &mut no_roots)
             .unwrap();
         let live = arena
-            .allocate_values(BlockKind::Values, &[Value::TRUE], &mut no_roots)
+            .allocate_values(BlockKind::Values, &mut [Value::TRUE], &mut no_roots)
             .unwrap();
         let _more_dead = arena
             .allocate_values(
                 BlockKind::Values,
-                &[Value::NULL, Value::NULL, Value::NULL],
+                &mut [Value::NULL, Value::NULL, Value::NULL],
                 &mut no_roots,
             )
             .unwrap();
@@ -415,7 +430,7 @@ mod tests {
         let mut initial = [0; 12];
         let mut arena = Arena::new(&mut initial);
         let reference = arena
-            .allocate_values(BlockKind::Values, &[Value::TRUE], &mut [])
+            .allocate_values(BlockKind::Values, &mut [Value::TRUE], &mut [])
             .unwrap();
         arena.push(Value::from_ref(reference)).unwrap();
         let mut larger = [0; 24];

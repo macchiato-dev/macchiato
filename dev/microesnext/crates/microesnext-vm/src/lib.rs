@@ -1,19 +1,24 @@
 #![no_std]
 
 use microesnext_arena::Arena;
-use microesnext_bytecode::{Opcode, read_i30, read_opcode};
+use microesnext_bytecode::{Opcode, read_i30, read_opcode, read_u32};
 use microesnext_types::{Error, HeapRef, Value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Outcome {
     Complete(Value),
-    Await { value: Value, continuation: HeapRef },
+    #[cfg(feature = "async")]
+    Await {
+        value: Value,
+        continuation: HeapRef,
+    },
 }
 
 pub struct Machine<'code, 'memory> {
     arena: Arena<'memory>,
     code: &'code [u8],
     pc: usize,
+    frame_depth: Option<usize>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -22,6 +27,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             arena: Arena::new(memory),
             code,
             pc: 0,
+            frame_depth: None,
         }
     }
 
@@ -38,6 +44,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             arena: self.arena.grow_into(memory)?,
             code: self.code,
             pc: self.pc,
+            frame_depth: self.frame_depth,
         })
     }
 
@@ -57,22 +64,57 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.arena.push(value)?;
                 }
                 Opcode::Await => {
-                    let mut roots = [self.arena.pop()?];
-                    let continuation =
-                        self.arena.suspend_stack(self.pc as u32, None, &mut roots)?;
-                    let value = roots[0];
-                    return Ok(Outcome::Await {
-                        value,
-                        continuation,
-                    });
+                    #[cfg(not(feature = "async"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "async")]
+                    {
+                        let mut roots = [self.arena.pop()?];
+                        let continuation = self.arena.suspend_stack(
+                            self.pc as u32,
+                            self.frame_depth,
+                            &mut roots,
+                        )?;
+                        return Ok(Outcome::Await {
+                            value: roots[0],
+                            continuation,
+                        });
+                    }
                 }
-                Opcode::Return => return Ok(Outcome::Complete(self.arena.pop()?)),
+                Opcode::Return => {
+                    let result = self.arena.pop()?;
+                    let Some(frame_depth) = self.frame_depth else {
+                        return Ok(Outcome::Complete(result));
+                    };
+                    if self.arena.stack_len() != frame_depth {
+                        return Err(Error::BadBytecode);
+                    }
+                    let previous_frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
+                    let return_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
+                    self.frame_depth = (previous_frame >= 0).then_some(previous_frame as usize);
+                    self.pc = return_pc as usize;
+                    self.arena.push(result)?;
+                }
+                Opcode::Call => {
+                    let target = read_u32(self.code, &mut self.pc)? as usize;
+                    if target >= self.code.len() {
+                        return Err(Error::BadBytecode);
+                    }
+                    let previous_frame = self.frame_depth.map_or(-1, |depth| depth as i32);
+                    self.arena
+                        .push(Value::from_i30(self.pc as i32).ok_or(Error::BadBytecode)?)?;
+                    self.arena
+                        .push(Value::from_i30(previous_frame).ok_or(Error::BadBytecode)?)?;
+                    self.frame_depth = Some(self.arena.stack_len());
+                    self.pc = target;
+                }
             }
         }
     }
 
     pub fn resume(&mut self, continuation: HeapRef, value: Value) -> Result<Outcome, Error> {
-        self.pc = self.arena.resume_stack(continuation)?.0 as usize;
+        let (pc, frame_depth) = self.arena.resume_stack(continuation)?;
+        self.pc = pc as usize;
+        self.frame_depth = frame_depth;
         self.arena.push(value)?;
         self.run()
     }
@@ -82,11 +124,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 mod tests {
     extern crate alloc;
 
+    #[cfg(feature = "async")]
     use alloc::vec::Vec;
     use microesnext_compiler::Builder;
 
     use super::*;
 
+    #[cfg(feature = "async")]
     fn awaiting_program() -> Vec<u8> {
         Builder::new()
             .const_i30(40)
@@ -97,6 +141,7 @@ mod tests {
             .finish()
     }
 
+    #[cfg(feature = "async")]
     #[test]
     fn suspends_and_resumes_without_a_native_frame() {
         let code = awaiting_program();
@@ -117,5 +162,48 @@ mod tests {
             panic!("expected completion")
         };
         assert_eq!(value.as_i30(), Some(42));
+    }
+
+    #[cfg(feature = "async")]
+    #[test]
+    fn suspension_preserves_an_active_guest_call_frame() {
+        let code = Builder::new()
+            .call(6)
+            .op(Opcode::Return)
+            .const_i30(40)
+            .const_i30(2)
+            .op(Opcode::Await)
+            .op(Opcode::AddI30)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        let Outcome::Await { continuation, .. } = machine.run().unwrap() else {
+            panic!("expected suspension")
+        };
+        assert_eq!(
+            machine
+                .resume(continuation, Value::from_i30(2).unwrap())
+                .unwrap(),
+            Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[test]
+    fn guest_calls_use_vm_frames_instead_of_native_recursion() {
+        let code = Builder::new()
+            .call(6)
+            .op(Opcode::Return)
+            .const_i30(20)
+            .const_i30(22)
+            .op(Opcode::AddI30)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run().unwrap(),
+            Outcome::Complete(Value::from_i30(42).unwrap())
+        );
     }
 }

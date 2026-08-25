@@ -28,6 +28,12 @@ impl Builder {
         self
     }
 
+    pub fn call(mut self, bytecode_offset: u32) -> Self {
+        self.code.push(Opcode::Call as u8);
+        self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
+        self
+    }
+
     pub fn finish(self) -> Vec<u8> {
         self.code
     }

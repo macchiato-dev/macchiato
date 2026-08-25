@@ -9,8 +9,7 @@ version.workspace = true
 
 [dependencies]
 microesnext-types.workspace = true
-microesnext-vm.workspace = true
+microesnext-vm = { workspace = true, features = ["async"] }
 
 [lib]
 path = "src/lib.rs"
-

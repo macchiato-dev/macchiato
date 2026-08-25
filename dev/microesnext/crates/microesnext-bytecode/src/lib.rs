@@ -9,6 +9,7 @@ pub enum Opcode {
     AddI30 = 2,
     Await = 3,
     Return = 4,
+    Call = 5,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -20,6 +21,7 @@ impl TryFrom<u8> for Opcode {
             2 => Ok(Self::AddI30),
             3 => Ok(Self::Await),
             4 => Ok(Self::Return),
+            5 => Ok(Self::Call),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -46,4 +48,15 @@ pub fn read_i30(code: &[u8], pc: &mut usize) -> Result<i32, Error> {
     } else {
         Err(Error::BadBytecode)
     }
+}
+
+#[inline(always)]
+pub fn read_u32(code: &[u8], pc: &mut usize) -> Result<u32, Error> {
+    let bytes: [u8; 4] = code
+        .get(*pc..*pc + 4)
+        .ok_or(Error::BadBytecode)?
+        .try_into()
+        .map_err(|_| Error::BadBytecode)?;
+    *pc += 4;
+    Ok(u32::from_le_bytes(bytes))
 }
