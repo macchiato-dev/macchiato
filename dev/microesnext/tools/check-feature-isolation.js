@@ -76,9 +76,11 @@ const errors = "microesnext-errors";
 const receivers = "microesnext-receivers";
 const thenables = "microesnext-thenables";
 const integerOperations = "microesnext-integer-operations";
+const integerNegation = "microesnext-integer-negation";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
 const numberOperations = "microesnext-number-operations";
+const numberNegation = "microesnext-number-negation";
 
 assertCompilerFeatures(
   ["locals"],
@@ -189,7 +191,17 @@ assertCompilerFeatures(
 assertCompilerFeatures(
   ["number-operations"],
   ["integer-operations", "numbers", "number-operations"],
-  ["equality", "logical-operations"],
+  ["equality", "integer-negation", "logical-operations", "number-negation"],
+);
+assertCompilerFeatures(
+  ["integer-negation"],
+  ["integer-negation"],
+  ["integer-operations", "numbers", "number-negation", "number-operations"],
+);
+assertCompilerFeatures(
+  ["number-negation"],
+  ["integer-negation", "numbers", "number-negation"],
+  ["integer-operations", "number-operations"],
 );
 assertCompilerFeatures(
   ["strings"],
@@ -217,8 +229,10 @@ assertPresence(
     errors,
     equality,
     integerOperations,
+    integerNegation,
     logicalOperations,
     numberOperations,
+    numberNegation,
     parameters,
     promiseResolution,
     promiseResolvers,
@@ -253,7 +267,17 @@ assertPresence(
 assertPresence(
   ["number-operations"],
   [integerOperations, numberOperations, "microesnext-numbers"],
-  ["microesnext-strings"],
+  [integerNegation, numberNegation, "microesnext-strings"],
+);
+assertPresence(
+  ["integer-negation"],
+  [integerNegation],
+  [integerOperations, numberNegation, numberOperations, "microesnext-numbers"],
+);
+assertPresence(
+  ["number-negation"],
+  [integerNegation, numberNegation, "microesnext-numbers"],
+  [integerOperations, numberOperations, "microesnext-strings"],
 );
 assertPresence(
   ["minimal-program"],
@@ -261,6 +285,8 @@ assertPresence(
   [
     asyncFunctions,
     environments,
+    integerNegation,
+    numberNegation,
     "microesnext-numbers",
     "microesnext-strings",
   ],

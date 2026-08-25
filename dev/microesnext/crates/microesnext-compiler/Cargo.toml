@@ -18,6 +18,7 @@ default = [
   "recursive-async-functions",
   "recursive-functions",
   "logical-operations",
+  "number-negation",
   "number-operations",
   "objects",
   "receivers",
@@ -41,6 +42,7 @@ functions = [
 ]
 function-arguments = ["functions", "microesnext-bytecode/function-arguments"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
+integer-negation = ["microesnext-bytecode/integer-negation"]
 locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 numbers = ["microesnext-bytecode/numbers"]
@@ -48,6 +50,11 @@ number-operations = [
   "integer-operations",
   "numbers",
   "microesnext-bytecode/number-operations",
+]
+number-negation = [
+  "integer-negation",
+  "numbers",
+  "microesnext-bytecode/number-negation",
 ]
 objects = ["atoms", "microesnext-bytecode/objects"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]

@@ -150,6 +150,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       [core, ["logical_operations_probe", 1]],
     ],
     [
+      "bounded numeric negation",
+      "integer-negation",
+      [core, ["integer_negation_probe", -42]],
+    ],
+    [
       "logical operations with numbers only",
       "logical-operations,numbers",
       [
@@ -189,6 +194,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
       "number operations",
       "number-operations",
       [core, ["numbers_probe", 1.25], ["number_operations_probe", 3.25]],
+    ],
+    [
+      "JavaScript Number negation",
+      "number-negation",
+      [core, ["numbers_probe", 1.25], ["number_negation_probe", 1]],
     ],
     [
       "objects",

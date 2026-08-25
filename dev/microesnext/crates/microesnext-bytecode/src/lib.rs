@@ -120,9 +120,9 @@ pub enum Opcode {
     ConcatenateStrings = 94,
     #[cfg(feature = "logical-operations")]
     LogicalNot = 95,
-    #[cfg(feature = "integer-operations")]
+    #[cfg(feature = "integer-negation")]
     NegateI30 = 96,
-    #[cfg(feature = "number-operations")]
+    #[cfg(feature = "number-negation")]
     NegateNumber = 97,
 }
 
@@ -235,9 +235,9 @@ impl TryFrom<u8> for Opcode {
             94 => Ok(Self::ConcatenateStrings),
             #[cfg(feature = "logical-operations")]
             95 => Ok(Self::LogicalNot),
-            #[cfg(feature = "integer-operations")]
+            #[cfg(feature = "integer-negation")]
             96 => Ok(Self::NegateI30),
-            #[cfg(feature = "number-operations")]
+            #[cfg(feature = "number-negation")]
             97 => Ok(Self::NegateNumber),
             _ => Err(Error::BadBytecode),
         }
@@ -302,7 +302,6 @@ mod tests {
         for opcode in 90..=93 {
             assert!(Opcode::try_from(opcode).is_err());
         }
-        assert!(Opcode::try_from(97).is_err());
     }
 
     #[cfg(feature = "numbers")]
@@ -319,7 +318,6 @@ mod tests {
         assert_eq!(Opcode::try_from(91), Ok(Opcode::MultiplyNumber));
         assert_eq!(Opcode::try_from(92), Ok(Opcode::LessThanNumber));
         assert_eq!(Opcode::try_from(93), Ok(Opcode::GreaterThanNumber));
-        assert_eq!(Opcode::try_from(97), Ok(Opcode::NegateNumber));
     }
 
     #[test]
@@ -334,7 +332,6 @@ mod tests {
         assert_eq!(Opcode::try_from(83), Ok(Opcode::MultiplyI30));
         assert_eq!(Opcode::try_from(84), Ok(Opcode::LessThanI30));
         assert_eq!(Opcode::try_from(85), Ok(Opcode::GreaterThanI30));
-        assert_eq!(Opcode::try_from(96), Ok(Opcode::NegateI30));
     }
 
     #[cfg(not(feature = "integer-operations"))]
@@ -344,7 +341,6 @@ mod tests {
         assert!(Opcode::try_from(83).is_err());
         assert!(Opcode::try_from(84).is_err());
         assert!(Opcode::try_from(85).is_err());
-        assert!(Opcode::try_from(96).is_err());
     }
 
     #[cfg(feature = "equality")]
@@ -375,6 +371,30 @@ mod tests {
         assert!(Opcode::try_from(88).is_err());
         assert!(Opcode::try_from(89).is_err());
         assert!(Opcode::try_from(95).is_err());
+    }
+
+    #[cfg(feature = "integer-negation")]
+    #[test]
+    fn enabled_integer_negation_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(96), Ok(Opcode::NegateI30));
+    }
+
+    #[cfg(not(feature = "integer-negation"))]
+    #[test]
+    fn omitted_integer_negation_opcode_is_invalid() {
+        assert!(Opcode::try_from(96).is_err());
+    }
+
+    #[cfg(feature = "number-negation")]
+    #[test]
+    fn enabled_number_negation_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(97), Ok(Opcode::NegateNumber));
+    }
+
+    #[cfg(not(feature = "number-negation"))]
+    #[test]
+    fn omitted_number_negation_opcode_is_invalid() {
+        assert!(Opcode::try_from(97).is_err());
     }
 
     #[cfg(feature = "locals")]

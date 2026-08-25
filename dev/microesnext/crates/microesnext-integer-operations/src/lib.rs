@@ -9,14 +9,6 @@ pub fn subtract(left: Value, right: Value) -> Result<Value, Error> {
         .ok_or(Error::Type)
 }
 
-pub fn negate(value: Value) -> Result<Value, Error> {
-    value
-        .as_i30()
-        .and_then(i32::checked_neg)
-        .and_then(Value::from_i30)
-        .ok_or(Error::Type)
-}
-
 pub fn multiply(left: Value, right: Value) -> Result<Value, Error> {
     let (left, right) = operands(left, right)?;
     left.checked_mul(right)
@@ -56,7 +48,6 @@ mod tests {
         assert_eq!(subtract(seven, six).unwrap().as_i30(), Some(1));
         assert_eq!(less_than(six, seven), Ok(Value::TRUE));
         assert_eq!(greater_than(six, seven), Ok(Value::FALSE));
-        assert_eq!(negate(six).unwrap().as_i30(), Some(-6));
     }
 
     #[test]
@@ -65,10 +56,6 @@ mod tests {
         let maximum = Value::from_i30((1 << 29) - 1).unwrap();
         assert_eq!(
             multiply(maximum, Value::from_i30(2).unwrap()),
-            Err(Error::Type)
-        );
-        assert_eq!(
-            negate(Value::from_i30(-(1 << 29)).unwrap()),
             Err(Error::Type)
         );
     }

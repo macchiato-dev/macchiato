@@ -19,18 +19,6 @@ pub fn subtract(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Valu
     microesnext_numbers::new(arena, result)
 }
 
-pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    if let Some(value) = value.as_i30() {
-        if value != 0 {
-            if let Some(value) = value.checked_neg().and_then(Value::from_i30) {
-                return Ok(value);
-            }
-        }
-    }
-    let result = -microesnext_numbers::get(arena, value)?;
-    microesnext_numbers::new(arena, result)
-}
-
 pub fn multiply(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
     if let Some(value) = immediate(left, right, i32::checked_mul) {
         return Ok(value);
@@ -92,13 +80,5 @@ mod tests {
         );
         assert_eq!(less_than(&arena, two, maximum), Ok(Value::TRUE));
         assert_eq!(greater_than(&arena, two, maximum), Ok(Value::FALSE));
-        assert_eq!(negate(&mut arena, two).unwrap().as_i30(), Some(-2));
-        let negative_zero = negate(&mut arena, Value::from_i30(0).unwrap()).unwrap();
-        assert_eq!(microesnext_numbers::get(&arena, negative_zero), Ok(-0.0));
-        assert!(
-            microesnext_numbers::get(&arena, negative_zero)
-                .unwrap()
-                .is_sign_negative()
-        );
     }
 }

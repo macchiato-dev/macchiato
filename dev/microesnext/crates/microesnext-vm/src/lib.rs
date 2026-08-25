@@ -170,9 +170,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "functions",
         feature = "function-arguments",
         feature = "integer-operations",
+        feature = "integer-negation",
         feature = "locals",
         feature = "logical-operations",
         feature = "numbers",
+        feature = "number-negation",
         feature = "exceptions",
         feature = "environments",
         feature = "equality",
@@ -560,17 +562,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "integer-operations")]
+            #[cfg(feature = "integer-negation")]
             Opcode::NegateI30 => {
                 let operand = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::negate(operand)?;
+                let value = microesnext_integer_negation::negate(operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
-            #[cfg(feature = "number-operations")]
+            #[cfg(feature = "number-negation")]
             Opcode::NegateNumber => {
                 let operand = self.core.arena_mut().pop()?;
-                let value = microesnext_number_operations::negate(self.core.arena_mut(), operand)?;
+                let value = microesnext_number_negation::negate(self.core.arena_mut(), operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -713,9 +715,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "objects",
         feature = "functions",
         feature = "integer-operations",
+        feature = "integer-negation",
         feature = "locals",
         feature = "logical-operations",
         feature = "numbers",
+        feature = "number-negation",
         feature = "exceptions",
         feature = "equality",
         feature = "environments",

@@ -44,6 +44,10 @@ integer-operations = [
   "dep:microesnext-integer-operations",
   "microesnext-bytecode/integer-operations",
 ]
+integer-negation = [
+  "dep:microesnext-integer-negation",
+  "microesnext-bytecode/integer-negation",
+]
 equality = ["dep:microesnext-equality", "microesnext-bytecode/equality"]
 logical-operations = [
   "dep:microesnext-logical-operations",
@@ -61,6 +65,12 @@ number-operations = [
   "integer-operations",
   "dep:microesnext-number-operations",
   "microesnext-bytecode/number-operations",
+]
+number-negation = [
+  "numbers",
+  "integer-negation",
+  "dep:microesnext-number-negation",
+  "microesnext-bytecode/number-negation",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
@@ -99,8 +109,10 @@ microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
+microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-number-operations = { workspace = true, optional = true }
+microesnext-number-negation = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }

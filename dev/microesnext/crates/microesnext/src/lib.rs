@@ -11,6 +11,9 @@ pub use microesnext_locals as locals;
 #[cfg(feature = "integer-operations")]
 pub use microesnext_integer_operations as integer_operations;
 
+#[cfg(feature = "integer-negation")]
+pub use microesnext_integer_negation as integer_negation;
+
 #[cfg(feature = "logical-operations")]
 pub use microesnext_logical_operations as logical_operations;
 
@@ -52,6 +55,8 @@ pub use microesnext_iterable_protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_functions as functions;
+#[cfg(feature = "number-negation")]
+pub use microesnext_number_negation as number_negation;
 #[cfg(feature = "number-operations")]
 pub use microesnext_number_operations as number_operations;
 #[cfg(feature = "numbers")]

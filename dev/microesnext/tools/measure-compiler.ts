@@ -3,6 +3,9 @@ const builds = [
   ["control flow", "control-flow"],
   ["exceptions", "exceptions"],
   ["logical operations", "logical-operations"],
+  ["bounded integer operations", "integer-operations"],
+  ["bounded numeric negation", "integer-negation"],
+  ["JavaScript Number negation", "number-negation"],
   ["strings", "strings"],
   ["strict string concatenation", "string-operations"],
   ["locals", "locals"],
@@ -62,6 +65,12 @@ for (const [name, features] of builds) {
     ? "try { throw 1; } catch (error) { return error; }"
     : features.includes("logical-operations")
     ? "return !false && true;"
+    : features.includes("number-negation")
+    ? "return - 0;"
+    : features.includes("integer-negation")
+    ? "return - 42;"
+    : features.includes("integer-operations")
+    ? "return 6 * 7;"
     : features.includes("control-flow")
     ? "if (true) { return 1; } else { return 2; }"
     : features.includes("string-operations")

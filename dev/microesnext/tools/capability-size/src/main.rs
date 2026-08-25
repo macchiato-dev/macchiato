@@ -938,6 +938,46 @@ pub extern "C" fn number_operations_probe() -> f64 {
     microesnext::numbers::get(machine.arena(), value).unwrap_or(f64::NAN)
 }
 
+#[cfg(all(feature = "integer-negation", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn integer_negation_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::NegateI30 as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 16];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+#[cfg(all(feature = "number-negation", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn number_negation_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        0,
+        0,
+        0,
+        0,
+        Opcode::NegateNumber as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(Outcome::Complete(value)) = machine.run() else {
+        return 0;
+    };
+    microesnext::numbers::get(machine.arena(), value).is_ok_and(f64::is_sign_negative) as i32
+}
+
 #[cfg(all(feature = "objects", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn objects_probe() -> i32 {
