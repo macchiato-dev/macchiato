@@ -113,9 +113,11 @@ gate compiles direct `new Constructor(arguments)` expressions, creates a
 receiver whose prototype is the constructor's current object-valued
 `prototype`, exposes it as `this`, and implements the ordinary primitive- versus
 object-return rule. The preserved receiver stays below the ordinary call frame,
-so construction adds no persistent VM field. Parenthesized/member constructor
-forms, `new` without parentheses, `Symbol.hasInstance`, bound functions, and
-host constructors are not implied by this initial path. A named function's
+so construction adds no persistent VM field. A direct identifier or member
+constructor may omit parentheses and then uses the same zero-argument opcode.
+Parenthesized constructor expressions, post-call member access,
+`Symbol.hasInstance`, bound functions, and host constructors are not implied by
+this initial path. A named function's
 private self cell is rebound to the wrapper by the independent
 `recursive-constructors` composition, so calls and construction observe the
 same function identity. Function declarations already reuse their ordinary

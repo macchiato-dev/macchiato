@@ -30,3 +30,10 @@ fn new_uses_an_explicit_object_return() {
          return new Constructor() === replacement;");
     assert_eq!(outcome, Outcome::Complete(Value::TRUE));
 }
+
+#[test]
+fn new_without_parentheses_uses_the_zero_argument_path() {
+    let outcome = run("let Constructor = function () { return this; }; \
+         return new Constructor instanceof Constructor;");
+    assert_eq!(outcome, Outcome::Complete(Value::TRUE));
+}

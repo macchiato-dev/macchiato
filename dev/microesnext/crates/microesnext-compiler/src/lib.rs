@@ -1802,18 +1802,19 @@ impl Parser<'_> {
         #[cfg(feature = "construction")]
         if self.try_word(b"new") {
             self.whitespace();
+            let constructor_start = self.offset;
             let output_start = self.output.len();
             let _ = self.term(None)?;
-            let call = self
-                .output
-                .len()
-                .checked_sub(3)
-                .filter(|index| {
-                    *index >= output_start
-                        && self.output[*index] == Opcode::CallValueArguments as u8
-                })
-                .ok_or_else(|| self.error("a direct constructor call"))?;
-            self.output[call] = Opcode::ConstructValueArguments as u8;
+            if let Some(call) = self.output.len().checked_sub(3).filter(|index| {
+                *index >= output_start && self.output[*index] == Opcode::CallValueArguments as u8
+            }) {
+                self.output[call] = Opcode::ConstructValueArguments as u8;
+            } else if !self.source[constructor_start..self.offset].contains(&b'(') {
+                self.output.push(Opcode::ConstructValueArguments as u8);
+                self.output.extend_from_slice(&0_u16.to_le_bytes());
+            } else {
+                return Err(self.error("a direct constructor call"));
+            }
             self.output.push(Opcode::SelectConstructedResult as u8);
             return Ok((false, TermKind::General));
         }
@@ -3184,6 +3185,16 @@ mod tests {
         );
         assert!(code.contains(&(Opcode::SelectConstructedResult as u8)));
         assert!(code.contains(&(Opcode::LoadThis as u8)));
+
+        let without_parentheses = compile_script(
+            "let Constructor = function () { return this; }; return new Constructor;",
+        )
+        .unwrap();
+        assert!(
+            without_parentheses
+                .windows(3)
+                .any(|bytes| { bytes == [Opcode::ConstructValueArguments as u8, 0, 0] })
+        );
     }
 
     #[cfg(feature = "recursive-constructors")]
