@@ -5,24 +5,14 @@ use microesnext_types::{Error, Value};
 
 #[inline(always)]
 pub fn init(arena: &mut Arena<'_>, base: usize, count: usize) -> Result<(), Error> {
-    init_with_parameters(arena, base, count, 0)
-}
-
-#[inline(always)]
-pub fn init_with_parameters(
-    arena: &mut Arena<'_>,
-    base: usize,
-    count: usize,
-    parameter_count: usize,
-) -> Result<(), Error> {
-    if parameter_count > count || arena.stack_len() != base + parameter_count {
+    if arena.stack_len() != base {
         return Err(Error::BadBytecode);
     }
     arena.insert_stack_value_from_bottom(
         base,
         Value::from_i30(count as i32).ok_or(Error::BadBytecode)?,
     )?;
-    for _ in parameter_count..count {
+    for _ in 0..count {
         arena.push(Value::UNDEFINED)?;
     }
     Ok(())
@@ -84,18 +74,5 @@ mod tests {
         assert_eq!(arena.pop(), Ok(Value::TRUE));
         leave(&mut arena, 0).unwrap();
         assert_eq!(arena.stack_len(), 0);
-    }
-
-    #[test]
-    fn existing_arguments_become_the_first_local_slots() {
-        let mut memory = [0; 32];
-        let mut arena = Arena::new(&mut memory);
-        arena.push(Value::from_i30(40).unwrap()).unwrap();
-        arena.push(Value::from_i30(2).unwrap()).unwrap();
-        init_with_parameters(&mut arena, 0, 3, 2).unwrap();
-        assert_eq!(load(&arena, 0, 0).unwrap().as_i30(), Some(40));
-        assert_eq!(load(&arena, 0, 1).unwrap().as_i30(), Some(2));
-        assert_eq!(load(&arena, 0, 2), Ok(Value::UNDEFINED));
-        leave(&mut arena, 0).unwrap();
     }
 }

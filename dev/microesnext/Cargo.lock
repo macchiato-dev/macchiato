@@ -24,6 +24,7 @@ dependencies = [
  "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
+ "microesnext-parameters",
  "microesnext-promises",
  "microesnext-strings",
  "microesnext-symbols",
@@ -232,6 +233,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-parameters"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-promises"
 version = "0.0.0"
 dependencies = [
@@ -292,6 +301,7 @@ dependencies = [
  "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
+ "microesnext-parameters",
  "microesnext-strings",
  "microesnext-suspension",
  "microesnext-truthiness",

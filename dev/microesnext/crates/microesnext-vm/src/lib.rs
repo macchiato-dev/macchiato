@@ -149,6 +149,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "strings",
         feature = "objects",
         feature = "functions",
+        feature = "function-arguments",
         feature = "locals",
         feature = "numbers",
         feature = "exceptions"
@@ -220,17 +221,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.enter_call(function, target)?;
                 Ok(None)
             }
-            #[cfg(feature = "functions")]
+            #[cfg(feature = "function-arguments")]
             Opcode::CallValueArguments => {
                 let argument_count = self.core.next_u16()? as usize;
-                let stack_len = self.core.arena().stack_len();
-                let function_index = stack_len
-                    .checked_sub(argument_count + 1)
-                    .ok_or(Error::StackUnderflow)?;
-                let function = self
-                    .core
-                    .arena_mut()
-                    .remove_stack_value_from_bottom(function_index)?;
+                let function =
+                    microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
                 let target = entry(self.core.arena(), function)?;
                 self.core
                     .enter_call_with_arguments(function, target, argument_count)?;
@@ -268,9 +263,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "locals")]
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
+                let base = self.core.frame_base();
+                microesnext_locals::init(self.core.arena_mut(), base, count)?;
+                Ok(None)
+            }
+            #[cfg(feature = "function-arguments")]
+            Opcode::InitFrame => {
+                let count = self.core.next_u16()? as usize;
                 let parameter_count = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_locals::init_with_parameters(
+                microesnext_parameters::init_frame(
                     self.core.arena_mut(),
                     base,
                     count,
@@ -761,7 +763,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "functions", feature = "locals"))]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn external_arguments_initialize_parameter_slots() {
         let code = Builder::new()
@@ -779,7 +781,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "functions", feature = "locals"))]
+    #[cfg(feature = "function-arguments")]
     #[test]
     fn guest_calls_pass_evaluated_arguments_into_local_frames() {
         let code = Builder::new()

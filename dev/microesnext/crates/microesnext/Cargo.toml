@@ -24,6 +24,12 @@ well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
+function-arguments = [
+  "functions",
+  "locals",
+  "dep:microesnext-parameters",
+  "microesnext-vm/function-arguments",
+]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-vm/numbers",
@@ -64,6 +70,7 @@ microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
+microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
@@ -103,7 +110,7 @@ required-features = ["locals"]
 [[test]]
 name = "functions"
 path = "tests/functions.rs"
-required-features = ["functions", "locals"]
+required-features = ["function-arguments"]
 
 [[test]]
 name = "control-flow"

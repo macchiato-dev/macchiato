@@ -36,19 +36,16 @@ impl Builder {
     }
 
     pub fn init_locals(mut self, count: u16) -> Self {
-        self.output_frame(count, 0);
+        self.code.push(Opcode::InitLocals as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
         self
     }
 
     pub fn init_frame(mut self, count: u16, parameter_count: u16) -> Self {
-        self.output_frame(count, parameter_count);
-        self
-    }
-
-    fn output_frame(&mut self, count: u16, parameter_count: u16) {
-        self.code.push(Opcode::InitLocals as u8);
+        self.code.push(Opcode::InitFrame as u8);
         self.code.extend_from_slice(&count.to_le_bytes());
         self.code.extend_from_slice(&parameter_count.to_le_bytes());
+        self
     }
 
     pub fn load_local(mut self, slot: u16) -> Self {
@@ -306,7 +303,6 @@ impl Parser<'_> {
                 self.output.push(Opcode::InitLocals as u8);
                 count_patch = Some(self.output.len());
                 self.output.extend_from_slice(&0_u16.to_le_bytes());
-                self.output.extend_from_slice(&0_u16.to_le_bytes());
             }
             self.whitespace();
             let (start, end) = self.identifier()?;
@@ -341,7 +337,6 @@ impl Parser<'_> {
         if count_patch.is_none() {
             self.output.push(Opcode::InitLocals as u8);
             *count_patch = Some(self.output.len());
-            self.output.extend_from_slice(&0_u16.to_le_bytes());
             self.output.extend_from_slice(&0_u16.to_le_bytes());
         }
         self.whitespace();
@@ -938,10 +933,10 @@ mod tests {
             compile_script("function identity(value) { return value; } return identity(42);")
                 .unwrap();
         assert_eq!(code[0], Opcode::InitLocals as u8);
-        assert_eq!(code[5], Opcode::Closure as u8);
-        let target = u32::from_le_bytes(code[6..10].try_into().unwrap()) as usize;
+        assert_eq!(code[3], Opcode::Closure as u8);
+        let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert!(target < code.len());
-        assert_eq!(code[target], Opcode::InitLocals as u8);
+        assert_eq!(code[target], Opcode::InitFrame as u8);
         assert!(
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
@@ -952,10 +947,10 @@ mod tests {
     #[test]
     fn compiles_zero_parameter_calls_with_a_function_frame() {
         let code = compile_script("function answer() { return 42; } return answer();").unwrap();
-        let target = u32::from_le_bytes(code[6..10].try_into().unwrap()) as usize;
+        let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
         assert_eq!(
             &code[target..target + 5],
-            &[Opcode::InitLocals as u8, 0, 0, 0, 0]
+            &[Opcode::InitFrame as u8, 0, 0, 0, 0]
         );
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }

@@ -64,6 +64,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     ["exceptions", "exceptions", [core, ["exceptions_probe", 42]]],
     ["functions", "functions", [core, ["functions_probe", "nonzero"]]],
+    [
+      "functions with local parameters",
+      "function-arguments",
+      [core, ["functions_probe", "nonzero"], ["function_arguments_probe", 42]],
+    ],
     ["iterators", "iterators", [core, ["iterators_probe", 11]]],
     ["locals", "locals", [core, ["locals_probe", 42]]],
     [
@@ -107,7 +112,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async,collection-entry-iterators,collection-iterators,control-flow,exceptions,functions,iterable-protocol,iterator-results,locals,numbers,objects,promises,well-known-symbols,weak-collections",
+      "array-iterators,async,collection-entry-iterators,collection-iterators,control-flow,exceptions,function-arguments,iterable-protocol,iterator-results,numbers,objects,promises,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -122,6 +127,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["scalar_truthiness_probe", 1],
         ["exceptions_probe", 42],
         ["functions_probe", "nonzero"],
+        ["function_arguments_probe", 42],
         ["iterators_probe", 11],
         ["locals_probe", 42],
         ["iterator_results_probe", 42],

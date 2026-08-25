@@ -14,6 +14,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "async",
         feature = "control-flow",
         feature = "exceptions",
+        feature = "function-arguments",
         feature = "functions",
         feature = "locals",
         feature = "numbers",
@@ -47,8 +48,6 @@ pub extern "C" fn locals_probe() -> i32 {
     let code = [
         Opcode::InitLocals as u8,
         1,
-        0,
-        0,
         0,
         Opcode::ConstI30 as u8,
         42,
@@ -343,6 +342,45 @@ pub extern "C" fn functions_probe() -> i32 {
         Opcode::Return as u8,
     ];
     let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "function-arguments", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn function_arguments_probe() -> i32 {
+    const BODY: u32 = 16;
+    let code = [
+        Opcode::Closure as u8,
+        BODY as u8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::CallValueArguments as u8,
+        1,
+        0,
+        Opcode::Return as u8,
+        Opcode::InitFrame as u8,
+        1,
+        0,
+        1,
+        0,
+        Opcode::LoadLocal as u8,
+        0,
+        0,
+        Opcode::ReturnLocals as u8,
+    ];
+    let mut memory = [0; 64];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
