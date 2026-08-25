@@ -50,6 +50,9 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.
+- Strings and atom interning are independent of ordinary objects. An object VM
+  composes the string capability for property names, but a string-only machine
+  does not link prototype or property-table operations.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

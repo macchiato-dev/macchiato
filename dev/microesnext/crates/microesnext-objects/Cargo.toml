@@ -1,6 +1,6 @@
 [package]
 name = "microesnext-objects"
-description = "Compact strings, atoms, and ordinary objects for MicroESNext"
+description = "Compact ordinary objects for MicroESNext"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -11,6 +11,8 @@ version.workspace = true
 microesnext-arena.workspace = true
 microesnext-types.workspace = true
 
+[dev-dependencies]
+microesnext-strings.workspace = true
+
 [lib]
 path = "src/lib.rs"
-

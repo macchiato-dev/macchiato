@@ -1,13 +1,16 @@
 #![cfg_attr(target_arch = "wasm32", no_std)]
 #![cfg_attr(target_arch = "wasm32", no_main)]
 
-#[cfg(all(target_arch = "wasm32", feature = "async"))]
+#[cfg(all(target_arch = "wasm32", any(feature = "async", feature = "objects")))]
 use microesnext::Value;
 #[cfg(target_arch = "wasm32")]
 use microesnext::bytecode::Opcode;
 #[cfg(target_arch = "wasm32")]
 use microesnext::{Core, CoreOutcome};
-#[cfg(all(target_arch = "wasm32", any(feature = "async", feature = "exceptions")))]
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "async", feature = "exceptions", feature = "strings")
+))]
 use microesnext::{Machine, Outcome};
 
 #[cfg(all(not(test), target_arch = "wasm32"))]
@@ -108,12 +111,43 @@ pub extern "C" fn functions_probe() -> u32 {
 
 #[cfg(all(feature = "objects", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
-pub extern "C" fn objects_probe() -> u32 {
-    let mut memory = [0; 48];
+pub extern "C" fn objects_probe() -> i32 {
+    let mut memory = [0; 64];
     let mut arena = microesnext_arena::Arena::new(&mut memory);
-    microesnext::objects::new_object(&mut arena, microesnext::Value::NULL)
+    let object = microesnext::objects::new_object(&mut arena, Value::NULL).unwrap();
+    let object = microesnext::objects::set(
+        &mut arena,
+        object,
+        Value::from_i30(1).unwrap(),
+        Value::from_i30(42).unwrap(),
+    )
+    .unwrap();
+    microesnext::objects::get(&arena, object, Value::from_i30(1).unwrap())
         .unwrap()
-        .raw()
+        .as_i30()
+        .unwrap_or(-1)
+}
+
+#[cfg(all(feature = "strings", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn strings_probe() -> u32 {
+    let code = [
+        Opcode::ConstString as u8,
+        5,
+        0,
+        b'h',
+        b'e',
+        b'l',
+        b'l',
+        b'o',
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 48];
+    let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.raw(),
+        _ => 0,
+    }
 }
 
 #[cfg(all(feature = "promises", target_arch = "wasm32"))]

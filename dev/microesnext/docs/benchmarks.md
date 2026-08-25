@@ -61,16 +61,24 @@ LTO from merely discarding an enabled but unused dependency.
 | Collections | 3,201 | 1,416 |
 | Exceptions | 3,734 | 1,589 |
 | Functions | 1,924 | 892 |
-| Objects | 4,745 | 2,135 |
+| Objects with strings | 13,993 | 5,578 |
+| Strings only | 9,110 | 3,574 |
 | Promises | 4,756 | 2,144 |
 | Weak collections | 1,967 | 918 |
-| All capabilities | 25,230 | 9,157 |
+| All capabilities | 25,873 | 9,407 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
 the Cargo feature but accidentally ran only `Core`, allowing LTO to discard
 the handler implementation, and an “all” row that omitted exceptions. The
 current exception and combined figures supersede those undercounts.
+
+The object row now exercises property insertion and lookup and includes the
+string VM required for JavaScript property names. The separate string row
+executes `ConstString` and atom interning through `Machine` without linking
+`microesnext-objects`; its dependency graph contains no object crate. Earlier
+object figures measured only direct allocation of an empty low-level object
+and are not comparable to this fuller VM capability probe.
 
 Handler state belongs to the optional `Machine` wrapper; `Core` has one layout
 and one opcode loop in every feature configuration. `cargo tree -p

@@ -16,6 +16,7 @@ dependencies = [
  "microesnext-functions",
  "microesnext-objects",
  "microesnext-promises",
+ "microesnext-strings",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -93,6 +94,7 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-strings",
  "microesnext-types",
 ]
 
@@ -102,6 +104,14 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-strings"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -128,6 +138,7 @@ dependencies = [
  "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-objects",
+ "microesnext-strings",
  "microesnext-suspension",
  "microesnext-types",
  "microesnext-vm-core",

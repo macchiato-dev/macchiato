@@ -23,6 +23,9 @@ pub use microesnext_exceptions as exceptions;
 #[cfg(feature = "objects")]
 pub use microesnext_objects as objects;
 
+#[cfg(feature = "strings")]
+pub use microesnext_strings as strings;
+
 #[cfg(feature = "weak-collections")]
 pub use microesnext_weak_collections as weak_collections;
 

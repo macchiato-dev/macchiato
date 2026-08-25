@@ -1,49 +1,7 @@
 #![no_std]
 
 use microesnext_arena::{Arena, BlockKind};
-use microesnext_types::{Error, HeapRef, RootId, Value};
-
-/// A compact atom table retained in the machine's generation-checked roots.
-/// Lookup is linear for now; its representation can become a guest-heap hash
-/// table without changing the atom values or ordinary-object layout.
-pub struct Atoms {
-    table: RootId,
-}
-
-impl Atoms {
-    pub fn new(arena: &mut Arena<'_>) -> Result<Self, Error> {
-        let table = arena.allocate_values(BlockKind::Atoms, &mut [], &mut [])?;
-        Ok(Self {
-            table: arena.retain(Value::from_ref(table))?,
-        })
-    }
-
-    pub fn intern(&mut self, arena: &mut Arena<'_>, bytes: &[u8]) -> Result<Value, Error> {
-        let table = self.table_ref(arena)?;
-        for raw in arena.values(table)?.iter().copied() {
-            let atom = Value::from_raw(raw);
-            let string = atom.as_ref().ok_or(Error::Type)?;
-            if arena.bytes_equal(string, bytes)? {
-                return Ok(atom);
-            }
-        }
-
-        let string = arena.allocate_bytes(BlockKind::String, bytes, &mut [])?;
-        let mut extra = [Value::from_ref(string)];
-        let table = self.table_ref(arena)?;
-        let table = arena.extend_values(table, &mut extra, &mut [])?;
-        arena.set_root(self.table, Value::from_ref(table))?;
-        Ok(extra[0])
-    }
-
-    pub fn release(self, arena: &mut Arena<'_>) -> Result<(), Error> {
-        arena.release(self.table).map(|_| ())
-    }
-
-    fn table_ref(&self, arena: &Arena<'_>) -> Result<HeapRef, Error> {
-        arena.root(self.table)?.as_ref().ok_or(Error::Type)
-    }
-}
+use microesnext_types::{Error, HeapRef, Value};
 
 /// Ordinary objects contain only a prototype and a property-table reference.
 /// Property tables store interned-key/value pairs and can be replaced as they
@@ -121,6 +79,8 @@ fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
 
 #[cfg(test)]
 mod tests {
+    use microesnext_strings::Atoms;
+
     use super::*;
 
     #[test]

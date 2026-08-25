@@ -9,7 +9,9 @@ use microesnext_exceptions::Handlers;
 #[cfg(feature = "functions")]
 use microesnext_functions::{capture, capture_stack, entry};
 #[cfg(feature = "objects")]
-use microesnext_objects::{Atoms, get, new_object, set};
+use microesnext_objects::{get, new_object, set};
+#[cfg(feature = "strings")]
+use microesnext_strings::Atoms;
 #[cfg(feature = "async")]
 use microesnext_suspension::{restore, restore_value, resume, resume_value, suspend};
 use microesnext_types::{Error, RootId, Value};
@@ -26,7 +28,7 @@ pub struct Machine<'code, 'memory> {
     core: Core<'code, 'memory>,
     #[cfg(feature = "exceptions")]
     handlers: Handlers,
-    #[cfg(feature = "objects")]
+    #[cfg(feature = "strings")]
     atoms: Option<Atoms>,
 }
 
@@ -44,13 +46,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             core: Core::new(code, memory, root_capacity),
             #[cfg(feature = "exceptions")]
             handlers: Handlers::new(),
-            #[cfg(feature = "objects")]
+            #[cfg(feature = "strings")]
             atoms: None,
         }
     }
 
-    #[cfg(feature = "objects")]
-    pub fn with_objects(
+    #[cfg(feature = "strings")]
+    pub fn with_strings(
         code: &'code [u8],
         memory: &'memory mut [u32],
         root_capacity: usize,
@@ -63,6 +65,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             handlers: Handlers::new(),
             atoms: Some(atoms),
         })
+    }
+
+    #[cfg(feature = "objects")]
+    pub fn with_objects(
+        code: &'code [u8],
+        memory: &'memory mut [u32],
+        root_capacity: usize,
+    ) -> Result<Self, Error> {
+        Self::with_strings(code, memory, root_capacity)
     }
 
     #[inline(always)]
@@ -95,7 +106,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             core: self.core.grow_into(memory)?,
             #[cfg(feature = "exceptions")]
             handlers: self.handlers,
-            #[cfg(feature = "objects")]
+            #[cfg(feature = "strings")]
             atoms: self.atoms,
         })
     }
@@ -123,6 +134,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(any(
         feature = "async",
         feature = "arrays",
+        feature = "strings",
         feature = "objects",
         feature = "functions",
         feature = "exceptions"
@@ -143,9 +155,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 }
             }
             Opcode::ConstString => {
-                #[cfg(not(feature = "objects"))]
+                #[cfg(not(feature = "strings"))]
                 return Err(Error::BadBytecode);
-                #[cfg(feature = "objects")]
+                #[cfg(feature = "strings")]
                 {
                     let bytes = self.core.next_bytes()?;
                     let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
@@ -312,6 +324,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(not(any(
         feature = "async",
         feature = "arrays",
+        feature = "strings",
         feature = "objects",
         feature = "functions",
         feature = "exceptions"
@@ -605,6 +618,23 @@ mod tests {
         assert_eq!(
             machine.run().unwrap(),
             Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[cfg(feature = "strings")]
+    #[test]
+    fn executes_a_string_constant_without_objects() {
+        let code = Builder::new().string(b"hello").op(Opcode::Return).finish();
+        let mut memory = [0; 48];
+        let mut machine = Machine::with_strings(&code, &mut memory, 1).unwrap();
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected string completion")
+        };
+        assert!(
+            machine
+                .arena()
+                .bytes_equal(value.as_ref().unwrap(), b"hello")
+                .unwrap()
         );
     }
 

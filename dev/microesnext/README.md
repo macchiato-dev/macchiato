@@ -20,8 +20,11 @@ not link to that C implementation.
   of execution.
 - `microesnext-compiler` contains allocation-using source and bytecode tooling;
   the runtime crates do not depend on it.
-- `microesnext-objects` supplies packed strings, interned keys, and ordinary
-  objects only to builds enabling the `objects` feature.
+- `microesnext-strings` supplies packed byte strings and rooted atom interning
+  without requiring ordinary objects.
+- `microesnext-objects` supplies prototype and property-table storage. Its VM
+  feature composes strings for JavaScript property names, while the low-level
+  crate can also use already-interned or non-string keys.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set
