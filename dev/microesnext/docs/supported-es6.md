@@ -53,9 +53,11 @@ builds.
 
 The Rust engine keeps iterator cursors in the guest arena, so they relocate and
 retain their source without a native allocation. Array-value iteration and
-Map/Set key/value iteration are independent adapters. Iterator-result objects,
-entry-pair allocation, and the well-known `Symbol.iterator` binding will be
-composed above this cursor layer.
+Map/Set key/value iteration are independent adapters. A separate result-object
+capability creates relocatable `{ value, done }` objects using cached atom
+identities. Cursor-only builds omit its object, atom, and string dependencies.
+Entry-pair allocation and guest calls through the well-known `Symbol.iterator`
+binding will be composed above this layer.
 
 `WeakMap` and `WeakSet` provide constructors from arrays and their usual
 `get`, `set`, `add`, `has`, and `delete` operations. Keys must be objects. The

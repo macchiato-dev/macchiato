@@ -1,0 +1,17 @@
+[package]
+name = "microesnext-iterator-results"
+description = "Removable iterator-result object allocation for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-atoms.workspace = true
+microesnext-objects.workspace = true
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"

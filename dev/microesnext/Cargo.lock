@@ -17,6 +17,7 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-functions",
+ "microesnext-iterator-results",
  "microesnext-iterators",
  "microesnext-numbers",
  "microesnext-objects",
@@ -158,6 +159,16 @@ name = "microesnext-functions"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-iterator-results"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-atoms",
+ "microesnext-objects",
  "microesnext-types",
 ]
 

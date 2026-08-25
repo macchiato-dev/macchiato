@@ -18,6 +18,7 @@ collection-iterators = ["collections", "iterators", "microesnext/collection-iter
 exceptions = ["microesnext/exceptions"]
 functions = ["microesnext/functions"]
 iterators = ["microesnext/iterators"]
+iterator-results = ["microesnext/iterator-results"]
 numbers = ["microesnext/numbers"]
 objects = ["microesnext/objects"]
 promises = ["microesnext/promises"]
