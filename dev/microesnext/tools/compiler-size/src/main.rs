@@ -23,6 +23,8 @@ unsafe impl Sync for Heap {}
 #[cfg(target_arch = "wasm32")]
 static HEAP: Heap = Heap(UnsafeCell::new([0; 32 * 1024]));
 #[cfg(target_arch = "wasm32")]
+static SOURCE: Heap = Heap(UnsafeCell::new([0; 32 * 1024]));
+#[cfg(target_arch = "wasm32")]
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(target_arch = "wasm32")]
@@ -60,16 +62,23 @@ fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
 
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
-pub extern "C" fn compile_probe() -> usize {
+pub extern "C" fn source_pointer() -> *mut u8 {
+    // The probe caller writes source bytes before invoking compile_probe.
+    unsafe { (*SOURCE.0.get()).as_mut_ptr() }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[unsafe(no_mangle)]
+pub extern "C" fn compile_probe(length: usize) -> usize {
+    if length > 32 * 1024 {
+        return 0;
+    }
     NEXT.store(0, Ordering::Relaxed);
-    let source = if cfg!(feature = "async-functions") {
-        "async function choose(value) { if (value > 1) { return await value; } else { return 1; } } return choose(2);"
-    } else if cfg!(feature = "exceptions") {
-        "try { throw 1; } catch (error) { return error; }"
-    } else if cfg!(feature = "control-flow") {
-        "if (true) { return 1; } else { return 2; }"
-    } else {
-        "return true;"
+    // SAFETY: SOURCE is disjoint from the allocator and the caller has just
+    // initialized `length` bytes. Compilation does not mutate the input.
+    let bytes = unsafe { core::slice::from_raw_parts((*SOURCE.0.get()).as_ptr(), length) };
+    let Ok(source) = core::str::from_utf8(bytes) else {
+        return 0;
     };
     compile_script(source).map_or(0, |bytecode| bytecode.len())
 }

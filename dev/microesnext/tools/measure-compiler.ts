@@ -2,9 +2,11 @@ const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
   ["exceptions", "exceptions"],
+  ["locals", "locals"],
+  ["functions and captures", "functions"],
   [
     "default language slice",
-    "arrays,async-functions,control-flow,equality,exceptions,logical-operations,number-operations,objects,source-positions",
+    "arrays,async-functions,control-flow,equality,exceptions,functions,logical-operations,number-operations,objects,receivers,source-positions",
   ],
 ] as const;
 
@@ -36,8 +38,26 @@ for (const [name, features] of builds) {
     `${target}/wasm32-unknown-unknown/release/microesnext-compiler-size.wasm`,
   );
   const { instance } = await WebAssembly.instantiate(bytes);
+  const source = features.includes("async-functions")
+    ? "async function choose(value) { if (value > 1) { return await value; } else { return 1; } } return choose(2);"
+    : features.includes("exceptions")
+    ? "try { throw 1; } catch (error) { return error; }"
+    : features.includes("control-flow")
+    ? "if (true) { return 1; } else { return 2; }"
+    : features.includes("functions")
+    ? "function value() { return 1; } return value();"
+    : features.includes("locals")
+    ? "let value = 1; return value;"
+    : "return true;";
+  const memory = instance.exports.memory;
+  const pointer = instance.exports.source_pointer;
   const compile = instance.exports.compile_probe;
-  if (typeof compile !== "function" || compile() === 0) {
+  if (!(memory instanceof WebAssembly.Memory) || typeof pointer !== "function") {
+    throw new Error(`${name}: linked compiler source buffer is unavailable`);
+  }
+  const encoded = new TextEncoder().encode(source);
+  new Uint8Array(memory.buffer, pointer(), encoded.length).set(encoded);
+  if (typeof compile !== "function" || compile(encoded.length) === 0) {
     throw new Error(`${name}: linked compiler probe failed`);
   }
   const gzip = await new Response(

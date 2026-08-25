@@ -383,15 +383,18 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 
 | Compiler build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
-| minimal | 46,129 | 25,455 |
-| control flow | 46,161 | 25,472 |
-| exceptions | 46,161 | 25,475 |
-| default language slice | 46,226 | 25,508 |
+| minimal | 5,471 | 2,378 |
+| control flow | 7,506 | 2,941 |
+| exceptions | 7,004 | 2,947 |
+| locals | 8,346 | 3,519 |
+| functions and captures | 18,904 | 7,785 |
+| default language slice | 46,459 | 25,562 |
 
-The small deltas are expected at this stage: function, local, and environment
-syntax still forms one compiler cluster and therefore dominates all four
-rows. The measurement makes the next extractions observable instead of
-claiming savings from unlinked intermediate objects. Re-run it with:
+The minimal row links neither lexical binding nor function/capture parsing.
+The locals row adds stable slots without closures; functions compose locals,
+argument frames, environments, and recursive named closures as the current
+function compiler cluster. The default row additionally retains all currently
+supported structural and scalar syntax. Re-run it with:
 
 ```sh
 npm run measure:compiler

@@ -15,15 +15,18 @@ async-functions = ["microesnext-compiler/async-functions"]
 control-flow = ["microesnext-compiler/control-flow"]
 equality = ["microesnext-compiler/equality"]
 exceptions = ["microesnext-compiler/exceptions"]
+functions = ["microesnext-compiler/functions"]
 integer-operations = ["microesnext-compiler/integer-operations"]
 logical-operations = ["microesnext-compiler/logical-operations"]
+locals = ["microesnext-compiler/locals"]
 number-operations = ["microesnext-compiler/number-operations"]
 numbers = ["microesnext-compiler/numbers"]
 objects = ["microesnext-compiler/objects"]
+receivers = ["microesnext-compiler/receivers"]
 source-positions = ["microesnext-compiler/source-positions"]
 
 [dependencies]
-microesnext-compiler.workspace = true
+microesnext-compiler = { path = "../../crates/microesnext-compiler", default-features = false }
 
 [[bin]]
 name = "microesnext-compiler-size"
