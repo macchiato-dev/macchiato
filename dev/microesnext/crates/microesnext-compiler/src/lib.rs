@@ -136,6 +136,21 @@ impl Builder {
         self
     }
 
+    pub fn new_environment_cell(mut self) -> Self {
+        self.code.push(Opcode::NewEnvironmentCell as u8);
+        self
+    }
+
+    pub fn load_environment_cell(mut self) -> Self {
+        self.code.push(Opcode::LoadEnvironmentCell as u8);
+        self
+    }
+
+    pub fn store_environment_cell(mut self) -> Self {
+        self.code.push(Opcode::StoreEnvironmentCell as u8);
+        self
+    }
+
     fn output_string(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstString as u8);
         self.code

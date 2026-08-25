@@ -152,7 +152,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "function-arguments",
         feature = "locals",
         feature = "numbers",
-        feature = "exceptions"
+        feature = "exceptions",
+        feature = "environments"
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
@@ -280,6 +281,27 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 )?;
                 Ok(None)
             }
+            #[cfg(feature = "environments")]
+            Opcode::NewEnvironmentCell => {
+                let value = self.core.arena_mut().pop()?;
+                let cell = microesnext_environments::new(self.core.arena_mut(), value)?;
+                self.core.arena_mut().push(cell)?;
+                Ok(None)
+            }
+            #[cfg(feature = "environments")]
+            Opcode::LoadEnvironmentCell => {
+                let cell = self.core.arena_mut().pop()?;
+                let value = microesnext_environments::get(self.core.arena(), cell)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "environments")]
+            Opcode::StoreEnvironmentCell => {
+                let value = self.core.arena_mut().pop()?;
+                let cell = self.core.arena_mut().pop()?;
+                microesnext_environments::set(self.core.arena_mut(), cell, value)?;
+                Ok(None)
+            }
             #[cfg(feature = "locals")]
             Opcode::LoadLocal => {
                 let slot = self.core.next_u16()? as usize;
@@ -400,7 +422,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "functions",
         feature = "locals",
         feature = "numbers",
-        feature = "exceptions"
+        feature = "exceptions",
+        feature = "environments"
     )))]
     fn run_extension(&mut self, _opcode: Opcode) -> Result<Option<Outcome>, Error> {
         Err(Error::BadBytecode)
@@ -829,6 +852,29 @@ mod tests {
             .finish();
         let mut machine = Machine::new(&malformed, &mut memory);
         assert_eq!(machine.run(), Err(Error::BadBytecode));
+    }
+
+    #[cfg(all(feature = "environments", feature = "locals"))]
+    #[test]
+    fn environment_cell_mutation_is_shared_through_a_local_slot() {
+        let code = Builder::new()
+            .init_locals(1)
+            .const_i30(40)
+            .new_environment_cell()
+            .store_local(0)
+            .load_local(0)
+            .const_i30(42)
+            .store_environment_cell()
+            .load_local(0)
+            .load_environment_cell()
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+        );
     }
 
     #[cfg(feature = "control-flow")]

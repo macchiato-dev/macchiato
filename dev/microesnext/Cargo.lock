@@ -16,6 +16,7 @@ dependencies = [
  "microesnext-collection-iterators",
  "microesnext-collections",
  "microesnext-compiler",
+ "microesnext-environments",
  "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-iterable-protocol",
@@ -149,6 +150,14 @@ name = "microesnext-core-loop"
 version = "0.0.0"
 dependencies = [
  "microesnext",
+]
+
+[[package]]
+name = "microesnext-environments"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
 ]
 
 [[package]]
@@ -296,6 +305,7 @@ dependencies = [
  "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-compiler",
+ "microesnext-environments",
  "microesnext-exceptions",
  "microesnext-functions",
  "microesnext-locals",

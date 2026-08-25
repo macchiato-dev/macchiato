@@ -33,6 +33,8 @@ pub enum BlockKind {
     Symbol = 20,
     #[cfg(feature = "iterators")]
     Iterator = 21,
+    #[cfg(feature = "environments")]
+    EnvironmentCell = 22,
 }
 
 #[inline(always)]
@@ -661,6 +663,8 @@ impl<'memory> Arena<'memory> {
             20 => Ok(BlockKind::Symbol),
             #[cfg(feature = "iterators")]
             21 => Ok(BlockKind::Iterator),
+            #[cfg(feature = "environments")]
+            22 => Ok(BlockKind::EnvironmentCell),
             _ => Err(Error::DanglingReference),
         }
     }

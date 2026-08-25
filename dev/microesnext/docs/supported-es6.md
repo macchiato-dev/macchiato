@@ -31,6 +31,11 @@ parameters and call arguments have a `u16` count. Argument-to-local frame setup
 is a removable capability rather than a cost borne by functions without
 parameters.
 
+Mutable closure semantics use optional traced environment cells. The runtime
+primitive is implemented and relocation-tested; compiler capture analysis is
+the next layer. This deliberately avoids turning every lexical local into a
+heap allocation merely because some builds support closures.
+
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
 form. Catch targets are backpatched without an AST. Its handler and caught

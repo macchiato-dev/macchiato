@@ -74,6 +74,12 @@ pub enum Opcode {
     CallValueArguments = 71,
     #[cfg(feature = "function-arguments")]
     InitFrame = 72,
+    #[cfg(feature = "environments")]
+    NewEnvironmentCell = 73,
+    #[cfg(feature = "environments")]
+    LoadEnvironmentCell = 74,
+    #[cfg(feature = "environments")]
+    StoreEnvironmentCell = 75,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -139,6 +145,12 @@ impl TryFrom<u8> for Opcode {
             71 => Ok(Self::CallValueArguments),
             #[cfg(feature = "function-arguments")]
             72 => Ok(Self::InitFrame),
+            #[cfg(feature = "environments")]
+            73 => Ok(Self::NewEnvironmentCell),
+            #[cfg(feature = "environments")]
+            74 => Ok(Self::LoadEnvironmentCell),
+            #[cfg(feature = "environments")]
+            75 => Ok(Self::StoreEnvironmentCell),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -225,5 +237,13 @@ mod tests {
     fn omitted_argument_frame_opcodes_are_invalid() {
         assert!(Opcode::try_from(71).is_err());
         assert!(Opcode::try_from(72).is_err());
+    }
+
+    #[cfg(feature = "environments")]
+    #[test]
+    fn enabled_environment_cell_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(73), Ok(Opcode::NewEnvironmentCell));
+        assert_eq!(Opcode::try_from(74), Ok(Opcode::LoadEnvironmentCell));
+        assert_eq!(Opcode::try_from(75), Ok(Opcode::StoreEnvironmentCell));
     }
 }

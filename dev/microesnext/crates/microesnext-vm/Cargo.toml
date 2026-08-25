@@ -33,6 +33,7 @@ numbers = [
   "microesnext-truthiness?/numbers",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
+environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -47,6 +48,7 @@ microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
+microesnext-environments = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }

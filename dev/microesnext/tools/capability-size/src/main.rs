@@ -14,6 +14,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "async",
         feature = "control-flow",
         feature = "exceptions",
+        feature = "environments",
         feature = "function-arguments",
         feature = "functions",
         feature = "locals",
@@ -342,6 +343,27 @@ pub extern "C" fn functions_probe() -> i32 {
         Opcode::Return as u8,
     ];
     let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    match machine.run() {
+        Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
+        _ => -1,
+    }
+}
+
+#[cfg(all(feature = "environments", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn environments_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::NewEnvironmentCell as u8,
+        Opcode::LoadEnvironmentCell as u8,
+        Opcode::Return as u8,
+    ];
+    let mut memory = [0; 32];
     let mut machine = Machine::new(&code, &mut memory);
     match machine.run() {
         Ok(Outcome::Complete(value)) => value.as_i30().unwrap_or(-1),
