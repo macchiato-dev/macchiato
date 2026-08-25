@@ -23,3 +23,11 @@ fn source_function_without_parameters_leaves_its_frame() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn source_function_receives_multiple_arguments_in_order() {
+    assert_eq!(
+        run("function add(left, right) { return left + right; } return add(40, 2);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

@@ -350,33 +350,39 @@ impl Parser<'_> {
             return Err(self.error("("));
         }
         self.whitespace();
-        let parameter = if self.consume_raw(b')') {
-            None
-        } else {
-            let parameter = self.identifier()?;
-            if !self.consume(b')') {
-                return Err(self.error(")"));
+        let mut parameters = Vec::new();
+        if !self.consume_raw(b')') {
+            loop {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                if parameters.iter().any(|binding: &Binding| {
+                    self.source[binding.start..binding.end] == self.source[start..end]
+                }) {
+                    return Err(self.error("a unique parameter binding"));
+                }
+                let slot = u16::try_from(parameters.len())
+                    .map_err(|_| self.error("fewer than 65536 parameters"))?;
+                parameters.push(Binding { start, end, slot });
+                if self.consume(b')') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or )"));
+                }
             }
-            Some(parameter)
-        };
+        }
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
-        let parameter_count = u16::from(parameter.is_some());
+        let parameter_count = u16::try_from(parameters.len())
+            .map_err(|_| self.error("fewer than 65536 parameters"))?;
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
             output: Builder::new()
                 .init_frame(parameter_count, parameter_count)
                 .finish(),
-            locals: parameter
-                .map(|(start, end)| Binding {
-                    start,
-                    end,
-                    slot: 0,
-                })
-                .into_iter()
-                .collect(),
+            locals: parameters,
             functions: Vec::new(),
             function_frame: true,
         };
@@ -953,6 +959,32 @@ mod tests {
             &[Opcode::InitFrame as u8, 0, 0, 0, 0]
         );
         assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
+    }
+
+    #[test]
+    fn compiles_multiple_parameters_and_arguments() {
+        let code =
+            compile_script("function add(left, right) { return left + right; } return add(40, 2);")
+                .unwrap();
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 2, 0] })
+        );
+        let target = u32::from_le_bytes(code[4..8].try_into().unwrap()) as usize;
+        assert_eq!(
+            &code[target..target + 5],
+            &[Opcode::InitFrame as u8, 2, 0, 2, 0]
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_parameters() {
+        assert_eq!(
+            compile_script("function bad(value, value) { return value; } return bad(1, 2);")
+                .unwrap_err()
+                .expected,
+            "a unique parameter binding"
+        );
     }
 
     #[test]
