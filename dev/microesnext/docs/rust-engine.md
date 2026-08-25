@@ -65,6 +65,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   value is not automatically retained or interned. Atoms add a rooted table;
   objects compose atoms for source-level property names. A string-only machine
   links neither atom nor property-table operations.
+- Symbols are individually allocated identities whose optional descriptions do
+  not participate in equality. Object and collection tables already compare
+  compact `Value` identities, so symbols compose as keys without either table
+  depending on `microesnext-symbols`. The arena symbol kind is feature-gated.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

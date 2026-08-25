@@ -1,0 +1,18 @@
+[package]
+name = "microesnext-symbols"
+description = "Optional unique symbol identities for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena = { workspace = true, features = ["symbols"] }
+microesnext-types.workspace = true
+
+[dev-dependencies]
+microesnext-strings.workspace = true
+
+[lib]
+path = "src/lib.rs"

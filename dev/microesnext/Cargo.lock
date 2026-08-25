@@ -19,6 +19,7 @@ dependencies = [
  "microesnext-objects",
  "microesnext-promises",
  "microesnext-strings",
+ "microesnext-symbols",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -163,6 +164,15 @@ version = "0.0.0"
 dependencies = [
  "microesnext-types",
  "microesnext-vm-core",
+]
+
+[[package]]
+name = "microesnext-symbols"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-strings",
+ "microesnext-types",
 ]
 
 [[package]]

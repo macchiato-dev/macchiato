@@ -69,9 +69,10 @@ LTO from merely discarding an enabled but unused dependency.
 | Numbers | 5,889 | 2,545 |
 | Objects with atoms and strings | 14,377 | 5,696 |
 | Strings only | 4,867 | 2,205 |
+| Symbols | 4,903 | 2,162 |
 | Promises | 4,748 | 2,145 |
 | Weak collections | 1,959 | 919 |
-| All capabilities | 29,021 | 10,490 |
+| All capabilities | 29,462 | 10,654 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -93,6 +94,11 @@ the resulting arena value. Its 5,889-byte artifact includes floating-point
 storage and promotion. With `numbers` omitted, the minimal artifact remains
 1,892 bytes; every pre-existing capability is unchanged or two bytes smaller
 than its preceding measurement.
+
+The symbol probe creates two undescribed symbols, verifies distinct identity,
+and reads a description. Its 4,903-byte artifact does not link strings, atoms,
+objects, or collections. Adding the feature leaves every previously measured
+isolated artifact byte-for-byte unchanged.
 
 The probes now build in a dedicated package rather than as facade examples.
 That prevents the facade's compiler dev-dependency from enabling every opcode

@@ -31,6 +31,12 @@ and the complete ECMAScript grammar remain future compiler work.
 
 ## Collections
 
+Unique symbols are available as a removable primitive and compose directly as
+object, Map, and Set keys. Descriptions may be absent or ordinary strings, but
+do not affect equality. The global symbol registry and well-known symbols will
+join the iterable boundary rather than making every symbol build retain an atom
+table.
+
 `Map` and `Set` provide constructors from arrays, ordered storage,
 SameValueZero key comparison, `size`, `get`, `set`, `add`, `has`, `delete`,
 `clear`, `forEach`, and stateful `keys`, `values`, and `entries` iterators.

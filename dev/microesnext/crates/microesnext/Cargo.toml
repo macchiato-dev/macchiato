@@ -12,6 +12,7 @@ default = []
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 async = ["dep:microesnext-async"]
 strings = ["dep:microesnext-strings", "microesnext-vm/strings"]
+symbols = ["dep:microesnext-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
@@ -34,6 +35,7 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
+microesnext-symbols = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
@@ -65,3 +67,8 @@ required-features = ["arrays"]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["numbers"]
+
+[[test]]
+name = "symbols"
+path = "tests/symbols.rs"
+required-features = ["objects", "symbols"]

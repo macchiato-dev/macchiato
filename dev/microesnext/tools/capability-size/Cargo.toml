@@ -19,6 +19,7 @@ numbers = ["microesnext/numbers"]
 objects = ["atoms", "microesnext/objects"]
 promises = ["microesnext/promises"]
 strings = ["microesnext/strings"]
+symbols = ["microesnext/symbols"]
 weak-collections = ["microesnext/weak-collections"]
 
 [dependencies]

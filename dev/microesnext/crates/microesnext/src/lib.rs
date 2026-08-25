@@ -31,6 +31,9 @@ pub use microesnext_objects as objects;
 #[cfg(feature = "strings")]
 pub use microesnext_strings as strings;
 
+#[cfg(feature = "symbols")]
+pub use microesnext_symbols as symbols;
+
 #[cfg(feature = "weak-collections")]
 pub use microesnext_weak_collections as weak_collections;
 

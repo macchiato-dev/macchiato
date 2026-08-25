@@ -29,6 +29,8 @@ pub enum BlockKind {
     ArrayStorage = 18,
     #[cfg(feature = "numbers")]
     Number = 19,
+    #[cfg(feature = "symbols")]
+    Symbol = 20,
 }
 
 #[inline(always)]
@@ -593,6 +595,8 @@ impl<'memory> Arena<'memory> {
             18 => Ok(BlockKind::ArrayStorage),
             #[cfg(feature = "numbers")]
             19 => Ok(BlockKind::Number),
+            #[cfg(feature = "symbols")]
+            20 => Ok(BlockKind::Symbol),
             _ => Err(Error::DanglingReference),
         }
     }

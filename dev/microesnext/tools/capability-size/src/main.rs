@@ -240,6 +240,16 @@ pub extern "C" fn strings_probe() -> u32 {
     }
 }
 
+#[cfg(all(feature = "symbols", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn symbols_probe() -> u32 {
+    let mut memory = [0; 32];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let first = microesnext::symbols::new(&mut arena, microesnext::Value::UNDEFINED).unwrap();
+    let second = microesnext::symbols::new(&mut arena, microesnext::Value::UNDEFINED).unwrap();
+    u32::from(first != second && microesnext::symbols::description(&arena, first).is_ok())
+}
+
 #[cfg(all(feature = "atoms", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn atoms_probe() -> u32 {
