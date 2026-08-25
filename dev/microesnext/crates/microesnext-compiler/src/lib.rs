@@ -2011,7 +2011,7 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(feature = "arrays")]
+    #[cfg(all(feature = "arrays", not(feature = "literal-expressions")))]
     fn array_literal(&mut self) -> Result<bool, CompileError> {
         if !self.consume_raw(b'[') {
             return Ok(false);
@@ -2038,12 +2038,39 @@ impl Parser<'_> {
         Ok(true)
     }
 
+    #[cfg(all(feature = "arrays", feature = "literal-expressions"))]
+    fn array_literal(&mut self) -> Result<bool, CompileError> {
+        if !self.consume_raw(b'[') {
+            return Ok(false);
+        }
+        self.output.push(Opcode::NewArray as u8);
+        let mut index = 0_i32;
+        if !self.consume(b']') {
+            loop {
+                self.output.push(Opcode::ConstI30 as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
+                self.expression(None)?;
+                self.output.push(Opcode::SetIndex as u8);
+                index = index
+                    .checked_add(1)
+                    .ok_or_else(|| self.error("an array index"))?;
+                if self.consume(b']') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or ]"));
+                }
+            }
+        }
+        Ok(true)
+    }
+
     #[cfg(not(feature = "arrays"))]
     fn array_literal(&mut self) -> Result<bool, CompileError> {
         Ok(false)
     }
 
-    #[cfg(feature = "objects")]
+    #[cfg(all(feature = "objects", not(feature = "literal-expressions")))]
     fn object_literal(&mut self) -> Result<bool, CompileError> {
         if !self.consume_raw(b'{') {
             return Ok(false);
@@ -2058,6 +2085,33 @@ impl Parser<'_> {
                 }
                 self.output_atom_range(start, end);
                 let _ = self.number()?;
+                self.output.push(Opcode::SetProperty as u8);
+                if self.consume(b'}') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or }"));
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    #[cfg(all(feature = "objects", feature = "literal-expressions"))]
+    fn object_literal(&mut self) -> Result<bool, CompileError> {
+        if !self.consume_raw(b'{') {
+            return Ok(false);
+        }
+        self.output.push(Opcode::NewObject as u8);
+        if !self.consume(b'}') {
+            loop {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                if !self.consume(b':') {
+                    return Err(self.error(":"));
+                }
+                self.output_atom_range(start, end);
+                self.expression(None)?;
                 self.output.push(Opcode::SetProperty as u8);
                 if self.consume(b'}') {
                     break;
@@ -2967,6 +3021,41 @@ mod tests {
             2
         );
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
+    }
+
+    #[cfg(all(
+        feature = "arrays",
+        feature = "literal-expressions",
+        feature = "locals"
+    ))]
+    #[test]
+    fn compiles_enclosing_bindings_as_array_values() {
+        assert!(compile_script("let value = 7; return [value];").is_ok());
+    }
+
+    #[cfg(all(
+        feature = "objects",
+        feature = "literal-expressions",
+        feature = "locals"
+    ))]
+    #[test]
+    fn compiles_enclosing_bindings_and_nested_object_values() {
+        assert!(
+            compile_script("let value = 7; return { outer: { answer: value } }.outer.answer;")
+                .is_ok()
+        );
+    }
+
+    #[cfg(all(feature = "objects", not(feature = "literal-expressions")))]
+    #[test]
+    fn reduced_object_literals_keep_the_numeric_value_parser() {
+        assert!(compile_script("return { answer: 7 };").is_ok());
+        assert_eq!(
+            compile_script("let value = 7; return { answer: value };")
+                .unwrap_err()
+                .expected,
+            "a number"
+        );
     }
 
     #[cfg(feature = "source-positions")]

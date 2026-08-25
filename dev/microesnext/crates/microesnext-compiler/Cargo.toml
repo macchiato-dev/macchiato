@@ -22,6 +22,7 @@ default = [
   "exceptions",
   "function-arguments",
   "instanceof",
+  "literal-expressions",
   "recursive-async-functions",
   "recursive-functions",
   "recursive-constructors",
@@ -75,6 +76,7 @@ integer-negation = ["microesnext-bytecode/integer-negation"]
 instanceof = ["microesnext-bytecode/instanceof"]
 locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
+literal-expressions = []
 method-calls = [
   "function-arguments",
   "objects",

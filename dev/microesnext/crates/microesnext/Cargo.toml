@@ -354,6 +354,17 @@ path = "tests/objects.rs"
 required-features = ["objects"]
 
 [[test]]
+name = "literal-expressions"
+path = "tests/literal_expressions.rs"
+required-features = [
+  "arrays",
+  "constructors",
+  "function-arguments",
+  "objects",
+  "receivers",
+]
+
+[[test]]
 name = "arrays"
 path = "tests/arrays.rs"
 required-features = ["arrays"]

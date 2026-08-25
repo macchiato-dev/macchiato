@@ -61,7 +61,7 @@ fn a_property_can_be_read_directly_from_a_constructed_value() {
 fn a_constructor_can_be_resolved_from_an_object_property() {
     let outcome = run(
         "let Constructor = function (value) { this.answer = value; return 0; }; \
-         let namespace = {}; namespace.Type = Constructor; \
+         let namespace = { Type: Constructor }; \
          return new namespace.Type(42).answer;",
     );
     assert_eq!(outcome, Outcome::Complete(Value::from_i30(42).unwrap()));
