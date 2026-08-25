@@ -36,7 +36,8 @@ not link to that C implementation.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
 - `microesnext-environments` supplies traced one-value cells for bindings that
-  genuinely escape into closures. Uncaptured locals remain direct stack words.
+  genuinely escape into closures. The compiler shares a cell across sibling
+  closures and outer writes; uncaptured locals remain direct stack words.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely.

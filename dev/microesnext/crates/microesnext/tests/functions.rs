@@ -49,3 +49,23 @@ fn source_function_branches_over_its_own_parameter_frame() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn closure_and_outer_scope_share_a_mutable_binding_cell() {
+    assert_eq!(
+        run(
+            "let count = 40; function increment() { count = count + 1; return count; } let first = increment(); return increment();"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn sibling_closures_and_outer_writes_share_one_binding_cell() {
+    assert_eq!(
+        run(
+            "let count = 40; function increment() { count = count + 1; return count; } function read() { return count; } let ignored = increment(); count = 42; return read();"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

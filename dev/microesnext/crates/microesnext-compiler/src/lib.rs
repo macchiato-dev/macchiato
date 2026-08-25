@@ -179,6 +179,8 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         offset: 0,
         output: Vec::new(),
         locals: Vec::new(),
+        outer_bindings: Vec::new(),
+        captures: Vec::new(),
         functions: Vec::new(),
         function_frame: false,
     };
@@ -202,6 +204,8 @@ struct Parser<'source> {
     offset: usize,
     output: Vec<u8>,
     locals: Vec<Binding>,
+    outer_bindings: Vec<Binding>,
+    captures: Vec<Binding>,
     functions: Vec<PendingFunction>,
     function_frame: bool,
 }
@@ -211,6 +215,7 @@ struct Binding {
     start: usize,
     end: usize,
     slot: u16,
+    captured: bool,
 }
 
 struct PendingFunction {
@@ -314,44 +319,60 @@ impl Parser<'_> {
 
     fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
         let mut count_patch = None;
-        while self.try_word(b"function") {
-            self.function_declaration(&mut count_patch)?;
+        loop {
+            self.whitespace();
+            if self.try_word(b"function") {
+                self.function_declaration(&mut count_patch)?;
+            } else if self.try_word(b"let") {
+                self.let_declaration(&mut count_patch)?;
+            } else {
+                break;
+            }
         }
-        self.let_declarations(&mut count_patch)?;
         Ok(count_patch)
     }
 
     fn let_declarations(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
         self.whitespace();
         while self.try_word(b"let") {
-            if count_patch.is_none() {
-                self.output.push(Opcode::InitLocals as u8);
-                *count_patch = Some(self.output.len());
-                self.output.extend_from_slice(&0_u16.to_le_bytes());
-            }
-            self.whitespace();
-            let (start, end) = self.identifier()?;
-            if self
-                .locals
-                .iter()
-                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
-            {
-                return Err(self.error("a unique local binding"));
-            }
-            if !self.consume(b'=') {
-                return Err(self.error("="));
-            }
-            self.expression(None)?;
-            let slot = u16::try_from(self.locals.len())
-                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
-            self.output.push(Opcode::StoreLocal as u8);
-            self.output.extend_from_slice(&slot.to_le_bytes());
-            self.locals.push(Binding { start, end, slot });
-            if !self.consume(b';') {
-                return Err(self.error(";"));
-            }
-            self.whitespace();
+            self.let_declaration(count_patch)?;
         }
+        Ok(())
+    }
+
+    fn let_declaration(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+        if count_patch.is_none() {
+            self.output.push(Opcode::InitLocals as u8);
+            *count_patch = Some(self.output.len());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+        }
+        self.whitespace();
+        let (start, end) = self.identifier()?;
+        if self
+            .locals
+            .iter()
+            .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
+        {
+            return Err(self.error("a unique local binding"));
+        }
+        if !self.consume(b'=') {
+            return Err(self.error("="));
+        }
+        self.expression(None)?;
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.output.push(Opcode::StoreLocal as u8);
+        self.output.extend_from_slice(&slot.to_le_bytes());
+        self.locals.push(Binding {
+            start,
+            end,
+            slot,
+            captured: false,
+        });
+        if !self.consume(b';') {
+            return Err(self.error(";"));
+        }
+        self.whitespace();
         Ok(())
     }
 
@@ -387,7 +408,12 @@ impl Parser<'_> {
                 }
                 let slot = u16::try_from(parameters.len())
                     .map_err(|_| self.error("fewer than 65536 parameters"))?;
-                parameters.push(Binding { start, end, slot });
+                parameters.push(Binding {
+                    start,
+                    end,
+                    slot,
+                    captured: false,
+                });
                 if self.consume(b')') {
                     break;
                 }
@@ -408,6 +434,8 @@ impl Parser<'_> {
                 .init_frame(parameter_count, parameter_count)
                 .finish(),
             locals: parameters,
+            outer_bindings: self.locals.clone(),
+            captures: Vec::new(),
             functions: Vec::new(),
             function_frame: true,
         };
@@ -423,18 +451,41 @@ impl Parser<'_> {
         body.whitespace();
         self.offset = body.offset;
 
+        for capture in &body.captures {
+            let Some(index) = self
+                .locals
+                .iter()
+                .position(|binding| binding.slot == capture.slot)
+            else {
+                return Err(self.error("an enclosing binding"));
+            };
+            let binding = &mut self.locals[index];
+            if !binding.captured {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                self.output.push(Opcode::NewEnvironmentCell as u8);
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                binding.captured = true;
+            }
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        }
+        let capture_count = u16::try_from(body.captures.len())
+            .map_err(|_| self.error("fewer than 65536 captures"))?;
         let slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         self.output.push(Opcode::Closure as u8);
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
-        self.output.extend_from_slice(&0_u16.to_le_bytes());
+        self.output.extend_from_slice(&capture_count.to_le_bytes());
         self.output.push(Opcode::StoreLocal as u8);
         self.output.extend_from_slice(&slot.to_le_bytes());
         self.locals.push(Binding {
             start: name_start,
             end: name_end,
             slot,
+            captured: false,
         });
         self.functions.push(PendingFunction {
             target_patch,
@@ -447,7 +498,13 @@ impl Parser<'_> {
         loop {
             self.whitespace();
             let start = self.offset;
-            let Some(binding) = self.local_at_offset() else {
+            let local = self.local_at_offset();
+            let capture = if local.is_none() {
+                self.capture_at_offset()?
+            } else {
+                None
+            };
+            let Some(binding) = local.or_else(|| capture.map(|(_, binding)| binding)) else {
                 return Ok(());
             };
             self.offset += binding.end - binding.start;
@@ -455,9 +512,20 @@ impl Parser<'_> {
                 self.offset = start;
                 return Ok(());
             }
+            if binding.captured {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            } else if let Some((capture, _)) = capture {
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+            }
             self.expression(None)?;
-            self.output.push(Opcode::StoreLocal as u8);
-            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            if binding.captured || capture.is_some() {
+                self.output.push(Opcode::StoreEnvironmentCell as u8);
+            } else {
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
             if !self.consume(b';') {
                 return Err(self.error(";"));
             }
@@ -566,6 +634,15 @@ impl Parser<'_> {
             self.offset += local.end - local.start;
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&local.slot.to_le_bytes());
+            if local.captured {
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+            }
+            (false, TermKind::General)
+        } else if let Some((capture, binding)) = self.capture_at_offset()? {
+            self.offset += binding.end - binding.start;
+            self.output.push(Opcode::LoadCapture as u8);
+            self.output.extend_from_slice(&capture.to_le_bytes());
+            self.output.push(Opcode::LoadEnvironmentCell as u8);
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
@@ -675,6 +752,28 @@ impl Parser<'_> {
             self.source[self.offset..].starts_with(name)
                 && self.identifier_end(self.offset + name.len())
         })
+    }
+
+    fn capture_at_offset(&mut self) -> Result<Option<(u16, Binding)>, CompileError> {
+        let Some(binding) = self.outer_bindings.iter().rev().copied().find(|binding| {
+            let name = &self.source[binding.start..binding.end];
+            self.source[self.offset..].starts_with(name)
+                && self.identifier_end(self.offset + name.len())
+        }) else {
+            return Ok(None);
+        };
+        let index = if let Some(index) = self
+            .captures
+            .iter()
+            .position(|capture| capture.slot == binding.slot)
+        {
+            index
+        } else {
+            self.captures.push(binding);
+            self.captures.len() - 1
+        };
+        let index = u16::try_from(index).map_err(|_| self.error("fewer than 65536 captures"))?;
+        Ok(Some((index, binding)))
     }
 
     fn immediate(&mut self) -> Option<Immediate> {
@@ -1032,6 +1131,44 @@ mod tests {
             code[target..]
                 .windows(3)
                 .any(|bytes| { bytes == [Opcode::StoreLocal as u8, 1, 0] })
+        );
+    }
+
+    #[test]
+    fn boxes_only_a_binding_captured_by_a_source_function() {
+        let code =
+            compile_script("let count = 40; function read() { return count; } return read();")
+                .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::NewEnvironmentCell as u8)
+                .count(),
+            1
+        );
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::LoadCapture as u8, 0, 0] })
+        );
+        assert!(code.contains(&(Opcode::LoadEnvironmentCell as u8)));
+    }
+
+    #[test]
+    fn sibling_closures_reuse_one_environment_cell() {
+        let code = compile_script(
+            "let value = 40; function first() { return value; } function second() { return value; } return second();",
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::NewEnvironmentCell as u8)
+                .count(),
+            1
+        );
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::LoadEnvironmentCell as u8)
+                .count(),
+            2
         );
     }
 
