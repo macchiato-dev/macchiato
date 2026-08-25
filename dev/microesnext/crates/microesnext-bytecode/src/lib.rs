@@ -130,6 +130,8 @@ pub enum Opcode {
     DivideNumber = 99,
     #[cfg(feature = "number-remainder")]
     RemainderNumber = 100,
+    #[cfg(feature = "typeof")]
+    TypeOf = 101,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -251,6 +253,8 @@ impl TryFrom<u8> for Opcode {
             99 => Ok(Self::DivideNumber),
             #[cfg(feature = "number-remainder")]
             100 => Ok(Self::RemainderNumber),
+            #[cfg(feature = "typeof")]
+            101 => Ok(Self::TypeOf),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -443,6 +447,18 @@ mod tests {
     #[test]
     fn omitted_number_remainder_opcode_is_invalid() {
         assert!(Opcode::try_from(100).is_err());
+    }
+
+    #[cfg(feature = "typeof")]
+    #[test]
+    fn enabled_typeof_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(101), Ok(Opcode::TypeOf));
+    }
+
+    #[cfg(not(feature = "typeof"))]
+    #[test]
+    fn omitted_typeof_opcode_is_invalid() {
+        assert!(Opcode::try_from(101).is_err());
     }
 
     #[cfg(feature = "locals")]
