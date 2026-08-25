@@ -3,7 +3,11 @@
 use microesnext_arena::Arena;
 #[cfg(feature = "objects")]
 use microesnext_bytecode::read_bytes;
+#[cfg(feature = "functions")]
+use microesnext_bytecode::read_u16;
 use microesnext_bytecode::{Opcode, read_i30, read_opcode, read_u32};
+#[cfg(feature = "functions")]
+use microesnext_functions::{capture, capture_stack, entry};
 #[cfg(feature = "objects")]
 use microesnext_objects::{Atoms, get, new_object, set};
 use microesnext_types::{Error, RootId, Value};
@@ -136,6 +140,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     if self.arena.stack_len() != frame_depth {
                         return Err(Error::BadBytecode);
                     }
+                    let _function = self.arena.pop()?;
                     let previous_frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
                     let return_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
                     self.frame_depth = (previous_frame >= 0).then_some(previous_frame as usize);
@@ -152,6 +157,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         .push(Value::from_i30(self.pc as i32).ok_or(Error::BadBytecode)?)?;
                     self.arena
                         .push(Value::from_i30(previous_frame).ok_or(Error::BadBytecode)?)?;
+                    self.arena.push(Value::UNDEFINED)?;
                     self.frame_depth = Some(self.arena.stack_len());
                     self.pc = target;
                 }
@@ -195,6 +201,49 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         let object = self.arena.pop()?;
                         let object = set(&mut self.arena, object, key, value)?;
                         self.arena.push(object)?;
+                    }
+                }
+                Opcode::Closure => {
+                    #[cfg(not(feature = "functions"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "functions")]
+                    {
+                        let target = read_u32(self.code, &mut self.pc)?;
+                        let capture_count = read_u16(self.code, &mut self.pc)? as usize;
+                        if target as usize >= self.code.len() {
+                            return Err(Error::BadBytecode);
+                        }
+                        let closure = capture_stack(&mut self.arena, target, capture_count)?;
+                        self.arena.push(closure)?;
+                    }
+                }
+                Opcode::CallValue => {
+                    #[cfg(not(feature = "functions"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "functions")]
+                    {
+                        let function = self.arena.pop()?;
+                        let target = entry(&self.arena, function)?;
+                        let previous_frame = self.frame_depth.map_or(-1, |depth| depth as i32);
+                        self.arena
+                            .push(Value::from_i30(self.pc as i32).ok_or(Error::BadBytecode)?)?;
+                        self.arena
+                            .push(Value::from_i30(previous_frame).ok_or(Error::BadBytecode)?)?;
+                        self.arena.push(function)?;
+                        self.frame_depth = Some(self.arena.stack_len());
+                        self.pc = target;
+                    }
+                }
+                Opcode::LoadCapture => {
+                    #[cfg(not(feature = "functions"))]
+                    return Err(Error::BadBytecode);
+                    #[cfg(feature = "functions")]
+                    {
+                        let index = read_u16(self.code, &mut self.pc)? as usize;
+                        let frame_depth = self.frame_depth.ok_or(Error::BadBytecode)?;
+                        let function_index = self.arena.stack_len() - frame_depth;
+                        let function = self.arena.stack_value(function_index)?;
+                        self.arena.push(capture(&self.arena, function, index)?)?;
                     }
                 }
             }
@@ -313,6 +362,27 @@ mod tests {
             .finish();
         let mut memory = [0; 128];
         let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
+        assert_eq!(
+            machine.run().unwrap(),
+            Outcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[cfg(feature = "functions")]
+    #[test]
+    fn closure_captures_cross_an_explicit_call_frame() {
+        let code = Builder::new()
+            .const_i30(40)
+            .closure(14, 1)
+            .op(Opcode::CallValue)
+            .op(Opcode::Return)
+            .load_capture(0)
+            .const_i30(2)
+            .op(Opcode::AddI30)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 96];
+        let mut machine = Machine::new(&code, &mut memory);
         assert_eq!(
             machine.run().unwrap(),
             Outcome::Complete(Value::from_i30(42).unwrap())

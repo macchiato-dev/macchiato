@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 async = ["dep:microesnext-async"]
 objects = ["microesnext-vm/objects"]
+functions = ["microesnext-vm/functions"]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }

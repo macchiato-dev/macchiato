@@ -51,6 +51,19 @@ impl Builder {
         self
     }
 
+    pub fn closure(mut self, bytecode_offset: u32, captures: u16) -> Self {
+        self.code.push(Opcode::Closure as u8);
+        self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
+        self.code.extend_from_slice(&captures.to_le_bytes());
+        self
+    }
+
+    pub fn load_capture(mut self, index: u16) -> Self {
+        self.code.push(Opcode::LoadCapture as u8);
+        self.code.extend_from_slice(&index.to_le_bytes());
+        self
+    }
+
     fn output_string(&mut self, bytes: &[u8]) {
         self.code.push(Opcode::ConstString as u8);
         self.code

@@ -11,12 +11,14 @@ version.workspace = true
 default = []
 async = []
 objects = ["dep:microesnext-objects"]
+functions = ["dep:microesnext-functions"]
 
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-objects = { workspace = true, optional = true }
+microesnext-functions = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

@@ -16,6 +16,7 @@ pub enum BlockKind {
     Object = 5,
     Properties = 6,
     Atoms = 7,
+    Closure = 8,
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
@@ -165,6 +166,41 @@ impl<'memory> Arena<'memory> {
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
+    pub fn allocate_from_stack(
+        &mut self,
+        kind: BlockKind,
+        prefix: &mut [Value],
+        stack_count: usize,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        if stack_count > self.stack_len() || matches!(kind, BlockKind::Bytes | BlockKind::String) {
+            return Err(Error::StackUnderflow);
+        }
+        let length = HEADER_WORDS + prefix.len() + stack_count;
+        if self.heap_end + length > self.stack_start {
+            self.compact_groups(&mut [roots, prefix])?;
+        }
+        if self.heap_end + length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let start = self.heap_end;
+        self.words[start] = length as u32;
+        self.words[start + 1] = kind as u32;
+        for (slot, value) in self.words[start + HEADER_WORDS..]
+            .iter_mut()
+            .zip(prefix.iter())
+        {
+            *slot = value.raw();
+        }
+        for index in 0..stack_count {
+            self.words[start + HEADER_WORDS + prefix.len() + index] =
+                self.words[self.stack_start + stack_count - index - 1];
+        }
+        self.heap_end += length;
+        self.stack_start += stack_count;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
     #[inline(always)]
     pub fn push(&mut self, value: Value) -> Result<(), Error> {
         if self.stack_start == self.heap_end {
@@ -190,6 +226,15 @@ impl<'memory> Arena<'memory> {
             .iter()
             .copied()
             .map(Value::from_raw)
+    }
+
+    #[inline(always)]
+    pub fn stack_value(&self, index_from_top: usize) -> Result<Value, Error> {
+        self.words
+            .get(self.stack_start + index_from_top)
+            .copied()
+            .map(Value::from_raw)
+            .ok_or(Error::StackUnderflow)
     }
 
     pub fn clear_stack(&mut self) {
@@ -370,6 +415,7 @@ impl<'memory> Arena<'memory> {
             5 => Ok(BlockKind::Object),
             6 => Ok(BlockKind::Properties),
             7 => Ok(BlockKind::Atoms),
+            8 => Ok(BlockKind::Closure),
             _ => Err(Error::DanglingReference),
         }
     }

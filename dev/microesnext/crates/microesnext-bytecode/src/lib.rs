@@ -14,6 +14,9 @@ pub enum Opcode {
     NewObject = 7,
     GetProperty = 8,
     SetProperty = 9,
+    Closure = 10,
+    CallValue = 11,
+    LoadCapture = 12,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -30,6 +33,9 @@ impl TryFrom<u8> for Opcode {
             7 => Ok(Self::NewObject),
             8 => Ok(Self::GetProperty),
             9 => Ok(Self::SetProperty),
+            10 => Ok(Self::Closure),
+            11 => Ok(Self::CallValue),
+            12 => Ok(Self::LoadCapture),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -81,4 +87,15 @@ pub fn read_bytes<'code>(code: &'code [u8], pc: &mut usize) -> Result<&'code [u8
     let bytes = code.get(*pc..*pc + length).ok_or(Error::BadBytecode)?;
     *pc += length;
     Ok(bytes)
+}
+
+#[inline(always)]
+pub fn read_u16(code: &[u8], pc: &mut usize) -> Result<u16, Error> {
+    let bytes: [u8; 2] = code
+        .get(*pc..*pc + 2)
+        .ok_or(Error::BadBytecode)?
+        .try_into()
+        .map_err(|_| Error::BadBytecode)?;
+    *pc += 2;
+    Ok(u16::from_le_bytes(bytes))
 }
