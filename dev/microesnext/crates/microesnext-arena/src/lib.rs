@@ -320,7 +320,6 @@ impl<'memory> Arena<'memory> {
         Ok(target)
     }
 
-    #[cfg(debug_assertions)]
     fn is_block_start(&self, target: usize) -> bool {
         let mut cursor = 1;
         while cursor < self.heap_end {
