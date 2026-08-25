@@ -126,6 +126,10 @@ pub enum Opcode {
     NegateNumber = 97,
     #[cfg(feature = "number-coercion")]
     ToNumber = 98,
+    #[cfg(feature = "number-division")]
+    DivideNumber = 99,
+    #[cfg(feature = "number-division")]
+    RemainderNumber = 100,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -243,6 +247,10 @@ impl TryFrom<u8> for Opcode {
             97 => Ok(Self::NegateNumber),
             #[cfg(feature = "number-coercion")]
             98 => Ok(Self::ToNumber),
+            #[cfg(feature = "number-division")]
+            99 => Ok(Self::DivideNumber),
+            #[cfg(feature = "number-division")]
+            100 => Ok(Self::RemainderNumber),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -411,6 +419,20 @@ mod tests {
     #[test]
     fn omitted_number_coercion_opcode_is_invalid() {
         assert!(Opcode::try_from(98).is_err());
+    }
+
+    #[cfg(feature = "number-division")]
+    #[test]
+    fn enabled_number_division_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(99), Ok(Opcode::DivideNumber));
+        assert_eq!(Opcode::try_from(100), Ok(Opcode::RemainderNumber));
+    }
+
+    #[cfg(not(feature = "number-division"))]
+    #[test]
+    fn omitted_number_division_opcodes_are_invalid() {
+        assert!(Opcode::try_from(99).is_err());
+        assert!(Opcode::try_from(100).is_err());
     }
 
     #[cfg(feature = "locals")]
