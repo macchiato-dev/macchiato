@@ -3,6 +3,19 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
+/// Largest integer whose immediate neighbours are also distinct `f64` values.
+pub const MAX_SAFE_INTEGER: i64 = (1_i64 << 53) - 1;
+
+/// Smallest integer whose immediate neighbours are also distinct `f64` values.
+pub const MIN_SAFE_INTEGER: i64 = -MAX_SAFE_INTEGER;
+
+pub fn is_safe_integer(number: f64) -> bool {
+    number.is_finite()
+        && number >= MIN_SAFE_INTEGER as f64
+        && number <= MAX_SAFE_INTEGER as f64
+        && (number as i64) as f64 == number
+}
+
 pub fn new(arena: &mut Arena<'_>, number: f64) -> Result<Value, Error> {
     if !(number == 0.0 && number.is_sign_negative()) {
         let integer = number as i32;
@@ -83,5 +96,15 @@ mod tests {
         let mut number = [new(&mut arena, f64::from_bits(4 << 2)).unwrap()];
         arena.compact(&mut number).unwrap();
         assert_eq!(get(&arena, number[0]).unwrap().to_bits(), 4 << 2);
+    }
+
+    #[test]
+    fn distinguishes_the_safe_integer_limit_from_the_precision_boundary() {
+        let boundary = (1_u64 << 53) as f64;
+        assert!(is_safe_integer(MAX_SAFE_INTEGER as f64));
+        assert!(is_safe_integer(MIN_SAFE_INTEGER as f64));
+        assert!(!is_safe_integer(boundary));
+        assert_eq!(boundary, boundary + 1.0);
+        assert_ne!(boundary, boundary + 2.0);
     }
 }

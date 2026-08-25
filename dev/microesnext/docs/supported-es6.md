@@ -14,6 +14,13 @@ small integers as immediate i30 words. Addition of statically small integer
 terms stays on the invariant opcode path; expressions requiring promotion use
 the removable numeric path.
 
+The i30 range is an internal immediate-value optimization, not a visible
+JavaScript integer limit. With `numbers` enabled, the IEEE-754 precision
+boundary is `2^53`: that value itself is representable, but `2^53 + 1` is not
+distinct from it. Consequently `Number.MAX_SAFE_INTEGER` is `2^53 - 1`.
+Integer-only compositions intentionally expose a smaller bounded subset;
+full numeric compositions promote results that no longer fit an i30.
+
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational
 precedence. Together with local assignment and `while`, it can run a
