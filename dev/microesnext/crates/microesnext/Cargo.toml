@@ -18,6 +18,7 @@ async-functions = [
   "async",
   "functions",
   "promises",
+  "promise-resolution",
   "dep:microesnext-async-functions",
   "microesnext-async/functions",
   "microesnext-vm/async-functions",
@@ -78,7 +79,16 @@ iterable-protocol = [
 ]
 weak-collections = ["dep:microesnext-weak-collections"]
 promises = ["dep:microesnext-promises"]
-promise-jobs = ["async", "functions", "promises", "microesnext-async/promises"]
+promise-resolution = [
+  "promises",
+  "dep:microesnext-promise-resolution",
+]
+promise-jobs = [
+  "async",
+  "functions",
+  "promise-resolution",
+  "microesnext-async/resolution",
+]
 
 [dependencies]
 microesnext-async = { workspace = true, optional = true }
@@ -91,6 +101,7 @@ microesnext-collection-iterators = { workspace = true, optional = true }
 microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-weak-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
+microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }

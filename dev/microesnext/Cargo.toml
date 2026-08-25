@@ -27,6 +27,7 @@ members = [
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
   "crates/microesnext-promises",
+  "crates/microesnext-promise-resolution",
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
   "crates/microesnext-symbols",
@@ -76,6 +77,7 @@ microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0" }
+microesnext-promise-resolution = { path = "crates/microesnext-promise-resolution", version = "0.0.0" }
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }

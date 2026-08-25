@@ -10,8 +10,9 @@ version.workspace = true
 [features]
 default = []
 promises = ["dep:microesnext-arena", "dep:microesnext-promises", "microesnext-vm/functions"]
+resolution = ["promises", "dep:microesnext-promise-resolution"]
 functions = [
-  "promises",
+  "resolution",
   "dep:microesnext-async-functions",
   "microesnext-vm/async-functions",
 ]
@@ -20,6 +21,7 @@ functions = [
 microesnext-types.workspace = true
 microesnext-vm = { workspace = true, features = ["async"] }
 microesnext-promises = { workspace = true, optional = true }
+microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-arena = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 

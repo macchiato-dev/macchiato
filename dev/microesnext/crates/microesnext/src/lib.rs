@@ -81,3 +81,6 @@ pub use microesnext_weak_collections as weak_collections;
 
 #[cfg(feature = "promises")]
 pub use microesnext_promises as promises;
+
+#[cfg(feature = "promise-resolution")]
+pub use microesnext_promise_resolution as promise_resolution;

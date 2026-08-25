@@ -2,6 +2,8 @@
 
 #[cfg(feature = "promises")]
 use microesnext_arena::BlockKind;
+#[cfg(feature = "resolution")]
+use microesnext_promise_resolution::{Resolution, resolve_native};
 #[cfg(feature = "promises")]
 use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 #[cfg(feature = "functions")]
@@ -119,7 +121,7 @@ fn drive_functions(
                     return Ok(Progress::Complete(value));
                 };
                 let promise = machine.root(frame.promise)?;
-                settle_unobserved(machine.arena_mut(), promise, Settlement::Fulfilled, value)?;
+                resolve_value(machine, queue, promise, value)?;
                 machine.restore_caller(frame.caller)?;
                 machine.release(frame.promise)?;
                 machine.run()?
@@ -254,14 +256,7 @@ fn finish_progress(
 ) -> Result<(), Error> {
     match progress {
         Progress::Complete(value) => {
-            let destination = machine.release(destination)?;
-            settle(
-                machine.arena_mut(),
-                queue,
-                destination,
-                Settlement::Fulfilled,
-                value,
-            )?;
+            fulfill_destination(machine, queue, destination, value)?;
             Ok(())
         }
         Progress::Rejected(reason) => {
@@ -298,14 +293,7 @@ fn finish_reaction(
 ) -> Result<(), Error> {
     match outcome {
         Outcome::Complete(value) => {
-            let destination = machine.release(destination)?;
-            settle(
-                machine.arena_mut(),
-                queue,
-                destination,
-                Settlement::Fulfilled,
-                value,
-            )?;
+            fulfill_destination(machine, queue, destination, value)?;
             Ok(())
         }
         Outcome::Throw(reason) => {
@@ -328,6 +316,42 @@ fn finish_reaction(
         }
         Outcome::AsyncCall { .. } => Err(Error::Type),
     }
+}
+
+#[cfg(feature = "promises")]
+fn fulfill_destination(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    destination: RootId,
+    value: Value,
+) -> Result<(), Error> {
+    let destination = machine.release(destination)?;
+    resolve_value(machine, queue, destination, value)
+}
+
+#[cfg(feature = "promises")]
+fn resolve_value(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    promise: Value,
+    value: Value,
+) -> Result<(), Error> {
+    #[cfg(feature = "resolution")]
+    {
+        if resolve_native(machine.arena_mut(), queue, promise, value)? == Resolution::SelfReference
+        {
+            return Err(Error::Type);
+        }
+    }
+    #[cfg(not(feature = "resolution"))]
+    settle(
+        machine.arena_mut(),
+        queue,
+        promise,
+        Settlement::Fulfilled,
+        value,
+    )?;
+    Ok(())
 }
 
 #[cfg(feature = "promises")]

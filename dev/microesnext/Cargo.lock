@@ -27,6 +27,7 @@ dependencies = [
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
+ "microesnext-promise-resolution",
  "microesnext-promises",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
@@ -72,6 +73,7 @@ dependencies = [
  "microesnext-async-functions",
  "microesnext-bytecode",
  "microesnext-functions",
+ "microesnext-promise-resolution",
  "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
@@ -259,6 +261,15 @@ name = "microesnext-parameters"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-promise-resolution"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-promises",
  "microesnext-types",
 ]
 
