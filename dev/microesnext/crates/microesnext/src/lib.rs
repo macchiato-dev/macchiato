@@ -12,3 +12,6 @@ pub use microesnext_collections as collections;
 
 #[cfg(feature = "weak-collections")]
 pub use microesnext_weak_collections as weak_collections;
+
+#[cfg(feature = "promises")]
+pub use microesnext_promises as promises;

@@ -23,6 +23,8 @@ pub enum BlockKind {
     WeakMap = 12,
     WeakSet = 13,
     WeakTable = 14,
+    Promise = 15,
+    Reactions = 16,
 }
 
 /// One fixed-capacity address space: heap grows upward and VM stack downward.
@@ -500,6 +502,8 @@ impl<'memory> Arena<'memory> {
             12 => Ok(BlockKind::WeakMap),
             13 => Ok(BlockKind::WeakSet),
             14 => Ok(BlockKind::WeakTable),
+            15 => Ok(BlockKind::Promise),
+            16 => Ok(BlockKind::Reactions),
             _ => Err(Error::DanglingReference),
         }
     }

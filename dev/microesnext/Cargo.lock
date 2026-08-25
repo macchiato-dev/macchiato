@@ -10,6 +10,7 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
+ "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-weak-collections",
@@ -65,6 +66,15 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-promises"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-objects",
  "microesnext-types",
 ]
 
