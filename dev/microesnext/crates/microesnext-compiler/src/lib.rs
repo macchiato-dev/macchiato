@@ -35,6 +35,24 @@ impl Builder {
         self
     }
 
+    pub fn init_locals(mut self, count: u16) -> Self {
+        self.code.push(Opcode::InitLocals as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
+        self
+    }
+
+    pub fn load_local(mut self, slot: u16) -> Self {
+        self.code.push(Opcode::LoadLocal as u8);
+        self.code.extend_from_slice(&slot.to_le_bytes());
+        self
+    }
+
+    pub fn store_local(mut self, slot: u16) -> Self {
+        self.code.push(Opcode::StoreLocal as u8);
+        self.code.extend_from_slice(&slot.to_le_bytes());
+        self
+    }
+
     pub fn const_f64(mut self, value: f64) -> Self {
         self.code.push(Opcode::ConstF64 as u8);
         self.code.extend_from_slice(&value.to_bits().to_le_bytes());

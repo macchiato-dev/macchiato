@@ -56,6 +56,10 @@ pub enum Opcode {
     #[cfg(feature = "numbers")]
     AddNumber = 22,
     ConstImmediate = 23,
+    InitLocals = 24,
+    LoadLocal = 25,
+    StoreLocal = 26,
+    ReturnLocals = 27,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -103,6 +107,10 @@ impl TryFrom<u8> for Opcode {
             #[cfg(feature = "numbers")]
             22 => Ok(Self::AddNumber),
             23 => Ok(Self::ConstImmediate),
+            24 => Ok(Self::InitLocals),
+            25 => Ok(Self::LoadLocal),
+            26 => Ok(Self::StoreLocal),
+            27 => Ok(Self::ReturnLocals),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -158,5 +166,13 @@ mod tests {
     #[test]
     fn immediate_opcode_is_part_of_every_build() {
         assert_eq!(Opcode::try_from(23), Ok(Opcode::ConstImmediate));
+    }
+
+    #[test]
+    fn local_opcodes_are_part_of_every_build() {
+        assert_eq!(Opcode::try_from(24), Ok(Opcode::InitLocals));
+        assert_eq!(Opcode::try_from(25), Ok(Opcode::LoadLocal));
+        assert_eq!(Opcode::try_from(26), Ok(Opcode::StoreLocal));
+        assert_eq!(Opcode::try_from(27), Ok(Opcode::ReturnLocals));
     }
 }

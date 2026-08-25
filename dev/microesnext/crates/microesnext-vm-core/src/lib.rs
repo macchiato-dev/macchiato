@@ -2,8 +2,8 @@
 
 use microesnext_arena::Arena;
 use microesnext_bytecode_core::{
-    ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, RETURN, THROW, read_byte, read_bytes, read_i30,
-    read_immediate, read_u16, read_u32,
+    ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, INIT_LOCALS, LOAD_LOCAL, RETURN, RETURN_LOCALS,
+    STORE_LOCAL, THROW, read_byte, read_bytes, read_i30, read_immediate, read_u16, read_u32,
 };
 use microesnext_types::{Error, Value};
 
@@ -125,24 +125,39 @@ impl<'code, 'memory> Core<'code, 'memory> {
                         .ok_or(Error::Type)?;
                     self.arena.push(value)?;
                 }
+                INIT_LOCALS => {
+                    let count = read_u16(self.code, &mut self.pc)? as usize;
+                    self.init_locals(count)?;
+                }
+                LOAD_LOCAL => {
+                    let slot = read_u16(self.code, &mut self.pc)? as usize;
+                    let value = self.local(slot)?;
+                    self.arena.push(value)?;
+                }
+                STORE_LOCAL => {
+                    let slot = read_u16(self.code, &mut self.pc)? as usize;
+                    self.validate_local(slot)?;
+                    let value = self.arena.pop()?;
+                    self.arena
+                        .set_stack_value_from_bottom(self.local_base() + 1 + slot, value)?;
+                }
                 RETURN => {
                     let result = self.arena.pop()?;
-                    let Some(frame_depth) = self.frame_depth else {
-                        return Ok(CoreOutcome::Complete(result));
-                    };
-                    if self.arena.stack_len() != frame_depth {
+                    if let Some(outcome) = self.finish_return(result)? {
+                        return Ok(outcome);
+                    }
+                }
+                RETURN_LOCALS => {
+                    let result = self.arena.pop()?;
+                    let local_count = self.local_count()?;
+                    let base = self.local_base();
+                    if self.arena.stack_len() != base + 1 + local_count {
                         return Err(Error::BadBytecode);
                     }
-                    let _function = self.arena.pop()?;
-                    let previous_frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-                    let return_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
-                    if return_pc < 0 {
-                        self.frame_depth = None;
-                        return Ok(CoreOutcome::Complete(result));
+                    self.arena.truncate_stack(base)?;
+                    if let Some(outcome) = self.finish_return(result)? {
+                        return Ok(outcome);
                     }
-                    self.frame_depth = (previous_frame >= 0).then_some(previous_frame as usize);
-                    self.pc = return_pc as usize;
-                    self.arena.push(result)?;
                 }
                 CALL => {
                     let target = read_u32(self.code, &mut self.pc)? as usize;
@@ -171,6 +186,69 @@ impl<'code, 'memory> Core<'code, 'memory> {
         self.frame_depth = Some(self.arena.stack_len());
         self.pc = target;
         Ok(())
+    }
+
+    #[inline(always)]
+    fn local_base(&self) -> usize {
+        self.frame_depth.unwrap_or(0)
+    }
+
+    fn init_locals(&mut self, count: usize) -> Result<(), Error> {
+        if self.arena.stack_len() != self.local_base() {
+            return Err(Error::BadBytecode);
+        }
+        self.arena
+            .push(Value::from_i30(count as i32).ok_or(Error::BadBytecode)?)?;
+        for _ in 0..count {
+            self.arena.push(Value::UNDEFINED)?;
+        }
+        Ok(())
+    }
+
+    fn local_count(&self) -> Result<usize, Error> {
+        self.arena
+            .stack_value_from_bottom(self.local_base())?
+            .as_i30()
+            .and_then(|count| usize::try_from(count).ok())
+            .ok_or(Error::BadBytecode)
+    }
+
+    fn validate_local(&self, slot: usize) -> Result<(), Error> {
+        if slot < self.local_count()? {
+            Ok(())
+        } else {
+            Err(Error::BadBytecode)
+        }
+    }
+
+    fn local(&self, slot: usize) -> Result<Value, Error> {
+        self.validate_local(slot)?;
+        self.arena
+            .stack_value_from_bottom(self.local_base() + 1 + slot)
+    }
+
+    #[inline(always)]
+    fn finish_return(&mut self, result: Value) -> Result<Option<CoreOutcome>, Error> {
+        let Some(frame_depth) = self.frame_depth else {
+            if self.arena.stack_len() != 0 {
+                return Err(Error::BadBytecode);
+            }
+            return Ok(Some(CoreOutcome::Complete(result)));
+        };
+        if self.arena.stack_len() != frame_depth {
+            return Err(Error::BadBytecode);
+        }
+        let _function = self.arena.pop()?;
+        let previous_frame = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
+        let return_pc = self.arena.pop()?.as_i30().ok_or(Error::BadBytecode)?;
+        if return_pc < 0 {
+            self.frame_depth = None;
+            return Ok(Some(CoreOutcome::Complete(result)));
+        }
+        self.frame_depth = (previous_frame >= 0).then_some(previous_frame as usize);
+        self.pc = return_pc as usize;
+        self.arena.push(result)?;
+        Ok(None)
     }
 
     pub fn enter_external_call(
@@ -238,6 +316,70 @@ mod tests {
     fn rejects_unknown_immediate_tags() {
         let code = [Opcode::ConstImmediate as u8, 4, Opcode::Return as u8];
         let mut memory = [0; 8];
+        let mut core = Core::new(&code, &mut memory, 0);
+        assert_eq!(core.run(), Err(Error::BadBytecode));
+    }
+
+    #[test]
+    fn stores_and_loads_top_level_locals() {
+        let code = Builder::new()
+            .init_locals(2)
+            .const_i30(40)
+            .store_local(0)
+            .const_i30(2)
+            .store_local(1)
+            .load_local(0)
+            .load_local(1)
+            .op(Opcode::AddI30)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut core = Core::new(&code, &mut memory, 0);
+        assert_eq!(
+            core.run().unwrap(),
+            CoreOutcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[test]
+    fn returns_from_a_called_local_frame() {
+        let code = Builder::new()
+            .call(6)
+            .op(Opcode::Return)
+            .init_locals(1)
+            .const_i30(42)
+            .store_local(0)
+            .load_local(0)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 64];
+        let mut core = Core::new(&code, &mut memory, 0);
+        assert_eq!(
+            core.run().unwrap(),
+            CoreOutcome::Complete(Value::from_i30(42).unwrap())
+        );
+    }
+
+    #[test]
+    fn rejects_local_slots_outside_the_declared_frame() {
+        let code = Builder::new()
+            .init_locals(1)
+            .load_local(1)
+            .op(Opcode::ReturnLocals)
+            .finish();
+        let mut memory = [0; 32];
+        let mut core = Core::new(&code, &mut memory, 0);
+        assert_eq!(core.run(), Err(Error::BadBytecode));
+    }
+
+    #[test]
+    fn plain_return_rejects_unconsumed_operands() {
+        let code = Builder::new()
+            .const_i30(1)
+            .const_i30(2)
+            .op(Opcode::Return)
+            .finish();
+        let mut memory = [0; 32];
         let mut core = Core::new(&code, &mut memory, 0);
         assert_eq!(core.run(), Err(Error::BadBytecode));
     }
