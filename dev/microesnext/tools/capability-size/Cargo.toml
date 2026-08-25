@@ -21,6 +21,7 @@ control-flow = ["microesnext/control-flow"]
 constructors = ["callable-objects", "microesnext/constructors"]
 construction = ["constructors", "microesnext/construction"]
 classes = ["construction", "property-assignment", "microesnext/classes"]
+class-methods = ["classes", "microesnext/class-methods"]
 collection-iterators = ["collections", "iterators", "microesnext/collection-iterators"]
 collection-entry-iterators = [
   "arrays",

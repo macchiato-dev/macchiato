@@ -221,6 +221,48 @@ pub extern "C" fn classes_probe() -> i32 {
     microesnext::class_constructors::is_class_constructor(machine.arena(), constructor) as i32
 }
 
+#[cfg(all(feature = "class-methods", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn class_methods_probe() -> i32 {
+    let code = [
+        Opcode::GetMethod as u8,
+        Opcode::CallMethodArguments as u8,
+        0,
+        0,
+        Opcode::Return as u8,
+        Opcode::InitReceiverFrame as u8,
+        0,
+        0,
+        0,
+        0,
+        Opcode::LoadThis as u8,
+        Opcode::ReturnReceiverLocals as u8,
+    ];
+    let mut memory = [0; 224];
+    let Ok(mut machine) = Machine::with_objects(&code, &mut memory, 4) else {
+        return 0;
+    };
+    let key = microesnext::Value::from_i30(1).unwrap();
+    let Ok(closure) = microesnext::functions::capture_stack(machine.arena_mut(), 5, 0) else {
+        return 0;
+    };
+    let Ok(method) =
+        microesnext::callable_objects::new(machine.arena_mut(), closure, microesnext::Value::NULL)
+    else {
+        return 0;
+    };
+    let Ok(receiver) = microesnext::objects::new_object(machine.arena_mut(), Value::NULL) else {
+        return 0;
+    };
+    let Ok(receiver) = microesnext::objects::set(machine.arena_mut(), receiver, key, method) else {
+        return 0;
+    };
+    if machine.arena_mut().push(receiver).is_err() || machine.arena_mut().push(key).is_err() {
+        return 0;
+    }
+    matches!(machine.run(), Ok(Outcome::Complete(value)) if value == receiver) as i32
+}
+
 #[cfg(all(feature = "property-assignment", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn property_assignment_probe() -> i32 {

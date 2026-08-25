@@ -4,6 +4,7 @@ const builds = [
   ["constructors", "constructors"],
   ["construction", "construction"],
   ["classes", "classes"],
+  ["class methods", "class-methods"],
   ["exceptions", "exceptions"],
   ["logical operations", "logical-operations"],
   ["bounded integer operations", "integer-operations"],
@@ -29,7 +30,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,classes,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,class-methods,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -61,7 +62,9 @@ for (const [name, features] of builds) {
     `${target}/wasm32-unknown-unknown/release/microesnext-compiler-size.wasm`,
   );
   const { instance } = await WebAssembly.instantiate(bytes);
-  const source = features === "classes"
+  const source = features === "class-methods"
+    ? "class C { constructor(value) { this.value = value; } read() { return this.value; } } let value = new C(1); return value.read();"
+    : features === "classes"
     ? "class C { constructor(value) { this.value = value; } } let value = new C(1); return value.value;"
     : features.includes("recursive-async-functions")
     ? "return async function named() { return await named(); };"
