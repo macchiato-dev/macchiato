@@ -64,7 +64,10 @@ mod tests {
         let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
 
         assert!(microesnext_functions::is_function(&arena, callable));
-        assert_eq!(microesnext_objects::prototype(&arena, receiver), Ok(prototype));
+        assert_eq!(
+            microesnext_objects::prototype(&arena, receiver),
+            Ok(prototype)
+        );
         assert_eq!(select(&arena, receiver, Value::UNDEFINED), receiver);
         assert_eq!(select(&arena, receiver, prototype), prototype);
     }
