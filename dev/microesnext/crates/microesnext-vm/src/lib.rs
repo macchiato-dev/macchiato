@@ -380,6 +380,38 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "numbers")]
+            Opcode::SubtractNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_numbers::subtract(self.core.arena_mut(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "numbers")]
+            Opcode::MultiplyNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_numbers::multiply(self.core.arena_mut(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "numbers")]
+            Opcode::LessThanNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_numbers::less_than(self.core.arena(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "numbers")]
+            Opcode::GreaterThanNumber => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_numbers::greater_than(self.core.arena(), left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "locals")]
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
