@@ -48,6 +48,7 @@ functions = [
 function-arguments = ["functions", "microesnext-bytecode/function-arguments"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
 integer-negation = ["microesnext-bytecode/integer-negation"]
+instanceof = ["microesnext-bytecode/instanceof"]
 locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 numbers = ["dep:microesnext-decimal-to-f64", "microesnext-bytecode/numbers"]

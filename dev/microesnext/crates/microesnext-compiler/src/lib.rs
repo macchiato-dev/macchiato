@@ -1158,7 +1158,7 @@ impl Parser<'_> {
         self.relational(binding)
     }
 
-    #[cfg(feature = "integer-operations")]
+    #[cfg(all(feature = "integer-operations", not(feature = "instanceof")))]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -1181,7 +1181,52 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(not(feature = "integer-operations"))]
+    #[cfg(all(feature = "integer-operations", feature = "instanceof"))]
+    fn relational(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.additive(binding)?;
+        loop {
+            let relation = if self.consume(b'<') {
+                Some(true)
+            } else if self.consume(b'>') {
+                Some(false)
+            } else {
+                None
+            };
+            if let Some(less) = relation {
+                let (_, right) = self.additive(None)?;
+                let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
+                let opcode = self.relational_opcode(less, immediate);
+                self.output.push(opcode as u8);
+                kind = TermKind::General;
+            } else if self.consume_instanceof() {
+                self.additive(None)?;
+                self.output.push(Opcode::InstanceOf as u8);
+                kind = TermKind::General;
+            } else {
+                break;
+            }
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(feature = "instanceof", not(feature = "integer-operations")))]
+    fn relational(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.additive(binding)?;
+        while self.consume_instanceof() {
+            self.additive(None)?;
+            self.output.push(Opcode::InstanceOf as u8);
+            kind = TermKind::General;
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(all(not(feature = "integer-operations"), not(feature = "instanceof")))]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -1542,6 +1587,12 @@ impl Parser<'_> {
     fn consume_typeof(&mut self) -> bool {
         self.whitespace();
         self.try_word(b"typeof")
+    }
+
+    #[cfg(feature = "instanceof")]
+    fn consume_instanceof(&mut self) -> bool {
+        self.whitespace();
+        self.try_word(b"instanceof")
     }
 
     #[cfg(feature = "integer-negation")]
@@ -2708,6 +2759,29 @@ mod tests {
     #[test]
     fn does_not_parse_a_typeof_identifier_prefix_as_the_operator() {
         assert_eq!(compile_script("return typeofValue;").unwrap_err().offset, 7);
+    }
+
+    #[cfg(feature = "instanceof")]
+    #[test]
+    fn compiles_left_associative_instanceof_without_numeric_relations() {
+        let code = compile_script("return null instanceof true instanceof false;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::InstanceOf as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(not(feature = "instanceof"))]
+    #[test]
+    fn leaves_instanceof_unconsumed_when_omitted() {
+        assert_eq!(
+            compile_script("return null instanceof true;")
+                .unwrap_err()
+                .expected,
+            "end of input"
+        );
     }
 
     #[cfg(feature = "integer-negation")]
