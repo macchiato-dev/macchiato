@@ -242,6 +242,12 @@ enum CaptureSource {
     Outer(u16),
 }
 
+#[derive(Clone, Copy)]
+enum FunctionBody {
+    Block,
+    Expression,
+}
+
 impl Parser<'_> {
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
         self.local_assignments()?;
@@ -429,7 +435,7 @@ impl Parser<'_> {
             captured: false,
         });
         let parameters = self.function_parameters()?;
-        self.function_value(parameters, Some(slot))?;
+        self.function_value(parameters, Some(slot), FunctionBody::Block)?;
         Ok(())
     }
 
@@ -467,12 +473,43 @@ impl Parser<'_> {
         }
     }
 
+    fn try_arrow_parameters(&mut self) -> Result<Option<Vec<Binding>>, CompileError> {
+        let start = self.offset;
+        let parameters = if self.source.get(self.offset) == Some(&b'(') {
+            self.function_parameters()?
+        } else {
+            let Some(first) = self.source.get(self.offset) else {
+                return Ok(None);
+            };
+            if !first.is_ascii_alphabetic() && *first != b'_' && *first != b'$' {
+                return Ok(None);
+            }
+            let (name_start, name_end) = self.identifier()?;
+            let mut parameters = Vec::with_capacity(1);
+            parameters.push(Binding {
+                start: name_start,
+                end: name_end,
+                slot: 0,
+                captured: false,
+            });
+            parameters
+        };
+        self.whitespace();
+        if !self.source[self.offset..].starts_with(b"=>") {
+            self.offset = start;
+            return Ok(None);
+        }
+        self.offset += 2;
+        Ok(Some(parameters))
+    }
+
     fn function_value(
         &mut self,
         parameters: Vec<Binding>,
         destination: Option<u16>,
+        body_kind: FunctionBody,
     ) -> Result<(), CompileError> {
-        if !self.consume(b'{') {
+        if matches!(body_kind, FunctionBody::Block) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
         let parameter_count = u16::try_from(parameters.len())
@@ -493,13 +530,23 @@ impl Parser<'_> {
             function_frame: true,
         };
         let mut body_count_patch = Some(1);
-        body.frame_declarations(&mut body_count_patch)?;
+        if matches!(body_kind, FunctionBody::Block) {
+            body.frame_declarations(&mut body_count_patch)?;
+        }
         let body_local_count = u16::try_from(body.locals.len())
             .map_err(|_| body.error("fewer than 65536 local bindings"))?;
         body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
-        body.terminal_statement()?;
-        if !body.consume(b'}') {
-            return Err(body.error("}"));
+        match body_kind {
+            FunctionBody::Block => {
+                body.terminal_statement()?;
+                if !body.consume(b'}') {
+                    return Err(body.error("}"));
+                }
+            }
+            FunctionBody::Expression => {
+                body.expression(None)?;
+                body.output.push(Opcode::ReturnLocals as u8);
+            }
         }
         body.whitespace();
         body.append_function_bodies()?;
@@ -702,11 +749,21 @@ impl Parser<'_> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
+        let arrow_parameters = self.try_arrow_parameters()?;
         let binding = binding.filter(|(start, end)| {
             self.source[self.offset..].starts_with(&self.source[*start..*end])
                 && self.identifier_end(self.offset + end - start)
         });
-        let (used_binding, mut kind) = if let Some((start, end)) = binding {
+        let (used_binding, mut kind) = if let Some(parameters) = arrow_parameters {
+            self.whitespace();
+            let body = if self.source.get(self.offset) == Some(&b'{') {
+                FunctionBody::Block
+            } else {
+                FunctionBody::Expression
+            };
+            self.function_value(parameters, None, body)?;
+            (false, TermKind::General)
+        } else if let Some((start, end)) = binding {
             self.offset += end - start;
             (true, TermKind::General)
         } else if let Some(local) = self.local_at_offset() {
@@ -726,7 +783,7 @@ impl Parser<'_> {
         } else if self.try_word(b"function") {
             self.whitespace();
             let parameters = self.function_parameters()?;
-            self.function_value(parameters, None)?;
+            self.function_value(parameters, None, FunctionBody::Block)?;
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
             self.output.push(Opcode::NewArray as u8);
@@ -1188,6 +1245,21 @@ mod tests {
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
         );
+    }
+
+    #[test]
+    fn compiles_arrow_expression_and_block_bodies_as_closures() {
+        for source in [
+            "let identity = value => value; return identity(42);",
+            "let identity = (value) => { return value; }; return identity(42);",
+        ] {
+            let code = compile_script(source).unwrap();
+            assert!(code.contains(&(Opcode::Closure as u8)));
+            assert!(
+                code.windows(3)
+                    .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
+            );
+        }
     }
 
     #[test]

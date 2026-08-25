@@ -43,6 +43,22 @@ fn anonymous_function_expression_shares_an_outer_binding() {
 }
 
 #[test]
+fn arrow_expression_body_receives_arguments_and_captures() {
+    assert_eq!(
+        run("let base = 40; let addBase = value => base + value; return addBase(2);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn arrow_block_body_uses_the_shared_function_frame() {
+    assert_eq!(
+        run("let add = (left, right) => { return left + right; }; return add(40, 2);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_function_receives_multiple_arguments_in_order() {
     assert_eq!(
         run("function add(left, right) { return left + right; } return add(40, 2);"),

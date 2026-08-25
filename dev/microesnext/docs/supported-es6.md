@@ -26,12 +26,15 @@ suspensions; and turns uncaught exceptions into promise rejections. Async
 methods and async generators are not part of this initial surface.
 
 The current Rust compiler slice also emits function declarations, anonymous
-function expressions, postfix calls, and ordered parameter slots directly to
-bytecode. An expression may be called immediately or retained in a local, and
-uses the same capture analysis as a declaration. Both declared parameters and
-call arguments have a `u16` count. Argument-to-local frame setup is a removable
+function expressions, single- or parenthesized-parameter arrows, postfix calls,
+and ordered parameter slots directly to bytecode. Arrow expression and block
+bodies share the ordinary closure compiler rather than adding an opcode. A
+function expression may be called immediately or retained in a local, and all
+three forms use the same capture analysis. Both declared parameters and call
+arguments have a `u16` count. Argument-to-local frame setup is a removable
 capability rather than a cost borne by functions without parameters. Named
-function expressions and full declaration hoisting remain compiler work.
+function expressions, `this` and `arguments` exposure, constructors, and full
+declaration hoisting remain compiler work.
 
 Mutable closure semantics use optional traced environment cells. Compiler
 capture analysis boxes only bindings that cross a function boundary; sibling
