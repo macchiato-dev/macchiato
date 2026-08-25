@@ -20,3 +20,38 @@ fn an_instance_method_observes_its_call_receiver() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn method_arguments_keep_their_slots_ahead_of_the_receiver() {
+    let code = compile_script(
+        "class Identity { \
+           constructor() {} \
+           read(value) { return value; } \
+         } \
+         let identity = new Identity(); \
+         return identity.read(42);",
+    )
+    .unwrap();
+    let mut memory = [0; 1024];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
+
+#[test]
+fn methods_do_not_gain_constructor_prototypes() {
+    let code = compile_script(
+        "class Example { constructor() {} read() { return this; } } \
+         let example = new Example(); \
+         let method = example.read; \
+         return new method();",
+    )
+    .unwrap();
+    let mut memory = [0; 1024];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+
+    assert_eq!(machine.run(), Err(microesnext::Error::Type));
+}

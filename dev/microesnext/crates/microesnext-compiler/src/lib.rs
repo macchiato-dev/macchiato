@@ -671,15 +671,17 @@ impl Parser<'_> {
             false,
             true,
         )?;
+        #[cfg(not(feature = "class-methods"))]
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        #[cfg(feature = "class-methods")]
         loop {
             self.whitespace();
             if self.consume_raw(b'}') {
                 break;
             }
-            #[cfg(feature = "class-methods")]
             self.class_method(slot)?;
-            #[cfg(not(feature = "class-methods"))]
-            return Err(self.error("}"));
         }
         self.consume(b';');
         self.whitespace();
