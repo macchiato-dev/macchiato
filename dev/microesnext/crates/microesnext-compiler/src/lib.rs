@@ -167,6 +167,8 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         offset: 0,
         output: Vec::new(),
         locals: Vec::new(),
+        functions: Vec::new(),
+        function_frame: false,
     };
     parser.whitespace();
     let locals_patch = parser.local_declarations()?;
@@ -188,6 +190,7 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
             .map_err(|_| parser.error("fewer than 65536 local bindings"))?;
         parser.output[patch..patch + 2].copy_from_slice(&count.to_le_bytes());
     }
+    parser.append_function_bodies()?;
     Ok(parser.output)
 }
 
@@ -196,6 +199,8 @@ struct Parser<'source> {
     offset: usize,
     output: Vec<u8>,
     locals: Vec<Binding>,
+    functions: Vec<PendingFunction>,
+    function_frame: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -205,6 +210,11 @@ struct Binding {
     slot: u16,
 }
 
+struct PendingFunction {
+    target_patch: usize,
+    code: Vec<u8>,
+}
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum TermKind {
     I30,
@@ -212,6 +222,17 @@ enum TermKind {
 }
 
 impl Parser<'_> {
+    fn append_function_bodies(&mut self) -> Result<(), CompileError> {
+        for function in &self.functions {
+            let target = u32::try_from(self.output.len())
+                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+            self.output[function.target_patch..function.target_patch + 4]
+                .copy_from_slice(&target.to_le_bytes());
+            self.output.extend_from_slice(&function.code);
+        }
+        Ok(())
+    }
+
     fn while_loop(&mut self) -> Result<(), CompileError> {
         let loop_start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -277,6 +298,9 @@ impl Parser<'_> {
 
     fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
         let mut count_patch = None;
+        while self.try_word(b"function") {
+            self.function_declaration(&mut count_patch)?;
+        }
         while self.try_word(b"let") {
             if count_patch.is_none() {
                 self.output.push(Opcode::InitLocals as u8);
@@ -308,6 +332,84 @@ impl Parser<'_> {
             self.whitespace();
         }
         Ok(count_patch)
+    }
+
+    fn function_declaration(
+        &mut self,
+        count_patch: &mut Option<usize>,
+    ) -> Result<(), CompileError> {
+        if count_patch.is_none() {
+            self.output.push(Opcode::InitLocals as u8);
+            *count_patch = Some(self.output.len());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+        }
+        self.whitespace();
+        let (name_start, name_end) = self.identifier()?;
+        if self.locals.iter().any(|binding| {
+            self.source[binding.start..binding.end] == self.source[name_start..name_end]
+        }) {
+            return Err(self.error("a unique local binding"));
+        }
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.whitespace();
+        let parameter = if self.consume_raw(b')') {
+            None
+        } else {
+            let parameter = self.identifier()?;
+            if !self.consume(b')') {
+                return Err(self.error(")"));
+            }
+            Some(parameter)
+        };
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let parameter_count = u16::from(parameter.is_some());
+        let mut body = Parser {
+            source: self.source,
+            offset: self.offset,
+            output: Builder::new()
+                .init_frame(parameter_count, parameter_count)
+                .finish(),
+            locals: parameter
+                .map(|(start, end)| Binding {
+                    start,
+                    end,
+                    slot: 0,
+                })
+                .into_iter()
+                .collect(),
+            functions: Vec::new(),
+            function_frame: true,
+        };
+        body.completion(None, false, false)?;
+        if !body.consume(b'}') {
+            return Err(body.error("}"));
+        }
+        body.whitespace();
+        self.offset = body.offset;
+
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.output.push(Opcode::Closure as u8);
+        let target_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.extend_from_slice(&0_u16.to_le_bytes());
+        self.output.push(Opcode::StoreLocal as u8);
+        self.output.extend_from_slice(&slot.to_le_bytes());
+        self.locals.push(Binding {
+            start: name_start,
+            end: name_end,
+            slot,
+        });
+        self.functions.push(PendingFunction {
+            target_patch,
+            code: body.output,
+        });
+        Ok(())
     }
 
     fn local_assignments(&mut self) -> Result<(), CompileError> {
@@ -392,7 +494,7 @@ impl Parser<'_> {
             self.output.push(Opcode::EndTry as u8);
         }
         self.output.push(if returning {
-            if self.locals.is_empty() {
+            if !self.function_frame && self.locals.is_empty() {
                 Opcode::Return as u8
             } else {
                 Opcode::ReturnLocals as u8
@@ -491,12 +593,37 @@ impl Parser<'_> {
                 },
             )
         };
-        while self.consume(b'.') {
-            self.whitespace();
-            let (start, end) = self.identifier()?;
-            self.output_atom_range(start, end);
-            self.output.push(Opcode::GetProperty as u8);
-            kind = TermKind::General;
+        loop {
+            if self.consume(b'.') {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                self.output_atom_range(start, end);
+                self.output.push(Opcode::GetProperty as u8);
+                kind = TermKind::General;
+                continue;
+            }
+            if self.consume(b'(') {
+                let mut count = 0_u16;
+                if !self.consume(b')') {
+                    loop {
+                        self.expression(None)?;
+                        count = count
+                            .checked_add(1)
+                            .ok_or_else(|| self.error("fewer than 65536 arguments"))?;
+                        if self.consume(b')') {
+                            break;
+                        }
+                        if !self.consume(b',') {
+                            return Err(self.error(", or )"));
+                        }
+                    }
+                }
+                self.output.push(Opcode::CallValueArguments as u8);
+                self.output.extend_from_slice(&count.to_le_bytes());
+                kind = TermKind::General;
+                continue;
+            }
+            break;
         }
         if awaiting {
             self.output.push(Opcode::Await as u8);
@@ -803,6 +930,34 @@ mod tests {
                 .op(Opcode::ReturnLocals)
                 .finish()
         );
+    }
+
+    #[test]
+    fn appends_source_functions_and_backpatches_their_entry() {
+        let code =
+            compile_script("function identity(value) { return value; } return identity(42);")
+                .unwrap();
+        assert_eq!(code[0], Opcode::InitLocals as u8);
+        assert_eq!(code[5], Opcode::Closure as u8);
+        let target = u32::from_le_bytes(code[6..10].try_into().unwrap()) as usize;
+        assert!(target < code.len());
+        assert_eq!(code[target], Opcode::InitLocals as u8);
+        assert!(
+            code.windows(3)
+                .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
+        );
+        assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
+    }
+
+    #[test]
+    fn compiles_zero_parameter_calls_with_a_function_frame() {
+        let code = compile_script("function answer() { return 42; } return answer();").unwrap();
+        let target = u32::from_le_bytes(code[6..10].try_into().unwrap()) as usize;
+        assert_eq!(
+            &code[target..target + 5],
+            &[Opcode::InitLocals as u8, 0, 0, 0, 0]
+        );
+        assert_eq!(code.last(), Some(&(Opcode::ReturnLocals as u8)));
     }
 
     #[test]
