@@ -15,6 +15,7 @@ microesnext-promise-resolvers.workspace = true
 microesnext-promises.workspace = true
 microesnext-types.workspace = true
 microesnext-vm = { workspace = true, features = [
+  "objects",
   "promise-resolvers",
   "receivers",
 ] }

@@ -10,6 +10,11 @@ pub enum Prepared {
     Job(Job),
 }
 
+pub enum Finished {
+    Complete,
+    Job(Job),
+}
+
 /// A rooted PromiseResolveThenableJob. Keeping it separate lets a controller
 /// enqueue the job instead of invoking arbitrary guest `then` code inline.
 pub struct Job {
@@ -17,6 +22,7 @@ pub struct Job {
     receiver: RootId,
     resolve: RootId,
     reject: RootId,
+    then_key: RootId,
 }
 
 /// Applies the synchronous part of Promise resolution and returns a rooted job
@@ -93,21 +99,36 @@ pub fn prepare(
             return Err(error);
         }
     };
+    let then_key = match machine.retain(then_key) {
+        Ok(root) => root,
+        Err(error) => {
+            machine.release(reject)?;
+            machine.release(resolve)?;
+            machine.release(receiver)?;
+            machine.release(then)?;
+            return Err(error);
+        }
+    };
     Ok(Prepared::Job(Job {
         then,
         receiver,
         resolve,
         reject,
+        then_key,
     }))
 }
 
 /// Executes one previously prepared thenable job without native recursion.
-pub fn run(machine: &mut Machine<'_, '_>, queue: &mut JobQueue<'_>, job: Job) -> Result<(), Error> {
+pub fn run(
+    machine: &mut Machine<'_, '_>,
+    queue: &mut JobQueue<'_>,
+    job: Job,
+) -> Result<Finished, Error> {
     let result = run_inner(machine, queue, &job);
     let cleanup = release(machine, job);
     match (result, cleanup) {
-        (Err(error), _) | (Ok(()), Err(error)) => Err(error),
-        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), _) | (Ok(_), Err(error)) => Err(error),
+        (Ok(finished), Ok(())) => Ok(finished),
     }
 }
 
@@ -115,20 +136,37 @@ fn run_inner(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
     job: &Job,
-) -> Result<(), Error> {
+) -> Result<Finished, Error> {
     let then = machine.root(job.then)?;
     let receiver = machine.root(job.receiver)?;
     let resolve = machine.root(job.resolve)?;
     let reject = machine.root(job.reject)?;
+    let mut chained = None;
     let mut outcome = machine.call_closure_with_receiver(then, receiver, &[resolve, reject])?;
     loop {
         outcome = match outcome {
             Outcome::PromiseResolverCall => {
                 let call = machine.take_resolver_call()?;
-                microesnext_promise_resolvers::settle_call(machine.arena_mut(), queue, call)?;
+                match call.settlement {
+                    Settlement::Fulfilled => {
+                        let then_key = machine.root(job.then_key)?;
+                        if let Prepared::Job(job) =
+                            prepare(machine, queue, call.destination, call.argument, then_key)?
+                        {
+                            chained = Some(job);
+                        }
+                    }
+                    Settlement::Rejected => {
+                        microesnext_promise_resolvers::settle_call(
+                            machine.arena_mut(),
+                            queue,
+                            call,
+                        )?;
+                    }
+                }
                 machine.resume_resolver_call()?
             }
-            Outcome::Complete(_) => return Ok(()),
+            Outcome::Complete(_) => return Ok(finished(chained)),
             Outcome::Throw(reason) => {
                 let reject = machine.root(job.reject)?;
                 if let Some(call) = microesnext_promise_resolvers::reject_if_open(
@@ -138,7 +176,7 @@ fn run_inner(
                 )? {
                     microesnext_promise_resolvers::settle_call(machine.arena_mut(), queue, call)?;
                 }
-                return Ok(());
+                return Ok(finished(chained));
             }
             Outcome::Await { .. } | Outcome::AsyncCall { .. } => return Err(Error::Type),
         };
@@ -146,6 +184,7 @@ fn run_inner(
 }
 
 fn release(machine: &mut Machine<'_, '_>, job: Job) -> Result<(), Error> {
+    machine.release(job.then_key)?;
     machine.release(job.reject)?;
     machine.release(job.resolve)?;
     machine.release(job.receiver)?;
@@ -153,9 +192,16 @@ fn release(machine: &mut Machine<'_, '_>, job: Job) -> Result<(), Error> {
     Ok(())
 }
 
+fn finished(job: Option<Job>) -> Finished {
+    match job {
+        Some(job) => Finished::Job(job),
+        None => Finished::Complete,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use microesnext_bytecode::Opcode;
+    use microesnext_bytecode::{Immediate, Opcode};
     use microesnext_compiler::Builder;
     use microesnext_promises::{JobSlot, pending, settled_result};
 
@@ -167,6 +213,8 @@ mod tests {
             .init_receiver_frame(2, 2)
             .load_local(0)
             .op(Opcode::LoadThis)
+            .immediate(Immediate::False)
+            .op(Opcode::GetProperty)
             .call_value_arguments(1)
             .op(Opcode::ReturnReceiverLocals)
             .finish();
@@ -175,15 +223,20 @@ mod tests {
         let then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+        let object = microesnext_objects::set(
+            machine.arena_mut(),
+            object,
+            Value::FALSE,
+            Value::from_i30(42).unwrap(),
+        )
+        .unwrap();
         let object = microesnext_objects::set(machine.arena_mut(), object, key, then).unwrap();
         let destination = pending(machine.arena_mut()).unwrap();
-        let object_root = machine.retain(object).unwrap();
         let destination_root = machine.retain(destination).unwrap();
         let mut slots: [Option<JobSlot>; 0] = [];
         let mut queue = JobQueue::new(&mut slots);
 
         let destination = machine.root(destination_root).unwrap();
-        let object = machine.root(object_root).unwrap();
         let Prepared::Job(job) =
             prepare(&mut machine, &mut queue, destination, object, key).unwrap()
         else {
@@ -196,13 +249,9 @@ mod tests {
         run(&mut machine, &mut queue, job).unwrap();
         assert_eq!(
             settled_result(machine.arena(), machine.root(destination_root).unwrap()),
-            Ok(Some((
-                Settlement::Fulfilled,
-                machine.root(object_root).unwrap()
-            )))
+            Ok(Some((Settlement::Fulfilled, Value::from_i30(42).unwrap())))
         );
         machine.release(destination_root).unwrap();
-        machine.release(object_root).unwrap();
     }
 
     #[test]
@@ -255,6 +304,57 @@ mod tests {
         assert_eq!(
             settled_result(machine.arena(), machine.root(destination_root).unwrap()),
             Ok(Some((Settlement::Rejected, Value::from_i30(7).unwrap())))
+        );
+        machine.release(destination_root).unwrap();
+    }
+
+    #[test]
+    fn a_resolved_thenable_becomes_a_separate_followup_job() {
+        let code = Builder::new()
+            .init_receiver_frame(2, 2)
+            .load_local(0)
+            .load_capture(0)
+            .call_value_arguments(1)
+            .op(Opcode::ReturnReceiverLocals)
+            .finish();
+        let mut memory = [0; 256];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 12);
+        machine
+            .arena_mut()
+            .push(Value::from_i30(42).unwrap())
+            .unwrap();
+        let inner_then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 1).unwrap();
+        let key = Value::TRUE;
+        let inner = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+        let inner = microesnext_objects::set(machine.arena_mut(), inner, key, inner_then).unwrap();
+        machine.arena_mut().push(inner).unwrap();
+        let outer_then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 1).unwrap();
+        let outer = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
+        let outer = microesnext_objects::set(machine.arena_mut(), outer, key, outer_then).unwrap();
+        let destination = pending(machine.arena_mut()).unwrap();
+        let destination_root = machine.retain(destination).unwrap();
+        let mut slots: [Option<JobSlot>; 0] = [];
+        let mut queue = JobQueue::new(&mut slots);
+        let Prepared::Job(outer_job) =
+            prepare(&mut machine, &mut queue, destination, outer, key).unwrap()
+        else {
+            panic!("expected the outer job")
+        };
+
+        let Finished::Job(inner_job) = run(&mut machine, &mut queue, outer_job).unwrap() else {
+            panic!("expected a separately scheduled inner job")
+        };
+        assert_eq!(
+            settled_result(machine.arena(), machine.root(destination_root).unwrap()),
+            Ok(None)
+        );
+        assert!(matches!(
+            run(&mut machine, &mut queue, inner_job),
+            Ok(Finished::Complete)
+        ));
+        assert_eq!(
+            settled_result(machine.arena(), machine.root(destination_root).unwrap()),
+            Ok(Some((Settlement::Fulfilled, Value::from_i30(42).unwrap())))
         );
         machine.release(destination_root).unwrap();
     }
