@@ -39,3 +39,13 @@ fn source_function_keeps_parameters_and_lexical_locals_in_one_frame() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn source_function_branches_over_its_own_parameter_frame() {
+    assert_eq!(
+        run(
+            "function choose(condition) { if (condition) { return 42; } else { return 0; } } return choose(true);"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

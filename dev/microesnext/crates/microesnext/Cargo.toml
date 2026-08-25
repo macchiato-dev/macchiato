@@ -110,7 +110,7 @@ required-features = ["locals"]
 [[test]]
 name = "functions"
 path = "tests/functions.rs"
-required-features = ["function-arguments", "numbers"]
+required-features = ["control-flow", "function-arguments", "numbers"]
 
 [[test]]
 name = "control-flow"

@@ -169,16 +169,7 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
     };
     parser.whitespace();
     let locals_patch = parser.local_declarations()?;
-    parser.local_assignments()?;
-    if parser.try_word(b"if") {
-        parser.if_else()?;
-    } else if parser.try_word(b"while") {
-        parser.while_loop()?;
-    } else if parser.try_word(b"try") {
-        parser.try_catch()?;
-    } else {
-        parser.completion(None, false, false)?;
-    }
+    parser.terminal_statement()?;
     if parser.offset != parser.source.len() {
         return Err(parser.error("end of input"));
     }
@@ -219,6 +210,19 @@ enum TermKind {
 }
 
 impl Parser<'_> {
+    fn terminal_statement(&mut self) -> Result<(), CompileError> {
+        self.local_assignments()?;
+        if self.try_word_after_whitespace(b"if") {
+            self.if_else()
+        } else if self.try_word_after_whitespace(b"while") {
+            self.while_loop()
+        } else if self.try_word_after_whitespace(b"try") {
+            self.try_catch()
+        } else {
+            self.completion(None, false, false)
+        }
+    }
+
     fn append_function_bodies(&mut self) -> Result<(), CompileError> {
         for function in &self.functions {
             let target = u32::try_from(self.output.len())
@@ -397,7 +401,7 @@ impl Parser<'_> {
         let body_local_count = u16::try_from(body.locals.len())
             .map_err(|_| body.error("fewer than 65536 local bindings"))?;
         body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
-        body.completion(None, false, false)?;
+        body.terminal_statement()?;
         if !body.consume(b'}') {
             return Err(body.error("}"));
         }
