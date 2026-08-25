@@ -12,12 +12,20 @@ default = []
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
 async = ["dep:microesnext-async"]
-strings = ["dep:microesnext-strings", "microesnext-vm/strings"]
+strings = [
+  "dep:microesnext-strings",
+  "microesnext-vm/strings",
+  "microesnext-collections?/string-keys",
+]
 symbols = ["dep:microesnext-symbols"]
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
-numbers = ["dep:microesnext-numbers", "microesnext-vm/numbers"]
+numbers = [
+  "dep:microesnext-numbers",
+  "microesnext-vm/numbers",
+  "microesnext-collections?/number-keys",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]

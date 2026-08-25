@@ -73,6 +73,10 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   The source-agnostic `microesnext-iterators` crate retains the iterable and
   current index across collection. Array and Map/Set traversal live in separate
   adapter crates, preserving both dependency and code-size isolation.
+- SameValueZero is capability-aware without runtime registration. A standalone
+  collection build compares compact identities directly. Cargo weak-feature
+  forwarding statically adds string-content and boxed-number equality only
+  when collections are composed with those scalar crates.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

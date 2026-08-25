@@ -42,6 +42,9 @@ not link to that C implementation.
   relocatable guest object. `microesnext-array-iterators` and
   `microesnext-collection-iterators` are separate adapters, so adding array
   iteration does not pull in Map/Set storage, or the reverse.
+- `microesnext-equality` composes SameValueZero for enabled scalar types.
+  Collections use raw compact identity in their standalone build; number and
+  string comparison enters only when those capabilities are selected too.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set
   storage with live cursor semantics.
 - `microesnext-arrays` contains dense and sparse indexed storage with geometric

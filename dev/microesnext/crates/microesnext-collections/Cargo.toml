@@ -7,10 +7,19 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+number-keys = ["dep:microesnext-equality", "microesnext-equality/numbers"]
+string-keys = ["dep:microesnext-equality", "microesnext-equality/strings"]
+
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-equality = { workspace = true, optional = true }
 microesnext-types.workspace = true
+
+[dev-dependencies]
+microesnext-numbers.workspace = true
+microesnext-strings.workspace = true
 
 [lib]
 path = "src/lib.rs"
-

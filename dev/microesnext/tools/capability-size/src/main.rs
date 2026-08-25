@@ -169,6 +169,32 @@ pub extern "C" fn collection_iterators_probe() -> i32 {
     )
 }
 
+#[cfg(all(
+    feature = "collections",
+    feature = "numbers",
+    feature = "strings",
+    target_arch = "wasm32"
+))]
+#[unsafe(no_mangle)]
+pub extern "C" fn collection_equality_probe() -> i32 {
+    let mut memory = [0; 160];
+    let mut arena = microesnext_arena::Arena::new(&mut memory);
+    let map = microesnext::collections::new_map(&mut arena).unwrap();
+    let nan_a = microesnext::numbers::new(&mut arena, f64::NAN).unwrap();
+    let nan_b = microesnext::numbers::new(&mut arena, f64::NAN).unwrap();
+    let map =
+        microesnext::collections::set(&mut arena, map, nan_a, microesnext::Value::TRUE).unwrap();
+    let left = microesnext::strings::new(&mut arena, b"key").unwrap();
+    let right = microesnext::strings::new(&mut arena, b"key").unwrap();
+    let map =
+        microesnext::collections::set(&mut arena, map, left, microesnext::Value::FALSE).unwrap();
+    i32::from(
+        microesnext::collections::get(&arena, map, nan_b).unwrap() == microesnext::Value::TRUE
+            && microesnext::collections::get(&arena, map, right).unwrap()
+                == microesnext::Value::FALSE,
+    )
+}
+
 #[cfg(all(feature = "functions", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn functions_probe() -> i32 {

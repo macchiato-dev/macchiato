@@ -41,6 +41,10 @@ table.
 SameValueZero key comparison, `size`, `get`, `set`, `add`, `has`, `delete`,
 `clear`, `forEach`, and stateful `keys`, `values`, and `entries` iterators.
 Iterators remain live while entries are deleted or appended.
+SameValueZero is statically composed: boxed NaNs and signed zero work when the
+number capability is present, and independently allocated equal strings work
+when strings are present. Neither comparison path enters collection-only
+builds.
 
 The Rust engine keeps iterator cursors in the guest arena, so they relocate and
 retain their source without a native allocation. Array-value iteration and

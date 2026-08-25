@@ -29,6 +29,23 @@ pub fn get(arena: &Arena<'_>, value: Value) -> Result<f64, Error> {
     if arena.kind(reference)? != BlockKind::Number {
         return Err(Error::Type);
     }
+    read(arena, reference)
+}
+
+pub fn try_get(arena: &Arena<'_>, value: Value) -> Result<Option<f64>, Error> {
+    if let Some(integer) = value.as_i30() {
+        return Ok(Some(integer as f64));
+    }
+    let Some(reference) = value.as_ref() else {
+        return Ok(None);
+    };
+    if arena.kind(reference)? != BlockKind::Number {
+        return Ok(None);
+    }
+    read(arena, reference).map(Some)
+}
+
+fn read(arena: &Arena<'_>, reference: microesnext_types::HeapRef) -> Result<f64, Error> {
     let [low, high] = arena.opaque_words(reference)? else {
         return Err(Error::DanglingReference);
     };

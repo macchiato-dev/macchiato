@@ -10,6 +10,7 @@ members = [
   "crates/microesnext-compiler",
   "crates/microesnext-collections",
   "crates/microesnext-functions",
+  "crates/microesnext-equality",
   "crates/microesnext-iterators",
   "crates/microesnext-array-iterators",
   "crates/microesnext-collection-iterators",
@@ -47,6 +48,7 @@ microesnext-bytecode-core = { path = "crates/microesnext-bytecode-core", version
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
 microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.0" }
+microesnext-equality = { path = "crates/microesnext-equality", version = "0.0.0" }
 microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.0" }
 microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
 microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }

@@ -188,11 +188,22 @@ fn find(arena: &Arena<'_>, table: HeapRef, key: Value) -> Result<Option<usize>, 
     let entries = arena.values(table)?;
     for index in 0..used {
         let candidate = Value::from_raw(entries[TABLE_HEADER + index * 2]);
-        if candidate != Value::EMPTY && candidate == key {
+        if candidate != Value::EMPTY && keys_equal(arena, candidate, key)? {
             return Ok(Some(index));
         }
     }
     Ok(None)
+}
+
+#[inline(always)]
+fn keys_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    #[cfg(any(feature = "number-keys", feature = "string-keys"))]
+    return microesnext_equality::same_value_zero(arena, left, right);
+    #[cfg(not(any(feature = "number-keys", feature = "string-keys")))]
+    {
+        let _ = arena;
+        Ok(left == right)
+    }
 }
 
 fn i30(value: usize) -> Result<Value, Error> {
@@ -258,5 +269,35 @@ mod tests {
             get(&arena, map, i30(8).unwrap()).unwrap().as_i30(),
             Some(108)
         );
+    }
+
+    #[cfg(feature = "number-keys")]
+    #[test]
+    fn numeric_keys_use_same_value_zero_when_numbers_are_composed() {
+        let mut memory = [0; 128];
+        let mut arena = Arena::new(&mut memory);
+        let map = new_map(&mut arena).unwrap();
+        let nan_a = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
+        let nan_b = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
+        let map = set(&mut arena, map, nan_a, Value::TRUE).unwrap();
+        assert_eq!(get(&arena, map, nan_b), Ok(Value::TRUE));
+        let negative_zero = microesnext_numbers::new(&mut arena, -0.0).unwrap();
+        let map = set(&mut arena, map, negative_zero, Value::FALSE).unwrap();
+        assert_eq!(
+            get(&arena, map, Value::from_i30(0).unwrap()),
+            Ok(Value::FALSE)
+        );
+    }
+
+    #[cfg(feature = "string-keys")]
+    #[test]
+    fn string_keys_compare_by_content_when_strings_are_composed() {
+        let mut memory = [0; 128];
+        let mut arena = Arena::new(&mut memory);
+        let map = new_map(&mut arena).unwrap();
+        let left = microesnext_strings::new(&mut arena, b"key").unwrap();
+        let right = microesnext_strings::new(&mut arena, b"key").unwrap();
+        let map = set(&mut arena, map, left, Value::TRUE).unwrap();
+        assert_eq!(get(&arena, map, right), Ok(Value::TRUE));
     }
 }
