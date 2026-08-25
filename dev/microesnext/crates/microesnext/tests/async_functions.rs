@@ -65,6 +65,40 @@ fn async_expressions_and_arrows_execute_through_the_same_runtime_boundary() {
 }
 
 #[test]
+fn named_async_expression_keeps_its_private_self_identity() {
+    let code = compile_script("return async function named() { return await named; }();").unwrap();
+    let mut memory = [0; 256];
+    let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
+    let mut jobs: [Option<microesnext::promises::JobSlot>; 2] = [None; 2];
+    let mut queue = microesnext::promises::JobQueue::new(&mut jobs);
+    let mut frame_slots = [None; 1];
+    let mut frames = microesnext::async_functions::Frames::new(&mut frame_slots);
+    let microesnext::r#async::Progress::Complete(promise) =
+        microesnext::r#async::run_functions(&mut machine, &mut queue, &mut frames).unwrap()
+    else {
+        panic!("expected the top-level caller to return")
+    };
+    assert!(
+        microesnext::r#async::run_one_function_reaction(&mut machine, &mut queue, &mut frames,)
+            .unwrap()
+    );
+    let Some((microesnext::promises::Settlement::Fulfilled, function)) =
+        microesnext::promises::settled_result(machine.arena(), promise).unwrap()
+    else {
+        panic!("expected the private function identity")
+    };
+    assert!(microesnext::async_functions::is_async(
+        machine.arena(),
+        function
+    ));
+    let cell = microesnext::async_functions::capture(machine.arena(), function, 0).unwrap();
+    assert_eq!(
+        microesnext::environments::get(machine.arena(), cell),
+        Ok(function)
+    );
+}
+
+#[test]
 fn nested_async_calls_restore_each_caller_and_chain_their_promises() {
     let code = compile_script(
         "async function inner() { return await 42; } async function outer() { return await inner(); } return outer();",

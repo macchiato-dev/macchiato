@@ -22,6 +22,7 @@ microesnext-bytecode = { workspace = true, features = [
   "numbers",
   "objects",
   "recursive-functions",
+  "recursive-async-functions",
   "strings",
 ] }
 

@@ -614,13 +614,16 @@ impl Parser<'_> {
                 }
             }
         }
-        self.output.push(if expression_name.is_some() {
-            Opcode::RecursiveClosure as u8
-        } else if asynchronous {
-            Opcode::AsyncClosure as u8
-        } else {
-            Opcode::Closure as u8
-        });
+        self.output
+            .push(if expression_name.is_some() && asynchronous {
+                Opcode::RecursiveAsyncClosure as u8
+            } else if expression_name.is_some() {
+                Opcode::RecursiveClosure as u8
+            } else if asynchronous {
+                Opcode::AsyncClosure as u8
+            } else {
+                Opcode::Closure as u8
+            });
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
@@ -833,9 +836,6 @@ impl Parser<'_> {
                     captured: true,
                 })
             };
-            if asynchronous && expression_name.is_some() {
-                return Err(self.error("an anonymous async function expression"));
-            }
             let parameters = self.function_parameters()?;
             self.function_value(
                 parameters,
@@ -1327,13 +1327,11 @@ mod tests {
     }
 
     #[test]
-    fn rejects_named_async_expressions_until_the_combined_self_binding_exists() {
-        assert_eq!(
-            compile_script("return async function named() { return named; }();")
-                .unwrap_err()
-                .expected,
-            "an anonymous async function expression"
-        );
+    fn compiles_named_async_expressions_with_a_private_self_capture() {
+        let code =
+            compile_script("return async function named() { return await named; }();").unwrap();
+        assert!(code.contains(&(Opcode::RecursiveAsyncClosure as u8)));
+        assert!(code.contains(&(Opcode::Await as u8)));
     }
 
     #[test]

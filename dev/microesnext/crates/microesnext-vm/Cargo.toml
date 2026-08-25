@@ -46,6 +46,12 @@ recursive-functions = [
   "dep:microesnext-recursive-functions",
   "microesnext-bytecode/recursive-functions",
 ]
+recursive-async-functions = [
+  "async-functions",
+  "environments",
+  "dep:microesnext-recursive-async-functions",
+  "microesnext-bytecode/recursive-async-functions",
+]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -62,6 +68,7 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
+microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }

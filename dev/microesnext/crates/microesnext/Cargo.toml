@@ -51,6 +51,12 @@ recursive-functions = [
   "dep:microesnext-recursive-functions",
   "microesnext-vm/recursive-functions",
 ]
+recursive-async-functions = [
+  "async-functions",
+  "environments",
+  "dep:microesnext-recursive-async-functions",
+  "microesnext-vm/recursive-async-functions",
+]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]
 collection-entry-iterators = [
@@ -95,6 +101,7 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
+microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
@@ -139,7 +146,12 @@ required-features = [
 [[test]]
 name = "async-functions"
 path = "tests/async_functions.rs"
-required-features = ["async-functions", "environments", "function-arguments"]
+required-features = [
+  "async-functions",
+  "environments",
+  "function-arguments",
+  "recursive-async-functions",
+]
 
 [[test]]
 name = "control-flow"

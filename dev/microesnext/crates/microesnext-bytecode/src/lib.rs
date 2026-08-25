@@ -84,6 +84,8 @@ pub enum Opcode {
     RecursiveClosure = 76,
     #[cfg(feature = "async-functions")]
     AsyncClosure = 77,
+    #[cfg(feature = "recursive-async-functions")]
+    RecursiveAsyncClosure = 78,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -159,6 +161,8 @@ impl TryFrom<u8> for Opcode {
             76 => Ok(Self::RecursiveClosure),
             #[cfg(feature = "async-functions")]
             77 => Ok(Self::AsyncClosure),
+            #[cfg(feature = "recursive-async-functions")]
+            78 => Ok(Self::RecursiveAsyncClosure),
             _ => Err(Error::BadBytecode),
         }
     }
