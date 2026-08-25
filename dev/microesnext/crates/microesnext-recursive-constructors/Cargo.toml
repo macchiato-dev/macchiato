@@ -1,0 +1,21 @@
+[package]
+name = "microesnext-recursive-constructors"
+description = "Removable private constructor self-binding for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-callable-objects.workspace = true
+microesnext-environments.workspace = true
+microesnext-functions.workspace = true
+microesnext-types.workspace = true
+
+[dev-dependencies]
+microesnext-recursive-functions.workspace = true
+
+[lib]
+path = "src/lib.rs"

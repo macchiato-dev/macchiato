@@ -490,6 +490,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-recursive-constructors"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-callable-objects",
+ "microesnext-environments",
+ "microesnext-functions",
+ "microesnext-recursive-functions",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-recursive-functions"
 version = "0.0.0"
 dependencies = [

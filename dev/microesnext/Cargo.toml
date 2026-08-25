@@ -16,6 +16,7 @@ members = [
   "crates/microesnext-decimal-to-f64",
   "crates/microesnext-functions",
   "crates/microesnext-recursive-functions",
+  "crates/microesnext-recursive-constructors",
   "crates/microesnext-recursive-async-functions",
   "crates/microesnext-receivers",
   "crates/microesnext-parameters",
@@ -89,6 +90,7 @@ microesnext-construction = { path = "crates/microesnext-construction", version =
 microesnext-decimal-to-f64 = { path = "crates/microesnext-decimal-to-f64", version = "0.0.0" }
 microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.0" }
 microesnext-recursive-functions = { path = "crates/microesnext-recursive-functions", version = "0.0.0" }
+microesnext-recursive-constructors = { path = "crates/microesnext-recursive-constructors", version = "0.0.0" }
 microesnext-recursive-async-functions = { path = "crates/microesnext-recursive-async-functions", version = "0.0.0" }
 microesnext-receivers = { path = "crates/microesnext-receivers", version = "0.0.0" }
 microesnext-parameters = { path = "crates/microesnext-parameters", version = "0.0.0" }
