@@ -109,18 +109,21 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "control-flow")]
     pub fn jump(mut self, bytecode_offset: u32) -> Self {
         self.code.push(Opcode::Jump as u8);
         self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
         self
     }
 
+    #[cfg(feature = "control-flow")]
     pub fn jump_if_false_boolean(mut self, bytecode_offset: u32) -> Self {
         self.code.push(Opcode::JumpIfFalseBoolean as u8);
         self.code.extend_from_slice(&bytecode_offset.to_le_bytes());
         self
     }
 
+    #[cfg(feature = "control-flow")]
     pub fn to_boolean(mut self) -> Self {
         self.code.push(Opcode::ToBoolean as u8);
         self
@@ -295,6 +298,7 @@ enum FunctionBody {
 }
 
 impl Parser<'_> {
+    #[cfg(feature = "control-flow")]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
         self.local_assignments()?;
         if self.try_word_after_whitespace(b"if") {
@@ -302,6 +306,16 @@ impl Parser<'_> {
         } else if self.try_word_after_whitespace(b"while") {
             self.while_loop()
         } else if self.try_word_after_whitespace(b"try") {
+            self.try_catch()
+        } else {
+            self.completion(None, false, false)
+        }
+    }
+
+    #[cfg(not(feature = "control-flow"))]
+    fn terminal_statement(&mut self) -> Result<(), CompileError> {
+        self.local_assignments()?;
+        if self.try_word_after_whitespace(b"try") {
             self.try_catch()
         } else {
             self.completion(None, false, false)
@@ -333,6 +347,7 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "control-flow")]
     fn while_loop(&mut self) -> Result<(), CompileError> {
         let loop_start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -366,6 +381,7 @@ impl Parser<'_> {
         self.completion(None, false, false)
     }
 
+    #[cfg(feature = "control-flow")]
     fn if_else(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
@@ -1627,6 +1643,23 @@ mod tests {
         );
     }
 
+    #[cfg(all(not(feature = "control-flow"), feature = "source-positions"))]
+    #[test]
+    fn reduced_parser_leaves_control_flow_as_an_unexpected_token() {
+        assert_eq!(
+            compile_script("if (true) { return 1; } else { return 2; }")
+                .unwrap_err()
+                .offset,
+            0
+        );
+        assert_eq!(
+            compile_script("while (true) { return 1; } return 2;")
+                .unwrap_err()
+                .offset,
+            0
+        );
+    }
+
     #[cfg(feature = "number-operations")]
     #[test]
     fn preserves_fast_integer_addition_and_promotes_fractional_addition() {
@@ -1994,6 +2027,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "control-flow")]
     #[test]
     fn compiles_terminal_if_else_without_an_ast() {
         let code = compile_script("if (0) { return 1; } else { return 42; }").unwrap();
@@ -2007,6 +2041,7 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
+    #[cfg(feature = "control-flow")]
     #[test]
     fn compiles_assignment_and_while_without_native_recursion() {
         let code = compile_script(
