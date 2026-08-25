@@ -83,3 +83,23 @@ fn self_reference_resolves_to_the_initialized_closure() {
     };
     assert!(microesnext::functions::entry(machine.arena(), function).is_ok());
 }
+
+#[test]
+fn nested_function_captures_its_parent_parameter() {
+    assert_eq!(
+        run(
+            "function outer(value) { function inner() { return value; } return inner(); } return outer(42);"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn deeply_nested_function_receives_a_forwarded_grandparent_capture() {
+    assert_eq!(
+        run(
+            "function outer(value) { function middle() { function inner() { return value; } return inner(); } return middle(); } return outer(42);"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

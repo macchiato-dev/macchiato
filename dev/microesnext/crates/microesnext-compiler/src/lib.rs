@@ -182,6 +182,7 @@ pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
         outer_bindings: Vec::new(),
         captures: Vec::new(),
         functions: Vec::new(),
+        relocations: Vec::new(),
         function_frame: false,
     };
     parser.whitespace();
@@ -207,6 +208,7 @@ struct Parser<'source> {
     outer_bindings: Vec<Binding>,
     captures: Vec<Binding>,
     functions: Vec<PendingFunction>,
+    relocations: Vec<usize>,
     function_frame: bool,
 }
 
@@ -218,15 +220,26 @@ struct Binding {
     captured: bool,
 }
 
+fn same_binding(left: Binding, right: Binding) -> bool {
+    left.start == right.start && left.end == right.end
+}
+
 struct PendingFunction {
     target_patch: usize,
     code: Vec<u8>,
+    relocations: Vec<usize>,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum TermKind {
     I30,
     General,
+}
+
+#[derive(Clone, Copy)]
+enum CaptureSource {
+    Local(usize),
+    Outer(u16),
 }
 
 impl Parser<'_> {
@@ -244,11 +257,25 @@ impl Parser<'_> {
     }
 
     fn append_function_bodies(&mut self) -> Result<(), CompileError> {
-        for function in &self.functions {
+        for mut function in core::mem::take(&mut self.functions) {
             let target = u32::try_from(self.output.len())
                 .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
             self.output[function.target_patch..function.target_patch + 4]
                 .copy_from_slice(&target.to_le_bytes());
+            self.relocations.push(function.target_patch);
+            for relocation in &function.relocations {
+                let relative = u32::from_le_bytes(
+                    function.code[*relocation..*relocation + 4]
+                        .try_into()
+                        .map_err(|_| self.error("a complete relocation"))?,
+                );
+                let relocated = relative
+                    .checked_add(target)
+                    .ok_or_else(|| self.error("bytecode smaller than 4 GiB"))?;
+                function.code[*relocation..*relocation + 4]
+                    .copy_from_slice(&relocated.to_le_bytes());
+                self.relocations.push(target as usize + *relocation);
+            }
             self.output.extend_from_slice(&function.code);
         }
         Ok(())
@@ -319,23 +346,20 @@ impl Parser<'_> {
 
     fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
         let mut count_patch = None;
-        loop {
-            self.whitespace();
-            if self.try_word(b"function") {
-                self.function_declaration(&mut count_patch)?;
-            } else if self.try_word(b"let") {
-                self.let_declaration(&mut count_patch)?;
-            } else {
-                break;
-            }
-        }
+        self.frame_declarations(&mut count_patch)?;
         Ok(count_patch)
     }
 
-    fn let_declarations(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
-        self.whitespace();
-        while self.try_word(b"let") {
-            self.let_declaration(count_patch)?;
+    fn frame_declarations(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+        loop {
+            self.whitespace();
+            if self.try_word(b"function") {
+                self.function_declaration(count_patch)?;
+            } else if self.try_word(b"let") {
+                self.let_declaration(count_patch)?;
+            } else {
+                break;
+            }
         }
         Ok(())
     }
@@ -435,6 +459,8 @@ impl Parser<'_> {
         }
         let parameter_count = u16::try_from(parameters.len())
             .map_err(|_| self.error("fewer than 65536 parameters"))?;
+        let mut outer_bindings = self.outer_bindings.clone();
+        outer_bindings.extend_from_slice(&self.locals);
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
@@ -442,13 +468,14 @@ impl Parser<'_> {
                 .init_frame(parameter_count, parameter_count)
                 .finish(),
             locals: parameters,
-            outer_bindings: self.locals.clone(),
+            outer_bindings,
             captures: Vec::new(),
             functions: Vec::new(),
+            relocations: Vec::new(),
             function_frame: true,
         };
         let mut body_count_patch = Some(1);
-        body.let_declarations(&mut body_count_patch)?;
+        body.frame_declarations(&mut body_count_patch)?;
         let body_local_count = u16::try_from(body.locals.len())
             .map_err(|_| body.error("fewer than 65536 local bindings"))?;
         body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
@@ -457,24 +484,35 @@ impl Parser<'_> {
             return Err(body.error("}"));
         }
         body.whitespace();
+        body.append_function_bodies()?;
         self.offset = body.offset;
 
+        let mut capture_sources = Vec::with_capacity(body.captures.len());
         for capture in &body.captures {
-            let Some(index) = self
+            if let Some(index) = self
                 .locals
                 .iter()
-                .position(|binding| binding.slot == capture.slot)
-            else {
+                .position(|binding| same_binding(*binding, *capture))
+            {
+                if !self.locals[index].captured {
+                    let binding = &mut self.locals[index];
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                    self.output.push(Opcode::NewEnvironmentCell as u8);
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                    binding.captured = true;
+                }
+                capture_sources.push(CaptureSource::Local(index));
+            } else if self
+                .outer_bindings
+                .iter()
+                .any(|binding| same_binding(*binding, *capture))
+            {
+                let index = self.intern_capture(*capture)?;
+                capture_sources.push(CaptureSource::Outer(index));
+            } else {
                 return Err(self.error("an enclosing binding"));
-            };
-            let binding = &mut self.locals[index];
-            if !binding.captured {
-                self.output.push(Opcode::LoadLocal as u8);
-                self.output.extend_from_slice(&binding.slot.to_le_bytes());
-                self.output.push(Opcode::NewEnvironmentCell as u8);
-                self.output.push(Opcode::StoreLocal as u8);
-                self.output.extend_from_slice(&binding.slot.to_le_bytes());
-                binding.captured = true;
             }
         }
         let self_captured = self.locals[slot as usize].captured;
@@ -482,14 +520,18 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
-        for capture in &body.captures {
-            let binding = self
-                .locals
-                .iter()
-                .find(|binding| binding.slot == capture.slot)
-                .ok_or_else(|| self.error("an enclosing binding"))?;
-            self.output.push(Opcode::LoadLocal as u8);
-            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        for source in capture_sources {
+            match source {
+                CaptureSource::Local(index) => {
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output
+                        .extend_from_slice(&self.locals[index].slot.to_le_bytes());
+                }
+                CaptureSource::Outer(index) => {
+                    self.output.push(Opcode::LoadCapture as u8);
+                    self.output.extend_from_slice(&index.to_le_bytes());
+                }
+            }
         }
         let capture_count = u16::try_from(body.captures.len())
             .map_err(|_| self.error("fewer than 65536 captures"))?;
@@ -506,6 +548,7 @@ impl Parser<'_> {
         self.functions.push(PendingFunction {
             target_patch,
             code: body.output,
+            relocations: body.relocations,
         });
         Ok(())
     }
@@ -778,18 +821,22 @@ impl Parser<'_> {
         }) else {
             return Ok(None);
         };
+        let index = self.intern_capture(binding)?;
+        Ok(Some((index, binding)))
+    }
+
+    fn intern_capture(&mut self, binding: Binding) -> Result<u16, CompileError> {
         let index = if let Some(index) = self
             .captures
             .iter()
-            .position(|capture| capture.slot == binding.slot)
+            .position(|capture| same_binding(*capture, binding))
         {
             index
         } else {
             self.captures.push(binding);
             self.captures.len() - 1
         };
-        let index = u16::try_from(index).map_err(|_| self.error("fewer than 65536 captures"))?;
-        Ok(Some((index, binding)))
+        u16::try_from(index).map_err(|_| self.error("fewer than 65536 captures"))
     }
 
     fn immediate(&mut self) -> Option<Immediate> {
@@ -1204,6 +1251,50 @@ mod tests {
         assert!(
             code.windows(3)
                 .any(|bytes| { bytes == [Opcode::LoadCapture as u8, 0, 0] })
+        );
+    }
+
+    #[test]
+    fn relocates_a_nested_function_body_when_appending_its_parent() {
+        let code = compile_script(
+            "function outer(value) { function inner() { return value; } return inner(); } return outer(42);",
+        )
+        .unwrap();
+        let closure_targets: Vec<_> = code
+            .iter()
+            .enumerate()
+            .filter(|(_, opcode)| **opcode == Opcode::Closure as u8)
+            .map(|(index, _)| {
+                u32::from_le_bytes(code[index + 1..index + 5].try_into().unwrap()) as usize
+            })
+            .collect();
+        assert_eq!(closure_targets.len(), 2);
+        assert!(closure_targets.iter().all(|target| *target < code.len()));
+        assert!(
+            closure_targets
+                .iter()
+                .all(|target| { code[*target] == Opcode::InitFrame as u8 })
+        );
+        assert_ne!(closure_targets[0], closure_targets[1]);
+    }
+
+    #[test]
+    fn forwards_a_capture_through_an_intermediate_function() {
+        let code = compile_script(
+            "function outer(value) { function middle() { function inner() { return value; } return inner(); } return middle(); } return outer(42);",
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::NewEnvironmentCell as u8)
+                .count(),
+            1
+        );
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::Closure as u8)
+                .count(),
+            3
         );
     }
 

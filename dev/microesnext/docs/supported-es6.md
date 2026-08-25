@@ -37,7 +37,9 @@ closures and later writes by the outer frame share the same cell. This avoids
 turning every lexical local into a heap allocation merely because some builds
 support closures. A self-referential declaration initializes its closure into
 that same cell, providing the identity needed by recursive calls. Nested
-function declarations remain compiler work.
+function declarations are appended with explicit bytecode relocation records;
+captures can be forwarded through intermediate functions without allocating a
+second cell for the same binding.
 
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
