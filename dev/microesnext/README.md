@@ -90,8 +90,15 @@ not link to that C implementation.
 - `microesnext-errors` supplies compact guest error identities without forcing
   message strings, stacks, objects, or exception handlers into every build.
 - `microesnext-promise-resolution` optionally adopts native Promise results.
-  Plain Promise storage does not link the resolver, and object-based thenable
-  assimilation will compose at a separate boundary.
+  Plain Promise storage does not link the resolver.
+- `microesnext-promise-resolvers` adds compact guest-callable resolve/reject
+  records. Each pair shares one arena cell, so exactly one call can win without
+  allocating two independent closures.
+- `microesnext-thenables` composes ordinary object lookup, receiver-aware
+  calls, resolving functions, and deferred assimilation jobs. A controller
+  schedules guest `then` code instead of running it during property resolution;
+  resolving to another thenable produces another rooted job rather than native
+  recursion. Builds without `thenables` link none of this composition.
 - `microesnext-exceptions` owns explicit guest handler-chain bookkeeping and
   stack unwinding only for builds enabling the `exceptions` feature. Handler
   records remain guest-stack words; the invariant opcode core has no exception

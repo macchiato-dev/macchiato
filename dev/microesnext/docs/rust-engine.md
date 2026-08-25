@@ -69,8 +69,17 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Receiver-aware invocation is an optional frame composition. It reuses the
   existing argument entry path with one hidden value after fixed locals; the
   invariant `Core`, ordinary frames, and builds omitting `receivers` are
-  unchanged. This is the call boundary for eventual object thenable
-  assimilation rather than a host callback or proxy.
+  unchanged. Object thenable assimilation uses this boundary rather than a
+  host callback or proxy.
+- Promise resolving functions are compact callable records rather than guest
+  closures. A resolve/reject pair shares one traced `alreadyResolved` cell and
+  yields a payload-free VM outcome; optional machine state carries the call to
+  its controller without changing the invariant core or the public outcome
+  layout under Cargo feature unification.
+- Thenable resolution is split into synchronous inspection and rooted jobs.
+  Guest `then` code is never invoked inline while resolving a value. If its
+  resolving function receives another thenable, execution returns a new job to
+  the controller, preserving ECMAScript deferral without native recursion.
 - Packed byte strings, atom tables, objects, and closures remain arena blocks;
   they do not become Rust allocations merely because their implementations are
   split across crates.

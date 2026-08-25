@@ -41,9 +41,9 @@ fixed local region. Temporary operands can therefore grow above it without
 changing its address.
 
 These instructions are optional rather than a new field in the invariant VM.
-Ordinary closures and bytecode remain unchanged, while object thenable
-assimilation can invoke a guest `then` function with the source object as its
-receiver.
+Ordinary closures and bytecode remain unchanged. The optional thenable driver
+uses these instructions to invoke a guest `then` function with the source
+object as its receiver; it schedules chained thenables as separate jobs.
 
 ## Untagged template literals
 

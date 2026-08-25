@@ -28,8 +28,9 @@ engine Promise resumes through the Promise job queue; synchronous throws
 reject the outer Promise. Rejections after suspension propagate through nested
 awaits and enter restored guest `catch` handlers. Named async expressions
 retain a private self-binding through the removable recursive-async
-composition. Promise assimilation, thenables, async methods, and async
-generators remain compiler/runtime work rather than implied support.
+composition. The optional runtime can assimilate ordinary object thenables,
+but source-visible Promise APIs, async methods, and async generators remain
+compiler/runtime work rather than implied support.
 
 The current Rust compiler slice also emits function declarations, anonymous
 function expressions, single- or parenthesized-parameter arrows, postfix calls,
@@ -110,11 +111,16 @@ reaction lists, and a caller-owned FIFO job ring. Optional native resolution
 adopts another engine Promise, including its eventual rejection, without
 linking object property lookup. Async function return uses this path.
 
-Self-resolution rejects with a compact guest TypeError value. The separate
-receiver capability now supplies the correct `this` call shape required by
-thenables; resolving functions and the assimilation job remain work. Object thenables,
-source-visible `Promise`, `then`, `catch`, `finally`, `resolve`, `reject`,
-`all`, and `race`,
+Self-resolution rejects with a compact guest TypeError value. Optional
+one-shot resolving functions share an `alreadyResolved` cell. The thenable
+composition reads an ordinary object's data-property `then`, verifies that it
+is a guest closure, and schedules it with the object as `this`. A throw before
+resolution rejects; a throw or second resolver call afterward is ignored.
+Resolving with another thenable returns a separately rooted follow-up job, so
+chains remain deferred and never recurse on the Rust or WebAssembly stack.
+
+Accessors and proxies for `then`, async `then` closures, source-visible
+`Promise`, `then`, `catch`, `finally`, `resolve`, `reject`, `all`, and `race`,
 subclass constructors, species, and unhandled-rejection reporting remain work
 rather than claimed support.
 
