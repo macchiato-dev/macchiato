@@ -25,6 +25,12 @@ the Promise job queue; preserves locals and captured variables across repeated
 suspensions; and turns uncaught exceptions into promise rejections. Async
 methods and async generators are not part of this initial surface.
 
+The current Rust compiler slice also emits top-level function declarations,
+postfix calls, and parameter slots directly to bytecode. Its first executable
+form permits zero or one declared parameter while calls already encode an
+arbitrary `u16` argument count. Argument-to-local frame setup is a removable
+capability rather than a cost borne by functions without parameters.
+
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
 form. Catch targets are backpatched without an AST. Its handler and caught

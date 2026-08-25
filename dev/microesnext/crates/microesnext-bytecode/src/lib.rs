@@ -212,4 +212,18 @@ mod tests {
         assert_eq!(Opcode::try_from(69), Ok(Opcode::JumpIfFalseBoolean));
         assert_eq!(Opcode::try_from(70), Ok(Opcode::ToBoolean));
     }
+
+    #[cfg(feature = "function-arguments")]
+    #[test]
+    fn enabled_argument_frame_opcodes_are_decodable() {
+        assert_eq!(Opcode::try_from(71), Ok(Opcode::CallValueArguments));
+        assert_eq!(Opcode::try_from(72), Ok(Opcode::InitFrame));
+    }
+
+    #[cfg(not(feature = "function-arguments"))]
+    #[test]
+    fn omitted_argument_frame_opcodes_are_invalid() {
+        assert!(Opcode::try_from(71).is_err());
+        assert!(Opcode::try_from(72).is_err());
+    }
 }

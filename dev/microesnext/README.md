@@ -33,6 +33,8 @@ not link to that C implementation.
   crate can also use already-interned or non-string keys.
 - `microesnext-functions` supplies heap closures and captured values only to
   builds enabling the `functions` feature. Direct calls remain in the base VM.
+- `microesnext-parameters` composes evaluated arguments with lexical slots.
+  Functions without parameters and locals outside calls do not link it.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely.
@@ -105,6 +107,8 @@ instruction-loop check without compiler dev-feature unification:
 cargo run --release -p microesnext-core-loop --no-default-features
 cargo run --release -p microesnext-core-loop --no-default-features \
   --features async,objects,functions,numbers -- --machine
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features function-arguments -- --calls
 ```
 
 It is a regression signal rather than a claim that noisy wall-clock timings can

@@ -72,8 +72,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Collections with number/string equality | 15,138 | 5,840 |
 | Exceptions | 3,846 | 1,761 |
 | Functions | 6,962 | 3,034 |
+| Functions with local parameters | 10,897 | 4,357 |
 | Iterator cursor | 3,599 | 1,630 |
-| Lexical locals | 4,008 | 1,820 |
+| Lexical locals | 4,012 | 1,798 |
 | Iterator result objects | 13,944 | 5,448 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Numbers | 5,981 | 2,627 |
@@ -83,7 +84,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 42,664 | 14,723 |
+| All capabilities | 44,263 | 15,211 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -96,6 +97,12 @@ call through `Machine`, rather than merely returning a freshly allocated
 closure reference. That correction raised the honest live feature measurement
 from 1,916 to 6,869 bytes at that checkpoint; the smaller result was mostly an
 LTO artifact.
+The parameter composition additionally removes a callable from beneath its
+evaluated arguments, enters a guest frame, exposes the argument through local
+slot zero, and returns through that frame. Moving this path into
+`microesnext-parameters` restored the functions-only artifact from 8,018 to
+6,962 bytes and locals-only from 4,324 to 4,012 bytes. The 10,897-byte
+composition is the only row that pays for both operations.
 Array and object probes also execute create, set, and get instructions through
 `Machine`. Low-level storage-only probes remain appropriate for collections,
 promises, and weak collections because those capabilities do not yet expose VM
@@ -182,7 +189,7 @@ The replacement puts bottom-relative slot operations in
 same statically composed extension boundary as other optional capabilities.
 Control flow uses that boundary too, with `microesnext-truthiness` composing
 boxed-number and string coercion only when those scalar features are enabled.
-The resulting live Wasm probes are 4,008 bytes for locals and 3,486 bytes for
+The resulting live Wasm probes are 4,012 bytes for locals and 3,486 bytes for
 control flow, while the minimal artifact is 1,984 bytes. Five alternating
 native samples measured 3.22–3.31 ns/instruction for the minimal core and
 3.23–3.37 with locals and control flow enabled; the first composed warm-up was
@@ -193,6 +200,14 @@ The 9,380-byte scalar-truthiness composition executes `ToBoolean` on a boxed
 NaN and an empty ordinary string. This ensures the measurement retains the
 optional false-value paths rather than reporting a control-flow build that
 only ever sees invariant immediates.
+
+Ten million one-argument guest calls through the composed function/parameter
+machine took 677.5 ms, or 67.75 ns/call, in the native release benchmark.
+Two alternating invariant-loop samples measured 3.24–3.26 ns/instruction for
+minimal `Core` and 3.22–3.28 with function arguments enabled; `Machine`
+measured 3.30–3.36 and 3.20–3.36 respectively. The ranges overlap, while the
+stronger structural result is that the functions-only, locals-only, and
+minimal artifacts do not contain the argument-frame capability.
 
 Ordinary `ConstString` now allocates an unrooted string and no longer creates
 or populates an atom table. The 5,008-byte string row therefore excludes both
