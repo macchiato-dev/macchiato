@@ -70,15 +70,15 @@ LTO from merely discarding an enabled but unused dependency.
 | Exceptions | 3,894 | 1,714 |
 | Functions | 7,010 | 2,973 |
 | Iterator cursor | 3,647 | 1,577 |
-| Iterator result objects | 13,354 | 5,178 |
+| Iterator result objects | 13,555 | 5,212 |
 | Numbers | 6,029 | 2,565 |
-| Objects with atoms and strings | 14,517 | 5,734 |
+| Objects with atoms and strings | 14,711 | 5,798 |
 | Strings only | 5,008 | 2,243 |
 | Symbols | 5,043 | 2,198 |
 | Well-known symbols | 5,573 | 2,392 |
 | Promises | 4,888 | 2,183 |
 | Weak collections | 2,099 | 951 |
-| All capabilities | 37,178 | 12,986 |
+| All capabilities | 37,398 | 13,034 |
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled
@@ -118,11 +118,17 @@ collection row executes a Set value step. Enabling either adapter leaves the
 other source crate out of its graph, and the original non-iterator array and
 collection artifacts remain byte-for-byte unchanged.
 
-The 13,354-byte result-object row constructs and reads a live `{ value, done }`
+The 13,555-byte result-object row constructs and reads a live `{ value, done }`
 object. It includes ordinary objects, cached atoms, and strings, but not an
 iterator cursor or either source adapter. Conversely, all three cursor rows
 remain byte-for-byte unchanged. This pays the object cost only at the
 ECMAScript-facing result boundary rather than in low-level iteration.
+
+Iterative prototype lookup and prototype validation add 194 raw bytes to the
+object probe. The result-object probe rises by 201 bytes because it uses the
+same ordinary-object path. All non-object rows remain byte-for-byte unchanged;
+this is the semantic cost required for inherited methods such as
+`[Symbol.iterator]`, not a cost paid by the invariant VM.
 
 The 15,186-byte composed equality probe performs lookups with independently
 boxed NaNs and independently allocated equal strings. Collection-only remains

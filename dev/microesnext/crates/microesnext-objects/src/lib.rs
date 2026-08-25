@@ -7,6 +7,9 @@ use microesnext_types::{Error, HeapRef, Value};
 /// Property tables store interned-key/value pairs and can be replaced as they
 /// grow without changing the object reference.
 pub fn new_object(arena: &mut Arena<'_>, prototype: Value) -> Result<Value, Error> {
+    if prototype != Value::NULL {
+        object_ref(arena, prototype)?;
+    }
     let properties = arena.allocate_values(BlockKind::Properties, &mut [], &mut [])?;
     let object = arena.allocate_values(
         BlockKind::Object,
@@ -17,6 +20,19 @@ pub fn new_object(arena: &mut Arena<'_>, prototype: Value) -> Result<Value, Erro
 }
 
 pub fn get(arena: &Arena<'_>, object: Value, key: Value) -> Result<Value, Error> {
+    let mut object = object;
+    loop {
+        if let Some(value) = get_own(arena, object, key)? {
+            return Ok(value);
+        }
+        object = prototype(arena, object)?;
+        if object == Value::NULL {
+            return Ok(Value::UNDEFINED);
+        }
+    }
+}
+
+pub fn get_own(arena: &Arena<'_>, object: Value, key: Value) -> Result<Option<Value>, Error> {
     let properties = properties_ref(arena, object)?;
     let entries = arena.values(properties)?;
     if entries.len() % 2 != 0 {
@@ -24,10 +40,10 @@ pub fn get(arena: &Arena<'_>, object: Value, key: Value) -> Result<Value, Error>
     }
     for pair in entries.chunks_exact(2) {
         if Value::from_raw(pair[0]) == key {
-            return Ok(Value::from_raw(pair[1]));
+            return Ok(Some(Value::from_raw(pair[1])));
         }
     }
-    Ok(Value::UNDEFINED)
+    Ok(None)
 }
 
 pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Result<Value, Error> {
@@ -53,10 +69,7 @@ pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Re
 }
 
 pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
-    let object = object.as_ref().ok_or(Error::Type)?;
-    if arena.kind(object)? != BlockKind::Object {
-        return Err(Error::Type);
-    }
+    let object = object_ref(arena, object)?;
     arena
         .values(object)?
         .first()
@@ -66,15 +79,20 @@ pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
 }
 
 fn properties_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
-    let object = object.as_ref().ok_or(Error::Type)?;
-    if arena.kind(object)? != BlockKind::Object {
-        return Err(Error::Type);
-    }
+    let object = object_ref(arena, object)?;
     let fields = arena.values(object)?;
     if fields.len() != 2 {
         return Err(Error::DanglingReference);
     }
     Value::from_raw(fields[1]).as_ref().ok_or(Error::Type)
+}
+
+fn object_ref(arena: &Arena<'_>, object: Value) -> Result<HeapRef, Error> {
+    let object = object.as_ref().ok_or(Error::Type)?;
+    if arena.kind(object)? != BlockKind::Object {
+        return Err(Error::Type);
+    }
+    Ok(object)
 }
 
 #[cfg(test)]
@@ -123,5 +141,28 @@ mod tests {
         let object = arena.pop().unwrap();
 
         assert_eq!(get(&arena, object, key).unwrap().as_i30(), Some(42));
+    }
+
+    #[test]
+    fn reads_inherited_properties_without_native_recursion() {
+        let mut memory = [0; 112];
+        let mut arena = Arena::with_root_capacity(&mut memory, 4);
+        let mut atoms = Atoms::new(&mut arena).unwrap();
+        let key = atoms.intern(&mut arena, b"iterator").unwrap();
+        let grandparent = new_object(&mut arena, Value::NULL).unwrap();
+        let grandparent = set(&mut arena, grandparent, key, Value::TRUE).unwrap();
+        let parent = new_object(&mut arena, grandparent).unwrap();
+        let child = new_object(&mut arena, parent).unwrap();
+
+        assert_eq!(get(&arena, child, key), Ok(Value::TRUE));
+        assert_eq!(get_own(&arena, child, key), Ok(None));
+        assert_eq!(get_own(&arena, grandparent, key), Ok(Some(Value::TRUE)));
+    }
+
+    #[test]
+    fn rejects_non_object_prototypes() {
+        let mut memory = [0; 24];
+        let mut arena = Arena::new(&mut memory);
+        assert_eq!(new_object(&mut arena, Value::TRUE), Err(Error::Type));
     }
 }
