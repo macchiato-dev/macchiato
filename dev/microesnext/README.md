@@ -162,6 +162,12 @@ claimed export, then reports raw and gzip sizes. The separate package has no
 compiler dev-dependency whose Cargo features could contaminate production
 measurements.
 
+`tools/measure-compiler.ts` performs the corresponding check for the source
+compiler. It links a real allocator-backed Wasm executable, instantiates it,
+and requires the selected compiler to produce bytecode before reporting its
+raw and gzip sizes. This avoids treating an archive or LLVM bitcode object as
+evidence that omitted parser paths disappeared from a final program.
+
 The isolated `microesnext-core-loop` package provides a repeatable native
 instruction-loop check without compiler dev-feature unification:
 

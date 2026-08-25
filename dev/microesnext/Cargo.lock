@@ -185,6 +185,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-compiler-size"
+version = "0.0.0"
+dependencies = [
+ "microesnext-compiler",
+]
+
+[[package]]
 name = "microesnext-core-loop"
 version = "0.0.0"
 dependencies = [

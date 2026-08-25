@@ -46,6 +46,7 @@ members = [
   "crates/microesnext-vm-core",
   "crates/microesnext-weak-collections",
   "tools/capability-size",
+  "tools/compiler-size",
   "tools/core-loop",
 ]
 resolver = "2"

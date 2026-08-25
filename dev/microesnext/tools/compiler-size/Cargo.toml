@@ -1,0 +1,30 @@
+[package]
+name = "microesnext-compiler-size"
+description = "Final linked Wasm probe for progressive compiler builds"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = []
+arrays = ["microesnext-compiler/arrays"]
+async = ["microesnext-compiler/async"]
+async-functions = ["microesnext-compiler/async-functions"]
+control-flow = ["microesnext-compiler/control-flow"]
+equality = ["microesnext-compiler/equality"]
+exceptions = ["microesnext-compiler/exceptions"]
+integer-operations = ["microesnext-compiler/integer-operations"]
+logical-operations = ["microesnext-compiler/logical-operations"]
+number-operations = ["microesnext-compiler/number-operations"]
+numbers = ["microesnext-compiler/numbers"]
+objects = ["microesnext-compiler/objects"]
+source-positions = ["microesnext-compiler/source-positions"]
+
+[dependencies]
+microesnext-compiler.workspace = true
+
+[[bin]]
+name = "microesnext-compiler-size"
+path = "src/main.rs"

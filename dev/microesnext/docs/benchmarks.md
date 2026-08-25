@@ -372,3 +372,27 @@ Re-run them with:
 deno run --allow-run=cargo --allow-read=target \
   tools/measure-capabilities.ts
 ```
+
+## Progressive compiler artifacts
+
+The compiler has its own final-linked Wasm probe because `.rlib` archives and
+LLVM bitcode contain code that link-time optimization may discard. Each row
+below instantiates the artifact and compiles a source string that exercises its
+selected syntax. The shared probe includes a fixed 32 KiB bump arena in linear
+memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
+
+| Compiler build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| minimal | 46,129 | 25,455 |
+| control flow | 46,161 | 25,472 |
+| exceptions | 46,161 | 25,475 |
+| default language slice | 46,226 | 25,508 |
+
+The small deltas are expected at this stage: function, local, and environment
+syntax still forms one compiler cluster and therefore dominates all four
+rows. The measurement makes the next extractions observable instead of
+claiming savings from unlinked intermediate objects. Re-run it with:
+
+```sh
+npm run measure:compiler
+```

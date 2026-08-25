@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node scripts/build.js",
     "check:features": "node tools/check-feature-isolation.js",
+    "measure:compiler": "deno run --allow-env --allow-read --allow-run tools/measure-compiler.ts",
     "test": "node --test --test-concurrency=1 test/*.test.js"
   }
 }
