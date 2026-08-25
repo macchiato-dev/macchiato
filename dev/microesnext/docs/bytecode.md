@@ -48,6 +48,12 @@ caller while its body runs in an independent guest context. Builds omitting
 `async-functions` neither decode that constructor nor link its closure and
 invocation storage.
 
+Declarations, anonymous function expressions, and arrows all emit that same
+constructor. A named recursive async expression needs a constructor composing
+the async call boundary with the private self cell; the compiler rejects that
+form until the combined capability exists rather than silently emitting an
+ordinary recursive closure.
+
 `await` suspends after evaluating one operand. It retains the function's
 arguments, locals, operand stack, program counter, exception state, and live
 captured-variable references, then resumes with either a fulfilled value or a

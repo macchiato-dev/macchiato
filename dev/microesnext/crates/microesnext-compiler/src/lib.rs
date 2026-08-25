@@ -768,7 +768,28 @@ impl Parser<'_> {
         self.whitespace();
         let awaiting = self.try_word(b"await");
         self.whitespace();
-        let arrow_parameters = self.try_arrow_parameters()?;
+        let async_start = self.offset;
+        let async_prefix = self.try_word(b"async")
+            && self
+                .source
+                .get(self.offset)
+                .is_some_and(u8::is_ascii_whitespace);
+        let mut asynchronous = false;
+        let mut async_function = false;
+        let mut arrow_parameters = None;
+        if async_prefix {
+            self.whitespace();
+            arrow_parameters = self.try_arrow_parameters()?;
+            asynchronous = arrow_parameters.is_some();
+            if !asynchronous && self.try_word(b"function") {
+                asynchronous = true;
+                async_function = true;
+            }
+        }
+        if !asynchronous {
+            self.offset = async_start;
+            arrow_parameters = self.try_arrow_parameters()?;
+        }
         let binding = binding.filter(|(start, end)| {
             self.source[self.offset..].starts_with(&self.source[*start..*end])
                 && self.identifier_end(self.offset + end - start)
@@ -780,7 +801,7 @@ impl Parser<'_> {
             } else {
                 FunctionBody::Expression
             };
-            self.function_value(parameters, None, body, None, false)?;
+            self.function_value(parameters, None, body, None, asynchronous)?;
             (false, TermKind::General)
         } else if let Some((start, end)) = binding {
             self.offset += end - start;
@@ -799,7 +820,7 @@ impl Parser<'_> {
             self.output.extend_from_slice(&capture.to_le_bytes());
             self.output.push(Opcode::LoadEnvironmentCell as u8);
             (false, TermKind::General)
-        } else if self.try_word(b"function") {
+        } else if async_function || self.try_word(b"function") {
             self.whitespace();
             let expression_name = if self.source.get(self.offset) == Some(&b'(') {
                 None
@@ -812,13 +833,16 @@ impl Parser<'_> {
                     captured: true,
                 })
             };
+            if asynchronous && expression_name.is_some() {
+                return Err(self.error("an anonymous async function expression"));
+            }
             let parameters = self.function_parameters()?;
             self.function_value(
                 parameters,
                 None,
                 FunctionBody::Block,
                 expression_name,
-                false,
+                asynchronous,
             )?;
             (false, TermKind::General)
         } else if self.consume_raw(b'[') {
@@ -1287,6 +1311,35 @@ mod tests {
         assert!(code.contains(&(Opcode::AsyncClosure as u8)));
         assert!(code.contains(&(Opcode::Await as u8)));
         assert!(!code.contains(&(Opcode::Closure as u8)));
+    }
+
+    #[test]
+    fn compiles_async_expressions_and_arrows_to_async_closures() {
+        for source in [
+            "return async function (value) { return await value; }(42);",
+            "let answer = async () => await 42; return answer();",
+            "let identity = async value => { return await value; }; return identity(42);",
+        ] {
+            let code = compile_script(source).unwrap();
+            assert!(code.contains(&(Opcode::AsyncClosure as u8)));
+            assert!(code.contains(&(Opcode::Await as u8)));
+        }
+    }
+
+    #[test]
+    fn rejects_named_async_expressions_until_the_combined_self_binding_exists() {
+        assert_eq!(
+            compile_script("return async function named() { return named; }();")
+                .unwrap_err()
+                .expected,
+            "an anonymous async function expression"
+        );
+    }
+
+    #[test]
+    fn keeps_async_available_as_an_ordinary_binding() {
+        let code = compile_script("let async = 41; return async + 1;").unwrap();
+        assert!(!code.contains(&(Opcode::AsyncClosure as u8)));
     }
 
     #[test]

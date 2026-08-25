@@ -32,6 +32,39 @@ fn source_async_function_returns_before_its_awaited_body_finishes() {
 }
 
 #[test]
+fn async_expressions_and_arrows_execute_through_the_same_runtime_boundary() {
+    for source in [
+        "return async function (value) { return await value; }(42);",
+        "let answer = async () => await 42; return answer();",
+        "let identity = async value => { return await value; }; return identity(42);",
+    ] {
+        let code = compile_script(source).unwrap();
+        let mut memory = [0; 256];
+        let mut machine = Machine::with_root_capacity(&code, &mut memory, 16);
+        let mut jobs: [Option<microesnext::promises::JobSlot>; 2] = [None; 2];
+        let mut queue = microesnext::promises::JobQueue::new(&mut jobs);
+        let mut frame_slots = [None; 1];
+        let mut frames = microesnext::async_functions::Frames::new(&mut frame_slots);
+        let microesnext::r#async::Progress::Complete(promise) =
+            microesnext::r#async::run_functions(&mut machine, &mut queue, &mut frames).unwrap()
+        else {
+            panic!("expected the top-level caller to return")
+        };
+        assert!(
+            microesnext::r#async::run_one_function_reaction(&mut machine, &mut queue, &mut frames,)
+                .unwrap()
+        );
+        assert_eq!(
+            microesnext::promises::settled_result(machine.arena(), promise),
+            Ok(Some((
+                microesnext::promises::Settlement::Fulfilled,
+                Value::from_i30(42).unwrap(),
+            )))
+        );
+    }
+}
+
+#[test]
 fn nested_async_calls_restore_each_caller_and_chain_their_promises() {
     let code = compile_script(
         "async function inner() { return await 42; } async function outer() { return await inner(); } return outer();",
