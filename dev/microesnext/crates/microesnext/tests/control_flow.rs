@@ -77,3 +77,29 @@ fn structured_else_if_chains_choose_one_branch() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn single_if_can_break_a_for_loop() {
+    let code = compile_script(
+        "let value = 0; for (let i = 0; i < 10; i++) { if (i == 4) break; else value += 1; } return value;",
+    )
+    .unwrap();
+    let mut memory = [0; 192];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(4).unwrap()))
+    );
+}
+
+#[test]
+fn single_if_can_break_a_nested_while_loop() {
+    let code = compile_script(
+        "let pos = 0, count = 0; while (pos < 10) { if (count % 2 == 0) break; else pos += 2; } return pos;",
+    )
+    .unwrap();
+    let mut memory = [0; 192];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(0).unwrap()))
+    );
+}

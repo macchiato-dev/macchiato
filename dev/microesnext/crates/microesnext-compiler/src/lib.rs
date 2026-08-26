@@ -279,6 +279,8 @@ fn compile_script_with_options_and_host_globals(
         relocations: Vec::new(),
         #[cfg(feature = "functions")]
         function_frame: false,
+        #[cfg(feature = "for-statements")]
+        loop_breaks: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
         #[cfg(any(feature = "number-negation", feature = "number-operations"))]
@@ -334,6 +336,8 @@ struct Parser<'source> {
     function_frame: bool,
     #[cfg(feature = "receivers")]
     receiver_frame: bool,
+    #[cfg(feature = "for-statements")]
+    loop_breaks: Vec<Vec<usize>>,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
     options: CompileOptions,
 }
@@ -718,6 +722,7 @@ impl Parser<'_> {
         }
         self.word_at_offset(b"return")
             || self.word_at_offset(b"throw")
+            || cfg!(feature = "for-statements") && self.word_at_offset(b"break")
             || cfg!(feature = "control-flow")
                 && (self.word_at_offset(b"if")
                     || self.word_at_offset(b"while")
@@ -856,6 +861,7 @@ impl Parser<'_> {
             return Err(self.error("a for update without nested control flow or functions"));
         }
 
+        self.loop_breaks.push(Vec::new());
         if self.consume(b'{') {
             let abrupt = self.control_block_body()?;
             if !self.consume(b'}') {
@@ -867,6 +873,7 @@ impl Parser<'_> {
                 self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
                 #[cfg(feature = "functions")]
                 self.relocations.push(exit_patch);
+                self.patch_loop_breaks(exit)?;
                 return Ok(());
             }
         } else {
@@ -884,11 +891,37 @@ impl Parser<'_> {
         let exit = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        self.patch_loop_breaks(exit)?;
         #[cfg(feature = "functions")]
         {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn patch_loop_breaks(&mut self, exit: u32) -> Result<(), CompileError> {
+        let Some(patches) = self.loop_breaks.pop() else {
+            return Err(self.error("an active loop"));
+        };
+        for patch in patches {
+            self.output[patch..patch + 4].copy_from_slice(&exit.to_le_bytes());
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn emit_loop_break(&mut self) -> Result<(), CompileError> {
+        let Some(patches) = self.loop_breaks.last_mut() else {
+            return Err(self.error("break inside a loop"));
+        };
+        self.output.push(Opcode::Jump as u8);
+        let patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        patches.push(patch);
+        #[cfg(feature = "functions")]
+        self.relocations.push(patch);
         Ok(())
     }
 
@@ -1032,6 +1065,14 @@ impl Parser<'_> {
     #[cfg(feature = "control-flow")]
     fn single_control_body(&mut self) -> Result<bool, CompileError> {
         self.whitespace();
+        #[cfg(feature = "for-statements")]
+        if self.try_word(b"break") {
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            self.emit_loop_break()?;
+            return Ok(true);
+        }
         if self.try_word(b"return") {
             self.offset -= b"return".len();
             self.completion(None, false, false)?;
@@ -1375,7 +1416,11 @@ impl Parser<'_> {
             self.statement_prefix()?;
             self.whitespace();
             if self.try_word(b"if") {
-                self.begin_structured(&mut frames, StructuredStart::Conditional)?;
+                if self.conditional_body_is_braced() {
+                    self.begin_structured(&mut frames, StructuredStart::Conditional)?;
+                } else if self.single_if()? {
+                    return Err(self.error("a fallthrough path after a single-statement conditional"));
+                }
                 continue;
             }
             if self.try_word(b"while") {
@@ -1397,8 +1442,21 @@ impl Parser<'_> {
                 continue;
             }
 
-            let fallthrough = self.source.get(self.offset) == Some(&b'}');
-            if !fallthrough {
+            #[cfg(feature = "for-statements")]
+            let explicit_break = if self.try_word(b"break") {
+                if !self.consume(b';') {
+                    return Err(self.error(";"));
+                }
+                self.emit_loop_break()?;
+                self.whitespace();
+                true
+            } else {
+                false
+            };
+            #[cfg(not(feature = "for-statements"))]
+            let explicit_break = false;
+            let fallthrough = !explicit_break && self.source.get(self.offset) == Some(&b'}');
+            if !fallthrough && !explicit_break {
                 let close_handlers = frames
                     .iter()
                     .filter(|frame| matches!(frame, StructuredFrame::Try { .. }))
@@ -1491,6 +1549,8 @@ impl Parser<'_> {
                             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
                         self.output[exit_patch..exit_patch + 4]
                             .copy_from_slice(&exit.to_le_bytes());
+                        #[cfg(feature = "for-statements")]
+                        self.patch_loop_breaks(exit)?;
                         #[cfg(feature = "functions")]
                         self.relocations.push(exit_patch);
                         completed_abrupt = false;
@@ -1611,6 +1671,8 @@ impl Parser<'_> {
                     return Err(self.error("{"));
                 }
                 frames.push(StructuredFrame::Loop { start, exit_patch });
+                #[cfg(feature = "for-statements")]
+                self.loop_breaks.push(Vec::new());
             }
             StructuredStart::Exception => {
                 if !self.consume(b'{') {
@@ -2321,6 +2383,8 @@ impl Parser<'_> {
             functions: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
+            #[cfg(feature = "for-statements")]
+            loop_breaks: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
             #[cfg(any(feature = "number-negation", feature = "number-operations"))]
