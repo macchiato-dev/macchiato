@@ -22,7 +22,6 @@ members = [
   "crates/microesnext-integer-operations",
   "crates/microesnext-locals",
   "crates/microesnext-logical-operations",
-  "crates/microesnext-integer-negation",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -75,7 +74,6 @@ microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.
 microesnext-integer-operations = { path = "crates/microesnext-integer-operations", version = "0.0.0" }
 microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
 microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
-microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }

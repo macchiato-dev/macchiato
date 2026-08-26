@@ -69,7 +69,7 @@ integer-operations = [
   "microesnext-bytecode/integer-operations",
 ]
 integer-negation = [
-  "dep:microesnext-integer-negation",
+  "dep:microesnext-integer-operations",
   "microesnext-bytecode/integer-negation",
 ]
 instanceof = [
@@ -183,7 +183,6 @@ microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
-microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }

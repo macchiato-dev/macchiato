@@ -83,12 +83,12 @@ the 6,506-byte minimal programmable runtime byte-for-byte unchanged.
 The standalone primitive-coercion build is 6,371 bytes (2,823 gzip). Its live
 probe executes `+true` and verifies the immediate result `1`; runtime tests
 also cover false, null, undefined/NaN, i30 values, and existing boxed numbers.
-It contains number representation but neither arithmetic nor either negation
-crate. The compiler-only unary-plus build is 5,690 bytes (2,466 gzip).
+It contains number representation but neither integer operations nor either
+negation path. The compiler-only unary-plus build is 5,690 bytes (2,466 gzip).
 
 Number negation now composes the same coercion crate, making `-true`, `-null`,
 and `-undefined` follow primitive JavaScript semantics. Its linked artifact is
-6,912 bytes (3,050 gzip). The pre-existing i30 branch remains a direct fast
+6,898 bytes (3,040 gzip). The pre-existing i30 branch remains a direct fast
 path, and the interpreter kernel, bounded-negation, promoted-operations,
 and minimal-program artifacts are byte-for-byte unchanged.
 
@@ -311,7 +311,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Promoted number operations | 9,382 | 3,309 |
 | Number division | 6,494 | 2,878 |
 | Number remainder | 9,311 | 4,240 |
-| JavaScript Number negation | 6,912 | 3,050 |
+| JavaScript Number negation | 6,898 | 3,040 |
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Property assignment | 16,352 | 6,302 |
 | Property assignment expressions | 15,713 | 6,242 |
@@ -343,12 +343,13 @@ composition but omitted independently gated paths; it was therefore mislabeled
 rather than a valid before/after size comparison.
 
 The negation rows are intentionally separate. Adding unary instructions to the
-existing integer and promoted-arithmetic crates initially grew the minimal
+existing integer and promoted-arithmetic paths initially grew the minimal
 programmable runtime from 6,506 to 6,967 bytes and promoted number operations
-from 9,382 to 10,413 bytes. Extracting two static capability crates restored
-both baselines exactly. Bounded negation is 2,587 bytes in isolation; the
-negative-zero-preserving Number composition is 6,784 bytes. Neither boundary
-adds runtime dispatch to an arithmetic build that omits it.
+from 9,382 to 10,413 bytes. Keeping separate bytecode and VM reachability gates
+restores both baselines without making negation a separate package. Bounded
+negation is 2,587 bytes in isolation; the negative-zero-preserving Number
+composition is 6,898 bytes. Neither path adds runtime dispatch to an arithmetic
+build that omits it.
 
 The harness now instantiates every built artifact and invokes the export for
 each claimed capability. This corrected an older exception row that enabled

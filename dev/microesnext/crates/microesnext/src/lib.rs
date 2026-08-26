@@ -12,7 +12,7 @@ pub use microesnext_locals as locals;
 pub use microesnext_integer_operations as integer_operations;
 
 #[cfg(feature = "integer-negation")]
-pub use microesnext_integer_negation as integer_negation;
+pub use microesnext_integer_operations::negation as integer_negation;
 
 #[cfg(feature = "instanceof")]
 pub use microesnext_objects::instanceof;

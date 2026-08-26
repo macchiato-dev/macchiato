@@ -817,7 +817,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "integer-negation")]
             Opcode::NegateI30 => {
                 let operand = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_negation::negate(operand)?;
+                let value = microesnext_integer_operations::negation::negate(operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }

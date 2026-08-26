@@ -151,13 +151,12 @@ an explicit relational stopping condition.
   `local-assignment-expressions` composition enables the arena's gated stack
   helpers, allowing an assignment to store one copy while returning the other
   without changing the local fast path.
-- `microesnext-integer-operations` supplies checked i30 subtraction,
-  multiplication, and relational comparisons. The `minimal-program` feature
-  composes it with locals and control flow without adding floating-point
-  storage or changing the invariant interpreter loop.
-- `microesnext-integer-negation` is a smaller unary-only boundary. A build can
-  compile `-value` without acquiring multiplication, subtraction, comparison,
-  or floating-point storage.
+- `microesnext-integer-operations` supplies checked i30 negation, subtraction,
+  multiplication, and relational comparisons. The bytecode and VM features
+  decide which operations are reachable, so a unary-only build does not retain
+  multiplication or comparison. `minimal-program` composes the same library
+  with locals and control flow without adding floating-point storage or
+  changing the invariant interpreter loop.
 - `microesnext-equality` supplies strict equality and SameValueZero as distinct
   operations. Identity-only builds remain small; optional number and string
   features add their JavaScript value semantics without making equality depend

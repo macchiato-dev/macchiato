@@ -2,6 +2,18 @@
 
 use microesnext_types::{Error, Value};
 
+pub mod negation {
+    use microesnext_types::{Error, Value};
+
+    pub fn negate(value: Value) -> Result<Value, Error> {
+        value
+            .as_i30()
+            .and_then(i32::checked_neg)
+            .and_then(Value::from_i30)
+            .ok_or(Error::Type)
+    }
+}
+
 pub fn subtract(left: Value, right: Value) -> Result<Value, Error> {
     let (left, right) = operands(left, right)?;
     left.checked_sub(right)
@@ -58,5 +70,20 @@ mod tests {
             multiply(maximum, Value::from_i30(2).unwrap()),
             Err(Error::Type)
         );
+    }
+
+    #[test]
+    fn negates_only_results_representable_as_i30() {
+        assert_eq!(
+            negation::negate(Value::from_i30(42).unwrap())
+                .unwrap()
+                .as_i30(),
+            Some(-42)
+        );
+        assert_eq!(
+            negation::negate(Value::from_i30(-(1 << 29)).unwrap()),
+            Err(Error::Type)
+        );
+        assert_eq!(negation::negate(Value::TRUE), Err(Error::Type));
     }
 }
