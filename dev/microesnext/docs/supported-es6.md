@@ -59,8 +59,18 @@ seen by sibling closures and still returns the assignment result. Property
 targets are another independent composition. It accepts local, captured, and
 receiver bases with one or more dot-separated names, so `object.value = rhs`,
 `outer.inner.value = rhs`, and `this.value = rhs` all return and store `rhs`.
-Computed keys, arbitrary expression bases, and compound assignment remain
-separate compositions because they need different storage and stack mechanics.
+Computed object keys, arbitrary expression bases, and compound assignment
+remain separate compositions because they need different storage and stack
+mechanics.
+
+Array indexing is independently selectable from array literals. It accepts an
+ordinary supported expression between brackets and composes through chained
+index, named-property, call, and construction suffixes. The separate
+`array-assignment-expressions` composition accepts local, captured, and
+receiver bases ending in an index, including mixed forms such as
+`holder.items[index] = value`. Indices in this initial array-specific layer must
+be nonnegative i30 values; general computed property keys require a later
+`ToPropertyKey` composition.
 
 Array and object literals keep a compact numeric-value parser when
 `literal-expressions` is omitted. Enabling that compiler-only composition lets

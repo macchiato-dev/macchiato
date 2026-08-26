@@ -92,6 +92,14 @@ so a nested target adds no specialized traversal instruction. The opcode is
 separate from `set_property`, which returns the object for literal assembly,
 and `set_property_statement`, which leaves no result.
 
+Computed array reads use the existing `get_index` instruction already required
+by array storage. The compiler-only `array-indexing` gate therefore changes no
+runtime. Array assignment expressions use `set_index_result`; its input is
+`[array, index, value]` and its output is `[value]`. This is distinct from
+`set_index`, whose object result lets literal construction append another
+element. Intermediate mixed suffixes continue to use ordinary `get_property`
+or `get_index` instructions.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

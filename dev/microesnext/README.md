@@ -207,6 +207,10 @@ an explicit relational stopping condition.
   storage with live cursor semantics.
 - `microesnext-arrays` contains dense and sparse indexed storage with geometric
   growth, holes, and JavaScript length behavior.
+- `microesnext-array-assignment-expressions` stores a computed array index while
+  retaining the assigned value. The compiler's separate `array-indexing` gate
+  adds reads without adding runtime code; literal stores keep their existing
+  object-preserving path when expression assignment is omitted.
 - `microesnext-weak-collections` contains WeakMap and WeakSet storage as a
   separate capability because ephemerons alter collector tracing.
 - `microesnext-promises` contains compact promise records and a caller-owned,
