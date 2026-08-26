@@ -25,6 +25,21 @@ microArrayPrototype.filter = function (callback) {
   }
   return result;
 };
+microArrayPrototype.reduce = function (callback, initialValue) {
+  var index = 0;
+  var result = undefined;
+  if (initialValue !== undefined) {
+    result = initialValue;
+  } else {
+    if (!this.length) throw new TypeError("Reduce of empty array with no initial value");
+    result = this[0];
+    index = 1;
+  }
+  for (; index < this.length; index++) {
+    result = callback(result, this[index], index, this);
+  }
+  return result;
+};
 microArrayPrototype.some = function (callback) {
   for (var index = 0; index < this.length; index++) {
     if (callback(this[index], index, this)) return true;
