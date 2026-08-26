@@ -57,3 +57,13 @@ fn nested_loop_targets_relocate_with_function_bodies() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn labels_target_while_loops_and_conditional_statements() {
+    assert_eq!(
+        run(
+            "let value = 0; search: while (value < 4) { value++; adjust: if (value == 2) { break adjust; } if (value == 3) break search; } return value;"
+        ),
+        Outcome::Complete(Value::from_i30(3).unwrap())
+    );
+}

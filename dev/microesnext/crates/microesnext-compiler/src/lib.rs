@@ -652,7 +652,10 @@ impl Parser<'_> {
                 continue;
             }
             #[cfg(feature = "for-statements")]
-            if self.try_labeled_for_loop()? {
+            if self.try_labeled_loop()? {
+                continue;
+            }
+            if self.try_labeled_if()? {
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -714,7 +717,10 @@ impl Parser<'_> {
                 continue;
             }
             #[cfg(feature = "for-statements")]
-            if self.try_labeled_for_loop()? {
+            if self.try_labeled_loop()? {
+                continue;
+            }
+            if self.try_labeled_if()? {
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -856,7 +862,8 @@ impl Parser<'_> {
             || self.word_at_offset(b"throw")
             || cfg!(feature = "for-statements") && self.word_at_offset(b"break")
             || cfg!(feature = "for-statements") && self.word_at_offset(b"continue")
-            || cfg!(feature = "for-statements") && self.labeled_for_at_offset()
+            || cfg!(feature = "for-statements") && self.labeled_loop_at_offset()
+            || cfg!(feature = "for-statements") && self.labeled_if_at_offset()
             || cfg!(feature = "control-flow")
                 && (self.word_at_offset(b"if")
                     || self.word_at_offset(b"while")
@@ -871,7 +878,7 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "for-statements")]
-    fn labeled_for_at_offset(&self) -> bool {
+    fn labeled_loop_at_offset(&self) -> bool {
         let mut offset = self.offset;
         let Some(first) = self.source.get(offset) else {
             return false;
@@ -898,19 +905,87 @@ impl Parser<'_> {
             offset += 1;
         }
         self.source[offset..].starts_with(b"for") && self.identifier_end(offset + 3)
+            || self.source[offset..].starts_with(b"while") && self.identifier_end(offset + 5)
     }
 
     #[cfg(feature = "for-statements")]
-    fn try_labeled_for_loop(&mut self) -> Result<bool, CompileError> {
+    fn labeled_if_at_offset(&self) -> bool {
+        let mut offset = self.offset;
+        let Some(first) = self.source.get(offset) else {
+            return false;
+        };
+        if !first.is_ascii_alphabetic() && !matches!(first, b'_' | b'$') {
+            return false;
+        }
+        offset += 1;
+        while self
+            .source
+            .get(offset)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$'))
+        {
+            offset += 1;
+        }
+        while self.source.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+        if self.source.get(offset) != Some(&b':') {
+            return false;
+        }
+        offset += 1;
+        while self.source.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+        self.source[offset..].starts_with(b"if") && self.identifier_end(offset + 2)
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn try_labeled_loop(&mut self) -> Result<bool, CompileError> {
         self.whitespace();
-        if !self.labeled_for_at_offset() {
+        if !self.labeled_loop_at_offset() {
             return Ok(false);
         }
         let label = self.identifier()?;
-        if !self.consume(b':') || !self.try_word_after_whitespace(b"for") {
-            return Err(self.error(": for"));
+        if !self.consume(b':') {
+            return Err(self.error(":"));
         }
-        self.for_loop_with_label(Some(label))?;
+        if self.try_word_after_whitespace(b"for") {
+            self.for_loop_with_label(Some(label))?;
+        } else if self.try_word_after_whitespace(b"while") {
+            self.single_while_loop_with_label(Some(label))?;
+        } else {
+            return Err(self.error("for or while"));
+        }
+        Ok(true)
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn try_labeled_if(&mut self) -> Result<bool, CompileError> {
+        self.whitespace();
+        if !self.labeled_if_at_offset() {
+            return Ok(false);
+        }
+        let label = self.identifier()?;
+        if !self.consume(b':') || !self.try_word_after_whitespace(b"if") {
+            return Err(self.error(": if"));
+        }
+        self.loop_breaks.push(LoopBreaks {
+            label: Some(label),
+            break_patches: Vec::new(),
+            continue_patches: Vec::new(),
+        });
+        self.single_if()?;
+        let exit = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        let patches = self
+            .loop_breaks
+            .pop()
+            .ok_or_else(|| self.error("an active label"))?;
+        if !patches.continue_patches.is_empty() {
+            return Err(self.error("continue to a loop label"));
+        }
+        for patch in patches.break_patches {
+            self.output[patch..patch + 4].copy_from_slice(&exit.to_le_bytes());
+        }
         Ok(true)
     }
 
@@ -984,6 +1059,14 @@ impl Parser<'_> {
 
     #[cfg(feature = "control-flow")]
     fn single_while_loop(&mut self) -> Result<(), CompileError> {
+        self.single_while_loop_with_label(None)
+    }
+
+    #[cfg(feature = "control-flow")]
+    fn single_while_loop_with_label(
+        &mut self,
+        label: Option<(usize, usize)>,
+    ) -> Result<(), CompileError> {
         let loop_start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         if !self.consume(b'(') {
@@ -999,11 +1082,18 @@ impl Parser<'_> {
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         #[cfg(feature = "for-statements")]
         self.loop_breaks.push(LoopBreaks {
-            label: None,
+            label,
             break_patches: Vec::new(),
             continue_patches: Vec::new(),
         });
-        self.single_control_body()?;
+        if self.consume(b'{') {
+            self.control_block_body()?;
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+        } else {
+            self.single_control_body()?;
+        }
         self.output.push(Opcode::Jump as u8);
         let loop_patch = self.output.len();
         self.output.extend_from_slice(&loop_start.to_le_bytes());
@@ -1497,7 +1587,10 @@ impl Parser<'_> {
                 self.for_loop()?;
                 continue;
             }
-            if self.try_labeled_for_loop()? {
+            if self.try_labeled_loop()? {
+                continue;
+            }
+            if self.try_labeled_if()? {
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -2079,7 +2172,10 @@ impl Parser<'_> {
                 continue;
             }
             #[cfg(feature = "for-statements")]
-            if self.try_labeled_for_loop()? {
+            if self.try_labeled_loop()? {
+                continue;
+            }
+            if self.try_labeled_if()? {
                 continue;
             }
             if self.try_word(b"try") {
