@@ -226,6 +226,8 @@ pub enum Opcode {
     CopyObjectProperties = 146,
     #[cfg(feature = "objects")]
     DeleteProperty = 147,
+    #[cfg(feature = "locals")]
+    LoadLocalRaw = 148,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -435,6 +437,8 @@ impl TryFrom<u8> for Opcode {
             146 => Ok(Self::CopyObjectProperties),
             #[cfg(feature = "objects")]
             147 => Ok(Self::DeleteProperty),
+            #[cfg(feature = "locals")]
+            148 => Ok(Self::LoadLocalRaw),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

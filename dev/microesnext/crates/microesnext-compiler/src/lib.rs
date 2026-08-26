@@ -3466,7 +3466,7 @@ impl Parser<'_> {
             #[cfg(feature = "environments")]
             if should_store && existing_binding.is_some_and(|binding| binding.captured) {
                 let binding = existing_binding.expect("checked captured binding");
-                self.output.push(Opcode::LoadLocal as u8);
+                self.output.push(Opcode::LoadLocalRaw as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
             if initialized {
@@ -4784,7 +4784,7 @@ impl Parser<'_> {
             {
                 if !self.locals[index].captured {
                     let binding = &mut self.locals[index];
-                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.push(Opcode::LoadLocalRaw as u8);
                     self.output.extend_from_slice(&binding.slot.to_le_bytes());
                     self.output.push(Opcode::NewEnvironmentCell as u8);
                     self.output.push(Opcode::StoreLocal as u8);
@@ -4805,7 +4805,7 @@ impl Parser<'_> {
         let self_captured = destination.is_some_and(|slot| self.locals[slot as usize].captured);
         if self_captured {
             let slot = destination.expect("captured declarations have a destination");
-            self.output.push(Opcode::LoadLocal as u8);
+            self.output.push(Opcode::LoadLocalRaw as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
         let count = u16::try_from(sources.len() + usize::from(body.receiver_capture.is_some()))
@@ -4823,7 +4823,7 @@ impl Parser<'_> {
         for source in sources {
             match source {
                 CaptureSource::Local(index) => {
-                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.push(Opcode::LoadLocalRaw as u8);
                     self.output
                         .extend_from_slice(&self.locals[index].slot.to_le_bytes());
                 }
@@ -5016,7 +5016,7 @@ impl Parser<'_> {
                         self.output.push(Opcode::LoadCapture as u8);
                         self.output.extend_from_slice(&capture.to_le_bytes());
                     } else {
-                        self.output.push(Opcode::LoadLocal as u8);
+                        self.output.push(Opcode::LoadLocalRaw as u8);
                         self.output.extend_from_slice(&binding.slot.to_le_bytes());
                     }
                     self.output.push(Opcode::LoadLocal as u8);
@@ -5234,7 +5234,7 @@ impl Parser<'_> {
                 self.output.push(Opcode::LoadCapture as u8);
                 self.output.extend_from_slice(&capture.to_le_bytes());
             } else if binding.captured {
-                self.output.push(Opcode::LoadLocal as u8);
+                self.output.push(Opcode::LoadLocalRaw as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
             self.expression(None)?;
@@ -5791,7 +5791,7 @@ impl Parser<'_> {
             if local.captured && self.consume_plain_assignment() {
                 #[cfg(feature = "captured-assignment-expressions")]
                 {
-                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.push(Opcode::LoadLocalRaw as u8);
                     self.output.extend_from_slice(&local.slot.to_le_bytes());
                     self.expression(None)?;
                     self.output.push(Opcode::StoreEnvironmentCellResult as u8);
@@ -5890,7 +5890,11 @@ impl Parser<'_> {
         local: Binding,
         opcode: Opcode,
     ) -> Result<(), CompileError> {
-        self.output.push(Opcode::LoadLocal as u8);
+        #[cfg(feature = "environments")]
+        let load = if local.captured { Opcode::LoadLocalRaw } else { Opcode::LoadLocal };
+        #[cfg(not(feature = "environments"))]
+        let load = Opcode::LoadLocal;
+        self.output.push(load as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
         if local.captured {
@@ -5928,7 +5932,11 @@ impl Parser<'_> {
         local: Binding,
         opcode: Opcode,
     ) -> Result<(), CompileError> {
-        self.output.push(Opcode::LoadLocal as u8);
+        #[cfg(feature = "environments")]
+        let load = if local.captured { Opcode::LoadLocalRaw } else { Opcode::LoadLocal };
+        #[cfg(not(feature = "environments"))]
+        let load = Opcode::LoadLocal;
+        self.output.push(load as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
         if local.captured {
@@ -5972,10 +5980,15 @@ impl Parser<'_> {
             return Ok(false);
         }
 
-        self.output.push(Opcode::LoadLocal as u8);
+        #[cfg(feature = "environments")]
+        let load = if local.captured { Opcode::LoadLocalRaw } else { Opcode::LoadLocal };
+        #[cfg(not(feature = "environments"))]
+        let load = Opcode::LoadLocal;
+        self.output.push(load as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
         if local.captured {
+            self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::LoadEnvironmentCell as u8);
         }
         if !prefix {
@@ -6092,7 +6105,7 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
             #[cfg(feature = "environments")]
             if binding.captured {
-                self.output.push(Opcode::LoadLocal as u8);
+                self.output.push(Opcode::LoadLocalRaw as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
                 self.output.push(Opcode::StoreEnvironmentCell as u8);
                 continue;
@@ -8307,12 +8320,12 @@ impl Parser<'_> {
         let inherited = false;
         #[cfg(feature = "named-class-expressions")]
         if let Some(slot) = named_slot {
-            self.output.push(Opcode::LoadLocal as u8);
+            self.output.push(Opcode::LoadLocalRaw as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
             self.output.push(Opcode::NewEnvironmentCell as u8);
             self.output.push(Opcode::StoreLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
-            self.output.push(Opcode::LoadLocal as u8);
+            self.output.push(Opcode::LoadLocalRaw as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
         if !self.consume(b'{') {

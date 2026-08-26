@@ -44,3 +44,14 @@ fn string_accumulation_survives_a_callback_call() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
 }
+
+#[test]
+fn conditionally_created_closure_does_not_control_captured_parameter_storage() {
+    let code = compile_script(
+        "function render(value, create) { if (create) { let read = () => value; read(); } return value; } return render(42, false);",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1024];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}

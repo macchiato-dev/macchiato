@@ -100,6 +100,8 @@ pub struct Machine<'code, 'memory> {
     function_call: Option<HostRef>,
     #[cfg(feature = "host-bindings")]
     host_object_types: u64,
+    last_method_key: Option<Value>,
+    last_method_receiver: Option<Value>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -142,6 +144,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             function_call: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
+            last_method_key: None,
+            last_method_receiver: None,
         }
     }
 
@@ -258,6 +262,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             function_call: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
+            last_method_key: None,
+            last_method_receiver: None,
         })
     }
 
@@ -298,6 +304,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn program_counter(&self) -> usize {
         self.core.pc()
+    }
+
+    pub fn last_method_key(&self) -> Option<Value> {
+        self.last_method_key
+    }
+
+    pub fn last_method_receiver(&self) -> Option<Value> {
+        self.last_method_receiver
     }
 
     pub fn frame_base(&self) -> usize {
@@ -521,6 +535,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             function_call: self.function_call,
             #[cfg(feature = "host-bindings")]
             host_object_types: self.host_object_types,
+            last_method_key: self.last_method_key,
+            last_method_receiver: self.last_method_receiver,
         })
     }
 
@@ -778,6 +794,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetMethod => {
                 let key = self.core.arena_mut().pop()?;
                 let receiver = self.core.arena_mut().pop()?;
+                self.last_method_key = Some(key);
+                self.last_method_receiver = Some(receiver);
                 #[cfg(feature = "host-bindings")]
                 if let Some(object) = receiver.as_host() {
                     if self
@@ -1485,7 +1503,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "environments")]
             Opcode::LoadEnvironmentCell => {
                 let cell = self.core.arena_mut().pop()?;
-                let value = microesnext_bindings::environments::get(self.core.arena(), cell)?;
+                let value = if cell.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::EnvironmentCell)
+                {
+                    microesnext_bindings::environments::get(self.core.arena(), cell)?
+                } else {
+                    cell
+                };
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -1607,6 +1631,23 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena(),
                     self.core.frame_base(),
                     slot,
+                )?;
+                #[cfg(feature = "environments")]
+                let value = if value.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::EnvironmentCell)
+                {
+                    microesnext_bindings::environments::get(self.core.arena(), value)?
+                } else {
+                    value
+                };
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "locals")]
+            Opcode::LoadLocalRaw => {
+                let slot = self.core.next_u16()? as usize;
+                let value = microesnext_bindings::locals::load(
+                    self.core.arena(), self.core.frame_base(), slot,
                 )?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
@@ -2457,10 +2498,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
         #[cfg(feature = "host-bindings")]
         if let Some(function) = method.as_host() {
-            if self.host_argument_count.replace(argument_count).is_some()
-                || self.host_call_receiver.replace(receiver).is_some()
-            {
-                return Err(Error::Type);
+            if self.host_argument_count.replace(argument_count).is_some() {
+                return Err(Error::InvalidRoot);
+            }
+            if self.host_call_receiver.replace(receiver).is_some() {
+                return Err(Error::DanglingReference);
             }
             return Ok(Some(Outcome::HostCall {
                 function,
@@ -2470,7 +2512,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         let receiver_aware =
             microesnext_objects::callable::is_callable_object(self.core.arena(), method);
-        let function = unwrap_callable(self.core.arena(), method)?;
+        if method == Value::UNDEFINED {
+            return Err(Error::DanglingReference);
+        }
+        let function = unwrap_callable(self.core.arena(), method).map_err(|_| Error::InvalidRoot)?;
         let target = entry(self.core.arena(), function)?;
         if receiver_aware {
             microesnext_bindings::receivers::append(
@@ -2574,6 +2619,43 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(17).unwrap()))
         );
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "function-arguments"))]
+    fn exposes_host_arguments_in_source_order() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "return host(11, 22, 33);",
+            &["host"],
+        )
+        .unwrap();
+        let mut memory = [0; 128];
+        let mut machine = Machine::new(&code, &mut memory);
+        assert!(matches!(machine.run(), Ok(Outcome::HostCall { argument_count: 3, .. })));
+        assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(11));
+        assert_eq!(machine.host_argument(1).unwrap().as_i30(), Some(22));
+        assert_eq!(machine.host_argument(2).unwrap().as_i30(), Some(33));
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "function-arguments", feature = "strings", feature = "objects"))]
+    fn preserves_a_primitive_string_method_receiver() {
+        let code = microesnext_compiler::compile_script("return 'opacity'.replace(11, 22);").unwrap();
+        let mut memory = [0; 256];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 6).unwrap();
+        let prototype = machine.new_object(Value::NULL).unwrap();
+        let key = machine.intern_atom(b"replace").unwrap();
+        microesnext_objects::set(
+            machine.arena_mut(), prototype, key,
+            Value::from_host(HostRef::new(9).unwrap()),
+        ).unwrap();
+        machine.install_string_prototype(prototype).unwrap();
+        let Ok(Outcome::HostCall { receiver: Some(receiver), argument_count: 2, .. }) = machine.run() else {
+            panic!("expected primitive string method call")
+        };
+        assert_eq!(machine.string_bytes(receiver), Ok(&b"opacity"[..]));
+        assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(11));
+        assert_eq!(machine.host_argument(1).unwrap().as_i30(), Some(22));
     }
 
     #[test]
