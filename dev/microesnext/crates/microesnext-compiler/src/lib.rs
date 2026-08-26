@@ -1380,21 +1380,51 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "local-assignment-expressions")]
+    #[cfg(any(
+        feature = "captured-assignment-expressions",
+        feature = "local-assignment-expressions"
+    ))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         self.whitespace();
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
             #[cfg(feature = "environments")]
-            let assignable = !local.captured;
+            if local.captured && self.consume_plain_assignment() {
+                #[cfg(feature = "captured-assignment-expressions")]
+                {
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&local.slot.to_le_bytes());
+                    self.expression(None)?;
+                    self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+                    return Ok(false);
+                }
+            }
             #[cfg(not(feature = "environments"))]
-            let assignable = true;
-            if assignable && self.consume_plain_assignment() {
+            let local_is_captured = false;
+            #[cfg(feature = "environments")]
+            let local_is_captured = local.captured;
+            if !local_is_captured && self.consume_plain_assignment() {
+                #[cfg(feature = "local-assignment-expressions")]
+                {
+                    self.expression(None)?;
+                    self.output.push(Opcode::DuplicateTop as u8);
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&local.slot.to_le_bytes());
+                    return Ok(false);
+                }
+            }
+        }
+        self.offset = start;
+        #[cfg(feature = "captured-assignment-expressions")]
+        if let Some(capture) = self.outer_binding_at_offset() {
+            self.offset += capture.end - capture.start;
+            if self.consume_plain_assignment() {
+                let index = self.intern_capture(capture)?;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
                 self.expression(None)?;
-                self.output.push(Opcode::DuplicateTop as u8);
-                self.output.push(Opcode::StoreLocal as u8);
-                self.output.extend_from_slice(&local.slot.to_le_bytes());
+                self.output.push(Opcode::StoreEnvironmentCellResult as u8);
                 return Ok(false);
             }
         }
@@ -1403,13 +1433,19 @@ impl Parser<'_> {
         Ok(used_binding)
     }
 
-    #[cfg(not(feature = "local-assignment-expressions"))]
+    #[cfg(not(any(
+        feature = "captured-assignment-expressions",
+        feature = "local-assignment-expressions"
+    )))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         let (used_binding, _) = self.logical_or(binding)?;
         Ok(used_binding)
     }
 
-    #[cfg(feature = "local-assignment-expressions")]
+    #[cfg(any(
+        feature = "captured-assignment-expressions",
+        feature = "local-assignment-expressions"
+    ))]
     fn consume_plain_assignment(&mut self) -> bool {
         self.whitespace();
         if self.source.get(self.offset) != Some(&b'=')
@@ -2733,15 +2769,20 @@ impl Parser<'_> {
 
     #[cfg(feature = "environments")]
     fn capture_at_offset(&mut self) -> Result<Option<(u16, Binding)>, CompileError> {
-        let Some(binding) = self.outer_bindings.iter().rev().copied().find(|binding| {
-            let name = &self.source[binding.start..binding.end];
-            self.source[self.offset..].starts_with(name)
-                && self.identifier_end(self.offset + name.len())
-        }) else {
+        let Some(binding) = self.outer_binding_at_offset() else {
             return Ok(None);
         };
         let index = self.intern_capture(binding)?;
         Ok(Some((index, binding)))
+    }
+
+    #[cfg(feature = "environments")]
+    fn outer_binding_at_offset(&self) -> Option<Binding> {
+        self.outer_bindings.iter().rev().copied().find(|binding| {
+            let name = &self.source[binding.start..binding.end];
+            self.source[self.offset..].starts_with(name)
+                && self.identifier_end(self.offset + name.len())
+        })
     }
 
     #[cfg(all(feature = "functions", not(feature = "environments")))]
@@ -3114,6 +3155,33 @@ mod tests {
                 .unwrap_err()
                 .expected,
             "end of input"
+        );
+    }
+
+    #[cfg(feature = "captured-assignment-expressions")]
+    #[test]
+    fn compiles_result_preserving_assignments_to_captured_cells() {
+        let outer =
+            compile_script("let value = 1; let set = () => { return value = 42; }; return set();")
+                .unwrap();
+        assert!(outer.contains(&(Opcode::StoreEnvironmentCellResult as u8)));
+
+        let local = compile_script(
+            "let value = 1; let read = () => value; let assigned = value = 42; return read();",
+        )
+        .unwrap();
+        assert!(local.contains(&(Opcode::StoreEnvironmentCellResult as u8)));
+    }
+
+    #[cfg(all(
+        feature = "environments",
+        not(feature = "captured-assignment-expressions")
+    ))]
+    #[test]
+    fn reduced_environment_compilers_leave_captured_assignment_unconsumed() {
+        assert!(
+            compile_script("let value = 1; let set = () => { return value = 42; }; return set();")
+                .is_err()
         );
     }
 

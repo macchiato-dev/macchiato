@@ -18,6 +18,7 @@ default = [
   "class-static-methods",
   "class-expressions",
   "class-default-constructors",
+  "captured-assignment-expressions",
   "equality",
   "exceptions",
   "function-arguments",
@@ -64,6 +65,10 @@ class-expressions = [
   "microesnext-bytecode/stack-operations",
 ]
 class-default-constructors = ["classes"]
+captured-assignment-expressions = [
+  "environments",
+  "microesnext-bytecode/captured-assignment-expressions",
+]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 environments = ["functions", "microesnext-bytecode/environments"]
