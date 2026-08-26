@@ -2006,7 +2006,7 @@ String.prototype.replace = function (search, replacement) {
       if (text[index] === "$" && text[index + 1] === "&") {
         result += found[0];
         index++;
-      } else if (text[index] === "$" && /[1-9]/.test(text[index + 1])) {
+      } else if (text[index] === "$" && text[index + 1] >= "1" && text[index + 1] <= "9") {
         result += found[+text[++index]] || "";
       } else result += text[index];
     }
