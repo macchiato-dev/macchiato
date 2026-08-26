@@ -291,6 +291,10 @@ fn compile_script_with_options_and_host_globals(
         outer_bindings: Vec::new(),
         #[cfg(feature = "environments")]
         captures: Vec::new(),
+        #[cfg(feature = "environments")]
+        self_binding: None,
+        #[cfg(feature = "environments")]
+        self_used: false,
         #[cfg(feature = "functions")]
         functions: Vec::new(),
         #[cfg(feature = "functions")]
@@ -301,6 +305,8 @@ fn compile_script_with_options_and_host_globals(
         loop_breaks: Vec::new(),
         #[cfg(feature = "locals")]
         inactive_loop_locals: Vec::new(),
+        #[cfg(feature = "locals")]
+        inactive_catch_locals: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
         #[cfg(feature = "receivers")]
@@ -352,6 +358,10 @@ struct Parser<'source> {
     outer_bindings: Vec<Binding>,
     #[cfg(feature = "environments")]
     captures: Vec<Binding>,
+    #[cfg(feature = "environments")]
+    self_binding: Option<Binding>,
+    #[cfg(feature = "environments")]
+    self_used: bool,
     #[cfg(feature = "functions")]
     functions: Vec<PendingFunction>,
     #[cfg(feature = "functions")]
@@ -368,6 +378,8 @@ struct Parser<'source> {
     loop_breaks: Vec<LoopBreaks>,
     #[cfg(feature = "locals")]
     inactive_loop_locals: Vec<u16>,
+    #[cfg(feature = "locals")]
+    inactive_catch_locals: Vec<u16>,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
     options: CompileOptions,
 }
@@ -474,6 +486,7 @@ const fn string_term_kind() -> TermKind {
 enum CaptureSource {
     Local(usize),
     Outer(u16),
+    Undefined,
 }
 
 #[cfg(feature = "functions")]
@@ -524,7 +537,7 @@ enum ExceptionFrame {
         catch_patch: usize,
     },
     Catch {
-        binding: Option<(usize, usize)>,
+        binding: Option<Binding>,
         join_patch: Option<usize>,
         try_fallthrough: bool,
         pending: bool,
@@ -555,7 +568,7 @@ enum StructuredFrame {
         catch_patch: usize,
     },
     Catch {
-        binding: Option<(usize, usize)>,
+        binding: Option<Binding>,
         join_patch: Option<usize>,
         try_fallthrough: bool,
         pending: bool,
@@ -1608,6 +1621,10 @@ impl Parser<'_> {
             self.single_while_loop()?;
             return Ok(false);
         }
+        #[cfg(feature = "exceptions")]
+        if self.try_word(b"try") {
+            return self.single_try_statement();
+        }
         #[cfg(feature = "for-statements")]
         if self.try_word(b"for") {
             self.for_loop()?;
@@ -1658,6 +1675,30 @@ impl Parser<'_> {
         }
         #[cfg(not(feature = "expression-statements"))]
         Err(self.error("return or throw"))
+    }
+
+    #[cfg(all(feature = "exceptions", feature = "structured-statements"))]
+    fn single_try_statement(&mut self) -> Result<bool, CompileError> {
+        self.structured_statement(StructuredStart::Exception)
+    }
+
+    #[cfg(all(
+        feature = "exceptions",
+        feature = "nonterminal-exceptions",
+        not(feature = "structured-statements")
+    ))]
+    fn single_try_statement(&mut self) -> Result<bool, CompileError> {
+        self.try_catch()
+    }
+
+    #[cfg(all(
+        feature = "exceptions",
+        not(feature = "nonterminal-exceptions"),
+        not(feature = "structured-statements")
+    ))]
+    fn single_try_statement(&mut self) -> Result<bool, CompileError> {
+        self.try_catch()?;
+        Ok(true)
     }
 
     #[cfg(all(
@@ -2053,7 +2094,7 @@ impl Parser<'_> {
                     .find_map(|frame| match frame {
                         StructuredFrame::Catch {
                             binding, pending, ..
-                        } if *pending => Some((*binding, true)),
+                        } if *pending => Some((binding.map(|item| (item.start, item.end)), true)),
                         _ => None,
                     })
                     .unwrap_or((None, false));
@@ -2191,11 +2232,12 @@ impl Parser<'_> {
                             binding,
                             join_patch,
                             try_fallthrough,
-                            pending: true,
+                            pending: false,
                         });
                         break;
                     }
                     StructuredFrame::Catch {
+                        binding,
                         join_patch,
                         try_fallthrough,
                         pending,
@@ -2204,6 +2246,9 @@ impl Parser<'_> {
                         let catch_fallthrough = !completed_abrupt;
                         if catch_fallthrough && pending {
                             self.output.push(Opcode::Drop as u8);
+                        }
+                        if let Some(binding) = binding {
+                            self.inactive_catch_locals.push(binding.slot);
                         }
                         let join = u32::try_from(self.output.len())
                             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -2619,6 +2664,15 @@ impl Parser<'_> {
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
             if initialized {
+                #[cfg(feature = "functions")]
+                {
+                    let initializer = self.offset;
+                    self.whitespace();
+                    let recursive_arrow = self.try_arrow_parameters()?.is_some();
+                    self.offset = initializer;
+                    self.expression(recursive_arrow.then_some((start, end)))?;
+                }
+                #[cfg(not(feature = "functions"))]
                 self.expression(None)?;
             } else if should_store {
                 self.output.push(Opcode::ConstImmediate as u8);
@@ -3387,6 +3441,10 @@ impl Parser<'_> {
             outer_bindings,
             #[cfg(feature = "environments")]
             captures: expression_name.into_iter().collect(),
+            #[cfg(feature = "environments")]
+            self_binding: expression_name,
+            #[cfg(feature = "environments")]
+            self_used: false,
             functions: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
@@ -3394,6 +3452,8 @@ impl Parser<'_> {
             loop_breaks: Vec::new(),
             #[cfg(feature = "locals")]
             inactive_loop_locals: Vec::new(),
+            #[cfg(feature = "locals")]
+            inactive_catch_locals: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
             #[cfg(feature = "receivers")]
@@ -3485,12 +3545,16 @@ impl Parser<'_> {
         self.offset = body.offset;
 
         #[cfg(feature = "environments")]
+        let named_captured = body.self_used;
+        #[cfg(feature = "environments")]
         let (capture_count, self_captured) =
             self.emit_capture_sources(&body, expression_name, destination)?;
         #[cfg(not(feature = "environments"))]
         let capture_count = 0_u16;
+        #[cfg(not(feature = "environments"))]
+        let named_captured = expression_name.is_some();
         self.output
-            .push(self.closure_opcode(expression_name.is_some(), asynchronous) as u8);
+            .push(self.closure_opcode(named_captured, asynchronous) as u8);
         let target_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
         self.output.extend_from_slice(&capture_count.to_le_bytes());
@@ -3614,6 +3678,9 @@ impl Parser<'_> {
         let mut sources = Vec::with_capacity(body.captures.len());
         for capture in &body.captures {
             if expression_name.is_some_and(|name| same_binding(name, *capture)) {
+                if !body.self_used {
+                    sources.push(CaptureSource::Undefined);
+                }
                 continue;
             }
             if let Some(index) = self
@@ -3669,6 +3736,10 @@ impl Parser<'_> {
                 CaptureSource::Outer(index) => {
                     self.output.push(Opcode::LoadCapture as u8);
                     self.output.extend_from_slice(&index.to_le_bytes());
+                }
+                CaptureSource::Undefined => {
+                    self.output.push(Opcode::ConstImmediate as u8);
+                    self.output.push(Immediate::Undefined as u8);
                 }
             }
         }
@@ -4163,7 +4234,7 @@ impl Parser<'_> {
                 let (binding, pending_exception) = match frames.last() {
                     Some(ExceptionFrame::Catch {
                         binding, pending, ..
-                    }) => (*binding, *pending),
+                    }) => (binding.map(|item| (item.start, item.end)), *pending),
                     _ => (None, false),
                 };
                 self.nested_exception_completion(binding, close_handlers, pending_exception)?;
@@ -4197,11 +4268,12 @@ impl Parser<'_> {
                             binding,
                             join_patch,
                             try_fallthrough,
-                            pending: true,
+                            pending: false,
                         });
                         break;
                     }
                     ExceptionFrame::Catch {
+                        binding,
                         join_patch,
                         try_fallthrough,
                         pending,
@@ -4210,6 +4282,9 @@ impl Parser<'_> {
                         let catch_fallthrough = !completed_abrupt;
                         if catch_fallthrough && pending {
                             self.output.push(Opcode::Drop as u8);
+                        }
+                        if let Some(binding) = binding {
+                            self.inactive_catch_locals.push(binding.slot);
                         }
                         let join = u32::try_from(self.output.len())
                             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -4248,7 +4323,7 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "nested-exceptions")]
-    fn catch_header(&mut self, catch_patch: usize) -> Result<Option<(usize, usize)>, CompileError> {
+    fn catch_header(&mut self, catch_patch: usize) -> Result<Option<Binding>, CompileError> {
         if !self.try_word_after_whitespace(b"catch") {
             return Err(self.error("catch"));
         }
@@ -4258,7 +4333,17 @@ impl Parser<'_> {
             if !self.consume(b')') {
                 return Err(self.error(")"));
             }
-            Some(binding)
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            Some(Binding {
+                start: binding.0,
+                end: binding.1,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            })
         } else {
             None
         };
@@ -4270,6 +4355,18 @@ impl Parser<'_> {
         self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
         #[cfg(feature = "functions")]
         self.relocations.push(catch_patch);
+        if let Some(binding) = binding {
+            self.locals.push(binding);
+            if self.function_frame {
+                let count = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                self.output[1..3].copy_from_slice(&count.to_le_bytes());
+            }
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        } else {
+            self.output.push(Opcode::Drop as u8);
+        }
         Ok(binding)
     }
 
@@ -4806,10 +4903,18 @@ impl Parser<'_> {
             return Ok(true);
         }
         #[cfg(feature = "compound-assignment-expressions")]
+        let bitwise_or = self.consume_bytes(b"|=");
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let bitwise_or = false;
+        #[cfg(feature = "compound-assignment-expressions")]
+        let bitwise_and = !bitwise_or && self.consume_bytes(b"&=");
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let bitwise_and = false;
+        #[cfg(feature = "compound-assignment-expressions")]
         let compound = self.consume_compound_addition();
         #[cfg(not(feature = "compound-assignment-expressions"))]
         let compound: Option<bool> = None;
-        if compound.is_none() && !self.consume_plain_assignment() {
+        if !bitwise_or && !bitwise_and && compound.is_none() && !self.consume_plain_assignment() {
             self.offset = start;
             return Ok(false);
         }
@@ -4821,6 +4926,22 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(final_property.0, final_property.1);
+        if bitwise_or {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(Opcode::GetProperty as u8);
+            self.expression(None)?;
+            self.output.push(Opcode::BitwiseOrI30 as u8);
+            self.output.push(Opcode::SetPropertyResult as u8);
+            return Ok(true);
+        }
+        if bitwise_and {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(Opcode::GetProperty as u8);
+            self.expression(None)?;
+            self.output.push(Opcode::BitwiseAndI30 as u8);
+            self.output.push(Opcode::SetPropertyResult as u8);
+            return Ok(true);
+        }
         if let Some(subtracting) = compound {
             self.output.push(Opcode::DuplicatePair as u8);
             self.output.push(Opcode::GetProperty as u8);
@@ -4864,7 +4985,7 @@ impl Parser<'_> {
             }
             break;
         }
-        if !matches!(suffixes.last(), Some(AssignmentSuffix::Index(_, _))) {
+        if suffixes.is_empty() {
             self.offset = start;
             return Ok(false);
         }
@@ -4876,35 +4997,83 @@ impl Parser<'_> {
         if postfix_increment || postfix_decrement {
             let resume = self.offset;
             self.emit_assignment_base(base)?;
-            let final_suffix = suffixes.pop().expect("an index was checked above");
+            let final_suffix = suffixes.pop().expect("a suffix was checked above");
             for suffix in suffixes {
                 self.emit_assignment_suffix(suffix, resume)?;
             }
-            self.emit_index_suffix(final_suffix, resume)?;
+            let property = self.emit_assignment_target(final_suffix, resume)?;
             self.offset = resume;
-            self.output.push(Opcode::UpdateIndex as u8);
+            self.output.push(if property {
+                Opcode::UpdateProperty as u8
+            } else {
+                Opcode::UpdateIndex as u8
+            });
             self.output.push(u8::from(postfix_decrement));
             return Ok(true);
         }
         #[cfg(feature = "compound-assignment-expressions")]
+        let bitwise_or = self.consume_bytes(b"|=");
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let bitwise_or = false;
+        #[cfg(feature = "compound-assignment-expressions")]
+        let bitwise_and = !bitwise_or && self.consume_bytes(b"&=");
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let bitwise_and = false;
+        #[cfg(feature = "compound-assignment-expressions")]
         let compound = self.consume_compound_addition();
         #[cfg(not(feature = "compound-assignment-expressions"))]
         let compound: Option<bool> = None;
-        if compound.is_none() && !self.consume_plain_assignment() {
+        if !bitwise_or && !bitwise_and && compound.is_none() && !self.consume_plain_assignment() {
             self.offset = start;
             return Ok(false);
         }
         let rhs = self.offset;
         self.emit_assignment_base(base)?;
-        let final_suffix = suffixes.pop().expect("an index was checked above");
+        let final_suffix = suffixes.pop().expect("a suffix was checked above");
         for suffix in suffixes {
             self.emit_assignment_suffix(suffix, rhs)?;
         }
-        self.emit_index_suffix(final_suffix, rhs)?;
+        let property = self.emit_assignment_target(final_suffix, rhs)?;
         self.offset = rhs;
+        if bitwise_or {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(if property {
+                Opcode::GetProperty as u8
+            } else {
+                Opcode::GetIndex as u8
+            });
+            self.expression(None)?;
+            self.output.push(Opcode::BitwiseOrI30 as u8);
+            self.output.push(if property {
+                Opcode::SetPropertyResult as u8
+            } else {
+                Opcode::SetIndexResult as u8
+            });
+            return Ok(true);
+        }
+        if bitwise_and {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(if property {
+                Opcode::GetProperty as u8
+            } else {
+                Opcode::GetIndex as u8
+            });
+            self.expression(None)?;
+            self.output.push(Opcode::BitwiseAndI30 as u8);
+            self.output.push(if property {
+                Opcode::SetPropertyResult as u8
+            } else {
+                Opcode::SetIndexResult as u8
+            });
+            return Ok(true);
+        }
         if let Some(subtracting) = compound {
             self.output.push(Opcode::DuplicatePair as u8);
-            self.output.push(Opcode::GetIndex as u8);
+            self.output.push(if property {
+                Opcode::GetProperty as u8
+            } else {
+                Opcode::GetIndex as u8
+            });
             self.output.push(Opcode::ToNumber as u8);
             self.expression(None)?;
             self.output.push(Opcode::ToNumber as u8);
@@ -4913,11 +5082,19 @@ impl Parser<'_> {
             } else {
                 Opcode::AddNumber as u8
             });
-            self.output.push(Opcode::SetIndexResult as u8);
+            self.output.push(if property {
+                Opcode::SetPropertyResult as u8
+            } else {
+                Opcode::SetIndexResult as u8
+            });
             return Ok(true);
         }
         self.expression(None)?;
-        self.output.push(Opcode::SetIndexResult as u8);
+        self.output.push(if property {
+            Opcode::SetPropertyResult as u8
+        } else {
+            Opcode::SetIndexResult as u8
+        });
         Ok(true)
     }
 
@@ -5008,6 +5185,25 @@ impl Parser<'_> {
         }
         self.offset = resume;
         Ok(())
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    fn emit_assignment_target(
+        &mut self,
+        suffix: AssignmentSuffix,
+        resume: usize,
+    ) -> Result<bool, CompileError> {
+        match suffix {
+            #[cfg(feature = "objects")]
+            AssignmentSuffix::Property(start, end) => {
+                self.output_atom_range(start, end);
+                Ok(true)
+            }
+            AssignmentSuffix::Index(_, _) => {
+                self.emit_index_suffix(suffix, resume)?;
+                Ok(false)
+            }
+        }
     }
 
     #[cfg(feature = "array-assignment-expressions")]
@@ -6093,6 +6289,12 @@ impl Parser<'_> {
     #[cfg(feature = "functions")]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "bitwise-operations")]
+        if self.consume_raw(b'~') {
+            let (used_binding, _) = self.unary(binding)?;
+            self.output.push(Opcode::BitwiseNotI30 as u8);
+            return Ok((used_binding, TermKind::General));
+        }
         #[cfg(feature = "class-inheritance")]
         if self.try_word(b"super") {
             self.super_call()?;
@@ -6101,6 +6303,13 @@ impl Parser<'_> {
         #[cfg(feature = "construction")]
         if self.try_word(b"new") {
             self.whitespace();
+            #[cfg(feature = "class-expressions")]
+            if self.try_word(b"class") {
+                self.class_expression()?;
+            } else {
+                self.construction_reference()?;
+            }
+            #[cfg(not(feature = "class-expressions"))]
             self.construction_reference()?;
             if self.consume(b'(') {
                 #[cfg(feature = "method-calls")]
@@ -6121,6 +6330,7 @@ impl Parser<'_> {
         #[cfg(feature = "async")]
         let awaiting = self.try_word(b"await");
         self.whitespace();
+        let expression_binding = binding;
         let async_start = self.offset;
         #[cfg(feature = "async-functions")]
         let async_prefix = self.try_word(b"async")
@@ -6173,7 +6383,24 @@ impl Parser<'_> {
                 } else {
                     FunctionBody::Expression
                 };
-                self.function_value(parameters, None, body, None, asynchronous, false, true)?;
+                let expression_name = expression_binding.map(|(start, end)| Binding {
+                    start,
+                    end,
+                    slot: 0,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: true,
+                });
+                self.function_value(
+                    parameters,
+                    None,
+                    body,
+                    expression_name,
+                    asynchronous,
+                    false,
+                    true,
+                )?;
                 (false, TermKind::General)
             } else if let Some((start, end)) = binding {
                 self.offset += end - start;
@@ -6718,6 +6945,12 @@ impl Parser<'_> {
     #[cfg(not(feature = "functions"))]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "bitwise-operations")]
+        if self.consume_raw(b'~') {
+            let (used_binding, _) = self.unary(binding)?;
+            self.output.push(Opcode::BitwiseNotI30 as u8);
+            return Ok((used_binding, TermKind::General));
+        }
         #[cfg(feature = "async")]
         let awaiting = self.try_word(b"await");
         self.whitespace();
@@ -7062,6 +7295,7 @@ impl Parser<'_> {
         self.locals.iter().rev().copied().find(|binding| {
             let name = &self.source[binding.start..binding.end];
             !self.inactive_loop_locals.contains(&binding.slot)
+                && !self.inactive_catch_locals.contains(&binding.slot)
                 && !name.is_empty()
                 && self.source[self.offset..].starts_with(name)
                 && self.identifier_end(self.offset + name.len())
@@ -7073,6 +7307,12 @@ impl Parser<'_> {
         let Some(binding) = self.outer_binding_at_offset() else {
             return Ok(None);
         };
+        if self
+            .self_binding
+            .is_some_and(|self_binding| same_binding(self_binding, binding))
+        {
+            self.self_used = true;
+        }
         let index = self.intern_capture(binding)?;
         Ok(Some((index, binding)))
     }
@@ -7382,6 +7622,25 @@ mod tests {
         assert!(code.windows(2).any(|bytes| bytes == 2_u16.to_le_bytes()));
     }
 
+    #[test]
+    #[cfg(all(feature = "classes", feature = "environments"))]
+    fn class_methods_capture_an_enclosing_function_declaration() {
+        compile_script(
+            "function outer() { function log() {} var Example = class { run() { log(); } }; }",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "classes")]
+    fn class_methods_can_call_an_explicit_host_binding() {
+        compile_script_with_host_globals(
+            "var Example = class { run() { logException(); } };",
+            &["logException"],
+        )
+        .unwrap();
+    }
+
     #[cfg(feature = "locals")]
     fn unknown_add_opcode() -> Opcode {
         #[cfg(feature = "number-operations")]
@@ -7597,8 +7856,9 @@ mod tests {
         let code = compile_script("try { throw 17; } catch (error) { return error; }").unwrap();
         assert_eq!(code[0], Opcode::Try as u8);
         let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
-        assert_eq!(code[target], Opcode::Return as u8);
-        assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
+        assert_eq!(code[target], Opcode::StoreLocal as u8);
+        assert!(code[target..].contains(&(Opcode::LoadLocal as u8)));
+        assert_eq!(*code.last().unwrap(), Opcode::ReturnLocals as u8);
     }
 
     #[cfg(all(feature = "async", feature = "exceptions"))]

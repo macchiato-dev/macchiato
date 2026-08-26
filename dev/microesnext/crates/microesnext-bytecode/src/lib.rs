@@ -212,6 +212,8 @@ pub enum Opcode {
     AppendArrayValue = 139,
     #[cfg(feature = "objects")]
     HasProperty = 140,
+    #[cfg(feature = "bitwise-operations")]
+    BitwiseNotI30 = 141,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -407,6 +409,8 @@ impl TryFrom<u8> for Opcode {
             139 => Ok(Self::AppendArrayValue),
             #[cfg(feature = "objects")]
             140 => Ok(Self::HasProperty),
+            #[cfg(feature = "bitwise-operations")]
+            141 => Ok(Self::BitwiseNotI30),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

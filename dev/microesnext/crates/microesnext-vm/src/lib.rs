@@ -1238,6 +1238,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "bitwise-operations")]
+            Opcode::BitwiseNotI30 => {
+                let value = self.core.arena_mut().pop()?;
+                let value = value.as_i30().ok_or(Error::Type)?;
+                self.core
+                    .arena_mut()
+                    .push(Value::from_i30(!value).ok_or(Error::Type)?)?;
+                Ok(None)
+            }
             #[cfg(feature = "strings")]
             Opcode::ToStringPrimitive => {
                 let value = self.core.arena_mut().pop()?;
