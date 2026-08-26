@@ -169,6 +169,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-captured-assignment-expressions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-environments",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-class-constructors"
 version = "0.0.0"
 dependencies = [
