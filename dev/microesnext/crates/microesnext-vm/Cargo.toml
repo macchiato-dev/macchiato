@@ -176,6 +176,12 @@ captured-assignment-expressions = [
   "microesnext-bindings/assignment-expressions",
   "microesnext-bytecode/captured-assignment-expressions",
 ]
+captured-update-expressions = [
+  "environments",
+  "number-coercion",
+  "number-operations",
+  "microesnext-bytecode/captured-update-expressions",
+]
 array-assignment-expressions = [
   "arrays",
   "microesnext-objects/array-assignment-expressions",

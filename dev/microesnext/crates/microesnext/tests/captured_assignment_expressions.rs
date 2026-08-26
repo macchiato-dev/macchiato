@@ -36,3 +36,11 @@ fn captured_and_plain_local_assignment_targets_compose_in_one_chain() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn captured_postfix_updates_return_the_old_value_and_store_the_new_one() {
+    assert_eq!(
+        run("let value = 40; let update = () => value++; return update() + update() - 39;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

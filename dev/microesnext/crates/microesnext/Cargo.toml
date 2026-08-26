@@ -57,11 +57,16 @@ construction = [
   "microesnext-compiler/construction",
 ]
 compound-assignment-expressions = [
+  "bitwise-operations",
   "captured-assignment-expressions",
   "local-assignment-expressions",
   "number-coercion",
   "number-operations",
   "microesnext-compiler/compound-assignment-expressions",
+]
+captured-update-expressions = [
+  "microesnext-vm/captured-update-expressions",
+  "microesnext-compiler/captured-update-expressions",
 ]
 classes = [
   "class-constructors",
@@ -119,6 +124,7 @@ local-assignment-expressions = [
   "microesnext-compiler/local-assignment-expressions",
 ]
 update-expressions = [
+  "captured-update-expressions",
   "local-assignment-expressions",
   "number-coercion",
   "number-operations",
@@ -615,6 +621,7 @@ name = "captured-assignment-expressions"
 path = "tests/captured_assignment_expressions.rs"
 required-features = [
   "captured-assignment-expressions",
+  "captured-update-expressions",
   "function-arguments",
   "local-assignment-expressions",
 ]

@@ -113,6 +113,7 @@ atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 conditional-expressions = ["control-flow"]
 compound-assignment-expressions = [
+  "bitwise-operations",
   "captured-assignment-expressions",
   "local-assignment-expressions",
   "number-operations",
@@ -180,9 +181,14 @@ logical-operations = ["microesnext-bytecode/logical-operations"]
 literal-expressions = []
 local-assignment-expressions = ["locals", "microesnext-bytecode/stack-operations"]
 update-expressions = [
+  "captured-update-expressions",
   "local-assignment-expressions",
   "number-coercion",
   "number-operations",
+]
+captured-update-expressions = [
+  "environments",
+  "microesnext-bytecode/captured-update-expressions",
 ]
 method-calls = [
   "function-arguments",

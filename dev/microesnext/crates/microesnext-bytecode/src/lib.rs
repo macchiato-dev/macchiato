@@ -196,6 +196,8 @@ pub enum Opcode {
     UpdateIndex = 131,
     #[cfg(feature = "property-update-expressions")]
     UpdateProperty = 132,
+    #[cfg(feature = "captured-update-expressions")]
+    UpdateEnvironmentCell = 133,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -375,6 +377,8 @@ impl TryFrom<u8> for Opcode {
             131 => Ok(Self::UpdateIndex),
             #[cfg(feature = "property-update-expressions")]
             132 => Ok(Self::UpdateProperty),
+            #[cfg(feature = "captured-update-expressions")]
+            133 => Ok(Self::UpdateEnvironmentCell),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

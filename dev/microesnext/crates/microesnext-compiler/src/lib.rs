@@ -4016,9 +4016,18 @@ impl Parser<'_> {
         if self.local_update_expression()? {
             return Ok(false);
         }
+        #[cfg(feature = "captured-update-expressions")]
+        if self.captured_update_expression()? {
+            return Ok(false);
+        }
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
+            #[cfg(feature = "compound-assignment-expressions")]
+            if self.consume_bytes(b"|=") {
+                self.emit_local_bitwise_or_assignment(local)?;
+                return Ok(false);
+            }
             #[cfg(feature = "compound-assignment-expressions")]
             if let Some(subtracting) = self.consume_compound_addition() {
                 self.emit_local_compound_assignment(local, subtracting)?;
@@ -4135,6 +4144,37 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "compound-assignment-expressions")]
+    fn emit_local_bitwise_or_assignment(
+        &mut self,
+        local: Binding,
+    ) -> Result<(), CompileError> {
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&local.slot.to_le_bytes());
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::LoadEnvironmentCell as u8);
+        }
+        self.expression(None)?;
+        self.output.push(Opcode::BitwiseOrI30 as u8);
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+        } else {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        #[cfg(not(feature = "environments"))]
+        {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        Ok(())
+    }
+
     #[cfg(feature = "update-expressions")]
     fn local_update_expression(&mut self) -> Result<bool, CompileError> {
         let start = self.offset;
@@ -4186,6 +4226,33 @@ impl Parser<'_> {
             self.output.extend_from_slice(&local.slot.to_le_bytes());
         }
         debug_assert!(self.offset > postfix_start || prefix);
+        Ok(true)
+    }
+
+    #[cfg(feature = "captured-update-expressions")]
+    fn captured_update_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        let prefix_increment = self.consume_bytes(b"++");
+        let prefix_decrement = !prefix_increment && self.consume_bytes(b"--");
+        let Some(binding) = self.outer_binding_at_offset() else {
+            self.offset = start;
+            return Ok(false);
+        };
+        self.offset += binding.end - binding.start;
+        let postfix_increment = self.consume_bytes(b"++");
+        let postfix_decrement = !postfix_increment && self.consume_bytes(b"--");
+        if !prefix_increment && !prefix_decrement && !postfix_increment && !postfix_decrement {
+            self.offset = start;
+            return Ok(false);
+        }
+        let capture = self.intern_capture(binding)?;
+        self.output.push(Opcode::LoadCapture as u8);
+        self.output.extend_from_slice(&capture.to_le_bytes());
+        self.output.push(Opcode::UpdateEnvironmentCell as u8);
+        let subtracting = prefix_decrement || postfix_decrement;
+        let prefix = prefix_increment || prefix_decrement;
+        self.output
+            .push(u8::from(subtracting) | if prefix { 2 } else { 0 });
         Ok(true)
     }
 
@@ -5370,6 +5437,27 @@ impl Parser<'_> {
             loop {
                 self.whitespace();
                 let (start, end) = self.identifier()?;
+                #[cfg(feature = "functions")]
+                if self.source.get(self.offset) == Some(&b'(') {
+                    let parameters = self.function_parameters()?;
+                    self.output_atom_range(start, end);
+                    self.function_value(
+                        parameters,
+                        None,
+                        FunctionBody::Method,
+                        None,
+                        false,
+                        false,
+                    )?;
+                    self.output.push(Opcode::SetProperty as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 if !self.consume(b':') {
                     return Err(self.error(":"));
                 }
@@ -5397,6 +5485,27 @@ impl Parser<'_> {
             loop {
                 self.whitespace();
                 let (start, end) = self.identifier()?;
+                #[cfg(feature = "functions")]
+                if self.source.get(self.offset) == Some(&b'(') {
+                    let parameters = self.function_parameters()?;
+                    self.output_atom_range(start, end);
+                    self.function_value(
+                        parameters,
+                        None,
+                        FunctionBody::Method,
+                        None,
+                        false,
+                        false,
+                    )?;
+                    self.output.push(Opcode::SetProperty as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 if !self.consume(b':') {
                     return Err(self.error(":"));
                 }

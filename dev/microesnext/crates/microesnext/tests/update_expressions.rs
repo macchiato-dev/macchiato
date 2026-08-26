@@ -40,3 +40,11 @@ fn postfix_updates_preserve_property_results_and_entries() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn local_bitwise_or_assignments_return_and_store_the_result() {
+    assert_eq!(
+        run("let flags = 7; let value = flags |= true ? 8 : 16; return flags + value;"),
+        Outcome::Complete(Value::from_i30(30).unwrap())
+    );
+}
