@@ -154,6 +154,7 @@ number-remainder = [
   "microesnext-vm/number-remainder",
 ]
 nonterminal-conditionals = ["control-flow"]
+nested-conditionals = ["nonterminal-conditionals"]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -423,6 +424,11 @@ required-features = ["minimal-program"]
 name = "nonterminal-conditionals"
 path = "tests/nonterminal_conditionals.rs"
 required-features = ["locals", "nonterminal-conditionals"]
+
+[[test]]
+name = "nested-conditionals"
+path = "tests/nested_conditionals.rs"
+required-features = ["locals", "nested-conditionals"]
 
 [[test]]
 name = "equality"

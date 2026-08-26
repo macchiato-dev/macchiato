@@ -403,6 +403,21 @@ enum FunctionBody {
     Method,
 }
 
+#[cfg(feature = "nested-conditionals")]
+#[derive(Clone, Copy)]
+enum ConditionalSide {
+    Consequent,
+    Alternate,
+}
+
+#[cfg(feature = "nested-conditionals")]
+struct ConditionalFrame {
+    alternate_patch: usize,
+    join_patch: Option<usize>,
+    consequent_abrupt: bool,
+    side: ConditionalSide,
+}
+
 impl Parser<'_> {
     #[cfg(all(feature = "control-flow", feature = "nonterminal-conditionals"))]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
@@ -573,7 +588,11 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(all(feature = "control-flow", feature = "nonterminal-conditionals"))]
+    #[cfg(all(
+        feature = "control-flow",
+        feature = "nonterminal-conditionals",
+        not(feature = "nested-conditionals")
+    ))]
     fn if_else(&mut self) -> Result<bool, CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
@@ -618,7 +637,111 @@ impl Parser<'_> {
         Ok(consequent_abrupt && alternate_abrupt)
     }
 
-    #[cfg(feature = "nonterminal-conditionals")]
+    #[cfg(feature = "nested-conditionals")]
+    fn if_else(&mut self) -> Result<bool, CompileError> {
+        let mut frames = Vec::new();
+        self.begin_conditional(&mut frames)?;
+        loop {
+            self.statement_prefix()?;
+            self.whitespace();
+            if self.try_word(b"if") {
+                self.begin_conditional(&mut frames)?;
+                continue;
+            }
+            let branch_abrupt = if self.source.get(self.offset) == Some(&b'}') {
+                false
+            } else {
+                self.completion(None, false, false)?;
+                true
+            };
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+            let mut completed_abrupt = branch_abrupt;
+            loop {
+                let Some(frame) = frames.last_mut() else {
+                    return Err(self.error("an active conditional frame"));
+                };
+                match frame.side {
+                    ConditionalSide::Consequent => {
+                        frame.consequent_abrupt = completed_abrupt;
+                        if !completed_abrupt {
+                            self.output.push(Opcode::Jump as u8);
+                            let patch = self.output.len();
+                            self.output.extend_from_slice(&0_u32.to_le_bytes());
+                            frame.join_patch = Some(patch);
+                        }
+                        if !self.try_word_after_whitespace(b"else") || !self.consume(b'{') {
+                            return Err(self.error("else {"));
+                        }
+                        let alternate = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        self.output[frame.alternate_patch..frame.alternate_patch + 4]
+                            .copy_from_slice(&alternate.to_le_bytes());
+                        #[cfg(feature = "functions")]
+                        self.relocations.push(frame.alternate_patch);
+                        frame.side = ConditionalSide::Alternate;
+                        break;
+                    }
+                    ConditionalSide::Alternate => {
+                        if let Some(patch) = frame.join_patch {
+                            let join = u32::try_from(self.output.len())
+                                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(patch);
+                        }
+                        completed_abrupt = frame.consequent_abrupt && completed_abrupt;
+                        frames.pop();
+                        if frames.is_empty() {
+                            self.whitespace();
+                            return Ok(completed_abrupt);
+                        }
+                        if completed_abrupt {
+                            if !self.consume(b'}') {
+                                return Err(self.error("}"));
+                            }
+                            continue;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "nested-conditionals")]
+    fn begin_conditional(
+        &mut self,
+        frames: &mut Vec<ConditionalFrame>,
+    ) -> Result<(), CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let alternate_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        frames.push(ConditionalFrame {
+            alternate_patch,
+            join_patch: None,
+            consequent_abrupt: false,
+            side: ConditionalSide::Consequent,
+        });
+        Ok(())
+    }
+
+    #[cfg(all(
+        feature = "nonterminal-conditionals",
+        not(feature = "nested-conditionals")
+    ))]
     fn conditional_branch(&mut self) -> Result<bool, CompileError> {
         self.statement_prefix()?;
         self.whitespace();
@@ -4951,6 +5074,42 @@ mod tests {
     fn avoids_a_join_jump_after_an_abrupt_consequent() {
         let code = compile_script("if (true) { return 42; } else {} return 7;").unwrap();
         assert!(!code.contains(&(Opcode::Jump as u8)));
+    }
+
+    #[cfg(feature = "nested-conditionals")]
+    #[test]
+    fn compiles_nested_conditional_joins_from_an_explicit_worklist() {
+        let code = compile_script(
+            "let answer = 0; \
+             if (true) { \
+               if (false) { answer = 1; } else { answer = 42; } \
+             } else { answer = 7; } \
+             return answer;",
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::JumpIfFalseBoolean as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(feature = "nested-conditionals")]
+    #[test]
+    fn conditional_source_depth_does_not_consume_the_rust_stack() {
+        let depth = 2_048;
+        let mut source = alloc::string::String::new();
+        for _ in 0..depth {
+            source.push_str("if (true) {");
+        }
+        source.push_str("return 42;");
+        for _ in 0..depth {
+            source.push_str("} else { return 0; }");
+        }
+
+        let code = compile_script(&source).unwrap();
+        assert!(code.len() > depth * 10);
     }
 
     #[cfg(all(feature = "control-flow", feature = "locals"))]
