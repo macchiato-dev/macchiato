@@ -50,3 +50,16 @@ fn a_declaration_list_can_mix_multiple_object_patterns_and_a_binding() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn nested_object_patterns_follow_each_property_path() {
+    let code = compile_script(
+        "let source = { selection: { main: 42 } }; let { selection: { main: range } } = source; return range;",
+    )
+    .unwrap();
+    let mut memory = [0; 384];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

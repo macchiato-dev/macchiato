@@ -1644,6 +1644,21 @@ impl Parser<'_> {
                 }
                 continue;
             }
+            if byte == b'/' && self.source.get(offset) == Some(&b'/') {
+                offset += 1;
+                while self.source.get(offset).is_some_and(|byte| *byte != b'\n') {
+                    offset += 1;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset) == Some(&b'*') {
+                offset += 1;
+                while offset + 1 < self.source.len() && &self.source[offset..offset + 2] != b"*/" {
+                    offset += 1;
+                }
+                offset = (offset + 2).min(self.source.len());
+                continue;
+            }
             match byte {
                 b'\'' | b'"' | b'`' => quote = Some(byte),
                 b'(' => depth += 1,
@@ -3039,31 +3054,7 @@ impl Parser<'_> {
     #[cfg(feature = "object-destructuring-declarations")]
     fn object_destructuring_declaration(&mut self) -> Result<(), CompileError> {
         let mut properties = Vec::new();
-        loop {
-            self.whitespace();
-            let key = self.identifier()?;
-            let binding = if self.consume(b':') {
-                self.whitespace();
-                self.identifier()?
-            } else {
-                key
-            };
-            let default = if self.consume(b'=') {
-                let start = self.offset;
-                let end = self.destructuring_default_end()?;
-                self.offset = end;
-                Some((start, end))
-            } else {
-                None
-            };
-            properties.push((key, binding, default));
-            if self.consume(b'}') {
-                break;
-            }
-            if !self.consume(b',') {
-                return Err(self.error(", or }"));
-            }
-        }
+        self.object_destructuring_properties(&mut properties, &[])?;
         for (index, (_, (start, end), _)) in properties.iter().enumerate() {
             if self
                 .locals
@@ -3084,16 +3075,16 @@ impl Parser<'_> {
         self.expression(None)?;
         let resume = self.offset;
         let first_slot = self.locals.len();
-        for (index, ((key_start, key_end), (start, end), default)) in
-            properties.into_iter().enumerate()
-        {
+        for (index, (path, (start, end), default)) in properties.into_iter().enumerate() {
             let slot = first_slot
                 .checked_add(index)
                 .and_then(|slot| u16::try_from(slot).ok())
                 .ok_or_else(|| self.error("fewer than 65536 local bindings"))?;
             self.output.push(Opcode::DuplicateTop as u8);
-            self.output_atom_range(key_start, key_end);
-            self.output.push(Opcode::GetProperty as u8);
+            for (key_start, key_end) in path {
+                self.output_atom_range(key_start, key_end);
+                self.output.push(Opcode::GetProperty as u8);
+            }
             if let Some((default_start, default_end)) = default {
                 self.output.push(Opcode::DuplicateTop as u8);
                 self.output.push(Opcode::ConstImmediate as u8);
@@ -3137,6 +3128,53 @@ impl Parser<'_> {
         }
         self.whitespace();
         Ok(())
+    }
+
+    #[cfg(feature = "object-destructuring-declarations")]
+    fn object_destructuring_properties(
+        &mut self,
+        properties: &mut Vec<(Vec<(usize, usize)>, (usize, usize), Option<(usize, usize)>)>,
+        prefix: &[(usize, usize)],
+    ) -> Result<(), CompileError> {
+        loop {
+            self.whitespace();
+            let key = self.identifier()?;
+            let mut path = prefix.to_vec();
+            path.push(key);
+            if self.consume(b':') {
+                self.whitespace();
+                if self.consume_raw(b'{') {
+                    self.object_destructuring_properties(properties, &path)?;
+                } else {
+                    let binding = self.identifier()?;
+                    let default = if self.consume(b'=') {
+                        let start = self.offset;
+                        let end = self.destructuring_default_end()?;
+                        self.offset = end;
+                        Some((start, end))
+                    } else {
+                        None
+                    };
+                    properties.push((path, binding, default));
+                }
+            } else {
+                let default = if self.consume(b'=') {
+                    let start = self.offset;
+                    let end = self.destructuring_default_end()?;
+                    self.offset = end;
+                    Some((start, end))
+                } else {
+                    None
+                };
+                properties.push((path, key, default));
+            }
+            if self.consume(b'}') {
+                return Ok(());
+            }
+            if !self.consume(b',') {
+                return Err(self.error(", or }"));
+            }
+        }
     }
 
     #[cfg(feature = "object-destructuring-declarations")]
@@ -4936,14 +4974,6 @@ impl Parser<'_> {
         if self.property_assignment_expression()? {
             return Ok(false);
         }
-        #[cfg(feature = "update-expressions")]
-        if self.local_update_expression()? {
-            return Ok(false);
-        }
-        #[cfg(feature = "captured-update-expressions")]
-        if self.captured_update_expression()? {
-            return Ok(false);
-        }
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
@@ -6675,6 +6705,14 @@ impl Parser<'_> {
     #[cfg(feature = "functions")]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "update-expressions")]
+        if self.local_update_expression()? {
+            return Ok((false, TermKind::General));
+        }
+        #[cfg(feature = "captured-update-expressions")]
+        if self.captured_update_expression()? {
+            return Ok((false, TermKind::General));
+        }
         #[cfg(feature = "bitwise-operations")]
         if self.consume_raw(b'~') {
             let (used_binding, _) = self.unary(binding)?;
@@ -7331,6 +7369,10 @@ impl Parser<'_> {
     #[cfg(not(feature = "functions"))]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "update-expressions")]
+        if self.local_update_expression()? {
+            return Ok((false, TermKind::General));
+        }
         #[cfg(feature = "bitwise-operations")]
         if self.consume_raw(b'~') {
             let (used_binding, _) = self.unary(binding)?;

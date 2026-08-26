@@ -48,3 +48,11 @@ fn local_bitwise_or_assignments_return_and_store_the_result() {
         Outcome::Complete(Value::from_i30(30).unwrap())
     );
 }
+
+#[test]
+fn a_captured_prefix_update_participates_in_a_larger_expression() {
+    assert_eq!(
+        run("let read = 0; let next = () => ++read == 1; return next() ? 42 : 0;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
