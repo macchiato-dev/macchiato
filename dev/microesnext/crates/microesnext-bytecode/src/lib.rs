@@ -214,6 +214,10 @@ pub enum Opcode {
     HasProperty = 140,
     #[cfg(feature = "bitwise-operations")]
     BitwiseNotI30 = 141,
+    #[cfg(feature = "getters")]
+    ToSetter = 142,
+    #[cfg(all(feature = "getters", feature = "property-assignment"))]
+    SetPropertyAccessor = 143,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -411,6 +415,10 @@ impl TryFrom<u8> for Opcode {
             140 => Ok(Self::HasProperty),
             #[cfg(feature = "bitwise-operations")]
             141 => Ok(Self::BitwiseNotI30),
+            #[cfg(feature = "getters")]
+            142 => Ok(Self::ToSetter),
+            #[cfg(all(feature = "getters", feature = "property-assignment"))]
+            143 => Ok(Self::SetPropertyAccessor),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

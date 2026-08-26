@@ -29,6 +29,7 @@ default = [
   "class-expressions",
   "class-inheritance",
   "class-getters",
+  "class-setters",
   "named-class-expressions",
   "object-destructuring-declarations",
   "object-destructuring-assignments",
@@ -149,6 +150,7 @@ class-inheritance = [
   "microesnext-bytecode/class-inheritance",
 ]
 class-getters = ["class-expressions", "microesnext-bytecode/getters"]
+class-setters = ["class-getters", "property-assignment"]
 named-class-expressions = ["class-expressions", "captured-assignment-expressions"]
 comments = []
 class-default-constructors = ["classes"]

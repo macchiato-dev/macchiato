@@ -433,18 +433,42 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "objects")]
             Opcode::SetProperty => {
-                let value = self.core.arena_mut().pop()?;
+                let mut value = self.core.arena_mut().pop()?;
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "getters")]
+                if let Some(current) =
+                    microesnext_objects::get_own(self.core.arena(), object, key)?
+                {
+                    if let Some(accessor) = microesnext_objects::getters::merge(
+                        self.core.arena_mut(),
+                        current,
+                        value,
+                    )? {
+                        value = accessor;
+                    }
+                }
                 let object = set(self.core.arena_mut(), object, key, value)?;
                 self.core.arena_mut().push(object)?;
                 Ok(None)
             }
             #[cfg(feature = "property-assignment")]
             Opcode::SetPropertyStatement => {
-                let value = self.core.arena_mut().pop()?;
+                let mut value = self.core.arena_mut().pop()?;
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "getters")]
+                if let Some(current) =
+                    microesnext_objects::get_own(self.core.arena(), object, key)?
+                {
+                    if let Some(accessor) = microesnext_objects::getters::merge(
+                        self.core.arena_mut(),
+                        current,
+                        value,
+                    )? {
+                        value = accessor;
+                    }
+                }
                 microesnext_objects::set(self.core.arena_mut(), object, key, value)?;
                 Ok(None)
             }
@@ -523,6 +547,19 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let closure = self.core.arena_mut().pop()?;
                 let getter = microesnext_objects::getters::new(self.core.arena_mut(), closure)?;
                 self.core.arena_mut().push(getter)?;
+                Ok(None)
+            }
+            #[cfg(feature = "getters")]
+            Opcode::ToSetter => {
+                let closure = self.core.arena_mut().pop()?;
+                let setter =
+                    microesnext_objects::getters::new_setter(self.core.arena_mut(), closure)?;
+                self.core.arena_mut().push(setter)?;
+                Ok(None)
+            }
+            #[cfg(all(feature = "getters", feature = "property-assignment"))]
+            Opcode::SetPropertyAccessor => {
+                self.set_property_accessor()?;
                 Ok(None)
             }
             #[cfg(feature = "recursive-constructors")]
@@ -1754,6 +1791,34 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         self.core.abandon();
         Ok(Some(Outcome::Throw(reason)))
+    }
+
+    #[cfg(all(
+        feature = "getters",
+        any(
+            feature = "property-assignment",
+            feature = "property-assignment-expressions"
+        )
+    ))]
+    fn set_property_accessor(&mut self) -> Result<(), Error> {
+        let value = self.core.arena_mut().pop()?;
+        let key = self.core.arena_mut().pop()?;
+        let object = self.core.arena_mut().pop()?;
+        let current = get(self.core.arena(), object, key)?;
+        if let Some(function) =
+            microesnext_objects::getters::setter_callable(self.core.arena(), current)?
+        {
+            let target = entry(self.core.arena(), function)?;
+            self.core.arena_mut().push(value)?;
+            self.core.arena_mut().push(value)?;
+            microesnext_bindings::receivers::append(self.core.arena_mut(), 1, object)?;
+            self.core.enter_call_with_arguments(function, target, 2)?;
+        } else {
+            set(self.core.arena_mut(), object, key, value)?;
+            self.core.arena_mut().push(value)?;
+            self.core.arena_mut().push(Value::UNDEFINED)?;
+        }
+        Ok(())
     }
 }
 

@@ -527,6 +527,8 @@ enum FunctionBody {
     Method,
     #[cfg(feature = "class-getters")]
     Getter,
+    #[cfg(feature = "class-getters")]
+    Setter,
 }
 
 #[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
@@ -3458,20 +3460,32 @@ impl Parser<'_> {
         if static_method {
             self.whitespace();
         }
-        #[cfg(feature = "class-getters")]
-        let getter_start = self.offset;
+        #[cfg(any(feature = "class-getters", feature = "class-setters"))]
+        let accessor_start = self.offset;
         #[cfg(feature = "class-getters")]
         let mut getter = self.try_word(b"get");
         #[cfg(feature = "class-getters")]
         if getter {
             self.whitespace();
             if self.source.get(self.offset) == Some(&b'(') {
-                self.offset = getter_start;
+                self.offset = accessor_start;
                 getter = false;
             }
         }
         #[cfg(not(feature = "class-getters"))]
         let getter = false;
+        #[cfg(feature = "class-setters")]
+        let mut setter = !getter && self.try_word(b"set");
+        #[cfg(feature = "class-setters")]
+        if setter {
+            self.whitespace();
+            if self.source.get(self.offset) == Some(&b'(') {
+                self.offset = accessor_start;
+                setter = false;
+            }
+        }
+        #[cfg(not(feature = "class-setters"))]
+        let setter = false;
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
         self.output.push(Opcode::LoadLocal as u8);
@@ -3484,16 +3498,21 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(name_start, name_end);
-        #[cfg(feature = "class-getters")]
+        #[cfg(any(feature = "class-getters", feature = "class-setters"))]
         let body_kind = if getter {
             if !parameters.is_empty() {
                 return Err(self.error("a getter without parameters"));
             }
             FunctionBody::Getter
+        } else if setter {
+            if parameters.count != 1 {
+                return Err(self.error("a setter with one parameter"));
+            }
+            FunctionBody::Setter
         } else {
             FunctionBody::Method
         };
-        #[cfg(not(feature = "class-getters"))]
+        #[cfg(not(any(feature = "class-getters", feature = "class-setters")))]
         let body_kind = FunctionBody::Method;
         self.function_value(parameters, None, body_kind, None, false, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
@@ -3525,7 +3544,6 @@ impl Parser<'_> {
             let parameter_slot = u16::try_from(parameters.len())
                 .map_err(|_| self.error("fewer than 65536 parameters"))?;
             if self.consume_raw(b'{') {
-                let pattern_start = self.offset - 1;
                 let mut properties = Vec::new();
                 self.whitespace();
                 if !self.consume_raw(b'}') {
@@ -3556,8 +3574,11 @@ impl Parser<'_> {
                     }
                 }
                 parameters.push(Binding {
-                    start: pattern_start,
-                    end: pattern_start + 1,
+                    // The positional argument needs a slot but has no source
+                    // binding of its own. An empty range prevents the opening
+                    // brace from masquerading as a local named `{`.
+                    start: self.source.len(),
+                    end: self.source.len(),
                     slot: parameter_slot,
                     default: None,
                     hoisted: false,
@@ -3758,8 +3779,13 @@ impl Parser<'_> {
         #[cfg(all(feature = "class-methods", not(feature = "class-getters")))]
         let receiver_frame = receiver_frame || matches!(body_kind, FunctionBody::Method);
         #[cfg(feature = "class-getters")]
-        let receiver_frame =
-            receiver_frame || matches!(body_kind, FunctionBody::Method | FunctionBody::Getter);
+        let receiver_frame = receiver_frame
+            || matches!(
+                body_kind,
+                FunctionBody::Method
+                    | FunctionBody::Getter
+                    | FunctionBody::Setter
+            );
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -3909,6 +3935,13 @@ impl Parser<'_> {
                     return Err(body.error("}"));
                 }
             }
+            #[cfg(feature = "class-getters")]
+            FunctionBody::Setter => {
+                body.terminal_statement()?;
+                if !body.consume(b'}') {
+                    return Err(body.error("}"));
+                }
+            }
         }
         body.whitespace();
         body.append_function_bodies()?;
@@ -3935,6 +3968,10 @@ impl Parser<'_> {
         #[cfg(feature = "class-getters")]
         if matches!(body_kind, FunctionBody::Getter) {
             self.output.push(Opcode::ToGetter as u8);
+        }
+        #[cfg(feature = "class-setters")]
+        if matches!(body_kind, FunctionBody::Setter) {
+            self.output.push(Opcode::ToSetter as u8);
         }
         #[cfg(feature = "constructors")]
         if constructible {
@@ -3978,7 +4015,10 @@ impl Parser<'_> {
     fn body_accepts_super(body_kind: FunctionBody) -> bool {
         matches!(
             body_kind,
-            FunctionBody::ClassConstructor | FunctionBody::Method | FunctionBody::Getter
+            FunctionBody::ClassConstructor
+                | FunctionBody::Method
+                | FunctionBody::Getter
+                | FunctionBody::Setter
         )
     }
 
@@ -4174,14 +4214,14 @@ impl Parser<'_> {
                 } else {
                     Opcode::AddNumber as u8
                 });
-                self.output.push(Opcode::SetPropertyStatement as u8);
+                self.emit_property_assignment_statement();
                 if !self.consume(b';') {
                     return Err(self.error(";"));
                 }
                 continue;
             }
             self.expression(None)?;
-            self.output.push(Opcode::SetPropertyStatement as u8);
+            self.emit_property_assignment_statement();
             if !self.consume(b';') {
                 return Err(self.error(";"));
             }
@@ -4367,12 +4407,35 @@ impl Parser<'_> {
                     self.output_atom_range(start, end);
                     self.output.push(Opcode::LoadLocal as u8);
                     self.output.extend_from_slice(&temporary.to_le_bytes());
-                    self.output.push(Opcode::SetPropertyStatement as u8);
+                    self.emit_property_assignment_statement();
                 }
             }
         }
         self.output.push(Opcode::DropTop as u8);
         Ok(true)
+    }
+
+    #[cfg(feature = "property-assignment")]
+    fn emit_property_assignment_statement(&mut self) {
+        #[cfg(feature = "class-setters")]
+        {
+            self.output.push(Opcode::SetPropertyAccessor as u8);
+            self.output.push(Opcode::DropTop as u8);
+            self.output.push(Opcode::DropTop as u8);
+        }
+        #[cfg(not(feature = "class-setters"))]
+        self.output.push(Opcode::SetPropertyStatement as u8);
+    }
+
+    #[cfg(feature = "property-assignment-expressions")]
+    fn emit_property_assignment_result(&mut self) {
+        #[cfg(feature = "class-setters")]
+        {
+            self.output.push(Opcode::SetPropertyAccessor as u8);
+            self.output.push(Opcode::DropTop as u8);
+        }
+        #[cfg(not(feature = "class-setters"))]
+        self.output.push(Opcode::SetPropertyResult as u8);
     }
 
     #[cfg(not(feature = "property-assignment"))]
@@ -5338,7 +5401,7 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
             self.expression(None)?;
             self.output.push(Opcode::BitwiseOrI30 as u8);
-            self.output.push(Opcode::SetPropertyResult as u8);
+            self.emit_property_assignment_result();
             return Ok(true);
         }
         if bitwise_and {
@@ -5346,7 +5409,7 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
             self.expression(None)?;
             self.output.push(Opcode::BitwiseAndI30 as u8);
-            self.output.push(Opcode::SetPropertyResult as u8);
+            self.emit_property_assignment_result();
             return Ok(true);
         }
         if let Some(subtracting) = compound {
@@ -5360,11 +5423,11 @@ impl Parser<'_> {
             } else {
                 Opcode::AddNumber as u8
             });
-            self.output.push(Opcode::SetPropertyResult as u8);
+            self.emit_property_assignment_result();
             return Ok(true);
         }
         self.expression(None)?;
-        self.output.push(Opcode::SetPropertyResult as u8);
+        self.emit_property_assignment_result();
         Ok(true)
     }
 
@@ -5451,11 +5514,11 @@ impl Parser<'_> {
             });
             self.expression(None)?;
             self.output.push(Opcode::BitwiseOrI30 as u8);
-            self.output.push(if property {
-                Opcode::SetPropertyResult as u8
+            if property {
+                self.emit_property_assignment_result();
             } else {
-                Opcode::SetIndexResult as u8
-            });
+                self.output.push(Opcode::SetIndexResult as u8);
+            }
             return Ok(true);
         }
         if bitwise_and {
@@ -5467,11 +5530,11 @@ impl Parser<'_> {
             });
             self.expression(None)?;
             self.output.push(Opcode::BitwiseAndI30 as u8);
-            self.output.push(if property {
-                Opcode::SetPropertyResult as u8
+            if property {
+                self.emit_property_assignment_result();
             } else {
-                Opcode::SetIndexResult as u8
-            });
+                self.output.push(Opcode::SetIndexResult as u8);
+            }
             return Ok(true);
         }
         if let Some(subtracting) = compound {
@@ -5489,19 +5552,19 @@ impl Parser<'_> {
             } else {
                 Opcode::AddNumber as u8
             });
-            self.output.push(if property {
-                Opcode::SetPropertyResult as u8
+            if property {
+                self.emit_property_assignment_result();
             } else {
-                Opcode::SetIndexResult as u8
-            });
+                self.output.push(Opcode::SetIndexResult as u8);
+            }
             return Ok(true);
         }
         self.expression(None)?;
-        self.output.push(if property {
-            Opcode::SetPropertyResult as u8
+        if property {
+            self.emit_property_assignment_result();
         } else {
-            Opcode::SetIndexResult as u8
-        });
+            self.output.push(Opcode::SetIndexResult as u8);
+        }
         Ok(true)
     }
 
@@ -6648,6 +6711,22 @@ impl Parser<'_> {
 
     #[cfg(feature = "objects")]
     fn object_property_name(&mut self) -> Result<(usize, usize), CompileError> {
+        if let Some(quote @ (b'\'' | b'"')) = self.source.get(self.offset).copied() {
+            self.offset += 1;
+            let start = self.offset;
+            while let Some(byte) = self.source.get(self.offset).copied() {
+                if byte == quote {
+                    let end = self.offset;
+                    self.offset += 1;
+                    return Ok((start, end));
+                }
+                if byte == b'\\' {
+                    return Err(self.error("an unescaped quoted property name"));
+                }
+                self.offset += 1;
+            }
+            return Err(self.error("a closing quote"));
+        }
         let start = self.offset;
         while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
             self.offset += 1;
@@ -7273,18 +7352,32 @@ impl Parser<'_> {
         if static_method {
             self.whitespace();
         }
-        #[cfg(feature = "class-getters")]
-        let getter_start = self.offset;
+        #[cfg(any(feature = "class-getters", feature = "class-setters"))]
+        let accessor_start = self.offset;
         #[cfg(feature = "class-getters")]
         let mut getter = self.try_word(b"get");
         #[cfg(feature = "class-getters")]
         if getter {
             self.whitespace();
             if self.source.get(self.offset) == Some(&b'(') {
-                self.offset = getter_start;
+                self.offset = accessor_start;
                 getter = false;
             }
         }
+        #[cfg(not(feature = "class-getters"))]
+        let getter = false;
+        #[cfg(feature = "class-setters")]
+        let mut setter = !getter && self.try_word(b"set");
+        #[cfg(feature = "class-setters")]
+        if setter {
+            self.whitespace();
+            if self.source.get(self.offset) == Some(&b'(') {
+                self.offset = accessor_start;
+                setter = false;
+            }
+        }
+        #[cfg(not(feature = "class-setters"))]
+        let setter = false;
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
         self.output.push(Opcode::DuplicateTop as u8);
@@ -7296,16 +7389,21 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(name_start, name_end);
-        #[cfg(feature = "class-getters")]
+        #[cfg(any(feature = "class-getters", feature = "class-setters"))]
         let body_kind = if getter {
             if !parameters.is_empty() {
                 return Err(self.error("a getter without parameters"));
             }
             FunctionBody::Getter
+        } else if setter {
+            if parameters.count != 1 {
+                return Err(self.error("a setter with one parameter"));
+            }
+            FunctionBody::Setter
         } else {
             FunctionBody::Method
         };
-        #[cfg(not(feature = "class-getters"))]
+        #[cfg(not(any(feature = "class-getters", feature = "class-setters")))]
         let body_kind = FunctionBody::Method;
         self.function_value(parameters, None, body_kind, None, false, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);

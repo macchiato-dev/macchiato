@@ -105,6 +105,11 @@ class-getters = [
   "microesnext-vm/getters",
   "microesnext-compiler/class-getters",
 ]
+class-setters = [
+  "class-getters",
+  "property-assignment",
+  "microesnext-compiler/class-setters",
+]
 named-class-expressions = [
   "class-expressions",
   "captured-assignment-expressions",
@@ -892,6 +897,11 @@ required-features = ["class-inheritance", "locals", "objects"]
 name = "class-getters"
 path = "tests/class_getters.rs"
 required-features = ["class-getters", "locals", "objects"]
+
+[[test]]
+name = "class-setters"
+path = "tests/class_setters.rs"
+required-features = ["class-setters", "locals", "objects"]
 
 [[test]]
 name = "recursive-constructors"
