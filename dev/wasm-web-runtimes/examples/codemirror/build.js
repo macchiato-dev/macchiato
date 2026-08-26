@@ -75,6 +75,7 @@ await build({
 for (const [entry, outfile] of [
   ["src/simple-entry.js", "generated/codemirror-simple.js"],
   ["src/large-entry.js", "generated/codemirror-large.js"],
+  ["src/multi-entry.js", "generated/codemirror-multi.js"],
 ]) {
   await build({
     entryPoints: [new URL(entry, import.meta.url).pathname],
@@ -109,6 +110,9 @@ const lowerForMicroQuickJS = async source => (await transformAsync(source, {
 const modernApplication = await readFile(modern, "utf8");
 await writeFile(microModern, modernApplication);
 await writeFile(micro, await lowerForMicroQuickJS(modernApplication));
+await writeFile(new URL("generated/codemirror-multi-micro.js", import.meta.url),
+  await lowerForMicroQuickJS(await readFile(
+    new URL("generated/codemirror-multi.js", import.meta.url), "utf8")));
 
 // MicroQuickJS supplies `print` and `HostReference` as native globals. The
 // canonical full-QuickJS build uses equivalent Rust-hosted bindings instead.

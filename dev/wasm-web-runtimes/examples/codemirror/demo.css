@@ -9,3 +9,18 @@ body { background: #282c34; color: #abb2bf; }
   font: 14px/1.5 system-ui, sans-serif; }
 @keyframes runtime-spin { to { transform: rotate(360deg); } }
 .cm-editor { height: 100vh; max-height: 100%; min-height: 0; }
+#workspace { display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) 240px;
+  height: 100%; overflow: hidden; }
+.file-tabs { display: flex; gap: 4px; padding: 7px 8px 0; background: #20242b; }
+.file-tabs button, .search-results button { border: 1px solid #454b55; border-radius: 5px;
+  background: #2d323c; color: #d7dae0; padding: 6px 10px; cursor: pointer; }
+.file-tabs button[aria-selected="true"] { background: #3b4250; border-color: #61afef; }
+.file-search { grid-area: 1 / 2 / 3; padding: 8px; border-left: 1px solid #454b55;
+  background: #242830; overflow: auto; }
+.file-search input { width: 100%; border: 1px solid #565d69; border-radius: 5px;
+  background: #1d2127; color: #e5e8ed; padding: 7px 8px; }
+.search-results { margin: 8px 0 0; padding: 0; list-style: none; }
+.search-results li + li { margin-top: 4px; }
+.search-results button { width: 100%; text-align: left; }
+.file-editors, .file-editor { min-height: 0; height: 100%; overflow: hidden; }
+.file-editor .cm-editor { height: 100%; }
