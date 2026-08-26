@@ -105,10 +105,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 .arena()
                 .stack_value_from_bottom(base + fixed + index)?;
             let rest_index = self.core.arena().stack_len() - 1;
-            let rest = self
-                .core
-                .arena()
-                .stack_value_from_bottom(rest_index)?;
+            let rest = self.core.arena().stack_value_from_bottom(rest_index)?;
             let rest = array_set(self.core.arena_mut(), rest, index, value)?;
             self.core
                 .arena_mut()
@@ -1362,10 +1359,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "object-key-iterators")]
             Opcode::NewObjectKeyIterator => {
                 let object = self.core.arena_mut().pop()?;
-                let iterator = microesnext_objects::object_key_iterators::new(
-                    self.core.arena_mut(),
-                    object,
-                )?;
+                let iterator =
+                    microesnext_objects::object_key_iterators::new(self.core.arena_mut(), object)?;
                 self.core.arena_mut().push(iterator)?;
                 Ok(None)
             }

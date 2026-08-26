@@ -94,11 +94,7 @@ impl Builder {
     }
 
     #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
-    pub fn init_receiver_rest_frame(
-        mut self,
-        count: u16,
-        fixed_parameter_count: u16,
-    ) -> Self {
+    pub fn init_receiver_rest_frame(mut self, count: u16, fixed_parameter_count: u16) -> Self {
         self.code.push(Opcode::InitReceiverRestFrame as u8);
         self.code.extend_from_slice(&count.to_le_bytes());
         self.code
@@ -303,6 +299,8 @@ fn compile_script_with_options_and_host_globals(
         function_frame: false,
         #[cfg(feature = "for-statements")]
         loop_breaks: Vec::new(),
+        #[cfg(feature = "locals")]
+        inactive_loop_locals: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
         #[cfg(feature = "receivers")]
@@ -368,6 +366,8 @@ struct Parser<'source> {
     super_binding: Option<Binding>,
     #[cfg(feature = "for-statements")]
     loop_breaks: Vec<LoopBreaks>,
+    #[cfg(feature = "locals")]
+    inactive_loop_locals: Vec<u16>,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
     options: CompileOptions,
 }
@@ -559,7 +559,8 @@ enum StructuredFrame {
 #[cfg(feature = "for-statements")]
 struct LoopBreaks {
     label: Option<(usize, usize)>,
-    patches: Vec<usize>,
+    break_patches: Vec<usize>,
+    continue_patches: Vec<usize>,
 }
 
 impl Parser<'_> {
@@ -935,23 +936,22 @@ impl Parser<'_> {
         #[cfg(feature = "for-statements")]
         self.loop_breaks.push(LoopBreaks {
             label: None,
-            patches: Vec::new(),
+            break_patches: Vec::new(),
+            continue_patches: Vec::new(),
         });
-        let abrupt = self.single_control_body()?;
-        if !abrupt {
-            self.output.push(Opcode::Jump as u8);
-            let loop_patch = self.output.len();
-            self.output.extend_from_slice(&loop_start.to_le_bytes());
-            #[cfg(feature = "functions")]
-            self.relocations.push(loop_patch);
-        }
+        self.single_control_body()?;
+        self.output.push(Opcode::Jump as u8);
+        let loop_patch = self.output.len();
+        self.output.extend_from_slice(&loop_start.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(loop_patch);
         let exit = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
         #[cfg(feature = "functions")]
         self.relocations.push(exit_patch);
         #[cfg(feature = "for-statements")]
-        self.patch_loop_breaks(exit)?;
+        self.patch_loop_breaks(exit, loop_start)?;
         Ok(())
     }
 
@@ -962,6 +962,8 @@ impl Parser<'_> {
 
     #[cfg(feature = "for-statements")]
     fn for_loop_with_label(&mut self, label: Option<(usize, usize)>) -> Result<(), CompileError> {
+        let loop_local_start = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
@@ -1032,9 +1034,10 @@ impl Parser<'_> {
 
         self.loop_breaks.push(LoopBreaks {
             label,
-            patches: Vec::new(),
+            break_patches: Vec::new(),
+            continue_patches: Vec::new(),
         });
-        let abrupt = if self.consume(b'{') {
+        if self.consume(b'{') {
             let abrupt = self.control_block_body()?;
             if !self.consume(b'}') {
                 return Err(self.error("}"));
@@ -1043,15 +1046,8 @@ impl Parser<'_> {
         } else {
             self.single_control_body()?
         };
-        if abrupt {
-            let exit = u32::try_from(self.output.len())
-                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
-            self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
-            #[cfg(feature = "functions")]
-            self.relocations.push(exit_patch);
-            self.patch_loop_breaks(exit)?;
-            return Ok(());
-        }
+        let continue_target = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output.extend_from_slice(&update);
         self.output.push(Opcode::Jump as u8);
         #[cfg(feature = "functions")]
@@ -1060,12 +1056,13 @@ impl Parser<'_> {
         let exit = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
-        self.patch_loop_breaks(exit)?;
+        self.patch_loop_breaks(exit, continue_target)?;
         #[cfg(feature = "functions")]
         {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
+        self.expire_loop_locals(loop_local_start);
         Ok(())
     }
 
@@ -1092,7 +1089,8 @@ impl Parser<'_> {
             return Ok(None);
         }
         if let Some(binding) = self.locals.iter().rev().copied().find(|binding| {
-            self.source[binding.start..binding.end] == self.source[name_start..name_end]
+            !self.inactive_loop_locals.contains(&binding.slot)
+                && self.source[binding.start..binding.end] == self.source[name_start..name_end]
         }) {
             return Ok(Some(binding));
         }
@@ -1147,6 +1145,7 @@ impl Parser<'_> {
         new_iterator: Opcode,
         iterator_next: Opcode,
     ) -> Result<(), CompileError> {
+        let loop_local_start = binding.slot;
         let iterator_slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         self.expression(None)?;
@@ -1180,9 +1179,10 @@ impl Parser<'_> {
 
         self.loop_breaks.push(LoopBreaks {
             label,
-            patches: Vec::new(),
+            break_patches: Vec::new(),
+            continue_patches: Vec::new(),
         });
-        let abrupt = if self.consume(b'{') {
+        if self.consume(b'{') {
             let abrupt = self.control_block_body()?;
             if !self.consume(b'}') {
                 return Err(self.error("}"));
@@ -1191,13 +1191,11 @@ impl Parser<'_> {
         } else {
             self.single_control_body()?
         };
-        if !abrupt {
-            self.output.push(Opcode::Jump as u8);
-            let loop_patch = self.output.len();
-            self.output.extend_from_slice(&loop_start.to_le_bytes());
-            #[cfg(feature = "functions")]
-            self.relocations.push(loop_patch);
-        }
+        self.output.push(Opcode::Jump as u8);
+        let loop_patch = self.output.len();
+        self.output.extend_from_slice(&loop_start.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(loop_patch);
         let exhausted = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output[exit_patch..exit_patch + 4].copy_from_slice(&exhausted.to_le_bytes());
@@ -1206,17 +1204,31 @@ impl Parser<'_> {
         self.output.push(Opcode::DropTop as u8);
         let cleanup = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
-        self.patch_loop_breaks(cleanup)?;
+        self.patch_loop_breaks(cleanup, loop_start)?;
+        self.expire_loop_locals(loop_local_start);
         Ok(())
     }
 
     #[cfg(feature = "for-statements")]
-    fn patch_loop_breaks(&mut self, exit: u32) -> Result<(), CompileError> {
+    fn expire_loop_locals(&mut self, first_slot: u16) {
+        self.inactive_loop_locals.extend(
+            self.locals
+                .iter()
+                .filter(|binding| binding.slot >= first_slot)
+                .map(|binding| binding.slot),
+        );
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn patch_loop_breaks(&mut self, exit: u32, continue_target: u32) -> Result<(), CompileError> {
         let Some(patches) = self.loop_breaks.pop() else {
             return Err(self.error("an active loop"));
         };
-        for patch in patches.patches {
+        for patch in patches.break_patches {
             self.output[patch..patch + 4].copy_from_slice(&exit.to_le_bytes());
+        }
+        for patch in patches.continue_patches {
+            self.output[patch..patch + 4].copy_from_slice(&continue_target.to_le_bytes());
         }
         Ok(())
     }
@@ -1245,7 +1257,37 @@ impl Parser<'_> {
         self.output.push(Opcode::Jump as u8);
         let patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
-        self.loop_breaks[target].patches.push(patch);
+        self.loop_breaks[target].break_patches.push(patch);
+        #[cfg(feature = "functions")]
+        self.relocations.push(patch);
+        Ok(())
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn emit_loop_continue(&mut self) -> Result<(), CompileError> {
+        self.whitespace();
+        let label = self
+            .source
+            .get(self.offset)
+            .is_some_and(|byte| byte.is_ascii_alphabetic() || matches!(byte, b'_' | b'$'))
+            .then(|| self.identifier())
+            .transpose()?;
+        let target = if let Some((start, end)) = label {
+            self.loop_breaks.iter().rposition(|entry| {
+                entry.label.is_some_and(|(label_start, label_end)| {
+                    self.source[label_start..label_end] == self.source[start..end]
+                })
+            })
+        } else {
+            self.loop_breaks.len().checked_sub(1)
+        };
+        let Some(target) = target else {
+            return Err(self.error("continue inside a loop"));
+        };
+        self.output.push(Opcode::Jump as u8);
+        let patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.loop_breaks[target].continue_patches.push(patch);
         #[cfg(feature = "functions")]
         self.relocations.push(patch);
         Ok(())
@@ -1298,6 +1340,13 @@ impl Parser<'_> {
             }
             if self.try_word(b"break") {
                 self.emit_loop_break()?;
+                if !self.consume(b';') {
+                    return Err(self.error(";"));
+                }
+                return Ok(true);
+            }
+            if self.try_word(b"continue") {
+                self.emit_loop_continue()?;
                 if !self.consume(b';') {
                     return Err(self.error(";"));
                 }
@@ -1427,6 +1476,9 @@ impl Parser<'_> {
     #[cfg(feature = "control-flow")]
     fn single_control_body(&mut self) -> Result<bool, CompileError> {
         self.whitespace();
+        if self.consume_raw(b';') {
+            return Ok(false);
+        }
         if self.try_word(b"if") {
             return self.single_if();
         }
@@ -1442,6 +1494,14 @@ impl Parser<'_> {
         #[cfg(feature = "for-statements")]
         if self.try_word(b"break") {
             self.emit_loop_break()?;
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            return Ok(true);
+        }
+        #[cfg(feature = "for-statements")]
+        if self.try_word(b"continue") {
+            self.emit_loop_continue()?;
             if !self.consume(b';') {
                 return Err(self.error(";"));
             }
@@ -1832,8 +1892,15 @@ impl Parser<'_> {
             }
 
             #[cfg(feature = "for-statements")]
-            let explicit_break = if self.try_word(b"break") {
+            let explicit_completion = if self.try_word(b"break") {
                 self.emit_loop_break()?;
+                if !self.consume(b';') {
+                    return Err(self.error(";"));
+                }
+                self.whitespace();
+                true
+            } else if self.try_word(b"continue") {
+                self.emit_loop_continue()?;
                 if !self.consume(b';') {
                     return Err(self.error(";"));
                 }
@@ -1843,9 +1910,9 @@ impl Parser<'_> {
                 false
             };
             #[cfg(not(feature = "for-statements"))]
-            let explicit_break = false;
-            let fallthrough = !explicit_break && self.source.get(self.offset) == Some(&b'}');
-            if !fallthrough && !explicit_break {
+            let explicit_completion = false;
+            let fallthrough = !explicit_completion && self.source.get(self.offset) == Some(&b'}');
+            if !fallthrough && !explicit_completion {
                 let close_handlers = frames
                     .iter()
                     .filter(|frame| matches!(frame, StructuredFrame::Try { .. }))
@@ -1970,7 +2037,7 @@ impl Parser<'_> {
                         self.output[exit_patch..exit_patch + 4]
                             .copy_from_slice(&exit.to_le_bytes());
                         #[cfg(feature = "for-statements")]
-                        self.patch_loop_breaks(exit)?;
+                        self.patch_loop_breaks(exit, start)?;
                         #[cfg(feature = "functions")]
                         self.relocations.push(exit_patch);
                         completed_abrupt = false;
@@ -2094,7 +2161,8 @@ impl Parser<'_> {
                 #[cfg(feature = "for-statements")]
                 self.loop_breaks.push(LoopBreaks {
                     label: None,
-                    patches: Vec::new(),
+                    break_patches: Vec::new(),
+                    continue_patches: Vec::new(),
                 });
             }
             StructuredStart::Exception => {
@@ -2397,7 +2465,8 @@ impl Parser<'_> {
             }
             let (start, end) = self.identifier()?;
             let existing = self.locals.iter().position(|binding| {
-                self.source[binding.start..binding.end] == self.source[start..end]
+                !self.inactive_loop_locals.contains(&binding.slot)
+                    && self.source[binding.start..binding.end] == self.source[start..end]
             });
             let existing = existing.filter(|index| {
                 self.locals[*index].hoisted
@@ -2934,7 +3003,15 @@ impl Parser<'_> {
         self.output.extend_from_slice(b"prototype");
         self.output.push(Opcode::GetProperty as u8);
         self.output_atom_range(name_start, name_end);
-        self.function_value(parameters, None, FunctionBody::Method, None, false, false, false)?;
+        self.function_value(
+            parameters,
+            None,
+            FunctionBody::Method,
+            None,
+            false,
+            false,
+            false,
+        )?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
@@ -3182,6 +3259,8 @@ impl Parser<'_> {
             function_frame: true,
             #[cfg(feature = "for-statements")]
             loop_breaks: Vec::new(),
+            #[cfg(feature = "locals")]
+            inactive_loop_locals: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
             #[cfg(feature = "receivers")]
@@ -3435,9 +3514,8 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
-        let count =
-            u16::try_from(sources.len() + usize::from(body.receiver_capture.is_some()))
-                .map_err(|_| self.error("fewer than 65536 captures"))?;
+        let count = u16::try_from(sources.len() + usize::from(body.receiver_capture.is_some()))
+            .map_err(|_| self.error("fewer than 65536 captures"))?;
         if body.receiver_capture.is_some() {
             if self.receiver_frame {
                 self.output.push(Opcode::LoadThis as u8);
@@ -4291,10 +4369,7 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "compound-assignment-expressions")]
-    fn emit_local_bitwise_or_assignment(
-        &mut self,
-        local: Binding,
-    ) -> Result<(), CompileError> {
+    fn emit_local_bitwise_or_assignment(&mut self, local: Binding) -> Result<(), CompileError> {
         self.output.push(Opcode::LoadLocal as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
@@ -6656,7 +6731,8 @@ impl Parser<'_> {
     fn local_at_offset(&self) -> Option<Binding> {
         self.locals.iter().rev().copied().find(|binding| {
             let name = &self.source[binding.start..binding.end];
-            !name.is_empty()
+            !self.inactive_loop_locals.contains(&binding.slot)
+                && !name.is_empty()
                 && self.source[self.offset..].starts_with(name)
                 && self.identifier_end(self.offset + name.len())
         })
@@ -6675,7 +6751,8 @@ impl Parser<'_> {
     fn outer_binding_at_offset(&self) -> Option<Binding> {
         self.outer_bindings.iter().rev().copied().find(|binding| {
             let name = &self.source[binding.start..binding.end];
-            self.source[self.offset..].starts_with(name)
+            !name.is_empty()
+                && self.source[self.offset..].starts_with(name)
                 && self.identifier_end(self.offset + name.len())
         })
     }

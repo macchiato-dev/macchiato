@@ -87,7 +87,9 @@ fn rest_parameters_collect_excess_arguments() {
 #[test]
 fn method_rest_parameters_preserve_the_receiver_frame() {
     assert_eq!(
-        run("let Box = class { pick(...rest) { this.value = rest[1]; return this.value; } }; return new Box().pick(40, 42);"),
+        run(
+            "let Box = class { pick(...rest) { this.value = rest[1]; return this.value; } }; return new Box().pick(40, 42);"
+        ),
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }

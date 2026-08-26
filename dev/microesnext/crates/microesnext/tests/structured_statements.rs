@@ -105,6 +105,34 @@ fn an_else_if_chain_can_reach_a_braced_consequent() {
 }
 
 #[test]
+fn an_else_if_chain_accepts_an_empty_statement() {
+    assert_eq!(
+        run("let answer = 42; if (false) answer = 0; else if (true) ; return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn continue_reaches_the_update_of_a_classic_for_loop() {
+    assert_eq!(
+        run(
+            "let answer = 0; for (let i = 0; i < 7; i++) { if (i < 5) continue; answer += i; } return answer + 31;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn continue_advances_a_for_of_iterator() {
+    assert_eq!(
+        run(
+            "let answer = 0; for (let value of [1, 2, 40]) { if (value < 40) continue; answer += value; } return answer + 2;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn a_single_consequent_can_have_a_braced_alternate() {
     assert_eq!(
         run(
