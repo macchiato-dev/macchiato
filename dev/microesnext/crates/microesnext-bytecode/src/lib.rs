@@ -186,6 +186,10 @@ pub enum Opcode {
     BitwiseAndI30 = 126,
     #[cfg(feature = "class-inheritance")]
     GetSuperMethod = 127,
+    #[cfg(feature = "array-iterators")]
+    NewArrayIterator = 128,
+    #[cfg(feature = "array-iterators")]
+    ArrayIteratorNext = 129,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -355,6 +359,10 @@ impl TryFrom<u8> for Opcode {
             126 => Ok(Self::BitwiseAndI30),
             #[cfg(feature = "class-inheritance")]
             127 => Ok(Self::GetSuperMethod),
+            #[cfg(feature = "array-iterators")]
+            128 => Ok(Self::NewArrayIterator),
+            #[cfg(feature = "array-iterators")]
+            129 => Ok(Self::ArrayIteratorNext),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

@@ -819,6 +819,10 @@ impl Parser<'_> {
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
+        #[cfg(feature = "for-of-statements")]
+        if let Some(binding) = self.for_of_binding()? {
+            return self.for_of_loop(binding);
+        }
         let mut initialized_locals = Some(0);
         if self.try_word_after_whitespace(b"let")
             || self.try_word_after_whitespace(b"var")
@@ -907,6 +911,90 @@ impl Parser<'_> {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "for-of-statements")]
+    fn for_of_binding(&mut self) -> Result<Option<Binding>, CompileError> {
+        let start = self.offset;
+        if !self.try_word_after_whitespace(b"let") {
+            return Ok(None);
+        }
+        self.whitespace();
+        let (name_start, name_end) = self.identifier()?;
+        if !self.try_word_after_whitespace(b"of") {
+            self.offset = start;
+            return Ok(None);
+        }
+        if self.locals.iter().any(|binding| {
+            self.source[binding.start..binding.end] == self.source[name_start..name_end]
+        }) {
+            return Err(self.error("a unique loop binding"));
+        }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        let binding = Binding {
+            start: name_start,
+            end: name_end,
+            slot,
+            default: None,
+            hoisted: false,
+            #[cfg(feature = "environments")]
+            captured: false,
+        };
+        self.locals.push(binding);
+        Ok(Some(binding))
+    }
+
+    #[cfg(feature = "for-of-statements")]
+    fn for_of_loop(&mut self, binding: Binding) -> Result<(), CompileError> {
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::NewArrayIterator as u8);
+        let loop_start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output.push(Opcode::DuplicateTop as u8);
+        self.output.push(Opcode::ArrayIteratorNext as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.push(Opcode::StoreLocal as u8);
+        self.output.extend_from_slice(&binding.slot.to_le_bytes());
+
+        self.loop_breaks.push(Vec::new());
+        let abrupt = if self.consume(b'{') {
+            let abrupt = self.control_block_body()?;
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+            abrupt
+        } else {
+            self.expression(None)?;
+            self.output.push(Opcode::DropTop as u8);
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            false
+        };
+        if !abrupt {
+            self.output.push(Opcode::Jump as u8);
+            let loop_patch = self.output.len();
+            self.output.extend_from_slice(&loop_start.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(loop_patch);
+        }
+        let exhausted = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[exit_patch..exit_patch + 4].copy_from_slice(&exhausted.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(exit_patch);
+        self.output.push(Opcode::DropTop as u8);
+        let cleanup = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.patch_loop_breaks(cleanup)?;
+        self.output.push(Opcode::DropTop as u8);
         Ok(())
     }
 
@@ -1509,29 +1597,44 @@ impl Parser<'_> {
                             Some(patch)
                         };
                         if !self.try_word_after_whitespace(b"else") {
-                            return Err(self.error("else"));
+                            let join = u32::try_from(self.output.len())
+                                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                            self.output[alternate_patch..alternate_patch + 4]
+                                .copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(alternate_patch);
+                            if let Some(patch) = join_patch {
+                                self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                                #[cfg(feature = "functions")]
+                                self.relocations.push(patch);
+                            }
+                            completed_abrupt = false;
+                        } else {
+                            let alternate = u32::try_from(self.output.len())
+                                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                            self.output[alternate_patch..alternate_patch + 4]
+                                .copy_from_slice(&alternate.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(alternate_patch);
+                            let else_if = self.try_word_after_whitespace(b"if");
+                            if !else_if && !self.consume(b'{') {
+                                return Err(self.error("if or {"));
+                            }
+                            frames.push(StructuredFrame::Conditional {
+                                alternate_patch,
+                                join_patch,
+                                consequent_abrupt: completed_abrupt,
+                                alternate: true,
+                                implicit_alternate: else_if,
+                            });
+                            if else_if {
+                                self.begin_structured(
+                                    frames.as_mut(),
+                                    StructuredStart::Conditional,
+                                )?;
+                            }
+                            break;
                         }
-                        let alternate = u32::try_from(self.output.len())
-                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
-                        self.output[alternate_patch..alternate_patch + 4]
-                            .copy_from_slice(&alternate.to_le_bytes());
-                        #[cfg(feature = "functions")]
-                        self.relocations.push(alternate_patch);
-                        let else_if = self.try_word_after_whitespace(b"if");
-                        if !else_if && !self.consume(b'{') {
-                            return Err(self.error("if or {"));
-                        }
-                        frames.push(StructuredFrame::Conditional {
-                            alternate_patch,
-                            join_patch,
-                            consequent_abrupt: completed_abrupt,
-                            alternate: true,
-                            implicit_alternate: else_if,
-                        });
-                        if else_if {
-                            self.begin_structured(frames.as_mut(), StructuredStart::Conditional)?;
-                        }
-                        break;
                     }
                     StructuredFrame::Conditional {
                         join_patch,

@@ -24,3 +24,12 @@ fn for_loop_accepts_multiple_initializer_bindings() {
         Outcome::Complete(Value::from_i30(21).unwrap())
     );
 }
+
+#[cfg(feature = "for-of-statements")]
+#[test]
+fn for_of_visits_each_array_value() {
+    assert_eq!(
+        run("let sum = 0; for (let value of [20, 22]) { sum += value; } return sum;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

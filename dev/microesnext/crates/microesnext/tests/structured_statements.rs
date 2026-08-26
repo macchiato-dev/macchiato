@@ -33,6 +33,14 @@ fn exception_frames_can_be_nested_inside_control_frames() {
 }
 
 #[test]
+fn braced_conditionals_do_not_require_an_else_branch() {
+    assert_eq!(
+        run("let answer = 40; if (true) { answer += 2; } return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

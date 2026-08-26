@@ -142,7 +142,17 @@ array-destructuring-assignments = [
   "stack-operations",
   "microesnext-compiler/array-destructuring-assignments",
 ]
-array-iterators = ["arrays", "iterators", "microesnext-objects/array-iterators"]
+array-iterators = [
+  "arrays",
+  "iterators",
+  "microesnext-objects/array-iterators",
+  "microesnext-vm/array-iterators",
+]
+for-of-statements = [
+  "array-iterators",
+  "for-statements",
+  "microesnext-compiler/for-of-statements",
+]
 async = [
   "dep:microesnext-scheduler",
   "microesnext-scheduler/async",
@@ -510,7 +520,13 @@ required-features = ["expression-statements", "update-expressions"]
 [[test]]
 name = "for-statements"
 path = "tests/for_statements.rs"
-required-features = ["for-statements", "update-expressions"]
+required-features = [
+  "arrays",
+  "compound-assignment-expressions",
+  "for-of-statements",
+  "for-statements",
+  "update-expressions",
+]
 
 [[test]]
 name = "bitwise-operations"

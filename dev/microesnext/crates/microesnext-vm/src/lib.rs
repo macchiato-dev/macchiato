@@ -1210,6 +1210,30 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "array-iterators")]
+            Opcode::NewArrayIterator => {
+                let array = self.core.arena_mut().pop()?;
+                let iterator = microesnext_objects::arrays::iterators::new_values(
+                    self.core.arena_mut(),
+                    array,
+                )?;
+                self.core.arena_mut().push(iterator)?;
+                Ok(None)
+            }
+            #[cfg(feature = "array-iterators")]
+            Opcode::ArrayIteratorNext => {
+                let iterator = self.core.arena_mut().pop()?;
+                if let Some(value) =
+                    microesnext_objects::arrays::iterators::next(self.core.arena_mut(), iterator)?
+                {
+                    self.core.arena_mut().push(value)?;
+                    self.core.arena_mut().push(Value::TRUE)?;
+                } else {
+                    self.core.arena_mut().push(Value::UNDEFINED)?;
+                    self.core.arena_mut().push(Value::FALSE)?;
+                }
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::SetIndex => {
                 let value = self.core.arena_mut().pop()?;
