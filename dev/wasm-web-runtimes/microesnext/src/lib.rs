@@ -58,6 +58,7 @@ const HOST_NOW: u32 = 42;
 const RUNTIME_DATE_NOW: u32 = 55;
 const PARSE_FLOAT: u32 = 46;
 const PARSE_INT: u32 = 47;
+const NUMBER_TO_STRING: u32 = (1 << 29) + 75;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -366,6 +367,20 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     let machine_string_prototype = string_prototype;
+    let number_prototype = (|| {
+        let base = machine.root(object_prototype)?;
+        let prototype = machine.new_object(base)?;
+        object_set(
+            &mut machine,
+            prototype,
+            b"toString",
+            Value::from_host(microesnext::HostRef::new(NUMBER_TO_STRING).unwrap()),
+        )
+    })();
+    if let Err(error) = number_prototype.and_then(|value| machine.install_number_prototype(value)) {
+        DETAIL.store(error as u32 + 2500, Ordering::Relaxed);
+        return;
+    }
     let date_prototype = match machine
         .new_object(Value::NULL)
         .and_then(|value| machine.retain(value))
@@ -837,6 +852,45 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 2000, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == NUMBER_TO_STRING =>
+            {
+                let result = (|| {
+                    let receiver = receiver.ok_or(Error::Type)?;
+                    let number = machine.number(receiver)?;
+                    let radix = machine.host_argument(0).ok()
+                        .filter(|value| *value != Value::UNDEFINED)
+                        .and_then(Value::as_i30)
+                        .unwrap_or(10);
+                    if !(2..=36).contains(&radix) { return Err(Error::Type); }
+                    let text = if radix == 10 || number.fract() != 0.0 {
+                        number.to_string()
+                    } else {
+                        let mut value = number as i64;
+                        let negative = value < 0;
+                        if negative { value = -value; }
+                        let mut digits = [0_u8; 65];
+                        let mut at = digits.len();
+                        loop {
+                            let digit = (value % i64::from(radix)) as u8;
+                            at -= 1;
+                            digits[at] = if digit < 10 { b'0' + digit } else { b'a' + digit - 10 };
+                            value /= i64::from(radix);
+                            if value == 0 { break; }
+                        }
+                        if negative { at -= 1; digits[at] = b'-'; }
+                        String::from(core::str::from_utf8(&digits[at..]).map_err(|_| Error::Type)?)
+                    };
+                    machine.new_string(text.as_bytes())
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2500, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }

@@ -17,7 +17,7 @@ full = [
   "compound-assignment-expressions", "default-parameters", "do-while-statements",
   "finally-statements", "for-in-statements", "for-of-statements", "implicit-completions",
   "in-expressions", "instanceof", "literal-expressions", "named-class-expressions",
-  "nested-exceptions", "number-division", "number-remainder",
+  "nested-exceptions", "number-division", "number-negation", "number-remainder",
   "object-destructuring-assignments", "object-destructuring-declarations",
   "object-spread", "property-update-expressions", "recursive-async-functions",
   "recursive-constructors", "regexp-literals", "rest-parameters", "spread-calls",

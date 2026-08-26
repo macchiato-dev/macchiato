@@ -92,6 +92,8 @@ pub struct Machine<'code, 'memory> {
     array_prototype: Option<RootId>,
     #[cfg(all(feature = "strings", feature = "objects"))]
     string_prototype: Option<RootId>,
+    #[cfg(all(feature = "numbers", feature = "objects"))]
+    number_prototype: Option<RootId>,
     #[cfg(feature = "objects")]
     object_prototype: Option<RootId>,
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
@@ -132,6 +134,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: None,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: None,
+            #[cfg(all(feature = "numbers", feature = "objects"))]
+            number_prototype: None,
             #[cfg(feature = "objects")]
             object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
@@ -246,6 +250,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: None,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: None,
+            #[cfg(all(feature = "numbers", feature = "objects"))]
+            number_prototype: None,
             #[cfg(feature = "objects")]
             object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
@@ -381,6 +387,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Ok(())
     }
 
+    #[cfg(all(feature = "numbers", feature = "objects"))]
+    pub fn install_number_prototype(&mut self, prototype: Value) -> Result<(), Error> {
+        if let Some(root) = self.number_prototype.take() { self.release(root)?; }
+        self.number_prototype = Some(self.retain(prototype)?);
+        Ok(())
+    }
+
     #[cfg(feature = "objects")]
     pub fn install_object_prototype(&mut self, prototype: Value) -> Result<(), Error> {
         if let Some(root) = self.object_prototype.take() { self.release(root)?; }
@@ -500,6 +513,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: self.array_prototype,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: self.string_prototype,
+            #[cfg(all(feature = "numbers", feature = "objects"))]
+            number_prototype: self.number_prototype,
             #[cfg(feature = "objects")]
             object_prototype: self.object_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
@@ -794,6 +809,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut().push(method)?;
                 } else if self.string_bytes(receiver).is_ok() {
                     let prototype = self.string_prototype.ok_or(Error::Type)?;
+                    let method = get(self.core.arena(), self.root(prototype)?, key)?;
+                    self.core.arena_mut().push(receiver)?;
+                    self.core.arena_mut().push(method)?;
+                } else if receiver.as_i30().is_some()
+                    || microesnext_values::numbers::try_get(self.core.arena(), receiver)?.is_some()
+                {
+                    let prototype = self.number_prototype.ok_or(Error::Type)?;
                     let method = get(self.core.arena(), self.root(prototype)?, key)?;
                     self.core.arena_mut().push(receiver)?;
                     self.core.arena_mut().push(method)?;
@@ -1510,6 +1532,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let key = self.core.arena_mut().pop()?;
                 let target = self.core.arena_mut().pop()?;
                 let result = value;
+                #[cfg(feature = "host-bindings")]
+                if let Some(object) = target.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::SetResult(value))
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostSet { object, key, value }));
+                }
                 if target.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
                     == Some(microesnext_arena::BlockKind::Bytes)
                 {
@@ -1814,6 +1847,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetIndex => {
                 let key = self.core.arena_mut().pop()?;
                 let target = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(object) = target.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::Value)
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostGet {
+                        object,
+                        key,
+                        method: false,
+                    }));
+                }
                 let value = if target.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
                     == Some(microesnext_arena::BlockKind::Bytes)
                 {
@@ -2549,6 +2597,27 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "objects", feature = "arrays"))]
+    fn yields_computed_host_properties() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "return environment[key];",
+            &["environment", "key"],
+        )
+        .unwrap();
+        let mut memory = [0; 96];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 2).unwrap();
+        let key_value = Value::from_host(HostRef::new(1).unwrap());
+        let Outcome::HostGet { object, key, method } = machine.run().unwrap() else {
+            panic!("expected a computed host property read")
+        };
+        assert_eq!(object, HostRef::new(0).unwrap());
+        assert_eq!(key, key_value);
+        assert!(!method);
+        machine.complete_host_operation(Value::TRUE).unwrap();
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
     }
 
     #[test]
