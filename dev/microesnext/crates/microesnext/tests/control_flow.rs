@@ -64,3 +64,16 @@ fn declarations_can_follow_control_flow() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn structured_else_if_chains_choose_one_branch() {
+    let code = compile_script(
+        "let value = 2; if (value == 1) { return 10; } else if (value == 2) { return 42; } else { return 30; }",
+    )
+    .unwrap();
+    let mut memory = [0; 192];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

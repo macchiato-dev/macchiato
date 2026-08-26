@@ -494,6 +494,7 @@ enum StructuredFrame {
         join_patch: Option<usize>,
         consequent_abrupt: bool,
         alternate: bool,
+        implicit_alternate: bool,
     },
     Loop {
         start: u32,
@@ -1437,8 +1438,8 @@ impl Parser<'_> {
                             self.output.extend_from_slice(&0_u32.to_le_bytes());
                             Some(patch)
                         };
-                        if !self.try_word_after_whitespace(b"else") || !self.consume(b'{') {
-                            return Err(self.error("else {"));
+                        if !self.try_word_after_whitespace(b"else") {
+                            return Err(self.error("else"));
                         }
                         let alternate = u32::try_from(self.output.len())
                             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -1446,12 +1447,20 @@ impl Parser<'_> {
                             .copy_from_slice(&alternate.to_le_bytes());
                         #[cfg(feature = "functions")]
                         self.relocations.push(alternate_patch);
+                        let else_if = self.try_word_after_whitespace(b"if");
+                        if !else_if && !self.consume(b'{') {
+                            return Err(self.error("if or {"));
+                        }
                         frames.push(StructuredFrame::Conditional {
                             alternate_patch,
                             join_patch,
                             consequent_abrupt: completed_abrupt,
                             alternate: true,
+                            implicit_alternate: else_if,
                         });
+                        if else_if {
+                            self.begin_structured(frames.as_mut(), StructuredStart::Conditional)?;
+                        }
                         break;
                     }
                     StructuredFrame::Conditional {
@@ -1533,6 +1542,16 @@ impl Parser<'_> {
                     self.whitespace();
                     return Ok(completed_abrupt);
                 }
+                if matches!(
+                    frames.last(),
+                    Some(StructuredFrame::Conditional {
+                        alternate: true,
+                        implicit_alternate: true,
+                        ..
+                    })
+                ) {
+                    continue;
+                }
                 if completed_abrupt {
                     if !self.consume(b'}') {
                         return Err(self.error("}"));
@@ -1571,6 +1590,7 @@ impl Parser<'_> {
                     join_patch: None,
                     consequent_abrupt: false,
                     alternate: false,
+                    implicit_alternate: false,
                 });
             }
             StructuredStart::Loop => {
