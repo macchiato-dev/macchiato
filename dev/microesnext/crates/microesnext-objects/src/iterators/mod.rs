@@ -15,6 +15,7 @@ pub mod kind {
     pub const COLLECTION_KEYS: u16 = 1;
     pub const COLLECTION_VALUES: u16 = 2;
     pub const COLLECTION_ENTRIES: u16 = 3;
+    pub const OBJECT_KEYS: u16 = 4;
 }
 
 pub fn new(arena: &mut Arena<'_>, source: Value, kind: u16) -> Result<Value, Error> {

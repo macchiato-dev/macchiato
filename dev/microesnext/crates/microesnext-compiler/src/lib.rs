@@ -84,6 +84,28 @@ impl Builder {
         self
     }
 
+    #[cfg(feature = "rest-parameters")]
+    pub fn init_rest_frame(mut self, count: u16, fixed_parameter_count: u16) -> Self {
+        self.code.push(Opcode::InitRestFrame as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
+        self.code
+            .extend_from_slice(&fixed_parameter_count.to_le_bytes());
+        self
+    }
+
+    #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
+    pub fn init_receiver_rest_frame(
+        mut self,
+        count: u16,
+        fixed_parameter_count: u16,
+    ) -> Self {
+        self.code.push(Opcode::InitReceiverRestFrame as u8);
+        self.code.extend_from_slice(&count.to_le_bytes());
+        self.code
+            .extend_from_slice(&fixed_parameter_count.to_le_bytes());
+        self
+    }
+
     #[cfg(feature = "locals")]
     pub fn load_local(mut self, slot: u16) -> Self {
         self.code.push(Opcode::LoadLocal as u8);
@@ -283,6 +305,8 @@ fn compile_script_with_options_and_host_globals(
         loop_breaks: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
+        #[cfg(feature = "receivers")]
+        receiver_capture: None,
         #[cfg(feature = "class-inheritance")]
         super_binding: None,
         #[cfg(any(feature = "number-negation", feature = "number-operations"))]
@@ -338,6 +362,8 @@ struct Parser<'source> {
     function_frame: bool,
     #[cfg(feature = "receivers")]
     receiver_frame: bool,
+    #[cfg(feature = "receivers")]
+    receiver_capture: Option<u16>,
     #[cfg(feature = "class-inheritance")]
     super_binding: Option<Binding>,
     #[cfg(feature = "for-statements")]
@@ -382,6 +408,15 @@ enum AssignmentSuffix {
 #[cfg(feature = "environments")]
 fn same_binding(left: Binding, right: Binding) -> bool {
     left.start == right.start && left.end == right.end
+}
+
+fn hex_nibble(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 #[cfg(feature = "functions")]
@@ -934,6 +969,10 @@ impl Parser<'_> {
         if let Some(binding) = self.for_of_binding()? {
             return self.for_of_loop(binding, label);
         }
+        #[cfg(feature = "for-in-statements")]
+        if let Some(binding) = self.for_in_binding()? {
+            return self.for_in_loop(binding, label);
+        }
         let mut initialized_locals = Some(0);
         if self.try_word_after_whitespace(b"let")
             || self.try_word_after_whitespace(b"var")
@@ -1032,13 +1071,23 @@ impl Parser<'_> {
 
     #[cfg(feature = "for-of-statements")]
     fn for_of_binding(&mut self) -> Result<Option<Binding>, CompileError> {
+        self.iteration_binding(b"of")
+    }
+
+    #[cfg(feature = "for-in-statements")]
+    fn for_in_binding(&mut self) -> Result<Option<Binding>, CompileError> {
+        self.iteration_binding(b"in")
+    }
+
+    #[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
+    fn iteration_binding(&mut self, keyword: &[u8]) -> Result<Option<Binding>, CompileError> {
         let start = self.offset;
         if !self.try_word_after_whitespace(b"let") {
             return Ok(None);
         }
         self.whitespace();
         let (name_start, name_end) = self.identifier()?;
-        if !self.try_word_after_whitespace(b"of") {
+        if !self.try_word_after_whitespace(keyword) {
             self.offset = start;
             return Ok(None);
         }
@@ -1068,6 +1117,36 @@ impl Parser<'_> {
         binding: Binding,
         label: Option<(usize, usize)>,
     ) -> Result<(), CompileError> {
+        self.iterator_loop(
+            binding,
+            label,
+            Opcode::NewArrayIterator,
+            Opcode::ArrayIteratorNext,
+        )
+    }
+
+    #[cfg(feature = "for-in-statements")]
+    fn for_in_loop(
+        &mut self,
+        binding: Binding,
+        label: Option<(usize, usize)>,
+    ) -> Result<(), CompileError> {
+        self.iterator_loop(
+            binding,
+            label,
+            Opcode::NewObjectKeyIterator,
+            Opcode::ObjectKeyIteratorNext,
+        )
+    }
+
+    #[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
+    fn iterator_loop(
+        &mut self,
+        binding: Binding,
+        label: Option<(usize, usize)>,
+        new_iterator: Opcode,
+        iterator_next: Opcode,
+    ) -> Result<(), CompileError> {
         let iterator_slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         self.expression(None)?;
@@ -1085,14 +1164,14 @@ impl Parser<'_> {
         if !self.consume(b')') {
             return Err(self.error(")"));
         }
-        self.output.push(Opcode::NewArrayIterator as u8);
+        self.output.push(new_iterator as u8);
         self.output.push(Opcode::StoreLocal as u8);
         self.output.extend_from_slice(&iterator_slot.to_le_bytes());
         let loop_start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
         self.output.push(Opcode::LoadLocal as u8);
         self.output.extend_from_slice(&iterator_slot.to_le_bytes());
-        self.output.push(Opcode::ArrayIteratorNext as u8);
+        self.output.push(iterator_next as u8);
         self.output.push(Opcode::JumpIfFalseBoolean as u8);
         let exit_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
@@ -2703,6 +2782,7 @@ impl Parser<'_> {
             None,
             asynchronous,
             !asynchronous,
+            false,
         )?;
         Ok(())
     }
@@ -2743,6 +2823,7 @@ impl Parser<'_> {
             None,
             false,
             true,
+            false,
         )?;
         #[cfg(not(feature = "class-methods"))]
         if !self.consume(b'}') {
@@ -2798,6 +2879,7 @@ impl Parser<'_> {
                 None,
                 false,
                 true,
+                false,
             )?;
         } else {
             self.default_class_constructor(slot);
@@ -2829,7 +2911,7 @@ impl Parser<'_> {
         self.output.push(Opcode::StoreLocal as u8);
         self.output.extend_from_slice(&destination.to_le_bytes());
         let code = self
-            .initial_function_frame(0, true)
+            .initial_function_frame(0, true, false)
             .into_iter()
             .chain([Opcode::LoadThis as u8, Opcode::ReturnReceiverLocals as u8])
             .collect();
@@ -2852,7 +2934,7 @@ impl Parser<'_> {
         self.output.extend_from_slice(b"prototype");
         self.output.push(Opcode::GetProperty as u8);
         self.output_atom_range(name_start, name_end);
-        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        self.function_value(parameters, None, FunctionBody::Method, None, false, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
@@ -2864,10 +2946,16 @@ impl Parser<'_> {
             self.whitespace();
         }
         #[cfg(feature = "class-getters")]
-        let getter = self.try_word(b"get");
+        let getter_start = self.offset;
+        #[cfg(feature = "class-getters")]
+        let mut getter = self.try_word(b"get");
         #[cfg(feature = "class-getters")]
         if getter {
             self.whitespace();
+            if self.source.get(self.offset) == Some(&b'(') {
+                self.offset = getter_start;
+                getter = false;
+            }
         }
         #[cfg(not(feature = "class-getters"))]
         let getter = false;
@@ -2894,7 +2982,7 @@ impl Parser<'_> {
         };
         #[cfg(not(feature = "class-getters"))]
         let body_kind = FunctionBody::Method;
-        self.function_value(parameters, None, body_kind, None, false, false)?;
+        self.function_value(parameters, None, body_kind, None, false, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
@@ -2911,6 +2999,10 @@ impl Parser<'_> {
         }
         loop {
             self.whitespace();
+            #[cfg(feature = "rest-parameters")]
+            let rest = self.consume_bytes(b"...");
+            #[cfg(not(feature = "rest-parameters"))]
+            let rest = false;
             let (start, end) = self.identifier()?;
             if parameters.iter().any(|binding: &Binding| {
                 self.source[binding.start..binding.end] == self.source[start..end]
@@ -2939,6 +3031,12 @@ impl Parser<'_> {
                 #[cfg(feature = "environments")]
                 captured: false,
             });
+            if rest {
+                if !self.consume(b')') {
+                    return Err(self.error(") after a rest parameter"));
+                }
+                return Ok(parameters);
+            }
             if self.consume(b')') {
                 return Ok(parameters);
             }
@@ -3037,6 +3135,7 @@ impl Parser<'_> {
         expression_name: Option<Binding>,
         asynchronous: bool,
         constructible: bool,
+        lexical_receiver: bool,
     ) -> Result<(), CompileError> {
         let receiver_frame = constructible && cfg!(feature = "constructors");
         #[cfg(all(feature = "class-methods", not(feature = "class-getters")))]
@@ -3049,6 +3148,12 @@ impl Parser<'_> {
         }
         let parameter_count = u16::try_from(parameters.len())
             .map_err(|_| self.error("fewer than 65536 parameters"))?;
+        #[cfg(feature = "rest-parameters")]
+        let rest_parameter = parameters.last().is_some_and(|binding| {
+            binding.start >= 3 && &self.source[binding.start - 3..binding.start] == b"..."
+        });
+        #[cfg(not(feature = "rest-parameters"))]
+        let rest_parameter = false;
         #[cfg(feature = "default-parameters")]
         let parameter_defaults: Vec<_> = parameters
             .iter()
@@ -3064,7 +3169,7 @@ impl Parser<'_> {
         let mut body = Parser {
             source: self.source,
             offset: self.offset,
-            output: self.initial_function_frame(parameter_count, receiver_frame),
+            output: self.initial_function_frame(parameter_count, receiver_frame, rest_parameter),
             #[cfg(feature = "host-bindings")]
             host_globals: self.host_globals.clone(),
             locals: parameters,
@@ -3079,6 +3184,10 @@ impl Parser<'_> {
             loop_breaks: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
+            #[cfg(feature = "receivers")]
+            receiver_capture: (lexical_receiver
+                && (self.receiver_frame || self.receiver_capture.is_some()))
+            .then_some(0),
             #[cfg(feature = "class-inheritance")]
             super_binding: Self::body_accepts_super(body_kind)
                 .then_some(self.super_binding)
@@ -3236,7 +3345,27 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "function-arguments")]
-    fn initial_function_frame(&self, parameter_count: u16, constructible: bool) -> Vec<u8> {
+    fn initial_function_frame(
+        &self,
+        parameter_count: u16,
+        constructible: bool,
+        rest_parameter: bool,
+    ) -> Vec<u8> {
+        #[cfg(feature = "rest-parameters")]
+        if rest_parameter {
+            let fixed = parameter_count - 1;
+            #[cfg(feature = "receivers")]
+            if constructible {
+                return Builder::new()
+                    .init_receiver_rest_frame(parameter_count, fixed)
+                    .finish();
+            }
+            return Builder::new()
+                .init_rest_frame(parameter_count, fixed)
+                .finish();
+        }
+        #[cfg(not(feature = "rest-parameters"))]
+        let _ = rest_parameter;
         #[cfg(feature = "receivers")]
         if constructible {
             return Builder::new()
@@ -3251,8 +3380,14 @@ impl Parser<'_> {
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
-    fn initial_function_frame(&self, parameter_count: u16, constructible: bool) -> Vec<u8> {
+    fn initial_function_frame(
+        &self,
+        parameter_count: u16,
+        constructible: bool,
+        rest_parameter: bool,
+    ) -> Vec<u8> {
         debug_assert_eq!(parameter_count, 0);
+        debug_assert!(!rest_parameter);
         let _ = constructible;
         Builder::new().init_locals(0).finish()
     }
@@ -3301,7 +3436,18 @@ impl Parser<'_> {
             self.output.extend_from_slice(&slot.to_le_bytes());
         }
         let count =
-            u16::try_from(sources.len()).map_err(|_| self.error("fewer than 65536 captures"))?;
+            u16::try_from(sources.len() + usize::from(body.receiver_capture.is_some()))
+                .map_err(|_| self.error("fewer than 65536 captures"))?;
+        if body.receiver_capture.is_some() {
+            if self.receiver_frame {
+                self.output.push(Opcode::LoadThis as u8);
+            } else if let Some(capture) = self.receiver_capture {
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+            } else {
+                return Err(self.error("an enclosing receiver"));
+            }
+        }
         for source in sources {
             match source {
                 CaptureSource::Local(index) => {
@@ -5448,6 +5594,7 @@ impl Parser<'_> {
                         None,
                         false,
                         false,
+                        false,
                     )?;
                     self.output.push(Opcode::SetProperty as u8);
                     if self.consume(b'}') {
@@ -5456,6 +5603,20 @@ impl Parser<'_> {
                     if !self.consume(b',') {
                         return Err(self.error(", or }"));
                     }
+                    continue;
+                }
+                self.whitespace();
+                if matches!(self.source.get(self.offset), Some(b',' | b'}')) {
+                    self.output_atom_range(start, end);
+                    let resume = self.offset;
+                    self.offset = start;
+                    self.expression(None)?;
+                    self.offset = resume;
+                    self.output.push(Opcode::SetProperty as u8);
+                    if self.consume_raw(b'}') {
+                        break;
+                    }
+                    self.offset += 1;
                     continue;
                 }
                 if !self.consume(b':') {
@@ -5496,6 +5657,7 @@ impl Parser<'_> {
                         None,
                         false,
                         false,
+                        false,
                     )?;
                     self.output.push(Opcode::SetProperty as u8);
                     if self.consume(b'}') {
@@ -5504,6 +5666,20 @@ impl Parser<'_> {
                     if !self.consume(b',') {
                         return Err(self.error(", or }"));
                     }
+                    continue;
+                }
+                self.whitespace();
+                if matches!(self.source.get(self.offset), Some(b',' | b'}')) {
+                    self.output_atom_range(start, end);
+                    let resume = self.offset;
+                    self.offset = start;
+                    self.expression(None)?;
+                    self.offset = resume;
+                    self.output.push(Opcode::SetProperty as u8);
+                    if self.consume_raw(b'}') {
+                        break;
+                    }
+                    self.offset += 1;
                     continue;
                 }
                 if !self.consume(b':') {
@@ -5611,7 +5787,7 @@ impl Parser<'_> {
                 } else {
                     FunctionBody::Expression
                 };
-                self.function_value(parameters, None, body, None, asynchronous, false)?;
+                self.function_value(parameters, None, body, None, asynchronous, false, true)?;
                 (false, TermKind::General)
             } else if let Some((start, end)) = binding {
                 self.offset += end - start;
@@ -5680,6 +5856,7 @@ impl Parser<'_> {
                     expression_name,
                     asynchronous,
                     !asynchronous,
+                    false,
                 )?;
                 (false, TermKind::General)
             } else if cfg!(feature = "parenthesized-expressions") && self.consume_raw(b'(') {
@@ -5907,11 +6084,19 @@ impl Parser<'_> {
 
     #[cfg(all(feature = "functions", feature = "receivers"))]
     fn receiver_term(&mut self) -> bool {
-        if !self.receiver_frame || !self.try_word(b"this") {
+        if (!self.receiver_frame && self.receiver_capture.is_none()) || !self.try_word(b"this") {
             return false;
         }
-        self.output.push(Opcode::LoadThis as u8);
-        true
+        if self.receiver_frame {
+            self.output.push(Opcode::LoadThis as u8);
+            return true;
+        }
+        if let Some(capture) = self.receiver_capture {
+            self.output.push(Opcode::LoadCapture as u8);
+            self.output.extend_from_slice(&capture.to_le_bytes());
+            return true;
+        }
+        false
     }
 
     #[cfg(all(feature = "functions", not(feature = "receivers")))]
@@ -5999,6 +6184,7 @@ impl Parser<'_> {
                 None,
                 false,
                 true,
+                false,
             )?;
         } else {
             self.default_class_value();
@@ -6033,7 +6219,7 @@ impl Parser<'_> {
         self.output.extend_from_slice(&0_u16.to_le_bytes());
         self.output.push(Opcode::ToClassConstructor as u8);
         let code = self
-            .initial_function_frame(0, true)
+            .initial_function_frame(0, true, false)
             .into_iter()
             .chain([Opcode::LoadThis as u8, Opcode::ReturnReceiverLocals as u8])
             .collect();
@@ -6051,10 +6237,16 @@ impl Parser<'_> {
             self.whitespace();
         }
         #[cfg(feature = "class-getters")]
-        let getter = self.try_word(b"get");
+        let getter_start = self.offset;
+        #[cfg(feature = "class-getters")]
+        let mut getter = self.try_word(b"get");
         #[cfg(feature = "class-getters")]
         if getter {
             self.whitespace();
+            if self.source.get(self.offset) == Some(&b'(') {
+                self.offset = getter_start;
+                getter = false;
+            }
         }
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
@@ -6078,7 +6270,7 @@ impl Parser<'_> {
         };
         #[cfg(not(feature = "class-getters"))]
         let body_kind = FunctionBody::Method;
-        self.function_value(parameters, None, body_kind, None, false, false)?;
+        self.function_value(parameters, None, body_kind, None, false, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
@@ -6267,6 +6459,29 @@ impl Parser<'_> {
                 return Err(self.error("a string escape"));
             };
             self.offset += 1;
+            if escaped == b'x' {
+                let high = self
+                    .source
+                    .get(self.offset)
+                    .copied()
+                    .and_then(hex_nibble)
+                    .ok_or_else(|| self.error("two hexadecimal escape digits"))?;
+                let low = self
+                    .source
+                    .get(self.offset + 1)
+                    .copied()
+                    .and_then(hex_nibble)
+                    .ok_or_else(|| self.error("two hexadecimal escape digits"))?;
+                self.offset += 2;
+                let value = high << 4 | low;
+                if value < 0x80 {
+                    self.output.push(value);
+                } else {
+                    self.output.push(0xc0 | value >> 6);
+                    self.output.push(0x80 | value & 0x3f);
+                }
+                continue;
+            }
             self.output.push(match escaped {
                 b'b' => 0x08,
                 b'f' => 0x0c,
@@ -6482,7 +6697,8 @@ impl Parser<'_> {
             self.captures.push(binding);
             self.captures.len() - 1
         };
-        u16::try_from(index).map_err(|_| self.error("fewer than 65536 captures"))
+        u16::try_from(index + usize::from(self.receiver_capture.is_some()))
+            .map_err(|_| self.error("fewer than 65536 captures"))
     }
 
     fn immediate(&mut self) -> Option<Immediate> {
@@ -7671,7 +7887,7 @@ mod tests {
 
     #[cfg(feature = "strings")]
     #[test]
-    fn compiles_no_substitution_templates_and_rejects_unknown_forms() {
+    fn compiles_templates_and_hexadecimal_string_escapes() {
         assert_eq!(
             compile_script("return `first\nsecond`;").unwrap(),
             Builder::new()
@@ -7687,8 +7903,11 @@ mod tests {
             "a template literal without substitutions"
         );
         assert_eq!(
-            compile_script("return '\\x41';").unwrap_err().expected,
-            "a supported string escape"
+            compile_script("return '\\x41\\x80';").unwrap(),
+            Builder::new()
+                .string(&[b'A', 0xc2, 0x80])
+                .op(Opcode::Return)
+                .finish()
         );
     }
 

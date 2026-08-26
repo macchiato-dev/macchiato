@@ -77,6 +77,22 @@ fn source_function_receives_multiple_arguments_in_order() {
 }
 
 #[test]
+fn rest_parameters_collect_excess_arguments() {
+    assert_eq!(
+        run("function pick(first, ...rest) { return rest[1]; } return pick(0, 40, 42);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn method_rest_parameters_preserve_the_receiver_frame() {
+    assert_eq!(
+        run("let Box = class { pick(...rest) { this.value = rest[1]; return this.value; } }; return new Box().pick(40, 42);"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_function_keeps_parameters_and_lexical_locals_in_one_frame() {
     assert_eq!(
         run("function addBase(value) { let base = 40; return base + value; } return addBase(2);"),

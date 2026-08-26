@@ -41,6 +41,7 @@ default = [
   "function-arguments",
   "for-statements",
   "for-of-statements",
+  "for-in-statements",
   "implicit-completions",
   "host-bindings",
   "instanceof",
@@ -72,6 +73,7 @@ default = [
   "property-assignment-expressions",
   "receivers",
   "regexp-literals",
+  "rest-parameters",
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
@@ -165,6 +167,7 @@ exceptions = ["microesnext-bytecode/exceptions"]
 expression-statements = ["microesnext-bytecode/stack-operations"]
 for-statements = ["control-flow", "expression-statements", "locals"]
 for-of-statements = ["arrays", "for-statements", "microesnext-bytecode/array-iterators"]
+for-in-statements = ["for-statements", "objects", "microesnext-bytecode/object-key-iterators"]
 environments = ["functions", "microesnext-bytecode/environments"]
 functions = [
   "locals",
@@ -228,6 +231,7 @@ object-destructuring-declarations = [
 parenthesized-expressions = []
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]
+rest-parameters = ["arrays", "function-arguments", "microesnext-bytecode/rest-parameters"]
 recursive-async-functions = [
   "async-functions",
   "environments",

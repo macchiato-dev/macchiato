@@ -64,3 +64,11 @@ fn an_unbraced_for_body_can_be_a_conditional_return() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn for_in_visits_each_own_object_key() {
+    assert_eq!(
+        run("let count = 0; for (let key in { first: 1, second: 2 }) count++; return count;"),
+        Outcome::Complete(Value::from_i30(2).unwrap())
+    );
+}

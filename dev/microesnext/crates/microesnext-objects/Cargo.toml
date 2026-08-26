@@ -12,6 +12,7 @@ default = []
 arrays = []
 array-assignment-expressions = ["arrays"]
 array-iterators = ["arrays", "iterators"]
+object-key-iterators = ["iterators"]
 iterators = ["microesnext-arena/iterators"]
 iterator-protocol = [
   "iterators",

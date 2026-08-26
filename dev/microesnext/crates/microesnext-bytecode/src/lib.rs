@@ -198,6 +198,14 @@ pub enum Opcode {
     UpdateProperty = 132,
     #[cfg(feature = "captured-update-expressions")]
     UpdateEnvironmentCell = 133,
+    #[cfg(feature = "object-key-iterators")]
+    NewObjectKeyIterator = 134,
+    #[cfg(feature = "object-key-iterators")]
+    ObjectKeyIteratorNext = 135,
+    #[cfg(feature = "rest-parameters")]
+    InitRestFrame = 136,
+    #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
+    InitReceiverRestFrame = 137,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -379,6 +387,14 @@ impl TryFrom<u8> for Opcode {
             132 => Ok(Self::UpdateProperty),
             #[cfg(feature = "captured-update-expressions")]
             133 => Ok(Self::UpdateEnvironmentCell),
+            #[cfg(feature = "object-key-iterators")]
+            134 => Ok(Self::NewObjectKeyIterator),
+            #[cfg(feature = "object-key-iterators")]
+            135 => Ok(Self::ObjectKeyIteratorNext),
+            #[cfg(feature = "rest-parameters")]
+            136 => Ok(Self::InitRestFrame),
+            #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
+            137 => Ok(Self::InitReceiverRestFrame),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

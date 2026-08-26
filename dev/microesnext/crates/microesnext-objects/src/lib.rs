@@ -6,6 +6,8 @@ pub mod arrays;
 pub mod collections;
 #[cfg(feature = "iterators")]
 pub mod iterators;
+#[cfg(feature = "object-key-iterators")]
+pub mod object_key_iterators;
 
 #[cfg(feature = "assignment-expressions")]
 pub mod assignment_expressions;
@@ -86,6 +88,29 @@ pub fn get_own(arena: &Arena<'_>, object: Value, key: Value) -> Result<Option<Va
         }
     }
     Ok(None)
+}
+
+#[cfg(feature = "object-key-iterators")]
+pub(crate) fn own_property_count(arena: &Arena<'_>, object: Value) -> Result<usize, Error> {
+    let entries = arena.values(properties_ref(arena, object)?)?;
+    if entries.len() % 2 != 0 {
+        return Err(Error::DanglingReference);
+    }
+    Ok(entries.len() / 2)
+}
+
+#[cfg(feature = "object-key-iterators")]
+pub(crate) fn own_property_key(
+    arena: &Arena<'_>,
+    object: Value,
+    index: usize,
+) -> Result<Value, Error> {
+    let entries = arena.values(properties_ref(arena, object)?)?;
+    entries
+        .get(index.checked_mul(2).ok_or(Error::OutOfMemory)?)
+        .copied()
+        .map(Value::from_raw)
+        .ok_or(Error::DanglingReference)
 }
 
 pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Result<Value, Error> {

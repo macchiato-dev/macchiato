@@ -80,6 +80,80 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
     }
 
+    #[cfg(feature = "rest-parameters")]
+    fn init_rest_frame(
+        &mut self,
+        count: usize,
+        fixed: usize,
+        has_receiver: bool,
+    ) -> Result<(), Error> {
+        if count <= fixed {
+            return Err(Error::BadBytecode);
+        }
+        let base = self.core.frame_base();
+        let stack_len = self.core.arena().stack_len();
+        let receiver_count = usize::from(has_receiver);
+        let argument_count = stack_len
+            .checked_sub(base + receiver_count)
+            .ok_or(Error::BadBytecode)?;
+        let extra_count = argument_count.saturating_sub(fixed);
+        let rest = new_array(self.core.arena_mut())?;
+        self.core.arena_mut().push(rest)?;
+        for index in 0..extra_count {
+            let value = self
+                .core
+                .arena()
+                .stack_value_from_bottom(base + fixed + index)?;
+            let rest_index = self.core.arena().stack_len() - 1;
+            let rest = self
+                .core
+                .arena()
+                .stack_value_from_bottom(rest_index)?;
+            let rest = array_set(self.core.arena_mut(), rest, index, value)?;
+            self.core
+                .arena_mut()
+                .set_stack_value_from_bottom(rest_index, rest)?;
+        }
+        let rest = self.core.arena_mut().pop()?;
+        let receiver = if has_receiver {
+            Some(self.core.arena_mut().pop()?)
+        } else {
+            None
+        };
+        self.core
+            .arena_mut()
+            .truncate_stack(base + argument_count.min(fixed))?;
+        for _ in argument_count..fixed {
+            self.core.arena_mut().push(Value::UNDEFINED)?;
+        }
+        self.core.arena_mut().push(rest)?;
+        if let Some(receiver) = receiver {
+            #[cfg(feature = "receivers")]
+            {
+                self.core.arena_mut().push(receiver)?;
+                microesnext_bindings::receivers::init_frame(
+                    self.core.arena_mut(),
+                    base,
+                    count,
+                    fixed + 1,
+                )?;
+            }
+            #[cfg(not(feature = "receivers"))]
+            {
+                let _ = receiver;
+                return Err(Error::BadBytecode);
+            }
+        } else {
+            microesnext_bindings::parameters::init_frame(
+                self.core.arena_mut(),
+                base,
+                count,
+                fixed + 1,
+            )?;
+        }
+        Ok(())
+    }
+
     #[cfg(feature = "strings")]
     pub fn with_strings(
         code: &'code [u8],
@@ -874,6 +948,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 )?;
                 Ok(None)
             }
+            #[cfg(feature = "rest-parameters")]
+            Opcode::InitRestFrame => {
+                let count = self.core.next_u16()? as usize;
+                let fixed = self.core.next_u16()? as usize;
+                self.init_rest_frame(count, fixed, false)?;
+                Ok(None)
+            }
+            #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
+            Opcode::InitReceiverRestFrame => {
+                let count = self.core.next_u16()? as usize;
+                let fixed = self.core.next_u16()? as usize;
+                self.init_rest_frame(count, fixed, true)?;
+                Ok(None)
+            }
             #[cfg(feature = "receivers")]
             Opcode::LoadThis => {
                 let receiver = microesnext_bindings::receivers::load(
@@ -1263,6 +1351,31 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 if let Some(value) =
                     microesnext_objects::arrays::iterators::next(self.core.arena_mut(), iterator)?
                 {
+                    self.core.arena_mut().push(value)?;
+                    self.core.arena_mut().push(Value::TRUE)?;
+                } else {
+                    self.core.arena_mut().push(Value::UNDEFINED)?;
+                    self.core.arena_mut().push(Value::FALSE)?;
+                }
+                Ok(None)
+            }
+            #[cfg(feature = "object-key-iterators")]
+            Opcode::NewObjectKeyIterator => {
+                let object = self.core.arena_mut().pop()?;
+                let iterator = microesnext_objects::object_key_iterators::new(
+                    self.core.arena_mut(),
+                    object,
+                )?;
+                self.core.arena_mut().push(iterator)?;
+                Ok(None)
+            }
+            #[cfg(feature = "object-key-iterators")]
+            Opcode::ObjectKeyIteratorNext => {
+                let iterator = self.core.arena_mut().pop()?;
+                if let Some(value) = microesnext_objects::object_key_iterators::next(
+                    self.core.arena_mut(),
+                    iterator,
+                )? {
                     self.core.arena_mut().push(value)?;
                     self.core.arena_mut().push(Value::TRUE)?;
                 } else {

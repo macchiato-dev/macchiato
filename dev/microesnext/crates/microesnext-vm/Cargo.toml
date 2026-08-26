@@ -34,6 +34,17 @@ array-iterators = [
   "microesnext-objects/array-iterators",
   "microesnext-bytecode/array-iterators",
 ]
+rest-parameters = [
+  "arrays",
+  "function-arguments",
+  "microesnext-bytecode/rest-parameters",
+]
+object-key-iterators = [
+  "iterators",
+  "objects",
+  "microesnext-objects/object-key-iterators",
+  "microesnext-bytecode/object-key-iterators",
+]
 strings = [
   "dep:microesnext-values",
   "microesnext-values/strings",

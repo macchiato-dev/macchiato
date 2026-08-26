@@ -180,6 +180,17 @@ for-of-statements = [
   "for-statements",
   "microesnext-compiler/for-of-statements",
 ]
+object-key-iterators = [
+  "iterators",
+  "objects",
+  "microesnext-objects/object-key-iterators",
+  "microesnext-vm/object-key-iterators",
+]
+for-in-statements = [
+  "for-statements",
+  "object-key-iterators",
+  "microesnext-compiler/for-in-statements",
+]
 async = [
   "dep:microesnext-scheduler",
   "microesnext-scheduler/async",
@@ -274,6 +285,12 @@ function-arguments = [
   "microesnext-bindings/parameters",
   "microesnext-vm/function-arguments",
   "microesnext-compiler/function-arguments",
+]
+rest-parameters = [
+  "arrays",
+  "function-arguments",
+  "microesnext-vm/rest-parameters",
+  "microesnext-compiler/rest-parameters",
 ]
 integer-operations = [
   "dep:microesnext-semantics",
@@ -586,6 +603,7 @@ required-features = [
   "compound-assignment-expressions",
   "class-expressions",
   "for-of-statements",
+  "for-in-statements",
   "for-statements",
   "update-expressions",
 ]
@@ -655,6 +673,7 @@ required-features = [
   "function-arguments",
   "numbers",
   "recursive-functions",
+  "rest-parameters",
 ]
 
 [[test]]
