@@ -391,6 +391,11 @@ path = "tests/conditional_functions.rs"
 required-features = ["control-flow", "function-arguments"]
 
 [[test]]
+name = "conditional-assignments"
+path = "tests/conditional_assignments.rs"
+required-features = ["control-flow", "local-assignment-expressions"]
+
+[[test]]
 name = "minimal-program"
 path = "tests/minimal_program.rs"
 required-features = ["minimal-program"]
