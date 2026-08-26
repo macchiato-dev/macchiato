@@ -109,16 +109,22 @@ pub fn own_property_count(arena: &Arena<'_>, object: Value) -> Result<usize, Err
     if entries.len() % 2 != 0 {
         return Err(Error::DanglingReference);
     }
-    Ok(entries.len() / 2)
+    Ok(entries
+        .chunks_exact(2)
+        .filter(|pair| Value::from_raw(pair[0]) != Value::EMPTY)
+        .count())
 }
 
 #[cfg(any(feature = "object-key-iterators", feature = "object-spread"))]
 pub fn own_property_key(arena: &Arena<'_>, object: Value, index: usize) -> Result<Value, Error> {
     let entries = arena.values(properties_ref(arena, object)?)?;
     entries
-        .get(index.checked_mul(2).ok_or(Error::OutOfMemory)?)
-        .copied()
-        .map(Value::from_raw)
+        .chunks_exact(2)
+        .filter_map(|pair| {
+            let key = Value::from_raw(pair[0]);
+            (key != Value::EMPTY).then_some(key)
+        })
+        .nth(index)
         .ok_or(Error::DanglingReference)
 }
 
@@ -135,6 +141,14 @@ pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Re
         }
     }
 
+    for index in (0..entries.len()).step_by(2) {
+        if Value::from_raw(entries[index]) == Value::EMPTY {
+            arena.set_value(properties, index, key)?;
+            arena.set_value(properties, index + 1, value)?;
+            return Ok(object);
+        }
+    }
+
     let mut live = [object, key, value];
     let properties = properties_ref(arena, live[0])?;
     let (object_root, pair) = live.split_at_mut(1);
@@ -142,6 +156,22 @@ pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Re
     let object = live[0].as_ref().ok_or(Error::Type)?;
     arena.set_value(object, 1, Value::from_ref(properties))?;
     Ok(live[0])
+}
+
+pub fn delete(arena: &mut Arena<'_>, object: Value, key: Value) -> Result<bool, Error> {
+    let properties = properties_ref(arena, object)?;
+    let entries = arena.values(properties)?;
+    if entries.len() % 2 != 0 {
+        return Err(Error::DanglingReference);
+    }
+    for index in (0..entries.len()).step_by(2) {
+        if Value::from_raw(entries[index]) == key {
+            arena.set_value(properties, index, Value::EMPTY)?;
+            arena.set_value(properties, index + 1, Value::EMPTY)?;
+            return Ok(true);
+        }
+    }
+    Ok(true)
 }
 
 pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {
@@ -276,5 +306,21 @@ mod tests {
         let mut memory = [0; 24];
         let mut arena = Arena::new(&mut memory);
         assert_eq!(new_object(&mut arena, Value::TRUE), Err(Error::Type));
+    }
+
+    #[test]
+    fn deleted_property_slots_are_absent_and_reused() {
+        let mut memory = [0; 96];
+        let mut arena = Arena::with_root_capacity(&mut memory, 4);
+        let mut atoms = Atoms::new(&mut arena).unwrap();
+        let first = atoms.intern(&mut arena, b"first").unwrap();
+        let second = atoms.intern(&mut arena, b"second").unwrap();
+        let object = new_object(&mut arena, Value::NULL).unwrap();
+        set(&mut arena, object, first, Value::TRUE).unwrap();
+        assert_eq!(delete(&mut arena, object, first), Ok(true));
+        assert_eq!(get_own(&arena, object, first), Ok(None));
+        set(&mut arena, object, second, Value::FALSE).unwrap();
+        assert_eq!(own_property_count(&arena, object), Ok(1));
+        assert_eq!(own_property_key(&arena, object, 0), Ok(second));
     }
 }

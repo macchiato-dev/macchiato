@@ -224,6 +224,8 @@ pub enum Opcode {
     CallMethodSpread = 145,
     #[cfg(feature = "object-spread")]
     CopyObjectProperties = 146,
+    #[cfg(feature = "objects")]
+    DeleteProperty = 147,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -431,6 +433,8 @@ impl TryFrom<u8> for Opcode {
             145 => Ok(Self::CallMethodSpread),
             #[cfg(feature = "object-spread")]
             146 => Ok(Self::CopyObjectProperties),
+            #[cfg(feature = "objects")]
+            147 => Ok(Self::DeleteProperty),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

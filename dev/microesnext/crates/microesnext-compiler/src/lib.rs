@@ -1347,7 +1347,9 @@ impl Parser<'_> {
     ) -> Result<Option<IterationBinding>, CompileError> {
         let start = self.offset;
         self.whitespace();
-        let declaration = self.try_word(b"let");
+        let declaration = self.try_word(b"let")
+            || self.try_word(b"const")
+            || (cfg!(feature = "var-declarations") && self.try_word(b"var"));
         self.whitespace();
         #[cfg(feature = "array-destructuring-declarations")]
         if declaration && self.consume_raw(b'[') {
@@ -2708,17 +2710,34 @@ impl Parser<'_> {
                             self.relocations.push(alternate_patch);
                             let else_if = self.try_word_after_whitespace(b"if");
                             if else_if {
-                                frames.push(StructuredFrame::Conditional {
-                                    alternate_patch,
-                                    join_patch,
-                                    consequent_abrupt: completed_abrupt,
-                                    alternate: true,
-                                    implicit_alternate: true,
-                                });
-                                self.begin_structured(
-                                    frames.as_mut(),
-                                    StructuredStart::Conditional,
-                                )?;
+                                if self.conditional_body_is_braced() {
+                                    frames.push(StructuredFrame::Conditional {
+                                        alternate_patch,
+                                        join_patch,
+                                        consequent_abrupt: completed_abrupt,
+                                        alternate: true,
+                                        implicit_alternate: true,
+                                    });
+                                    self.begin_structured(
+                                        frames.as_mut(),
+                                        StructuredStart::Conditional,
+                                    )?;
+                                    break;
+                                }
+                                let alternate_abrupt = self.single_if()?;
+                                if let Some(patch) = join_patch {
+                                    let join = u32::try_from(self.output.len())
+                                        .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                                    self.output[patch..patch + 4]
+                                        .copy_from_slice(&join.to_le_bytes());
+                                    #[cfg(feature = "functions")]
+                                    self.relocations.push(patch);
+                                }
+                                let completed = completed_abrupt && alternate_abrupt;
+                                if frames.is_empty() {
+                                    self.whitespace();
+                                    return Ok(completed);
+                                }
                                 break;
                             }
                             if self.consume(b'{') {
@@ -3070,6 +3089,7 @@ impl Parser<'_> {
         let mut offset = self.offset;
         let mut depth = 0_usize;
         let mut quote = None;
+        let mut previous_significant = None;
         while let Some(byte) = self.source.get(offset).copied() {
             if let Some(delimiter) = quote {
                 offset += 1;
@@ -3118,20 +3138,23 @@ impl Parser<'_> {
             match byte {
                 b'\'' | b'"' | b'`' => {
                     quote = Some(byte);
+                    previous_significant = Some(byte);
                     offset += 1;
                 }
                 b'{' => {
                     depth += 1;
+                    previous_significant = Some(byte);
                     offset += 1;
                 }
                 b'}' if depth == 0 => break,
                 b'}' => {
                     depth -= 1;
+                    previous_significant = Some(byte);
                     offset += 1;
                 }
                 b'f' if depth == 0
                     && self.source[offset..].starts_with(b"function")
-                    && self.function_declaration_position(offset)
+                    && matches!(previous_significant, None | Some(b';' | b'}'))
                     && (offset == 0 || self.identifier_end_before(offset))
                     && self.identifier_end(offset + b"function".len()) =>
                 {
@@ -3170,6 +3193,7 @@ impl Parser<'_> {
                             captured: false,
                         });
                     }
+                    previous_significant = Some(b'n');
                     offset = name_end.max(offset + 1);
                 }
                 b'v' if depth == 0
@@ -3193,9 +3217,15 @@ impl Parser<'_> {
                         name_end += 1;
                     }
                     self.add_hoisted_binding(name_start, name_end)?;
+                    previous_significant = Some(b'r');
                     offset = name_end.max(offset + 1);
                 }
-                _ => offset += 1,
+                _ => {
+                    if !byte.is_ascii_whitespace() {
+                        previous_significant = Some(byte);
+                    }
+                    offset += 1;
+                }
             }
         }
         Ok(())
@@ -3231,18 +3261,6 @@ impl Parser<'_> {
             .source
             .get(offset - 1)
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
-    }
-
-    #[cfg(feature = "functions")]
-    fn function_declaration_position(&self, offset: usize) -> bool {
-        if offset == self.offset {
-            return true;
-        }
-        let mut previous = offset;
-        while previous > self.offset && self.source[previous - 1].is_ascii_whitespace() {
-            previous -= 1;
-        }
-        previous == self.offset || matches!(self.source.get(previous - 1), Some(b';' | b'}'))
     }
 
     #[cfg(feature = "functions")]
@@ -5639,8 +5657,8 @@ impl Parser<'_> {
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
             #[cfg(feature = "compound-assignment-expressions")]
-            if self.consume_bytes(b"|=") {
-                self.emit_local_bitwise_or_assignment(local)?;
+            if let Some(opcode) = self.consume_compound_bitwise() {
+                self.emit_local_bitwise_assignment(local, opcode)?;
                 return Ok(false);
             }
             #[cfg(feature = "compound-assignment-expressions")]
@@ -5731,6 +5749,17 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "compound-assignment-expressions")]
+    fn consume_compound_bitwise(&mut self) -> Option<Opcode> {
+        if self.consume_bytes(b"|=") {
+            Some(Opcode::BitwiseOrI30)
+        } else if self.consume_bytes(b"&=") {
+            Some(Opcode::BitwiseAndI30)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "compound-assignment-expressions")]
     fn emit_local_compound_assignment(
         &mut self,
         local: Binding,
@@ -5765,7 +5794,11 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "compound-assignment-expressions")]
-    fn emit_local_bitwise_or_assignment(&mut self, local: Binding) -> Result<(), CompileError> {
+    fn emit_local_bitwise_assignment(
+        &mut self,
+        local: Binding,
+        opcode: Opcode,
+    ) -> Result<(), CompileError> {
         self.output.push(Opcode::LoadLocal as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
@@ -5774,7 +5807,7 @@ impl Parser<'_> {
             self.output.push(Opcode::LoadEnvironmentCell as u8);
         }
         self.expression(None)?;
-        self.output.push(Opcode::BitwiseOrI30 as u8);
+        self.output.push(opcode as u8);
         #[cfg(feature = "environments")]
         if local.captured {
             self.output.push(Opcode::StoreEnvironmentCellResult as u8);
@@ -7339,6 +7372,9 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                if self.consume_raw(b'}') {
+                    break;
+                }
                 #[cfg(feature = "object-spread")]
                 if self.consume_bytes(b"...") {
                     self.expression(None)?;
@@ -7449,6 +7485,9 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                if self.consume_raw(b'}') {
+                    break;
+                }
                 #[cfg(feature = "object-spread")]
                 if self.consume_bytes(b"...") {
                     self.expression(None)?;
@@ -7624,6 +7663,10 @@ impl Parser<'_> {
 
     #[cfg(feature = "functions")]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        #[cfg(feature = "property-assignment-expressions")]
+        if self.delete_expression()? {
+            return Ok((false, TermKind::General));
+        }
         self.whitespace();
         #[cfg(feature = "update-expressions")]
         if self.local_update_expression()? {
@@ -8323,6 +8366,10 @@ impl Parser<'_> {
 
     #[cfg(not(feature = "functions"))]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        #[cfg(feature = "property-assignment-expressions")]
+        if self.delete_expression()? {
+            return Ok((false, TermKind::General));
+        }
         self.whitespace();
         #[cfg(feature = "update-expressions")]
         if self.local_update_expression()? {
@@ -8390,6 +8437,33 @@ impl Parser<'_> {
             self.output.push(Opcode::Await as u8);
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "property-assignment-expressions")]
+    fn delete_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        if !self.try_word(b"delete") {
+            return Ok(false);
+        }
+        let Some(base) = self.assignment_base() else {
+            self.offset = start;
+            return Ok(false);
+        };
+        self.emit_assignment_base(base)?;
+        if self.consume(b'[') {
+            self.expression(None)?;
+            if !self.consume(b']') {
+                return Err(self.error("]"));
+            }
+        } else if self.consume(b'.') {
+            self.whitespace();
+            let (property_start, property_end) = self.identifier()?;
+            self.output_atom_range(property_start, property_end);
+        } else {
+            return Err(self.error("a property after delete"));
+        }
+        self.output.push(Opcode::DeleteProperty as u8);
+        Ok(true)
     }
 
     #[cfg(all(not(feature = "functions"), feature = "locals"))]
@@ -8767,7 +8841,43 @@ impl Parser<'_> {
     fn number(&mut self) -> Result<Option<i32>, CompileError> {
         self.whitespace();
         let start = self.offset;
-        self.consume_raw(b'-');
+        let negative = self.consume_raw(b'-');
+        if self.source.get(self.offset..self.offset + 2) == Some(&b"0x"[..])
+            || self.source.get(self.offset..self.offset + 2) == Some(&b"0X"[..])
+        {
+            self.offset += 2;
+            let digits_start = self.offset;
+            let mut value = 0_i64;
+            while let Some(nibble) = self.source.get(self.offset).copied().and_then(hex_nibble) {
+                value = value
+                    .checked_mul(16)
+                    .and_then(|value| value.checked_add(i64::from(nibble)))
+                    .ok_or_else(|| self.error("a hexadecimal number"))?;
+                self.offset += 1;
+            }
+            if self.offset == digits_start {
+                return Err(self.error("a hexadecimal digit"));
+            }
+            if negative {
+                value = -value;
+            }
+            if let Ok(value) = i32::try_from(value) {
+                if (-(1 << 29)..(1 << 29)).contains(&value) {
+                    self.output.push(Opcode::ConstI30 as u8);
+                    self.output.extend_from_slice(&value.to_le_bytes());
+                    return Ok(Some(value));
+                }
+            }
+            #[cfg(feature = "numbers")]
+            {
+                self.output.push(Opcode::ConstF64 as u8);
+                self.output
+                    .extend_from_slice(&(value as f64).to_bits().to_le_bytes());
+                return Ok(None);
+            }
+            #[cfg(not(feature = "numbers"))]
+            return Err(self.error("a hexadecimal number in the selected numeric range"));
+        }
         let mut digits = 0_usize;
         while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
             self.offset += 1;
@@ -10802,5 +10912,18 @@ mod tests {
     #[test]
     fn declaration_only_class_builds_reject_class_expressions() {
         assert!(compile_script("let Type = class {}; return Type;").is_err());
+    }
+
+    #[test]
+    fn compiles_browser_runtime_syntax() {
+        let code = compile_script(
+            "var values = { first: 1, }; \
+             for (var name in values) { values[name] &= 1; delete values[name]; }",
+        )
+        .unwrap();
+
+        assert!(code.contains(&(Opcode::NewObjectKeyIterator as u8)));
+        assert!(code.contains(&(Opcode::BitwiseAndI30 as u8)));
+        assert!(code.contains(&(Opcode::DeleteProperty as u8)));
     }
 }

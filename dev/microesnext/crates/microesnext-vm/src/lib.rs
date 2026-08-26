@@ -451,6 +451,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(object)?;
                 Ok(None)
             }
+            #[cfg(feature = "objects")]
+            Opcode::DeleteProperty => {
+                let key = self.core.arena_mut().pop()?;
+                let object = self.core.arena_mut().pop()?;
+                let deleted = microesnext_objects::delete(self.core.arena_mut(), object, key)?;
+                self.core
+                    .arena_mut()
+                    .push(if deleted { Value::TRUE } else { Value::FALSE })?;
+                Ok(None)
+            }
             #[cfg(feature = "property-assignment")]
             Opcode::SetPropertyStatement => {
                 let mut value = self.core.arena_mut().pop()?;
