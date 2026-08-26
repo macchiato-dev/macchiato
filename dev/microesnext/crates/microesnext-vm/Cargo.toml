@@ -59,6 +59,11 @@ class-constructors = [
   "microesnext-bytecode/class-constructors",
   "microesnext-semantics?/class-constructors",
 ]
+class-inheritance = [
+  "class-constructors",
+  "microesnext-objects/class-inheritance",
+  "microesnext-bytecode/class-inheritance",
+]
 construction = [
   "constructors",
   "receivers",

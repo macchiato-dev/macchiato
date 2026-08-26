@@ -41,6 +41,7 @@ collection-string-keys = [
   "microesnext-semantics/string-values",
 ]
 class-constructors = ["microesnext-arena/class-constructors", "microesnext-arena/closures"]
+class-inheritance = ["class-constructors"]
 construction = ["callable-objects"]
 instanceof = ["callable-objects", "prototype-chain"]
 assignment-expressions = []

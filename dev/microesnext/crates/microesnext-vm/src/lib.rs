@@ -380,6 +380,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(constructor)?;
                 Ok(None)
             }
+            #[cfg(feature = "class-inheritance")]
+            Opcode::InheritClass => {
+                let prototype_key = self.intern(b"prototype")?;
+                let derived = self.core.arena_mut().pop()?;
+                let base = self.core.arena_mut().pop()?;
+                let derived = microesnext_objects::class_constructor::inherit(
+                    self.core.arena_mut(),
+                    derived,
+                    base,
+                    prototype_key,
+                )?;
+                self.core.arena_mut().push(derived)?;
+                Ok(None)
+            }
             #[cfg(feature = "method-calls")]
             Opcode::ToMethod => {
                 let closure = self.core.arena_mut().pop()?;
@@ -595,6 +609,29 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core
                         .enter_call_with_arguments(function, target, argument_count)?;
                 }
+                Ok(None)
+            }
+            #[cfg(feature = "class-inheritance")]
+            Opcode::CallSuperArguments => {
+                let argument_count = self.core.next_u16()? as usize;
+                let receiver = microesnext_bindings::receivers::load(
+                    self.core.arena(),
+                    self.core.frame_base(),
+                )?;
+                let base = microesnext_bindings::parameters::take_callable(
+                    self.core.arena_mut(),
+                    argument_count,
+                )?;
+                let function =
+                    microesnext_objects::class_constructor::callable(self.core.arena(), base)?;
+                let target = entry(self.core.arena(), function)?;
+                microesnext_bindings::receivers::append(
+                    self.core.arena_mut(),
+                    argument_count,
+                    receiver,
+                )?;
+                self.core
+                    .enter_call_with_arguments(function, target, argument_count + 1)?;
                 Ok(None)
             }
             #[cfg(feature = "construction")]

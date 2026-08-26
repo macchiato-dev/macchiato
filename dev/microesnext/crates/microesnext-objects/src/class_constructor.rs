@@ -73,6 +73,30 @@ pub fn is_class_constructor(arena: &Arena<'_>, value: Value) -> bool {
         == Some(BlockKind::ClassConstructor)
 }
 
+#[cfg(feature = "class-inheritance")]
+pub fn inherit(
+    arena: &mut Arena<'_>,
+    derived: Value,
+    base: Value,
+    prototype_key: Value,
+) -> Result<Value, Error> {
+    let derived_ref = derived.as_ref().ok_or(Error::Type)?;
+    if arena.kind(derived_ref)? != BlockKind::ClassConstructor || !crate::is_object(arena, base) {
+        return Err(Error::Type);
+    }
+    let derived_prototype = crate::get(arena, derived, prototype_key)?;
+    let base_prototype = crate::get(arena, base, prototype_key)?;
+    let derived_prototype_ref = derived_prototype.as_ref().ok_or(Error::Type)?;
+    if arena.kind(derived_prototype_ref)? != BlockKind::Object
+        || !crate::is_object(arena, base_prototype)
+    {
+        return Err(Error::Type);
+    }
+    arena.set_value(derived_ref, 0, base)?;
+    arena.set_value(derived_prototype_ref, 0, base_prototype)?;
+    Ok(derived)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

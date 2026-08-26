@@ -283,6 +283,8 @@ fn compile_script_with_options_and_host_globals(
         loop_breaks: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
+        #[cfg(feature = "class-inheritance")]
+        super_binding: None,
         #[cfg(any(feature = "number-negation", feature = "number-operations"))]
         options,
     };
@@ -336,6 +338,8 @@ struct Parser<'source> {
     function_frame: bool,
     #[cfg(feature = "receivers")]
     receiver_frame: bool,
+    #[cfg(feature = "class-inheritance")]
+    super_binding: Option<Binding>,
     #[cfg(feature = "for-statements")]
     loop_breaks: Vec<Vec<usize>>,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
@@ -2473,6 +2477,13 @@ impl Parser<'_> {
             loop_breaks: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
+            #[cfg(feature = "class-inheritance")]
+            super_binding: matches!(
+                body_kind,
+                FunctionBody::ClassConstructor | FunctionBody::Method
+            )
+            .then_some(self.super_binding)
+            .flatten(),
             #[cfg(any(feature = "number-negation", feature = "number-operations"))]
             options: self.options,
         };
@@ -4638,6 +4649,11 @@ impl Parser<'_> {
     #[cfg(feature = "functions")]
     fn term(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.whitespace();
+        #[cfg(feature = "class-inheritance")]
+        if self.try_word(b"super") {
+            self.super_call()?;
+            return Ok((false, TermKind::General));
+        }
         #[cfg(feature = "construction")]
         if self.try_word(b"new") {
             self.whitespace();
@@ -4856,6 +4872,25 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(feature = "class-inheritance")]
+    fn super_call(&mut self) -> Result<(), CompileError> {
+        let Some(binding) = self.super_binding else {
+            return Err(self.error("super inside a derived class"));
+        };
+        let capture = self.intern_capture(binding)?;
+        self.output.push(Opcode::LoadCapture as u8);
+        self.output.extend_from_slice(&capture.to_le_bytes());
+        self.output.push(Opcode::LoadEnvironmentCell as u8);
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.call_suffix(false)?;
+        let call = self.output.len() - 3;
+        debug_assert_eq!(self.output[call], Opcode::CallValueArguments as u8);
+        self.output[call] = Opcode::CallSuperArguments as u8;
+        Ok(())
+    }
+
     #[cfg(feature = "construction")]
     fn construction_reference(&mut self) -> Result<(), CompileError> {
         if let Some(local) = self.local_at_offset() {
@@ -4985,21 +5020,63 @@ impl Parser<'_> {
     #[cfg(feature = "class-expressions")]
     fn class_expression(&mut self) -> Result<(), CompileError> {
         self.whitespace();
+        #[cfg(feature = "class-inheritance")]
+        let outer_super = self.super_binding;
         #[cfg(feature = "named-class-expressions")]
-        let named_slot = if self.source.get(self.offset) == Some(&b'{') {
-            None
-        } else {
-            let (start, end) = self.identifier()?;
-            let slot = u16::try_from(self.locals.len())
-                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
-            self.locals.push(Binding {
-                start,
-                end,
-                slot,
-                default: None,
-                hoisted: false,
-                captured: true,
-            });
+        let named_slot =
+            if self.source.get(self.offset) == Some(&b'{') || self.word_at_offset(b"extends") {
+                None
+            } else {
+                let (start, end) = self.identifier()?;
+                let slot = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                self.locals.push(Binding {
+                    start,
+                    end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    captured: true,
+                });
+                Some(slot)
+            };
+        #[cfg(not(feature = "named-class-expressions"))]
+        let named_slot: Option<u16> = None;
+        #[cfg(feature = "class-inheritance")]
+        let inherited =
+            if self.try_word_after_whitespace(b"extends") {
+                self.whitespace();
+                let start = self.offset;
+                let mut end = start;
+                while self.source.get(end).is_some_and(|byte| {
+                    byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$'
+                }) {
+                    end += 1;
+                }
+                self.construction_reference()?;
+                let slot = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let binding = Binding {
+                    start,
+                    end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    captured: false,
+                };
+                self.locals.push(binding);
+                self.output.push(Opcode::DuplicateTop as u8);
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&slot.to_le_bytes());
+                self.super_binding = Some(binding);
+                true
+            } else {
+                false
+            };
+        #[cfg(not(feature = "class-inheritance"))]
+        let inherited = false;
+        #[cfg(feature = "named-class-expressions")]
+        if let Some(slot) = named_slot {
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
             self.output.push(Opcode::NewEnvironmentCell as u8);
@@ -5007,10 +5084,7 @@ impl Parser<'_> {
             self.output.extend_from_slice(&slot.to_le_bytes());
             self.output.push(Opcode::LoadLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
-            Some(slot)
-        };
-        #[cfg(not(feature = "named-class-expressions"))]
-        let named_slot: Option<u16> = None;
+        }
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -5037,6 +5111,14 @@ impl Parser<'_> {
                 break;
             }
             self.class_expression_method()?;
+        }
+        #[cfg(feature = "class-inheritance")]
+        if inherited {
+            self.output.push(Opcode::InheritClass as u8);
+        }
+        #[cfg(feature = "class-inheritance")]
+        {
+            self.super_binding = outer_super;
         }
         Ok(())
     }
@@ -5279,6 +5361,7 @@ impl Parser<'_> {
             });
         }
         self.patch_string_length(length_patch, content_start)?;
+        #[cfg(feature = "template-literals")]
         if substituted {
             self.output.push(Opcode::ConcatenateStrings as u8);
         }

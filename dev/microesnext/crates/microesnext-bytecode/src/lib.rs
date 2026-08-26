@@ -176,6 +176,10 @@ pub enum Opcode {
     ToStringPrimitive = 121,
     #[cfg(feature = "bitwise-operations")]
     BitwiseOrI30 = 122,
+    #[cfg(feature = "class-inheritance")]
+    InheritClass = 123,
+    #[cfg(feature = "class-inheritance")]
+    CallSuperArguments = 124,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -335,6 +339,10 @@ impl TryFrom<u8> for Opcode {
             121 => Ok(Self::ToStringPrimitive),
             #[cfg(feature = "bitwise-operations")]
             122 => Ok(Self::BitwiseOrI30),
+            #[cfg(feature = "class-inheritance")]
+            123 => Ok(Self::InheritClass),
+            #[cfg(feature = "class-inheritance")]
+            124 => Ok(Self::CallSuperArguments),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
