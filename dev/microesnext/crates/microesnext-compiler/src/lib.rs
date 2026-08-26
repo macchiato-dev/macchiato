@@ -826,6 +826,7 @@ impl Parser<'_> {
         #[cfg(feature = "functions")]
         let function_count = self.functions.len();
         let prefix = core::mem::take(&mut self.output);
+        self.whitespace();
         if self.source.get(self.offset) != Some(&b')') {
             self.expression(None)?;
             self.output.push(Opcode::DropTop as u8);
