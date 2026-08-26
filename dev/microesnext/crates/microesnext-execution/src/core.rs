@@ -96,6 +96,10 @@ impl<'code, 'memory> Core<'code, 'memory> {
         read_u32(self.code, &mut self.pc)
     }
 
+    pub fn next_u8(&mut self) -> Result<u8, Error> {
+        read_byte(self.code, &mut self.pc)
+    }
+
     pub fn next_u16(&mut self) -> Result<u16, Error> {
         read_u16(self.code, &mut self.pc)
     }

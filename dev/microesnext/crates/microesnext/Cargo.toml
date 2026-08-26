@@ -88,6 +88,7 @@ class-expressions = [
 ]
 class-inheritance = [
   "class-expressions",
+  "array-assignment-expressions",
   "environments",
   "microesnext-objects/class-inheritance",
   "microesnext-vm/class-inheritance",
@@ -121,6 +122,12 @@ update-expressions = [
   "number-coercion",
   "number-operations",
   "microesnext-compiler/update-expressions",
+]
+array-update-expressions = [
+  "array-assignment-expressions",
+  "update-expressions",
+  "microesnext-vm/array-update-expressions",
+  "microesnext-compiler/array-update-expressions",
 ]
 arrays = [
   "dep:microesnext-objects",
@@ -526,7 +533,11 @@ required-features = ["local-assignment-expressions"]
 [[test]]
 name = "update-expressions"
 path = "tests/update_expressions.rs"
-required-features = ["expression-statements", "update-expressions"]
+required-features = [
+  "array-update-expressions",
+  "expression-statements",
+  "update-expressions",
+]
 
 [[test]]
 name = "for-statements"

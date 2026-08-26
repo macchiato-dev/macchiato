@@ -181,6 +181,12 @@ array-assignment-expressions = [
   "microesnext-objects/array-assignment-expressions",
   "microesnext-bytecode/array-assignment-expressions",
 ]
+array-update-expressions = [
+  "arrays",
+  "number-coercion",
+  "number-operations",
+  "microesnext-bytecode/array-update-expressions",
+]
 property-assignment-expressions = [
   "objects",
   "microesnext-objects/assignment-expressions",

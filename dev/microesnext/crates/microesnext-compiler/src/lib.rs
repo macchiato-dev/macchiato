@@ -696,6 +696,8 @@ impl Parser<'_> {
     #[cfg(feature = "expression-statements")]
     fn statement_prefix(&mut self) -> Result<(), CompileError> {
         loop {
+            self.whitespace();
+            let statement_start = self.offset;
             self.local_declaration_statements()?;
             #[cfg(feature = "array-destructuring-assignments")]
             if self.array_destructuring_assignment()? {
@@ -704,6 +706,9 @@ impl Parser<'_> {
             self.property_assignments()?;
             self.local_assignments()?;
             self.whitespace();
+            if self.offset != statement_start {
+                continue;
+            }
             if self.at_terminal_statement() {
                 return Ok(());
             }
@@ -1632,23 +1637,39 @@ impl Parser<'_> {
                             #[cfg(feature = "functions")]
                             self.relocations.push(alternate_patch);
                             let else_if = self.try_word_after_whitespace(b"if");
-                            if !else_if && !self.consume(b'{') {
-                                return Err(self.error("if or {"));
-                            }
-                            frames.push(StructuredFrame::Conditional {
-                                alternate_patch,
-                                join_patch,
-                                consequent_abrupt: completed_abrupt,
-                                alternate: true,
-                                implicit_alternate: else_if,
-                            });
                             if else_if {
+                                frames.push(StructuredFrame::Conditional {
+                                    alternate_patch,
+                                    join_patch,
+                                    consequent_abrupt: completed_abrupt,
+                                    alternate: true,
+                                    implicit_alternate: true,
+                                });
                                 self.begin_structured(
                                     frames.as_mut(),
                                     StructuredStart::Conditional,
                                 )?;
+                                break;
                             }
-                            break;
+                            if self.consume(b'{') {
+                                frames.push(StructuredFrame::Conditional {
+                                    alternate_patch,
+                                    join_patch,
+                                    consequent_abrupt: completed_abrupt,
+                                    alternate: true,
+                                    implicit_alternate: false,
+                                });
+                                break;
+                            }
+                            let alternate_abrupt = self.single_control_body()?;
+                            if let Some(patch) = join_patch {
+                                let join = u32::try_from(self.output.len())
+                                    .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                                self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                                #[cfg(feature = "functions")]
+                                self.relocations.push(patch);
+                            }
+                            completed_abrupt &= alternate_abrupt;
                         }
                     }
                     StructuredFrame::Conditional {
@@ -3940,9 +3961,33 @@ impl Parser<'_> {
             }
             break;
         }
-        if !matches!(suffixes.last(), Some(AssignmentSuffix::Index(_, _)))
-            || !self.consume_plain_assignment()
-        {
+        if !matches!(suffixes.last(), Some(AssignmentSuffix::Index(_, _))) {
+            self.offset = start;
+            return Ok(false);
+        }
+        #[cfg(feature = "array-update-expressions")]
+        let postfix_increment = self.consume_bytes(b"++");
+        #[cfg(feature = "array-update-expressions")]
+        let postfix_decrement = !postfix_increment && self.consume_bytes(b"--");
+        #[cfg(feature = "array-update-expressions")]
+        if postfix_increment || postfix_decrement {
+            let resume = self.offset;
+            self.emit_assignment_base(base)?;
+            let final_suffix = suffixes.pop().expect("an index was checked above");
+            for suffix in suffixes {
+                self.emit_assignment_suffix(suffix, resume)?;
+            }
+            self.emit_index_suffix(final_suffix, resume)?;
+            self.offset = resume;
+            self.output.push(Opcode::UpdateIndex as u8);
+            self.output.push(u8::from(postfix_decrement));
+            return Ok(true);
+        }
+        #[cfg(feature = "compound-assignment-expressions")]
+        let compound = self.consume_compound_addition();
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let compound: Option<bool> = None;
+        if compound.is_none() && !self.consume_plain_assignment() {
             self.offset = start;
             return Ok(false);
         }
@@ -3954,6 +3999,20 @@ impl Parser<'_> {
         }
         self.emit_index_suffix(final_suffix, rhs)?;
         self.offset = rhs;
+        if let Some(subtracting) = compound {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(Opcode::GetIndex as u8);
+            self.output.push(Opcode::ToNumber as u8);
+            self.expression(None)?;
+            self.output.push(Opcode::ToNumber as u8);
+            self.output.push(if subtracting {
+                Opcode::SubtractNumber as u8
+            } else {
+                Opcode::AddNumber as u8
+            });
+            self.output.push(Opcode::SetIndexResult as u8);
+            return Ok(true);
+        }
         self.expression(None)?;
         self.output.push(Opcode::SetIndexResult as u8);
         Ok(true)

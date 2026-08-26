@@ -61,6 +61,14 @@ fn a_braced_conditional_can_contain_a_for_loop_after_a_declaration() {
 }
 
 #[test]
+fn a_braced_consequent_can_have_a_single_statement_alternate() {
+    assert_eq!(
+        run("let answer = 0; if (false) { answer = 1; } else answer = 42; return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

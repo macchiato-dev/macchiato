@@ -63,3 +63,13 @@ fn additive_compound_assignments_update_captured_bindings() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn additive_compound_assignments_update_array_entries() {
+    let code = compile_script("let values = [40]; values[0] += 2; return values[0];").unwrap();
+    let mut memory = [0; 256];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

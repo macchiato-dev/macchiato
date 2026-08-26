@@ -1239,6 +1239,45 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 }
                 Ok(None)
             }
+            #[cfg(feature = "array-update-expressions")]
+            Opcode::UpdateIndex => {
+                let mode = self.core.next_u8()?;
+                if mode > 3 {
+                    return Err(Error::BadBytecode);
+                }
+                let index = self
+                    .core
+                    .arena_mut()
+                    .pop()?
+                    .as_i30()
+                    .and_then(|index| usize::try_from(index).ok())
+                    .ok_or(Error::Type)?;
+                let array = self.core.arena_mut().pop()?;
+                let old = array_get(self.core.arena(), array, index)?;
+                #[cfg(feature = "string-number-coercion")]
+                let old = microesnext_values::numbers::string_coercion::to_number(
+                    self.core.arena_mut(),
+                    old,
+                )?;
+                #[cfg(not(feature = "string-number-coercion"))]
+                let old =
+                    microesnext_values::numbers::coercion::to_number(self.core.arena_mut(), old)?;
+                let one = Value::from_i30(1).ok_or(Error::Type)?;
+                let updated = if mode & 1 == 0 {
+                    microesnext_values::numbers::operations::add(self.core.arena_mut(), old, one)?
+                } else {
+                    microesnext_values::numbers::operations::subtract(
+                        self.core.arena_mut(),
+                        old,
+                        one,
+                    )?
+                };
+                array_set(self.core.arena_mut(), array, index, updated)?;
+                self.core
+                    .arena_mut()
+                    .push(if mode >= 2 { updated } else { old })?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::SetIndex => {
                 let value = self.core.arena_mut().pop()?;

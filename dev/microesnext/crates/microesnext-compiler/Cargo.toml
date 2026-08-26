@@ -16,6 +16,7 @@ default = [
   "array-assignment-expressions",
   "array-destructuring-assignments",
   "array-destructuring-declarations",
+  "array-update-expressions",
   "async-functions",
   "control-flow",
   "conditional-expressions",
@@ -81,6 +82,11 @@ array-assignment-expressions = [
   "array-indexing",
   "locals",
   "microesnext-bytecode/array-assignment-expressions",
+]
+array-update-expressions = [
+  "array-assignment-expressions",
+  "update-expressions",
+  "microesnext-bytecode/array-update-expressions",
 ]
 array-destructuring-assignments = [
   "array-indexing",

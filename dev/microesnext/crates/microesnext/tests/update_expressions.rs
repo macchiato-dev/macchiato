@@ -24,3 +24,11 @@ fn decrement_updates_the_local_in_both_forms() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn postfix_updates_preserve_array_results_and_entries() {
+    assert_eq!(
+        run("let values = [40]; let old = values[0]++; return old + values[0] - 39;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

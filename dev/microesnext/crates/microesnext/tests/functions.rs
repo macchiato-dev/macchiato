@@ -163,3 +163,12 @@ fn recursive_source_calls_use_guest_frames_and_a_self_cell() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[cfg(feature = "property-assignment")]
+#[test]
+fn a_function_declaration_can_follow_an_assignment_statement() {
+    assert_eq!(
+        run("let box = {}; box.answer = 42; function read() { return 42; } return read();"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
