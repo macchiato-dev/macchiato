@@ -284,6 +284,31 @@ pub extern "C" fn stack_operations_probe() -> i32 {
     ) as i32
 }
 
+#[cfg(all(feature = "local-assignment-expressions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn local_assignment_expressions_probe() -> i32 {
+    let code = [
+        Opcode::InitLocals as u8,
+        1,
+        0,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::DuplicateTop as u8,
+        Opcode::StoreLocal as u8,
+        0,
+        0,
+        Opcode::ReturnLocals as u8,
+    ];
+    let mut memory = [0; 32];
+    matches!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(value)) if value.as_i30() == Some(42)
+    ) as i32
+}
+
 #[cfg(all(feature = "property-assignment", target_arch = "wasm32"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn property_assignment_probe() -> i32 {
