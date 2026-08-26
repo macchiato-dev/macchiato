@@ -1380,9 +1380,45 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "local-assignment-expressions")]
+    fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
+        self.whitespace();
+        let start = self.offset;
+        if let Some(local) = self.local_at_offset() {
+            self.offset += local.end - local.start;
+            #[cfg(feature = "environments")]
+            let assignable = !local.captured;
+            #[cfg(not(feature = "environments"))]
+            let assignable = true;
+            if assignable && self.consume_plain_assignment() {
+                self.expression(None)?;
+                self.output.push(Opcode::DuplicateTop as u8);
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&local.slot.to_le_bytes());
+                return Ok(false);
+            }
+        }
+        self.offset = start;
+        let (used_binding, _) = self.logical_or(binding)?;
+        Ok(used_binding)
+    }
+
+    #[cfg(not(feature = "local-assignment-expressions"))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         let (used_binding, _) = self.logical_or(binding)?;
         Ok(used_binding)
+    }
+
+    #[cfg(feature = "local-assignment-expressions")]
+    fn consume_plain_assignment(&mut self) -> bool {
+        self.whitespace();
+        if self.source.get(self.offset) != Some(&b'=')
+            || matches!(self.source.get(self.offset + 1), Some(b'=' | b'>'))
+        {
+            return false;
+        }
+        self.offset += 1;
+        true
     }
 
     #[cfg(feature = "logical-operations")]
@@ -3042,6 +3078,42 @@ mod tests {
                 .unwrap_err()
                 .expected,
             "a number"
+        );
+    }
+
+    #[cfg(feature = "local-assignment-expressions")]
+    #[test]
+    fn compiles_right_associative_local_assignment_values() {
+        let code =
+            compile_script("let left = 0; let right = 0; return left = right = 42;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|byte| **byte == Opcode::DuplicateTop as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(all(feature = "local-assignment-expressions", feature = "equality"))]
+    #[test]
+    fn assignment_detection_does_not_consume_strict_equality() {
+        assert!(compile_script("let value = 1; return value === 1;").is_ok());
+    }
+
+    #[cfg(all(feature = "local-assignment-expressions", feature = "functions"))]
+    #[test]
+    fn assignment_detection_does_not_consume_an_arrow() {
+        assert!(compile_script("let identity = value => value; return identity(1);").is_ok());
+    }
+
+    #[cfg(all(feature = "locals", not(feature = "local-assignment-expressions")))]
+    #[test]
+    fn reduced_local_compilers_leave_assignment_expressions_unconsumed() {
+        assert_eq!(
+            compile_script("let value = 1; return value = 2;")
+                .unwrap_err()
+                .expected,
+            "end of input"
         );
     }
 

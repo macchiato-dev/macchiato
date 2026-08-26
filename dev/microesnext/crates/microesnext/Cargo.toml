@@ -36,6 +36,7 @@ class-methods = ["classes", "method-calls"]
 class-static-methods = ["class-methods"]
 class-expressions = ["class-static-methods", "stack-operations"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
+local-assignment-expressions = ["locals", "stack-operations"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
 async = ["dep:microesnext-async"]
@@ -306,6 +307,11 @@ path = "tests/immediates.rs"
 name = "locals"
 path = "tests/locals.rs"
 required-features = ["locals"]
+
+[[test]]
+name = "local-assignment-expressions"
+path = "tests/local_assignment_expressions.rs"
+required-features = ["local-assignment-expressions"]
 
 [[test]]
 name = "functions"
