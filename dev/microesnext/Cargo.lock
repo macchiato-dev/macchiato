@@ -73,6 +73,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-array-assignment-expressions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-arrays",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-array-iterators"
 version = "0.0.0"
 dependencies = [

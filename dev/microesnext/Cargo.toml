@@ -41,6 +41,7 @@ members = [
   "crates/microesnext-number-division",
   "crates/microesnext-number-remainder",
   "crates/microesnext-array-iterators",
+  "crates/microesnext-array-assignment-expressions",
   "crates/microesnext-collection-iterators",
   "crates/microesnext-collection-entry-iterators",
   "crates/microesnext-numbers",
@@ -120,6 +121,7 @@ microesnext-number-coercion = { path = "crates/microesnext-number-coercion", ver
 microesnext-number-division = { path = "crates/microesnext-number-division", version = "0.0.0" }
 microesnext-number-remainder = { path = "crates/microesnext-number-remainder", version = "0.0.0" }
 microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
+microesnext-array-assignment-expressions = { path = "crates/microesnext-array-assignment-expressions", version = "0.0.0" }
 microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }
 microesnext-collection-entry-iterators = { path = "crates/microesnext-collection-entry-iterators", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
