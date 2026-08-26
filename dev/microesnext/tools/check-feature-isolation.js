@@ -115,6 +115,11 @@ assertCompilerFeatures(
   ["exceptions", "functions", "locals", "objects"],
 );
 assertCompilerFeatures(
+  ["implicit-completions"],
+  [],
+  ["exceptions", "functions", "locals", "stack-operations"],
+);
+assertCompilerFeatures(
   ["array-indexing"],
   ["arrays"],
   ["atoms", "locals", "objects", "strings"],

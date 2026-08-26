@@ -41,6 +41,7 @@ const builds = [
   ["property assignment expressions", "property-assignment-expressions"],
   ["basic functions", "functions"],
   ["function arguments", "function-arguments"],
+  ["implicit completions", "implicit-completions"],
   ["captured environments", "environments"],
   ["recursive named functions", "recursive-functions"],
   ["recursive constructors", "recursive-constructors"],
@@ -48,7 +49,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,implicit-completions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -84,6 +85,8 @@ for (const [name, features] of builds) {
     ? "let C = class { constructor(value) { this.value = value; } read() { return this.value; } }; return new C(1).read();"
     : features === "expression-statements"
     ? "1; return 42;"
+    : features === "implicit-completions"
+    ? ""
     : features === "captured-assignment-expressions"
     ? "let value = 1; let set = () => { return value = 2; }; return set();"
     : features === "local-assignment-expressions"
