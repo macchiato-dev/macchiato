@@ -284,7 +284,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,779 | 4,219 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 23,191 | 8,866 |
+| Async functions | 23,191 | 8,848 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 8,708 | 3,736 |
@@ -298,7 +298,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 25,797 | 9,529 |
+| Recursive async functions | 25,797 | 9,530 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
@@ -523,25 +523,25 @@ These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the
 final Wasm, while enabled rows contain live exported calls into that crate.
 Moving suspend/resume/restore out of `microesnext-vm-core` and into the optional
-`microesnext-suspension` crate leaves the invariant core untouched. The
+execution `suspension` feature leaves the invariant core untouched. The
 isolated live async probe is 6,455 bytes (2,856 gzip). Enabling `async` adds the crate
 through the VM; disabling it also removes resume operations from the public
 surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
 
-The 23,191-byte (8,866 gzip) async-functions row executes async closure entry,
+The 23,191-byte (8,848 gzip) async-functions row executes async closure entry,
 returns a pending outer Promise, parks an `await`, runs its queued reaction,
 and verifies fulfillment. The dependency check also proves that selecting
-plain `async` does not resolve `microesnext-async-functions`, while selecting
+plain `async` does not retain async-closure operations, while selecting
 `async-functions` does not pull in environment cells, parameter frames, or
 recursive-function storage. The minimal artifact remains 1,984 bytes.
 
-The 25,797-byte (9,529 gzip) recursive-async row adds and exercises only the
+The 25,797-byte (9,530 gzip) recursive-async row adds and exercises only the
 composition that initializes an async closure's private self cell. Its graph
 contains neither `microesnext-recursive-functions` nor parameter-frame
 storage; conversely, ordinary async and ordinary recursive rows exclude
-`microesnext-recursive-async-functions`.
+the recursive-async construction path.
 
 The 12,664-byte (5,239 gzip) native-resolution row creates two Promises,
 attaches an identity reaction, settles the source, forwards its queued result,

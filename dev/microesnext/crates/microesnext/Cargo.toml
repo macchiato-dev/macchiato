@@ -56,7 +56,8 @@ async-functions = [
   "functions",
   "promises",
   "promise-resolution",
-  "dep:microesnext-async-functions",
+  "dep:microesnext-execution",
+  "microesnext-execution/async-functions",
   "microesnext-async/functions",
   "microesnext-vm/async-functions",
   "microesnext-semantics?/async-functions",
@@ -198,7 +199,7 @@ recursive-constructors = [
 recursive-async-functions = [
   "async-functions",
   "environments",
-  "dep:microesnext-recursive-async-functions",
+  "microesnext-execution/recursive-async-functions",
   "microesnext-vm/recursive-async-functions",
 ]
 receivers = [
@@ -253,7 +254,7 @@ promise-jobs = [
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-async = { workspace = true, optional = true }
-microesnext-async-functions = { workspace = true, optional = true }
+microesnext-execution = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
@@ -268,7 +269,6 @@ microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-errors = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
-microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }

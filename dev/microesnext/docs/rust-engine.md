@@ -36,12 +36,12 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
-- The optional `microesnext-suspension` crate owns conversion between a live
+- The optional execution `suspension` feature owns conversion between a live
   VM stack and a rooted continuation. The arena supplies generic stack-snapshot
   storage, but `microesnext-vm-core` contains no suspend, resume, or restore
   algorithm. Builds without `async` do not expose those machine operations.
 - An async JavaScript call cannot suspend its ordinary caller at the first
-  `await`. The optional `microesnext-async-functions` layer therefore packages
+  `await`. The optional execution `async-functions` layer therefore packages
   the closure and evaluated arguments, snapshots the caller, and starts the
   body in an independent guest context over the same arena. The scheduler can
   restore the caller with the outer promise while the body continuation enters

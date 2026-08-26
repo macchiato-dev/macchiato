@@ -8,14 +8,14 @@ use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "exceptions")]
 use microesnext_exceptions::Handlers;
+#[cfg(feature = "async")]
+use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
+#[cfg(feature = "async-functions")]
+use microesnext_execution::suspension::{resume_context, suspend_context};
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
 #[cfg(feature = "atoms")]
 use microesnext_strings::atoms::Atoms;
-#[cfg(feature = "async")]
-use microesnext_suspension::{restore, restore_value, resume, resume_value, suspend};
-#[cfg(feature = "async-functions")]
-use microesnext_suspension::{resume_context, suspend_context};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::{Core, CoreOutcome};
 
@@ -374,7 +374,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 if target as usize >= self.core.code().len() {
                     return Err(Error::BadBytecode);
                 }
-                let closure = microesnext_async_functions::capture_stack(
+                let closure = microesnext_execution::async_functions::capture_stack(
                     self.core.arena_mut(),
                     target,
                     capture_count,
@@ -389,7 +389,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 if target as usize >= self.core.code().len() {
                     return Err(Error::BadBytecode);
                 }
-                let closure = microesnext_recursive_async_functions::capture_recursive_async_stack(
+                let closure = microesnext_execution::recursive_async_functions::capture_recursive_async_stack(
                     self.core.arena_mut(),
                     target,
                     capture_count,
@@ -438,7 +438,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     return Ok(None);
                 }
                 #[cfg(feature = "async-functions")]
-                if microesnext_async_functions::is_async(self.core.arena(), function) {
+                if microesnext_execution::async_functions::is_async(self.core.arena(), function) {
                     return Ok(Some(Outcome::AsyncCall {
                         function,
                         argument_count: 0,
@@ -484,7 +484,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     return Ok(None);
                 }
                 #[cfg(feature = "async-functions")]
-                if microesnext_async_functions::is_async(self.core.arena(), function) {
+                if microesnext_execution::async_functions::is_async(self.core.arena(), function) {
                     return Ok(Some(Outcome::AsyncCall {
                         function,
                         argument_count,
@@ -572,8 +572,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let function_index = self.core.arena().stack_len() - frame_depth;
                 let function = self.core.arena().stack_value(function_index)?;
                 #[cfg(feature = "async-functions")]
-                let value = if microesnext_async_functions::is_async(self.core.arena(), function) {
-                    microesnext_async_functions::capture(self.core.arena(), function, index)?
+                let value = if microesnext_execution::async_functions::is_async(
+                    self.core.arena(),
+                    function,
+                ) {
+                    microesnext_execution::async_functions::capture(
+                        self.core.arena(),
+                        function,
+                        index,
+                    )?
                 } else {
                     capture(self.core.arena(), function, index)?
                 };
@@ -1107,7 +1114,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         argument_count: usize,
         promise: RootId,
     ) -> Result<RootId, Error> {
-        let invocation = microesnext_async_functions::take_invocation(
+        let invocation = microesnext_execution::async_functions::take_invocation(
             self.core.arena_mut(),
             function,
             argument_count,
@@ -1127,7 +1134,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
         };
         let invocation = self.core.arena_mut().release(invocation)?;
-        microesnext_async_functions::start_invocation(&mut self.core, invocation)?;
+        microesnext_execution::async_functions::start_invocation(&mut self.core, invocation)?;
         self.set_handler_depth(None);
         Ok(caller)
     }
@@ -1263,7 +1270,7 @@ mod tests {
         };
         assert_eq!(argument_count, 0);
         assert_eq!(
-            microesnext_async_functions::entry(machine.arena(), function),
+            microesnext_execution::async_functions::entry(machine.arena(), function),
             Ok(9)
         );
         let promise = machine.retain(Value::TRUE).unwrap();

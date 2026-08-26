@@ -9,7 +9,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
  "microesnext-async",
- "microesnext-async-functions",
  "microesnext-async-thenables",
  "microesnext-bytecode",
  "microesnext-collections",
@@ -17,6 +16,7 @@ dependencies = [
  "microesnext-environments",
  "microesnext-errors",
  "microesnext-exceptions",
+ "microesnext-execution",
  "microesnext-integer-operations",
  "microesnext-iterators",
  "microesnext-locals",
@@ -25,7 +25,6 @@ dependencies = [
  "microesnext-parameters",
  "microesnext-promises",
  "microesnext-receivers",
- "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
  "microesnext-semantics",
  "microesnext-strings",
@@ -57,20 +56,11 @@ name = "microesnext-async"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-async-functions",
  "microesnext-bytecode",
+ "microesnext-execution",
  "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
-]
-
-[[package]]
-name = "microesnext-async-functions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
- "microesnext-vm-core",
 ]
 
 [[package]]
@@ -79,8 +69,8 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-async",
- "microesnext-async-functions",
  "microesnext-bytecode",
+ "microesnext-execution",
  "microesnext-objects",
  "microesnext-promises",
  "microesnext-thenables",
@@ -184,6 +174,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-execution"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-environments",
+ "microesnext-types",
+ "microesnext-vm-core",
+]
+
+[[package]]
 name = "microesnext-integer-operations"
 version = "0.0.0"
 dependencies = [
@@ -259,16 +259,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-recursive-async-functions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-async-functions",
- "microesnext-environments",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-recursive-functions"
 version = "0.0.0"
 dependencies = [
@@ -294,14 +284,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-suspension"
-version = "0.0.0"
-dependencies = [
- "microesnext-types",
- "microesnext-vm-core",
 ]
 
 [[package]]
@@ -336,11 +318,11 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
- "microesnext-async-functions",
  "microesnext-bytecode",
  "microesnext-compiler",
  "microesnext-environments",
  "microesnext-exceptions",
+ "microesnext-execution",
  "microesnext-integer-operations",
  "microesnext-locals",
  "microesnext-numbers",
@@ -348,11 +330,9 @@ dependencies = [
  "microesnext-parameters",
  "microesnext-promises",
  "microesnext-receivers",
- "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
  "microesnext-semantics",
  "microesnext-strings",
- "microesnext-suspension",
  "microesnext-types",
  "microesnext-vm-core",
 ]

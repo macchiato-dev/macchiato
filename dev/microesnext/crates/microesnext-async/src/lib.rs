@@ -133,7 +133,7 @@ pub fn reject(
 pub fn run_functions(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-    frames: &mut microesnext_async_functions::Frames<'_>,
+    frames: &mut microesnext_execution::async_functions::Frames<'_>,
 ) -> Result<Progress, Error> {
     run_functions_with(machine, queue, frames, &mut NativeResolver)
 }
@@ -142,7 +142,7 @@ pub fn run_functions(
 pub fn run_functions_with<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-    frames: &mut microesnext_async_functions::Frames<'_>,
+    frames: &mut microesnext_execution::async_functions::Frames<'_>,
     resolver: &mut R,
 ) -> Result<Progress, Error> {
     let outcome = machine.run()?;
@@ -153,7 +153,7 @@ pub fn run_functions_with<R: Resolver>(
 fn drive_functions<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-    frames: &mut microesnext_async_functions::Frames<'_>,
+    frames: &mut microesnext_execution::async_functions::Frames<'_>,
     resolver: &mut R,
     mut outcome: Outcome,
 ) -> Result<Progress, Error> {
@@ -183,7 +183,7 @@ fn drive_functions<R: Resolver>(
                     }
                 };
                 if let Err(error) =
-                    frames.push(microesnext_async_functions::Frame { caller, promise })
+                    frames.push(microesnext_execution::async_functions::Frame { caller, promise })
                 {
                     machine.restore_caller(caller)?;
                     machine.release(promise)?;
@@ -237,7 +237,7 @@ fn drive_functions<R: Resolver>(
 pub fn run_one_function_reaction(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-    frames: &mut microesnext_async_functions::Frames<'_>,
+    frames: &mut microesnext_execution::async_functions::Frames<'_>,
 ) -> Result<bool, Error> {
     run_one_function_reaction_with(machine, queue, frames, &mut NativeResolver)
 }
@@ -246,7 +246,7 @@ pub fn run_one_function_reaction(
 pub fn run_one_function_reaction_with<R: Resolver>(
     machine: &mut Machine<'_, '_>,
     queue: &mut JobQueue<'_>,
-    frames: &mut microesnext_async_functions::Frames<'_>,
+    frames: &mut microesnext_execution::async_functions::Frames<'_>,
     resolver: &mut R,
 ) -> Result<bool, Error> {
     let Some(job) = queue.pop(machine.arena_mut())? else {
@@ -496,7 +496,7 @@ mod tests {
         let mut jobs = [None; 2];
         let mut queue = JobQueue::new(&mut jobs);
         let mut frame_slots = [None; 1];
-        let mut frames = microesnext_async_functions::Frames::new(&mut frame_slots);
+        let mut frames = microesnext_execution::async_functions::Frames::new(&mut frame_slots);
         let Progress::Complete(promise) =
             run_functions(&mut machine, &mut queue, &mut frames).unwrap()
         else {
@@ -535,7 +535,7 @@ mod tests {
         let mut jobs = [None; 2];
         let mut queue = JobQueue::new(&mut jobs);
         let mut frame_slots = [None; 1];
-        let mut frames = microesnext_async_functions::Frames::new(&mut frame_slots);
+        let mut frames = microesnext_execution::async_functions::Frames::new(&mut frame_slots);
         let Progress::Complete(promise) =
             run_functions(&mut machine, &mut queue, &mut frames).unwrap()
         else {

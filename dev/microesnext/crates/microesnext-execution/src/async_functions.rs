@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm_core::Core;

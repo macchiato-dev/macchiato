@@ -39,7 +39,7 @@ pub use microesnext_strings::atoms;
 pub use microesnext_async as r#async;
 
 #[cfg(feature = "async-functions")]
-pub use microesnext_async_functions as async_functions;
+pub use microesnext_execution::async_functions;
 
 #[cfg(feature = "async-thenables")]
 pub use microesnext_async_thenables as async_thenables;
@@ -111,7 +111,7 @@ pub use microesnext_objects::assignment_expressions as property_assignment_expre
 pub use microesnext_recursive_functions as recursive_functions;
 
 #[cfg(feature = "recursive-async-functions")]
-pub use microesnext_recursive_async_functions as recursive_async_functions;
+pub use microesnext_execution::recursive_async_functions;
 
 #[cfg(feature = "receivers")]
 pub use microesnext_receivers as receivers;

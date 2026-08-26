@@ -13,7 +13,8 @@ promises = ["dep:microesnext-arena", "dep:microesnext-promises", "microesnext-vm
 resolution = ["promises", "microesnext-promises/resolution"]
 functions = [
   "resolution",
-  "dep:microesnext-async-functions",
+  "dep:microesnext-execution",
+  "microesnext-execution/async-functions",
   "microesnext-vm/async-functions",
 ]
 
@@ -22,7 +23,7 @@ microesnext-types.workspace = true
 microesnext-vm = { workspace = true, features = ["async"] }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-arena = { workspace = true, optional = true }
-microesnext-async-functions = { workspace = true, optional = true }
+microesnext-execution = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-bytecode.workspace = true

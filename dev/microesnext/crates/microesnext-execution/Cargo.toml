@@ -1,0 +1,27 @@
+[package]
+name = "microesnext-execution"
+description = "Optional execution-state capabilities for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = []
+async-functions = ["microesnext-arena/async-functions"]
+recursive-async-functions = [
+  "async-functions",
+  "dep:microesnext-environments",
+  "microesnext-arena/environments",
+]
+suspension = []
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-environments = { workspace = true, optional = true }
+microesnext-types.workspace = true
+microesnext-vm-core.workspace = true
+
+[lib]
+path = "src/lib.rs"

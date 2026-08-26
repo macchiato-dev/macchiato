@@ -141,10 +141,9 @@ an explicit relational stopping condition.
 - `microesnext-recursive-functions` composes closures with environment cells
   only for private self-bindings in named function expressions. Ordinary
   function builds do not resolve the crate or decode its constructor opcode.
-- `microesnext-recursive-async-functions` performs the corresponding
+- The execution `recursive-async-functions` feature performs the corresponding
   composition for named async expressions. It reuses async closure storage and
-  an environment cell without entering either non-recursive async builds or
-  ordinary recursive-function builds.
+  an environment cell without entering ordinary recursive-function builds.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely. The facade's
@@ -223,17 +222,16 @@ an explicit relational stopping condition.
   stack unwinding only for builds enabling the `exceptions` feature. Handler
   records remain guest-stack words; the invariant opcode core has no exception
   state.
-- `microesnext-suspension` turns a running guest stack into a rooted,
-  relocatable continuation and restores it for fulfilled or rejected `await`.
-  It enters the graph only through the VM's `async` feature.
+- `microesnext-execution` contains independently gated stack suspension, async
+  closure records, bounded caller frames, and recursive async construction.
+  A plain synchronous VM retains none of those paths.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-async` adds scheduler-facing async types without entering the
   synchronous VM's dependency graph.
-- `microesnext-async-functions` stores async closures and packages evaluated
-  calls for execution in independent guest contexts. Its bounded,
-  caller-supplied frame stack connects nested calls to outer promises; caller
-  suspension and promise orchestration remain absent from ordinary function
-  builds.
+- The execution `async-functions` feature stores async closures and packages
+  evaluated calls for independent guest contexts. Its bounded, caller-supplied
+  frame stack connects nested calls to outer promises; caller suspension and
+  promise orchestration remain absent from ordinary function builds.
 - `microesnext-async-thenables` supplies a statically selected policy for
   object assimilation at both async return and `await`. Object operands use a
   small intermediate Promise and the bounded thenable-job queue; primitives

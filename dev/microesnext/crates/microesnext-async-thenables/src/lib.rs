@@ -112,8 +112,8 @@ impl AsyncResolver for Resolver<'_, '_> {
 #[cfg(test)]
 mod tests {
     use microesnext_async::Progress;
-    use microesnext_async_functions::{FrameSlot, Frames};
     use microesnext_bytecode::Opcode;
+    use microesnext_execution::async_functions::{FrameSlot, Frames};
     use microesnext_promises::{JobSlot, Settlement, settled_result};
     use microesnext_thenables::JobSlot as ThenableJobSlot;
 

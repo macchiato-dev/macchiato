@@ -16,7 +16,7 @@ microesnext-types.workspace = true
 microesnext-vm.workspace = true
 
 [dev-dependencies]
-microesnext-async-functions.workspace = true
+microesnext-execution = { workspace = true, features = ["async-functions"] }
 microesnext-bytecode.workspace = true
 microesnext-arena = { workspace = true, features = ["closures"] }
 

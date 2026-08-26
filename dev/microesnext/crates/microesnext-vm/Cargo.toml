@@ -15,11 +15,15 @@ control-flow = [
   "microesnext-bytecode/control-flow",
 ]
 locals = ["dep:microesnext-locals", "microesnext-bytecode/locals"]
-async = ["dep:microesnext-suspension", "microesnext-bytecode/async"]
+async = [
+  "dep:microesnext-execution",
+  "microesnext-execution/suspension",
+  "microesnext-bytecode/async",
+]
 async-functions = [
   "async",
   "functions",
-  "dep:microesnext-async-functions",
+  "microesnext-execution/async-functions",
   "microesnext-bytecode/async-functions",
   "microesnext-semantics?/async-functions",
 ]
@@ -161,7 +165,7 @@ recursive-constructors = [
 recursive-async-functions = [
   "async-functions",
   "environments",
-  "dep:microesnext-recursive-async-functions",
+  "microesnext-execution/recursive-async-functions",
   "microesnext-bytecode/recursive-async-functions",
 ]
 receivers = [
@@ -197,11 +201,9 @@ microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
-microesnext-recursive-async-functions = { workspace = true, optional = true }
+microesnext-execution = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
-microesnext-suspension = { workspace = true, optional = true }
-microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 
 [dev-dependencies]

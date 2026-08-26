@@ -65,11 +65,12 @@ function assertCompilerFeatures(features, present, absent) {
 
 const environments = "microesnext-environments";
 const parameters = "microesnext-parameters";
-const suspension = "microesnext-suspension";
+const execution = "microesnext-execution";
+const suspension = execution;
 const recursiveFunctions = "microesnext-recursive-functions";
-const asyncFunctions = "microesnext-async-functions";
+const asyncFunctions = execution;
 const asyncThenables = "microesnext-async-thenables";
-const recursiveAsyncFunctions = "microesnext-recursive-async-functions";
+const recursiveAsyncFunctions = execution;
 const promises = "microesnext-promises";
 const promiseResolution = promises;
 const promiseResolvers = promises;
@@ -571,12 +572,10 @@ assertPresence(
   ["async"],
   [suspension],
   [
-    asyncFunctions,
     environments,
     errors,
     parameters,
     promiseResolution,
-    recursiveAsyncFunctions,
   ],
 );
 assertPresence(
@@ -643,7 +642,6 @@ assertPresence(
     asyncThenables,
     environments,
     parameters,
-    recursiveAsyncFunctions,
     recursiveFunctions,
     thenables,
   ],
@@ -661,7 +659,7 @@ assertPresence(
     suspension,
     thenables,
   ],
-  [environments, recursiveAsyncFunctions, recursiveFunctions],
+  [environments, recursiveFunctions],
 );
 assertPresence(
   ["recursive-async-functions"],
