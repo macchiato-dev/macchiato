@@ -1696,7 +1696,7 @@ impl Parser<'_> {
 
     #[cfg(feature = "array-assignment-expressions")]
     fn index_expression_end(&mut self) -> Result<usize, CompileError> {
-        let mut endings = Vec::from([b']']);
+        let mut endings = Vec::from(*b"]");
         let mut offset = self.offset;
         while let Some(byte) = self.source.get(offset).copied() {
             match byte {
