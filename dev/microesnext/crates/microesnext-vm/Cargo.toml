@@ -179,8 +179,8 @@ receivers = [
 ]
 promise-resolvers = [
   "function-arguments",
-  "dep:microesnext-promises",
-  "microesnext-promises/resolvers",
+  "dep:microesnext-execution",
+  "microesnext-execution/promise-resolvers",
   "microesnext-semantics?/promise-resolvers",
 ]
 typeof = [
@@ -200,12 +200,11 @@ microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
-microesnext-promises = { workspace = true, optional = true }
 microesnext-values = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true
-microesnext-promises.workspace = true
+microesnext-execution = { workspace = true, features = ["promise-resolvers"] }
 
 [lib]
 path = "src/lib.rs"

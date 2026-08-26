@@ -13,7 +13,6 @@ dependencies = [
  "microesnext-exceptions",
  "microesnext-execution",
  "microesnext-objects",
- "microesnext-promises",
  "microesnext-scheduler",
  "microesnext-semantics",
  "microesnext-types",
@@ -96,7 +95,9 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-bindings",
+ "microesnext-objects",
  "microesnext-types",
+ "microesnext-values",
  "microesnext-vm-core",
 ]
 
@@ -112,16 +113,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-promises"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-types",
- "microesnext-values",
-]
-
-[[package]]
 name = "microesnext-scheduler"
 version = "0.0.0"
 dependencies = [
@@ -130,7 +121,6 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-execution",
  "microesnext-objects",
- "microesnext-promises",
  "microesnext-types",
  "microesnext-vm",
 ]
@@ -168,7 +158,6 @@ dependencies = [
  "microesnext-exceptions",
  "microesnext-execution",
  "microesnext-objects",
- "microesnext-promises",
  "microesnext-semantics",
  "microesnext-types",
  "microesnext-values",

@@ -41,7 +41,7 @@ pub struct Machine<'code, 'memory> {
     #[cfg(feature = "atoms")]
     atoms: Option<Atoms>,
     #[cfg(feature = "promise-resolvers")]
-    resolver_call: Option<microesnext_promises::resolvers::Call>,
+    resolver_call: Option<microesnext_execution::promises::resolvers::Call>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -412,8 +412,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 #[cfg(feature = "callable-objects")]
                 let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
-                if microesnext_promises::resolvers::is_resolver(self.core.arena(), function) {
-                    if let Some(call) = microesnext_promises::resolvers::take_call(
+                if microesnext_execution::promises::resolvers::is_resolver(
+                    self.core.arena(),
+                    function,
+                ) {
+                    if let Some(call) = microesnext_execution::promises::resolvers::take_call(
                         self.core.arena_mut(),
                         function,
                         0,
@@ -464,8 +467,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 #[cfg(feature = "callable-objects")]
                 let function = unwrap_callable(self.core.arena(), function)?;
                 #[cfg(feature = "promise-resolvers")]
-                if microesnext_promises::resolvers::is_resolver(self.core.arena(), function) {
-                    if let Some(call) = microesnext_promises::resolvers::take_call(
+                if microesnext_execution::promises::resolvers::is_resolver(
+                    self.core.arena(),
+                    function,
+                ) {
+                    if let Some(call) = microesnext_execution::promises::resolvers::take_call(
                         self.core.arena_mut(),
                         function,
                         argument_count,
@@ -1134,7 +1140,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     /// been handled by the Promise driver. JavaScript resolving functions
     /// return `undefined` regardless of whether they won the shared cell.
     #[cfg(feature = "promise-resolvers")]
-    pub fn take_resolver_call(&mut self) -> Result<microesnext_promises::resolvers::Call, Error> {
+    pub fn take_resolver_call(
+        &mut self,
+    ) -> Result<microesnext_execution::promises::resolvers::Call, Error> {
         self.resolver_call.take().ok_or(Error::Type)
     }
 
@@ -1818,8 +1826,10 @@ mod tests {
         let mut machine = Machine::new(&code, &mut memory);
         let function =
             microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
-        let destination = microesnext_promises::pending(machine.arena_mut()).unwrap();
-        let pair = microesnext_promises::resolvers::new(machine.arena_mut(), destination).unwrap();
+        let destination = microesnext_execution::promises::pending(machine.arena_mut()).unwrap();
+        let pair =
+            microesnext_execution::promises::resolvers::new(machine.arena_mut(), destination)
+                .unwrap();
 
         let Outcome::PromiseResolverCall = machine.call_closure(function, pair.resolve).unwrap()
         else {
@@ -1827,7 +1837,10 @@ mod tests {
         };
         let call = machine.take_resolver_call().unwrap();
         assert_eq!(call.destination, destination);
-        assert_eq!(call.settlement, microesnext_promises::Settlement::Fulfilled);
+        assert_eq!(
+            call.settlement,
+            microesnext_execution::promises::Settlement::Fulfilled
+        );
         assert_eq!(call.argument.as_i30(), Some(42));
         assert_eq!(
             machine.resume_resolver_call(),

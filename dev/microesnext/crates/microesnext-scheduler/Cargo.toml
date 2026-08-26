@@ -13,10 +13,11 @@ async = ["microesnext-vm/async"]
 promises = [
   "async",
   "dep:microesnext-arena",
-  "dep:microesnext-promises",
+  "dep:microesnext-execution",
+  "microesnext-execution/promises",
   "microesnext-vm/functions",
 ]
-resolution = ["promises", "microesnext-promises/resolution"]
+resolution = ["promises", "microesnext-execution/promise-resolution"]
 functions = [
   "resolution",
   "dep:microesnext-execution",
@@ -27,8 +28,8 @@ thenables = [
   "dep:microesnext-arena",
   "microesnext-arena/closures",
   "dep:microesnext-objects",
-  "dep:microesnext-promises",
-  "microesnext-promises/resolvers",
+  "dep:microesnext-execution",
+  "microesnext-execution/promise-resolvers",
   "microesnext-vm/objects",
   "microesnext-vm/promise-resolvers",
   "microesnext-vm/receivers",
@@ -38,7 +39,6 @@ async-thenables = ["functions", "thenables"]
 [dependencies]
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
-microesnext-promises = { workspace = true, optional = true }
 microesnext-arena = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }

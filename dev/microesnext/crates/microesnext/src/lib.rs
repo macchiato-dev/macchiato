@@ -142,16 +142,16 @@ pub use microesnext_values::symbols::well_known as well_known_symbols;
 pub use microesnext_objects::collections::weak as weak_collections;
 
 #[cfg(feature = "promises")]
-pub use microesnext_promises as promises;
+pub use microesnext_execution::promises;
 
 #[cfg(feature = "promise-resolution")]
-pub use microesnext_promises::resolution as promise_resolution;
+pub use microesnext_execution::promises::resolution as promise_resolution;
 
 #[cfg(feature = "prototype-chain")]
 pub use microesnext_objects::prototype_chain;
 
 #[cfg(feature = "promise-resolvers")]
-pub use microesnext_promises::resolvers as promise_resolvers;
+pub use microesnext_execution::promises::resolvers as promise_resolvers;
 
 #[cfg(feature = "thenables")]
 pub use microesnext_scheduler::thenables;

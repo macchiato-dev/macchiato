@@ -1,11 +1,11 @@
 #[cfg(feature = "promises")]
 use microesnext_arena::BlockKind;
 #[cfg(feature = "resolution")]
-use microesnext_promises::resolution::resolve_native;
+use microesnext_execution::promises::resolution::resolve_native;
 #[cfg(feature = "promises")]
-use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
+use microesnext_execution::promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 #[cfg(feature = "functions")]
-use microesnext_promises::{pending, settle_unobserved};
+use microesnext_execution::promises::{pending, settle_unobserved};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
@@ -464,7 +464,7 @@ pub fn park_continuation(
 mod tests {
     use microesnext_arena::closures::capture_stack;
     use microesnext_bytecode::Opcode;
-    use microesnext_promises::{JobSlot, pending, settled_result, then};
+    use microesnext_execution::promises::{JobSlot, pending, settled_result, then};
 
     use super::*;
 

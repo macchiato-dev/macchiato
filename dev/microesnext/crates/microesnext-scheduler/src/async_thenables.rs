@@ -1,6 +1,6 @@
 use crate::async_driver::Resolver as AsyncResolver;
 use crate::thenables::{Jobs, Prepared};
-use microesnext_promises::{JobQueue, is_promise, pending, then};
+use microesnext_execution::promises::{JobQueue, is_promise, pending, then};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::Machine;
 
@@ -113,7 +113,7 @@ mod tests {
     use crate::thenables::JobSlot as ThenableJobSlot;
     use microesnext_bytecode::Opcode;
     use microesnext_execution::async_functions::{FrameSlot, Frames};
-    use microesnext_promises::{JobSlot, Settlement, settled_result};
+    use microesnext_execution::promises::{JobSlot, Settlement, settled_result};
 
     use super::*;
 

@@ -1,7 +1,7 @@
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
-use crate::{JobQueue, Settlement, is_promise, settle, then};
+use crate::promises::{JobQueue, Settlement, is_promise, settle, then};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Resolution {
@@ -51,7 +51,7 @@ pub fn resolve_native(
 
 #[cfg(test)]
 mod tests {
-    use crate::{JobSlot, pending, settled_result};
+    use crate::promises::{JobSlot, pending, settled_result};
     use microesnext_arena::BlockKind;
 
     use super::*;

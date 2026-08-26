@@ -1,7 +1,7 @@
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
-use crate::{JobQueue, Settlement, settle};
+use crate::promises::{JobQueue, Settlement, settle};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Pair {
@@ -124,7 +124,12 @@ pub fn settle_call(
 ) -> Result<(), Error> {
     match call.settlement {
         Settlement::Fulfilled => {
-            crate::resolution::resolve_native(arena, queue, call.destination, call.argument)?;
+            crate::promises::resolution::resolve_native(
+                arena,
+                queue,
+                call.destination,
+                call.argument,
+            )?;
         }
         Settlement::Rejected => {
             settle(
@@ -154,7 +159,7 @@ fn checked(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{JobSlot, pending, settled_result};
+    use crate::promises::{JobSlot, pending, settled_result};
 
     #[test]
     fn either_resolver_wins_exactly_once() {

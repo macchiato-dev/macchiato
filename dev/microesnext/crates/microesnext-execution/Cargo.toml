@@ -10,6 +10,16 @@ version.workspace = true
 [features]
 default = []
 async-functions = ["microesnext-arena/async-functions"]
+promises = []
+promise-resolution = [
+  "promises",
+  "dep:microesnext-values",
+  "microesnext-values/errors",
+]
+promise-resolvers = [
+  "promise-resolution",
+  "microesnext-arena/promise-resolvers",
+]
 recursive-async-functions = [
   "async-functions",
   "dep:microesnext-bindings",
@@ -21,7 +31,11 @@ suspension = []
 microesnext-arena.workspace = true
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-types.workspace = true
+microesnext-values = { workspace = true, optional = true }
 microesnext-vm-core.workspace = true
+
+[dev-dependencies]
+microesnext-objects.workspace = true
 
 [lib]
 path = "src/lib.rs"

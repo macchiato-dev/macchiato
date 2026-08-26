@@ -331,14 +331,14 @@ iterable-protocol = [
   "well-known-symbols",
 ]
 weak-collections = ["collections", "microesnext-objects/weak-collections"]
-promises = ["dep:microesnext-promises"]
+promises = ["dep:microesnext-execution", "microesnext-execution/promises"]
 promise-resolution = [
   "promises",
-  "microesnext-promises/resolution",
+  "microesnext-execution/promise-resolution",
 ]
 promise-resolvers = [
   "promise-resolution",
-  "microesnext-promises/resolvers",
+  "microesnext-execution/promise-resolvers",
   "microesnext-vm/promise-resolvers",
   "microesnext-semantics?/promise-resolvers",
 ]
@@ -360,7 +360,6 @@ promise-jobs = [
 microesnext-arena.workspace = true
 microesnext-scheduler = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
-microesnext-promises = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }

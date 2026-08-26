@@ -21,13 +21,13 @@ function packages(features) {
 function assertPresence(features, present, absent) {
   const graph = packages(features);
   for (const name of present) {
-    if (name === bindings || name === objects || name === semantics || name === values) continue;
+    if (name === bindings || name === execution || name === objects || name === semantics || name === values) continue;
     if (!graph.has(name)) {
       throw new Error(`${features || "minimal"}: expected ${name}`);
     }
   }
   for (const name of absent) {
-    if (name === bindings || name === objects || name === semantics || name === values) continue;
+    if (name === bindings || name === execution || name === objects || name === semantics || name === values) continue;
     if (graph.has(name)) {
       throw new Error(
         `${features || "minimal"}: unexpectedly contains ${name}`,
@@ -152,6 +152,35 @@ function assertObjectFeatures(features, present, absent) {
   }
 }
 
+function assertExecutionFeatures(features, present, absent) {
+  if (!packages(features).has(execution)) {
+    if (present.length > 0) {
+      throw new Error(`${features || "minimal"}: expected execution`);
+    }
+    return;
+  }
+  const args = [
+    "tree",
+    "--package=microesnext",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-execution",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-execution feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: expected execution/${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-execution feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: unexpectedly contains execution/${feature}`);
+    }
+  }
+}
+
 function compilerTree(features) {
   const args = [
     "tree",
@@ -191,7 +220,7 @@ const asyncFunctions = execution;
 const scheduler = "microesnext-scheduler";
 const asyncThenables = scheduler;
 const recursiveAsyncFunctions = execution;
-const promises = "microesnext-promises";
+const promises = execution;
 const promiseResolution = promises;
 const promiseResolvers = promises;
 const values = "microesnext-values";
@@ -753,7 +782,7 @@ assertPresence(
   [
     asyncFunctions,
     errors,
-    "microesnext-promises",
+    execution,
     promiseResolution,
     scheduler,
     suspension,
@@ -770,7 +799,7 @@ assertPresence(
     asyncFunctions,
     asyncThenables,
     objects,
-    "microesnext-promises",
+    execution,
     promiseResolution,
     promiseResolvers,
     receivers,
@@ -785,7 +814,7 @@ assertPresence(
     asyncFunctions,
     environments,
     errors,
-    "microesnext-promises",
+    execution,
     promiseResolution,
     recursiveAsyncFunctions,
     scheduler,
@@ -836,5 +865,13 @@ assertObjectFeatures(["array-iterators"], ["arrays", "array-iterators", "iterato
 assertObjectFeatures(["collections"], ["collections"], ["arrays", "collection-iterators", "iterators", "weak-collections"]);
 assertObjectFeatures(["collection-entry-iterators"], ["arrays", "collection-entry-iterators", "collection-iterators", "collections", "iterators"], ["weak-collections"]);
 assertObjectFeatures(["weak-collections"], ["collections", "weak-collections"], ["arrays", "iterators"]);
+assertExecutionFeatures([], [], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "recursive-async-functions", "suspension"]);
+assertExecutionFeatures(["promises"], ["promises"], ["async-functions", "promise-resolution", "promise-resolvers", "suspension"]);
+assertExecutionFeatures(["promise-resolution"], ["promise-resolution", "promises"], ["async-functions", "promise-resolvers", "suspension"]);
+assertExecutionFeatures(["promise-resolvers"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "suspension"]);
+assertExecutionFeatures(["thenables"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "suspension"]);
+assertExecutionFeatures(["async-functions"], ["async-functions", "promise-resolution", "promises", "suspension"], ["promise-resolvers", "recursive-async-functions"]);
+assertExecutionFeatures(["async-thenables"], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "suspension"], ["recursive-async-functions"]);
+assertExecutionFeatures(["recursive-async-functions"], ["async-functions", "promise-resolution", "promises", "recursive-async-functions", "suspension"], ["promise-resolvers"]);
 
 console.log("feature dependency isolation verified");

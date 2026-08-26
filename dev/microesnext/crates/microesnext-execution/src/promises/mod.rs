@@ -1,8 +1,6 @@
-#![no_std]
-
-#[cfg(feature = "resolution")]
+#[cfg(feature = "promise-resolution")]
 pub mod resolution;
-#[cfg(feature = "resolvers")]
+#[cfg(feature = "promise-resolvers")]
 pub mod resolvers;
 
 use microesnext_arena::{Arena, BlockKind};

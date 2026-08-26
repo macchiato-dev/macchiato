@@ -1,5 +1,5 @@
+use microesnext_execution::promises::{JobQueue, Settlement, is_promise, settle};
 use microesnext_objects::{get, is_object};
-use microesnext_promises::{JobQueue, Settlement, is_promise, settle};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
@@ -109,7 +109,7 @@ pub fn prepare(
     then_key: Value,
 ) -> Result<Prepared, Error> {
     if destination == resolution || is_promise(machine.arena(), resolution) {
-        microesnext_promises::resolution::resolve_native(
+        microesnext_execution::promises::resolution::resolve_native(
             machine.arena_mut(),
             queue,
             destination,
@@ -148,14 +148,15 @@ pub fn prepare(
             return Err(error);
         }
     };
-    let pair = match microesnext_promises::resolvers::new(machine.arena_mut(), destination) {
-        Ok(pair) => pair,
-        Err(error) => {
-            machine.release(receiver)?;
-            machine.release(then)?;
-            return Err(error);
-        }
-    };
+    let pair =
+        match microesnext_execution::promises::resolvers::new(machine.arena_mut(), destination) {
+            Ok(pair) => pair,
+            Err(error) => {
+                machine.release(receiver)?;
+                machine.release(then)?;
+                return Err(error);
+            }
+        };
     let resolve = match machine.retain(pair.resolve) {
         Ok(root) => root,
         Err(error) => {
@@ -231,7 +232,7 @@ fn run_inner(
                         }
                     }
                     Settlement::Rejected => {
-                        microesnext_promises::resolvers::settle_call(
+                        microesnext_execution::promises::resolvers::settle_call(
                             machine.arena_mut(),
                             queue,
                             call,
@@ -243,12 +244,16 @@ fn run_inner(
             Outcome::Complete(_) => return Ok(finished(chained)),
             Outcome::Throw(reason) => {
                 let reject = machine.root(job.reject)?;
-                if let Some(call) = microesnext_promises::resolvers::reject_if_open(
+                if let Some(call) = microesnext_execution::promises::resolvers::reject_if_open(
                     machine.arena_mut(),
                     reject,
                     reason,
                 )? {
-                    microesnext_promises::resolvers::settle_call(machine.arena_mut(), queue, call)?;
+                    microesnext_execution::promises::resolvers::settle_call(
+                        machine.arena_mut(),
+                        queue,
+                        call,
+                    )?;
                 }
                 return Ok(finished(chained));
             }
@@ -277,7 +282,7 @@ fn finished(job: Option<Job>) -> Finished {
 mod tests {
     use microesnext_bytecode::{Immediate, Opcode};
     use microesnext_compiler::Builder;
-    use microesnext_promises::{JobSlot, pending, settled_result};
+    use microesnext_execution::promises::{JobSlot, pending, settled_result};
 
     use super::*;
 

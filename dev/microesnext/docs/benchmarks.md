@@ -337,6 +337,13 @@ LTO from merely discarding an enabled but unused dependency.
 | Weak collections | 2,051 | 1,001 |
 | All capabilities | 110,159 | 34,934 |
 
+Moving Promise state, resolution, and one-shot resolvers into independently
+gated `microesnext-execution` modules preserved their raw Wasm sizes exactly:
+4,840, 12,664, and 20,494 bytes. Async suspension remained 6,455 bytes, while
+the async-functions probe decreased from 23,191 to 23,176 bytes. The shared
+crate therefore removes a package boundary without forcing Promise code into
+smaller execution builds or adding runtime dispatch.
+
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
 objects, and ordinary `instanceof`. The earlier 78,513-byte row was a broad
