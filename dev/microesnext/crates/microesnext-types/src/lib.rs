@@ -6,6 +6,7 @@ const TAG_MASK: u32 = 0b11;
 const TAG_REF: u32 = 0b00;
 const TAG_INT: u32 = 0b01;
 const TAG_IMMEDIATE: u32 = 0b10;
+const TAG_HOST: u32 = 0b11;
 
 /// A word offset into the machine arena. Zero is reserved as an invalid handle.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -24,6 +25,30 @@ impl HeapRef {
 
     #[inline(always)]
     pub const fn word_index(self) -> u32 {
+        self.0
+    }
+}
+
+/// An opaque value owned by the embedding host rather than the guest heap.
+///
+/// Host references use the fourth value tag, so the guest collector can move
+/// heap objects without inspecting or retaining browser-side capabilities.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[repr(transparent)]
+pub struct HostRef(u32);
+
+impl HostRef {
+    #[inline(always)]
+    pub const fn new(index: u32) -> Option<Self> {
+        if index < (1 << 30) {
+            Some(Self(index))
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub const fn index(self) -> u32 {
         self.0
     }
 }
@@ -96,6 +121,20 @@ impl Value {
     }
 
     #[inline(always)]
+    pub const fn from_host(reference: HostRef) -> Self {
+        Self((reference.index() << 2) | TAG_HOST)
+    }
+
+    #[inline(always)]
+    pub const fn as_host(self) -> Option<HostRef> {
+        if self.0 & TAG_MASK == TAG_HOST {
+            HostRef::new(self.0 >> 2)
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
     pub const fn from_raw(raw: u32) -> Self {
         Self(raw)
     }
@@ -114,6 +153,9 @@ impl fmt::Debug for Value {
         if let Some(reference) = self.as_ref() {
             return formatter.debug_tuple("Ref").field(&reference).finish();
         }
+        if let Some(reference) = self.as_host() {
+            return formatter.debug_tuple("Host").field(&reference).finish();
+        }
         match *self {
             Self::UNDEFINED => formatter.write_str("Undefined"),
             Self::NULL => formatter.write_str("Null"),
@@ -125,6 +167,7 @@ impl fmt::Debug for Value {
 }
 
 const _: () = assert!(core::mem::size_of::<HeapRef>() == 4);
+const _: () = assert!(core::mem::size_of::<HostRef>() == 4);
 const _: () = assert!(core::mem::size_of::<RootId>() == 4);
 const _: () = assert!(core::mem::size_of::<Value>() == 4);
 
@@ -136,4 +179,18 @@ pub enum Error {
     InvalidRoot,
     StackUnderflow,
     Type,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn host_references_are_disjoint_from_guest_values() {
+        let reference = HostRef::new(42).unwrap();
+        let value = Value::from_host(reference);
+        assert_eq!(value.as_host(), Some(reference));
+        assert_eq!(value.as_ref(), None);
+        assert_eq!(value.as_i30(), None);
+    }
 }
