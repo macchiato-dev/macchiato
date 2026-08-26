@@ -42,6 +42,7 @@ collection-string-keys = [
 ]
 class-constructors = ["microesnext-arena/class-constructors", "microesnext-arena/closures"]
 class-inheritance = ["class-constructors"]
+getters = ["microesnext-arena/getters"]
 construction = ["callable-objects"]
 instanceof = ["callable-objects", "prototype-chain"]
 assignment-expressions = []

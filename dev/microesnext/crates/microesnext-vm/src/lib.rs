@@ -308,6 +308,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
                 let value = get(self.core.arena(), object, key)?;
+                #[cfg(feature = "getters")]
+                if let Some(function) =
+                    microesnext_objects::getters::callable(self.core.arena(), value)?
+                {
+                    let target = entry(self.core.arena(), function)?;
+                    microesnext_bindings::receivers::append(self.core.arena_mut(), 0, object)?;
+                    self.core.enter_call_with_arguments(function, target, 1)?;
+                    return Ok(None);
+                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -403,6 +412,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     Value::NULL,
                 )?;
                 self.core.arena_mut().push(method)?;
+                Ok(None)
+            }
+            #[cfg(feature = "getters")]
+            Opcode::ToGetter => {
+                let closure = self.core.arena_mut().pop()?;
+                let getter = microesnext_objects::getters::new(self.core.arena_mut(), closure)?;
+                self.core.arena_mut().push(getter)?;
                 Ok(None)
             }
             #[cfg(feature = "recursive-constructors")]

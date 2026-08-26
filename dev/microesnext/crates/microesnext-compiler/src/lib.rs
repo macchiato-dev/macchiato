@@ -444,6 +444,8 @@ enum FunctionBody {
     ClassConstructor,
     #[cfg(feature = "class-methods")]
     Method,
+    #[cfg(feature = "class-getters")]
+    Getter,
 }
 
 #[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
@@ -2283,6 +2285,14 @@ impl Parser<'_> {
         if static_method {
             self.whitespace();
         }
+        #[cfg(feature = "class-getters")]
+        let getter = self.try_word(b"get");
+        #[cfg(feature = "class-getters")]
+        if getter {
+            self.whitespace();
+        }
+        #[cfg(not(feature = "class-getters"))]
+        let getter = false;
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
         self.output.push(Opcode::LoadLocal as u8);
@@ -2295,7 +2305,18 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(name_start, name_end);
-        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        #[cfg(feature = "class-getters")]
+        let body_kind = if getter {
+            if !parameters.is_empty() {
+                return Err(self.error("a getter without parameters"));
+            }
+            FunctionBody::Getter
+        } else {
+            FunctionBody::Method
+        };
+        #[cfg(not(feature = "class-getters"))]
+        let body_kind = FunctionBody::Method;
+        self.function_value(parameters, None, body_kind, None, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }
@@ -2440,8 +2461,11 @@ impl Parser<'_> {
         constructible: bool,
     ) -> Result<(), CompileError> {
         let receiver_frame = constructible && cfg!(feature = "constructors");
-        #[cfg(feature = "class-methods")]
+        #[cfg(all(feature = "class-methods", not(feature = "class-getters")))]
         let receiver_frame = receiver_frame || matches!(body_kind, FunctionBody::Method);
+        #[cfg(feature = "class-getters")]
+        let receiver_frame =
+            receiver_frame || matches!(body_kind, FunctionBody::Method | FunctionBody::Getter);
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -2478,12 +2502,9 @@ impl Parser<'_> {
             #[cfg(feature = "receivers")]
             receiver_frame,
             #[cfg(feature = "class-inheritance")]
-            super_binding: matches!(
-                body_kind,
-                FunctionBody::ClassConstructor | FunctionBody::Method
-            )
-            .then_some(self.super_binding)
-            .flatten(),
+            super_binding: Self::body_accepts_super(body_kind)
+                .then_some(self.super_binding)
+                .flatten(),
             #[cfg(any(feature = "number-negation", feature = "number-operations"))]
             options: self.options,
         };
@@ -2552,6 +2573,13 @@ impl Parser<'_> {
                     return Err(body.error("}"));
                 }
             }
+            #[cfg(feature = "class-getters")]
+            FunctionBody::Getter => {
+                body.terminal_statement()?;
+                if !body.consume(b'}') {
+                    return Err(body.error("}"));
+                }
+            }
         }
         body.whitespace();
         body.append_function_bodies()?;
@@ -2570,6 +2598,10 @@ impl Parser<'_> {
         #[cfg(feature = "class-methods")]
         if matches!(body_kind, FunctionBody::Method) {
             self.output.push(Opcode::ToMethod as u8);
+        }
+        #[cfg(feature = "class-getters")]
+        if matches!(body_kind, FunctionBody::Getter) {
+            self.output.push(Opcode::ToGetter as u8);
         }
         #[cfg(feature = "constructors")]
         if constructible {
@@ -2607,6 +2639,22 @@ impl Parser<'_> {
             relocations: body.relocations,
         });
         Ok(())
+    }
+
+    #[cfg(all(feature = "class-inheritance", feature = "class-getters"))]
+    fn body_accepts_super(body_kind: FunctionBody) -> bool {
+        matches!(
+            body_kind,
+            FunctionBody::ClassConstructor | FunctionBody::Method | FunctionBody::Getter
+        )
+    }
+
+    #[cfg(all(feature = "class-inheritance", not(feature = "class-getters")))]
+    fn body_accepts_super(body_kind: FunctionBody) -> bool {
+        matches!(
+            body_kind,
+            FunctionBody::ClassConstructor | FunctionBody::Method
+        )
     }
 
     #[cfg(feature = "function-arguments")]
@@ -5148,6 +5196,12 @@ impl Parser<'_> {
         if static_method {
             self.whitespace();
         }
+        #[cfg(feature = "class-getters")]
+        let getter = self.try_word(b"get");
+        #[cfg(feature = "class-getters")]
+        if getter {
+            self.whitespace();
+        }
         let (name_start, name_end) = self.identifier()?;
         let parameters = self.function_parameters()?;
         self.output.push(Opcode::DuplicateTop as u8);
@@ -5159,7 +5213,18 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(name_start, name_end);
-        self.function_value(parameters, None, FunctionBody::Method, None, false, false)?;
+        #[cfg(feature = "class-getters")]
+        let body_kind = if getter {
+            if !parameters.is_empty() {
+                return Err(self.error("a getter without parameters"));
+            }
+            FunctionBody::Getter
+        } else {
+            FunctionBody::Method
+        };
+        #[cfg(not(feature = "class-getters"))]
+        let body_kind = FunctionBody::Method;
+        self.function_value(parameters, None, body_kind, None, false, false)?;
         self.output.push(Opcode::SetPropertyStatement as u8);
         Ok(())
     }

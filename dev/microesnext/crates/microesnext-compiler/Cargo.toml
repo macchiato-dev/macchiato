@@ -25,6 +25,7 @@ default = [
   "class-static-methods",
   "class-expressions",
   "class-inheritance",
+  "class-getters",
   "named-class-expressions",
   "comments",
   "class-default-constructors",
@@ -123,6 +124,7 @@ class-inheritance = [
   "receivers",
   "microesnext-bytecode/class-inheritance",
 ]
+class-getters = ["class-expressions", "microesnext-bytecode/getters"]
 named-class-expressions = ["class-expressions", "captured-assignment-expressions"]
 comments = []
 class-default-constructors = ["classes"]

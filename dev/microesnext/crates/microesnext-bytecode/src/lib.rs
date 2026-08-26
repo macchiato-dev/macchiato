@@ -180,6 +180,8 @@ pub enum Opcode {
     InheritClass = 123,
     #[cfg(feature = "class-inheritance")]
     CallSuperArguments = 124,
+    #[cfg(feature = "getters")]
+    ToGetter = 125,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -343,6 +345,8 @@ impl TryFrom<u8> for Opcode {
             123 => Ok(Self::InheritClass),
             #[cfg(feature = "class-inheritance")]
             124 => Ok(Self::CallSuperArguments),
+            #[cfg(feature = "getters")]
+            125 => Ok(Self::ToGetter),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

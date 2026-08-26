@@ -15,6 +15,8 @@ pub mod callable;
 pub mod class_constructor;
 #[cfg(feature = "construction")]
 pub mod construction;
+#[cfg(feature = "getters")]
+pub mod getters;
 #[cfg(feature = "instanceof")]
 pub mod instanceof;
 #[cfg(feature = "method-calls")]

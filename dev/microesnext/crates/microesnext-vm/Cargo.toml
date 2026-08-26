@@ -64,6 +64,13 @@ class-inheritance = [
   "microesnext-objects/class-inheritance",
   "microesnext-bytecode/class-inheritance",
 ]
+getters = [
+  "functions",
+  "objects",
+  "receivers",
+  "microesnext-objects/getters",
+  "microesnext-bytecode/getters",
+]
 construction = [
   "constructors",
   "receivers",
