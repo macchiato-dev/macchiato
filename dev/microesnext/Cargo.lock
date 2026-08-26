@@ -35,11 +35,6 @@ dependencies = [
  "microesnext-locals",
  "microesnext-logical-operations",
  "microesnext-method-calls",
- "microesnext-number-coercion",
- "microesnext-number-division",
- "microesnext-number-negation",
- "microesnext-number-operations",
- "microesnext-number-remainder",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -52,7 +47,6 @@ dependencies = [
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
  "microesnext-stack-operations",
- "microesnext-string-number-coercion",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-symbols",
@@ -391,57 +385,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-number-coercion"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-number-division"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-number-negation"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-integer-negation",
- "microesnext-number-coercion",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-number-operations"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-number-remainder"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-decimal-to-f64",
+ "microesnext-integer-negation",
  "microesnext-types",
 ]
 
@@ -559,17 +508,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-string-number-coercion"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-decimal-to-f64",
- "microesnext-number-coercion",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-string-operations"
 version = "0.0.0"
 dependencies = [
@@ -664,11 +602,6 @@ dependencies = [
  "microesnext-locals",
  "microesnext-logical-operations",
  "microesnext-method-calls",
- "microesnext-number-coercion",
- "microesnext-number-division",
- "microesnext-number-negation",
- "microesnext-number-operations",
- "microesnext-number-remainder",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -681,7 +614,6 @@ dependencies = [
  "microesnext-recursive-constructors",
  "microesnext-recursive-functions",
  "microesnext-stack-operations",
- "microesnext-string-number-coercion",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-suspension",

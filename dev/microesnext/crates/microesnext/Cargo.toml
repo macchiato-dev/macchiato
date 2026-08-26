@@ -129,28 +129,28 @@ numbers = [
 number-operations = [
   "numbers",
   "integer-operations",
-  "dep:microesnext-number-operations",
+  "microesnext-numbers/operations",
   "microesnext-vm/number-operations",
 ]
 number-negation = [
   "numbers",
   "integer-negation",
-  "dep:microesnext-number-negation",
+  "microesnext-numbers/negation",
   "microesnext-vm/number-negation",
 ]
 number-coercion = [
   "numbers",
-  "dep:microesnext-number-coercion",
+  "microesnext-numbers/coercion",
   "microesnext-vm/number-coercion",
 ]
 number-division = [
   "numbers",
-  "dep:microesnext-number-division",
+  "microesnext-numbers/division",
   "microesnext-vm/number-division",
 ]
 number-remainder = [
   "numbers",
-  "dep:microesnext-number-remainder",
+  "microesnext-numbers/remainder",
   "microesnext-vm/number-remainder",
 ]
 nonterminal-conditionals = ["control-flow"]
@@ -162,7 +162,7 @@ structured-statements = ["nested-exceptions", "nested-loops"]
 string-number-coercion = [
   "number-coercion",
   "strings",
-  "dep:microesnext-string-number-coercion",
+  "microesnext-numbers/string-coercion",
   "microesnext-vm/string-number-coercion",
 ]
 typeof = ["strings", "dep:microesnext-typeof", "microesnext-vm/typeof"]
@@ -276,12 +276,6 @@ microesnext-instanceof = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
-microesnext-number-operations = { workspace = true, optional = true }
-microesnext-number-negation = { workspace = true, optional = true }
-microesnext-number-coercion = { workspace = true, optional = true }
-microesnext-number-division = { workspace = true, optional = true }
-microesnext-number-remainder = { workspace = true, optional = true }
-microesnext-string-number-coercion = { workspace = true, optional = true }
 microesnext-typeof = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }

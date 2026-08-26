@@ -1,12 +1,10 @@
-#![no_std]
-
+use crate::coercion::PrimitiveNumber;
 use microesnext_arena::{Arena, BlockKind};
-use microesnext_number_coercion::PrimitiveNumber;
 use microesnext_types::{Error, Value};
 
 /// Apply `ToNumber` through the primitive and string-only compositions.
 pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
-    match microesnext_number_coercion::coerce(arena, value) {
+    match crate::coercion::coerce(arena, value) {
         Ok(number) => return Ok(number),
         Err(Error::Type) => {}
         Err(error) => return Err(error),
@@ -19,7 +17,7 @@ pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error>
 }
 
 pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    match microesnext_number_coercion::coerce(arena, value) {
+    match crate::coercion::coerce(arena, value) {
         Ok(number) => {
             if value.as_i30().is_some() || value.as_ref().is_some() {
                 return Ok(value);

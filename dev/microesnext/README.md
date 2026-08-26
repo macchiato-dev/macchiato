@@ -182,32 +182,20 @@ an explicit relational stopping condition.
   ordinary guest string. Optional number, symbol, async-closure, and resolver
   classifications are statically forwarded only when those representations
   coexist with `typeof`.
-- `microesnext-numbers` supplies heap-backed IEEE-754 representation.
-  Integer-only builds do not link floating-point parsing or storage, while
-  equality-only number builds do not acquire arithmetic.
-- `microesnext-number-coercion` implements the primitive-only portion of
-  `ToNumber`. Immediate integers, booleans, and null stay allocation-free;
-  undefined becomes boxed NaN. String parsing and object `ToPrimitive` remain
-  separate future compositions rather than hidden dependencies.
-- `microesnext-string-number-coercion` adds allocation-free
-  `StringNumericLiteral` parsing, including current ECMAScript whitespace and
-  power-of-two radix forms. Its decimal parser and string dependency disappear
-  together when the composition is omitted.
+- `microesnext-numbers` supplies heap-backed IEEE-754 representation with
+  independently gated arithmetic, division, remainder, negation, primitive
+  coercion, and string-coercion modules. Integer-only builds do not link this
+  crate; equality-only number builds do not retain arithmetic. Immediate
+  integers, booleans, and null stay allocation-free during coercion, while
+  undefined becomes boxed NaN. String coercion adds `StringNumericLiteral`
+  parsing only when selected.
 - `microesnext-decimal-to-f64` is the shared, `no_std` decimal conversion
   boundary for source literals and string coercion. A small exact path handles
   common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
   Builds omitting both consumers do not link the crate.
-- `microesnext-number-operations` adds promoted arithmetic and relational
-  comparison. Its i30 fast paths remain direct; overflow falls through to the
-  number representation only in builds selecting this crate.
-- `microesnext-number-division` adds `/` without pulling in the larger
-  floating-point remainder helper. `microesnext-number-remainder` separately
-  adds `%` and keeps safe i30 results immediate. Either feature can be omitted
-  without adding an opcode case to the other arithmetic paths.
-- `microesnext-number-negation` composes the integer fast path with boxed
-  IEEE-754 results and primitive coercion, including negative zero. Its i30
-  path still enters integer negation directly. It does not make the compiler
-  retain decimal/exponent literal parsing merely to emit `NegateNumber`.
+- The numeric feature modules retain the existing i30 fast paths. Overflow
+  falls through to boxed values only when promoted operations are selected;
+  `/`, `%`, negation, and decimal string parsing remain separately removable.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.

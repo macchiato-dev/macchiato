@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
@@ -12,22 +10,20 @@ pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
         }
         return microesnext_numbers::new(arena, -(number as f64));
     }
-    let number = microesnext_number_coercion::coerce(arena, value)?;
+    let number = crate::coercion::coerce(arena, value)?;
     negate_coerced(arena, number)
 }
 
 #[inline(always)]
 pub fn negate_coerced(
     arena: &mut Arena<'_>,
-    number: microesnext_number_coercion::PrimitiveNumber,
+    number: crate::coercion::PrimitiveNumber,
 ) -> Result<Value, Error> {
     match number {
-        microesnext_number_coercion::PrimitiveNumber::I30(value) => {
+        crate::coercion::PrimitiveNumber::I30(value) => {
             microesnext_numbers::new(arena, -(value as f64))
         }
-        microesnext_number_coercion::PrimitiveNumber::F64(value) => {
-            microesnext_numbers::new(arena, -value)
-        }
+        crate::coercion::PrimitiveNumber::F64(value) => microesnext_numbers::new(arena, -value),
     }
 }
 

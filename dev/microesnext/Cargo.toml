@@ -33,12 +33,7 @@ members = [
   "crates/microesnext-locals",
   "crates/microesnext-logical-operations",
   "crates/microesnext-method-calls",
-  "crates/microesnext-number-operations",
   "crates/microesnext-integer-negation",
-  "crates/microesnext-number-negation",
-  "crates/microesnext-number-coercion",
-  "crates/microesnext-number-division",
-  "crates/microesnext-number-remainder",
   "crates/microesnext-array-iterators",
   "crates/microesnext-array-assignment-expressions",
   "crates/microesnext-collection-iterators",
@@ -54,7 +49,6 @@ members = [
   "crates/microesnext-strings",
   "crates/microesnext-stack-operations",
   "crates/microesnext-string-operations",
-  "crates/microesnext-string-number-coercion",
   "crates/microesnext-symbols",
   "crates/microesnext-thenables",
   "crates/microesnext-well-known-symbols",
@@ -111,12 +105,7 @@ microesnext-instanceof = { path = "crates/microesnext-instanceof", version = "0.
 microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
 microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
 microesnext-method-calls = { path = "crates/microesnext-method-calls", version = "0.0.0" }
-microesnext-number-operations = { path = "crates/microesnext-number-operations", version = "0.0.0" }
 microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
-microesnext-number-negation = { path = "crates/microesnext-number-negation", version = "0.0.0" }
-microesnext-number-coercion = { path = "crates/microesnext-number-coercion", version = "0.0.0" }
-microesnext-number-division = { path = "crates/microesnext-number-division", version = "0.0.0" }
-microesnext-number-remainder = { path = "crates/microesnext-number-remainder", version = "0.0.0" }
 microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
 microesnext-array-assignment-expressions = { path = "crates/microesnext-array-assignment-expressions", version = "0.0.0" }
 microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }
@@ -132,7 +121,6 @@ microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
 microesnext-stack-operations = { path = "crates/microesnext-stack-operations", version = "0.0.0" }
 microesnext-string-operations = { path = "crates/microesnext-string-operations", version = "0.0.0" }
-microesnext-string-number-coercion = { path = "crates/microesnext-string-number-coercion", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
 microesnext-thenables = { path = "crates/microesnext-thenables", version = "0.0.0" }
 microesnext-well-known-symbols = { path = "crates/microesnext-well-known-symbols", version = "0.0.0" }

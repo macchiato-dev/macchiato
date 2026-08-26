@@ -7,8 +7,19 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+coercion = []
+division = []
+negation = ["coercion", "dep:microesnext-integer-negation"]
+operations = []
+remainder = []
+string-coercion = ["coercion", "dep:microesnext-decimal-to-f64"]
+
 [dependencies]
 microesnext-arena = { workspace = true, features = ["numbers"] }
+microesnext-decimal-to-f64 = { workspace = true, optional = true }
+microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [lib]

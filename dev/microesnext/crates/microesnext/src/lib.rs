@@ -70,22 +70,22 @@ pub use microesnext_iterable_protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_arena::closures as functions;
-#[cfg(feature = "number-coercion")]
-pub use microesnext_number_coercion as number_coercion;
-#[cfg(feature = "number-division")]
-pub use microesnext_number_division as number_division;
-#[cfg(feature = "number-negation")]
-pub use microesnext_number_negation as number_negation;
-#[cfg(feature = "number-operations")]
-pub use microesnext_number_operations as number_operations;
-#[cfg(feature = "number-remainder")]
-pub use microesnext_number_remainder as number_remainder;
 #[cfg(feature = "numbers")]
 pub use microesnext_numbers as numbers;
+#[cfg(feature = "number-coercion")]
+pub use microesnext_numbers::coercion as number_coercion;
+#[cfg(feature = "number-division")]
+pub use microesnext_numbers::division as number_division;
+#[cfg(feature = "number-negation")]
+pub use microesnext_numbers::negation as number_negation;
+#[cfg(feature = "number-operations")]
+pub use microesnext_numbers::operations as number_operations;
+#[cfg(feature = "number-remainder")]
+pub use microesnext_numbers::remainder as number_remainder;
+#[cfg(feature = "string-number-coercion")]
+pub use microesnext_numbers::string_coercion as string_number_coercion;
 #[cfg(feature = "function-arguments")]
 pub use microesnext_parameters as parameters;
-#[cfg(feature = "string-number-coercion")]
-pub use microesnext_string_number_coercion as string_number_coercion;
 #[cfg(feature = "typeof")]
 pub use microesnext_typeof as r#typeof;
 

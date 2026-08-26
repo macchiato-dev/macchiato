@@ -79,12 +79,6 @@ const integerOperations = "microesnext-integer-operations";
 const integerNegation = "microesnext-integer-negation";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
-const numberOperations = "microesnext-number-operations";
-const numberNegation = "microesnext-number-negation";
-const numberCoercion = "microesnext-number-coercion";
-const numberDivision = "microesnext-number-division";
-const numberRemainder = "microesnext-number-remainder";
-const stringNumberCoercion = "microesnext-string-number-coercion";
 const typeOf = "microesnext-typeof";
 const prototypeChain = "microesnext-prototype-chain";
 const callableObjects = "microesnext-callable-objects";
@@ -377,12 +371,6 @@ assertPresence(
     integerOperations,
     integerNegation,
     logicalOperations,
-    numberOperations,
-    numberNegation,
-    numberCoercion,
-    numberDivision,
-    numberRemainder,
-    stringNumberCoercion,
     parameters,
     promiseResolution,
     promiseResolvers,
@@ -410,50 +398,49 @@ assertPresence(
   [equality, "microesnext-numbers"],
   [
     "microesnext-atoms",
-    numberOperations,
     "microesnext-objects",
     "microesnext-strings",
   ],
 );
 assertPresence(
   ["number-operations"],
-  [integerOperations, numberOperations, "microesnext-numbers"],
-  [integerNegation, numberDivision, numberNegation, numberRemainder, "microesnext-strings"],
+  [integerOperations, "microesnext-numbers"],
+  [integerNegation, "microesnext-strings"],
 );
 assertPresence(
   ["number-division"],
-  [numberDivision, "microesnext-numbers"],
-  [integerOperations, numberOperations, numberRemainder, "microesnext-strings"],
+  ["microesnext-numbers"],
+  [integerOperations, "microesnext-strings"],
 );
 assertPresence(
   ["number-remainder"],
-  [numberRemainder, "microesnext-numbers"],
-  [integerOperations, numberDivision, numberOperations, "microesnext-strings"],
+  ["microesnext-numbers"],
+  [integerOperations, "microesnext-strings"],
 );
 assertPresence(
   ["integer-negation"],
   [integerNegation],
-  [integerOperations, numberNegation, numberOperations, "microesnext-numbers"],
+  [integerOperations, "microesnext-numbers"],
 );
 assertPresence(
   ["number-negation"],
-  [integerNegation, numberCoercion, numberNegation, "microesnext-numbers"],
-  [integerOperations, numberOperations, "microesnext-strings"],
+  [integerNegation, "microesnext-numbers"],
+  [integerOperations, "microesnext-strings"],
 );
 assertPresence(
   ["number-coercion"],
-  [numberCoercion, "microesnext-numbers"],
-  [integerNegation, integerOperations, numberNegation, numberOperations, stringNumberCoercion, "microesnext-strings"],
+  ["microesnext-numbers"],
+  [integerNegation, integerOperations, "microesnext-strings"],
 );
 assertPresence(
   ["string-number-coercion"],
-  [numberCoercion, stringNumberCoercion, "microesnext-numbers", "microesnext-strings"],
-  [integerNegation, integerOperations, numberNegation, numberOperations],
+  ["microesnext-numbers", "microesnext-strings"],
+  [integerNegation, integerOperations],
 );
 assertPresence(
   ["typeof"],
   [typeOf, "microesnext-strings"],
-  [integerOperations, numberOperations, "microesnext-numbers", "microesnext-objects"],
+  [integerOperations, "microesnext-numbers", "microesnext-objects"],
 );
 assertPresence(
   ["prototype-chain"],
@@ -522,7 +509,6 @@ assertPresence(
     asyncFunctions,
     environments,
     integerNegation,
-    numberNegation,
     "microesnext-numbers",
     "microesnext-strings",
   ],

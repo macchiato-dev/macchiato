@@ -1,5 +1,20 @@
 #![no_std]
 
+extern crate self as microesnext_numbers;
+
+#[cfg(feature = "coercion")]
+pub mod coercion;
+#[cfg(feature = "division")]
+pub mod division;
+#[cfg(feature = "negation")]
+pub mod negation;
+#[cfg(feature = "operations")]
+pub mod operations;
+#[cfg(feature = "remainder")]
+pub mod remainder;
+#[cfg(feature = "string-coercion")]
+pub mod string_coercion;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 

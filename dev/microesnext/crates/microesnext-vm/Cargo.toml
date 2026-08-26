@@ -105,34 +105,34 @@ numbers = [
 number-operations = [
   "numbers",
   "integer-operations",
-  "dep:microesnext-number-operations",
+  "microesnext-numbers/operations",
   "microesnext-bytecode/number-operations",
 ]
 number-negation = [
   "numbers",
   "integer-negation",
-  "dep:microesnext-number-negation",
+  "microesnext-numbers/negation",
   "microesnext-bytecode/number-negation",
 ]
 number-coercion = [
   "numbers",
-  "dep:microesnext-number-coercion",
+  "microesnext-numbers/coercion",
   "microesnext-bytecode/number-coercion",
 ]
 number-division = [
   "numbers",
-  "dep:microesnext-number-division",
+  "microesnext-numbers/division",
   "microesnext-bytecode/number-division",
 ]
 number-remainder = [
   "numbers",
-  "dep:microesnext-number-remainder",
+  "microesnext-numbers/remainder",
   "microesnext-bytecode/number-remainder",
 ]
 string-number-coercion = [
   "number-coercion",
   "strings",
-  "dep:microesnext-string-number-coercion",
+  "microesnext-numbers/string-coercion",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
@@ -203,12 +203,6 @@ microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-integer-negation = { workspace = true, optional = true }
 microesnext-instanceof = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
-microesnext-number-operations = { workspace = true, optional = true }
-microesnext-number-negation = { workspace = true, optional = true }
-microesnext-number-coercion = { workspace = true, optional = true }
-microesnext-number-division = { workspace = true, optional = true }
-microesnext-number-remainder = { workspace = true, optional = true }
-microesnext-string-number-coercion = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
 microesnext-equality = { workspace = true, optional = true }
