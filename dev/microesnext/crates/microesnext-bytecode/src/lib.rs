@@ -156,6 +156,8 @@ pub enum Opcode {
     DuplicateTop = 112,
     #[cfg(feature = "captured-assignment-expressions")]
     StoreEnvironmentCellResult = 113,
+    #[cfg(feature = "property-assignment-expressions")]
+    SetPropertyResult = 114,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -303,6 +305,8 @@ impl TryFrom<u8> for Opcode {
             112 => Ok(Self::DuplicateTop),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
+            #[cfg(feature = "property-assignment-expressions")]
+            114 => Ok(Self::SetPropertyResult),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -612,6 +616,18 @@ mod tests {
     #[test]
     fn omitted_captured_assignment_opcode_is_invalid() {
         assert!(Opcode::try_from(113).is_err());
+    }
+
+    #[cfg(feature = "property-assignment-expressions")]
+    #[test]
+    fn enabled_property_assignment_expression_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(114), Ok(Opcode::SetPropertyResult));
+    }
+
+    #[cfg(not(feature = "property-assignment-expressions"))]
+    #[test]
+    fn omitted_property_assignment_expression_opcode_is_invalid() {
+        assert!(Opcode::try_from(114).is_err());
     }
 
     #[cfg(feature = "property-assignment")]

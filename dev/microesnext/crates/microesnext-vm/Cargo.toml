@@ -141,6 +141,11 @@ captured-assignment-expressions = [
   "dep:microesnext-captured-assignment-expressions",
   "microesnext-bytecode/captured-assignment-expressions",
 ]
+property-assignment-expressions = [
+  "objects",
+  "dep:microesnext-property-assignment-expressions",
+  "microesnext-bytecode/property-assignment-expressions",
+]
 recursive-functions = [
   "functions",
   "environments",
@@ -180,6 +185,7 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-captured-assignment-expressions = { workspace = true, optional = true }
+microesnext-property-assignment-expressions = { workspace = true, optional = true }
 microesnext-construction = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }

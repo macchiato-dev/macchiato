@@ -44,6 +44,7 @@ instanceof = []
 constructors = []
 class-constructors = ["constructors"]
 captured-assignment-expressions = ["environments"]
+property-assignment-expressions = ["objects"]
 construction = ["constructors", "receivers"]
 
 [dependencies]

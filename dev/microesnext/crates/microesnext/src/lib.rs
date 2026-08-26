@@ -101,6 +101,9 @@ pub use microesnext_environments as environments;
 #[cfg(feature = "captured-assignment-expressions")]
 pub use microesnext_captured_assignment_expressions as captured_assignment_expressions;
 
+#[cfg(feature = "property-assignment-expressions")]
+pub use microesnext_property_assignment_expressions as property_assignment_expressions;
+
 #[cfg(feature = "recursive-functions")]
 pub use microesnext_recursive_functions as recursive_functions;
 
