@@ -23,6 +23,7 @@ construction = ["constructors", "microesnext/construction"]
 classes = ["construction", "property-assignment", "microesnext/classes"]
 class-methods = ["classes", "microesnext/class-methods"]
 class-expressions = ["class-methods", "stack-operations", "microesnext/class-expressions"]
+captured-assignment-expressions = ["microesnext/captured-assignment-expressions"]
 collection-iterators = ["collections", "iterators", "microesnext/collection-iterators"]
 collection-entry-iterators = [
   "arrays",
