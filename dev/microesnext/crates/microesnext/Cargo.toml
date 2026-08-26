@@ -56,6 +56,13 @@ construction = [
   "microesnext-vm/construction",
   "microesnext-compiler/construction",
 ]
+compound-assignment-expressions = [
+  "captured-assignment-expressions",
+  "local-assignment-expressions",
+  "number-coercion",
+  "number-operations",
+  "microesnext-compiler/compound-assignment-expressions",
+]
 classes = [
   "class-constructors",
   "construction",
@@ -469,6 +476,11 @@ required-features = ["abstract-equality"]
 name = "default-parameters"
 path = "tests/default_parameters.rs"
 required-features = ["default-parameters", "number-operations"]
+
+[[test]]
+name = "compound-assignment-expressions"
+path = "tests/compound_assignment_expressions.rs"
+required-features = ["compound-assignment-expressions", "expression-statements"]
 
 [[test]]
 name = "captured-assignment-expressions"

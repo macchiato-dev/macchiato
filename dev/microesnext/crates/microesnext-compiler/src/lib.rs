@@ -3142,6 +3142,11 @@ impl Parser<'_> {
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
+            #[cfg(feature = "compound-assignment-expressions")]
+            if let Some(subtracting) = self.consume_compound_addition() {
+                self.emit_local_compound_assignment(local, subtracting)?;
+                return Ok(false);
+            }
             #[cfg(feature = "environments")]
             if local.captured && self.consume_plain_assignment() {
                 #[cfg(feature = "captured-assignment-expressions")]
@@ -3184,6 +3189,55 @@ impl Parser<'_> {
         self.offset = start;
         let (used_binding, _) = self.conditional(binding)?;
         Ok(used_binding)
+    }
+
+    #[cfg(feature = "compound-assignment-expressions")]
+    fn consume_compound_addition(&mut self) -> Option<bool> {
+        if self.consume_bytes(b"+=") {
+            Some(false)
+        } else if self.consume_bytes(b"-=") {
+            Some(true)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "compound-assignment-expressions")]
+    fn emit_local_compound_assignment(
+        &mut self,
+        local: Binding,
+        subtracting: bool,
+    ) -> Result<(), CompileError> {
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&local.slot.to_le_bytes());
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::LoadEnvironmentCell as u8);
+        }
+        self.output.push(Opcode::ToNumber as u8);
+        self.expression(None)?;
+        self.output.push(Opcode::ToNumber as u8);
+        self.output.push(if subtracting {
+            Opcode::SubtractNumber as u8
+        } else {
+            Opcode::AddNumber as u8
+        });
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+        } else {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        #[cfg(not(feature = "environments"))]
+        {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        Ok(())
     }
 
     #[cfg(feature = "update-expressions")]
@@ -5179,6 +5233,7 @@ impl Parser<'_> {
         feature = "equality",
         feature = "logical-operations",
         feature = "bitwise-operations",
+        feature = "compound-assignment-expressions",
         feature = "update-expressions"
     ))]
     fn consume_bytes(&mut self, bytes: &[u8]) -> bool {
