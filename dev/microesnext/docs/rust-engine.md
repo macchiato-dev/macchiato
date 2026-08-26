@@ -30,7 +30,7 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   Bytes assigned to an omitted capability are invalid rather than accepted by
   a larger universal enum and rejected later by the VM wrapper.
 - `microesnext-vm-core` reads raw bytes and depends only on the invariant
-  `microesnext-bytecode-core` vocabulary. It returns any non-core byte to the
+  `microesnext-bytecode::core` vocabulary. It returns any non-core byte to the
   feature-gated typed decoder in `microesnext-vm`; the raw core is deliberately
   not an independent validator for extension opcodes.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its

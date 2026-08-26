@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_types::Error;
 
 pub const CONST_I30: u8 = 1;

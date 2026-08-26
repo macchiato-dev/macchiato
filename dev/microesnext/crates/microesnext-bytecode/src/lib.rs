@@ -1,16 +1,18 @@
 #![no_std]
 
+pub mod core;
+
 use microesnext_types::Error;
 
-pub use microesnext_bytecode_core::{read_byte, read_bytes, read_i30, read_u16, read_u32};
+pub use core::{read_byte, read_bytes, read_i30, read_u16, read_u32};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Immediate {
-    Undefined = microesnext_bytecode_core::IMMEDIATE_UNDEFINED,
-    Null = microesnext_bytecode_core::IMMEDIATE_NULL,
-    False = microesnext_bytecode_core::IMMEDIATE_FALSE,
-    True = microesnext_bytecode_core::IMMEDIATE_TRUE,
+    Undefined = core::IMMEDIATE_UNDEFINED,
+    Null = core::IMMEDIATE_NULL,
+    False = core::IMMEDIATE_FALSE,
+    True = core::IMMEDIATE_TRUE,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

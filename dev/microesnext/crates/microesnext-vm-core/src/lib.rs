@@ -1,7 +1,7 @@
 #![no_std]
 
 use microesnext_arena::Arena;
-use microesnext_bytecode_core::{
+use microesnext_bytecode::core::{
     ADD_I30, CALL, CONST_I30, CONST_IMMEDIATE, RETURN, THROW, read_byte, read_bytes, read_i30,
     read_immediate, read_u16, read_u32,
 };

@@ -53,14 +53,6 @@ dependencies = [
 name = "microesnext-bytecode"
 version = "0.0.0"
 dependencies = [
- "microesnext-bytecode-core",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-bytecode-core"
-version = "0.0.0"
-dependencies = [
  "microesnext-types",
 ]
 
@@ -224,7 +216,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-bytecode",
- "microesnext-bytecode-core",
  "microesnext-compiler",
  "microesnext-types",
 ]

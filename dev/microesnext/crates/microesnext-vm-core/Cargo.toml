@@ -9,7 +9,7 @@ version.workspace = true
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-bytecode-core.workspace = true
+microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]

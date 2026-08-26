@@ -23,7 +23,7 @@ an explicit relational stopping condition.
 - `microesnext-types` defines the four-byte `Value` and `HeapRef` words.
 - `microesnext-arena` owns the fixed-capacity heap and VM stack and compacts
   references without a forwarding-table allocation.
-- `microesnext-bytecode-core` defines the raw opcodes and readers used by the
+- The bytecode `core` module defines the raw opcodes and readers used by the
   invariant interpreter loop. It has no capability features; its immediate
   opcode covers `undefined`, `null`, and booleans in every build.
 - `microesnext-bytecode` adds the typed instruction vocabulary used by tools
@@ -287,7 +287,7 @@ npm run check:features
 It is a regression signal rather than a claim that noisy wall-clock timings can
 prove identical performance. The structural performance gate is stronger: the
 minimal dependency graph excludes capability crates, and the hot loop reads
-raw opcode bytes from `microesnext-bytecode-core`. It uses a direct match with
+raw opcode bytes from `microesnext-bytecode::core`. It uses a direct match with
 no feature-dependent enum, trait objects, registries, or dynamic callbacks.
 Only an extension byte crosses into the typed capability wrapper. Local and
 control-flow instructions use that same static boundary. This keeps the raw

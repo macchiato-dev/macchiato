@@ -249,7 +249,7 @@ omit this source operation do not decode its opcode.
 After Promise jobs were added, the facade benchmark began varying with enabled
 features even though it executed only integer opcodes. The hot interpreter was
 therefore extracted into `microesnext-vm-core`, and its byte readers and raw
-base-opcode constants into `microesnext-bytecode-core`. Neither crate has
+base-opcode constants into the bytecode `core` module. Neither layer has
 capability features. Optional opcode bytes return to the typed VM wrapper;
 base bytecodes remain in a state type and dispatch loop whose compiled Rust
 surface does not vary with the selected capabilities.

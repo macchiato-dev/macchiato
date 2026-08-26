@@ -49,7 +49,6 @@ array-assignment-expressions = ["arrays"]
 construction = ["constructors", "receivers"]
 
 [dependencies]
-microesnext-bytecode-core.workspace = true
 microesnext-types.workspace = true
 
 [lib]
