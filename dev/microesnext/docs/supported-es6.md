@@ -52,7 +52,11 @@ join targets use function relocation when needed. The further
 `nested-conditionals` gate tracks consequent/alternate state, abruptness, and
 patch positions in an explicit allocation-using worklist. It accepts nested
 `if`/`else` without Rust recursion; a test compiles and executes 2,048 levels.
-Nested loops and exception regions remain later worklist frame kinds.
+The further `nested-loops` gate adds loop start and exit frames to that same
+worklist. Loops and conditionals may be interleaved to arbitrary source depth;
+back edges, exits, joins, and function-body relocations remain direct bytecode
+patches. Its own 2,048-level compile-and-run test consumes no Rust parser
+frames. Exception regions remain a later worklist frame kind.
 
 Expression statements are independently selectable. Any expression accepted
 by the chosen compiler composition may be followed by `;` before a terminal

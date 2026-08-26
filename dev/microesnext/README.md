@@ -101,6 +101,10 @@ an explicit relational stopping condition.
   with explicit consequent/alternate frames in the compiler's allocation-using
   worklist. Thousands of nested source branches therefore do not consume the
   Rust stack, while nonnested compiler builds omit the frame type and loop.
+- `nested-loops` generalizes that worklist with loop frames, so arbitrarily
+  interleaved `while` and `if` blocks compile without Rust recursion. It emits
+  the existing control-flow vocabulary; builds that stop at nested
+  conditionals retain the smaller, conditional-only implementation exactly.
 - `implicit-completions` is compiler-only too. It lowers `return;` and a script
   or function body reaching its end to the invariant `undefined` constant and
   existing return instruction. Its omitted build retains the previous

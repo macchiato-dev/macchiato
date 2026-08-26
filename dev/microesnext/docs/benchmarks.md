@@ -607,6 +607,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | conditional expressions | 8,014 | 3,194 |
 | nonterminal conditionals | 8,207 | 3,100 |
 | nested conditionals | 8,588 | 3,494 |
+| nested loops | 8,410 | 3,546 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -649,7 +650,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,970 | 7,858 |
-| default language slice | 50,410 | 18,005 |
+| default language slice | 50,631 | 17,938 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -677,6 +678,14 @@ reflects the explicit frame-state loop rather than another repeated recursive
 parser path. A 2,048-level source and runtime probe completes without native
 parser or VM call frames. Omitting the feature preserves the nonterminal
 artifact exactly at 8,207 / 3,100 and adds no runtime capability.
+
+Nested loops generalize the conditional worklist rather than wrapping the old
+parser in another layer. The focused compiler is 8,410 / 3,546: consolidating
+the two frame paths makes it 178 raw bytes smaller and 52 gzip bytes larger
+than the conditional-only implementation. A mixed loop/conditional program and
+a 2,048-level loop source both compile and execute, including relocated targets
+inside functions. `nested-loops` adds only `control-flow` to the runtime graph.
+Omitting it preserves the nested-conditional artifact exactly at 8,588 / 3,494.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
