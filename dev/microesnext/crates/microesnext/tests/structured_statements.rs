@@ -69,6 +69,16 @@ fn a_braced_consequent_can_have_a_single_statement_alternate() {
 }
 
 #[test]
+fn sibling_branches_can_reuse_a_local_name() {
+    assert_eq!(
+        run(
+            "let answer = 0; if (true) { let next = 42; answer = next; } else { let next = 1; answer = next; } return answer;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

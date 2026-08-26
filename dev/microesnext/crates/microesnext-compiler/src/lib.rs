@@ -2123,6 +2123,10 @@ impl Parser<'_> {
             let existing = self.locals.iter().position(|binding| {
                 self.source[binding.start..binding.end] == self.source[start..end]
             });
+            let existing = existing.filter(|index| {
+                self.locals[*index].hoisted
+                    || !self.source[self.locals[*index].end..start].contains(&b'}')
+            });
             if existing.is_some_and(|index| !self.locals[index].hoisted) {
                 return Err(self.error("a unique local binding"));
             }
