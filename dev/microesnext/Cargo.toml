@@ -16,6 +16,7 @@ members = [
   "tools/compiler-size",
   "tools/core-loop",
   "tools/decimal-speed",
+  "tools/source-check",
 ]
 resolver = "2"
 

@@ -1,0 +1,16 @@
+[package]
+name = "microesnext-source-check"
+description = "Compile a JavaScript source file and report precise MicroESNext diagnostics"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+publish = false
+
+[dependencies]
+microesnext-compiler.workspace = true
+
+[[bin]]
+name = "microesnext-source-check"
+path = "src/main.rs"
