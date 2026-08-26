@@ -34,6 +34,11 @@ pub enum Outcome {
         argument_count: usize,
     },
     PromiseResolverCall,
+    #[cfg(feature = "host-bindings")]
+    HostCall {
+        function: HostRef,
+        argument_count: usize,
+    },
 }
 
 pub struct Machine<'code, 'memory> {
@@ -44,6 +49,8 @@ pub struct Machine<'code, 'memory> {
     atoms: Option<Atoms>,
     #[cfg(feature = "promise-resolvers")]
     resolver_call: Option<microesnext_execution::promises::resolvers::Call>,
+    #[cfg(feature = "host-bindings")]
+    host_argument_count: Option<usize>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -68,6 +75,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             atoms: None,
             #[cfg(feature = "promise-resolvers")]
             resolver_call: None,
+            #[cfg(feature = "host-bindings")]
+            host_argument_count: None,
         }
     }
 
@@ -95,6 +104,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             atoms: Some(atoms),
             #[cfg(feature = "promise-resolvers")]
             resolver_call: None,
+            #[cfg(feature = "host-bindings")]
+            host_argument_count: None,
         })
     }
 
@@ -157,7 +168,29 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             atoms: self.atoms,
             #[cfg(feature = "promise-resolvers")]
             resolver_call: self.resolver_call,
+            #[cfg(feature = "host-bindings")]
+            host_argument_count: self.host_argument_count,
         })
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn host_argument(&self, index: usize) -> Result<Value, Error> {
+        let count = self.host_argument_count.ok_or(Error::Type)?;
+        if index >= count || count > self.core.arena().stack_len() {
+            return Err(Error::Type);
+        }
+        self.core
+            .arena()
+            .stack_value(self.core.arena().stack_len() - count + index)
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn complete_host_call(&mut self, value: Value) -> Result<(), Error> {
+        let count = self.host_argument_count.take().ok_or(Error::Type)?;
+        for _ in 0..count {
+            self.core.arena_mut().pop()?;
+        }
+        self.core.arena_mut().push(value)
     }
 
     pub fn run(&mut self) -> Result<Outcome, Error> {
@@ -413,6 +446,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "functions")]
             Opcode::CallValue => {
                 let function = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(function) = function.as_host() {
+                    if self.host_argument_count.replace(0).is_some() {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostCall {
+                        function,
+                        argument_count: 0,
+                    }));
+                }
                 #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
                     microesnext_objects::callable::is_callable_object(self.core.arena(), function);
@@ -468,6 +511,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut(),
                     argument_count,
                 )?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(function) = function.as_host() {
+                    if self.host_argument_count.replace(argument_count).is_some() {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostCall {
+                        function,
+                        argument_count,
+                    }));
+                }
                 #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
                     microesnext_objects::callable::is_callable_object(self.core.arena(), function);
@@ -1300,6 +1353,45 @@ mod tests {
     use microesnext_compiler::Builder;
 
     use super::*;
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "function-arguments"))]
+    fn yields_host_calls_and_resumes_with_the_host_result() {
+        let code = [
+            Opcode::ConstHost as u8,
+            7,
+            0,
+            0,
+            0,
+            Opcode::ConstI30 as u8,
+            42,
+            0,
+            0,
+            0,
+            Opcode::CallValueArguments as u8,
+            1,
+            0,
+            Opcode::Return as u8,
+        ];
+        let mut memory = [0; 64];
+        let mut machine = Machine::new(&code, &mut memory);
+
+        assert_eq!(
+            machine.run().unwrap(),
+            Outcome::HostCall {
+                function: HostRef::new(7).unwrap(),
+                argument_count: 1,
+            }
+        );
+        assert_eq!(machine.host_argument(0), Ok(Value::from_i30(42).unwrap()));
+        machine
+            .complete_host_call(Value::from_i30(17).unwrap())
+            .unwrap();
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(17).unwrap()))
+        );
+    }
 
     #[cfg(feature = "async-functions")]
     #[test]
