@@ -165,17 +165,17 @@ an explicit relational stopping condition.
 - The values `numbers` feature supplies heap-backed IEEE-754 representation together
   with its small division, negation, and primitive-coercion helpers. VM opcode
   selection and dead-code elimination remove unused operators; they do not need
-  crate-level gates. String coercion remains gated because it introduces the
-  decimal parser. Integer-only builds do not link this crate.
+  separate package boundaries. String coercion remains gated because it
+  introduces the decimal parser. Integer-only builds do not link this module.
 - The values `decimal-to-f64` feature is the shared, `no_std` decimal conversion
   boundary for source literals and string coercion. A small exact path handles
   common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
-  Builds omitting both consumers do not link the crate.
+  Builds omitting both consumers do not link the module.
 - Numeric helpers retain the existing i30 fast paths. Overflow falls through to
   boxed values only when promoted operations are selected; decimal string
   parsing remains separately removable with its dependency.
 - The values `symbols` feature supplies unique, relocatable property-key identities.
-  Optional descriptions are ordinary values, so the crate does not force the
+  Optional descriptions are ordinary values, so the feature does not force the
   string, atom, object, or collection capability into a symbol-only build.
 - The symbols `well_known` module retains realm-owned identities. A realm can
   omit description strings or compose them without changing ordinary symbols.
@@ -251,10 +251,10 @@ a capability absent from their runtime.
 The runtime is `no_std` and has no global-allocator or libc dependency. Its
 arena borrows a caller-supplied word slice; only compiler tooling uses `alloc`.
 
-These are static Rust crate boundaries, not runtime plugins. Release builds use
-fat LTO and one code-generation unit, so hot functions can inline across them.
-Leaving out a capability removes its crate without adding indirect dispatch to
-the base interpreter.
+These are static Rust feature and crate boundaries, not runtime plugins.
+Release builds use fat LTO and one code-generation unit, so hot functions can
+inline across them. Leaving out a capability removes its implementation without
+adding indirect dispatch to the base interpreter.
 
 `tools/measure-capabilities.ts` builds the isolated
 `microesnext-capability-size` package, instantiates its final Wasm, calls every

@@ -8,6 +8,7 @@ function packages(features) {
     "--package=microesnext",
     "--no-default-features",
     "--target=wasm32-unknown-unknown",
+    "--edges=normal,build",
     "--prefix=none",
     "--format={p}",
   ];
@@ -16,6 +17,37 @@ function packages(features) {
   return new Set(
     tree.trim().split("\n").map((line) => line.split(" ", 1)[0]),
   );
+}
+
+function packageDependencies(name, features) {
+  const args = [
+    "tree",
+    `--package=${name}`,
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=normal,build",
+    "--prefix=none",
+    "--format={p}",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  return new Set(
+    tree.trim().split("\n").map((line) => line.split(" ", 1)[0]),
+  );
+}
+
+function assertPackageDependencies(name, features, present, absent) {
+  const graph = packageDependencies(name, features);
+  for (const dependency of present) {
+    if (!graph.has(dependency)) {
+      throw new Error(`${name}/${features || "minimal"}: expected ${dependency}`);
+    }
+  }
+  for (const dependency of absent) {
+    if (graph.has(dependency)) {
+      throw new Error(`${name}/${features || "minimal"}: unexpectedly contains ${dependency}`);
+    }
+  }
 }
 
 function assertPresence(features, present, absent) {
@@ -874,5 +906,8 @@ assertExecutionFeatures(["thenables"], ["promise-resolution", "promise-resolvers
 assertExecutionFeatures(["async-functions"], ["async-functions", "promise-resolution", "promises", "suspension"], ["exceptions", "promise-resolvers", "recursive-async-functions"]);
 assertExecutionFeatures(["async-thenables"], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "suspension"], ["exceptions", "recursive-async-functions"]);
 assertExecutionFeatures(["recursive-async-functions"], ["async-functions", "promise-resolution", "promises", "recursive-async-functions", "suspension"], ["exceptions", "promise-resolvers"]);
+assertPackageDependencies("microesnext-execution", ["promises"], [], ["microesnext-bytecode", "microesnext-values"]);
+assertPackageDependencies("microesnext-execution", ["promise-resolution"], ["microesnext-values"], ["microesnext-bytecode"]);
+assertPackageDependencies("microesnext-execution", ["core"], ["microesnext-bytecode"], ["microesnext-values"]);
 
 console.log("feature dependency isolation verified");

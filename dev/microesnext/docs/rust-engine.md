@@ -109,12 +109,12 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   i30 branch remains ahead of coercion. Unary plus materializes a boxed value
   only for NaN. String parsing and object coercion are deliberately absent
   rather than host-defined.
-- String Number coercion is layered above that primitive crate. It borrows the
+- String Number coercion is layered above that primitive module. It borrows the
   packed arena payload directly, validates the whole grammar, and allocates
   only the resulting boxed number when an immediate i30 cannot represent it.
   Power-of-two integer parsing keeps explicit guard/sticky bits; no temporary
   guest string participates in those paths.
-- Decimal conversion is a separate leaf crate shared by compiler literals and
+- Decimal conversion is a separate leaf module shared by compiler literals and
   string coercion. Its exact fast path and bounded correctly-rounded fallback
   contain no allocator or runtime policy. Static Cargo composition removes the
   code and its call sites when neither consumer is selected.
@@ -133,11 +133,11 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Iterator positions are guest-arena state rather than native Rust cursors.
   The source-agnostic objects `iterators` module retains the iterable and
   current index across collection. Array and Map/Set traversal live in separate
-  adapter crates, preserving both dependency and code-size isolation.
+  adapter modules, preserving both dependency and code-size isolation.
 - SameValueZero is capability-aware without runtime registration. A standalone
   collection build compares compact identities directly. Cargo weak-feature
   forwarding statically adds string-content and boxed-number equality only
-  when collections are composed with those scalar crates.
+  when collections are composed with those scalar features.
 
 The first Rust vertical slice deliberately supports only i30 constants,
 addition, `await`, and return. It proves that the interpreter can suspend after

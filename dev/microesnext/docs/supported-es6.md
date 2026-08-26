@@ -134,7 +134,7 @@ yet full JavaScript numeric semantics.
 JavaScript Number division and remainder are independent product-level
 features. `/` produces IEEE-754 semantics, including infinities and NaN. `%`
 preserves immediate integer results where possible and boxes cases such as
-negative zero or non-integer operands. They have separate crates, bytecodes,
+negative zero or non-integer operands. They have separate modules, bytecodes,
 compiler gates, and VM match arms because the linked floating remainder helper
 is much larger than division. Omitting either token family leaves it unconsumed
 as ordinary unexpected syntax.
