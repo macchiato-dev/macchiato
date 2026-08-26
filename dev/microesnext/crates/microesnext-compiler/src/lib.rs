@@ -5047,9 +5047,10 @@ impl Parser<'_> {
         };
         self.offset += 1;
         self.output.push(Opcode::ConstString as u8);
-        let length_patch = self.output.len();
+        let mut length_patch = self.output.len();
         self.output.extend_from_slice(&0_u16.to_le_bytes());
-        let content_start = self.output.len();
+        let mut content_start = self.output.len();
+        let mut substituted = false;
         loop {
             let Some(byte) = self.source.get(self.offset).copied() else {
                 return Err(self.error("a closing string delimiter"));
@@ -5062,7 +5063,28 @@ impl Parser<'_> {
                 return Err(self.error("a closing string delimiter"));
             }
             if delimiter == b'`' && self.source[self.offset..].starts_with(b"${") {
+                #[cfg(not(feature = "template-literals"))]
                 return Err(self.error("a template literal without substitutions"));
+                #[cfg(feature = "template-literals")]
+                {
+                    self.patch_string_length(length_patch, content_start)?;
+                    if substituted {
+                        self.output.push(Opcode::ConcatenateStrings as u8);
+                    }
+                    self.offset += 2;
+                    self.expression(None)?;
+                    if !self.consume(b'}') {
+                        return Err(self.error("}"));
+                    }
+                    self.output.push(Opcode::ToStringPrimitive as u8);
+                    self.output.push(Opcode::ConcatenateStrings as u8);
+                    substituted = true;
+                    self.output.push(Opcode::ConstString as u8);
+                    length_patch = self.output.len();
+                    self.output.extend_from_slice(&0_u16.to_le_bytes());
+                    content_start = self.output.len();
+                    continue;
+                }
             }
             self.offset += 1;
             if byte != b'\\' {
@@ -5085,11 +5107,24 @@ impl Parser<'_> {
                 _ => return Err(self.error("a supported string escape")),
             });
         }
+        self.patch_string_length(length_patch, content_start)?;
+        if substituted {
+            self.output.push(Opcode::ConcatenateStrings as u8);
+        }
+        Ok(true)
+    }
+
+    #[cfg(feature = "strings")]
+    fn patch_string_length(
+        &mut self,
+        length_patch: usize,
+        content_start: usize,
+    ) -> Result<(), CompileError> {
         let length = self.output.len() - content_start;
         let length =
             u16::try_from(length).map_err(|_| self.error("a string shorter than 64 KiB"))?;
         self.output[length_patch..length_patch + 2].copy_from_slice(&length.to_le_bytes());
-        Ok(true)
+        Ok(())
     }
 
     #[cfg(not(feature = "strings"))]

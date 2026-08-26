@@ -161,6 +161,11 @@ string-operations = [
   "microesnext-vm/string-operations",
   "microesnext-compiler/string-operations",
 ]
+template-literals = [
+  "strings",
+  "string-operations",
+  "microesnext-compiler/template-literals",
+]
 symbols = ["dep:microesnext-values", "microesnext-values/symbols", "microesnext-semantics?/symbols"]
 well-known-symbols = ["symbols"]
 atoms = ["strings", "microesnext-vm/atoms"]
@@ -427,6 +432,11 @@ required-features = ["async", "exceptions", "locals"]
 name = "source_strings"
 path = "tests/source_strings.rs"
 required-features = ["strings"]
+
+[[test]]
+name = "template-literals"
+path = "tests/template_literals.rs"
+required-features = ["template-literals", "locals"]
 
 [[test]]
 name = "source_logical"

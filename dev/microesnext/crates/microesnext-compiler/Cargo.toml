@@ -52,6 +52,7 @@ default = [
   "nested-exceptions",
   "structured-statements",
   "string-number-coercion",
+  "template-literals",
   "typeof",
   "update-expressions",
   "var-declarations",
@@ -168,6 +169,7 @@ nested-loops = ["nested-conditionals"]
 nested-exceptions = ["nonterminal-exceptions"]
 structured-statements = ["nested-exceptions", "nested-loops"]
 string-number-coercion = ["number-coercion", "strings"]
+template-literals = ["strings", "string-operations"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 parenthesized-expressions = []
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]

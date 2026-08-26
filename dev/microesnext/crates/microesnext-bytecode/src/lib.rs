@@ -172,6 +172,8 @@ pub enum Opcode {
     AbstractEqual = 119,
     #[cfg(feature = "bitwise-operations")]
     ShiftLeftI30 = 120,
+    #[cfg(feature = "strings")]
+    ToStringPrimitive = 121,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -327,6 +329,8 @@ impl TryFrom<u8> for Opcode {
             119 => Ok(Self::AbstractEqual),
             #[cfg(feature = "bitwise-operations")]
             120 => Ok(Self::ShiftLeftI30),
+            #[cfg(feature = "strings")]
+            121 => Ok(Self::ToStringPrimitive),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

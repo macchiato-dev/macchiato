@@ -1019,6 +1019,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "strings")]
+            Opcode::ToStringPrimitive => {
+                let value = self.core.arena_mut().pop()?;
+                let string =
+                    microesnext_values::strings::from_primitive(self.core.arena_mut(), value)?;
+                self.core.arena_mut().push(string)?;
+                Ok(None)
+            }
             #[cfg(feature = "equality")]
             Opcode::StrictEqual => {
                 let right = self.core.arena_mut().pop()?;
