@@ -315,14 +315,25 @@ struct Binding {
     captured: bool,
 }
 
-#[cfg(feature = "property-assignment-expressions")]
+#[cfg(any(
+    feature = "array-assignment-expressions",
+    feature = "property-assignment-expressions"
+))]
 #[derive(Clone, Copy)]
-enum PropertyAssignmentBase {
+enum AssignmentBase {
     Local(Binding),
     #[cfg(feature = "environments")]
     Capture(Binding),
     #[cfg(all(feature = "functions", feature = "receivers"))]
     Receiver,
+}
+
+#[cfg(feature = "array-assignment-expressions")]
+#[derive(Clone, Copy)]
+enum AssignmentSuffix {
+    #[cfg(feature = "objects")]
+    Property(usize, usize),
+    Index(usize, usize),
 }
 
 #[cfg(feature = "environments")]
@@ -1391,12 +1402,17 @@ impl Parser<'_> {
     }
 
     #[cfg(any(
+        feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "local-assignment-expressions",
         feature = "property-assignment-expressions"
     ))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         self.whitespace();
+        #[cfg(feature = "array-assignment-expressions")]
+        if self.array_assignment_expression()? {
+            return Ok(false);
+        }
         #[cfg(feature = "property-assignment-expressions")]
         if self.property_assignment_expression()? {
             return Ok(false);
@@ -1449,6 +1465,7 @@ impl Parser<'_> {
     }
 
     #[cfg(not(any(
+        feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "local-assignment-expressions",
         feature = "property-assignment-expressions"
@@ -1500,6 +1517,7 @@ impl Parser<'_> {
     }
 
     #[cfg(any(
+        feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "local-assignment-expressions",
         feature = "property-assignment-expressions"
@@ -1518,45 +1536,8 @@ impl Parser<'_> {
     #[cfg(feature = "property-assignment-expressions")]
     fn property_assignment_expression(&mut self) -> Result<bool, CompileError> {
         let start = self.offset;
-        let local = self.local_at_offset();
-
-        let base = if let Some(local) = local {
-            self.offset += local.end - local.start;
-            PropertyAssignmentBase::Local(local)
-        } else {
-            #[cfg(feature = "environments")]
-            if let Some(capture) = self.outer_binding_at_offset() {
-                self.offset += capture.end - capture.start;
-                PropertyAssignmentBase::Capture(capture)
-            } else {
-                #[cfg(all(feature = "functions", feature = "receivers"))]
-                if self.receiver_frame && self.try_word(b"this") {
-                    PropertyAssignmentBase::Receiver
-                } else {
-                    self.offset = start;
-                    return Ok(false);
-                }
-                #[cfg(not(all(feature = "functions", feature = "receivers")))]
-                {
-                    self.offset = start;
-                    return Ok(false);
-                }
-            }
-            #[cfg(not(feature = "environments"))]
-            {
-                #[cfg(all(feature = "functions", feature = "receivers"))]
-                if self.receiver_frame && self.try_word(b"this") {
-                    PropertyAssignmentBase::Receiver
-                } else {
-                    self.offset = start;
-                    return Ok(false);
-                }
-                #[cfg(not(all(feature = "functions", feature = "receivers")))]
-                {
-                    self.offset = start;
-                    return Ok(false);
-                }
-            }
+        let Some(base) = self.assignment_base() else {
+            return Ok(false);
         };
 
         let mut properties = Vec::new();
@@ -1569,25 +1550,7 @@ impl Parser<'_> {
             return Ok(false);
         }
 
-        match base {
-            PropertyAssignmentBase::Local(local) => {
-                self.output.push(Opcode::LoadLocal as u8);
-                self.output.extend_from_slice(&local.slot.to_le_bytes());
-                #[cfg(feature = "environments")]
-                if local.captured {
-                    self.output.push(Opcode::LoadEnvironmentCell as u8);
-                }
-            }
-            #[cfg(feature = "environments")]
-            PropertyAssignmentBase::Capture(capture) => {
-                let index = self.intern_capture(capture)?;
-                self.output.push(Opcode::LoadCapture as u8);
-                self.output.extend_from_slice(&index.to_le_bytes());
-                self.output.push(Opcode::LoadEnvironmentCell as u8);
-            }
-            #[cfg(all(feature = "functions", feature = "receivers"))]
-            PropertyAssignmentBase::Receiver => self.output.push(Opcode::LoadThis as u8),
-        }
+        self.emit_assignment_base(base)?;
         let final_property = properties.pop().expect("a property was checked above");
         for (property_start, property_end) in properties {
             self.output_atom_range(property_start, property_end);
@@ -1597,6 +1560,176 @@ impl Parser<'_> {
         self.expression(None)?;
         self.output.push(Opcode::SetPropertyResult as u8);
         Ok(true)
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    fn array_assignment_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        let Some(base) = self.assignment_base() else {
+            return Ok(false);
+        };
+        let mut suffixes = Vec::new();
+        loop {
+            #[cfg(feature = "objects")]
+            if self.consume(b'.') {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                suffixes.push(AssignmentSuffix::Property(start, end));
+                continue;
+            }
+            if self.consume(b'[') {
+                let expression_start = self.offset;
+                let expression_end = self.index_expression_end()?;
+                suffixes.push(AssignmentSuffix::Index(expression_start, expression_end));
+                self.offset = expression_end + 1;
+                continue;
+            }
+            break;
+        }
+        if !matches!(suffixes.last(), Some(AssignmentSuffix::Index(_, _)))
+            || !self.consume_plain_assignment()
+        {
+            self.offset = start;
+            return Ok(false);
+        }
+        let rhs = self.offset;
+        self.emit_assignment_base(base)?;
+        let final_suffix = suffixes.pop().expect("an index was checked above");
+        for suffix in suffixes {
+            self.emit_assignment_suffix(suffix, rhs)?;
+        }
+        self.emit_index_suffix(final_suffix, rhs)?;
+        self.offset = rhs;
+        self.expression(None)?;
+        self.output.push(Opcode::SetIndexResult as u8);
+        Ok(true)
+    }
+
+    #[cfg(any(
+        feature = "array-assignment-expressions",
+        feature = "property-assignment-expressions"
+    ))]
+    fn assignment_base(&mut self) -> Option<AssignmentBase> {
+        if let Some(local) = self.local_at_offset() {
+            self.offset += local.end - local.start;
+            return Some(AssignmentBase::Local(local));
+        }
+        #[cfg(feature = "environments")]
+        if let Some(capture) = self.outer_binding_at_offset() {
+            self.offset += capture.end - capture.start;
+            return Some(AssignmentBase::Capture(capture));
+        }
+        #[cfg(all(feature = "functions", feature = "receivers"))]
+        if self.receiver_frame && self.try_word(b"this") {
+            return Some(AssignmentBase::Receiver);
+        }
+        None
+    }
+
+    #[cfg(any(
+        feature = "array-assignment-expressions",
+        feature = "property-assignment-expressions"
+    ))]
+    fn emit_assignment_base(&mut self, base: AssignmentBase) -> Result<(), CompileError> {
+        match base {
+            AssignmentBase::Local(local) => {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&local.slot.to_le_bytes());
+                #[cfg(feature = "environments")]
+                if local.captured {
+                    self.output.push(Opcode::LoadEnvironmentCell as u8);
+                }
+            }
+            #[cfg(feature = "environments")]
+            AssignmentBase::Capture(capture) => {
+                let index = self.intern_capture(capture)?;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+            }
+            #[cfg(all(feature = "functions", feature = "receivers"))]
+            AssignmentBase::Receiver => self.output.push(Opcode::LoadThis as u8),
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    fn emit_assignment_suffix(
+        &mut self,
+        suffix: AssignmentSuffix,
+        resume: usize,
+    ) -> Result<(), CompileError> {
+        match suffix {
+            #[cfg(feature = "objects")]
+            AssignmentSuffix::Property(start, end) => {
+                self.output_atom_range(start, end);
+                self.output.push(Opcode::GetProperty as u8);
+            }
+            AssignmentSuffix::Index(_, _) => {
+                self.emit_index_suffix(suffix, resume)?;
+                self.output.push(Opcode::GetIndex as u8);
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    fn emit_index_suffix(
+        &mut self,
+        suffix: AssignmentSuffix,
+        resume: usize,
+    ) -> Result<(), CompileError> {
+        let (start, end) = match suffix {
+            AssignmentSuffix::Index(start, end) => (start, end),
+            #[cfg(feature = "objects")]
+            AssignmentSuffix::Property(_, _) => return Err(self.error("an array index")),
+        };
+        self.offset = start;
+        self.expression(None)?;
+        self.whitespace();
+        if self.offset != end {
+            return Err(self.error("]"));
+        }
+        self.offset = resume;
+        Ok(())
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    fn index_expression_end(&mut self) -> Result<usize, CompileError> {
+        let mut endings = Vec::from([b']']);
+        let mut offset = self.offset;
+        while let Some(byte) = self.source.get(offset).copied() {
+            match byte {
+                b'\'' | b'"' | b'`' => {
+                    let quote = byte;
+                    offset += 1;
+                    while let Some(byte) = self.source.get(offset).copied() {
+                        offset += 1;
+                        if byte == b'\\' {
+                            offset = offset.saturating_add(1);
+                        } else if byte == quote {
+                            break;
+                        }
+                    }
+                }
+                b'[' => endings.push(b']'),
+                b'(' => endings.push(b')'),
+                b'{' => endings.push(b'}'),
+                b']' | b')' | b'}' => {
+                    if endings.pop() != Some(byte) {
+                        self.offset = offset;
+                        return Err(self.error("a balanced array index"));
+                    }
+                    if endings.is_empty() {
+                        return Ok(offset);
+                    }
+                }
+                _ => {}
+            }
+            offset += 1;
+        }
+        self.offset = offset;
+        Err(self.error("]"))
     }
 
     #[cfg(feature = "logical-operations")]
@@ -3365,10 +3498,14 @@ mod tests {
 
     #[cfg(feature = "array-indexing")]
     #[test]
-    fn compiles_computed_and_chained_array_index_reads() {
+    fn compiles_computed_array_index_reads() {
         let computed = compile_script("return [7, 42][0 + 1];").unwrap();
         assert!(computed.contains(&(Opcode::GetIndex as u8)));
+    }
 
+    #[cfg(all(feature = "array-indexing", feature = "literal-expressions"))]
+    #[test]
+    fn compiles_chained_array_index_reads() {
         let nested = compile_script("return [[1], [42]][1][0];").unwrap();
         assert_eq!(
             nested
@@ -3384,6 +3521,34 @@ mod tests {
     fn reduced_array_compilers_leave_index_syntax_unconsumed() {
         assert_eq!(
             compile_script("return [7][0];").unwrap_err().expected,
+            "end of input"
+        );
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    #[test]
+    fn compiles_computed_and_nested_array_assignment_expressions() {
+        let computed =
+            compile_script("let values = [0, 0]; let index = 1; return values[index] = 42;")
+                .unwrap();
+        assert!(computed.contains(&(Opcode::SetIndexResult as u8)));
+
+        let nested = compile_script("let values = [[0]]; return values[0][0] = 42;").unwrap();
+        assert!(nested.contains(&(Opcode::GetIndex as u8)));
+        assert!(nested.contains(&(Opcode::SetIndexResult as u8)));
+    }
+
+    #[cfg(all(
+        feature = "array-indexing",
+        feature = "locals",
+        not(feature = "array-assignment-expressions")
+    ))]
+    #[test]
+    fn reduced_indexing_compilers_leave_array_assignment_unconsumed() {
+        assert_eq!(
+            compile_script("let values = [0]; return values[0] = 42;")
+                .unwrap_err()
+                .expected,
             "end of input"
         );
     }

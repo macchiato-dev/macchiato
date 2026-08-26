@@ -11,6 +11,7 @@ version.workspace = true
 default = [
   "arrays",
   "array-indexing",
+  "array-assignment-expressions",
   "async-functions",
   "control-flow",
   "conditional-expressions",
@@ -46,6 +47,11 @@ default = [
 ]
 arrays = ["microesnext-bytecode/arrays"]
 array-indexing = ["arrays"]
+array-assignment-expressions = [
+  "array-indexing",
+  "locals",
+  "microesnext-bytecode/array-assignment-expressions",
+]
 async = ["microesnext-bytecode/async"]
 async-functions = [
   "async",

@@ -443,6 +443,11 @@ path = "tests/array_indexing.rs"
 required-features = ["arrays"]
 
 [[test]]
+name = "array-assignment-expressions"
+path = "tests/array_assignment_expressions.rs"
+required-features = ["array-assignment-expressions", "arrays", "locals"]
+
+[[test]]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["locals", "number-coercion", "number-negation", "number-operations"]
