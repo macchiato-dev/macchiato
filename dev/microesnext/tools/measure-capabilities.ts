@@ -6,6 +6,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ["minimal", "", [core]],
     ["arrays", "arrays", [core, ["arrays_probe", 42]]],
     [
+      "array assignment expressions",
+      "array-assignment-expressions",
+      [core, ["array_assignment_expressions_probe", 1]],
+    ],
+    [
       "array iterators",
       "array-iterators",
       [core, ["arrays_probe", 42], ["iterators_probe", 11], [
@@ -362,10 +367,11 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-iterators,async-thenables,captured-assignment-expressions,class-expressions,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,local-assignment-expressions,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
+      "array-assignment-expressions,array-iterators,async-thenables,captured-assignment-expressions,class-expressions,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,local-assignment-expressions,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
+        ["array_assignment_expressions_probe", 1],
         ["array_iterators_probe", 1],
         ["atoms_probe", "nonzero"],
         ["async_probe", 7],

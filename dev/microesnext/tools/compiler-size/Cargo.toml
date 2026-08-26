@@ -10,6 +10,8 @@ version.workspace = true
 [features]
 default = []
 arrays = ["microesnext-compiler/arrays"]
+array-indexing = ["microesnext-compiler/array-indexing"]
+array-assignment-expressions = ["microesnext-compiler/array-assignment-expressions"]
 async = ["microesnext-compiler/async"]
 async-functions = ["microesnext-compiler/async-functions"]
 control-flow = ["microesnext-compiler/control-flow"]

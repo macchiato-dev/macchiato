@@ -94,6 +94,8 @@ const instanceOf = "microesnext-instanceof";
 const stackOperations = "microesnext-stack-operations";
 const capturedAssignmentExpressions =
   "microesnext-captured-assignment-expressions";
+const arrayAssignmentExpressions =
+  "microesnext-array-assignment-expressions";
 const propertyAssignmentExpressions =
   "microesnext-property-assignment-expressions";
 
@@ -106,6 +108,16 @@ assertCompilerFeatures(
   ["conditional-expressions"],
   ["control-flow"],
   ["functions", "locals", "logical-operations", "objects"],
+);
+assertCompilerFeatures(
+  ["array-indexing"],
+  ["arrays"],
+  ["atoms", "locals", "objects", "strings"],
+);
+assertCompilerFeatures(
+  ["array-assignment-expressions"],
+  ["array-assignment-expressions", "arrays", "locals"],
+  ["atoms", "environments", "objects", "stack-operations", "strings"],
 );
 assertCompilerFeatures(
   ["local-assignment-expressions"],
@@ -519,6 +531,11 @@ assertPresence(
   ["local-assignment-expressions"],
   ["microesnext-locals", stackOperations],
   [environments, "microesnext-objects"],
+);
+assertPresence(
+  ["array-assignment-expressions"],
+  [arrayAssignmentExpressions, "microesnext-arrays"],
+  [environments, "microesnext-locals", "microesnext-objects", stackOperations],
 );
 assertPresence(
   ["captured-assignment-expressions"],

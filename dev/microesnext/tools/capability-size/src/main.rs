@@ -5,6 +5,7 @@
     target_arch = "wasm32",
     any(
         feature = "async",
+        feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "equality",
         feature = "logical-operations",
@@ -24,6 +25,7 @@ use microesnext::{Core, CoreOutcome};
     target_arch = "wasm32",
     any(
         feature = "arrays",
+        feature = "array-assignment-expressions",
         feature = "async",
         feature = "async-functions",
         feature = "captured-assignment-expressions",
@@ -310,6 +312,30 @@ pub extern "C" fn local_assignment_expressions_probe() -> i32 {
     matches!(
         Machine::new(&code, &mut memory).run(),
         Ok(Outcome::Complete(value)) if value.as_i30() == Some(42)
+    ) as i32
+}
+
+#[cfg(all(feature = "array-assignment-expressions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn array_assignment_expressions_probe() -> i32 {
+    let code = [Opcode::SetIndexResult as u8, Opcode::Return as u8];
+    let mut memory = [0; 128];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(array) = microesnext::arrays::new(machine.arena_mut()) else {
+        return 0;
+    };
+    let index = Value::from_i30(3).unwrap();
+    let value = Value::from_i30(42).unwrap();
+    if machine.arena_mut().push(array).is_err()
+        || machine.arena_mut().push(index).is_err()
+        || machine.arena_mut().push(value).is_err()
+    {
+        return 0;
+    }
+    matches!(
+        machine.run(),
+        Ok(Outcome::Complete(result))
+            if result == value && microesnext::arrays::get(machine.arena(), array, 3) == Ok(value)
     ) as i32
 }
 

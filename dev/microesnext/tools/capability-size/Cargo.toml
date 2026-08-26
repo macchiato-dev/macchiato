@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = []
 arrays = ["microesnext/arrays"]
+array-assignment-expressions = ["arrays", "microesnext/array-assignment-expressions"]
 array-iterators = ["arrays", "iterators", "microesnext/array-iterators"]
 async = ["microesnext/async"]
 async-functions = ["async", "promises", "microesnext/async-functions"]
