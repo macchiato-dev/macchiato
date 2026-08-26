@@ -879,6 +879,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let constructor_key = self.intern(b"constructor")?;
                 let prototype_key = self.intern(b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if closure.as_host().is_some() {
+                    self.core.arena_mut().push(closure)?;
+                    return Ok(None);
+                }
                 let function = microesnext_objects::callable::new_constructor(
                     self.core.arena_mut(),
                     closure,
@@ -2433,6 +2438,31 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(17).unwrap()))
         );
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "construction"))]
+    fn yields_construction_of_a_bare_host_constructor() {
+        let code = [
+            Opcode::ConstHost as u8,
+            30, 0, 0, 0,
+            Opcode::ConstI30 as u8,
+            42, 0, 0, 0,
+            Opcode::ConstructValueArguments as u8,
+            1, 0,
+            Opcode::SelectConstructedResult as u8,
+            Opcode::Return as u8,
+        ];
+        let mut memory = [0; 96];
+        let mut machine = Machine::with_objects(&code, &mut memory, 4).unwrap();
+        assert!(matches!(
+            machine.run(),
+            Ok(Outcome::HostConstruct { constructor, argument_count: 1 })
+                if constructor == HostRef::new(30).unwrap()
+        ));
+        let object = machine.new_object(Value::NULL).unwrap();
+        machine.complete_host_construct(object).unwrap();
+        assert_eq!(machine.run(), Ok(Outcome::Complete(object)));
     }
 
     #[test]

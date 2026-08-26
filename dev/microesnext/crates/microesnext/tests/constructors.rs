@@ -32,6 +32,14 @@ fn source_functions_create_an_ordinary_prototype_cycle() {
 }
 
 #[test]
+fn construction_uses_a_reassigned_prototype() {
+    assert_eq!(
+        run("function Item() {} Item.prototype = {answer: 42}; let item = new Item(); return item.answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_arrows_remain_compact_non_constructor_closures() {
     let code = compile_script("return () => true;").unwrap();
     assert!(!code.contains(&(microesnext::bytecode::Opcode::ToConstructor as u8)));

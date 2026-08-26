@@ -46,6 +46,8 @@ const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
 const STRING: u32 = 22;
 const STRING_FROM_CHAR_CODE: u32 = (1 << 29) + 71;
+const WEAK_REF: u32 = 30;
+const WEAK_REF_DEREF: u32 = (1 << 29) + 73;
 const SYMBOL: u32 = 23;
 const SYMBOL_FOR: u32 = (1 << 29) + 72;
 const HOST_NOW: u32 = 42;
@@ -431,7 +433,17 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 )).unwrap();
             }
             Ok(Outcome::HostCall { function, .. }) if function.index() == OBJECT_CREATE => {
-                let object = match machine.new_object(microesnext::Value::NULL) {
+                let object = match machine
+                    .host_argument(0)
+                    .or(Ok(Value::NULL))
+                    .and_then(|prototype| machine.retain(prototype))
+                    .and_then(|root| {
+                        let prototype = machine.root(root)?;
+                        let object = machine.new_object(prototype);
+                        machine.release(root)?;
+                        object
+                    })
+                {
                     Ok(value) => value,
                     Err(error) => {
                         DETAIL.store(error as u32 + 100, Ordering::Relaxed);
@@ -672,6 +684,20 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == WEAK_REF_DEREF =>
+            {
+                let result = receiver
+                    .ok_or(Error::Type)
+                    .and_then(|object| object_get(&mut machine, object, b"value"));
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1800, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == REGEXP_TEST || function.index() == REGEXP_EXEC =>
             {
                 let result = (|| {
@@ -714,6 +740,28 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 break u32::MAX - 1;
             }
             Ok(Outcome::HostConstruct { constructor, .. }) => {
+                if constructor.index() == WEAK_REF {
+                    let result = (|| {
+                        let value = machine.host_argument(0)?;
+                        let object = machine.new_object(Value::NULL)?;
+                        let object = object_set(&mut machine, object, b"value", value)?;
+                        object_set(
+                            &mut machine,
+                            object,
+                            b"deref",
+                            Value::from_host(
+                                microesnext::HostRef::new(WEAK_REF_DEREF).unwrap(),
+                            ),
+                        )
+                    })();
+                    match result.and_then(|object| machine.complete_host_construct(object)) {
+                        Ok(()) => continue,
+                        Err(error) => {
+                            DETAIL.store(error as u32 + 1800, Ordering::Relaxed);
+                            break u32::MAX;
+                        }
+                    }
+                }
                 if constructor.index() == UINT8_ARRAY {
                     let length = machine.host_argument(0).ok().and_then(|value| value.as_i30())
                         .and_then(|value| usize::try_from(value).ok());

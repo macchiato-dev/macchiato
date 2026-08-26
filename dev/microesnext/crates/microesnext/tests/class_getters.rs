@@ -15,3 +15,18 @@ fn an_instance_getter_runs_with_its_receiver() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn an_instance_getter_can_return_an_object() {
+    let code = compile_script(
+        "let Type = class { constructor(value) { this.value = {answer: value}; } \
+         get object() { return this.value; } }; return new Type(42).object.answer;",
+    )
+    .unwrap();
+    let mut memory = [0; 1536];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
