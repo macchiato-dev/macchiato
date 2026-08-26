@@ -17,6 +17,8 @@ use microesnext_objects::arrays::len as array_len;
 use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
+#[cfg(feature = "object-spread")]
+use microesnext_objects::{get_own, own_property_count, own_property_key};
 #[cfg(feature = "host-bindings")]
 use microesnext_types::HostRef;
 use microesnext_types::{Error, RootId, Value};
@@ -1479,6 +1481,28 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let index = array_len(self.core.arena(), array)?;
                 let array = array_set(self.core.arena_mut(), array, index, value)?;
                 self.core.arena_mut().push(array)?;
+                Ok(None)
+            }
+            #[cfg(feature = "object-spread")]
+            Opcode::CopyObjectProperties => {
+                let source = self.core.arena().stack_value(0)?;
+                let count = own_property_count(self.core.arena(), source)?;
+                let target_stack_index = self.core.arena().stack_len() - 2;
+                for index in 0..count {
+                    let source = self.core.arena().stack_value(0)?;
+                    let key = own_property_key(self.core.arena(), source, index)?;
+                    let value =
+                        get_own(self.core.arena(), source, key)?.ok_or(Error::DanglingReference)?;
+                    let target = self
+                        .core
+                        .arena()
+                        .stack_value_from_bottom(target_stack_index)?;
+                    let target = set(self.core.arena_mut(), target, key, value)?;
+                    self.core
+                        .arena_mut()
+                        .set_stack_value_from_bottom(target_stack_index, target)?;
+                }
+                self.core.arena_mut().pop()?;
                 Ok(None)
             }
             #[cfg(feature = "exceptions")]

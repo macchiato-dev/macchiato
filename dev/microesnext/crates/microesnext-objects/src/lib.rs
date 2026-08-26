@@ -103,8 +103,8 @@ pub fn get_own(arena: &Arena<'_>, object: Value, key: Value) -> Result<Option<Va
     Ok(None)
 }
 
-#[cfg(feature = "object-key-iterators")]
-pub(crate) fn own_property_count(arena: &Arena<'_>, object: Value) -> Result<usize, Error> {
+#[cfg(any(feature = "object-key-iterators", feature = "object-spread"))]
+pub fn own_property_count(arena: &Arena<'_>, object: Value) -> Result<usize, Error> {
     let entries = arena.values(properties_ref(arena, object)?)?;
     if entries.len() % 2 != 0 {
         return Err(Error::DanglingReference);
@@ -112,12 +112,8 @@ pub(crate) fn own_property_count(arena: &Arena<'_>, object: Value) -> Result<usi
     Ok(entries.len() / 2)
 }
 
-#[cfg(feature = "object-key-iterators")]
-pub(crate) fn own_property_key(
-    arena: &Arena<'_>,
-    object: Value,
-    index: usize,
-) -> Result<Value, Error> {
+#[cfg(any(feature = "object-key-iterators", feature = "object-spread"))]
+pub fn own_property_key(arena: &Arena<'_>, object: Value, index: usize) -> Result<Value, Error> {
     let entries = arena.values(properties_ref(arena, object)?)?;
     entries
         .get(index.checked_mul(2).ok_or(Error::OutOfMemory)?)

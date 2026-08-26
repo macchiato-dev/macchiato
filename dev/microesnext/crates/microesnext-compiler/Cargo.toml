@@ -75,6 +75,7 @@ default = [
   "void-expressions",
   "number-operations",
   "objects",
+  "object-spread",
   "parenthesized-expressions",
   "property-assignment",
   "property-assignment-expressions",
@@ -236,6 +237,7 @@ switch-statements = ["control-flow", "equality", "locals"]
 string-number-coercion = ["number-coercion", "strings"]
 template-literals = ["strings", "string-operations"]
 objects = ["atoms", "microesnext-bytecode/objects"]
+object-spread = ["objects", "literal-expressions", "microesnext-bytecode/object-spread"]
 object-destructuring-declarations = [
   "control-flow",
   "equality",

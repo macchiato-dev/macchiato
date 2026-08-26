@@ -222,6 +222,8 @@ pub enum Opcode {
     CallValueSpread = 144,
     #[cfg(all(feature = "spread-calls", feature = "method-calls"))]
     CallMethodSpread = 145,
+    #[cfg(feature = "object-spread")]
+    CopyObjectProperties = 146,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -427,6 +429,8 @@ impl TryFrom<u8> for Opcode {
             144 => Ok(Self::CallValueSpread),
             #[cfg(all(feature = "spread-calls", feature = "method-calls"))]
             145 => Ok(Self::CallMethodSpread),
+            #[cfg(feature = "object-spread")]
+            146 => Ok(Self::CopyObjectProperties),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

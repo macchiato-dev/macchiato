@@ -436,6 +436,8 @@ struct DestructuredProperty {
 enum AssignmentBase {
     Local(Binding),
     Parenthesized(usize, usize),
+    #[cfg(feature = "host-bindings")]
+    Host(u32),
     #[cfg(feature = "environments")]
     Capture(Binding),
     #[cfg(all(feature = "functions", feature = "receivers"))]
@@ -4796,6 +4798,11 @@ impl Parser<'_> {
                         self.offset = start;
                         return Ok(false);
                     }
+                    #[cfg(feature = "host-bindings")]
+                    AssignmentBase::Host(..) => {
+                        self.offset = start;
+                        return Ok(false);
+                    }
                     AssignmentBase::Local(binding) => {
                         ArrayDestructuringAssignmentTarget::Binding(binding, None)
                     }
@@ -6278,6 +6285,11 @@ impl Parser<'_> {
             self.offset += capture.end - capture.start;
             return Some(AssignmentBase::Capture(capture));
         }
+        #[cfg(feature = "host-bindings")]
+        if let Some(host) = self.host_global_at_offset() {
+            self.offset += self.host_globals[host as usize].len();
+            return Some(AssignmentBase::Host(host));
+        }
         #[cfg(all(feature = "functions", feature = "receivers"))]
         if (self.receiver_frame || self.receiver_capture.is_some()) && self.try_word(b"this") {
             return Some(AssignmentBase::Receiver);
@@ -6308,6 +6320,11 @@ impl Parser<'_> {
                 if local.captured {
                     self.output.push(Opcode::LoadEnvironmentCell as u8);
                 }
+            }
+            #[cfg(feature = "host-bindings")]
+            AssignmentBase::Host(host) => {
+                self.output.push(Opcode::ConstHost as u8);
+                self.output.extend_from_slice(&host.to_le_bytes());
             }
             #[cfg(feature = "environments")]
             AssignmentBase::Capture(capture) => {
@@ -7322,6 +7339,18 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                #[cfg(feature = "object-spread")]
+                if self.consume_bytes(b"...") {
+                    self.expression(None)?;
+                    self.output.push(Opcode::CopyObjectProperties as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 #[cfg(feature = "array-assignment-expressions")]
                 if self.consume_raw(b'[') {
                     let key_start = self.offset;
@@ -7420,6 +7449,18 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                #[cfg(feature = "object-spread")]
+                if self.consume_bytes(b"...") {
+                    self.expression(None)?;
+                    self.output.push(Opcode::CopyObjectProperties as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 #[cfg(feature = "array-assignment-expressions")]
                 if self.consume_raw(b'[') {
                     let key_start = self.offset;
@@ -8489,7 +8530,7 @@ impl Parser<'_> {
                 b't' => b'\t',
                 b'v' => 0x0b,
                 b'0' => 0,
-                b'\'' | b'"' | b'`' | b'\\' => escaped,
+                b'\'' | b'"' | b'`' | b'\\' | b'$' => escaped,
                 _ => return Err(self.error("a supported string escape")),
             });
         }

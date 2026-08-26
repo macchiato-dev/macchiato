@@ -81,6 +81,7 @@ method-calls = [
   "callable-objects",
   "function-arguments",
   "objects",
+  "object-spread",
   "receivers",
   "microesnext-objects/method-calls",
   "microesnext-vm/method-calls",
@@ -267,6 +268,12 @@ objects = [
   "atoms",
   "microesnext-vm/objects",
   "microesnext-compiler/objects",
+]
+object-spread = [
+  "objects",
+  "microesnext-objects/object-spread",
+  "microesnext-vm/object-spread",
+  "microesnext-compiler/object-spread",
 ]
 object-destructuring-declarations = [
   "control-flow",
@@ -956,3 +963,13 @@ required-features = [
   "collection-iterators",
   "iterator-results",
 ]
+
+[[test]]
+name = "object-spread"
+path = "tests/object_spread.rs"
+required-features = ["locals", "number-operations", "object-spread"]
+
+[[test]]
+name = "do-while-statements"
+path = "tests/do_while_statements.rs"
+required-features = ["do-while-statements", "locals", "update-expressions"]
