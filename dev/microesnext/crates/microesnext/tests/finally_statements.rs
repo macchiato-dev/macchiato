@@ -27,8 +27,10 @@ fn finally_runs_before_a_return_and_preserves_its_value() {
 #[test]
 fn finally_runs_on_fallthrough_and_exceptional_completion() {
     assert_eq!(
-        run("let state = { value: 0 }; try {} finally { state.value = 42; } \
-             return state.value;"),
+        run(
+            "let state = { value: 0 }; try {} finally { state.value = 42; } \
+             return state.value;"
+        ),
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
     assert_eq!(

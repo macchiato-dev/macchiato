@@ -76,8 +76,16 @@ pub fn merge(arena: &mut Arena<'_>, old: Value, new: Value) -> Result<Option<Val
     let old_setter = Value::from_raw(old_values[1]);
     let new_getter = Value::from_raw(new_values[0]);
     let new_setter = Value::from_raw(new_values[1]);
-    let getter = if new_getter == Value::UNDEFINED { old_getter } else { new_getter };
-    let setter = if new_setter == Value::UNDEFINED { old_setter } else { new_setter };
+    let getter = if new_getter == Value::UNDEFINED {
+        old_getter
+    } else {
+        new_getter
+    };
+    let setter = if new_setter == Value::UNDEFINED {
+        old_setter
+    } else {
+        new_setter
+    };
     let descriptor = arena.allocate_values(BlockKind::Getter, &mut [getter, setter], &mut [])?;
     Ok(Some(Value::from_ref(descriptor)))
 }

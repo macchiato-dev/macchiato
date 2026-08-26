@@ -425,6 +425,7 @@ struct DestructuredProperty {
     key_start: usize,
     key_end: usize,
     local_slot: u16,
+    default: Option<(usize, usize)>,
 }
 
 #[cfg(any(
@@ -434,6 +435,7 @@ struct DestructuredProperty {
 #[derive(Clone, Copy)]
 enum AssignmentBase {
     Local(Binding),
+    Parenthesized(usize, usize),
     #[cfg(feature = "environments")]
     Capture(Binding),
     #[cfg(all(feature = "functions", feature = "receivers"))]
@@ -663,6 +665,16 @@ impl Parser<'_> {
                 self.while_loop()?;
                 continue;
             }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word_after_whitespace(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "switch-statements")]
+            if self.try_word_after_whitespace(b"switch") {
+                self.switch_statement()?;
+                continue;
+            }
             #[cfg(feature = "for-statements")]
             if self.try_word_after_whitespace(b"for") {
                 self.for_loop()?;
@@ -728,6 +740,16 @@ impl Parser<'_> {
                 self.control_statement(false)?;
                 continue;
             }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word_after_whitespace(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "switch-statements")]
+            if self.try_word_after_whitespace(b"switch") {
+                self.switch_statement()?;
+                continue;
+            }
             #[cfg(feature = "for-statements")]
             if self.try_word_after_whitespace(b"for") {
                 self.for_loop()?;
@@ -788,6 +810,16 @@ impl Parser<'_> {
             }
             if self.try_word_after_whitespace(b"while") {
                 self.while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word_after_whitespace(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "switch-statements")]
+            if self.try_word_after_whitespace(b"switch") {
+                self.switch_statement()?;
                 continue;
             }
             #[cfg(feature = "for-statements")]
@@ -884,7 +916,9 @@ impl Parser<'_> {
             || cfg!(feature = "control-flow")
                 && (self.word_at_offset(b"if")
                     || self.word_at_offset(b"while")
+                    || cfg!(feature = "do-while-statements") && self.word_at_offset(b"do")
                     || cfg!(feature = "for-statements") && self.word_at_offset(b"for"))
+            || cfg!(feature = "switch-statements") && self.word_at_offset(b"switch")
             || cfg!(feature = "exceptions") && self.word_at_offset(b"try")
     }
 
@@ -1123,6 +1157,47 @@ impl Parser<'_> {
         self.relocations.push(exit_patch);
         #[cfg(feature = "for-statements")]
         self.patch_loop_breaks(exit, loop_start)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "do-while-statements")]
+    fn do_while_loop(&mut self) -> Result<(), CompileError> {
+        let loop_start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.loop_breaks.push(LoopBreaks {
+            label: None,
+            break_patches: Vec::new(),
+            continue_patches: Vec::new(),
+        });
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        self.control_block_body()?;
+        if !self.consume(b'}') || !self.try_word_after_whitespace(b"while") {
+            return Err(self.error("} while"));
+        }
+        let continue_target = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') || !self.consume(b';') {
+            return Err(self.error(") followed by ;"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.output.push(Opcode::Jump as u8);
+        let loop_patch = self.output.len();
+        self.output.extend_from_slice(&loop_start.to_le_bytes());
+        let exit = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        self.relocations.push(exit_patch);
+        self.relocations.push(loop_patch);
+        self.patch_loop_breaks(exit, continue_target)?;
         Ok(())
     }
 
@@ -1653,6 +1728,16 @@ impl Parser<'_> {
                 self.while_loop()?;
                 continue;
             }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "switch-statements")]
+            if self.try_word(b"switch") {
+                self.switch_statement()?;
+                continue;
+            }
             if self.try_word(b"for") {
                 self.for_loop()?;
                 continue;
@@ -1747,7 +1832,10 @@ impl Parser<'_> {
         false
     }
 
-    #[cfg(feature = "finally-statements")]
+    #[cfg(any(
+        feature = "finally-statements",
+        feature = "object-destructuring-assignments"
+    ))]
     fn block_close(&self, open: usize) -> Result<usize, CompileError> {
         let mut offset = open + 1;
         let mut depth = 1_usize;
@@ -1771,9 +1859,7 @@ impl Parser<'_> {
             }
             if byte == b'/' && self.source.get(offset) == Some(&b'*') {
                 offset += 1;
-                while offset + 1 < self.source.len()
-                    && &self.source[offset..offset + 2] != b"*/"
-                {
+                while offset + 1 < self.source.len() && &self.source[offset..offset + 2] != b"*/" {
                     offset += 1;
                 }
                 offset = (offset + 2).min(self.source.len());
@@ -1796,6 +1882,69 @@ impl Parser<'_> {
             offset: open,
             expected: "a closing brace",
         })
+    }
+
+    /// Lowers the compact, non-fallthrough switch form used by generated
+    /// libraries. Each case must complete with `return` or `throw`; broader
+    /// fallthrough and `break` semantics remain a separately addable product.
+    #[cfg(feature = "switch-statements")]
+    fn switch_statement(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') || !self.consume(b'{') {
+            return Err(self.error(") followed by {"));
+        }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.locals.push(Binding {
+            start: self.source.len(),
+            end: self.source.len(),
+            slot,
+            default: None,
+            hoisted: false,
+            #[cfg(feature = "environments")]
+            captured: false,
+        });
+        if self.function_frame {
+            let count = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.output[1..3].copy_from_slice(&count.to_le_bytes());
+        }
+        self.output.push(Opcode::StoreLocal as u8);
+        self.output.extend_from_slice(&slot.to_le_bytes());
+
+        loop {
+            self.whitespace();
+            if self.consume_raw(b'}') {
+                return Ok(());
+            }
+            if !self.try_word(b"case") {
+                return Err(self.error("case or }"));
+            }
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.expression(None)?;
+            if !self.consume(b':') {
+                return Err(self.error(":"));
+            }
+            self.output.push(Opcode::StrictEqual as u8);
+            self.output.push(Opcode::JumpIfFalseBoolean as u8);
+            let next_patch = self.output.len();
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            self.statement_prefix()?;
+            self.whitespace();
+            if !self.word_at_offset(b"return") && !self.word_at_offset(b"throw") {
+                return Err(self.error("an abruptly completing switch case"));
+            }
+            self.completion(None, false, false)?;
+            let next = u32::try_from(self.output.len())
+                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+            self.output[next_patch..next_patch + 4].copy_from_slice(&next.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(next_patch);
+        }
     }
 
     #[cfg(feature = "control-flow")]
@@ -1883,6 +2032,16 @@ impl Parser<'_> {
         }
         if self.try_word(b"while") {
             self.single_while_loop()?;
+            return Ok(false);
+        }
+        #[cfg(feature = "do-while-statements")]
+        if self.try_word(b"do") {
+            self.do_while_loop()?;
+            return Ok(false);
+        }
+        #[cfg(feature = "switch-statements")]
+        if self.try_word(b"switch") {
+            self.switch_statement()?;
             return Ok(false);
         }
         #[cfg(feature = "exceptions")]
@@ -2248,6 +2407,11 @@ impl Parser<'_> {
                 self.begin_control_loop(&mut frames)?;
                 continue;
             }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
             let branch_abrupt = if self.source.get(self.offset) == Some(&b'}') {
                 false
             } else {
@@ -2401,10 +2565,12 @@ impl Parser<'_> {
             if self.try_word(b"if") {
                 if self.conditional_body_is_braced() {
                     self.begin_structured(&mut frames, StructuredStart::Conditional)?;
-                } else if self.single_if()? {
-                    return Err(
-                        self.error("a fallthrough path after a single-statement conditional")
-                    );
+                } else {
+                    // The emitted returns or throws already preserve abrupt behavior. Treating an
+                    // abrupt single-statement conditional as fallthrough here only leaves an
+                    // unreachable join in the enclosing structured frame, while allowing that
+                    // frame to finish through its ordinary closing-brace path.
+                    self.single_if()?;
                 }
                 continue;
             }
@@ -2414,6 +2580,16 @@ impl Parser<'_> {
                 } else {
                     self.single_while_loop()?;
                 }
+                continue;
+            }
+            #[cfg(feature = "do-while-statements")]
+            if self.try_word(b"do") {
+                self.do_while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "switch-statements")]
+            if self.try_word(b"switch") {
+                self.switch_statement()?;
                 continue;
             }
             #[cfg(feature = "for-statements")]
@@ -2833,6 +3009,26 @@ impl Parser<'_> {
                 offset = (offset + 2).min(self.source.len());
                 continue;
             }
+            if byte == b'/' && self.slash_starts_regexp(offset) {
+                offset += 1;
+                let mut character_class = false;
+                while let Some(byte) = self.source.get(offset).copied() {
+                    offset += 1;
+                    if byte == b'\\' {
+                        offset += usize::from(offset < self.source.len());
+                    } else if byte == b'[' {
+                        character_class = true;
+                    } else if byte == b']' {
+                        character_class = false;
+                    } else if byte == b'/' && !character_class {
+                        while self.source.get(offset).is_some_and(u8::is_ascii_alphabetic) {
+                            offset += 1;
+                        }
+                        break;
+                    }
+                }
+                continue;
+            }
             if matches!(byte, b'\'' | b'"' | b'`') {
                 quote = Some(byte);
                 offset += 1;
@@ -2895,6 +3091,26 @@ impl Parser<'_> {
                     offset += 1;
                 }
                 offset = (offset + 2).min(self.source.len());
+                continue;
+            }
+            if byte == b'/' && self.slash_starts_regexp(offset) {
+                offset += 1;
+                let mut character_class = false;
+                while let Some(byte) = self.source.get(offset).copied() {
+                    offset += 1;
+                    if byte == b'\\' {
+                        offset += usize::from(offset < self.source.len());
+                    } else if byte == b'[' {
+                        character_class = true;
+                    } else if byte == b']' {
+                        character_class = false;
+                    } else if byte == b'/' && !character_class {
+                        while self.source.get(offset).is_some_and(u8::is_ascii_alphabetic) {
+                            offset += 1;
+                        }
+                        break;
+                    }
+                }
                 continue;
             }
             match byte {
@@ -3025,6 +3241,21 @@ impl Parser<'_> {
             previous -= 1;
         }
         previous == self.offset || matches!(self.source.get(previous - 1), Some(b';' | b'}'))
+    }
+
+    #[cfg(feature = "functions")]
+    fn slash_starts_regexp(&self, offset: usize) -> bool {
+        let mut previous = offset;
+        while previous > self.offset && self.source[previous - 1].is_ascii_whitespace() {
+            previous -= 1;
+        }
+        previous == self.offset
+            || self.source.get(previous - 1).is_some_and(|byte| {
+                matches!(
+                    byte,
+                    b'=' | b'(' | b'[' | b'{' | b',' | b':' | b';' | b'!' | b'?' | b'&' | b'|'
+                )
+            })
     }
 
     #[cfg(feature = "functions")]
@@ -3793,6 +4024,17 @@ impl Parser<'_> {
                         } else {
                             (key_start, key_end)
                         };
+                        #[cfg(feature = "default-parameters")]
+                        let default = if self.consume(b'=') {
+                            let start = self.offset;
+                            let end = self.destructured_parameter_default_end()?;
+                            self.offset = end;
+                            Some((start, end))
+                        } else {
+                            None
+                        };
+                        #[cfg(not(feature = "default-parameters"))]
+                        let default = None;
                         if parameters.iter().any(|binding: &Binding| {
                             self.source[binding.start..binding.end] == self.source[start..end]
                         }) || destructured_names.iter().any(|&(other_start, other_end)| {
@@ -3801,7 +4043,7 @@ impl Parser<'_> {
                             return Err(self.error("a unique parameter binding"));
                         }
                         destructured_names.push((start, end));
-                        properties.push((key_start, key_end, start, end));
+                        properties.push((key_start, key_end, start, end, default));
                         if self.consume(b'}') {
                             break;
                         }
@@ -3810,6 +4052,17 @@ impl Parser<'_> {
                         }
                     }
                 }
+                #[cfg(feature = "default-parameters")]
+                let default = if self.consume(b'=') {
+                    let start = self.offset;
+                    let end = self.parameter_default_end()?;
+                    self.offset = end;
+                    Some((start, end))
+                } else {
+                    None
+                };
+                #[cfg(not(feature = "default-parameters"))]
+                let default = None;
                 parameters.push(Binding {
                     // The positional argument needs a slot but has no source
                     // binding of its own. An empty range prevents the opening
@@ -3817,7 +4070,7 @@ impl Parser<'_> {
                     start: self.source.len(),
                     end: self.source.len(),
                     slot: parameter_slot,
-                    default: None,
+                    default,
                     hoisted: false,
                     #[cfg(feature = "environments")]
                     captured: false,
@@ -3883,7 +4136,7 @@ impl Parser<'_> {
         let mut destructured = Vec::new();
         for (parameter_slot, properties) in raw_destructured {
             let mut materialized = Vec::new();
-            for (key_start, key_end, start, end) in properties {
+            for (key_start, key_end, start, end, default) in properties {
                 let local_slot = u16::try_from(parameters.len())
                     .map_err(|_| self.error("fewer than 65536 local bindings"))?;
                 parameters.push(Binding {
@@ -3899,6 +4152,7 @@ impl Parser<'_> {
                     key_start,
                     key_end,
                     local_slot,
+                    default,
                 });
             }
             destructured.push(DestructuredParameter {
@@ -3942,6 +4196,37 @@ impl Parser<'_> {
             offset += 1;
         }
         Err(self.error(", or )"))
+    }
+
+    #[cfg(feature = "default-parameters")]
+    fn destructured_parameter_default_end(&self) -> Result<usize, CompileError> {
+        let mut offset = self.offset;
+        let mut endings = Vec::new();
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            if let Some(delimiter) = quote {
+                offset += 1;
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => quote = Some(byte),
+                b'(' => endings.push(b')'),
+                b'[' => endings.push(b']'),
+                b'{' => endings.push(b'}'),
+                b')' | b']' | b'}' if endings.last() == Some(&byte) => {
+                    endings.pop();
+                }
+                b',' | b'}' if endings.is_empty() => return Ok(offset),
+                _ => {}
+            }
+            offset += 1;
+        }
+        Err(self.error(", or }"))
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
@@ -4019,9 +4304,7 @@ impl Parser<'_> {
         let receiver_frame = receiver_frame
             || matches!(
                 body_kind,
-                FunctionBody::Method
-                    | FunctionBody::Getter
-                    | FunctionBody::Setter
+                FunctionBody::Method | FunctionBody::Getter | FunctionBody::Setter
             );
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
@@ -4123,6 +4406,29 @@ impl Parser<'_> {
                     .extend_from_slice(&parameter.parameter_slot.to_le_bytes());
                 body.output_atom_range(property.key_start, property.key_end);
                 body.output.push(Opcode::GetProperty as u8);
+                #[cfg(feature = "default-parameters")]
+                if let Some((start, end)) = property.default {
+                    body.output.push(Opcode::DuplicateTop as u8);
+                    body.output.push(Opcode::ConstImmediate as u8);
+                    body.output.push(Immediate::Undefined as u8);
+                    body.output.push(Opcode::StrictEqual as u8);
+                    body.output.push(Opcode::JumpIfFalseBoolean as u8);
+                    let skip_patch = body.output.len();
+                    body.output.extend_from_slice(&0_u32.to_le_bytes());
+                    body.output.push(Opcode::DropTop as u8);
+                    let body_offset = body.offset;
+                    body.offset = start;
+                    body.expression(None)?;
+                    body.whitespace();
+                    if body.offset != end {
+                        return Err(body.error("the end of a destructured default parameter"));
+                    }
+                    body.offset = body_offset;
+                    let skip = u32::try_from(body.output.len())
+                        .map_err(|_| body.error("bytecode smaller than 4 GiB"))?;
+                    body.output[skip_patch..skip_patch + 4].copy_from_slice(&skip.to_le_bytes());
+                    body.relocations.push(skip_patch);
+                }
                 body.output.push(Opcode::StoreLocal as u8);
                 body.output
                     .extend_from_slice(&property.local_slot.to_le_bytes());
@@ -4486,6 +4792,10 @@ impl Parser<'_> {
                 ArrayDestructuringAssignmentTarget::Property(base, self.identifier()?)
             } else {
                 match base {
+                    AssignmentBase::Parenthesized(..) => {
+                        self.offset = start;
+                        return Ok(false);
+                    }
                     AssignmentBase::Local(binding) => {
                         ArrayDestructuringAssignmentTarget::Binding(binding, None)
                     }
@@ -4515,14 +4825,12 @@ impl Parser<'_> {
             return Ok(false);
         }
         self.expression(None)?;
-        let needs_temporary = targets
-            .iter()
-            .any(|target| match target {
-                ArrayDestructuringAssignmentTarget::Binding(binding, capture) => {
-                    binding.captured || capture.is_some()
-                }
-                ArrayDestructuringAssignmentTarget::Property(..) => true,
-            });
+        let needs_temporary = targets.iter().any(|target| match target {
+            ArrayDestructuringAssignmentTarget::Binding(binding, capture) => {
+                binding.captured || capture.is_some()
+            }
+            ArrayDestructuringAssignmentTarget::Property(..) => true,
+        });
         let temporary = if needs_temporary {
             let slot = u16::try_from(self.locals.len())
                 .map_err(|_| self.error("fewer than 65536 local bindings"))?;
@@ -4619,6 +4927,11 @@ impl Parser<'_> {
                 DestructuringAssignmentTarget::Property(base, self.identifier()?)
             } else {
                 match base {
+                    AssignmentBase::Parenthesized(..) => {
+                        self.offset = source_start;
+                        self.output.truncate(output_start);
+                        return Ok(false);
+                    }
                     AssignmentBase::Local(binding) => DestructuringAssignmentTarget::Local(binding),
                     _ => return Err(self.error("a local shorthand destructuring target")),
                 }
@@ -5298,10 +5611,15 @@ impl Parser<'_> {
         feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "local-assignment-expressions",
+        feature = "object-destructuring-assignments",
         feature = "property-assignment-expressions"
     ))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         self.whitespace();
+        #[cfg(feature = "object-destructuring-assignments")]
+        if self.object_destructuring_assignment_expression()? {
+            return Ok(false);
+        }
         #[cfg(feature = "array-assignment-expressions")]
         if self.array_assignment_expression()? {
             return Ok(false);
@@ -5319,8 +5637,8 @@ impl Parser<'_> {
                 return Ok(false);
             }
             #[cfg(feature = "compound-assignment-expressions")]
-            if let Some(subtracting) = self.consume_compound_addition() {
-                self.emit_local_compound_assignment(local, subtracting)?;
+            if let Some(opcode) = self.consume_compound_arithmetic() {
+                self.emit_local_compound_assignment(local, opcode)?;
                 return Ok(false);
             }
             #[cfg(feature = "environments")]
@@ -5354,7 +5672,7 @@ impl Parser<'_> {
         if let Some(capture) = self.outer_binding_at_offset() {
             self.offset += capture.end - capture.start;
             #[cfg(feature = "compound-assignment-expressions")]
-            if let Some(subtracting) = self.consume_compound_addition() {
+            if let Some(opcode) = self.consume_compound_arithmetic() {
                 let index = self.intern_capture(capture)?;
                 self.output.push(Opcode::LoadCapture as u8);
                 self.output.extend_from_slice(&index.to_le_bytes());
@@ -5363,11 +5681,7 @@ impl Parser<'_> {
                 self.output.push(Opcode::ToNumber as u8);
                 self.expression(None)?;
                 self.output.push(Opcode::ToNumber as u8);
-                self.output.push(if subtracting {
-                    Opcode::SubtractNumber as u8
-                } else {
-                    Opcode::AddNumber as u8
-                });
+                self.output.push(opcode as u8);
                 self.output.push(Opcode::StoreEnvironmentCellResult as u8);
                 return Ok(false);
             }
@@ -5397,10 +5711,23 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "compound-assignment-expressions")]
+    fn consume_compound_arithmetic(&mut self) -> Option<Opcode> {
+        if self.consume_bytes(b"+=") {
+            Some(Opcode::AddNumber)
+        } else if self.consume_bytes(b"-=") {
+            Some(Opcode::SubtractNumber)
+        } else if self.consume_bytes(b"*=") {
+            Some(Opcode::MultiplyNumber)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "compound-assignment-expressions")]
     fn emit_local_compound_assignment(
         &mut self,
         local: Binding,
-        subtracting: bool,
+        opcode: Opcode,
     ) -> Result<(), CompileError> {
         self.output.push(Opcode::LoadLocal as u8);
         self.output.extend_from_slice(&local.slot.to_le_bytes());
@@ -5412,11 +5739,7 @@ impl Parser<'_> {
         self.output.push(Opcode::ToNumber as u8);
         self.expression(None)?;
         self.output.push(Opcode::ToNumber as u8);
-        self.output.push(if subtracting {
-            Opcode::SubtractNumber as u8
-        } else {
-            Opcode::AddNumber as u8
-        });
+        self.output.push(opcode as u8);
         #[cfg(feature = "environments")]
         if local.captured {
             self.output.push(Opcode::StoreEnvironmentCellResult as u8);
@@ -5543,10 +5866,79 @@ impl Parser<'_> {
         Ok(true)
     }
 
+    #[cfg(feature = "object-destructuring-assignments")]
+    fn object_destructuring_assignment_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        let output_start = self.output.len();
+        if self.source.get(start) != Some(&b'{') {
+            return Ok(false);
+        }
+        let close = self.block_close(start)?;
+        let mut after = close + 1;
+        while self.source.get(after).is_some_and(u8::is_ascii_whitespace) {
+            after += 1;
+        }
+        if self.source.get(after) != Some(&b'=')
+            || matches!(self.source.get(after + 1), Some(b'=' | b'>'))
+        {
+            return Ok(false);
+        }
+        if !self.consume_raw(b'{') {
+            return Ok(false);
+        }
+        let mut properties = Vec::new();
+        loop {
+            self.whitespace();
+            let key = self.identifier()?;
+            if self.consume(b':') {
+                self.whitespace();
+            } else {
+                self.offset = key.0;
+            }
+            let Some(binding) = self.local_at_offset() else {
+                self.offset = start;
+                self.output.truncate(output_start);
+                return Ok(false);
+            };
+            self.offset += binding.end - binding.start;
+            properties.push((key, binding));
+            if self.consume(b'}') {
+                break;
+            }
+            if !self.consume(b',') {
+                self.offset = start;
+                self.output.truncate(output_start);
+                return Ok(false);
+            }
+        }
+        if !self.consume_plain_assignment() {
+            self.offset = start;
+            self.output.truncate(output_start);
+            return Ok(false);
+        }
+        self.expression(None)?;
+        for ((key_start, key_end), binding) in properties {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output_atom_range(key_start, key_end);
+            self.output.push(Opcode::GetProperty as u8);
+            #[cfg(feature = "environments")]
+            if binding.captured {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                self.output.push(Opcode::StoreEnvironmentCell as u8);
+                continue;
+            }
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        }
+        Ok(true)
+    }
+
     #[cfg(not(any(
         feature = "array-assignment-expressions",
         feature = "captured-assignment-expressions",
         feature = "local-assignment-expressions",
+        feature = "object-destructuring-assignments",
         feature = "property-assignment-expressions"
     )))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
@@ -5615,7 +6007,12 @@ impl Parser<'_> {
     #[cfg(feature = "property-assignment-expressions")]
     fn property_assignment_expression(&mut self) -> Result<bool, CompileError> {
         let start = self.offset;
+        #[cfg(feature = "property-update-expressions")]
+        let prefix_increment = self.consume_bytes(b"++");
+        #[cfg(feature = "property-update-expressions")]
+        let prefix_decrement = !prefix_increment && self.consume_bytes(b"--");
         let Some(base) = self.assignment_base() else {
+            self.offset = start;
             return Ok(false);
         };
 
@@ -5629,11 +6026,14 @@ impl Parser<'_> {
             return Ok(false);
         }
         #[cfg(feature = "property-update-expressions")]
-        let postfix_increment = self.consume_bytes(b"++");
+        let postfix_increment = !prefix_increment && !prefix_decrement && self.consume_bytes(b"++");
         #[cfg(feature = "property-update-expressions")]
-        let postfix_decrement = !postfix_increment && self.consume_bytes(b"--");
+        let postfix_decrement = !prefix_increment
+            && !prefix_decrement
+            && !postfix_increment
+            && self.consume_bytes(b"--");
         #[cfg(feature = "property-update-expressions")]
-        if postfix_increment || postfix_decrement {
+        if prefix_increment || prefix_decrement || postfix_increment || postfix_decrement {
             self.emit_assignment_base(base)?;
             let final_property = properties.pop().expect("a property was checked above");
             for (property_start, property_end) in properties {
@@ -5642,7 +6042,14 @@ impl Parser<'_> {
             }
             self.output_atom_range(final_property.0, final_property.1);
             self.output.push(Opcode::UpdateProperty as u8);
-            self.output.push(u8::from(postfix_decrement));
+            self.output.push(
+                u8::from(prefix_decrement || postfix_decrement)
+                    | if prefix_increment || prefix_decrement {
+                        2
+                    } else {
+                        0
+                    },
+            );
             return Ok(true);
         }
         #[cfg(feature = "compound-assignment-expressions")]
@@ -5846,6 +6253,22 @@ impl Parser<'_> {
         feature = "property-assignment-expressions"
     ))]
     fn assignment_base(&mut self) -> Option<AssignmentBase> {
+        let start = self.offset;
+        if self.consume(b'(') {
+            let expression_start = self.offset;
+            let expression_end = match self.balanced_expression_end(b')') {
+                Ok(end) => end,
+                Err(_) => {
+                    self.offset = start;
+                    return None;
+                }
+            };
+            self.offset = expression_end + 1;
+            return Some(AssignmentBase::Parenthesized(
+                expression_start,
+                expression_end,
+            ));
+        }
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
             return Some(AssignmentBase::Local(local));
@@ -5868,6 +6291,16 @@ impl Parser<'_> {
     ))]
     fn emit_assignment_base(&mut self, base: AssignmentBase) -> Result<(), CompileError> {
         match base {
+            AssignmentBase::Parenthesized(start, end) => {
+                let resume = self.offset;
+                self.offset = start;
+                self.expression(None)?;
+                self.whitespace();
+                if self.offset != end {
+                    return Err(self.error(")"));
+                }
+                self.offset = resume;
+            }
             AssignmentBase::Local(local) => {
                 self.output.push(Opcode::LoadLocal as u8);
                 self.output.extend_from_slice(&local.slot.to_le_bytes());
@@ -5896,6 +6329,48 @@ impl Parser<'_> {
             }
         }
         Ok(())
+    }
+
+    #[cfg(any(
+        feature = "array-assignment-expressions",
+        feature = "property-assignment-expressions"
+    ))]
+    fn balanced_expression_end(&mut self, closing: u8) -> Result<usize, CompileError> {
+        let mut endings = Vec::from([closing]);
+        let mut offset = self.offset;
+        while let Some(byte) = self.source.get(offset).copied() {
+            match byte {
+                b'\'' | b'"' | b'`' => {
+                    let quote = byte;
+                    offset += 1;
+                    while let Some(byte) = self.source.get(offset).copied() {
+                        offset += 1;
+                        if byte == b'\\' {
+                            offset += usize::from(offset < self.source.len());
+                        } else if byte == quote {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                b'[' => endings.push(b']'),
+                b'(' => endings.push(b')'),
+                b'{' => endings.push(b'}'),
+                b']' | b')' | b'}' => {
+                    if endings.pop() != Some(byte) {
+                        self.offset = offset;
+                        return Err(self.error("a balanced expression"));
+                    }
+                    if endings.is_empty() {
+                        return Ok(offset);
+                    }
+                }
+                _ => {}
+            }
+            offset += 1;
+        }
+        self.offset = offset;
+        Err(self.error("a closing delimiter"))
     }
 
     #[cfg(feature = "array-assignment-expressions")]
@@ -6847,6 +7322,32 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                #[cfg(feature = "array-assignment-expressions")]
+                if self.consume_raw(b'[') {
+                    let key_start = self.offset;
+                    let key_end = self.index_expression_end()?;
+                    self.offset = key_end + 1;
+                    if !self.consume(b':') {
+                        return Err(self.error(":"));
+                    }
+                    let value_start = self.offset;
+                    self.offset = key_start;
+                    self.expression(None)?;
+                    self.whitespace();
+                    if self.offset != key_end {
+                        return Err(self.error("]"));
+                    }
+                    self.offset = value_start;
+                    self.expression(None)?;
+                    self.output.push(Opcode::SetIndex as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 let (start, end) = self.object_property_name()?;
                 if self.object_getter(start, end)? {
                     if self.consume(b'}') {
@@ -6919,6 +7420,32 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
+                #[cfg(feature = "array-assignment-expressions")]
+                if self.consume_raw(b'[') {
+                    let key_start = self.offset;
+                    let key_end = self.index_expression_end()?;
+                    self.offset = key_end + 1;
+                    if !self.consume(b':') {
+                        return Err(self.error(":"));
+                    }
+                    let value_start = self.offset;
+                    self.offset = key_start;
+                    self.expression(None)?;
+                    self.whitespace();
+                    if self.offset != key_end {
+                        return Err(self.error("]"));
+                    }
+                    self.offset = value_start;
+                    self.expression(None)?;
+                    self.output.push(Opcode::SetIndex as u8);
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 let (start, end) = self.object_property_name()?;
                 if self.object_getter(start, end)? {
                     if self.consume(b'}') {
@@ -7918,16 +8445,35 @@ impl Parser<'_> {
             }
             if escaped == b'u' {
                 let mut value = 0_u32;
-                for index in 0..4 {
-                    let nibble = self
-                        .source
-                        .get(self.offset + index)
-                        .copied()
-                        .and_then(hex_nibble)
-                        .ok_or_else(|| self.error("four hexadecimal Unicode escape digits"))?;
-                    value = value << 4 | u32::from(nibble);
+                if self.source.get(self.offset) == Some(&b'{') {
+                    self.offset += 1;
+                    let digits_start = self.offset;
+                    while let Some(nibble) =
+                        self.source.get(self.offset).copied().and_then(hex_nibble)
+                    {
+                        value = value
+                            .checked_mul(16)
+                            .and_then(|value| value.checked_add(u32::from(nibble)))
+                            .ok_or_else(|| {
+                                self.error("a Unicode scalar value in a string escape")
+                            })?;
+                        self.offset += 1;
+                    }
+                    if self.offset == digits_start || !self.consume_raw(b'}') {
+                        return Err(self.error("hexadecimal Unicode escape digits followed by }"));
+                    }
+                } else {
+                    for index in 0..4 {
+                        let nibble = self
+                            .source
+                            .get(self.offset + index)
+                            .copied()
+                            .and_then(hex_nibble)
+                            .ok_or_else(|| self.error("four hexadecimal Unicode escape digits"))?;
+                        value = value << 4 | u32::from(nibble);
+                    }
+                    self.offset += 4;
                 }
-                self.offset += 4;
                 let character = char::from_u32(value)
                     .ok_or_else(|| self.error("a Unicode scalar value in a string escape"))?;
                 let mut utf8 = [0; 4];
@@ -8631,6 +9177,9 @@ mod tests {
     #[test]
     fn compiles_local_and_nested_property_assignment_expressions() {
         let direct = compile_script("let object = {}; return object.value = 42;").unwrap();
+        #[cfg(feature = "class-setters")]
+        assert!(direct.contains(&(Opcode::SetPropertyAccessor as u8)));
+        #[cfg(not(feature = "class-setters"))]
         assert!(direct.contains(&(Opcode::SetPropertyResult as u8)));
 
         let nested = compile_script(
@@ -8638,6 +9187,9 @@ mod tests {
         )
         .unwrap();
         assert!(nested.contains(&(Opcode::GetProperty as u8)));
+        #[cfg(feature = "class-setters")]
+        assert!(nested.contains(&(Opcode::SetPropertyAccessor as u8)));
+        #[cfg(not(feature = "class-setters"))]
         assert!(nested.contains(&(Opcode::SetPropertyResult as u8)));
     }
 
@@ -8653,6 +9205,9 @@ mod tests {
         )
         .unwrap();
         assert!(code.contains(&(Opcode::LoadCapture as u8)));
+        #[cfg(feature = "class-setters")]
+        assert!(code.contains(&(Opcode::SetPropertyAccessor as u8)));
+        #[cfg(not(feature = "class-setters"))]
         assert!(code.contains(&(Opcode::SetPropertyResult as u8)));
     }
 
@@ -9761,6 +10316,9 @@ mod tests {
              return new Constructor(42);",
         )
         .unwrap();
+        #[cfg(feature = "class-setters")]
+        assert!(code.contains(&(Opcode::SetPropertyAccessor as u8)));
+        #[cfg(not(feature = "class-setters"))]
         assert!(code.contains(&(Opcode::SetPropertyStatement as u8)));
     }
 
@@ -10101,6 +10659,9 @@ mod tests {
         assert!(code.contains(&(Opcode::ToClassConstructor as u8)));
         assert!(code.contains(&(Opcode::ConstructValueArguments as u8)));
         assert!(code.contains(&(Opcode::LoadThis as u8)));
+        #[cfg(feature = "class-setters")]
+        assert!(code.contains(&(Opcode::SetPropertyAccessor as u8)));
+        #[cfg(not(feature = "class-setters"))]
         assert!(code.contains(&(Opcode::SetPropertyStatement as u8)));
     }
 

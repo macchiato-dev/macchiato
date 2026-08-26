@@ -24,6 +24,7 @@ default = [
   "conditional-expressions",
   "constructors",
   "default-parameters",
+  "do-while-statements",
   "construction",
   "class-methods",
   "class-static-methods",
@@ -81,6 +82,7 @@ default = [
   "regexp-literals",
   "rest-parameters",
   "source-positions",
+  "switch-statements",
 ]
 arrays = ["microesnext-bytecode/arrays"]
 array-spread = ["arrays", "literal-expressions", "microesnext-bytecode/array-spread"]
@@ -131,6 +133,7 @@ compound-assignment-expressions = [
 ]
 constructors = ["functions", "microesnext-bytecode/constructors"]
 default-parameters = ["control-flow", "equality", "function-arguments"]
+do-while-statements = ["control-flow", "for-statements"]
 construction = ["constructors", "receivers", "microesnext-bytecode/construction"]
 classes = [
   "construction",
@@ -229,6 +232,7 @@ nested-conditionals = ["nonterminal-conditionals"]
 nested-loops = ["nested-conditionals"]
 nested-exceptions = ["nonterminal-exceptions"]
 structured-statements = ["nested-exceptions", "nested-loops"]
+switch-statements = ["control-flow", "equality", "locals"]
 string-number-coercion = ["number-coercion", "strings"]
 template-literals = ["strings", "string-operations"]
 objects = ["atoms", "microesnext-bytecode/objects"]

@@ -22,8 +22,10 @@ fn calls_a_function_with_array_arguments() {
 #[test]
 fn calls_a_method_with_array_arguments_and_its_receiver() {
     assert_eq!(
-        run("let object = { second(first, second) { return second; } }; \
-             let values = [1, 42]; return object.second(...values);"),
+        run(
+            "let object = { second(first, second) { return second; } }; \
+             let values = [1, 42]; return object.second(...values);"
+        ),
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }

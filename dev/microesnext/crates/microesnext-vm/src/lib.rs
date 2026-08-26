@@ -437,14 +437,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
                 #[cfg(feature = "getters")]
-                if let Some(current) =
-                    microesnext_objects::get_own(self.core.arena(), object, key)?
+                if let Some(current) = microesnext_objects::get_own(self.core.arena(), object, key)?
                 {
-                    if let Some(accessor) = microesnext_objects::getters::merge(
-                        self.core.arena_mut(),
-                        current,
-                        value,
-                    )? {
+                    if let Some(accessor) =
+                        microesnext_objects::getters::merge(self.core.arena_mut(), current, value)?
+                    {
                         value = accessor;
                     }
                 }
@@ -458,14 +455,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
                 #[cfg(feature = "getters")]
-                if let Some(current) =
-                    microesnext_objects::get_own(self.core.arena(), object, key)?
+                if let Some(current) = microesnext_objects::get_own(self.core.arena(), object, key)?
                 {
-                    if let Some(accessor) = microesnext_objects::getters::merge(
-                        self.core.arena_mut(),
-                        current,
-                        value,
-                    )? {
+                    if let Some(accessor) =
+                        microesnext_objects::getters::merge(self.core.arena_mut(), current, value)?
+                    {
                         value = accessor;
                     }
                 }
@@ -1735,10 +1729,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     #[cfg(feature = "function-arguments")]
     fn call_value_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
-        let function = microesnext_bindings::parameters::take_callable(
-            self.core.arena_mut(),
-            argument_count,
-        )?;
+        let function =
+            microesnext_bindings::parameters::take_callable(self.core.arena_mut(), argument_count)?;
         #[cfg(feature = "host-bindings")]
         if let Some(function) = function.as_host() {
             if self.host_argument_count.replace(argument_count).is_some() {
@@ -1757,10 +1749,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         #[cfg(feature = "callable-objects")]
         let function = unwrap_callable(self.core.arena(), function)?;
         #[cfg(feature = "promise-resolvers")]
-        if microesnext_execution::promises::resolvers::is_resolver(
-            self.core.arena(),
-            function,
-        ) {
+        if microesnext_execution::promises::resolvers::is_resolver(self.core.arena(), function) {
             if let Some(call) = microesnext_execution::promises::resolvers::take_call(
                 self.core.arena_mut(),
                 function,

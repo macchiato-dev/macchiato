@@ -44,6 +44,7 @@ default-parameters = [
   "function-arguments",
   "microesnext-compiler/default-parameters",
 ]
+do-while-statements = ["control-flow", "for-statements", "microesnext-compiler/do-while-statements"]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
@@ -405,6 +406,12 @@ structured-statements = [
   "nested-exceptions",
   "nested-loops",
   "microesnext-compiler/structured-statements",
+]
+switch-statements = [
+  "control-flow",
+  "equality",
+  "locals",
+  "microesnext-compiler/switch-statements",
 ]
 string-number-coercion = [
   "number-coercion",
@@ -768,6 +775,11 @@ required-features = ["finally-statements", "locals", "objects"]
 name = "spread-calls"
 path = "tests/spread_calls.rs"
 required-features = ["spread-calls", "method-calls", "literal-expressions", "locals"]
+
+[[test]]
+name = "switch-statements"
+path = "tests/switch_statements.rs"
+required-features = ["switch-statements", "functions", "locals"]
 
 [[test]]
 name = "nonterminal-exceptions"

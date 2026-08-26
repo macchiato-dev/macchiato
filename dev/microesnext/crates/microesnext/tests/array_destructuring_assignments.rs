@@ -36,9 +36,7 @@ fn array_destructuring_can_mix_property_and_local_targets() {
     .unwrap();
     let mut memory = [0; 768];
     assert_eq!(
-        Machine::with_objects(&code, &mut memory, 8)
-            .unwrap()
-            .run(),
+        Machine::with_objects(&code, &mut memory, 8).unwrap().run(),
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
