@@ -26,6 +26,7 @@ static FUNCTION: AtomicU32 = AtomicU32::new(0);
 static FAILURE_KEY_LENGTH: AtomicU32 = AtomicU32::new(0);
 
 const OBJECT: u32 = 15;
+const DATE: u32 = 3;
 const OBJECT_CREATE: u32 = (1 << 29) + 1;
 const OBJECT_DEFINE_PROPERTY: u32 = (1 << 29) + 2;
 const OBJECT_DEFINE_PROPERTIES: u32 = (1 << 29) + 3;
@@ -295,6 +296,16 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     let machine_string_prototype = string_prototype;
+    let date_prototype = match machine
+        .new_object(Value::NULL)
+        .and_then(|value| machine.retain(value))
+    {
+        Ok(root) => root,
+        Err(error) => {
+            DETAIL.store(error as u32 + 1600, Ordering::Relaxed);
+            return;
+        }
+    };
     let global_overlay = match machine.new_object(Value::NULL)
         .and_then(|value| machine.retain(value))
     {
@@ -306,6 +317,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
     };
     let raw = loop {
         STAGE.fetch_add(1, Ordering::Relaxed);
+        FAILURE_KEY_LENGTH.store(0, Ordering::Relaxed);
         match machine.run() {
             Ok(Outcome::Complete(value)) | Ok(Outcome::Throw(value)) => break value.raw(),
             Ok(Outcome::HostGet { object, key, .. })
@@ -349,6 +361,20 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == DATE && machine.string_bytes(key) == Ok(b"prototype") =>
+            {
+                match machine
+                    .root(date_prototype)
+                    .and_then(|value| machine.complete_host_operation(value))
+                {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1600, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }
