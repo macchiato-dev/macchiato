@@ -78,6 +78,13 @@ copy, and the other remains as the expression result. Statement assignment
 continues to emit only `store_local`; builds omitting assignment expressions do
 not decode stack duplication merely because they support mutable locals.
 
+Captured assignment uses `store_environment_cell_result` instead. Its input is
+`[cell, value]` and its output is `[value]`; the operation updates the traced
+cell between those states. This is deliberately distinct from
+`store_environment_cell`, which consumes both inputs for statement assignment,
+and from `duplicate_top`, which cannot preserve a value around a cell without
+extra stack movement.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

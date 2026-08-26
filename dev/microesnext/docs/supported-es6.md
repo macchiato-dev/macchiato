@@ -45,10 +45,12 @@ object, interned key, and value without leaving an unused expression result, so
 it needs no general stack-cleanup feature. The independent
 `local-assignment-expressions` composition adds plain `=` for uncaptured lexical
 locals. It is right-associative, so `left = right = value` stores and evaluates
-in JavaScript order, and the expression returns the stored value. Captured
-environment cells, property targets, computed keys, and compound assignment
-remain separate compositions because they need different storage and stack
-mechanics.
+in JavaScript order, and the expression returns the stored value. The separate
+`captured-assignment-expressions` composition extends the same grammar to an
+outer capture or a locally held environment cell. It updates the shared value
+seen by sibling closures and still returns the assignment result. Property
+targets, computed keys, and compound assignment remain separate compositions
+because they need different storage and stack mechanics.
 
 Array and object literals keep a compact numeric-value parser when
 `literal-expressions` is omitted. Enabling that compiler-only composition lets
