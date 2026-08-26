@@ -1841,9 +1841,56 @@ impl Parser<'_> {
                     }
                     offset = name_end.max(offset + 1);
                 }
+                b'v' if depth == 0
+                    && cfg!(feature = "var-declarations")
+                    && self.source[offset..].starts_with(b"var")
+                    && (offset == 0 || self.identifier_end_before(offset))
+                    && self.identifier_end(offset + b"var".len()) =>
+                {
+                    let mut name_start = offset + b"var".len();
+                    while self
+                        .source
+                        .get(name_start)
+                        .is_some_and(u8::is_ascii_whitespace)
+                    {
+                        name_start += 1;
+                    }
+                    let mut name_end = name_start;
+                    while self.source.get(name_end).is_some_and(|byte| {
+                        byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$'
+                    }) {
+                        name_end += 1;
+                    }
+                    self.add_hoisted_binding(name_start, name_end)?;
+                    offset = name_end.max(offset + 1);
+                }
                 _ => offset += 1,
             }
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "functions")]
+    fn add_hoisted_binding(&mut self, start: usize, end: usize) -> Result<(), CompileError> {
+        if end == start
+            || self
+                .locals
+                .iter()
+                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
+        {
+            return Ok(());
+        }
+        let slot = u16::try_from(self.locals.len())
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+        self.locals.push(Binding {
+            start,
+            end,
+            slot,
+            default: None,
+            hoisted: true,
+            #[cfg(feature = "environments")]
+            captured: false,
+        });
         Ok(())
     }
 
@@ -1924,30 +1971,57 @@ impl Parser<'_> {
         loop {
             self.whitespace();
             let (start, end) = self.identifier()?;
-            if self
-                .locals
-                .iter()
-                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
-            {
+            let existing = self.locals.iter().position(|binding| {
+                self.source[binding.start..binding.end] == self.source[start..end]
+            });
+            if existing.is_some_and(|index| !self.locals[index].hoisted) {
                 return Err(self.error("a unique local binding"));
             }
             if !self.consume(b'=') {
                 return Err(self.error("="));
             }
+            let existing_binding = existing.map(|index| self.locals[index]);
+            #[cfg(feature = "environments")]
+            if existing_binding.is_some_and(|binding| binding.captured) {
+                let binding = existing_binding.expect("checked captured binding");
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
             self.expression(None)?;
-            let slot = u16::try_from(self.locals.len())
-                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            let slot = if let Some(index) = existing {
+                self.locals[index].hoisted = false;
+                self.locals[index].slot
+            } else {
+                u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?
+            };
+            #[cfg(feature = "environments")]
+            let captured = existing_binding.is_some_and(|binding| binding.captured);
+            #[cfg(feature = "environments")]
+            self.output.push(if captured {
+                Opcode::StoreEnvironmentCell
+            } else {
+                Opcode::StoreLocal
+            } as u8);
+            #[cfg(not(feature = "environments"))]
             self.output.push(Opcode::StoreLocal as u8);
+            #[cfg(feature = "environments")]
+            if !captured {
+                self.output.extend_from_slice(&slot.to_le_bytes());
+            }
+            #[cfg(not(feature = "environments"))]
             self.output.extend_from_slice(&slot.to_le_bytes());
-            self.locals.push(Binding {
-                start,
-                end,
-                slot,
-                default: None,
-                hoisted: false,
-                #[cfg(feature = "environments")]
-                captured: false,
-            });
+            if existing.is_none() {
+                self.locals.push(Binding {
+                    start,
+                    end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                });
+            }
             if !self.consume(b',') {
                 break;
             }
