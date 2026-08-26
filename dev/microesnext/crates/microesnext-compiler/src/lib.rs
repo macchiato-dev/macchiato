@@ -418,7 +418,7 @@ struct ConditionalFrame {
     side: ConditionalSide,
 }
 
-#[cfg(feature = "nested-loops")]
+#[cfg(all(feature = "nested-loops", not(feature = "structured-statements")))]
 enum ControlFrame {
     Conditional {
         alternate_patch: usize,
@@ -432,8 +432,38 @@ enum ControlFrame {
     },
 }
 
-#[cfg(feature = "nested-exceptions")]
+#[cfg(all(feature = "nested-exceptions", not(feature = "structured-statements")))]
 enum ExceptionFrame {
+    Try {
+        catch_patch: usize,
+    },
+    Catch {
+        binding: Option<(usize, usize)>,
+        join_patch: Option<usize>,
+        try_fallthrough: bool,
+        pending: bool,
+    },
+}
+
+#[cfg(feature = "structured-statements")]
+enum StructuredStart {
+    Conditional,
+    Loop,
+    Exception,
+}
+
+#[cfg(feature = "structured-statements")]
+enum StructuredFrame {
+    Conditional {
+        alternate_patch: usize,
+        join_patch: Option<usize>,
+        consequent_abrupt: bool,
+        alternate: bool,
+    },
+    Loop {
+        start: u32,
+        exit_patch: usize,
+    },
     Try {
         catch_patch: usize,
     },
@@ -490,6 +520,9 @@ impl Parser<'_> {
         loop {
             self.statement_prefix()?;
             if self.try_word_after_whitespace(b"if") {
+                #[cfg(feature = "structured-statements")]
+                let abrupt = self.structured_statement(StructuredStart::Conditional)?;
+                #[cfg(not(feature = "structured-statements"))]
                 let abrupt = self.control_statement(true)?;
                 if abrupt && self.at_body_end() {
                     return Ok(());
@@ -497,11 +530,23 @@ impl Parser<'_> {
                 continue;
             }
             if self.try_word_after_whitespace(b"while") {
+                #[cfg(feature = "structured-statements")]
+                self.structured_statement(StructuredStart::Loop)?;
+                #[cfg(not(feature = "structured-statements"))]
                 self.control_statement(false)?;
                 continue;
             }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
+                #[cfg(feature = "structured-statements")]
+                {
+                    let abrupt = self.structured_statement(StructuredStart::Exception)?;
+                    if abrupt && self.at_body_end() {
+                        return Ok(());
+                    }
+                    continue;
+                }
+                #[cfg(not(feature = "structured-statements"))]
                 #[cfg(feature = "nonterminal-exceptions")]
                 {
                     #[cfg(feature = "nested-exceptions")]
@@ -513,7 +558,10 @@ impl Parser<'_> {
                     }
                     continue;
                 }
-                #[cfg(not(feature = "nonterminal-exceptions"))]
+                #[cfg(all(
+                    not(feature = "structured-statements"),
+                    not(feature = "nonterminal-exceptions")
+                ))]
                 return self.try_catch();
             }
             return self.completion(None, false, false);
@@ -831,7 +879,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "nested-loops")]
+    #[cfg(all(feature = "nested-loops", not(feature = "structured-statements")))]
     fn control_statement(&mut self, conditional: bool) -> Result<bool, CompileError> {
         let mut frames = Vec::new();
         if conditional {
@@ -943,7 +991,7 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(feature = "nested-loops")]
+    #[cfg(all(feature = "nested-loops", not(feature = "structured-statements")))]
     fn begin_control_conditional(
         &mut self,
         frames: &mut Vec<ControlFrame>,
@@ -971,7 +1019,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "nested-loops")]
+    #[cfg(all(feature = "nested-loops", not(feature = "structured-statements")))]
     fn begin_control_loop(&mut self, frames: &mut Vec<ControlFrame>) -> Result<(), CompileError> {
         let start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -990,6 +1038,245 @@ impl Parser<'_> {
             return Err(self.error("{"));
         }
         frames.push(ControlFrame::Loop { start, exit_patch });
+        Ok(())
+    }
+
+    #[cfg(feature = "structured-statements")]
+    fn structured_statement(&mut self, start: StructuredStart) -> Result<bool, CompileError> {
+        let mut frames = Vec::new();
+        self.begin_structured(&mut frames, start)?;
+        loop {
+            self.statement_prefix()?;
+            self.whitespace();
+            if self.try_word(b"if") {
+                self.begin_structured(&mut frames, StructuredStart::Conditional)?;
+                continue;
+            }
+            if self.try_word(b"while") {
+                self.begin_structured(&mut frames, StructuredStart::Loop)?;
+                continue;
+            }
+            if self.try_word(b"try") {
+                if let Some(StructuredFrame::Catch {
+                    binding, pending, ..
+                }) = frames.last_mut()
+                {
+                    if *pending {
+                        self.output.push(Opcode::Drop as u8);
+                        *binding = None;
+                        *pending = false;
+                    }
+                }
+                self.begin_structured(&mut frames, StructuredStart::Exception)?;
+                continue;
+            }
+
+            let fallthrough = self.source.get(self.offset) == Some(&b'}');
+            if !fallthrough {
+                let close_handlers = frames
+                    .iter()
+                    .filter(|frame| matches!(frame, StructuredFrame::Try { .. }))
+                    .count();
+                let (binding, pending_exception) = frames
+                    .iter()
+                    .rev()
+                    .find_map(|frame| match frame {
+                        StructuredFrame::Catch {
+                            binding, pending, ..
+                        } if *pending => Some((*binding, true)),
+                        _ => None,
+                    })
+                    .unwrap_or((None, false));
+                self.nested_exception_completion(binding, close_handlers, pending_exception)?;
+            }
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+
+            let mut completed_abrupt = !fallthrough;
+            loop {
+                let Some(frame) = frames.pop() else {
+                    return Err(self.error("an active structured frame"));
+                };
+                match frame {
+                    StructuredFrame::Conditional {
+                        alternate_patch,
+                        alternate: false,
+                        ..
+                    } => {
+                        let join_patch = if completed_abrupt {
+                            None
+                        } else {
+                            self.output.push(Opcode::Jump as u8);
+                            let patch = self.output.len();
+                            self.output.extend_from_slice(&0_u32.to_le_bytes());
+                            Some(patch)
+                        };
+                        if !self.try_word_after_whitespace(b"else") || !self.consume(b'{') {
+                            return Err(self.error("else {"));
+                        }
+                        let alternate = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        self.output[alternate_patch..alternate_patch + 4]
+                            .copy_from_slice(&alternate.to_le_bytes());
+                        #[cfg(feature = "functions")]
+                        self.relocations.push(alternate_patch);
+                        frames.push(StructuredFrame::Conditional {
+                            alternate_patch,
+                            join_patch,
+                            consequent_abrupt: completed_abrupt,
+                            alternate: true,
+                        });
+                        break;
+                    }
+                    StructuredFrame::Conditional {
+                        join_patch,
+                        consequent_abrupt,
+                        alternate: true,
+                        ..
+                    } => {
+                        if let Some(patch) = join_patch {
+                            let join = u32::try_from(self.output.len())
+                                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(patch);
+                        }
+                        completed_abrupt = consequent_abrupt && completed_abrupt;
+                    }
+                    StructuredFrame::Loop { start, exit_patch } => {
+                        if !completed_abrupt {
+                            self.output.push(Opcode::Jump as u8);
+                            #[cfg(feature = "functions")]
+                            let start_patch = self.output.len();
+                            self.output.extend_from_slice(&start.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(start_patch);
+                        }
+                        let exit = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        self.output[exit_patch..exit_patch + 4]
+                            .copy_from_slice(&exit.to_le_bytes());
+                        #[cfg(feature = "functions")]
+                        self.relocations.push(exit_patch);
+                        completed_abrupt = false;
+                    }
+                    StructuredFrame::Try { catch_patch } => {
+                        let try_fallthrough = !completed_abrupt;
+                        let join_patch = if try_fallthrough {
+                            self.output.push(Opcode::ConstImmediate as u8);
+                            self.output.push(Immediate::Undefined as u8);
+                            self.output.push(Opcode::EndTry as u8);
+                            self.output.push(Opcode::Drop as u8);
+                            self.output.push(Opcode::Jump as u8);
+                            let patch = self.output.len();
+                            self.output.extend_from_slice(&0_u32.to_le_bytes());
+                            Some(patch)
+                        } else {
+                            None
+                        };
+                        let binding = self.catch_header(catch_patch)?;
+                        frames.push(StructuredFrame::Catch {
+                            binding,
+                            join_patch,
+                            try_fallthrough,
+                            pending: true,
+                        });
+                        break;
+                    }
+                    StructuredFrame::Catch {
+                        join_patch,
+                        try_fallthrough,
+                        pending,
+                        ..
+                    } => {
+                        let catch_fallthrough = !completed_abrupt;
+                        if catch_fallthrough && pending {
+                            self.output.push(Opcode::Drop as u8);
+                        }
+                        let join = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        if let Some(patch) = join_patch {
+                            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(patch);
+                        }
+                        completed_abrupt = !try_fallthrough && !catch_fallthrough;
+                    }
+                }
+                if frames.is_empty() {
+                    self.whitespace();
+                    return Ok(completed_abrupt);
+                }
+                if completed_abrupt {
+                    if !self.consume(b'}') {
+                        return Err(self.error("}"));
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+
+    #[cfg(feature = "structured-statements")]
+    fn begin_structured(
+        &mut self,
+        frames: &mut Vec<StructuredFrame>,
+        start: StructuredStart,
+    ) -> Result<(), CompileError> {
+        match start {
+            StructuredStart::Conditional => {
+                if !self.consume(b'(') {
+                    return Err(self.error("("));
+                }
+                self.expression(None)?;
+                if !self.consume(b')') {
+                    return Err(self.error(")"));
+                }
+                self.output.push(Opcode::ToBoolean as u8);
+                self.output.push(Opcode::JumpIfFalseBoolean as u8);
+                let alternate_patch = self.output.len();
+                self.output.extend_from_slice(&0_u32.to_le_bytes());
+                if !self.consume(b'{') {
+                    return Err(self.error("{"));
+                }
+                frames.push(StructuredFrame::Conditional {
+                    alternate_patch,
+                    join_patch: None,
+                    consequent_abrupt: false,
+                    alternate: false,
+                });
+            }
+            StructuredStart::Loop => {
+                let start = u32::try_from(self.output.len())
+                    .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                if !self.consume(b'(') {
+                    return Err(self.error("("));
+                }
+                self.expression(None)?;
+                if !self.consume(b')') {
+                    return Err(self.error(")"));
+                }
+                self.output.push(Opcode::ToBoolean as u8);
+                self.output.push(Opcode::JumpIfFalseBoolean as u8);
+                let exit_patch = self.output.len();
+                self.output.extend_from_slice(&0_u32.to_le_bytes());
+                if !self.consume(b'{') {
+                    return Err(self.error("{"));
+                }
+                frames.push(StructuredFrame::Loop { start, exit_patch });
+            }
+            StructuredStart::Exception => {
+                if !self.consume(b'{') {
+                    return Err(self.error("{"));
+                }
+                let catch_patch = self.output.len() + 1;
+                self.output.push(Opcode::Try as u8);
+                self.output.extend_from_slice(&0_u32.to_le_bytes());
+                frames.push(StructuredFrame::Try { catch_patch });
+            }
+        }
         Ok(())
     }
 
@@ -1920,7 +2207,7 @@ impl Parser<'_> {
         Ok(!try_fallthrough && !catch_fallthrough)
     }
 
-    #[cfg(feature = "nested-exceptions")]
+    #[cfg(all(feature = "nested-exceptions", not(feature = "structured-statements")))]
     fn try_catch(&mut self) -> Result<bool, CompileError> {
         let mut frames = Vec::new();
         self.begin_exception(&mut frames)?;
@@ -2023,7 +2310,7 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(feature = "nested-exceptions")]
+    #[cfg(all(feature = "nested-exceptions", not(feature = "structured-statements")))]
     fn begin_exception(&mut self, frames: &mut Vec<ExceptionFrame>) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
