@@ -27,6 +27,7 @@ async-functions = [
   "microesnext-semantics?/async-functions",
 ]
 arrays = ["dep:microesnext-objects", "microesnext-objects/arrays", "microesnext-bytecode/arrays"]
+array-spread = ["arrays", "microesnext-bytecode/array-spread"]
 iterators = ["objects", "microesnext-objects/iterators", "microesnext-bytecode/iterators"]
 array-iterators = [
   "arrays",

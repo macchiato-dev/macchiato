@@ -150,6 +150,11 @@ arrays = [
   "microesnext-compiler/arrays",
   "microesnext-compiler/array-indexing",
 ]
+array-spread = [
+  "arrays",
+  "microesnext-vm/array-spread",
+  "microesnext-compiler/array-spread",
+]
 array-assignment-expressions = [
   "arrays",
   "microesnext-objects/array-assignment-expressions",
@@ -168,6 +173,13 @@ array-destructuring-declarations = [
   "locals",
   "stack-operations",
   "microesnext-compiler/array-destructuring-declarations",
+]
+object-destructuring-assignments = [
+  "locals",
+  "objects",
+  "property-assignment-expressions",
+  "stack-operations",
+  "microesnext-compiler/object-destructuring-assignments",
 ]
 array-iterators = [
   "arrays",
@@ -309,6 +321,10 @@ instanceof = [
   "microesnext-objects/instanceof",
   "microesnext-vm/instanceof",
   "microesnext-compiler/instanceof",
+]
+in-expressions = [
+  "objects",
+  "microesnext-compiler/in-expressions",
 ]
 minimal-program = ["control-flow", "integer-operations", "locals"]
 equality = [
@@ -777,6 +793,11 @@ required-features = [
 name = "arrays"
 path = "tests/arrays.rs"
 required-features = ["arrays"]
+
+[[test]]
+name = "array-spread"
+path = "tests/array_spread.rs"
+required-features = ["array-spread", "locals"]
 
 [[test]]
 name = "array-indexing"

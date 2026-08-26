@@ -13,6 +13,7 @@ default = [
   "abstract-equality",
   "bitwise-operations",
   "array-indexing",
+  "array-spread",
   "array-assignment-expressions",
   "array-destructuring-assignments",
   "array-destructuring-declarations",
@@ -30,6 +31,7 @@ default = [
   "class-getters",
   "named-class-expressions",
   "object-destructuring-declarations",
+  "object-destructuring-assignments",
   "property-update-expressions",
   "comments",
   "class-default-constructors",
@@ -45,6 +47,7 @@ default = [
   "implicit-completions",
   "host-bindings",
   "instanceof",
+  "in-expressions",
   "literal-expressions",
   "local-assignment-expressions",
   "recursive-async-functions",
@@ -77,6 +80,7 @@ default = [
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
+array-spread = ["arrays", "literal-expressions", "microesnext-bytecode/array-spread"]
 abstract-equality = [
   "equality",
   "logical-operations",
@@ -179,6 +183,7 @@ host-bindings = ["microesnext-bytecode/host-bindings"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
 integer-negation = ["microesnext-bytecode/integer-negation"]
 instanceof = ["microesnext-bytecode/instanceof"]
+in-expressions = ["objects"]
 locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 literal-expressions = []
@@ -226,6 +231,13 @@ object-destructuring-declarations = [
   "equality",
   "locals",
   "objects",
+  "microesnext-bytecode/stack-operations",
+]
+object-destructuring-assignments = [
+  "locals",
+  "objects",
+  "expression-statements",
+  "property-assignment-expressions",
   "microesnext-bytecode/stack-operations",
 ]
 parenthesized-expressions = []

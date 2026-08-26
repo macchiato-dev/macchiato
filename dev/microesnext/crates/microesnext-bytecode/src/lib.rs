@@ -206,6 +206,12 @@ pub enum Opcode {
     InitRestFrame = 136,
     #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
     InitReceiverRestFrame = 137,
+    #[cfg(feature = "array-spread")]
+    AppendArraySpread = 138,
+    #[cfg(feature = "array-spread")]
+    AppendArrayValue = 139,
+    #[cfg(feature = "objects")]
+    HasProperty = 140,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -395,6 +401,12 @@ impl TryFrom<u8> for Opcode {
             136 => Ok(Self::InitRestFrame),
             #[cfg(all(feature = "rest-parameters", feature = "receivers"))]
             137 => Ok(Self::InitReceiverRestFrame),
+            #[cfg(feature = "array-spread")]
+            138 => Ok(Self::AppendArraySpread),
+            #[cfg(feature = "array-spread")]
+            139 => Ok(Self::AppendArrayValue),
+            #[cfg(feature = "objects")]
+            140 => Ok(Self::HasProperty),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

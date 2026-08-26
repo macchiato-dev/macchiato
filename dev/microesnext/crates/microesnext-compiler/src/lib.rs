@@ -405,6 +405,12 @@ enum AssignmentSuffix {
     Index(usize, usize),
 }
 
+#[cfg(feature = "object-destructuring-assignments")]
+enum DestructuringAssignmentTarget {
+    Local(Binding),
+    Property(AssignmentBase, (usize, usize)),
+}
+
 #[cfg(feature = "environments")]
 fn same_binding(left: Binding, right: Binding) -> bool {
     left.start == right.start && left.end == right.end
@@ -561,6 +567,19 @@ struct LoopBreaks {
     label: Option<(usize, usize)>,
     break_patches: Vec<usize>,
     continue_patches: Vec<usize>,
+}
+
+#[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
+struct IterationBinding {
+    target: IterationTarget,
+    first_loop_local: u16,
+}
+
+#[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
+enum IterationTarget {
+    Local(Binding),
+    #[cfg(feature = "object-destructuring-declarations")]
+    Object(Vec<((usize, usize), Binding)>),
 }
 
 impl Parser<'_> {
@@ -757,6 +776,10 @@ impl Parser<'_> {
             if self.array_destructuring_assignment()? {
                 continue;
             }
+            #[cfg(feature = "object-destructuring-assignments")]
+            if self.object_destructuring_assignment()? {
+                continue;
+            }
             self.property_assignments()?;
             self.local_assignments()?;
             self.whitespace();
@@ -792,6 +815,7 @@ impl Parser<'_> {
         self.word_at_offset(b"return")
             || self.word_at_offset(b"throw")
             || cfg!(feature = "for-statements") && self.word_at_offset(b"break")
+            || cfg!(feature = "for-statements") && self.word_at_offset(b"continue")
             || cfg!(feature = "for-statements") && self.labeled_for_at_offset()
             || cfg!(feature = "control-flow")
                 && (self.word_at_offset(b"if")
@@ -976,11 +1000,10 @@ impl Parser<'_> {
             return self.for_in_loop(binding, label);
         }
         let mut initialized_locals = Some(0);
-        if self.try_word_after_whitespace(b"let")
-            || self.try_word_after_whitespace(b"var")
-            || self.try_word_after_whitespace(b"const")
-        {
-            self.let_declaration(&mut initialized_locals)?;
+        if self.try_word_after_whitespace(b"let") || self.try_word_after_whitespace(b"const") {
+            self.let_declaration(&mut initialized_locals, false)?;
+        } else if self.try_word_after_whitespace(b"var") {
+            self.let_declaration(&mut initialized_locals, true)?;
         } else if !self.consume(b';') {
             self.expression(None)?;
             self.output.push(Opcode::DropTop as u8);
@@ -1026,11 +1049,13 @@ impl Parser<'_> {
         if !self.consume(b')') {
             return Err(self.error(")"));
         }
-        let update = core::mem::replace(&mut self.output, prefix);
+        let mut update = core::mem::replace(&mut self.output, prefix);
         #[cfg(feature = "functions")]
-        if self.relocations.len() != relocation_count || self.functions.len() != function_count {
-            return Err(self.error("a for update without nested control flow or functions"));
+        if self.functions.len() != function_count {
+            return Err(self.error("a for update without nested functions"));
         }
+        #[cfg(feature = "functions")]
+        let update_relocations = self.relocations.split_off(relocation_count);
 
         self.loop_breaks.push(LoopBreaks {
             label,
@@ -1048,6 +1073,21 @@ impl Parser<'_> {
         };
         let continue_target = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        #[cfg(feature = "functions")]
+        for patch in update_relocations {
+            let target = u32::from_le_bytes(
+                update[patch..patch + 4]
+                    .try_into()
+                    .map_err(|_| self.error("a complete for-update relocation"))?,
+            )
+            .checked_add(continue_target)
+            .ok_or_else(|| self.error("bytecode smaller than 4 GiB"))?;
+            update[patch..patch + 4].copy_from_slice(&target.to_le_bytes());
+            self.relocations.push(
+                usize::try_from(continue_target).map_err(|_| self.error("a bytecode offset"))?
+                    + patch,
+            );
+        }
         self.output.extend_from_slice(&update);
         self.output.push(Opcode::Jump as u8);
         #[cfg(feature = "functions")]
@@ -1067,32 +1107,95 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "for-of-statements")]
-    fn for_of_binding(&mut self) -> Result<Option<Binding>, CompileError> {
+    fn for_of_binding(&mut self) -> Result<Option<IterationBinding>, CompileError> {
         self.iteration_binding(b"of")
     }
 
     #[cfg(feature = "for-in-statements")]
-    fn for_in_binding(&mut self) -> Result<Option<Binding>, CompileError> {
+    fn for_in_binding(&mut self) -> Result<Option<IterationBinding>, CompileError> {
         self.iteration_binding(b"in")
     }
 
     #[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
-    fn iteration_binding(&mut self, keyword: &[u8]) -> Result<Option<Binding>, CompileError> {
+    fn iteration_binding(
+        &mut self,
+        keyword: &[u8],
+    ) -> Result<Option<IterationBinding>, CompileError> {
         let start = self.offset;
-        if !self.try_word_after_whitespace(b"let") {
-            return Ok(None);
-        }
         self.whitespace();
-        let (name_start, name_end) = self.identifier()?;
+        let declaration = self.try_word(b"let");
+        self.whitespace();
+        #[cfg(feature = "object-destructuring-declarations")]
+        if declaration && self.consume_raw(b'{') {
+            let mut properties = Vec::new();
+            loop {
+                self.whitespace();
+                let key = self.identifier()?;
+                let name = if self.consume(b':') {
+                    self.whitespace();
+                    self.identifier()?
+                } else {
+                    key
+                };
+                properties.push((key, name));
+                if self.consume(b'}') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or }"));
+                }
+            }
+            if !self.try_word_after_whitespace(keyword) {
+                self.offset = start;
+                return Ok(None);
+            }
+            let first_loop_local = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            let mut target = Vec::new();
+            for (key, (name_start, name_end)) in properties {
+                let slot = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let binding = Binding {
+                    start: name_start,
+                    end: name_end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                };
+                self.locals.push(binding);
+                target.push((key, binding));
+            }
+            return Ok(Some(IterationBinding {
+                target: IterationTarget::Object(target),
+                first_loop_local,
+            }));
+        }
+        let Ok((name_start, name_end)) = self.identifier() else {
+            self.offset = start;
+            return Ok(None);
+        };
         if !self.try_word_after_whitespace(keyword) {
             self.offset = start;
             return Ok(None);
         }
-        if let Some(binding) = self.locals.iter().rev().copied().find(|binding| {
-            !self.inactive_loop_locals.contains(&binding.slot)
-                && self.source[binding.start..binding.end] == self.source[name_start..name_end]
-        }) {
-            return Ok(Some(binding));
+        if !declaration {
+            if let Some(binding) = self.locals.iter().rev().copied().find(|binding| {
+                !self.inactive_loop_locals.contains(&binding.slot)
+                    && self.source[binding.start..binding.end] == self.source[name_start..name_end]
+            }) {
+                let first_loop_local = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                return Ok(Some(IterationBinding {
+                    target: IterationTarget::Local(binding),
+                    first_loop_local,
+                }));
+            }
+        }
+        if !declaration {
+            self.offset = start;
+            return Ok(None);
         }
         let slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
@@ -1106,13 +1209,16 @@ impl Parser<'_> {
             captured: false,
         };
         self.locals.push(binding);
-        Ok(Some(binding))
+        Ok(Some(IterationBinding {
+            target: IterationTarget::Local(binding),
+            first_loop_local: slot,
+        }))
     }
 
     #[cfg(feature = "for-of-statements")]
     fn for_of_loop(
         &mut self,
-        binding: Binding,
+        binding: IterationBinding,
         label: Option<(usize, usize)>,
     ) -> Result<(), CompileError> {
         self.iterator_loop(
@@ -1126,7 +1232,7 @@ impl Parser<'_> {
     #[cfg(feature = "for-in-statements")]
     fn for_in_loop(
         &mut self,
-        binding: Binding,
+        binding: IterationBinding,
         label: Option<(usize, usize)>,
     ) -> Result<(), CompileError> {
         self.iterator_loop(
@@ -1140,12 +1246,13 @@ impl Parser<'_> {
     #[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
     fn iterator_loop(
         &mut self,
-        binding: Binding,
+        binding: IterationBinding,
         label: Option<(usize, usize)>,
         new_iterator: Opcode,
         iterator_next: Opcode,
     ) -> Result<(), CompileError> {
-        let loop_local_start = binding.slot;
+        let loop_local_start = binding.first_loop_local;
+        let target = binding.target;
         let iterator_slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
         self.expression(None)?;
@@ -1174,8 +1281,23 @@ impl Parser<'_> {
         self.output.push(Opcode::JumpIfFalseBoolean as u8);
         let exit_patch = self.output.len();
         self.output.extend_from_slice(&0_u32.to_le_bytes());
-        self.output.push(Opcode::StoreLocal as u8);
-        self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        match target {
+            IterationTarget::Local(binding) => {
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
+            #[cfg(feature = "object-destructuring-declarations")]
+            IterationTarget::Object(properties) => {
+                for ((key_start, key_end), binding) in properties {
+                    self.output.push(Opcode::DuplicateTop as u8);
+                    self.output_atom_range(key_start, key_end);
+                    self.output.push(Opcode::GetProperty as u8);
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                }
+                self.output.push(Opcode::DropTop as u8);
+            }
+        }
 
         self.loop_breaks.push(LoopBreaks {
             label,
@@ -1516,6 +1638,14 @@ impl Parser<'_> {
             self.offset -= b"throw".len();
             self.completion(None, false, false)?;
             return Ok(true);
+        }
+        #[cfg(feature = "array-destructuring-assignments")]
+        if self.array_destructuring_assignment()? {
+            return Ok(false);
+        }
+        #[cfg(feature = "object-destructuring-assignments")]
+        if self.object_destructuring_assignment()? {
+            return Ok(false);
         }
         #[cfg(feature = "expression-statements")]
         {
@@ -2411,12 +2541,12 @@ impl Parser<'_> {
             } else if cfg!(feature = "async-functions") && self.try_async_function() {
                 self.function_declaration(count_patch, true)?;
             } else if self.try_word(b"let") {
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, false)?;
             } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
                 #[cfg(feature = "var-declarations")]
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, true)?;
             } else if self.try_word(b"const") {
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, false)?;
             } else {
                 break;
             }
@@ -2429,12 +2559,12 @@ impl Parser<'_> {
         loop {
             self.whitespace();
             if self.try_word(b"let") {
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, false)?;
             } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
                 #[cfg(feature = "var-declarations")]
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, true)?;
             } else if self.try_word(b"const") {
-                self.let_declaration(count_patch)?;
+                self.let_declaration(count_patch, false)?;
             } else {
                 return Ok(());
             }
@@ -2447,7 +2577,11 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "locals")]
-    fn let_declaration(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
+    fn let_declaration(
+        &mut self,
+        count_patch: &mut Option<usize>,
+        allow_redeclaration: bool,
+    ) -> Result<(), CompileError> {
         if count_patch.is_none() {
             self.output.push(Opcode::InitLocals as u8);
             *count_patch = Some(self.output.len());
@@ -2472,7 +2606,7 @@ impl Parser<'_> {
                 self.locals[*index].hoisted
                     || !self.source[self.locals[*index].end..start].contains(&b'}')
             });
-            if existing.is_some_and(|index| !self.locals[index].hoisted) {
+            if !allow_redeclaration && existing.is_some_and(|index| !self.locals[index].hoisted) {
                 return Err(self.error("a unique local binding"));
             }
             let initialized = self.consume(b'=');
@@ -2791,11 +2925,10 @@ impl Parser<'_> {
                 self.function_declaration(&mut initialized_locals, true)?;
                 continue;
             }
-            if self.try_word(b"let")
-                || self.try_word(b"const")
-                || cfg!(feature = "var-declarations") && self.try_word(b"var")
-            {
-                self.let_declaration(&mut initialized_locals)?;
+            if self.try_word(b"let") || self.try_word(b"const") {
+                self.let_declaration(&mut initialized_locals, false)?;
+            } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
+                self.let_declaration(&mut initialized_locals, true)?;
             } else {
                 return Ok(());
             }
@@ -3660,6 +3793,99 @@ impl Parser<'_> {
         if !self.consume(b';') {
             return Err(self.error(";"));
         }
+        Ok(true)
+    }
+
+    #[cfg(feature = "object-destructuring-assignments")]
+    fn object_destructuring_assignment(&mut self) -> Result<bool, CompileError> {
+        self.whitespace();
+        let source_start = self.offset;
+        let output_start = self.output.len();
+        if !self.consume_raw(b'(') || !self.consume(b'{') {
+            self.offset = source_start;
+            return Ok(false);
+        }
+        let mut properties = Vec::new();
+        loop {
+            self.whitespace();
+            let key = self.identifier()?;
+            if self.consume(b':') {
+                self.whitespace();
+            } else {
+                self.offset = key.0;
+            }
+            let Some(base) = self.assignment_base() else {
+                self.offset = source_start;
+                self.output.truncate(output_start);
+                return Ok(false);
+            };
+            let target = if self.consume(b'.') {
+                self.whitespace();
+                DestructuringAssignmentTarget::Property(base, self.identifier()?)
+            } else {
+                match base {
+                    AssignmentBase::Local(binding) => DestructuringAssignmentTarget::Local(binding),
+                    _ => return Err(self.error("a local shorthand destructuring target")),
+                }
+            };
+            properties.push((key, target));
+            if self.consume(b'}') {
+                break;
+            }
+            if !self.consume(b',') {
+                return Err(self.error(", or }"));
+            }
+        }
+        if !self.consume(b'=') {
+            self.offset = source_start;
+            self.output.truncate(output_start);
+            return Ok(false);
+        }
+        let needs_temporary = properties
+            .iter()
+            .any(|(_, target)| matches!(target, DestructuringAssignmentTarget::Property(..)));
+        let temporary = if needs_temporary {
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.locals.push(Binding {
+                start: self.source.len(),
+                end: self.source.len(),
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+            Some(slot)
+        } else {
+            None
+        };
+        self.expression(None)?;
+        if !self.consume(b')') || !self.consume(b';') {
+            return Err(self.error(") followed by ;"));
+        }
+        for ((key_start, key_end), target) in properties {
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output_atom_range(key_start, key_end);
+            self.output.push(Opcode::GetProperty as u8);
+            match target {
+                DestructuringAssignmentTarget::Local(binding) => {
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                }
+                DestructuringAssignmentTarget::Property(base, (start, end)) => {
+                    let temporary = temporary.expect("property target reserves a temporary");
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    self.emit_assignment_base(base)?;
+                    self.output_atom_range(start, end);
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    self.output.push(Opcode::SetPropertyStatement as u8);
+                }
+            }
+        }
+        self.output.push(Opcode::DropTop as u8);
         Ok(true)
     }
 
@@ -4625,7 +4851,7 @@ impl Parser<'_> {
             #[cfg(feature = "objects")]
             if self.consume(b'.') {
                 self.whitespace();
-                let (start, end) = self.identifier()?;
+                let (start, end) = self.object_property_name()?;
                 suffixes.push(AssignmentSuffix::Property(start, end));
                 continue;
             }
@@ -4994,38 +5220,18 @@ impl Parser<'_> {
         self.relational(binding)
     }
 
-    #[cfg(all(feature = "integer-operations", not(feature = "instanceof")))]
+    #[cfg(any(
+        feature = "integer-operations",
+        feature = "instanceof",
+        feature = "in-expressions"
+    ))]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
         let (used_binding, mut kind) = self.shift(binding)?;
         loop {
-            let Some((less, inverted)) = self.relational_operator() else {
-                break;
-            };
-            let (_, right) = self.shift(None)?;
-            let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
-            let opcode = self.relational_opcode(less, immediate);
-            self.output.push(opcode as u8);
-            #[cfg(feature = "logical-operations")]
-            if inverted {
-                self.output.push(Opcode::LogicalNot as u8);
-            }
-            #[cfg(not(feature = "logical-operations"))]
-            debug_assert!(!inverted);
-            kind = TermKind::General;
-        }
-        Ok((used_binding, kind))
-    }
-
-    #[cfg(all(feature = "integer-operations", feature = "instanceof"))]
-    fn relational(
-        &mut self,
-        binding: Option<(usize, usize)>,
-    ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.shift(binding)?;
-        loop {
+            #[cfg(feature = "integer-operations")]
             if let Some((less, inverted)) = self.relational_operator() {
                 let (_, right) = self.shift(None)?;
                 let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
@@ -5038,13 +5244,23 @@ impl Parser<'_> {
                 #[cfg(not(feature = "logical-operations"))]
                 debug_assert!(!inverted);
                 kind = TermKind::General;
-            } else if self.consume_instanceof() {
+                continue;
+            }
+            #[cfg(feature = "instanceof")]
+            if self.consume_instanceof() {
                 self.shift(None)?;
                 self.output.push(Opcode::InstanceOf as u8);
                 kind = TermKind::General;
-            } else {
-                break;
+                continue;
             }
+            #[cfg(feature = "in-expressions")]
+            if self.consume_in() {
+                self.shift(None)?;
+                self.output.push(Opcode::HasProperty as u8);
+                kind = TermKind::General;
+                continue;
+            }
+            break;
         }
         Ok((used_binding, kind))
     }
@@ -5069,21 +5285,11 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(all(feature = "instanceof", not(feature = "integer-operations")))]
-    fn relational(
-        &mut self,
-        binding: Option<(usize, usize)>,
-    ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.shift(binding)?;
-        while self.consume_instanceof() {
-            self.shift(None)?;
-            self.output.push(Opcode::InstanceOf as u8);
-            kind = TermKind::General;
-        }
-        Ok((used_binding, kind))
-    }
-
-    #[cfg(all(not(feature = "integer-operations"), not(feature = "instanceof")))]
+    #[cfg(not(any(
+        feature = "integer-operations",
+        feature = "instanceof",
+        feature = "in-expressions"
+    )))]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -5485,6 +5691,12 @@ impl Parser<'_> {
         self.try_word(b"instanceof")
     }
 
+    #[cfg(feature = "in-expressions")]
+    fn consume_in(&mut self) -> bool {
+        self.whitespace();
+        self.try_word(b"in")
+    }
+
     #[cfg(feature = "integer-negation")]
     fn emit_numeric_negation(&mut self, kind: TermKind) -> TermKind {
         let result = match kind {
@@ -5616,7 +5828,11 @@ impl Parser<'_> {
         Ok(true)
     }
 
-    #[cfg(all(feature = "arrays", feature = "literal-expressions"))]
+    #[cfg(all(
+        feature = "arrays",
+        feature = "literal-expressions",
+        not(feature = "array-spread")
+    ))]
     fn array_literal(&mut self) -> Result<bool, CompileError> {
         if !self.consume_raw(b'[') {
             return Ok(false);
@@ -5643,6 +5859,32 @@ impl Parser<'_> {
         Ok(true)
     }
 
+    #[cfg(feature = "array-spread")]
+    fn array_literal(&mut self) -> Result<bool, CompileError> {
+        if !self.consume_raw(b'[') {
+            return Ok(false);
+        }
+        self.output.push(Opcode::NewArray as u8);
+        if !self.consume(b']') {
+            loop {
+                let spread = self.consume(b'.') && self.consume_raw(b'.') && self.consume_raw(b'.');
+                self.expression(None)?;
+                self.output.push(if spread {
+                    Opcode::AppendArraySpread
+                } else {
+                    Opcode::AppendArrayValue
+                } as u8);
+                if self.consume(b']') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or ]"));
+                }
+            }
+        }
+        Ok(true)
+    }
+
     #[cfg(not(feature = "arrays"))]
     fn array_literal(&mut self) -> Result<bool, CompileError> {
         Ok(false)
@@ -5657,7 +5899,16 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
-                let (start, end) = self.identifier()?;
+                let (start, end) = self.object_property_name()?;
+                if self.object_getter(start, end)? {
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 #[cfg(feature = "functions")]
                 if self.source.get(self.offset) == Some(&b'(') {
                     let parameters = self.function_parameters()?;
@@ -5720,7 +5971,16 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             loop {
                 self.whitespace();
-                let (start, end) = self.identifier()?;
+                let (start, end) = self.object_property_name()?;
+                if self.object_getter(start, end)? {
+                    if self.consume(b'}') {
+                        break;
+                    }
+                    if !self.consume(b',') {
+                        return Err(self.error(", or }"));
+                    }
+                    continue;
+                }
                 #[cfg(feature = "functions")]
                 if self.source.get(self.offset) == Some(&b'(') {
                     let parameters = self.function_parameters()?;
@@ -5772,6 +6032,57 @@ impl Parser<'_> {
             }
         }
         Ok(true)
+    }
+
+    #[cfg(feature = "objects")]
+    fn object_property_name(&mut self) -> Result<(usize, usize), CompileError> {
+        let start = self.offset;
+        while self.source.get(self.offset).is_some_and(u8::is_ascii_digit) {
+            self.offset += 1;
+        }
+        if self.offset > start {
+            Ok((start, self.offset))
+        } else {
+            self.identifier()
+        }
+    }
+
+    #[cfg(all(feature = "objects", feature = "class-getters"))]
+    fn object_getter(&mut self, start: usize, end: usize) -> Result<bool, CompileError> {
+        if &self.source[start..end] != b"get" {
+            return Ok(false);
+        }
+        let resume = self.offset;
+        self.whitespace();
+        if self.source.get(self.offset) == Some(&b'(') {
+            self.offset = resume;
+            return Ok(false);
+        }
+        let Ok((name_start, name_end)) = self.identifier() else {
+            self.offset = resume;
+            return Ok(false);
+        };
+        let parameters = self.function_parameters()?;
+        if !parameters.is_empty() {
+            return Err(self.error("a getter without parameters"));
+        }
+        self.output_atom_range(name_start, name_end);
+        self.function_value(
+            parameters,
+            None,
+            FunctionBody::Getter,
+            None,
+            false,
+            false,
+            false,
+        )?;
+        self.output.push(Opcode::SetProperty as u8);
+        Ok(true)
+    }
+
+    #[cfg(all(feature = "objects", not(feature = "class-getters")))]
+    fn object_getter(&mut self, _start: usize, _end: usize) -> Result<bool, CompileError> {
+        Ok(false)
     }
 
     #[cfg(not(feature = "objects"))]
@@ -7345,13 +7656,47 @@ mod tests {
     fn compiles_array_literals_without_an_ast() {
         let code = compile_script("return [7, 9];").unwrap();
         assert_eq!(code[0], Opcode::NewArray as u8);
+        #[cfg(not(feature = "array-spread"))]
         assert_eq!(
             code.iter()
                 .filter(|opcode| **opcode == Opcode::SetIndex as u8)
                 .count(),
             2
         );
+        #[cfg(feature = "array-spread")]
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::AppendArrayValue as u8)
+                .count(),
+            2
+        );
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
+    }
+
+    #[cfg(feature = "array-spread")]
+    #[test]
+    fn compiles_array_spread_as_semantic_append_operations() {
+        let code = compile_script("let middle = [2, 3]; return [1, ...middle, 4];").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::AppendArrayValue as u8)
+                .count(),
+            4
+        );
+        assert!(code.contains(&(Opcode::AppendArraySpread as u8)));
+    }
+
+    #[cfg(all(feature = "object-destructuring-assignments", feature = "functions"))]
+    #[test]
+    fn compiles_object_destructuring_assignment_to_properties() {
+        compile_script(
+            "let update = (options, mods) => { ({ altKey: options.altKey } = mods); return options; }; return update;",
+        )
+        .unwrap();
+        compile_script(
+            "let make = (options) => (mods) => { ({ altKey: options.altKey } = mods); return options; }; return make;",
+        )
+        .unwrap();
     }
 
     #[cfg(feature = "array-indexing")]

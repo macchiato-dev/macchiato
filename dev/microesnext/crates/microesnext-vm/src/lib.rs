@@ -11,6 +11,8 @@ use microesnext_execution::exceptions::Handlers;
 use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]
 use microesnext_execution::suspension::{resume_context, suspend_context};
+#[cfg(feature = "array-spread")]
+use microesnext_objects::arrays::len as array_len;
 #[cfg(feature = "arrays")]
 use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
 #[cfg(feature = "objects")]
@@ -394,6 +396,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     return Ok(None);
                 }
                 self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "objects")]
+            Opcode::HasProperty => {
+                let object = self.core.arena_mut().pop()?;
+                let key = self.core.arena_mut().pop()?;
+                let exists = microesnext_objects::has(self.core.arena(), object, key)?;
+                self.core
+                    .arena_mut()
+                    .push(if exists { Value::TRUE } else { Value::FALSE })?;
                 Ok(None)
             }
             #[cfg(feature = "method-calls")]
@@ -1462,6 +1474,40 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .and_then(|index| usize::try_from(index).ok())
                     .ok_or(Error::Type)?;
                 let array = self.core.arena_mut().pop()?;
+                let array = array_set(self.core.arena_mut(), array, index, value)?;
+                self.core.arena_mut().push(array)?;
+                Ok(None)
+            }
+            #[cfg(feature = "array-spread")]
+            Opcode::AppendArraySpread => {
+                let source = self.core.arena().stack_value(0)?;
+                let source_length = array_len(self.core.arena(), source)?;
+                let target = self.core.arena().stack_value(1)?;
+                let target_start = array_len(self.core.arena(), target)?;
+                let target_stack_index = self.core.arena().stack_len() - 2;
+                for index in 0..source_length {
+                    // Both arrays stay on the operand stack, so compaction can
+                    // relocate either one while the spread is being appended.
+                    let source = self.core.arena().stack_value(0)?;
+                    let value = array_get(self.core.arena(), source, index)?;
+                    let target = self
+                        .core
+                        .arena()
+                        .stack_value_from_bottom(target_stack_index)?;
+                    let target =
+                        array_set(self.core.arena_mut(), target, target_start + index, value)?;
+                    self.core
+                        .arena_mut()
+                        .set_stack_value_from_bottom(target_stack_index, target)?;
+                }
+                self.core.arena_mut().pop()?;
+                Ok(None)
+            }
+            #[cfg(feature = "array-spread")]
+            Opcode::AppendArrayValue => {
+                let value = self.core.arena_mut().pop()?;
+                let array = self.core.arena_mut().pop()?;
+                let index = array_len(self.core.arena(), array)?;
                 let array = array_set(self.core.arena_mut(), array, index, value)?;
                 self.core.arena_mut().push(array)?;
                 Ok(None)

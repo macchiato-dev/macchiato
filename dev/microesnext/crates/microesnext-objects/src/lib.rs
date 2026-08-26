@@ -76,6 +76,19 @@ pub fn get(arena: &Arena<'_>, object: Value, key: Value) -> Result<Value, Error>
     }
 }
 
+pub fn has(arena: &Arena<'_>, object: Value, key: Value) -> Result<bool, Error> {
+    let mut object = object;
+    loop {
+        if get_own(arena, object, key)?.is_some() {
+            return Ok(true);
+        }
+        object = prototype(arena, object)?;
+        if object == Value::NULL {
+            return Ok(false);
+        }
+    }
+}
+
 pub fn get_own(arena: &Arena<'_>, object: Value, key: Value) -> Result<Option<Value>, Error> {
     let properties = properties_ref(arena, object)?;
     let entries = arena.values(properties)?;
