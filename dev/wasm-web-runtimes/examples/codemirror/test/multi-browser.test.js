@@ -37,6 +37,16 @@ test("tabbed editors preserve state and search across files in both runtimes", a
   });
   const base = `http://127.0.0.1:${server.address().port}`;
 
+  const smoke = await browser.newPage();
+  const smokeErrors = [];
+  smoke.on("pageerror", error => smokeErrors.push(error.stack || error.message));
+  await smoke.goto(`${base}/microesnext/`);
+  await smoke.waitForSelector("body[data-ready]");
+  assert.equal(await smoke.locator("#status").innerText(),
+    "MicroESNext executed 40 + 2 in WebAssembly.");
+  assert.deepEqual(smokeErrors, []);
+  await smoke.close();
+
   for (const [runtime, path] of [
     ["quickjs", "/multi/"],
     ["microquickjs", "/microquickjs/multi/"],

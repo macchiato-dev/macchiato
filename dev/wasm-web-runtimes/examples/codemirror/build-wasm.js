@@ -78,5 +78,16 @@ if (requestedTargets.has("multi")) {
     `runtime.bin=${microRuntimeBytecode}`,
     `application.bin=${microMultiApplication}`,
   ], { stdio: "inherit" });
-  console.log(`microquickjs multi: ${(await stat(microMultiDestination)).size} bytes`);
+console.log(`microquickjs multi: ${(await stat(microMultiDestination)).size} bytes`);
 }
+
+const microESNextRuntime = resolve(example, "../../microesnext");
+execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+  cwd: microESNextRuntime,
+  stdio: "inherit",
+});
+const microESNextOutput = resolve(microESNextRuntime,
+  "target/wasm32-unknown-unknown/release/wasm_web_machine_microesnext_runtime.wasm");
+const microESNextDestination = resolve(example, "generated/microesnext-smoke.wasm");
+await copyFile(microESNextOutput, microESNextDestination);
+console.log(`microesnext smoke: ${(await stat(microESNextDestination)).size} bytes`);

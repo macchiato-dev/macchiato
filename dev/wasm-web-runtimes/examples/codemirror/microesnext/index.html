@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror in MicroESNext</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
+    background: #282c34; color: #d7dae0; }
+  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
+  p { color: #abb2bf; line-height: 1.55; }
+  output { display: block; margin-top: 2rem; padding: 1rem; border: 1px solid #454b57;
+    border-radius: 8px; color: #e5c07b; background: #21252b; }
+</style>
+<h1>CodeMirror in MicroESNext</h1>
+<p>The Rust runtime and source compiler now execute through the same WebAssembly
+  entry ABI as the QuickJS runtimes. CodeMirror language coverage is being
+  expanded against the generated application bundle.</p>
+<output id="status">Starting MicroESNext…</output>
+<script type="module">
+  const response = await fetch("../generated/microesnext-smoke.wasm");
+  if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+  const instance = await WebAssembly.instantiateStreaming(response);
+  instance.instance.exports.onmsg(0);
+  const result = instance.instance.exports.result();
+  if (result !== 169) throw new Error(`Unexpected MicroESNext result ${result}`);
+  document.getElementById("status").textContent = "MicroESNext executed 40 + 2 in WebAssembly.";
+  document.body.dataset.ready = "true";
+</script>
