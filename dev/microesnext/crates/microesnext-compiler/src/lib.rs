@@ -1500,6 +1500,14 @@ impl Parser<'_> {
             if self.try_labeled_for_loop()? {
                 continue;
             }
+            #[cfg(feature = "exceptions")]
+            if self.try_word(b"try") {
+                let abrupt = self.single_try_statement()?;
+                if abrupt && self.source.get(self.offset) == Some(&b'}') {
+                    return Ok(true);
+                }
+                continue;
+            }
             if self.try_word(b"break") {
                 self.emit_loop_break()?;
                 if !self.consume(b';') {
@@ -4044,16 +4052,21 @@ impl Parser<'_> {
         let mut bindings = Vec::new();
         loop {
             self.whitespace();
-            let Some(binding) = self.local_at_offset() else {
+            let local = self.local_at_offset();
+            #[cfg(feature = "environments")]
+            let capture = if local.is_none() {
+                self.capture_at_offset()?
+            } else {
+                None
+            };
+            #[cfg(not(feature = "environments"))]
+            let capture: Option<(u16, Binding)> = None;
+            let Some(binding) = local.or_else(|| capture.map(|(_, binding)| binding)) else {
                 self.offset = start;
                 return Ok(false);
             };
             self.offset += binding.end - binding.start;
-            #[cfg(feature = "environments")]
-            if binding.captured {
-                return Err(self.error("uncaptured destructuring bindings"));
-            }
-            bindings.push(binding);
+            bindings.push((binding, capture.map(|(index, _)| index)));
             if self.consume(b']') {
                 break;
             }
@@ -4067,14 +4080,54 @@ impl Parser<'_> {
             return Ok(false);
         }
         self.expression(None)?;
-        for (index, binding) in bindings.into_iter().enumerate() {
+        let needs_temporary = bindings
+            .iter()
+            .any(|(binding, capture)| binding.captured || capture.is_some());
+        let temporary = if needs_temporary {
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.locals.push(Binding {
+                start,
+                end: start,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+            if self.function_frame {
+                let count = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                self.output[1..3].copy_from_slice(&count.to_le_bytes());
+            }
+            Some(slot)
+        } else {
+            None
+        };
+        for (index, (binding, capture)) in bindings.into_iter().enumerate() {
             let index = i32::try_from(index).map_err(|_| self.error("an array index"))?;
             self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::ConstI30 as u8);
             self.output.extend_from_slice(&index.to_le_bytes());
             self.output.push(Opcode::GetIndex as u8);
-            self.output.push(Opcode::StoreLocal as u8);
-            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            if binding.captured || capture.is_some() {
+                let temporary = temporary.expect("captured assignments allocate a temporary");
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&temporary.to_le_bytes());
+                if let Some(capture) = capture {
+                    self.output.push(Opcode::LoadCapture as u8);
+                    self.output.extend_from_slice(&capture.to_le_bytes());
+                } else {
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                }
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&temporary.to_le_bytes());
+                self.output.push(Opcode::StoreEnvironmentCell as u8);
+            } else {
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
         }
         self.output.push(Opcode::DropTop as u8);
         if !self.consume(b';') {
@@ -5329,7 +5382,7 @@ impl Parser<'_> {
             return Some(AssignmentBase::Capture(capture));
         }
         #[cfg(all(feature = "functions", feature = "receivers"))]
-        if self.receiver_frame && self.try_word(b"this") {
+        if (self.receiver_frame || self.receiver_capture.is_some()) && self.try_word(b"this") {
             return Some(AssignmentBase::Receiver);
         }
         None
@@ -5357,7 +5410,16 @@ impl Parser<'_> {
                 self.output.push(Opcode::LoadEnvironmentCell as u8);
             }
             #[cfg(all(feature = "functions", feature = "receivers"))]
-            AssignmentBase::Receiver => self.output.push(Opcode::LoadThis as u8),
+            AssignmentBase::Receiver if self.receiver_frame => {
+                self.output.push(Opcode::LoadThis as u8)
+            }
+            AssignmentBase::Receiver => {
+                let capture = self
+                    .receiver_capture
+                    .ok_or_else(|| self.error("an enclosing receiver"))?;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+            }
         }
         Ok(())
     }
