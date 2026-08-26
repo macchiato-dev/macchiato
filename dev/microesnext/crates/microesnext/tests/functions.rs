@@ -125,6 +125,12 @@ fn self_reference_resolves_to_the_initialized_closure() {
     let Outcome::Complete(function) = machine.run().unwrap() else {
         panic!("expected a closure")
     };
+    #[cfg(feature = "callable-objects")]
+    let function = if microesnext::callable_objects::is_callable_object(machine.arena(), function) {
+        microesnext::callable_objects::callable(machine.arena(), function).unwrap()
+    } else {
+        function
+    };
     assert!(microesnext::functions::entry(machine.arena(), function).is_ok());
 }
 

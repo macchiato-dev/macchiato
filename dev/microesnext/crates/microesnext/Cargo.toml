@@ -9,10 +9,18 @@ version.workspace = true
 
 [features]
 default = []
-control-flow = ["microesnext-vm/control-flow"]
-expression-statements = ["stack-operations"]
-implicit-completions = []
-constructors = ["callable-objects", "microesnext-vm/constructors"]
+control-flow = [
+  "microesnext-vm/control-flow",
+  "microesnext-compiler/control-flow",
+  "microesnext-compiler/conditional-expressions",
+]
+expression-statements = ["stack-operations", "microesnext-compiler/expression-statements"]
+implicit-completions = ["microesnext-compiler/implicit-completions"]
+constructors = [
+  "callable-objects",
+  "microesnext-vm/constructors",
+  "microesnext-compiler/constructors",
+]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
@@ -24,11 +32,14 @@ construction = [
   "receivers",
   "microesnext-objects/construction",
   "microesnext-vm/construction",
+  "microesnext-compiler/construction",
 ]
 classes = [
   "class-constructors",
   "construction",
   "property-assignment",
+  "microesnext-compiler/classes",
+  "microesnext-compiler/class-default-constructors",
 ]
 method-calls = [
   "callable-objects",
@@ -37,22 +48,42 @@ method-calls = [
   "receivers",
   "microesnext-objects/method-calls",
   "microesnext-vm/method-calls",
+  "microesnext-compiler/method-calls",
 ]
-class-methods = ["classes", "method-calls"]
-class-static-methods = ["class-methods"]
-class-expressions = ["class-static-methods", "stack-operations"]
-locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
-local-assignment-expressions = ["locals", "stack-operations"]
-arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
+class-methods = ["classes", "method-calls", "microesnext-compiler/class-methods"]
+class-static-methods = ["class-methods", "microesnext-compiler/class-static-methods"]
+class-expressions = [
+  "class-static-methods",
+  "stack-operations",
+  "microesnext-compiler/class-expressions",
+]
+locals = [
+  "dep:microesnext-locals",
+  "microesnext-vm/locals",
+  "microesnext-compiler/locals",
+]
+local-assignment-expressions = [
+  "locals",
+  "stack-operations",
+  "microesnext-compiler/local-assignment-expressions",
+]
+arrays = [
+  "dep:microesnext-arrays",
+  "microesnext-vm/arrays",
+  "microesnext-compiler/arrays",
+  "microesnext-compiler/array-indexing",
+]
 array-assignment-expressions = [
   "arrays",
   "microesnext-arrays/assignment-expressions",
   "microesnext-vm/array-assignment-expressions",
+  "microesnext-compiler/array-assignment-expressions",
 ]
 array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
 async = [
   "dep:microesnext-scheduler",
   "microesnext-scheduler/async",
+  "microesnext-compiler/async",
 ]
 async-functions = [
   "async",
@@ -64,6 +95,7 @@ async-functions = [
   "microesnext-scheduler/functions",
   "microesnext-vm/async-functions",
   "microesnext-semantics?/async-functions",
+  "microesnext-compiler/async-functions",
 ]
 async-thenables = [
   "async-functions",
@@ -75,6 +107,7 @@ strings = [
   "microesnext-vm/strings",
   "microesnext-collections?/string-keys",
   "microesnext-semantics?/string-values",
+  "microesnext-compiler/strings",
 ]
 stack-operations = [
   "microesnext-arena/stack-operations",
@@ -83,14 +116,28 @@ stack-operations = [
 string-operations = [
   "strings",
   "microesnext-vm/string-operations",
+  "microesnext-compiler/string-operations",
 ]
 symbols = ["dep:microesnext-symbols", "microesnext-semantics?/symbols"]
 well-known-symbols = ["symbols"]
 atoms = ["strings", "microesnext-vm/atoms"]
-objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
-property-assignment = ["objects", "microesnext-vm/property-assignment"]
+objects = [
+  "dep:microesnext-objects",
+  "atoms",
+  "microesnext-vm/objects",
+  "microesnext-compiler/objects",
+]
+property-assignment = [
+  "objects",
+  "microesnext-vm/property-assignment",
+  "microesnext-compiler/property-assignment",
+]
 prototype-chain = ["objects", "microesnext-objects/prototype-chain"]
-functions = ["microesnext-arena/closures", "microesnext-vm/functions"]
+functions = [
+  "microesnext-arena/closures",
+  "microesnext-vm/functions",
+  "microesnext-compiler/functions",
+]
 callable-objects = [
   "functions",
   "objects",
@@ -103,112 +150,154 @@ function-arguments = [
   "locals",
   "dep:microesnext-parameters",
   "microesnext-vm/function-arguments",
+  "microesnext-compiler/function-arguments",
 ]
 integer-operations = [
   "dep:microesnext-integer-operations",
   "microesnext-vm/integer-operations",
+  "microesnext-compiler/integer-operations",
 ]
 integer-negation = [
   "dep:microesnext-integer-operations",
   "microesnext-vm/integer-negation",
+  "microesnext-compiler/integer-negation",
 ]
 instanceof = [
   "callable-objects",
   "microesnext-objects/instanceof",
   "microesnext-vm/instanceof",
+  "microesnext-compiler/instanceof",
 ]
 minimal-program = ["control-flow", "integer-operations", "locals"]
 equality = [
   "dep:microesnext-semantics",
   "microesnext-semantics/equality",
   "microesnext-vm/equality",
+  "microesnext-compiler/equality",
 ]
 logical-operations = [
   "dep:microesnext-semantics",
   "microesnext-semantics/logical-operations",
   "microesnext-vm/logical-operations",
+  "microesnext-compiler/logical-operations",
 ]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-vm/numbers",
   "microesnext-collections?/number-keys",
   "microesnext-semantics?/numbers",
+  "microesnext-compiler/numbers",
 ]
 number-operations = [
   "numbers",
   "integer-operations",
   "microesnext-vm/number-operations",
+  "microesnext-compiler/number-operations",
 ]
 number-negation = [
   "numbers",
   "integer-negation",
   "microesnext-vm/number-negation",
+  "microesnext-compiler/number-negation",
 ]
 number-coercion = [
   "numbers",
   "microesnext-vm/number-coercion",
+  "microesnext-compiler/number-coercion",
 ]
 number-division = [
   "numbers",
   "microesnext-vm/number-division",
+  "microesnext-compiler/number-division",
 ]
 number-remainder = [
   "numbers",
   "microesnext-vm/number-remainder",
+  "microesnext-compiler/number-remainder",
 ]
-nonterminal-conditionals = ["control-flow"]
-nonterminal-exceptions = ["control-flow", "exceptions"]
-nested-conditionals = ["nonterminal-conditionals"]
-nested-loops = ["nested-conditionals"]
-nested-exceptions = ["nonterminal-exceptions"]
-structured-statements = ["nested-exceptions", "nested-loops"]
+nonterminal-conditionals = ["control-flow", "microesnext-compiler/nonterminal-conditionals"]
+nonterminal-exceptions = [
+  "control-flow",
+  "exceptions",
+  "microesnext-compiler/nonterminal-exceptions",
+]
+nested-conditionals = [
+  "nonterminal-conditionals",
+  "microesnext-compiler/nested-conditionals",
+]
+nested-loops = ["nested-conditionals", "microesnext-compiler/nested-loops"]
+nested-exceptions = [
+  "nonterminal-exceptions",
+  "microesnext-compiler/nested-exceptions",
+]
+structured-statements = [
+  "nested-exceptions",
+  "nested-loops",
+  "microesnext-compiler/structured-statements",
+]
 string-number-coercion = [
   "number-coercion",
   "strings",
   "microesnext-numbers/string-coercion",
   "microesnext-vm/string-number-coercion",
+  "microesnext-compiler/string-number-coercion",
 ]
 typeof = [
   "strings",
   "dep:microesnext-semantics",
   "microesnext-semantics/typeof",
   "microesnext-vm/typeof",
+  "microesnext-compiler/typeof",
 ]
-exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
+exceptions = [
+  "dep:microesnext-exceptions",
+  "microesnext-vm/exceptions",
+  "microesnext-compiler/exceptions",
+]
 errors = ["dep:microesnext-errors"]
-environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
+environments = [
+  "dep:microesnext-environments",
+  "microesnext-vm/environments",
+  "microesnext-compiler/environments",
+]
 captured-assignment-expressions = [
   "environments",
   "microesnext-environments/assignment-expressions",
   "microesnext-vm/captured-assignment-expressions",
+  "microesnext-compiler/captured-assignment-expressions",
 ]
 property-assignment-expressions = [
   "objects",
   "microesnext-objects/assignment-expressions",
   "microesnext-vm/property-assignment-expressions",
+  "microesnext-compiler/property-assignment-expressions",
 ]
 recursive-functions = [
   "functions",
   "environments",
   "dep:microesnext-recursive-functions",
   "microesnext-vm/recursive-functions",
+  "microesnext-compiler/recursive-functions",
 ]
 recursive-constructors = [
   "constructors",
   "recursive-functions",
   "microesnext-objects/recursive-constructors",
   "microesnext-vm/recursive-constructors",
+  "microesnext-compiler/recursive-constructors",
 ]
 recursive-async-functions = [
   "async-functions",
   "environments",
   "microesnext-execution/recursive-async-functions",
   "microesnext-vm/recursive-async-functions",
+  "microesnext-compiler/recursive-async-functions",
 ]
 receivers = [
   "function-arguments",
   "dep:microesnext-receivers",
   "microesnext-vm/receivers",
+  "microesnext-compiler/receivers",
 ]
 collections = ["dep:microesnext-collections"]
 collection-iterators = ["collections", "iterators", "microesnext-collections/iterators"]
@@ -285,7 +374,7 @@ microesnext-vm-core.workspace = true
 path = "src/lib.rs"
 
 [dev-dependencies]
-microesnext-compiler.workspace = true
+microesnext-compiler = { path = "../microesnext-compiler", default-features = false }
 
 [[test]]
 name = "source"

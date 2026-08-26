@@ -46,7 +46,11 @@ pub struct Machine<'code, 'memory> {
 
 impl<'code, 'memory> Machine<'code, 'memory> {
     pub fn new(code: &'code [u8], memory: &'memory mut [u32]) -> Self {
-        Self::with_root_capacity(code, memory, 0)
+        #[cfg(feature = "atoms")]
+        let root_capacity = 1;
+        #[cfg(not(feature = "atoms"))]
+        let root_capacity = 0;
+        Self::with_root_capacity(code, memory, root_capacity)
     }
 
     pub fn with_root_capacity(
@@ -103,10 +107,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     #[cfg(feature = "atoms")]
     pub fn intern_atom(&mut self, bytes: &[u8]) -> Result<Value, Error> {
-        self.atoms
-            .as_mut()
-            .ok_or(Error::Type)?
-            .intern(self.core.arena_mut(), bytes)
+        self.intern(bytes)
     }
 
     #[inline(always)]
@@ -129,6 +130,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn release(&mut self, root: RootId) -> Result<Value, Error> {
         self.core.arena_mut().release(root)
+    }
+
+    #[cfg(feature = "atoms")]
+    fn intern(&mut self, bytes: &[u8]) -> Result<Value, Error> {
+        if self.atoms.is_none() {
+            self.atoms = Some(Atoms::new(self.core.arena_mut())?);
+        }
+        self.atoms
+            .as_mut()
+            .ok_or(Error::DanglingReference)?
+            .intern(self.core.arena_mut(), bytes)
     }
 
     pub fn grow_into<'next>(
@@ -237,8 +249,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "atoms")]
             Opcode::ConstAtom => {
                 let bytes = self.core.next_bytes()?;
-                let atoms = self.atoms.as_mut().ok_or(Error::Type)?;
-                let value = atoms.intern(self.core.arena_mut(), bytes)?;
+                let value = self.intern(bytes)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -293,20 +304,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "constructors")]
             Opcode::ToConstructor => {
-                self.atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"prototype")?;
-                let constructor_key = self
-                    .atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"constructor")?;
-                let prototype_key = self
-                    .atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"prototype")?;
+                self.intern(b"prototype")?;
+                let constructor_key = self.intern(b"constructor")?;
+                let prototype_key = self.intern(b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
                 let function = microesnext_objects::callable::new_constructor(
                     self.core.arena_mut(),
@@ -321,20 +321,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "class-constructors")]
             Opcode::ToClassConstructor => {
-                self.atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"prototype")?;
-                let constructor_key = self
-                    .atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"constructor")?;
-                let prototype_key = self
-                    .atoms
-                    .as_mut()
-                    .ok_or(Error::Type)?
-                    .intern(self.core.arena_mut(), b"prototype")?;
+                self.intern(b"prototype")?;
+                let constructor_key = self.intern(b"constructor")?;
+                let prototype_key = self.intern(b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
                 let constructor = microesnext_objects::class_constructor::new(
                     self.core.arena_mut(),

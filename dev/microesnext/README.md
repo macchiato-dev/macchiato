@@ -241,6 +241,13 @@ an explicit relational stopping condition.
 - `microesnext` is a small facade; its `async` and `async-functions` features
   are disabled by default.
 
+When source is compiled for a selected facade feature set, the source compiler
+must enable the matching syntax and bytecode features. The facade's test-only
+compiler dependency deliberately has no default features; each facade feature
+forwards only its corresponding compiler feature. Production runtime builds do
+not link the compiler, and reduced tests cannot accidentally emit bytecode for
+a capability absent from their runtime.
+
 The runtime is `no_std` and has no global-allocator or libc dependency. Its
 arena borrows a caller-supplied word slice; only compiler tooling uses `alloc`.
 
