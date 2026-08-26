@@ -3889,9 +3889,9 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.equality(binding)?;
+        let (used_binding, mut kind) = self.bitwise_and(binding)?;
         while self.consume_bitwise_or() {
-            let (_, right) = self.equality(None)?;
+            let (_, right) = self.bitwise_and(None)?;
             self.output.push(Opcode::BitwiseOrI30 as u8);
             kind = match (kind, right) {
                 (TermKind::I30(left), TermKind::I30(right)) => TermKind::I30(left | right),
@@ -3899,6 +3899,36 @@ impl Parser<'_> {
             };
         }
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "bitwise-operations")]
+    fn bitwise_and(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.equality(binding)?;
+        while self.consume_bitwise_and() {
+            let (_, right) = self.equality(None)?;
+            self.output.push(Opcode::BitwiseAndI30 as u8);
+            kind = match (kind, right) {
+                (TermKind::I30(left), TermKind::I30(right)) => TermKind::I30(left & right),
+                _ => TermKind::General,
+            };
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "bitwise-operations")]
+    fn consume_bitwise_and(&mut self) -> bool {
+        self.whitespace();
+        if self.source.get(self.offset) != Some(&b'&')
+            || self.source.get(self.offset + 1) == Some(&b'&')
+        {
+            return false;
+        }
+        self.offset += 1;
+        self.whitespace();
+        true
     }
 
     #[cfg(feature = "bitwise-operations")]

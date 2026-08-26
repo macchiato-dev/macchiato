@@ -182,6 +182,8 @@ pub enum Opcode {
     CallSuperArguments = 124,
     #[cfg(feature = "getters")]
     ToGetter = 125,
+    #[cfg(feature = "bitwise-operations")]
+    BitwiseAndI30 = 126,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -347,6 +349,8 @@ impl TryFrom<u8> for Opcode {
             124 => Ok(Self::CallSuperArguments),
             #[cfg(feature = "getters")]
             125 => Ok(Self::ToGetter),
+            #[cfg(feature = "bitwise-operations")]
+            126 => Ok(Self::BitwiseAndI30),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
