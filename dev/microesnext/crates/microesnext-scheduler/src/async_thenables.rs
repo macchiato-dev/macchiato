@@ -1,8 +1,6 @@
-#![no_std]
-
-use microesnext_async::Resolver as AsyncResolver;
+use crate::async_driver::Resolver as AsyncResolver;
+use crate::thenables::{Jobs, Prepared};
 use microesnext_promises::{JobQueue, is_promise, pending, then};
-use microesnext_thenables::{Jobs, Prepared};
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::Machine;
 
@@ -41,7 +39,7 @@ impl AsyncResolver for Resolver<'_, '_> {
     ) -> Result<(), Error> {
         let then_key = machine.root(self.then_key)?;
         if let Prepared::Job(job) =
-            microesnext_thenables::prepare(machine, queue, promise, value, then_key)?
+            crate::thenables::prepare(machine, queue, promise, value, then_key)?
         {
             self.jobs.push(machine, job)?;
         }
@@ -59,7 +57,7 @@ impl AsyncResolver for Resolver<'_, '_> {
         if is_promise(machine.arena(), awaited)
             || !microesnext_objects::is_object(machine.arena(), awaited)
         {
-            return microesnext_async::park_continuation(
+            return crate::async_driver::park_continuation(
                 machine,
                 queue,
                 destination,
@@ -111,11 +109,11 @@ impl AsyncResolver for Resolver<'_, '_> {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_async::Progress;
+    use crate::async_driver::Progress;
+    use crate::thenables::JobSlot as ThenableJobSlot;
     use microesnext_bytecode::Opcode;
     use microesnext_execution::async_functions::{FrameSlot, Frames};
     use microesnext_promises::{JobSlot, Settlement, settled_result};
-    use microesnext_thenables::JobSlot as ThenableJobSlot;
 
     use super::*;
 
@@ -171,7 +169,7 @@ mod tests {
         let mut thenable_jobs = Jobs::new(&mut thenable_slots);
         let mut resolver = Resolver::new(&mut machine, &mut thenable_jobs, then_key).unwrap();
 
-        let Progress::Complete(promise) = microesnext_async::run_functions_with(
+        let Progress::Complete(promise) = crate::async_driver::run_functions_with(
             &mut machine,
             &mut promise_jobs,
             &mut frames,
@@ -250,7 +248,7 @@ mod tests {
         let mut thenable_jobs = Jobs::new(&mut thenable_slots);
         let mut resolver = Resolver::new(&mut machine, &mut thenable_jobs, then_key).unwrap();
 
-        let Progress::Complete(promise) = microesnext_async::run_functions_with(
+        let Progress::Complete(promise) = crate::async_driver::run_functions_with(
             &mut machine,
             &mut promise_jobs,
             &mut frames,
@@ -273,7 +271,7 @@ mod tests {
 
         let mut resolver = Resolver::new(&mut machine, &mut thenable_jobs, then_key).unwrap();
         assert_eq!(
-            microesnext_async::run_one_function_reaction_with(
+            crate::async_driver::run_one_function_reaction_with(
                 &mut machine,
                 &mut promise_jobs,
                 &mut frames,

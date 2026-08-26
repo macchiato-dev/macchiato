@@ -213,8 +213,8 @@ an explicit relational stopping condition.
 - The Promise `resolvers` feature adds compact guest-callable resolve/reject
   records. Each pair shares one arena cell, so exactly one call can win without
   allocating two independent closures.
-- `microesnext-thenables` composes ordinary object lookup, receiver-aware
-  calls, resolving functions, and deferred assimilation jobs. A controller
+- The scheduler `thenables` feature composes ordinary object lookup,
+  receiver-aware calls, resolving functions, and deferred assimilation jobs. A controller
   schedules guest `then` code instead of running it during property resolution;
   resolving to another thenable produces another rooted job rather than native
   recursion. Builds without `thenables` link none of this composition.
@@ -226,14 +226,14 @@ an explicit relational stopping condition.
   closure records, bounded caller frames, and recursive async construction.
   A plain synchronous VM retains none of those paths.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
-- `microesnext-async` adds scheduler-facing async types without entering the
-  synchronous VM's dependency graph.
+- `microesnext-scheduler` contains independently gated async driving, Promise
+  jobs, object-thenable jobs, and async-thenable resolution policies.
 - The execution `async-functions` feature stores async closures and packages
   evaluated calls for independent guest contexts. Its bounded, caller-supplied
   frame stack connects nested calls to outer promises; caller suspension and
   promise orchestration remain absent from ordinary function builds.
-- `microesnext-async-thenables` supplies a statically selected policy for
-  object assimilation at both async return and `await`. Object operands use a
+- The scheduler `async-thenables` feature supplies a statically selected policy
+  for object assimilation at both async return and `await`. Object operands use a
   small intermediate Promise and the bounded thenable-job queue; primitives
   and native Promises retain the ordinary path. The ordinary async driver
   remains monomorphized with its smaller native-Promise resolver when this

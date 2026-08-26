@@ -1,6 +1,6 @@
 [package]
-name = "microesnext-async"
-description = "Optional async scheduling types for MicroESNext"
+name = "microesnext-scheduler"
+description = "Optional Promise, async, and thenable scheduling for MicroESNext"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -9,7 +9,13 @@ version.workspace = true
 
 [features]
 default = []
-promises = ["dep:microesnext-arena", "dep:microesnext-promises", "microesnext-vm/functions"]
+async = ["microesnext-vm/async"]
+promises = [
+  "async",
+  "dep:microesnext-arena",
+  "dep:microesnext-promises",
+  "microesnext-vm/functions",
+]
 resolution = ["promises", "microesnext-promises/resolution"]
 functions = [
   "resolution",
@@ -17,16 +23,29 @@ functions = [
   "microesnext-execution/async-functions",
   "microesnext-vm/async-functions",
 ]
+thenables = [
+  "dep:microesnext-arena",
+  "microesnext-arena/closures",
+  "dep:microesnext-objects",
+  "dep:microesnext-promises",
+  "microesnext-promises/resolvers",
+  "microesnext-vm/objects",
+  "microesnext-vm/promise-resolvers",
+  "microesnext-vm/receivers",
+]
+async-thenables = ["functions", "thenables"]
 
 [dependencies]
 microesnext-types.workspace = true
-microesnext-vm = { workspace = true, features = ["async"] }
+microesnext-vm.workspace = true
 microesnext-promises = { workspace = true, optional = true }
 microesnext-arena = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
+microesnext-objects = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-bytecode.workspace = true
+microesnext-compiler.workspace = true
 microesnext-arena = { workspace = true, features = ["closures"] }
 
 [lib]

@@ -50,7 +50,10 @@ array-assignment-expressions = [
   "microesnext-vm/array-assignment-expressions",
 ]
 array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
-async = ["dep:microesnext-async"]
+async = [
+  "dep:microesnext-scheduler",
+  "microesnext-scheduler/async",
+]
 async-functions = [
   "async",
   "functions",
@@ -58,14 +61,14 @@ async-functions = [
   "promise-resolution",
   "dep:microesnext-execution",
   "microesnext-execution/async-functions",
-  "microesnext-async/functions",
+  "microesnext-scheduler/functions",
   "microesnext-vm/async-functions",
   "microesnext-semantics?/async-functions",
 ]
 async-thenables = [
   "async-functions",
   "thenables",
-  "dep:microesnext-async-thenables",
+  "microesnext-scheduler/async-thenables",
 ]
 strings = [
   "dep:microesnext-strings",
@@ -242,20 +245,20 @@ thenables = [
   "objects",
   "promise-resolvers",
   "receivers",
-  "dep:microesnext-thenables",
+  "dep:microesnext-scheduler",
+  "microesnext-scheduler/thenables",
 ]
 promise-jobs = [
   "async",
   "functions",
   "promise-resolution",
-  "microesnext-async/resolution",
+  "microesnext-scheduler/resolution",
 ]
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-async = { workspace = true, optional = true }
+microesnext-scheduler = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
-microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
@@ -273,7 +276,6 @@ microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
-microesnext-thenables = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true

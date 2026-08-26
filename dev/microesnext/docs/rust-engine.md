@@ -82,7 +82,8 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   the controller, preserving ECMAScript deferral without native recursion.
 - Async completion is generic over a statically dispatched resolution policy.
   Its ordinary public entry points monomorphize with native Promise resolution;
-  `microesnext-async-thenables` supplies a separate policy holding a bounded,
+  The scheduler `async-thenables` feature supplies a separate policy holding a
+  bounded,
   caller-owned thenable-job queue. The same policy can park an `await` on an
   intermediate Promise before resolving an object operand, while native
   Promises and primitives retain the direct path. This adds no trait object,

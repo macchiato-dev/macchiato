@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_objects::{get, is_object};
 use microesnext_promises::{JobQueue, Settlement, is_promise, settle};
 use microesnext_types::{Error, RootId, Value};

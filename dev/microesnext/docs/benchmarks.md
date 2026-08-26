@@ -284,7 +284,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Array iterators | 10,756 | 4,205 |
 | Atoms with strings | 9,779 | 4,219 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 23,191 | 8,848 |
+| Async functions | 23,191 | 8,840 |
 | Collections | 3,285 | 1,507 |
 | Control flow and base truthiness | 3,486 | 1,657 |
 | Control flow with number/string truthiness | 8,708 | 3,736 |
@@ -298,7 +298,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Closures with shared environments | 11,173 | 4,432 |
 | Functions | 6,962 | 3,034 |
 | Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 25,797 | 9,530 |
+| Recursive async functions | 25,797 | 9,524 |
 | Functions with local parameters | 10,897 | 4,357 |
 | Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
@@ -333,7 +333,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Native Promise resolution | 12,664 | 5,239 |
 | One-shot Promise resolvers | 20,494 | 7,884 |
 | Object thenable assimilation | 34,387 | 12,615 |
-| Async return thenable assimilation | 46,454 | 16,355 |
+| Async return thenable assimilation | 46,454 | 16,345 |
 | Weak collections | 2,051 | 1,001 |
 | All capabilities | 110,159 | 34,934 |
 
@@ -530,14 +530,14 @@ surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
 for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
 cost from the optional crate.
 
-The 23,191-byte (8,848 gzip) async-functions row executes async closure entry,
+The 23,191-byte (8,840 gzip) async-functions row executes async closure entry,
 returns a pending outer Promise, parks an `await`, runs its queued reaction,
 and verifies fulfillment. The dependency check also proves that selecting
 plain `async` does not retain async-closure operations, while selecting
 `async-functions` does not pull in environment cells, parameter frames, or
 recursive-function storage. The minimal artifact remains 1,984 bytes.
 
-The 25,797-byte (9,530 gzip) recursive-async row adds and exercises only the
+The 25,797-byte (9,524 gzip) recursive-async row adds and exercises only the
 composition that initializes an async closure's private self cell. Its graph
 contains neither `microesnext-recursive-functions` nor parameter-frame
 storage; conversely, ordinary async and ordinary recursive rows exclude
@@ -568,8 +568,8 @@ settles an intermediate Promise whose reaction restores the guest
 continuation. Refactoring async resolution behind its generic static policy
 reduced the isolated async-functions artifact by 72 raw bytes rather than
 adding dispatch overhead. The facade dependency check proves that ordinary
-`async-functions` includes neither `microesnext-thenables` nor
-`microesnext-async-thenables`.
+`async-functions` retains neither object-thenable jobs nor the
+async-thenable policy.
 Re-run them with:
 
 ```sh

@@ -8,8 +8,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
- "microesnext-async",
- "microesnext-async-thenables",
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
@@ -26,10 +24,10 @@ dependencies = [
  "microesnext-promises",
  "microesnext-receivers",
  "microesnext-recursive-functions",
+ "microesnext-scheduler",
  "microesnext-semantics",
  "microesnext-strings",
  "microesnext-symbols",
- "microesnext-thenables",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -49,33 +47,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-iterators",
  "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-async"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-bytecode",
- "microesnext-execution",
- "microesnext-promises",
- "microesnext-types",
- "microesnext-vm",
-]
-
-[[package]]
-name = "microesnext-async-thenables"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-async",
- "microesnext-bytecode",
- "microesnext-execution",
- "microesnext-objects",
- "microesnext-promises",
- "microesnext-thenables",
- "microesnext-types",
- "microesnext-vm",
 ]
 
 [[package]]
@@ -268,6 +239,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-scheduler"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-bytecode",
+ "microesnext-compiler",
+ "microesnext-execution",
+ "microesnext-objects",
+ "microesnext-promises",
+ "microesnext-types",
+ "microesnext-vm",
+]
+
+[[package]]
 name = "microesnext-semantics"
 version = "0.0.0"
 dependencies = [
@@ -293,19 +278,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-strings",
  "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-thenables"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-bytecode",
- "microesnext-compiler",
- "microesnext-objects",
- "microesnext-promises",
- "microesnext-types",
- "microesnext-vm",
 ]
 
 [[package]]

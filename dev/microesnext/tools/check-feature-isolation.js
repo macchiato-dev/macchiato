@@ -69,14 +69,15 @@ const execution = "microesnext-execution";
 const suspension = execution;
 const recursiveFunctions = "microesnext-recursive-functions";
 const asyncFunctions = execution;
-const asyncThenables = "microesnext-async-thenables";
+const scheduler = "microesnext-scheduler";
+const asyncThenables = scheduler;
 const recursiveAsyncFunctions = execution;
 const promises = "microesnext-promises";
 const promiseResolution = promises;
 const promiseResolvers = promises;
 const errors = "microesnext-errors";
 const receivers = "microesnext-receivers";
-const thenables = "microesnext-thenables";
+const thenables = scheduler;
 const integerOperations = "microesnext-integer-operations";
 const semantics = "microesnext-semantics";
 const equality = semantics;
@@ -354,7 +355,6 @@ assertPresence(
   [],
   [
     asyncFunctions,
-    asyncThenables,
     environments,
     errors,
     equality,
@@ -367,7 +367,6 @@ assertPresence(
     recursiveFunctions,
     receivers,
     suspension,
-    thenables,
     typeOf,
   ],
 );
@@ -570,7 +569,7 @@ assertPresence(
 );
 assertPresence(
   ["async"],
-  [suspension],
+  [scheduler, suspension],
   [
     environments,
     errors,
@@ -623,7 +622,6 @@ assertPresence(
   ],
   [
     asyncFunctions,
-    asyncThenables,
     environments,
     recursiveAsyncFunctions,
     suspension,
@@ -636,14 +634,13 @@ assertPresence(
     errors,
     "microesnext-promises",
     promiseResolution,
+    scheduler,
     suspension,
   ],
   [
-    asyncThenables,
     environments,
     parameters,
     recursiveFunctions,
-    thenables,
   ],
 );
 assertPresence(
@@ -670,6 +667,7 @@ assertPresence(
     "microesnext-promises",
     promiseResolution,
     recursiveAsyncFunctions,
+    scheduler,
     suspension,
   ],
   [parameters, recursiveFunctions],

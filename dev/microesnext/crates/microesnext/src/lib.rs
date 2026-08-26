@@ -36,13 +36,13 @@ pub use microesnext_arrays::iterators as array_iterators;
 pub use microesnext_strings::atoms;
 
 #[cfg(feature = "async")]
-pub use microesnext_async as r#async;
+pub use microesnext_scheduler::async_driver as r#async;
 
 #[cfg(feature = "async-functions")]
 pub use microesnext_execution::async_functions;
 
 #[cfg(feature = "async-thenables")]
-pub use microesnext_async_thenables as async_thenables;
+pub use microesnext_scheduler::async_thenables;
 
 #[cfg(feature = "collections")]
 pub use microesnext_collections as collections;
@@ -154,4 +154,4 @@ pub use microesnext_objects::prototype_chain;
 pub use microesnext_promises::resolvers as promise_resolvers;
 
 #[cfg(feature = "thenables")]
-pub use microesnext_thenables as thenables;
+pub use microesnext_scheduler::thenables;

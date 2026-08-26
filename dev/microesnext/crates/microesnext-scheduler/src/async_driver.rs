@@ -1,5 +1,3 @@
-#![no_std]
-
 #[cfg(feature = "promises")]
 use microesnext_arena::BlockKind;
 #[cfg(feature = "resolution")]
