@@ -7,8 +7,14 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+resolution = ["dep:microesnext-errors"]
+resolvers = ["resolution", "microesnext-arena/promise-resolvers"]
+
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-errors = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]
@@ -16,4 +22,3 @@ microesnext-objects.workspace = true
 
 [lib]
 path = "src/lib.rs"
-

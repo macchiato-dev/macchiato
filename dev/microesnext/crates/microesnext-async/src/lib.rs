@@ -3,7 +3,7 @@
 #[cfg(feature = "promises")]
 use microesnext_arena::BlockKind;
 #[cfg(feature = "resolution")]
-use microesnext_promise_resolution::resolve_native;
+use microesnext_promises::resolution::resolve_native;
 #[cfg(feature = "promises")]
 use microesnext_promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 #[cfg(feature = "functions")]

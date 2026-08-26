@@ -145,13 +145,13 @@ pub use microesnext_collections::weak as weak_collections;
 pub use microesnext_promises as promises;
 
 #[cfg(feature = "promise-resolution")]
-pub use microesnext_promise_resolution as promise_resolution;
+pub use microesnext_promises::resolution as promise_resolution;
 
 #[cfg(feature = "prototype-chain")]
 pub use microesnext_objects::prototype_chain;
 
 #[cfg(feature = "promise-resolvers")]
-pub use microesnext_promise_resolvers as promise_resolvers;
+pub use microesnext_promises::resolvers as promise_resolvers;
 
 #[cfg(feature = "thenables")]
 pub use microesnext_thenables as thenables;

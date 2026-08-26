@@ -331,9 +331,9 @@ LTO from merely discarding an enabled but unused dependency.
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
 | Native Promise resolution | 12,664 | 5,239 |
-| One-shot Promise resolvers | 20,479 | 7,910 |
-| Object thenable assimilation | 34,353 | 12,618 |
-| Async return thenable assimilation | 46,429 | 16,350 |
+| One-shot Promise resolvers | 20,494 | 7,884 |
+| Object thenable assimilation | 34,387 | 12,615 |
+| Async return thenable assimilation | 46,454 | 16,355 |
 | Weak collections | 2,051 | 1,001 |
 | All capabilities | 110,159 | 34,934 |
 
@@ -547,13 +547,13 @@ The 12,664-byte (5,239 gzip) native-resolution row creates two Promises,
 attaches an identity reaction, settles the source, forwards its queued result,
 verifies the destination, and rejects self-resolution with a guest TypeError.
 The isolated error value is 2,520 bytes (1,195 gzip). The 4,840-byte
-Promise-storage row remains unchanged and its dependency graph excludes
-`microesnext-promise-resolution`.
+Promise-storage row remains unchanged; its final Wasm excludes native
+resolution even though both capabilities now share one package.
 
-The 20,479-byte (7,910 gzip) resolver row invokes a compact resolving function
+The 20,494-byte (7,884 gzip) resolver row invokes a compact resolving function
 through guest call bytecode, handles its payload outside the invariant core,
 resumes the caller with `undefined`, and verifies that the destination settles.
-The 34,353-byte (12,618 gzip) thenable row additionally performs ordinary
+The 34,387-byte (12,615 gzip) thenable row additionally performs ordinary
 property lookup, invokes a real guest closure with its receiver, and fulfills
 through the one-shot pair. Unit tests cover deferred execution, receiver
 identity, rejection before resolution, ignored throws after resolution, and a

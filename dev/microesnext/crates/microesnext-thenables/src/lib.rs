@@ -111,7 +111,7 @@ pub fn prepare(
     then_key: Value,
 ) -> Result<Prepared, Error> {
     if destination == resolution || is_promise(machine.arena(), resolution) {
-        microesnext_promise_resolution::resolve_native(
+        microesnext_promises::resolution::resolve_native(
             machine.arena_mut(),
             queue,
             destination,
@@ -150,7 +150,7 @@ pub fn prepare(
             return Err(error);
         }
     };
-    let pair = match microesnext_promise_resolvers::new(machine.arena_mut(), destination) {
+    let pair = match microesnext_promises::resolvers::new(machine.arena_mut(), destination) {
         Ok(pair) => pair,
         Err(error) => {
             machine.release(receiver)?;
@@ -233,7 +233,7 @@ fn run_inner(
                         }
                     }
                     Settlement::Rejected => {
-                        microesnext_promise_resolvers::settle_call(
+                        microesnext_promises::resolvers::settle_call(
                             machine.arena_mut(),
                             queue,
                             call,
@@ -245,12 +245,12 @@ fn run_inner(
             Outcome::Complete(_) => return Ok(finished(chained)),
             Outcome::Throw(reason) => {
                 let reject = machine.root(job.reject)?;
-                if let Some(call) = microesnext_promise_resolvers::reject_if_open(
+                if let Some(call) = microesnext_promises::resolvers::reject_if_open(
                     machine.arena_mut(),
                     reject,
                     reason,
                 )? {
-                    microesnext_promise_resolvers::settle_call(machine.arena_mut(), queue, call)?;
+                    microesnext_promises::resolvers::settle_call(machine.arena_mut(), queue, call)?;
                 }
                 return Ok(finished(chained));
             }

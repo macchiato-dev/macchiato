@@ -209,9 +209,9 @@ an explicit relational stopping condition.
   rooted FIFO job ring; it does not require a native allocator or Rust futures.
 - `microesnext-errors` supplies compact guest error identities without forcing
   message strings, stacks, objects, or exception handlers into every build.
-- `microesnext-promise-resolution` optionally adopts native Promise results.
-  Plain Promise storage does not link the resolver.
-- `microesnext-promise-resolvers` adds compact guest-callable resolve/reject
+- The Promise `resolution` feature optionally adopts native Promise results.
+  Plain Promise storage does not retain the resolver path.
+- The Promise `resolvers` feature adds compact guest-callable resolve/reject
   records. Each pair shares one arena cell, so exactly one call can win without
   allocating two independent closures.
 - `microesnext-thenables` composes ordinary object lookup, receiver-aware

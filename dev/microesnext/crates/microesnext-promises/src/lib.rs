@@ -1,5 +1,10 @@
 #![no_std]
 
+#[cfg(feature = "resolution")]
+pub mod resolution;
+#[cfg(feature = "resolvers")]
+pub mod resolvers;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, RootId, Value};
 

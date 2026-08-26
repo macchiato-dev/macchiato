@@ -171,7 +171,8 @@ receivers = [
 ]
 promise-resolvers = [
   "function-arguments",
-  "dep:microesnext-promise-resolvers",
+  "dep:microesnext-promises",
+  "microesnext-promises/resolvers",
   "microesnext-semantics?/promise-resolvers",
 ]
 typeof = [
@@ -198,7 +199,7 @@ microesnext-environments = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
-microesnext-promise-resolvers = { workspace = true, optional = true }
+microesnext-promises = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
