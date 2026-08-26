@@ -15,6 +15,7 @@ default = [
   "array-indexing",
   "array-assignment-expressions",
   "array-destructuring-assignments",
+  "array-destructuring-declarations",
   "async-functions",
   "control-flow",
   "conditional-expressions",
@@ -85,6 +86,11 @@ array-destructuring-assignments = [
   "array-indexing",
   "expression-statements",
   "local-assignment-expressions",
+  "microesnext-bytecode/stack-operations",
+]
+array-destructuring-declarations = [
+  "array-indexing",
+  "locals",
   "microesnext-bytecode/stack-operations",
 ]
 async = ["microesnext-bytecode/async"]

@@ -2084,6 +2084,10 @@ impl Parser<'_> {
         }
         loop {
             self.whitespace();
+            #[cfg(feature = "array-destructuring-declarations")]
+            if self.consume_raw(b'[') {
+                return self.array_destructuring_declaration();
+            }
             let (start, end) = self.identifier()?;
             let existing = self.locals.iter().position(|binding| {
                 self.source[binding.start..binding.end] == self.source[start..end]
@@ -2146,6 +2150,69 @@ impl Parser<'_> {
                 break;
             }
         }
+        if !self.consume(b';') {
+            return Err(self.error(";"));
+        }
+        self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "array-destructuring-declarations")]
+    fn array_destructuring_declaration(&mut self) -> Result<(), CompileError> {
+        let mut names = Vec::new();
+        loop {
+            self.whitespace();
+            names.push(self.identifier()?);
+            if self.consume(b']') {
+                break;
+            }
+            if !self.consume(b',') {
+                return Err(self.error(", or ]"));
+            }
+        }
+        for (index, (start, end)) in names.iter().enumerate() {
+            if self
+                .locals
+                .iter()
+                .any(|binding| self.source[binding.start..binding.end] == self.source[*start..*end])
+                || names[..index].iter().any(|(other_start, other_end)| {
+                    self.source[*other_start..*other_end] == self.source[*start..*end]
+                })
+            {
+                return Err(self.error("unique destructuring bindings"));
+            }
+        }
+        if !self.consume(b'=') {
+            return Err(self.error("="));
+        }
+        self.expression(None)?;
+        let first_slot = self.locals.len();
+        for (index, (start, end)) in names.into_iter().enumerate() {
+            let slot = first_slot
+                .checked_add(index)
+                .and_then(|slot| u16::try_from(slot).ok())
+                .ok_or_else(|| self.error("fewer than 65536 local bindings"))?;
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::ConstI30 as u8);
+            self.output.extend_from_slice(
+                &i32::try_from(index)
+                    .map_err(|_| self.error("an array index"))?
+                    .to_le_bytes(),
+            );
+            self.output.push(Opcode::GetIndex as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.locals.push(Binding {
+                start,
+                end,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+        }
+        self.output.push(Opcode::DropTop as u8);
         if !self.consume(b';') {
             return Err(self.error(";"));
         }
