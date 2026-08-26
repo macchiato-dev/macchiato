@@ -153,6 +153,7 @@ number-remainder = [
   "dep:microesnext-number-remainder",
   "microesnext-vm/number-remainder",
 ]
+nonterminal-conditionals = ["control-flow"]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -417,6 +418,11 @@ required-features = ["control-flow", "local-assignment-expressions"]
 name = "minimal-program"
 path = "tests/minimal_program.rs"
 required-features = ["minimal-program"]
+
+[[test]]
+name = "nonterminal-conditionals"
+path = "tests/nonterminal_conditionals.rs"
+required-features = ["locals", "nonterminal-conditionals"]
 
 [[test]]
 name = "equality"

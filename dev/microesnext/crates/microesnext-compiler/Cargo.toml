@@ -38,6 +38,7 @@ default = [
   "number-coercion",
   "number-division",
   "number-remainder",
+  "nonterminal-conditionals",
   "string-number-coercion",
   "typeof",
   "number-operations",
@@ -123,6 +124,7 @@ number-negation = [
 number-coercion = ["microesnext-bytecode/number-coercion"]
 number-division = ["numbers", "microesnext-bytecode/number-division"]
 number-remainder = ["numbers", "microesnext-bytecode/number-remainder"]
+nonterminal-conditionals = ["control-flow"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]
