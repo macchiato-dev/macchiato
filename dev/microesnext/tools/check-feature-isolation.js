@@ -682,7 +682,7 @@ assertPresence(
 assertPresence(
   ["expression-statements"],
   [],
-  ["microesnext-exceptions", objects],
+  [execution, objects],
 );
 assertPresence(
   ["array-assignment-expressions"],
@@ -865,13 +865,14 @@ assertObjectFeatures(["array-iterators"], ["arrays", "array-iterators", "iterato
 assertObjectFeatures(["collections"], ["collections"], ["arrays", "collection-iterators", "iterators", "weak-collections"]);
 assertObjectFeatures(["collection-entry-iterators"], ["arrays", "collection-entry-iterators", "collection-iterators", "collections", "iterators"], ["weak-collections"]);
 assertObjectFeatures(["weak-collections"], ["collections", "weak-collections"], ["arrays", "iterators"]);
-assertExecutionFeatures([], [], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "recursive-async-functions", "suspension"]);
-assertExecutionFeatures(["promises"], ["promises"], ["async-functions", "promise-resolution", "promise-resolvers", "suspension"]);
-assertExecutionFeatures(["promise-resolution"], ["promise-resolution", "promises"], ["async-functions", "promise-resolvers", "suspension"]);
-assertExecutionFeatures(["promise-resolvers"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "suspension"]);
-assertExecutionFeatures(["thenables"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "suspension"]);
-assertExecutionFeatures(["async-functions"], ["async-functions", "promise-resolution", "promises", "suspension"], ["promise-resolvers", "recursive-async-functions"]);
-assertExecutionFeatures(["async-thenables"], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "suspension"], ["recursive-async-functions"]);
-assertExecutionFeatures(["recursive-async-functions"], ["async-functions", "promise-resolution", "promises", "recursive-async-functions", "suspension"], ["promise-resolvers"]);
+assertExecutionFeatures([], [], ["async-functions", "exceptions", "promise-resolution", "promise-resolvers", "promises", "recursive-async-functions", "suspension"]);
+assertExecutionFeatures(["exceptions"], ["exceptions"], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "suspension"]);
+assertExecutionFeatures(["promises"], ["promises"], ["async-functions", "exceptions", "promise-resolution", "promise-resolvers", "suspension"]);
+assertExecutionFeatures(["promise-resolution"], ["promise-resolution", "promises"], ["async-functions", "exceptions", "promise-resolvers", "suspension"]);
+assertExecutionFeatures(["promise-resolvers"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "exceptions", "suspension"]);
+assertExecutionFeatures(["thenables"], ["promise-resolution", "promise-resolvers", "promises"], ["async-functions", "exceptions", "suspension"]);
+assertExecutionFeatures(["async-functions"], ["async-functions", "promise-resolution", "promises", "suspension"], ["exceptions", "promise-resolvers", "recursive-async-functions"]);
+assertExecutionFeatures(["async-thenables"], ["async-functions", "promise-resolution", "promise-resolvers", "promises", "suspension"], ["exceptions", "recursive-async-functions"]);
+assertExecutionFeatures(["recursive-async-functions"], ["async-functions", "promise-resolution", "promises", "recursive-async-functions", "suspension"], ["exceptions", "promise-resolvers"]);
 
 console.log("feature dependency isolation verified");

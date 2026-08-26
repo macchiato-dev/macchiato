@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_types::{Error, Value};
 use microesnext_vm_core::Core;
 

@@ -344,6 +344,9 @@ the async-functions probe decreased from 23,191 to 23,176 bytes. The shared
 crate therefore removes a package boundary without forcing Promise code into
 smaller execution builds or adding runtime dispatch.
 
+Folding exception-handler state into its own `microesnext-execution` feature
+also preserved the exception probe at 3,846 raw Wasm bytes.
+
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
 objects, and ordinary `instanceof`. The earlier 78,513-byte row was a broad

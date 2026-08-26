@@ -137,7 +137,11 @@ string-number-coercion = [
   "strings",
   "microesnext-values/string-coercion",
 ]
-exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
+exceptions = [
+  "dep:microesnext-execution",
+  "microesnext-execution/exceptions",
+  "microesnext-bytecode/exceptions",
+]
 environments = ["dep:microesnext-bindings", "microesnext-bindings/environments", "microesnext-bytecode/environments"]
 captured-assignment-expressions = [
   "environments",
@@ -198,7 +202,6 @@ microesnext-vm-core.workspace = true
 microesnext-objects = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-exceptions = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
 microesnext-values = { workspace = true, optional = true }
 

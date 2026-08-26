@@ -5,7 +5,7 @@ use microesnext_arena::Arena;
 use microesnext_arena::closures::{capture, capture_stack, entry};
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "exceptions")]
-use microesnext_exceptions::Handlers;
+use microesnext_execution::exceptions::Handlers;
 #[cfg(feature = "async")]
 use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]

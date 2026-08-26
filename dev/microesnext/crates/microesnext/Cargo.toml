@@ -262,7 +262,8 @@ typeof = [
   "microesnext-compiler/typeof",
 ]
 exceptions = [
-  "dep:microesnext-exceptions",
+  "dep:microesnext-execution",
+  "microesnext-execution/exceptions",
   "microesnext-vm/exceptions",
   "microesnext-compiler/exceptions",
 ]
@@ -362,7 +363,6 @@ microesnext-scheduler = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-values = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true

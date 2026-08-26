@@ -90,7 +90,7 @@ pub use microesnext_values::numbers::remainder as number_remainder;
 pub use microesnext_values::numbers::string_coercion as string_number_coercion;
 
 #[cfg(feature = "exceptions")]
-pub use microesnext_exceptions as exceptions;
+pub use microesnext_execution::exceptions;
 
 #[cfg(feature = "errors")]
 pub use microesnext_values::errors;
