@@ -863,8 +863,13 @@ impl Parser<'_> {
         let prefix = core::mem::take(&mut self.output);
         self.whitespace();
         if self.source.get(self.offset) != Some(&b')') {
-            self.expression(None)?;
-            self.output.push(Opcode::DropTop as u8);
+            loop {
+                self.expression(None)?;
+                self.output.push(Opcode::DropTop as u8);
+                if !self.consume(b',') {
+                    break;
+                }
+            }
         }
         if !self.consume(b')') {
             return Err(self.error(")"));
@@ -926,10 +931,10 @@ impl Parser<'_> {
             self.offset = start;
             return Ok(None);
         }
-        if self.locals.iter().any(|binding| {
+        if let Some(binding) = self.locals.iter().rev().copied().find(|binding| {
             self.source[binding.start..binding.end] == self.source[name_start..name_end]
         }) {
-            return Err(self.error("a unique loop binding"));
+            return Ok(Some(binding));
         }
         let slot = u16::try_from(self.locals.len())
             .map_err(|_| self.error("fewer than 65536 local bindings"))?;
@@ -1530,6 +1535,11 @@ impl Parser<'_> {
             }
             if self.try_word(b"while") {
                 self.begin_structured(&mut frames, StructuredStart::Loop)?;
+                continue;
+            }
+            #[cfg(feature = "for-statements")]
+            if self.try_word(b"for") {
+                self.for_loop()?;
                 continue;
             }
             if self.try_word(b"try") {
@@ -3651,6 +3661,24 @@ impl Parser<'_> {
         #[cfg(feature = "captured-assignment-expressions")]
         if let Some(capture) = self.outer_binding_at_offset() {
             self.offset += capture.end - capture.start;
+            #[cfg(feature = "compound-assignment-expressions")]
+            if let Some(subtracting) = self.consume_compound_addition() {
+                let index = self.intern_capture(capture)?;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
+                self.output.push(Opcode::DuplicateTop as u8);
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+                self.output.push(Opcode::ToNumber as u8);
+                self.expression(None)?;
+                self.output.push(Opcode::ToNumber as u8);
+                self.output.push(if subtracting {
+                    Opcode::SubtractNumber as u8
+                } else {
+                    Opcode::AddNumber as u8
+                });
+                self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+                return Ok(false);
+            }
             if self.consume_plain_assignment() {
                 let index = self.intern_capture(capture)?;
                 self.output.push(Opcode::LoadCapture as u8);

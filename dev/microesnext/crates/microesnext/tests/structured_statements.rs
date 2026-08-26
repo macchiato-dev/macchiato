@@ -51,6 +51,16 @@ fn a_single_statement_conditional_can_control_a_for_loop() {
 }
 
 #[test]
+fn a_braced_conditional_can_contain_a_for_loop_after_a_declaration() {
+    assert_eq!(
+        run(
+            "let answer = 0; if (true) { let values = [20, 22]; for (let value of values) answer += value; } return answer;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

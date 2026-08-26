@@ -25,11 +25,32 @@ fn for_loop_accepts_multiple_initializer_bindings() {
     );
 }
 
+#[test]
+fn for_loop_accepts_multiple_update_expressions() {
+    assert_eq!(
+        run(
+            "let left = 0; let right = 0; for (; ; left += 1, right += 2) { if (left == 2) break; } return left + right;"
+        ),
+        Outcome::Complete(Value::from_i30(6).unwrap())
+    );
+}
+
 #[cfg(feature = "for-of-statements")]
 #[test]
 fn for_of_visits_each_array_value() {
     assert_eq!(
         run("let sum = 0; for (let value of [20, 22]) { sum += value; } return sum;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[cfg(feature = "for-of-statements")]
+#[test]
+fn separate_for_of_loops_can_reuse_a_binding_name() {
+    assert_eq!(
+        run(
+            "let sum = 0; for (let value of [10, 11]) sum += value; for (let value of [10, 11]) sum += value; return sum;"
+        ),
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }

@@ -50,3 +50,16 @@ fn additive_compound_assignments_update_receiver_properties() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn additive_compound_assignments_update_captured_bindings() {
+    let code = compile_script(
+        "let value = 40; function add(amount) { value += amount; return value; } return add(2);",
+    )
+    .unwrap();
+    let mut memory = [0; 512];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
