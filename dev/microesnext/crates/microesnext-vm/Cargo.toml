@@ -192,6 +192,12 @@ property-assignment-expressions = [
   "microesnext-objects/assignment-expressions",
   "microesnext-bytecode/property-assignment-expressions",
 ]
+property-update-expressions = [
+  "objects",
+  "number-coercion",
+  "number-operations",
+  "microesnext-bytecode/property-update-expressions",
+]
 recursive-functions = [
   "functions",
   "environments",

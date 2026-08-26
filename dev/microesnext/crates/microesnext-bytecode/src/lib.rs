@@ -194,6 +194,8 @@ pub enum Opcode {
     DuplicatePair = 130,
     #[cfg(feature = "array-update-expressions")]
     UpdateIndex = 131,
+    #[cfg(feature = "property-update-expressions")]
+    UpdateProperty = 132,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -371,6 +373,8 @@ impl TryFrom<u8> for Opcode {
             130 => Ok(Self::DuplicatePair),
             #[cfg(feature = "array-update-expressions")]
             131 => Ok(Self::UpdateIndex),
+            #[cfg(feature = "property-update-expressions")]
+            132 => Ok(Self::UpdateProperty),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

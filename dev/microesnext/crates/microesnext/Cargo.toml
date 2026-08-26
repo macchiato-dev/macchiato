@@ -112,6 +112,7 @@ locals = [
   "microesnext-compiler/locals",
 ]
 var-declarations = ["locals", "microesnext-compiler/var-declarations"]
+void-expressions = ["stack-operations", "microesnext-compiler/void-expressions"]
 local-assignment-expressions = [
   "locals",
   "stack-operations",
@@ -122,6 +123,13 @@ update-expressions = [
   "number-coercion",
   "number-operations",
   "microesnext-compiler/update-expressions",
+]
+property-update-expressions = [
+  "objects",
+  "property-assignment-expressions",
+  "update-expressions",
+  "microesnext-vm/property-update-expressions",
+  "microesnext-compiler/property-update-expressions",
 ]
 array-update-expressions = [
   "array-assignment-expressions",
@@ -219,6 +227,8 @@ objects = [
   "microesnext-compiler/objects",
 ]
 object-destructuring-declarations = [
+  "control-flow",
+  "equality",
   "locals",
   "objects",
   "stack-operations",
@@ -528,6 +538,11 @@ name = "immediates"
 path = "tests/immediates.rs"
 
 [[test]]
+name = "void-expressions"
+path = "tests/void_expressions.rs"
+required-features = ["void-expressions"]
+
+[[test]]
 name = "expression-statements"
 path = "tests/expression_statements.rs"
 required-features = ["expression-statements"]
@@ -553,6 +568,7 @@ path = "tests/update_expressions.rs"
 required-features = [
   "array-update-expressions",
   "expression-statements",
+  "property-update-expressions",
   "update-expressions",
 ]
 

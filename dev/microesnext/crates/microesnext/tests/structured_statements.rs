@@ -87,6 +87,34 @@ fn nested_unbraced_while_loops_execute_their_single_body() {
 }
 
 #[test]
+fn labeled_break_exits_its_named_outer_loop() {
+    assert_eq!(
+        run("done: for (; ; ) { while (true) { break done; } } return 42;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn an_else_if_chain_can_reach_a_braced_consequent() {
+    assert_eq!(
+        run(
+            "let answer = 0; if (false) answer = 1; else if (true) { answer = 42; } else answer = 2; return answer;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn a_single_consequent_can_have_a_braced_alternate() {
+    assert_eq!(
+        run(
+            "let answer = 0; if (false) answer = 1; else { answer = 40; answer += 2; } return answer;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

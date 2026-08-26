@@ -30,6 +30,7 @@ default = [
   "class-getters",
   "named-class-expressions",
   "object-destructuring-declarations",
+  "property-update-expressions",
   "comments",
   "class-default-constructors",
   "compound-assignment-expressions",
@@ -63,6 +64,7 @@ default = [
   "typeof",
   "update-expressions",
   "var-declarations",
+  "void-expressions",
   "number-operations",
   "objects",
   "parenthesized-expressions",
@@ -152,6 +154,11 @@ property-assignment-expressions = [
   "objects",
   "microesnext-bytecode/property-assignment-expressions",
 ]
+property-update-expressions = [
+  "property-assignment-expressions",
+  "update-expressions",
+  "microesnext-bytecode/property-update-expressions",
+]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 expression-statements = ["microesnext-bytecode/stack-operations"]
@@ -206,6 +213,8 @@ string-number-coercion = ["number-coercion", "strings"]
 template-literals = ["strings", "string-operations"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 object-destructuring-declarations = [
+  "control-flow",
+  "equality",
   "locals",
   "objects",
   "microesnext-bytecode/stack-operations",
@@ -233,6 +242,7 @@ strings = ["microesnext-bytecode/strings"]
 string-operations = ["strings", "microesnext-bytecode/string-operations"]
 typeof = ["strings", "microesnext-bytecode/typeof"]
 var-declarations = ["locals"]
+void-expressions = ["expression-statements"]
 
 [dependencies]
 microesnext-bytecode.workspace = true

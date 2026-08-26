@@ -32,3 +32,11 @@ fn postfix_updates_preserve_array_results_and_entries() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn postfix_updates_preserve_property_results_and_entries() {
+    assert_eq!(
+        run("let box = { value: 40 }; let old = box.value++; return old + box.value - 39;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

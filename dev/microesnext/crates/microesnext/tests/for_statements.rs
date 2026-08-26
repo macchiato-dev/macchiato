@@ -54,3 +54,13 @@ fn separate_for_of_loops_can_reuse_a_binding_name() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn an_unbraced_for_body_can_be_a_conditional_return() {
+    assert_eq!(
+        run(
+            "let ignored = 0; for (let value of [40, 42]) if (value == 42) return value; return ignored;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

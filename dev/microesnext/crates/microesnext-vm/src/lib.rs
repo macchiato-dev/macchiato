@@ -1278,6 +1278,39 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .push(if mode >= 2 { updated } else { old })?;
                 Ok(None)
             }
+            #[cfg(feature = "property-update-expressions")]
+            Opcode::UpdateProperty => {
+                let mode = self.core.next_u8()?;
+                if mode > 3 {
+                    return Err(Error::BadBytecode);
+                }
+                let key = self.core.arena_mut().pop()?;
+                let object = self.core.arena_mut().pop()?;
+                let old = get(self.core.arena(), object, key)?;
+                #[cfg(feature = "string-number-coercion")]
+                let old = microesnext_values::numbers::string_coercion::to_number(
+                    self.core.arena_mut(),
+                    old,
+                )?;
+                #[cfg(not(feature = "string-number-coercion"))]
+                let old =
+                    microesnext_values::numbers::coercion::to_number(self.core.arena_mut(), old)?;
+                let one = Value::from_i30(1).ok_or(Error::Type)?;
+                let updated = if mode & 1 == 0 {
+                    microesnext_values::numbers::operations::add(self.core.arena_mut(), old, one)?
+                } else {
+                    microesnext_values::numbers::operations::subtract(
+                        self.core.arena_mut(),
+                        old,
+                        one,
+                    )?
+                };
+                set(self.core.arena_mut(), object, key, updated)?;
+                self.core
+                    .arena_mut()
+                    .push(if mode >= 2 { updated } else { old })?;
+                Ok(None)
+            }
             #[cfg(feature = "arrays")]
             Opcode::SetIndex => {
                 let value = self.core.arena_mut().pop()?;
