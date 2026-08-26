@@ -386,3 +386,13 @@ three editors' ordered maps, sets, weak caches, and `Promise.all` joins.
 `test/editor-primitives.test.js` keeps those observed patterns executable. It
 tests the primitives independently of each editor's DOM facade and of syntax
 features that MicroESNext has not added yet.
+
+Browser editors follow the same boundary as the QuickJS and MicroQuickJS
+examples. Guest JavaScript owns the browser-shaped DOM facade, event behavior,
+and application-specific overrides. The native runtime supplies opaque host
+references, their lifetime notifications, message transport, and small
+explicit primitives such as time. A future integration may forward an
+individual well-audited operation natively when measurement justifies it, but
+native forwarding is opt-in per operation rather than an all-or-nothing host
+object model. The compiler's caller-provided host-name list is a source probe;
+it is not the browser integration API.
