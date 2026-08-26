@@ -93,6 +93,10 @@ an explicit relational stopping condition.
 - `conditional-expressions` is likewise compiler-only. It emits the existing
   typed truthiness and jump vocabulary for `condition ? consequent : alternate`,
   so removing the parser branch changes no runtime dispatch path.
+- `nonterminal-conditionals` lets either side of `if`/`else` join later
+  statements, while omitting the join jump after an abrupt branch. It reuses
+  control-flow bytecode and relocates both targets inside function bodies;
+  reduced control-flow compilers retain their smaller terminal-only parser.
 - `implicit-completions` is compiler-only too. It lowers `return;` and a script
   or function body reaching its end to the invariant `undefined` constant and
   existing return instruction. Its omitted build retains the previous

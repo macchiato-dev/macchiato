@@ -201,37 +201,37 @@ exactly 13,264 / 5,615.
 
 The constructor-only `classes` composition uses a distinct class record while
 reusing receiver frames and ordinary construction. Its live runtime is 30,301
-raw / 10,377 gzip bytes and its compiler is 19,914 / 7,656. The object-only
+raw / 10,377 gzip bytes and its compiler is 19,762 / 7,588. The object-only
 probe remains exactly 14,473 / 5,775 and ordinary construction remains exactly
 27,444 / 9,825 when class support is omitted.
 
 The independent `class-methods` composition is 32,689 raw / 10,891 gzip bytes;
-its compiler is 20,911 / 7,953. It covers method wrapping, receiver-preserving
+its compiler is 20,727 / 7,869. It covers method wrapping, receiver-preserving
 lookup and calls, method parameters, and non-constructibility. With that feature
 omitted, the constructor-only runtime remains 30,301 / 10,377 and its compiler
-remains 19,914 / 7,656.
+remains 19,762 / 7,588.
 
-Implicit base constructors are compiler-only. Their focused build is 20,693
+Implicit base constructors are compiler-only. Their focused build is 20,541
 raw / 8,091 gzip bytes. Omitting the feature leaves the explicit constructor
-compiler exactly 19,914 / 7,656 and changes no runtime artifact. The default
+compiler exactly 19,762 / 7,588 and changes no runtime artifact. The default
 compiler includes this syntax without adding a runtime feature.
 
 Static methods are another compiler-only selection over the existing method
-runtime. Their focused compiler is 21,028 raw / 8,002 gzip bytes. Omitting them
-leaves instance methods exactly 20,911 / 7,953. The default compiler including
+runtime. Their focused compiler is 20,844 raw / 7,916 gzip bytes. Omitting them
+leaves instance methods exactly 20,727 / 7,869. The default compiler including
 static methods reuses the same runtime operations.
 
 Anonymous class expressions add one removable operand-stack operation so the
 class record can remain as the expression result while methods are installed.
 The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
-is 23,560 / 8,946. Omitting it leaves the class-method runtime exactly 32,689 /
-10,891 and its compiler at 20,911 / 7,953. With expressions
+is 23,379 / 8,866. Omitting it leaves the class-method runtime exactly 32,689 /
+10,891 and its compiler at 20,727 / 7,869. With expressions
 included, the default compiler is 48,615 / 17,302 and the all-capability runtime
 is 109,821 / 34,862.
 
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
-its compiler is 18,134 / 7,558. Its allocation-free opcode changes capture zero
+its compiler is 18,137 / 7,564. Its allocation-free opcode changes capture zero
 from the compact recursive closure to the wrapper; declarations continue to use
 their existing captured destination cell. Builds selecting ordinary recursive
 functions or non-recursive constructors do not link this bridge crate.
@@ -603,8 +603,9 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | Compiler build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
 | minimal | 5,471 | 2,378 |
-| control flow | 7,506 | 2,941 |
-| conditional expressions | 8,060 | 3,165 |
+| control flow | 7,460 | 2,965 |
+| conditional expressions | 8,014 | 3,194 |
+| nonterminal conditionals | 8,207 | 3,100 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -614,12 +615,12 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | collection literal expressions | 10,611 | 4,419 |
 | constructors | 13,264 | 5,615 |
 | construction | 15,459 | 6,311 |
-| classes | 19,914 | 7,656 |
-| class methods | 20,911 | 7,953 |
-| implicit class constructors | 20,693 | 8,091 |
-| static class methods | 21,028 | 8,002 |
-| anonymous class expressions | 23,560 | 8,946 |
-| exceptions | 7,004 | 2,947 |
+| classes | 19,762 | 7,588 |
+| class methods | 20,727 | 7,869 |
+| implicit class constructors | 20,541 | 8,022 |
+| static class methods | 20,844 | 7,916 |
+| anonymous class expressions | 23,379 | 8,866 |
+| exceptions | 7,121 | 3,030 |
 | expression statements | 6,175 | 2,607 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
@@ -637,17 +638,17 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | property assignment | 11,317 | 4,571 |
 | locals | 8,346 | 3,519 |
 | local assignment expressions | 8,823 | 3,652 |
-| captured assignment expressions | 18,770 | 7,509 |
+| captured assignment expressions | 18,773 | 7,524 |
 | property assignment expressions | 11,619 | 4,787 |
 | basic functions | 13,184 | 5,564 |
 | function arguments | 14,148 | 5,953 |
 | implicit completions | 5,772 | 2,441 |
-| captured environments | 17,881 | 7,430 |
-| recursive named functions | 17,995 | 7,484 |
-| recursive constructors | 18,134 | 7,558 |
+| captured environments | 17,884 | 7,449 |
+| recursive named functions | 17,998 | 7,497 |
+| recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
-| recursive async functions | 18,967 | 7,856 |
-| default language slice | 49,259 | 17,455 |
+| recursive async functions | 18,970 | 7,858 |
+| default language slice | 49,703 | 17,680 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -664,6 +665,11 @@ keeps the omitted completion function structurally identical to its earlier
 form: the independently measured expression-statements compiler remains
 exactly 6,175 / 2,607 after this addition.
 
+Nonterminal conditionals are also compiler-only. Their 8,207 / 3,100 artifact
+adds 747 raw / 135 gzip bytes to the 7,460 / 2,965 control-flow compiler. The
+focused feature graph adds no bytecode capability beyond `control-flow`, while
+the omitted build retains the terminal conditional implementation.
+
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
 is 8,823 / 3,652, an increment of 477 raw / 133 gzip bytes over locals alone.
@@ -672,7 +678,7 @@ plain assignment unconsumed in expression position.
 
 Captured assignment expressions compose the 6,285 / 2,728 environment-cell
 runtime with a result-preserving store for a 7,186 / 3,047 live artifact. Their
-compiler is 18,770 / 7,509 versus 17,881 / 7,430 for captured environments.
+compiler is 18,773 / 7,524 versus 17,884 / 7,449 for captured environments.
 Omitting the feature removes its crate and opcode; it does not acquire the
 stack-operations crate used by uncaptured assignment.
 
@@ -691,7 +697,7 @@ dedicated crate and opcode and does not link objects, environments, locals, or
 stack operations into the focused runtime.
 
 Conditional expressions add 554 raw / 224 gzip bytes to the compiler over the
-7,506 / 2,941 control-flow baseline, producing an 8,060 / 3,165 focused
+7,460 / 2,965 control-flow baseline, producing an 8,014 / 3,194 focused
 artifact. The runtime is byte-for-byte the same control-flow machine: the
 syntax reuses boolean conversion and existing conditional and unconditional
 jumps. Omission leaves the token unconsumed and removes the parser and

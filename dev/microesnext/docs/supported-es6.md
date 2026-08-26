@@ -45,6 +45,14 @@ targets use the same relocation path inside nested functions as loops and
 logical operators. Omitting `conditional-expressions` leaves `?` unconsumed and
 adds no opcode or runtime feature.
 
+The separate `nonterminal-conditionals` compiler gate lets either `if` branch
+fall through to later statements. A branch ending in `return` or `throw` is
+recognized as abrupt and receives no redundant join jump. Both alternate and
+join targets use function relocation when needed. This first nonterminal slice
+accepts ordinary expression and assignment statements inside each branch;
+nested control statements await the explicit iterative block-worklist layer so
+the Rust parser does not recurse with source nesting depth.
+
 Expression statements are independently selectable. Any expression accepted
 by the chosen compiler composition may be followed by `;` before a terminal
 completion, including calls and result-preserving property or array
