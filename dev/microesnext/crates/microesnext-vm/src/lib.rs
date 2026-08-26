@@ -1279,10 +1279,43 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::AddNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
+                #[cfg(feature = "string-operations")]
+                let string_addition = [left, right].iter().any(|value| {
+                    value.as_ref().is_some_and(|reference| {
+                        self.core.arena().kind(reference)
+                            == Ok(microesnext_arena::BlockKind::String)
+                    })
+                });
+                #[cfg(feature = "string-operations")]
+                let value = if string_addition {
+                    let left_root = self.retain(left)?;
+                    let right_root = self.retain(right)?;
+                    let rooted_left = self.root(left_root)?;
+                    let left = microesnext_values::strings::from_primitive(
+                        self.core.arena_mut(), rooted_left,
+                    )?;
+                    self.core.arena_mut().set_root(left_root, left)?;
+                    let rooted_right = self.root(right_root)?;
+                    let right = microesnext_values::strings::from_primitive(
+                        self.core.arena_mut(), rooted_right,
+                    )?;
+                    self.core.arena_mut().set_root(right_root, right)?;
+                    let left = self.root(left_root)?;
+                    let right = self.root(right_root)?;
+                    let value = microesnext_values::strings::operations::concatenate(
+                        self.core.arena_mut(), left, right,
+                    )?;
+                    self.release(left_root)?;
+                    self.release(right_root)?;
+                    value
+                } else {
+                    microesnext_values::numbers::operations::add(
+                        self.core.arena_mut(), left, right,
+                    )?
+                };
+                #[cfg(not(feature = "string-operations"))]
                 let value = microesnext_values::numbers::operations::add(
-                    self.core.arena_mut(),
-                    left,
-                    right,
+                    self.core.arena_mut(), left, right,
                 )?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
@@ -2907,6 +2940,21 @@ mod tests {
                 .bytes_equal(value.as_ref().unwrap(), b"hello")
                 .unwrap()
         );
+    }
+
+    #[cfg(all(feature = "string-operations", feature = "locals"))]
+    #[test]
+    fn applies_javascript_addition_to_dynamic_strings() {
+        let code = microesnext_compiler::compile_script(
+            "let prefix = 'item-'; return prefix + 42;",
+        )
+        .unwrap();
+        let mut memory = [0; 256];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 4).unwrap();
+        let Outcome::Complete(value) = machine.run().unwrap() else {
+            panic!("expected string completion")
+        };
+        assert_eq!(machine.string_bytes(value), Ok(&b"item-42"[..]));
     }
 
     #[cfg(feature = "logical-operations")]

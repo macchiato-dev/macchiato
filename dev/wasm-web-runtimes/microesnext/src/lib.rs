@@ -304,6 +304,48 @@ fn regexp_match(
     Ok(Some((begin, end, groups)))
 }
 
+fn regexp_split(machine: &mut Machine<'_, '_>, separator: Value, text: &str)
+    -> Result<Vec<String>, Error>
+{
+    let (pattern, flags, _) = regexp_parts(machine, separator)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let bytes = text.as_bytes();
+    let mut pieces = Vec::new();
+    let mut start = 0;
+    while start <= bytes.len() {
+        let region = unsafe { onig_region_new() };
+        if region.is_null() { return Err(Error::OutOfMemory); }
+        let status = unsafe {
+            onig_search(
+                regexp.0,
+                bytes.as_ptr(),
+                bytes.as_ptr().add(bytes.len()),
+                bytes.as_ptr().add(start),
+                bytes.as_ptr().add(bytes.len()),
+                region,
+                ONIG_OPTION_NONE,
+            )
+        };
+        if status == ONIG_MISMATCH || status < 0 {
+            unsafe { onig_region_free(region, 1) };
+            break;
+        }
+        let native = unsafe { &*region };
+        let begin = unsafe { *native.beg } as usize;
+        let end = unsafe { *native.end } as usize;
+        unsafe { onig_region_free(region, 1) };
+        pieces.push(String::from(&text[start..begin]));
+        if end == begin {
+            let advance = text[end..].chars().next().map_or(1, char::len_utf8);
+            start = end.saturating_add(advance).min(bytes.len());
+        } else {
+            start = end;
+        }
+    }
+    pieces.push(String::from(&text[start.min(bytes.len())..]));
+    Ok(pieces)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn onmsg(minimum_length: u32) {
     if minimum_length != 0 || RESULT.load(Ordering::Relaxed) != 0 {
@@ -830,14 +872,15 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 let result = (|| {
                     let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
                     let separator = machine.host_argument(0).ok()
-                        .filter(|value| *value != Value::UNDEFINED)
-                        .map(|value| owned_string(&machine, value))
-                        .transpose()?;
+                        .filter(|value| *value != Value::UNDEFINED);
                     let pieces: Vec<String> = match separator {
                         None => vec![text],
-                        Some(separator) if separator.is_empty() =>
+                        Some(separator) if owned_string(&machine, separator).is_ok_and(|value| value.is_empty()) =>
                             text.chars().map(|character| character.to_string()).collect(),
-                        Some(separator) => text.split(&separator).map(String::from).collect(),
+                        Some(separator) => match owned_string(&machine, separator) {
+                            Ok(separator) => text.split(&separator).map(String::from).collect(),
+                            Err(_) => regexp_split(&mut machine, separator, &text)?,
+                        },
                     };
                     let mut result = microesnext::arrays::new(machine.arena_mut())?;
                     for (index, piece) in pieces.iter().enumerate() {
