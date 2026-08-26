@@ -91,11 +91,17 @@ const callableObjects = "microesnext-callable-objects";
 const construction = "microesnext-construction";
 const recursiveConstructors = "microesnext-recursive-constructors";
 const instanceOf = "microesnext-instanceof";
+const stackOperations = "microesnext-stack-operations";
 
 assertCompilerFeatures(
   ["locals"],
   ["locals"],
   ["environments", "function-arguments", "functions", "receivers"],
+);
+assertCompilerFeatures(
+  ["local-assignment-expressions"],
+  ["locals", "stack-operations"],
+  ["environments", "functions", "property-assignment"],
 );
 assertCompilerFeatures(
   ["functions"],
@@ -489,6 +495,11 @@ assertPresence(
     recursiveAsyncFunctions,
     recursiveFunctions,
   ],
+);
+assertPresence(
+  ["local-assignment-expressions"],
+  ["microesnext-locals", stackOperations],
+  [environments, "microesnext-objects"],
 );
 assertPresence(
   ["function-arguments"],
