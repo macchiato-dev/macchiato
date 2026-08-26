@@ -41,6 +41,10 @@ const HOST_REFERENCE: u32 = 43;
 const RELEASE_HOST_REFERENCE: u32 = 53;
 const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
+const STRING: u32 = 22;
+const STRING_FROM_CHAR_CODE: u32 = (1 << 29) + 71;
+const SYMBOL: u32 = 23;
+const SYMBOL_FOR: u32 = (1 << 29) + 72;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -253,7 +257,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
     })();
     let string_prototype = match string_prototype.and_then(|value| {
         machine.install_string_prototype(value)?;
-        Ok(value)
+        machine.retain(value)
     }) {
         Ok(value) => value,
         Err(error) => {
@@ -261,7 +265,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             return;
         }
     };
-    let _ = string_prototype;
+    let machine_string_prototype = string_prototype;
     let global_overlay = match machine.new_object(Value::NULL)
         .and_then(|value| machine.retain(value))
     {
@@ -296,6 +300,43 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 1400, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == STRING && machine.string_bytes(key) == Ok(b"fromCharCode") =>
+            {
+                machine.complete_host_operation(Value::from_host(
+                    microesnext::HostRef::new(STRING_FROM_CHAR_CODE).unwrap(),
+                )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == STRING && machine.string_bytes(key) == Ok(b"prototype") =>
+            {
+                match machine.root(machine_string_prototype).and_then(|value| {
+                    machine.complete_host_operation(value)
+                }) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostGet { object, key, .. }) if object.index() == SYMBOL => {
+                let result = match machine.string_bytes(key) {
+                    Ok(b"hasInstance") => machine.intern_atom(b"@@hasInstance"),
+                    Ok(b"iterator") => machine.intern_atom(b"@@iterator"),
+                    Ok(b"for") => Ok(Value::from_host(
+                        microesnext::HostRef::new(SYMBOL_FOR).unwrap(),
+                    )),
+                    _ => Err(Error::Type),
+                };
+                match result.and_then(|value| machine.complete_host_operation(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1500, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }
@@ -472,6 +513,39 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, argument_count, .. })
+                if function.index() == STRING_FROM_CHAR_CODE =>
+            {
+                let mut text = String::new();
+                let result = (|| {
+                    for index in 0..argument_count {
+                        let code = machine.host_argument(index)?.as_i30().ok_or(Error::Type)? as u16;
+                        text.push(char::from_u32(u32::from(code)).unwrap_or(char::REPLACEMENT_CHARACTER));
+                    }
+                    machine.new_string(text.as_bytes())
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == SYMBOL_FOR => {
+                let result = machine.host_argument(0).and_then(|value| {
+                    let mut name = String::from("@@for:");
+                    name.push_str(core::str::from_utf8(machine.string_bytes(value)?).map_err(|_| Error::Type)?);
+                    machine.intern_atom(name.as_bytes())
+                });
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1500, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }
