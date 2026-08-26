@@ -21,7 +21,7 @@ pub use microesnext_instanceof as r#instanceof;
 pub use microesnext_logical_operations as logical_operations;
 
 #[cfg(feature = "method-calls")]
-pub use microesnext_method_calls as method_calls;
+pub use microesnext_objects::method_calls;
 
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
@@ -148,7 +148,7 @@ pub use microesnext_promises as promises;
 pub use microesnext_promise_resolution as promise_resolution;
 
 #[cfg(feature = "prototype-chain")]
-pub use microesnext_prototype_chain as prototype_chain;
+pub use microesnext_objects::prototype_chain;
 
 #[cfg(feature = "promise-resolvers")]
 pub use microesnext_promise_resolvers as promise_resolvers;

@@ -31,7 +31,7 @@ method-calls = [
   "function-arguments",
   "objects",
   "receivers",
-  "dep:microesnext-method-calls",
+  "microesnext-objects/method-calls",
   "microesnext-vm/method-calls",
 ]
 class-methods = ["classes", "method-calls"]
@@ -82,7 +82,7 @@ well-known-symbols = ["symbols"]
 atoms = ["strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 property-assignment = ["objects", "microesnext-vm/property-assignment"]
-prototype-chain = ["objects", "dep:microesnext-prototype-chain"]
+prototype-chain = ["objects", "microesnext-objects/prototype-chain"]
 functions = ["microesnext-arena/closures", "microesnext-vm/functions"]
 callable-objects = [
   "functions",
@@ -249,10 +249,8 @@ microesnext-collections = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
-microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }
-microesnext-method-calls = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-iterator-results = { workspace = true, optional = true }

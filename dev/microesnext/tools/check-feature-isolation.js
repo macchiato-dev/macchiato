@@ -80,7 +80,6 @@ const integerNegation = "microesnext-integer-negation";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
 const typeOf = "microesnext-typeof";
-const prototypeChain = "microesnext-prototype-chain";
 const callableObjects = "microesnext-callable-objects";
 const construction = "microesnext-construction";
 const recursiveConstructors = "microesnext-recursive-constructors";
@@ -436,7 +435,7 @@ assertPresence(
 );
 assertPresence(
   ["prototype-chain"],
-  [prototypeChain, "microesnext-objects", "microesnext-strings"],
+  ["microesnext-objects", "microesnext-strings"],
   [typeOf, "microesnext-numbers"],
 );
 assertPresence(
@@ -446,7 +445,7 @@ assertPresence(
     "microesnext-objects",
     "microesnext-strings",
   ],
-  [prototypeChain, typeOf, "microesnext-numbers"],
+  [typeOf, "microesnext-numbers"],
 );
 assertPresence(
   ["constructors"],
@@ -455,7 +454,7 @@ assertPresence(
     "microesnext-objects",
     "microesnext-strings",
   ],
-  [instanceOf, prototypeChain, typeOf],
+  [instanceOf, typeOf],
 );
 assertPresence(
   ["construction"],
@@ -465,7 +464,7 @@ assertPresence(
     callableObjects,
     "microesnext-objects",
   ],
-  [instanceOf, prototypeChain, typeOf],
+  [instanceOf, typeOf],
 );
 assertPresence(
   ["property-assignment"],
@@ -486,7 +485,6 @@ assertPresence(
   ["instanceof"],
   [
     instanceOf,
-    prototypeChain,
     callableObjects,
     "microesnext-objects",
   ],

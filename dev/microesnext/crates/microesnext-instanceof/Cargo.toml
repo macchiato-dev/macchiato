@@ -19,8 +19,7 @@ class-constructors = [
 microesnext-arena = { workspace = true, features = ["callable-objects", "closures"] }
 microesnext-callable-objects.workspace = true
 microesnext-class-constructors = { workspace = true, optional = true }
-microesnext-objects = { workspace = true, features = ["callable-objects"] }
-microesnext-prototype-chain.workspace = true
+microesnext-objects = { workspace = true, features = ["callable-objects", "prototype-chain"] }
 microesnext-types.workspace = true
 
 [dev-dependencies]

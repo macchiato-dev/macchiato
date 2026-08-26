@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
@@ -9,26 +7,26 @@ use microesnext_types::{Error, Value};
 /// `Object.prototype.isPrototypeOf`. Callable validation and retrieval of a
 /// constructor's `prototype` property belong to the higher-level operation.
 pub fn contains(arena: &Arena<'_>, value: Value, prototype: Value) -> Result<bool, Error> {
-    if !microesnext_objects::is_object(arena, prototype) {
+    if !crate::is_object(arena, prototype) {
         return Err(Error::Type);
     }
-    if !microesnext_objects::is_object(arena, value) {
+    if !crate::is_object(arena, value) {
         return Ok(false);
     }
 
-    let mut current = microesnext_objects::prototype(arena, value)?;
+    let mut current = crate::prototype(arena, value)?;
     while current != Value::NULL {
         if current == prototype {
             return Ok(true);
         }
-        current = microesnext_objects::prototype(arena, current)?;
+        current = crate::prototype(arena, current)?;
     }
     Ok(false)
 }
 
 #[cfg(test)]
 mod tests {
-    use microesnext_objects::new_object;
+    use crate::new_object;
 
     use super::*;
 

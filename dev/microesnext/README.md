@@ -50,10 +50,9 @@ an explicit relational stopping condition.
   crate can also use already-interned or non-string keys. A separate
   `property-assignment` bytecode/compiler gate adds source statement writes;
   read-only object builds retain no write dispatch beyond literal assembly.
-- `microesnext-prototype-chain` performs allocation-free ordinary-object
-  prototype traversal. It is the shared semantic core for future `instanceof`
-  and `Object.prototype.isPrototypeOf` support, without making object-only
-  builds retain either operation.
+- The objects `prototype_chain` module performs allocation-free traversal for
+  `instanceof` and `Object.prototype.isPrototypeOf`; the VM feature determines
+  whether any traversal call is retained.
 - `microesnext-instanceof` composes callable-object validation, ordinary
   `prototype` lookup, and prototype traversal without allocation. Custom
   `Symbol.hasInstance` dispatch remains a higher optional layer.
@@ -73,8 +72,8 @@ an explicit relational stopping condition.
   class can use the same removable construction path, but ordinary call
   unwrapping does not accept it. The initial `classes` compiler slice supports
   constructor-only declarations; methods and inheritance remain separate.
-- `microesnext-method-calls` preserves a member receiver beneath its resolved
-  method and removes both before entering the call frame. The independent
+- The objects `method_calls` module preserves a member receiver beneath its
+  resolved method and removes both before entering the call frame. The independent
   `class-methods` composition stores receiver-aware, non-constructible callable
   objects on a class prototype; constructor-only class builds retain neither
   its stack operations nor its three opcodes.

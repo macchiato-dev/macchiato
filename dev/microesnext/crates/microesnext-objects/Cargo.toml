@@ -12,9 +12,12 @@ default = []
 callable-objects = ["microesnext-arena/callable-objects"]
 class-constructors = ["microesnext-arena/class-constructors"]
 assignment-expressions = []
+method-calls = ["dep:microesnext-parameters"]
+prototype-chain = []
 
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-parameters = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]

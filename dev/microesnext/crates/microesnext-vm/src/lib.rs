@@ -260,7 +260,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetMethod => {
                 let key = self.core.arena_mut().pop()?;
                 let receiver = self.core.arena_mut().pop()?;
-                microesnext_method_calls::load(self.core.arena_mut(), receiver, key)?;
+                microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
                 Ok(None)
             }
             #[cfg(feature = "objects")]
@@ -507,7 +507,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::CallMethodArguments => {
                 let argument_count = self.core.next_u16()? as usize;
                 let (method, receiver) =
-                    microesnext_method_calls::take(self.core.arena_mut(), argument_count)?;
+                    microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
                 let receiver_aware =
                     microesnext_callable_objects::is_callable_object(self.core.arena(), method);
                 let function = unwrap_callable(self.core.arena(), method)?;

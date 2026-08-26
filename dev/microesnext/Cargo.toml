@@ -29,13 +29,11 @@ members = [
   "crates/microesnext-instanceof",
   "crates/microesnext-locals",
   "crates/microesnext-logical-operations",
-  "crates/microesnext-method-calls",
   "crates/microesnext-integer-negation",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
   "crates/microesnext-promises",
-  "crates/microesnext-prototype-chain",
   "crates/microesnext-promise-resolution",
   "crates/microesnext-promise-resolvers",
   "crates/microesnext-suspension",
@@ -91,13 +89,11 @@ microesnext-integer-operations = { path = "crates/microesnext-integer-operations
 microesnext-instanceof = { path = "crates/microesnext-instanceof", version = "0.0.0" }
 microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
 microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
-microesnext-method-calls = { path = "crates/microesnext-method-calls", version = "0.0.0" }
 microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0" }
-microesnext-prototype-chain = { path = "crates/microesnext-prototype-chain", version = "0.0.0" }
 microesnext-promise-resolution = { path = "crates/microesnext-promise-resolution", version = "0.0.0" }
 microesnext-promise-resolvers = { path = "crates/microesnext-promise-resolvers", version = "0.0.0" }
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }

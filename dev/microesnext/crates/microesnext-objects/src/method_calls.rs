@@ -1,11 +1,9 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
 /// Resolve a property while preserving its receiver immediately below it.
 pub fn load(arena: &mut Arena<'_>, receiver: Value, key: Value) -> Result<(), Error> {
-    let method = microesnext_objects::get(arena, receiver, key)?;
+    let method = crate::get(arena, receiver, key)?;
     arena.push(receiver)?;
     arena.push(method)
 }
@@ -30,8 +28,8 @@ mod tests {
         let mut memory = [0; 64];
         let mut arena = Arena::new(&mut memory);
         let key = Value::from_i30(1).unwrap();
-        let receiver = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
-        let receiver = microesnext_objects::set(&mut arena, receiver, key, Value::TRUE).unwrap();
+        let receiver = crate::new_object(&mut arena, Value::NULL).unwrap();
+        let receiver = crate::set(&mut arena, receiver, key, Value::TRUE).unwrap();
 
         load(&mut arena, receiver, key).unwrap();
         arena.push(Value::from_i30(42).unwrap()).unwrap();

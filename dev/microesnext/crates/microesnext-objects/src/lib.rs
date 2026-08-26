@@ -2,6 +2,10 @@
 
 #[cfg(feature = "assignment-expressions")]
 pub mod assignment_expressions;
+#[cfg(feature = "method-calls")]
+pub mod method_calls;
+#[cfg(feature = "prototype-chain")]
+pub mod prototype_chain;
 
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};

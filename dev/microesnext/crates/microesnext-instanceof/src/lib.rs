@@ -17,7 +17,7 @@ pub fn ordinary(
         return Err(Error::Type);
     }
     let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
-    microesnext_prototype_chain::contains(arena, value, prototype)
+    microesnext_objects::prototype_chain::contains(arena, value, prototype)
 }
 
 #[cfg(not(feature = "class-constructors"))]
