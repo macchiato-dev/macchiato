@@ -37,7 +37,10 @@ an explicit relational stopping condition.
   parameter/argument frames, captured-environment analysis, synchronous named
   recursion, and asynchronous named recursion are independently selectable,
   mirroring their runtime instruction groups. Quoted and no-substitution
-  template strings enter only with the string bytecode capability.
+  template strings enter only with the string bytecode capability. The
+  compiler-only `literal-expressions` composition upgrades numeric-only array
+  and object values to arbitrary supported expressions while preserving the
+  smaller specialized literal loops when omitted.
 - `microesnext-strings` supplies ordinary packed byte strings without retained
   global state.
 - `microesnext-string-operations` adds strict concatenation without a temporary

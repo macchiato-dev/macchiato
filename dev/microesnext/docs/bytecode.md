@@ -122,6 +122,13 @@ the promoted operation. A bounded-i30 target emits only the smaller integer
 instruction family and reports overflow at execution. This is a build target,
 not a language-visible claim that JavaScript integers stop at 30 bits.
 
+Collection-literal expression support is entirely a compiler composition.
+Both the reduced numeric loop and the general-expression loop emit the same
+`new_array`/`set_index` and `new_object`/`set_property` instructions. Therefore
+enabling richer literal source syntax adds no decoder branch or runtime
+dispatch, and omitting it can discard parser code without changing bytecode
+semantics.
+
 ## Untagged template literals
 
 Bare template literals do not require a new instruction. Cooked literal pieces

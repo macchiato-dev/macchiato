@@ -46,6 +46,14 @@ it needs no general stack-cleanup feature. Assignment expressions, computed
 keys, chained assignment, and direct writes through an outer capture remain
 separate work.
 
+Array and object literals keep a compact numeric-value parser when
+`literal-expressions` is omitted. Enabling that compiler-only composition lets
+each value use the ordinary supported expression grammar, including enclosing
+bindings, nested literals, and guest calls. It adds no opcode or runtime crate:
+the resulting values still use `set_index` and `set_property`. Computed keys,
+spread properties/elements, elisions, and shorthand properties remain separate
+syntax work.
+
 The removable integer-operations slice adds subtraction, multiplication, and
 `<`/`>` comparisons with ordinary multiplicative, additive, then relational
 precedence. Together with local assignment and `while`, it can run a

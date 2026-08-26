@@ -226,7 +226,7 @@ class record can remain as the expression result while methods are installed.
 The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
 is 23,562 / 8,943. Omitting it leaves the class-method runtime exactly 32,689 /
 10,891 and its compiler at 20,901 / 7,940. With expressions
-included, the default compiler is 42,797 / 15,690 and the all-capability runtime
+included, the default compiler is 42,861 / 15,686 and the all-capability runtime
 is 107,208 / 34,141.
 
 Private identity for named constructor expressions is separately removable.
@@ -599,6 +599,11 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | --- | ---: | ---: |
 | minimal | 5,471 | 2,378 |
 | control flow | 7,506 | 2,941 |
+| array literals | 6,224 | 2,677 |
+| array expression values | 8,786 | 3,705 |
+| object literals | 7,779 | 3,363 |
+| object expression values | 10,246 | 4,298 |
+| collection literal expressions | 10,613 | 4,417 |
 | constructors | 13,264 | 5,620 |
 | construction | 15,434 | 6,301 |
 | classes | 19,904 | 7,633 |
@@ -629,7 +634,13 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,131 | 7,557 |
 | async functions | 14,224 | 5,938 |
 | recursive async functions | 18,966 | 7,846 |
-| default language slice | 42,797 | 15,690 |
+| default language slice | 42,861 | 15,686 |
+
+The `literal-expressions` rows compose the ordinary expression parser with
+literal storage without changing either runtime. Numeric-only array and object
+compilers remain 6,224 / 2,677 and 7,779 / 3,363 respectively. Enclosing local
+values cost 8,786 / 3,705 for arrays or 10,246 / 4,298 for objects; selecting
+both shares enough parser code to total 10,613 / 4,417 rather than their sum.
 
 Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
 strings. It is its own opcode and capability crate, and does not link numeric
