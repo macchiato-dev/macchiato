@@ -258,6 +258,8 @@ fn run_inner(
                 return Ok(finished(chained));
             }
             Outcome::Await { .. } | Outcome::AsyncCall { .. } => return Err(Error::Type),
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostCall { .. } => return Err(Error::Type),
         };
     }
 }

@@ -47,6 +47,7 @@ default = [
   "structured-statements",
   "string-number-coercion",
   "typeof",
+  "update-expressions",
   "var-declarations",
   "number-operations",
   "objects",
@@ -115,6 +116,11 @@ locals = ["microesnext-bytecode/locals"]
 logical-operations = ["microesnext-bytecode/logical-operations"]
 literal-expressions = []
 local-assignment-expressions = ["locals", "microesnext-bytecode/stack-operations"]
+update-expressions = [
+  "local-assignment-expressions",
+  "number-coercion",
+  "number-operations",
+]
 method-calls = [
   "function-arguments",
   "objects",

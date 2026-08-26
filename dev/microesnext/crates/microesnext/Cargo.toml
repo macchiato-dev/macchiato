@@ -68,6 +68,12 @@ local-assignment-expressions = [
   "stack-operations",
   "microesnext-compiler/local-assignment-expressions",
 ]
+update-expressions = [
+  "local-assignment-expressions",
+  "number-coercion",
+  "number-operations",
+  "microesnext-compiler/update-expressions",
+]
 arrays = [
   "dep:microesnext-objects",
   "microesnext-objects/arrays",
@@ -149,6 +155,7 @@ functions = [
 host-bindings = [
   "microesnext-vm/host-bindings",
   "microesnext-compiler/host-bindings",
+  "microesnext-scheduler?/host-bindings",
 ]
 callable-objects = [
   "functions",
@@ -415,6 +422,11 @@ required-features = ["locals"]
 name = "local-assignment-expressions"
 path = "tests/local_assignment_expressions.rs"
 required-features = ["local-assignment-expressions"]
+
+[[test]]
+name = "update-expressions"
+path = "tests/update_expressions.rs"
+required-features = ["expression-statements", "update-expressions"]
 
 [[test]]
 name = "captured-assignment-expressions"

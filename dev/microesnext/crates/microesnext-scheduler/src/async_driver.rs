@@ -6,6 +6,8 @@ use microesnext_execution::promises::resolution::resolve_native;
 use microesnext_execution::promises::{Job, JobQueue, Settlement, is_promise, settle, then};
 #[cfg(feature = "functions")]
 use microesnext_execution::promises::{pending, settle_unobserved};
+#[cfg(feature = "host-bindings")]
+use microesnext_types::HostRef;
 use microesnext_types::{Error, RootId, Value};
 use microesnext_vm::{Machine, Outcome};
 
@@ -26,6 +28,11 @@ pub enum Progress {
         argument_count: usize,
     },
     PromiseResolverCall,
+    #[cfg(feature = "host-bindings")]
+    HostCall {
+        function: HostRef,
+        argument_count: usize,
+    },
 }
 
 /// Statically selected Promise resolution policy. Drivers are generic over
@@ -110,6 +117,14 @@ impl From<Outcome> for Progress {
                 argument_count,
             },
             Outcome::PromiseResolverCall => Self::PromiseResolverCall,
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostCall {
+                function,
+                argument_count,
+            } => Self::HostCall {
+                function,
+                argument_count,
+            },
         }
     }
 }
@@ -224,6 +239,16 @@ fn drive_functions<R: Resolver>(
                 machine.run()?
             }
             Outcome::PromiseResolverCall => return Ok(Progress::PromiseResolverCall),
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostCall {
+                function,
+                argument_count,
+            } => {
+                return Ok(Progress::HostCall {
+                    function,
+                    argument_count,
+                });
+            }
         };
     }
 }
@@ -376,6 +401,8 @@ fn finish_progress<R: Resolver>(
         }
         Progress::AsyncCall { .. } => Err(Error::Type),
         Progress::PromiseResolverCall => Err(Error::Type),
+        #[cfg(feature = "host-bindings")]
+        Progress::HostCall { .. } => Err(Error::Type),
     }
 }
 
@@ -412,6 +439,8 @@ fn finish_reaction<R: Resolver>(
         }
         Outcome::AsyncCall { .. } => Err(Error::Type),
         Outcome::PromiseResolverCall => Err(Error::Type),
+        #[cfg(feature = "host-bindings")]
+        Outcome::HostCall { .. } => Err(Error::Type),
     }
 }
 

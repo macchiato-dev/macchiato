@@ -24,6 +24,7 @@ functions = [
   "microesnext-execution/async-functions",
   "microesnext-vm/async-functions",
 ]
+host-bindings = ["microesnext-vm/host-bindings"]
 thenables = [
   "dep:microesnext-arena",
   "microesnext-arena/closures",

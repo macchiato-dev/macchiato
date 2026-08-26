@@ -2035,11 +2035,20 @@ impl Parser<'_> {
             return false;
         };
         self.offset += local.end - local.start;
-        self.output.push(Opcode::LoadLocal as u8);
-        self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
         if local.captured {
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+            self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::LoadEnvironmentCell as u8);
+        } else {
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        #[cfg(not(feature = "environments"))]
+        {
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
         }
         true
     }
@@ -2578,6 +2587,10 @@ impl Parser<'_> {
         if self.property_assignment_expression()? {
             return Ok(false);
         }
+        #[cfg(feature = "update-expressions")]
+        if self.local_update_expression()? {
+            return Ok(false);
+        }
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
@@ -2623,6 +2636,60 @@ impl Parser<'_> {
         self.offset = start;
         let (used_binding, _) = self.conditional(binding)?;
         Ok(used_binding)
+    }
+
+    #[cfg(feature = "update-expressions")]
+    fn local_update_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        let prefix = self.consume_bytes(b"++") || self.consume_bytes(b"--");
+        let subtracting = prefix && self.source[start..self.offset].contains(&b'-');
+        let Some(local) = self.local_at_offset() else {
+            self.offset = start;
+            return Ok(false);
+        };
+        self.offset += local.end - local.start;
+        let postfix_start = self.offset;
+        let postfix_increment = self.consume_bytes(b"++");
+        let postfix_decrement = !postfix_increment && self.consume_bytes(b"--");
+        if !prefix && !postfix_increment && !postfix_decrement {
+            self.offset = start;
+            return Ok(false);
+        }
+
+        self.output.push(Opcode::LoadLocal as u8);
+        self.output.extend_from_slice(&local.slot.to_le_bytes());
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::LoadEnvironmentCell as u8);
+        }
+        if !prefix {
+            self.output.push(Opcode::DuplicateTop as u8);
+        }
+        self.output.push(Opcode::ToNumber as u8);
+        self.output.push(Opcode::ConstI30 as u8);
+        self.output.extend_from_slice(&1_i32.to_le_bytes());
+        self.output.push(if subtracting || postfix_decrement {
+            Opcode::SubtractNumber as u8
+        } else {
+            Opcode::AddNumber as u8
+        });
+        if prefix {
+            self.output.push(Opcode::DuplicateTop as u8);
+        }
+        #[cfg(feature = "environments")]
+        if local.captured {
+            self.output.push(Opcode::StoreEnvironmentCell as u8);
+        } else {
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        #[cfg(not(feature = "environments"))]
+        {
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&local.slot.to_le_bytes());
+        }
+        debug_assert!(self.offset > postfix_start || prefix);
+        Ok(true)
     }
 
     #[cfg(not(any(
@@ -4498,7 +4565,11 @@ impl Parser<'_> {
         self.consume_raw(byte)
     }
 
-    #[cfg(any(feature = "equality", feature = "logical-operations"))]
+    #[cfg(any(
+        feature = "equality",
+        feature = "logical-operations",
+        feature = "update-expressions"
+    ))]
     fn consume_bytes(&mut self, bytes: &[u8]) -> bool {
         self.whitespace();
         if self.source[self.offset..].starts_with(bytes) {
@@ -5593,6 +5664,30 @@ mod tests {
                 .load_local(1)
                 .op(Opcode::ReturnLocals)
                 .finish()
+        );
+    }
+
+    #[cfg(feature = "update-expressions")]
+    #[test]
+    fn compiles_local_prefix_and_postfix_updates() {
+        let code = compile_script("let value = 40; value++; return ++value;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|byte| **byte == Opcode::DuplicateTop as u8)
+                .count(),
+            2
+        );
+        assert_eq!(
+            code.iter()
+                .filter(|byte| **byte == Opcode::StoreLocal as u8)
+                .count(),
+            3
+        );
+        assert_eq!(
+            code.iter()
+                .filter(|byte| **byte == Opcode::AddNumber as u8)
+                .count(),
+            2
         );
     }
 
