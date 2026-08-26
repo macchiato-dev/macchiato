@@ -1413,30 +1413,35 @@ impl Parser<'_> {
             *count_patch = Some(self.output.len());
             self.output.extend_from_slice(&0_u16.to_le_bytes());
         }
-        self.whitespace();
-        let (start, end) = self.identifier()?;
-        if self
-            .locals
-            .iter()
-            .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
-        {
-            return Err(self.error("a unique local binding"));
+        loop {
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            if self
+                .locals
+                .iter()
+                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
+            {
+                return Err(self.error("a unique local binding"));
+            }
+            if !self.consume(b'=') {
+                return Err(self.error("="));
+            }
+            self.expression(None)?;
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.locals.push(Binding {
+                start,
+                end,
+                slot,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+            if !self.consume(b',') {
+                break;
+            }
         }
-        if !self.consume(b'=') {
-            return Err(self.error("="));
-        }
-        self.expression(None)?;
-        let slot = u16::try_from(self.locals.len())
-            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
-        self.output.push(Opcode::StoreLocal as u8);
-        self.output.extend_from_slice(&slot.to_le_bytes());
-        self.locals.push(Binding {
-            start,
-            end,
-            slot,
-            #[cfg(feature = "environments")]
-            captured: false,
-        });
         if !self.consume(b';') {
             return Err(self.error(";"));
         }
@@ -5558,6 +5563,25 @@ mod tests {
     fn compiles_lexical_bindings_to_stable_local_slots() {
         assert_eq!(
             compile_script("let forty = 40; let answer = forty + 2; return answer;").unwrap(),
+            Builder::new()
+                .init_locals(2)
+                .const_i30(40)
+                .store_local(0)
+                .load_local(0)
+                .const_i30(2)
+                .op(unknown_add_opcode())
+                .store_local(1)
+                .load_local(1)
+                .op(Opcode::ReturnLocals)
+                .finish()
+        );
+    }
+
+    #[cfg(feature = "locals")]
+    #[test]
+    fn compiles_multiple_bindings_in_one_declaration() {
+        assert_eq!(
+            compile_script("let forty = 40, answer = forty + 2; return answer;").unwrap(),
             Builder::new()
                 .init_locals(2)
                 .const_i30(40)
