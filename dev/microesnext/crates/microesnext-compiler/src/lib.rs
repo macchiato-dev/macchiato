@@ -1643,7 +1643,7 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
-    #[cfg(feature = "logical-operations")]
+    #[cfg(any(feature = "conditional-expressions", feature = "logical-operations"))]
     fn patch_expression_end(&mut self, patches: &[usize]) -> Result<(), CompileError> {
         let target = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;

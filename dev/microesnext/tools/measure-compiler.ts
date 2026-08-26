@@ -1,6 +1,7 @@
 const builds = [
   ["minimal", ""],
   ["control flow", "control-flow"],
+  ["conditional expressions", "conditional-expressions"],
   ["array literals", "arrays"],
   ["array expression values", "arrays,literal-expressions,locals"],
   ["object literals", "objects"],
@@ -44,7 +45,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,function-arguments,functions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -84,6 +85,8 @@ for (const [name, features] of builds) {
     ? "let left = 0; let right = 0; return left = right = 1;"
     : features === "property-assignment-expressions"
     ? "let object = {}; return object.value = 1;"
+    : features === "conditional-expressions"
+    ? "return true ? 1 : 2;"
     : features === "arrays,literal-expressions,locals"
     ? "let value = 1; return [value];"
     : features === "literal-expressions,locals,objects"

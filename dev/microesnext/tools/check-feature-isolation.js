@@ -103,6 +103,11 @@ assertCompilerFeatures(
   ["environments", "function-arguments", "functions", "receivers"],
 );
 assertCompilerFeatures(
+  ["conditional-expressions"],
+  ["control-flow"],
+  ["functions", "locals", "logical-operations", "objects"],
+);
+assertCompilerFeatures(
   ["local-assignment-expressions"],
   ["locals", "stack-operations"],
   ["environments", "functions", "property-assignment"],
