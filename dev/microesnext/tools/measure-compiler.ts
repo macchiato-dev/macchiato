@@ -4,6 +4,7 @@ const builds = [
   ["conditional expressions", "conditional-expressions"],
   ["nonterminal conditionals", "nonterminal-conditionals"],
   ["nested conditionals", "nested-conditionals"],
+  ["nested loops", "nested-loops"],
   ["array literals", "arrays"],
   ["array indexing", "array-indexing"],
   ["array assignment expressions", "array-assignment-expressions"],
@@ -51,7 +52,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,implicit-completions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,nested-conditionals,nonterminal-conditionals,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,implicit-completions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,nested-conditionals,nested-loops,nonterminal-conditionals,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -97,6 +98,8 @@ for (const [name, features] of builds) {
     ? "let object = {}; return object.value = 1;"
     : features === "nested-conditionals"
     ? "if (true) { if (false) {} else {} } else {} return 42;"
+    : features === "nested-loops"
+    ? "while (false) { if (true) { while (false) {} } else {} } return 42;"
     : features === "nonterminal-conditionals"
     ? "if (true) {} else {} return 42;"
     : features === "conditional-expressions"
