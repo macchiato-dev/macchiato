@@ -13,6 +13,7 @@ members = [
   "crates/microesnext-collections",
   "crates/microesnext-callable-objects",
   "crates/microesnext-class-constructors",
+  "crates/microesnext-captured-assignment-expressions",
   "crates/microesnext-construction",
   "crates/microesnext-decimal-to-f64",
   "crates/microesnext-functions",
@@ -90,6 +91,7 @@ microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0"
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
 microesnext-callable-objects = { path = "crates/microesnext-callable-objects", version = "0.0.0" }
 microesnext-class-constructors = { path = "crates/microesnext-class-constructors", version = "0.0.0" }
+microesnext-captured-assignment-expressions = { path = "crates/microesnext-captured-assignment-expressions", version = "0.0.0" }
 microesnext-construction = { path = "crates/microesnext-construction", version = "0.0.0" }
 microesnext-decimal-to-f64 = { path = "crates/microesnext-decimal-to-f64", version = "0.0.0" }
 microesnext-functions = { path = "crates/microesnext-functions", version = "0.0.0" }
