@@ -44,6 +44,16 @@ fn for_of_visits_each_array_value() {
     );
 }
 
+#[cfg(all(feature = "for-of-statements", feature = "array-destructuring-declarations"))]
+#[test]
+fn for_of_destructures_each_array_value() {
+    assert_eq!(
+        run("let answer = 0; for (let [left, right] of [[1, 2], [20, 22]]) { \
+             answer = left + right; } return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
 #[cfg(feature = "for-of-statements")]
 #[test]
 fn separate_for_of_loops_can_reuse_a_binding_name() {

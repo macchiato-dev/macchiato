@@ -14,6 +14,7 @@ default = [
   "bitwise-operations",
   "array-indexing",
   "array-spread",
+  "spread-calls",
   "array-assignment-expressions",
   "array-destructuring-assignments",
   "array-destructuring-declarations",
@@ -83,6 +84,7 @@ default = [
 ]
 arrays = ["microesnext-bytecode/arrays"]
 array-spread = ["arrays", "literal-expressions", "microesnext-bytecode/array-spread"]
+spread-calls = ["arrays", "function-arguments", "microesnext-bytecode/spread-calls"]
 abstract-equality = [
   "equality",
   "logical-operations",

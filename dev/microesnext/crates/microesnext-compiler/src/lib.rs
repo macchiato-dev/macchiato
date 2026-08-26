@@ -448,9 +448,18 @@ enum AssignmentSuffix {
     Index(usize, usize),
 }
 
-#[cfg(feature = "object-destructuring-assignments")]
+#[cfg(any(
+    feature = "array-destructuring-assignments",
+    feature = "object-destructuring-assignments"
+))]
 enum DestructuringAssignmentTarget {
     Local(Binding),
+    Property(AssignmentBase, (usize, usize)),
+}
+
+#[cfg(feature = "array-destructuring-assignments")]
+enum ArrayDestructuringAssignmentTarget {
+    Binding(Binding, Option<u16>),
     Property(AssignmentBase, (usize, usize)),
 }
 
@@ -624,6 +633,8 @@ struct IterationBinding {
 #[cfg(any(feature = "for-of-statements", feature = "for-in-statements"))]
 enum IterationTarget {
     Local(Binding),
+    #[cfg(feature = "array-destructuring-declarations")]
+    Array(Vec<Binding>),
     #[cfg(feature = "object-destructuring-declarations")]
     Object(Vec<((usize, usize), Binding)>),
 }
@@ -1261,6 +1272,46 @@ impl Parser<'_> {
         self.whitespace();
         let declaration = self.try_word(b"let");
         self.whitespace();
+        #[cfg(feature = "array-destructuring-declarations")]
+        if declaration && self.consume_raw(b'[') {
+            let mut names = Vec::new();
+            loop {
+                self.whitespace();
+                names.push(self.identifier()?);
+                if self.consume(b']') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or ]"));
+                }
+            }
+            if !self.try_word_after_whitespace(keyword) {
+                self.offset = start;
+                return Ok(None);
+            }
+            let first_loop_local = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            let mut bindings = Vec::new();
+            for (name_start, name_end) in names {
+                let slot = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let binding = Binding {
+                    start: name_start,
+                    end: name_end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                };
+                self.locals.push(binding);
+                bindings.push(binding);
+            }
+            return Ok(Some(IterationBinding {
+                target: IterationTarget::Array(bindings),
+                first_loop_local,
+            }));
+        }
         #[cfg(feature = "object-destructuring-declarations")]
         if declaration && self.consume_raw(b'{') {
             let mut properties = Vec::new();
@@ -1421,6 +1472,19 @@ impl Parser<'_> {
             IterationTarget::Local(binding) => {
                 self.output.push(Opcode::StoreLocal as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
+            #[cfg(feature = "array-destructuring-declarations")]
+            IterationTarget::Array(bindings) => {
+                for (index, binding) in bindings.into_iter().enumerate() {
+                    let index = i32::try_from(index).map_err(|_| self.error("an array index"))?;
+                    self.output.push(Opcode::DuplicateTop as u8);
+                    self.output.push(Opcode::ConstI30 as u8);
+                    self.output.extend_from_slice(&index.to_le_bytes());
+                    self.output.push(Opcode::GetIndex as u8);
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                }
+                self.output.push(Opcode::DropTop as u8);
             }
             #[cfg(feature = "object-destructuring-declarations")]
             IterationTarget::Object(properties) => {
@@ -4410,24 +4474,34 @@ impl Parser<'_> {
         if !self.consume_raw(b'[') {
             return Ok(false);
         }
-        let mut bindings = Vec::new();
+        let mut targets = Vec::new();
         loop {
             self.whitespace();
-            let local = self.local_at_offset();
-            #[cfg(feature = "environments")]
-            let capture = if local.is_none() {
-                self.capture_at_offset()?
-            } else {
-                None
-            };
-            #[cfg(not(feature = "environments"))]
-            let capture: Option<(u16, Binding)> = None;
-            let Some(binding) = local.or_else(|| capture.map(|(_, binding)| binding)) else {
+            let Some(base) = self.assignment_base() else {
                 self.offset = start;
                 return Ok(false);
             };
-            self.offset += binding.end - binding.start;
-            bindings.push((binding, capture.map(|(index, _)| index)));
+            let target = if self.consume(b'.') {
+                self.whitespace();
+                ArrayDestructuringAssignmentTarget::Property(base, self.identifier()?)
+            } else {
+                match base {
+                    AssignmentBase::Local(binding) => {
+                        ArrayDestructuringAssignmentTarget::Binding(binding, None)
+                    }
+                    #[cfg(feature = "environments")]
+                    AssignmentBase::Capture(binding) => {
+                        let capture = self.intern_capture(binding)?;
+                        ArrayDestructuringAssignmentTarget::Binding(binding, Some(capture))
+                    }
+                    #[cfg(all(feature = "functions", feature = "receivers"))]
+                    AssignmentBase::Receiver => {
+                        self.offset = start;
+                        return Ok(false);
+                    }
+                }
+            };
+            targets.push(target);
             if self.consume(b']') {
                 break;
             }
@@ -4441,9 +4515,14 @@ impl Parser<'_> {
             return Ok(false);
         }
         self.expression(None)?;
-        let needs_temporary = bindings
+        let needs_temporary = targets
             .iter()
-            .any(|(binding, capture)| binding.captured || capture.is_some());
+            .any(|target| match target {
+                ArrayDestructuringAssignmentTarget::Binding(binding, capture) => {
+                    binding.captured || capture.is_some()
+                }
+                ArrayDestructuringAssignmentTarget::Property(..) => true,
+            });
         let temporary = if needs_temporary {
             let slot = u16::try_from(self.locals.len())
                 .map_err(|_| self.error("fewer than 65536 local bindings"))?;
@@ -4465,29 +4544,44 @@ impl Parser<'_> {
         } else {
             None
         };
-        for (index, (binding, capture)) in bindings.into_iter().enumerate() {
+        for (index, target) in targets.into_iter().enumerate() {
             let index = i32::try_from(index).map_err(|_| self.error("an array index"))?;
             self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::ConstI30 as u8);
             self.output.extend_from_slice(&index.to_le_bytes());
             self.output.push(Opcode::GetIndex as u8);
-            if binding.captured || capture.is_some() {
-                let temporary = temporary.expect("captured assignments allocate a temporary");
-                self.output.push(Opcode::StoreLocal as u8);
-                self.output.extend_from_slice(&temporary.to_le_bytes());
-                if let Some(capture) = capture {
-                    self.output.push(Opcode::LoadCapture as u8);
-                    self.output.extend_from_slice(&capture.to_le_bytes());
-                } else {
+            match target {
+                ArrayDestructuringAssignmentTarget::Binding(binding, capture)
+                    if binding.captured || capture.is_some() =>
+                {
+                    let temporary = temporary.expect("captured assignments allocate a temporary");
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    if let Some(capture) = capture {
+                        self.output.push(Opcode::LoadCapture as u8);
+                        self.output.extend_from_slice(&capture.to_le_bytes());
+                    } else {
+                        self.output.push(Opcode::LoadLocal as u8);
+                        self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                    }
                     self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    self.output.push(Opcode::StoreEnvironmentCell as u8);
+                }
+                ArrayDestructuringAssignmentTarget::Binding(binding, _) => {
+                    self.output.push(Opcode::StoreLocal as u8);
                     self.output.extend_from_slice(&binding.slot.to_le_bytes());
                 }
-                self.output.push(Opcode::LoadLocal as u8);
-                self.output.extend_from_slice(&temporary.to_le_bytes());
-                self.output.push(Opcode::StoreEnvironmentCell as u8);
-            } else {
-                self.output.push(Opcode::StoreLocal as u8);
-                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                ArrayDestructuringAssignmentTarget::Property(base, (start, end)) => {
+                    let temporary = temporary.expect("property assignments allocate a temporary");
+                    self.output.push(Opcode::StoreLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    self.emit_assignment_base(base)?;
+                    self.output_atom_range(start, end);
+                    self.output.push(Opcode::LoadLocal as u8);
+                    self.output.extend_from_slice(&temporary.to_le_bytes());
+                    self.emit_property_assignment_statement();
+                }
             }
         }
         self.output.push(Opcode::DropTop as u8);
@@ -7594,6 +7688,22 @@ impl Parser<'_> {
         &mut self,
         #[cfg(feature = "method-calls")] method: bool,
     ) -> Result<(), CompileError> {
+        #[cfg(feature = "spread-calls")]
+        if self.consume_bytes(b"...") {
+            self.expression(None)?;
+            if !self.consume(b')') {
+                return Err(self.error(") after a spread argument"));
+            }
+            #[cfg(feature = "method-calls")]
+            self.output.push(if method {
+                Opcode::CallMethodSpread as u8
+            } else {
+                Opcode::CallValueSpread as u8
+            });
+            #[cfg(not(feature = "method-calls"))]
+            self.output.push(Opcode::CallValueSpread as u8);
+            return Ok(());
+        }
         let mut count = 0_u16;
         if !self.consume(b')') {
             loop {

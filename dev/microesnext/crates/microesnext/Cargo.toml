@@ -161,6 +161,12 @@ array-spread = [
   "microesnext-vm/array-spread",
   "microesnext-compiler/array-spread",
 ]
+spread-calls = [
+  "arrays",
+  "function-arguments",
+  "microesnext-vm/spread-calls",
+  "microesnext-compiler/spread-calls",
+]
 array-assignment-expressions = [
   "arrays",
   "microesnext-objects/array-assignment-expressions",
@@ -757,6 +763,11 @@ required-features = ["nested-exceptions"]
 name = "finally-statements"
 path = "tests/finally_statements.rs"
 required-features = ["finally-statements", "locals", "objects"]
+
+[[test]]
+name = "spread-calls"
+path = "tests/spread_calls.rs"
+required-features = ["spread-calls", "method-calls", "literal-expressions", "locals"]
 
 [[test]]
 name = "nonterminal-exceptions"

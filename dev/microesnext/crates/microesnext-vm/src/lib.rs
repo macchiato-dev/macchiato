@@ -11,7 +11,7 @@ use microesnext_execution::exceptions::Handlers;
 use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]
 use microesnext_execution::suspension::{resume_context, suspend_context};
-#[cfg(feature = "array-spread")]
+#[cfg(any(feature = "array-spread", feature = "spread-calls"))]
 use microesnext_objects::arrays::len as array_len;
 #[cfg(feature = "arrays")]
 use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
@@ -680,93 +680,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "function-arguments")]
             Opcode::CallValueArguments => {
                 let argument_count = self.core.next_u16()? as usize;
-                let function = microesnext_bindings::parameters::take_callable(
-                    self.core.arena_mut(),
-                    argument_count,
-                )?;
-                #[cfg(feature = "host-bindings")]
-                if let Some(function) = function.as_host() {
-                    if self.host_argument_count.replace(argument_count).is_some() {
-                        return Err(Error::Type);
-                    }
-                    return Ok(Some(Outcome::HostCall {
-                        function,
-                        argument_count,
-                    }));
-                }
-                #[cfg(all(feature = "callable-objects", feature = "receivers"))]
-                let receiver_aware =
-                    microesnext_objects::callable::is_callable_object(self.core.arena(), function);
-                #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
-                let receiver_aware = false;
-                #[cfg(feature = "callable-objects")]
-                let function = unwrap_callable(self.core.arena(), function)?;
-                #[cfg(feature = "promise-resolvers")]
-                if microesnext_execution::promises::resolvers::is_resolver(
-                    self.core.arena(),
-                    function,
-                ) {
-                    if let Some(call) = microesnext_execution::promises::resolvers::take_call(
-                        self.core.arena_mut(),
-                        function,
-                        argument_count,
-                    )? {
-                        if self.resolver_call.replace(call).is_some() {
-                            return Err(Error::Type);
-                        }
-                        return Ok(Some(Outcome::PromiseResolverCall));
-                    }
-                    self.core.arena_mut().push(Value::UNDEFINED)?;
-                    return Ok(None);
-                }
-                #[cfg(feature = "async-functions")]
-                if microesnext_execution::async_functions::is_async(self.core.arena(), function) {
-                    return Ok(Some(Outcome::AsyncCall {
-                        function,
-                        argument_count,
-                    }));
-                }
-                let target = entry(self.core.arena(), function)?;
-                #[cfg(feature = "receivers")]
-                if receiver_aware {
-                    microesnext_bindings::receivers::append(
-                        self.core.arena_mut(),
-                        argument_count,
-                        Value::UNDEFINED,
-                    )?;
-                    self.core
-                        .enter_call_with_arguments(function, target, argument_count + 1)?;
-                } else {
-                    self.core
-                        .enter_call_with_arguments(function, target, argument_count)?;
-                }
-                #[cfg(not(feature = "receivers"))]
-                self.core
-                    .enter_call_with_arguments(function, target, argument_count)?;
-                Ok(None)
+                self.call_value_arguments(argument_count)
             }
             #[cfg(feature = "method-calls")]
             Opcode::CallMethodArguments => {
                 let argument_count = self.core.next_u16()? as usize;
-                let (method, receiver) =
-                    microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
-                let receiver_aware =
-                    microesnext_objects::callable::is_callable_object(self.core.arena(), method);
-                let function = unwrap_callable(self.core.arena(), method)?;
-                let target = entry(self.core.arena(), function)?;
-                if receiver_aware {
-                    microesnext_bindings::receivers::append(
-                        self.core.arena_mut(),
-                        argument_count,
-                        receiver,
-                    )?;
-                    self.core
-                        .enter_call_with_arguments(function, target, argument_count + 1)?;
-                } else {
-                    self.core
-                        .enter_call_with_arguments(function, target, argument_count)?;
-                }
-                Ok(None)
+                self.call_method_arguments(argument_count)
+            }
+            #[cfg(feature = "spread-calls")]
+            Opcode::CallValueSpread => {
+                let count = self.expand_spread_arguments()?;
+                self.call_value_arguments(count)
+            }
+            #[cfg(all(feature = "spread-calls", feature = "method-calls"))]
+            Opcode::CallMethodSpread => {
+                let count = self.expand_spread_arguments()?;
+                self.call_method_arguments(count)
             }
             #[cfg(feature = "class-inheritance")]
             Opcode::CallSuperArguments => {
@@ -1791,6 +1720,108 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         self.core.abandon();
         Ok(Some(Outcome::Throw(reason)))
+    }
+
+    #[cfg(feature = "spread-calls")]
+    fn expand_spread_arguments(&mut self) -> Result<usize, Error> {
+        let array = self.core.arena_mut().pop()?;
+        let count = array_len(self.core.arena(), array)?;
+        for index in 0..count {
+            let value = array_get(self.core.arena(), array, index)?;
+            self.core.arena_mut().push(value)?;
+        }
+        Ok(count)
+    }
+
+    #[cfg(feature = "function-arguments")]
+    fn call_value_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
+        let function = microesnext_bindings::parameters::take_callable(
+            self.core.arena_mut(),
+            argument_count,
+        )?;
+        #[cfg(feature = "host-bindings")]
+        if let Some(function) = function.as_host() {
+            if self.host_argument_count.replace(argument_count).is_some() {
+                return Err(Error::Type);
+            }
+            return Ok(Some(Outcome::HostCall {
+                function,
+                argument_count,
+            }));
+        }
+        #[cfg(all(feature = "callable-objects", feature = "receivers"))]
+        let receiver_aware =
+            microesnext_objects::callable::is_callable_object(self.core.arena(), function);
+        #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
+        let receiver_aware = false;
+        #[cfg(feature = "callable-objects")]
+        let function = unwrap_callable(self.core.arena(), function)?;
+        #[cfg(feature = "promise-resolvers")]
+        if microesnext_execution::promises::resolvers::is_resolver(
+            self.core.arena(),
+            function,
+        ) {
+            if let Some(call) = microesnext_execution::promises::resolvers::take_call(
+                self.core.arena_mut(),
+                function,
+                argument_count,
+            )? {
+                if self.resolver_call.replace(call).is_some() {
+                    return Err(Error::Type);
+                }
+                return Ok(Some(Outcome::PromiseResolverCall));
+            }
+            self.core.arena_mut().push(Value::UNDEFINED)?;
+            return Ok(None);
+        }
+        #[cfg(feature = "async-functions")]
+        if microesnext_execution::async_functions::is_async(self.core.arena(), function) {
+            return Ok(Some(Outcome::AsyncCall {
+                function,
+                argument_count,
+            }));
+        }
+        let target = entry(self.core.arena(), function)?;
+        #[cfg(feature = "receivers")]
+        if receiver_aware {
+            microesnext_bindings::receivers::append(
+                self.core.arena_mut(),
+                argument_count,
+                Value::UNDEFINED,
+            )?;
+            self.core
+                .enter_call_with_arguments(function, target, argument_count + 1)?;
+        } else {
+            self.core
+                .enter_call_with_arguments(function, target, argument_count)?;
+        }
+        #[cfg(not(feature = "receivers"))]
+        self.core
+            .enter_call_with_arguments(function, target, argument_count)?;
+        Ok(None)
+    }
+
+    #[cfg(feature = "method-calls")]
+    fn call_method_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
+        let (method, receiver) =
+            microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
+        let receiver_aware =
+            microesnext_objects::callable::is_callable_object(self.core.arena(), method);
+        let function = unwrap_callable(self.core.arena(), method)?;
+        let target = entry(self.core.arena(), function)?;
+        if receiver_aware {
+            microesnext_bindings::receivers::append(
+                self.core.arena_mut(),
+                argument_count,
+                receiver,
+            )?;
+            self.core
+                .enter_call_with_arguments(function, target, argument_count + 1)?;
+        } else {
+            self.core
+                .enter_call_with_arguments(function, target, argument_count)?;
+        }
+        Ok(None)
     }
 
     #[cfg(all(

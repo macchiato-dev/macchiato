@@ -218,6 +218,10 @@ pub enum Opcode {
     ToSetter = 142,
     #[cfg(all(feature = "getters", feature = "property-assignment"))]
     SetPropertyAccessor = 143,
+    #[cfg(feature = "spread-calls")]
+    CallValueSpread = 144,
+    #[cfg(all(feature = "spread-calls", feature = "method-calls"))]
+    CallMethodSpread = 145,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -419,6 +423,10 @@ impl TryFrom<u8> for Opcode {
             142 => Ok(Self::ToSetter),
             #[cfg(all(feature = "getters", feature = "property-assignment"))]
             143 => Ok(Self::SetPropertyAccessor),
+            #[cfg(feature = "spread-calls")]
+            144 => Ok(Self::CallValueSpread),
+            #[cfg(all(feature = "spread-calls", feature = "method-calls"))]
+            145 => Ok(Self::CallMethodSpread),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

@@ -25,3 +25,20 @@ fn array_destructuring_reassigns_bindings_captured_by_an_arrow() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[cfg(feature = "objects")]
+#[test]
+fn array_destructuring_can_mix_property_and_local_targets() {
+    let code = compile_script(
+        "let object = { value: 1 }, local = 42; \
+         [object.value, local] = [local, object.value]; return object.value;",
+    )
+    .unwrap();
+    let mut memory = [0; 768];
+    assert_eq!(
+        Machine::with_objects(&code, &mut memory, 8)
+            .unwrap()
+            .run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
