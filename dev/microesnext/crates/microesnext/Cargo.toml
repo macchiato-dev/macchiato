@@ -955,6 +955,11 @@ path = "tests/class_setters.rs"
 required-features = ["class-setters", "locals", "objects"]
 
 [[test]]
+name = "host-define-property"
+path = "tests/host_define_property.rs"
+required-features = ["full"]
+
+[[test]]
 name = "recursive-constructors"
 path = "tests/recursive_constructors.rs"
 required-features = [

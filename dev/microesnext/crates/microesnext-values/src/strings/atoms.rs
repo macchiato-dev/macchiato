@@ -34,6 +34,28 @@ impl Atoms {
         Ok(extra[0])
     }
 
+    /// Intern an existing guest string without copying its UTF-8 bytes.
+    pub fn intern_value(&mut self, arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
+        let string = value.as_ref().ok_or(Error::Type)?;
+        if arena.kind(string)? != microesnext_arena::BlockKind::String {
+            return Err(Error::Type);
+        }
+        let table = self.table_ref(arena)?;
+        for raw in arena.values(table)?.iter().copied() {
+            let atom = Value::from_raw(raw);
+            let atom_ref = atom.as_ref().ok_or(Error::Type)?;
+            if arena.bytes(atom_ref)? == arena.bytes(string)? {
+                return Ok(atom);
+            }
+        }
+
+        let mut extra = [value];
+        let table = self.table_ref(arena)?;
+        let table = arena.extend_values(table, &mut extra, &mut [])?;
+        arena.set_root(self.table, Value::from_ref(table))?;
+        Ok(extra[0])
+    }
+
     pub fn release(self, arena: &mut Arena<'_>) -> Result<(), Error> {
         arena.release(self.table).map(|_| ())
     }

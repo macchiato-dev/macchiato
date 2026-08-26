@@ -6930,7 +6930,10 @@ impl Parser<'_> {
             if self.consume(b'+') {
                 let (_, right) = self.product(None)?;
                 #[cfg(feature = "string-operations")]
-                if kind == TermKind::String && right == TermKind::String {
+                if kind == TermKind::String {
+                    if right != TermKind::String {
+                        self.output.push(Opcode::ToStringPrimitive as u8);
+                    }
                     self.output.push(Opcode::ConcatenateStrings as u8);
                     kind = TermKind::String;
                     continue;
@@ -6970,7 +6973,10 @@ impl Parser<'_> {
         while self.consume(b'+') {
             let (_, right) = self.product(None)?;
             #[cfg(feature = "string-operations")]
-            if kind == TermKind::String && right == TermKind::String {
+            if kind == TermKind::String {
+                if right != TermKind::String {
+                    self.output.push(Opcode::ToStringPrimitive as u8);
+                }
                 self.output.push(Opcode::ConcatenateStrings as u8);
                 kind = TermKind::String;
                 continue;
@@ -10284,6 +10290,10 @@ mod tests {
     fn emits_strict_concatenation_only_for_proven_strings() {
         let code = compile_script("return 'micro' + `esnext`;").unwrap();
         assert!(code.contains(&(Opcode::ConcatenateStrings as u8)));
+
+        let dynamic = compile_script("let name = 'change'; return 'on' + name;").unwrap();
+        assert!(dynamic.contains(&(Opcode::ToStringPrimitive as u8)));
+        assert!(dynamic.contains(&(Opcode::ConcatenateStrings as u8)));
 
         let numeric = compile_script("return 1 + 2;").unwrap();
         assert!(!numeric.contains(&(Opcode::ConcatenateStrings as u8)));

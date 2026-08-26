@@ -263,6 +263,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         self.intern(bytes)
     }
 
+    #[cfg(feature = "atoms")]
+    pub fn intern_string_value(&mut self, value: Value) -> Result<Value, Error> {
+        if self.atoms.is_none() {
+            self.atoms = Some(Atoms::new(self.core.arena_mut())?);
+        }
+        self.atoms
+            .as_mut()
+            .ok_or(Error::DanglingReference)?
+            .intern_value(self.core.arena_mut(), value)
+    }
+
     #[inline(always)]
     pub fn arena(&self) -> &Arena<'_> {
         self.core.arena()
@@ -372,6 +383,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         descriptor: Value,
     ) -> Result<Value, Error> {
         let object_root = self.retain(object)?;
+        let key = self.intern_string_value(key)?;
         let key_root = self.retain(key)?;
         let descriptor_root = self.retain(descriptor)?;
         let result = self.define_rooted_property(object_root, key_root, descriptor_root);
