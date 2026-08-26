@@ -9,7 +9,11 @@ version.workspace = true
 
 [features]
 default = []
-control-flow = ["dep:microesnext-truthiness", "microesnext-bytecode/control-flow"]
+control-flow = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/truthiness",
+  "microesnext-bytecode/control-flow",
+]
 locals = ["dep:microesnext-locals", "microesnext-bytecode/locals"]
 async = ["dep:microesnext-suspension", "microesnext-bytecode/async"]
 async-functions = [
@@ -17,15 +21,13 @@ async-functions = [
   "functions",
   "dep:microesnext-async-functions",
   "microesnext-bytecode/async-functions",
-  "microesnext-typeof?/async-functions",
+  "microesnext-semantics?/async-functions",
 ]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = [
   "dep:microesnext-strings",
   "microesnext-bytecode/strings",
-  "microesnext-equality?/strings",
-  "microesnext-logical-operations?/strings",
-  "microesnext-truthiness?/strings",
+  "microesnext-semantics?/string-values",
 ]
 stack-operations = [
   "microesnext-arena/stack-operations",
@@ -43,14 +45,14 @@ callable-objects = [
   "functions",
   "objects",
   "microesnext-objects/callable-objects",
-  "microesnext-typeof?/callable-objects",
+  "microesnext-semantics?/callable-objects",
 ]
 constructors = ["callable-objects", "microesnext-bytecode/constructors"]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
   "microesnext-bytecode/class-constructors",
-  "microesnext-typeof?/class-constructors",
+  "microesnext-semantics?/class-constructors",
 ]
 construction = [
   "constructors",
@@ -77,9 +79,14 @@ instanceof = [
   "microesnext-objects/instanceof",
   "microesnext-bytecode/instanceof",
 ]
-equality = ["dep:microesnext-equality", "microesnext-bytecode/equality"]
+equality = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-bytecode/equality",
+]
 logical-operations = [
-  "dep:microesnext-logical-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/logical-operations",
   "microesnext-bytecode/logical-operations",
 ]
 method-calls = [
@@ -93,10 +100,7 @@ method-calls = [
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-bytecode/numbers",
-  "microesnext-equality?/numbers",
-  "microesnext-logical-operations?/numbers",
-  "microesnext-truthiness?/numbers",
-  "microesnext-typeof?/numbers",
+  "microesnext-semantics?/numbers",
 ]
 number-operations = [
   "numbers",
@@ -168,9 +172,14 @@ receivers = [
 promise-resolvers = [
   "function-arguments",
   "dep:microesnext-promise-resolvers",
-  "microesnext-typeof?/promise-resolvers",
+  "microesnext-semantics?/promise-resolvers",
 ]
-typeof = ["strings", "dep:microesnext-typeof", "microesnext-bytecode/typeof"]
+typeof = [
+  "strings",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/typeof",
+  "microesnext-bytecode/typeof",
+]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -181,12 +190,11 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
-microesnext-logical-operations = { workspace = true, optional = true }
+microesnext-semantics = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
-microesnext-equality = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
@@ -194,8 +202,6 @@ microesnext-promise-resolvers = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
-microesnext-truthiness = { workspace = true, optional = true }
-microesnext-typeof = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

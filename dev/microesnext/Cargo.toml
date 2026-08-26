@@ -15,13 +15,12 @@ members = [
   "crates/microesnext-recursive-async-functions",
   "crates/microesnext-receivers",
   "crates/microesnext-parameters",
-  "crates/microesnext-equality",
   "crates/microesnext-environments",
   "crates/microesnext-errors",
   "crates/microesnext-iterators",
   "crates/microesnext-integer-operations",
   "crates/microesnext-locals",
-  "crates/microesnext-logical-operations",
+  "crates/microesnext-semantics",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -33,8 +32,6 @@ members = [
   "crates/microesnext-symbols",
   "crates/microesnext-thenables",
   "crates/microesnext-types",
-  "crates/microesnext-truthiness",
-  "crates/microesnext-typeof",
   "crates/microesnext-vm",
   "crates/microesnext-vm-core",
   "tools/capability-size",
@@ -67,13 +64,12 @@ microesnext-recursive-functions = { path = "crates/microesnext-recursive-functio
 microesnext-recursive-async-functions = { path = "crates/microesnext-recursive-async-functions", version = "0.0.0" }
 microesnext-receivers = { path = "crates/microesnext-receivers", version = "0.0.0" }
 microesnext-parameters = { path = "crates/microesnext-parameters", version = "0.0.0" }
-microesnext-equality = { path = "crates/microesnext-equality", version = "0.0.0" }
 microesnext-environments = { path = "crates/microesnext-environments", version = "0.0.0" }
 microesnext-errors = { path = "crates/microesnext-errors", version = "0.0.0" }
 microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.0" }
 microesnext-integer-operations = { path = "crates/microesnext-integer-operations", version = "0.0.0" }
 microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
-microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
+microesnext-semantics = { path = "crates/microesnext-semantics", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
@@ -85,8 +81,6 @@ microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
 microesnext-thenables = { path = "crates/microesnext-thenables", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
-microesnext-truthiness = { path = "crates/microesnext-truthiness", version = "0.0.0" }
-microesnext-typeof = { path = "crates/microesnext-typeof", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
 microesnext-vm-core = { path = "crates/microesnext-vm-core", version = "0.0.0" }
 

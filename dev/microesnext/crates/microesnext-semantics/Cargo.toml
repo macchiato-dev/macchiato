@@ -1,6 +1,6 @@
 [package]
-name = "microesnext-typeof"
-description = "Removable JavaScript typeof classification for MicroESNext"
+name = "microesnext-semantics"
+description = "Composable JavaScript value semantics for MicroESNext"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -9,20 +9,27 @@ version.workspace = true
 
 [features]
 default = []
+equality = []
+logical-operations = ["truthiness"]
+numbers = ["dep:microesnext-numbers"]
+string-values = []
+truthiness = []
+typeof = ["dep:microesnext-strings", "microesnext-arena/closures"]
 async-functions = ["microesnext-arena/async-functions"]
 callable-objects = ["microesnext-arena/callable-objects"]
 class-constructors = ["microesnext-arena/class-constructors"]
-numbers = ["microesnext-arena/numbers"]
 promise-resolvers = ["microesnext-arena/promise-resolvers"]
 symbols = ["microesnext-arena/symbols"]
 
 [dependencies]
-microesnext-arena = { workspace = true, features = ["closures"] }
-microesnext-strings.workspace = true
+microesnext-arena.workspace = true
+microesnext-numbers = { workspace = true, optional = true }
+microesnext-strings = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-objects = { workspace = true, features = ["callable-objects"] }
+microesnext-strings.workspace = true
 
 [lib]
 path = "src/lib.rs"

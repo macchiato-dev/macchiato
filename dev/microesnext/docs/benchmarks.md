@@ -54,7 +54,8 @@ unequal. Composing both scalar representations produces a 9,480-byte (3,948
 gzip) artifact whose additional probe verifies separately allocated equal
 strings.
 
-`microesnext-equality` also retains SameValueZero for collection keys, but the
+The semantics `equality` feature also retains SameValueZero for collection
+keys, but the
 VM's `===` and `!==` instructions call the strict operation. This avoids the
 subtle but observable mistake of treating `NaN === NaN` as true while still
 sharing the scalar decoding and string-content comparison machinery.
@@ -477,7 +478,8 @@ performance gates.
 The replacement puts bottom-relative slot operations in
 `microesnext-locals`, gates their typed opcodes, and handles them through the
 same statically composed extension boundary as other optional capabilities.
-Control flow uses that boundary too, with `microesnext-truthiness` composing
+Control flow uses that boundary too, with the semantics `truthiness` feature
+composing
 boxed-number and string coercion only when those scalar features are enabled.
 The resulting live Wasm probes are 4,012 bytes for locals and 3,486 bytes for
 control flow, while the minimal artifact is 1,984 bytes. Five alternating

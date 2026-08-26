@@ -15,13 +15,11 @@ dependencies = [
  "microesnext-collections",
  "microesnext-compiler",
  "microesnext-environments",
- "microesnext-equality",
  "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-integer-operations",
  "microesnext-iterators",
  "microesnext-locals",
- "microesnext-logical-operations",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -31,10 +29,10 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-semantics",
  "microesnext-strings",
  "microesnext-symbols",
  "microesnext-thenables",
- "microesnext-typeof",
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
@@ -122,10 +120,10 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
- "microesnext-equality",
  "microesnext-iterators",
  "microesnext-numbers",
  "microesnext-objects",
+ "microesnext-semantics",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -172,16 +170,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-equality"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-strings",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-errors"
 version = "0.0.0"
 dependencies = [
@@ -221,17 +209,6 @@ name = "microesnext-locals"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-logical-operations"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-strings",
- "microesnext-truthiness",
  "microesnext-types",
 ]
 
@@ -323,6 +300,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-semantics"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-numbers",
+ "microesnext-objects",
+ "microesnext-strings",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-strings"
 version = "0.0.0"
 dependencies = [
@@ -363,25 +351,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-truthiness"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-numbers",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-typeof"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-strings",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-types"
 version = "0.0.0"
 
@@ -395,11 +364,9 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-compiler",
  "microesnext-environments",
- "microesnext-equality",
  "microesnext-exceptions",
  "microesnext-integer-operations",
  "microesnext-locals",
- "microesnext-logical-operations",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-parameters",
@@ -408,10 +375,9 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
+ "microesnext-semantics",
  "microesnext-strings",
  "microesnext-suspension",
- "microesnext-truthiness",
- "microesnext-typeof",
  "microesnext-types",
  "microesnext-vm-core",
 ]

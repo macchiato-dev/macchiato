@@ -659,7 +659,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "typeof")]
             Opcode::TypeOf => {
                 let value = self.core.arena_mut().pop()?;
-                let result = microesnext_typeof::type_of(self.core.arena_mut(), value)?;
+                let result =
+                    microesnext_semantics::r#typeof::type_of(self.core.arena_mut(), value)?;
                 self.core.arena_mut().push(result)?;
                 Ok(None)
             }
@@ -798,19 +799,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "control-flow")]
             Opcode::ToBoolean => {
                 let value = self.core.arena_mut().pop()?;
-                let value = if microesnext_truthiness::to_boolean(self.core.arena(), value)? {
-                    Value::TRUE
-                } else {
-                    Value::FALSE
-                };
+                let value =
+                    if microesnext_semantics::truthiness::to_boolean(self.core.arena(), value)? {
+                        Value::TRUE
+                    } else {
+                        Value::FALSE
+                    };
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
             #[cfg(feature = "logical-operations")]
             Opcode::LogicalNot => {
                 let operand = self.core.arena_mut().pop()?;
-                let value =
-                    microesnext_logical_operations::logical_not(self.core.arena(), operand)?;
+                let value = microesnext_semantics::logical_operations::logical_not(
+                    self.core.arena(),
+                    operand,
+                )?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -885,7 +889,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StrictEqual => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let equal = microesnext_equality::strict_equal(self.core.arena(), left, right)?;
+                let equal =
+                    microesnext_semantics::equality::strict_equal(self.core.arena(), left, right)?;
                 self.core
                     .arena_mut()
                     .push(if equal { Value::TRUE } else { Value::FALSE })?;
@@ -895,7 +900,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StrictNotEqual => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let equal = microesnext_equality::strict_equal(self.core.arena(), left, right)?;
+                let equal =
+                    microesnext_semantics::equality::strict_equal(self.core.arena(), left, right)?;
                 self.core
                     .arena_mut()
                     .push(if equal { Value::FALSE } else { Value::TRUE })?;
@@ -925,7 +931,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::JumpIfFalsyOrPop => {
                 let target = self.core.next_u32()? as usize;
                 let value = self.core.arena().stack_value(0)?;
-                if microesnext_logical_operations::is_falsy(self.core.arena(), value)? {
+                if microesnext_semantics::logical_operations::is_falsy(self.core.arena(), value)? {
                     self.core.jump(target)?;
                 } else {
                     self.core.arena_mut().pop()?;
@@ -936,7 +942,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::JumpIfTruthyOrPop => {
                 let target = self.core.next_u32()? as usize;
                 let value = self.core.arena().stack_value(0)?;
-                if microesnext_logical_operations::is_truthy(self.core.arena(), value)? {
+                if microesnext_semantics::logical_operations::is_truthy(self.core.arena(), value)? {
                     self.core.jump(target)?;
                 } else {
                     self.core.arena_mut().pop()?;

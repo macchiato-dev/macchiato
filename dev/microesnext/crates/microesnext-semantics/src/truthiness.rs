@@ -1,7 +1,5 @@
-#![no_std]
-
 use microesnext_arena::Arena;
-#[cfg(feature = "strings")]
+#[cfg(feature = "string-values")]
 use microesnext_arena::BlockKind;
 use microesnext_types::{Error, Value};
 
@@ -23,7 +21,7 @@ pub fn to_boolean(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
     if let Some(number) = microesnext_numbers::try_get(arena, value)? {
         return Ok(number != 0.0 && !number.is_nan());
     }
-    #[cfg(feature = "strings")]
+    #[cfg(feature = "string-values")]
     if arena.kind(reference)? == BlockKind::String {
         return Ok(arena.byte_len(reference)? != 0);
     }
@@ -60,7 +58,7 @@ mod tests {
         assert_eq!(to_boolean(&arena, value), Ok(true));
     }
 
-    #[cfg(feature = "strings")]
+    #[cfg(feature = "string-values")]
     #[test]
     fn coerces_strings_by_length() {
         let mut memory = [0; 32];

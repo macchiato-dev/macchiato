@@ -205,7 +205,7 @@ fn find(arena: &Arena<'_>, table: HeapRef, key: Value) -> Result<Option<usize>, 
 #[inline(always)]
 fn keys_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
     #[cfg(any(feature = "number-keys", feature = "string-keys"))]
-    return microesnext_equality::same_value_zero(arena, left, right);
+    return microesnext_semantics::equality::same_value_zero(arena, left, right);
     #[cfg(not(any(feature = "number-keys", feature = "string-keys")))]
     {
         let _ = arena;

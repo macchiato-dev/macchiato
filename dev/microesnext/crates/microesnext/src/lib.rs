@@ -18,7 +18,7 @@ pub use microesnext_integer_operations::negation as integer_negation;
 pub use microesnext_objects::instanceof;
 
 #[cfg(feature = "logical-operations")]
-pub use microesnext_logical_operations as logical_operations;
+pub use microesnext_semantics::logical_operations;
 
 #[cfg(feature = "method-calls")]
 pub use microesnext_objects::method_calls;
@@ -87,7 +87,7 @@ pub use microesnext_numbers::string_coercion as string_number_coercion;
 #[cfg(feature = "function-arguments")]
 pub use microesnext_parameters as parameters;
 #[cfg(feature = "typeof")]
-pub use microesnext_typeof as r#typeof;
+pub use microesnext_semantics::r#typeof;
 
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;
@@ -96,7 +96,7 @@ pub use microesnext_exceptions as exceptions;
 pub use microesnext_errors as errors;
 
 #[cfg(feature = "equality")]
-pub use microesnext_equality as equality;
+pub use microesnext_semantics::equality;
 
 #[cfg(feature = "environments")]
 pub use microesnext_environments as environments;

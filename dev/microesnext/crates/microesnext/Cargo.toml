@@ -16,7 +16,7 @@ constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
-  "microesnext-typeof?/class-constructors",
+  "microesnext-semantics?/class-constructors",
   "microesnext-vm/class-constructors",
 ]
 construction = [
@@ -59,7 +59,7 @@ async-functions = [
   "dep:microesnext-async-functions",
   "microesnext-async/functions",
   "microesnext-vm/async-functions",
-  "microesnext-typeof?/async-functions",
+  "microesnext-semantics?/async-functions",
 ]
 async-thenables = [
   "async-functions",
@@ -70,8 +70,7 @@ strings = [
   "dep:microesnext-strings",
   "microesnext-vm/strings",
   "microesnext-collections?/string-keys",
-  "microesnext-equality?/strings",
-  "microesnext-logical-operations?/strings",
+  "microesnext-semantics?/string-values",
 ]
 stack-operations = [
   "microesnext-arena/stack-operations",
@@ -81,7 +80,7 @@ string-operations = [
   "strings",
   "microesnext-vm/string-operations",
 ]
-symbols = ["dep:microesnext-symbols", "microesnext-typeof?/symbols"]
+symbols = ["dep:microesnext-symbols", "microesnext-semantics?/symbols"]
 well-known-symbols = ["symbols"]
 atoms = ["strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
@@ -93,7 +92,7 @@ callable-objects = [
   "objects",
   "microesnext-objects/callable-objects",
   "microesnext-vm/callable-objects",
-  "microesnext-typeof?/callable-objects",
+  "microesnext-semantics?/callable-objects",
 ]
 function-arguments = [
   "functions",
@@ -115,18 +114,21 @@ instanceof = [
   "microesnext-vm/instanceof",
 ]
 minimal-program = ["control-flow", "integer-operations", "locals"]
-equality = ["dep:microesnext-equality", "microesnext-vm/equality"]
+equality = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-vm/equality",
+]
 logical-operations = [
-  "dep:microesnext-logical-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/logical-operations",
   "microesnext-vm/logical-operations",
 ]
 numbers = [
   "dep:microesnext-numbers",
   "microesnext-vm/numbers",
   "microesnext-collections?/number-keys",
-  "microesnext-equality?/numbers",
-  "microesnext-logical-operations?/numbers",
-  "microesnext-typeof?/numbers",
+  "microesnext-semantics?/numbers",
 ]
 number-operations = [
   "numbers",
@@ -162,7 +164,12 @@ string-number-coercion = [
   "microesnext-numbers/string-coercion",
   "microesnext-vm/string-number-coercion",
 ]
-typeof = ["strings", "dep:microesnext-typeof", "microesnext-vm/typeof"]
+typeof = [
+  "strings",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/typeof",
+  "microesnext-vm/typeof",
+]
 exceptions = ["dep:microesnext-exceptions", "microesnext-vm/exceptions"]
 errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
@@ -228,7 +235,7 @@ promise-resolvers = [
   "promise-resolution",
   "dep:microesnext-promise-resolvers",
   "microesnext-vm/promise-resolvers",
-  "microesnext-typeof?/promise-resolvers",
+  "microesnext-semantics?/promise-resolvers",
 ]
 thenables = [
   "objects",
@@ -257,12 +264,10 @@ microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
-microesnext-logical-operations = { workspace = true, optional = true }
+microesnext-semantics = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
-microesnext-typeof = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-environments = { workspace = true, optional = true }
-microesnext-equality = { workspace = true, optional = true }
 microesnext-errors = { workspace = true, optional = true }
 microesnext-recursive-functions = { workspace = true, optional = true }
 microesnext-recursive-async-functions = { workspace = true, optional = true }

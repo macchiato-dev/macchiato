@@ -1,12 +1,10 @@
-#![no_std]
-
 use microesnext_arena::Arena;
-#[cfg(feature = "strings")]
+#[cfg(feature = "string-values")]
 use microesnext_arena::BlockKind;
 use microesnext_types::{Error, Value};
 
 pub fn same_value_zero(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
-    #[cfg(not(any(feature = "numbers", feature = "strings")))]
+    #[cfg(not(any(feature = "numbers", feature = "string-values")))]
     let _ = arena;
     if left == right {
         return Ok(true);
@@ -22,7 +20,7 @@ pub fn same_value_zero(arena: &Arena<'_>, left: Value, right: Value) -> Result<b
             return Ok(left == right || left.is_nan() && right.is_nan());
         }
     }
-    #[cfg(feature = "strings")]
+    #[cfg(feature = "string-values")]
     if string_equal(arena, left, right)? {
         return Ok(true);
     }
@@ -30,7 +28,7 @@ pub fn same_value_zero(arena: &Arena<'_>, left: Value, right: Value) -> Result<b
 }
 
 pub fn strict_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
-    #[cfg(not(any(feature = "numbers", feature = "strings")))]
+    #[cfg(not(any(feature = "numbers", feature = "string-values")))]
     let _ = arena;
     #[cfg(feature = "numbers")]
     {
@@ -46,14 +44,14 @@ pub fn strict_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool
     if left == right {
         return Ok(true);
     }
-    #[cfg(feature = "strings")]
+    #[cfg(feature = "string-values")]
     if string_equal(arena, left, right)? {
         return Ok(true);
     }
     Ok(false)
 }
 
-#[cfg(feature = "strings")]
+#[cfg(feature = "string-values")]
 fn string_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
     let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) else {
         return Ok(false);
@@ -100,7 +98,7 @@ mod tests {
         assert!(strict_equal(&arena, zero, negative_zero).unwrap());
     }
 
-    #[cfg(feature = "strings")]
+    #[cfg(feature = "string-values")]
     #[test]
     fn separately_allocated_strings_compare_by_content() {
         let mut memory = [0; 48];

@@ -1,10 +1,8 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
 pub fn is_truthy(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
-    microesnext_truthiness::to_boolean(arena, value)
+    crate::truthiness::to_boolean(arena, value)
 }
 
 pub fn is_falsy(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
@@ -49,7 +47,7 @@ mod tests {
     scalar_falsy_test!("numbers", handles_numbers_without_strings, |arena| {
         microesnext_numbers::new(arena, f64::NAN).unwrap()
     });
-    scalar_falsy_test!("strings", handles_strings_without_numbers, |arena| {
+    scalar_falsy_test!("string-values", handles_strings_without_numbers, |arena| {
         microesnext_strings::new(arena, b"").unwrap()
     });
 }

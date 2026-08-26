@@ -76,9 +76,10 @@ const errors = "microesnext-errors";
 const receivers = "microesnext-receivers";
 const thenables = "microesnext-thenables";
 const integerOperations = "microesnext-integer-operations";
-const equality = "microesnext-equality";
-const logicalOperations = "microesnext-logical-operations";
-const typeOf = "microesnext-typeof";
+const semantics = "microesnext-semantics";
+const equality = semantics;
+const logicalOperations = semantics;
+const typeOf = semantics;
 
 assertCompilerFeatures(
   ["locals"],
@@ -478,7 +479,7 @@ assertPresence(
 );
 assertPresence(
   ["minimal-program"],
-  [integerOperations, "microesnext-locals", "microesnext-truthiness"],
+  [integerOperations, "microesnext-locals", semantics],
   [
     asyncFunctions,
     environments,
@@ -488,12 +489,12 @@ assertPresence(
 );
 assertPresence(
   ["logical-operations"],
-  [logicalOperations, "microesnext-truthiness"],
+  [semantics],
   ["microesnext-numbers", "microesnext-strings"],
 );
 assertPresence(
   ["logical-operations", "numbers"],
-  [logicalOperations, "microesnext-numbers", "microesnext-truthiness"],
+  [semantics, "microesnext-numbers"],
   ["microesnext-strings"],
 );
 assertPresence(

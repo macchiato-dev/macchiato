@@ -157,22 +157,11 @@ an explicit relational stopping condition.
   multiplication or comparison. `minimal-program` composes the same library
   with locals and control flow without adding floating-point storage or
   changing the invariant interpreter loop.
-- `microesnext-equality` supplies strict equality and SameValueZero as distinct
-  operations. Identity-only builds remain small; optional number and string
-  features add their JavaScript value semantics without making equality depend
-  on either representation unconditionally.
-- `microesnext-logical-operations` supplies operand-preserving `&&` and `||`
-  truthiness plus unary `!` without enlarging the basic control-flow build.
-  Repeated negation is parsed iteratively rather than recursively. Number and
-  string truthiness compose independently, including builds that permit
-  numbers but have no guest operation capable of creating a string.
-- `microesnext-truthiness` implements `ToBoolean` and composes only the scalar
-  storage kinds a build enables. This keeps boxed `NaN`, zero, and empty
-  strings correct without making control-flow-only builds depend on them.
-- `microesnext-typeof` classifies immediate and arena values and returns an
-  ordinary guest string. Optional number, symbol, async-closure, and resolver
-  classifications are statically forwarded only when those representations
-  coexist with `typeof`.
+- `microesnext-semantics` interprets tagged values without owning their
+  representations. Its independent `equality`, `truthiness`,
+  `logical-operations`, and `typeof` features retain only the selected paths.
+  Optional number, string, symbol, and callable-record features add the
+  corresponding JavaScript behavior without indirect dispatch.
 - `microesnext-numbers` supplies heap-backed IEEE-754 representation together
   with its small division, negation, and primitive-coercion helpers. VM opcode
   selection and dead-code elimination remove unused operators; they do not need
@@ -203,7 +192,8 @@ an explicit relational stopping condition.
 - The iterator `protocol` feature defines and resolves realm-local
   `[Symbol.iterator]` bindings through object prototypes. Function validation
   and invocation remain independently composable.
-- `microesnext-equality` composes SameValueZero for enabled scalar types.
+- The semantics `equality` feature composes SameValueZero for enabled scalar
+  types.
   Collections use raw compact identity in their standalone build; number and
   string comparison enters only when those capabilities are selected too.
 - `microesnext-collections` contains ordered, geometrically grown Map and Set

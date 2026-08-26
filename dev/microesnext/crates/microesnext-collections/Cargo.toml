@@ -11,14 +11,22 @@ version.workspace = true
 default = []
 entry-iterators = ["iterators", "dep:microesnext-arrays"]
 iterators = ["dep:microesnext-iterators"]
-number-keys = ["dep:microesnext-equality", "microesnext-equality/numbers"]
-string-keys = ["dep:microesnext-equality", "microesnext-equality/strings"]
+number-keys = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-semantics/numbers",
+]
+string-keys = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-semantics/string-values",
+]
 weak = ["microesnext-arena/ephemerons"]
 
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
-microesnext-equality = { workspace = true, optional = true }
+microesnext-semantics = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
