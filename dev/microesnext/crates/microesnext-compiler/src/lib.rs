@@ -507,7 +507,11 @@ impl Parser<'_> {
         loop {
             self.statement_prefix()?;
             if self.try_word_after_whitespace(b"if") {
-                let abrupt = self.if_else()?;
+                let abrupt = if self.conditional_body_is_braced() {
+                    self.if_else()?
+                } else {
+                    self.single_if()?
+                };
                 if abrupt && self.at_body_end() {
                     return Ok(());
                 }
@@ -547,10 +551,18 @@ impl Parser<'_> {
         loop {
             self.statement_prefix()?;
             if self.try_word_after_whitespace(b"if") {
-                #[cfg(feature = "structured-statements")]
-                let abrupt = self.structured_statement(StructuredStart::Conditional)?;
-                #[cfg(not(feature = "structured-statements"))]
-                let abrupt = self.control_statement(true)?;
+                let abrupt = if self.conditional_body_is_braced() {
+                    #[cfg(feature = "structured-statements")]
+                    {
+                        self.structured_statement(StructuredStart::Conditional)?
+                    }
+                    #[cfg(not(feature = "structured-statements"))]
+                    {
+                        self.control_statement(true)?
+                    }
+                } else {
+                    self.single_if()?
+                };
                 if abrupt && self.at_body_end() {
                     return Ok(());
                 }
@@ -605,7 +617,14 @@ impl Parser<'_> {
         loop {
             self.statement_prefix()?;
             if self.try_word_after_whitespace(b"if") {
-                return self.if_else();
+                if self.conditional_body_is_braced() {
+                    return self.if_else();
+                }
+                let abrupt = self.single_if()?;
+                if abrupt && self.at_body_end() {
+                    return Ok(());
+                }
+                continue;
             }
             if self.try_word_after_whitespace(b"while") {
                 self.while_loop()?;
@@ -636,10 +655,6 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(any(
-        feature = "nonterminal-conditionals",
-        feature = "nonterminal-exceptions"
-    ))]
     fn at_body_end(&self) -> bool {
         self.source.get(self.offset).is_none() || self.source.get(self.offset) == Some(&b'}')
     }
@@ -850,6 +865,123 @@ impl Parser<'_> {
             self.relocations.push(loop_patch);
         }
         Ok(())
+    }
+
+    #[cfg(feature = "control-flow")]
+    fn conditional_body_is_braced(&self) -> bool {
+        let mut offset = self.offset;
+        while self.source.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+        if self.source.get(offset) != Some(&b'(') {
+            return false;
+        }
+        let mut depth = 0_usize;
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            offset += 1;
+            if let Some(delimiter) = quote {
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => quote = Some(byte),
+                b'(' => depth += 1,
+                b')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        while self.source.get(offset).is_some_and(u8::is_ascii_whitespace) {
+                            offset += 1;
+                        }
+                        return self.source.get(offset) == Some(&b'{');
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
+    #[cfg(feature = "control-flow")]
+    fn single_if(&mut self) -> Result<bool, CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let alternate_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        let consequent_abrupt = self.single_control_body()?;
+
+        let join_patch = if consequent_abrupt {
+            None
+        } else {
+            self.output.push(Opcode::Jump as u8);
+            let patch = self.output.len();
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            Some(patch)
+        };
+        let alternate = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[alternate_patch..alternate_patch + 4].copy_from_slice(&alternate.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(alternate_patch);
+
+        if !self.try_word_after_whitespace(b"else") {
+            if let Some(patch) = join_patch {
+                self.output[patch..patch + 4].copy_from_slice(&alternate.to_le_bytes());
+                #[cfg(feature = "functions")]
+                self.relocations.push(patch);
+            }
+            return Ok(false);
+        }
+        let alternate_abrupt = if self.try_word_after_whitespace(b"if") {
+            self.single_if()?
+        } else {
+            self.single_control_body()?
+        };
+        if let Some(patch) = join_patch {
+            let join = u32::try_from(self.output.len())
+                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(patch);
+        }
+        Ok(consequent_abrupt && alternate_abrupt)
+    }
+
+    #[cfg(feature = "control-flow")]
+    fn single_control_body(&mut self) -> Result<bool, CompileError> {
+        self.whitespace();
+        if self.try_word(b"return") {
+            self.offset -= b"return".len();
+            self.completion(None, false, false)?;
+            return Ok(true);
+        }
+        if self.try_word(b"throw") {
+            self.offset -= b"throw".len();
+            self.completion(None, false, false)?;
+            return Ok(true);
+        }
+        #[cfg(feature = "expression-statements")]
+        {
+            self.expression(None)?;
+            self.output.push(Opcode::DropTop as u8);
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            Ok(false)
+        }
+        #[cfg(not(feature = "expression-statements"))]
+        Err(self.error("return or throw"))
     }
 
     #[cfg(all(

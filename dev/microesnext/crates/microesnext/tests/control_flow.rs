@@ -18,6 +18,27 @@ fn source_if_else_composes_truthiness_and_locals() {
 }
 
 #[test]
+fn source_if_accepts_single_statements_and_an_optional_else() {
+    for (condition, expected) in [(0, 7), (1, 42)] {
+        let source = format!("let condition = {condition}; if (condition) return 42; return 7;");
+        let code = compile_script(&source).unwrap();
+        let mut memory = [0; 96];
+        assert_eq!(
+            Machine::new(&code, &mut memory).run(),
+            Ok(Outcome::Complete(Value::from_i30(expected).unwrap()))
+        );
+    }
+
+    let code =
+        compile_script("if (false) return 1; else if (true) return 42; else return 7;").unwrap();
+    let mut memory = [0; 96];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
+
+#[test]
 fn source_while_updates_stable_local_slots() {
     let code = compile_script(
         "let running = true; let answer = 0; while (running) { answer = 42; running = false; } return answer;",
