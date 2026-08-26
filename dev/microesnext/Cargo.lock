@@ -11,7 +11,6 @@ dependencies = [
  "microesnext-async",
  "microesnext-async-functions",
  "microesnext-async-thenables",
- "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
  "microesnext-class-constructors",
@@ -40,7 +39,6 @@ dependencies = [
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
- "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-symbols",
  "microesnext-thenables",
@@ -48,7 +46,6 @@ dependencies = [
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
- "microesnext-well-known-symbols",
 ]
 
 [[package]]
@@ -102,15 +99,6 @@ dependencies = [
  "microesnext-thenables",
  "microesnext-types",
  "microesnext-vm",
-]
-
-[[package]]
-name = "microesnext-atoms"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-strings",
- "microesnext-types",
 ]
 
 [[package]]
@@ -279,8 +267,8 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-objects",
+ "microesnext-symbols",
  "microesnext-types",
- "microesnext-well-known-symbols",
 ]
 
 [[package]]
@@ -288,8 +276,8 @@ name = "microesnext-iterator-results"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-atoms",
  "microesnext-objects",
+ "microesnext-strings",
  "microesnext-types",
 ]
 
@@ -344,7 +332,7 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-atoms",
+ "microesnext-strings",
  "microesnext-types",
 ]
 
@@ -435,14 +423,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-string-operations"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-strings"
 version = "0.0.0"
 dependencies = [
@@ -512,7 +492,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
  "microesnext-async-functions",
- "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
  "microesnext-class-constructors",
@@ -537,7 +516,6 @@ dependencies = [
  "microesnext-recursive-async-functions",
  "microesnext-recursive-constructors",
  "microesnext-recursive-functions",
- "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-suspension",
  "microesnext-truthiness",
@@ -554,15 +532,5 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-bytecode-core",
  "microesnext-compiler",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-well-known-symbols"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-strings",
- "microesnext-symbols",
  "microesnext-types",
 ]

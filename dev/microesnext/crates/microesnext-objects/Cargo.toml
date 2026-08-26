@@ -18,7 +18,7 @@ microesnext-arena.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-atoms.workspace = true
+microesnext-strings.workspace = true
 
 [lib]
 path = "src/lib.rs"

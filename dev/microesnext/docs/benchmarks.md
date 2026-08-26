@@ -500,7 +500,7 @@ minimal artifacts do not contain the argument-frame capability.
 
 Ordinary `ConstString` now allocates an unrooted string and no longer creates
 or populates an atom table. The 5,008-byte string row therefore excludes both
-`microesnext-atoms` and `microesnext-objects`. The atom row adds retained
+the atom module in `microesnext-strings` and `microesnext-objects`. The atom row adds retained
 interning; source-level objects compose both capabilities and use the distinct
 `ConstAtom` instruction for property names.
 

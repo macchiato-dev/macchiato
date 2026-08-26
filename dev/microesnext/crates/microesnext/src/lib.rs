@@ -33,7 +33,7 @@ pub use microesnext_arrays::assignment_expressions as array_assignment_expressio
 pub use microesnext_arrays::iterators as array_iterators;
 
 #[cfg(any(feature = "atoms", feature = "iterator-results"))]
-pub use microesnext_atoms as atoms;
+pub use microesnext_strings::atoms;
 
 #[cfg(feature = "async")]
 pub use microesnext_async as r#async;
@@ -130,13 +130,13 @@ pub use microesnext_strings as strings;
 pub use microesnext_arena::stack_operations;
 
 #[cfg(feature = "string-operations")]
-pub use microesnext_string_operations as string_operations;
+pub use microesnext_strings::operations as string_operations;
 
 #[cfg(feature = "symbols")]
 pub use microesnext_symbols as symbols;
 
 #[cfg(feature = "well-known-symbols")]
-pub use microesnext_well_known_symbols as well_known_symbols;
+pub use microesnext_symbols::well_known as well_known_symbols;
 
 #[cfg(feature = "weak-collections")]
 pub use microesnext_collections::weak as weak_collections;

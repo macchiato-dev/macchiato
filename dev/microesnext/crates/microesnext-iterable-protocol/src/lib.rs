@@ -1,8 +1,8 @@
 #![no_std]
 
 use microesnext_arena::Arena;
+use microesnext_symbols::well_known::WellKnownSymbols;
 use microesnext_types::{Error, Value};
-use microesnext_well_known_symbols::WellKnownSymbols;
 
 /// Define an object's realm-local `[Symbol.iterator]` property. The supplied
 /// value is deliberately opaque here; callable validation belongs to the

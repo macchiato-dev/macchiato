@@ -5,13 +5,13 @@ use microesnext_arena::Arena;
 use microesnext_arena::closures::{capture, capture_stack, entry};
 #[cfg(feature = "arrays")]
 use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
-#[cfg(feature = "atoms")]
-use microesnext_atoms::Atoms;
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "exceptions")]
 use microesnext_exceptions::Handlers;
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
+#[cfg(feature = "atoms")]
+use microesnext_strings::atoms::Atoms;
 #[cfg(feature = "async")]
 use microesnext_suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]
@@ -226,8 +226,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::ConcatenateStrings => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value =
-                    microesnext_string_operations::concatenate(self.core.arena_mut(), left, right)?;
+                let value = microesnext_strings::operations::concatenate(
+                    self.core.arena_mut(),
+                    left,
+                    right,
+                )?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }

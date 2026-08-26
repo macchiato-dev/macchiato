@@ -75,12 +75,11 @@ stack-operations = [
 ]
 string-operations = [
   "strings",
-  "dep:microesnext-string-operations",
   "microesnext-vm/string-operations",
 ]
 symbols = ["dep:microesnext-symbols", "microesnext-typeof?/symbols"]
-well-known-symbols = ["symbols", "dep:microesnext-well-known-symbols"]
-atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
+well-known-symbols = ["symbols"]
+atoms = ["strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 property-assignment = ["objects", "microesnext-vm/property-assignment"]
 prototype-chain = ["objects", "dep:microesnext-prototype-chain"]
@@ -206,7 +205,7 @@ collection-entry-iterators = [
 ]
 iterators = ["dep:microesnext-iterators"]
 iterator-results = [
-  "dep:microesnext-atoms",
+  "atoms",
   "dep:microesnext-iterator-results",
   "dep:microesnext-objects",
 ]
@@ -246,7 +245,6 @@ microesnext-async = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
-microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
@@ -275,10 +273,8 @@ microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
-microesnext-string-operations = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
 microesnext-thenables = { workspace = true, optional = true }
-microesnext-well-known-symbols = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true

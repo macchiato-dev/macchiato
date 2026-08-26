@@ -1,5 +1,8 @@
 #![no_std]
 
+pub mod atoms;
+pub mod operations;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 

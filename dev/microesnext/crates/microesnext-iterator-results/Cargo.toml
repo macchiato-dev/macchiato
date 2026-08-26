@@ -9,8 +9,8 @@ version.workspace = true
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-atoms.workspace = true
 microesnext-objects.workspace = true
+microesnext-strings.workspace = true
 microesnext-types.workspace = true
 
 [lib]

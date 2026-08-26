@@ -1,6 +1,5 @@
 [workspace]
 members = [
-  "crates/microesnext-atoms",
   "crates/microesnext",
   "crates/microesnext-arena",
   "crates/microesnext-arrays",
@@ -41,10 +40,8 @@ members = [
   "crates/microesnext-promise-resolvers",
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
-  "crates/microesnext-string-operations",
   "crates/microesnext-symbols",
   "crates/microesnext-thenables",
-  "crates/microesnext-well-known-symbols",
   "crates/microesnext-types",
   "crates/microesnext-truthiness",
   "crates/microesnext-typeof",
@@ -66,7 +63,6 @@ version = "0.0.0"
 
 [workspace.dependencies]
 microesnext = { path = "crates/microesnext", version = "0.0.0", default-features = false }
-microesnext-atoms = { path = "crates/microesnext-atoms", version = "0.0.0" }
 microesnext-arena = { path = "crates/microesnext-arena", version = "0.0.0" }
 microesnext-arrays = { path = "crates/microesnext-arrays", version = "0.0.0" }
 microesnext-async = { path = "crates/microesnext-async", version = "0.0.0" }
@@ -106,10 +102,8 @@ microesnext-promise-resolution = { path = "crates/microesnext-promise-resolution
 microesnext-promise-resolvers = { path = "crates/microesnext-promise-resolvers", version = "0.0.0" }
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
-microesnext-string-operations = { path = "crates/microesnext-string-operations", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
 microesnext-thenables = { path = "crates/microesnext-thenables", version = "0.0.0" }
-microesnext-well-known-symbols = { path = "crates/microesnext-well-known-symbols", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-truthiness = { path = "crates/microesnext-truthiness", version = "0.0.0" }
 microesnext-typeof = { path = "crates/microesnext-typeof", version = "0.0.0" }

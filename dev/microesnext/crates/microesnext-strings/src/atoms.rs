@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, RootId, Value};
 
@@ -28,7 +26,7 @@ impl Atoms {
             }
         }
 
-        let string = microesnext_strings::new(arena, bytes)?;
+        let string = crate::new(arena, bytes)?;
         let mut extra = [string];
         let table = self.table_ref(arena)?;
         let table = arena.extend_values(table, &mut extra, &mut [])?;

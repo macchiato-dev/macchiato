@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod well_known;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 

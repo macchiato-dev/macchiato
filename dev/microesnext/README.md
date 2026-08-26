@@ -41,13 +41,10 @@ an explicit relational stopping condition.
   compiler-only `literal-expressions` composition upgrades numeric-only array
   and object values to arbitrary supported expressions while preserving the
   smaller specialized literal loops when omitted.
-- `microesnext-strings` supplies ordinary packed byte strings without retained
-  global state.
-- `microesnext-string-operations` adds strict concatenation without a temporary
-  Rust allocation. It remains separate from storage and from future general
-  JavaScript coercion.
-- `microesnext-atoms` adds rooted interning for property names and other keys;
-  ordinary string literals neither link nor populate it.
+- `microesnext-strings` supplies ordinary packed byte strings, strict
+  allocation-conscious concatenation, and an atom-table module. The VM retains
+  atom state only when its `atoms` feature is selected; ordinary string literals
+  neither allocate nor populate that table.
 - `microesnext-objects` supplies prototype and property-table storage. Its VM
   feature composes strings for JavaScript property names, while the low-level
   crate can also use already-interned or non-string keys. A separate
@@ -193,9 +190,8 @@ an explicit relational stopping condition.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.
-- `microesnext-well-known-symbols` retains realm-owned identities separately.
-  A realm can omit description strings or compose them without changing the
-  ordinary symbol crate.
+- The symbols `well_known` module retains realm-owned identities. A realm can
+  omit description strings or compose them without changing ordinary symbols.
 - `microesnext-iterators` stores a source, cursor, and adapter tag in a
   relocatable guest object. Arrays and collections expose independently gated
   iterator modules, so adding array iteration does not pull in Map/Set storage,

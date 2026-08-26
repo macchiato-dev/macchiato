@@ -10,8 +10,8 @@ version.workspace = true
 [dependencies]
 microesnext-arena = { workspace = true, features = ["closures"] }
 microesnext-objects.workspace = true
+microesnext-symbols.workspace = true
 microesnext-types.workspace = true
-microesnext-well-known-symbols.workspace = true
 
 [dev-dependencies]
 

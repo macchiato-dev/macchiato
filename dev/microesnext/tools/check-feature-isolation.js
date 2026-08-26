@@ -390,7 +390,6 @@ assertPresence(
   ["equality", "numbers"],
   [equality, "microesnext-numbers"],
   [
-    "microesnext-atoms",
     "microesnext-objects",
     "microesnext-strings",
   ],
@@ -437,7 +436,7 @@ assertPresence(
 );
 assertPresence(
   ["prototype-chain"],
-  [prototypeChain, "microesnext-objects", "microesnext-atoms", "microesnext-strings"],
+  [prototypeChain, "microesnext-objects", "microesnext-strings"],
   [typeOf, "microesnext-numbers"],
 );
 assertPresence(
@@ -445,7 +444,6 @@ assertPresence(
   [
     callableObjects,
     "microesnext-objects",
-    "microesnext-atoms",
     "microesnext-strings",
   ],
   [prototypeChain, typeOf, "microesnext-numbers"],
@@ -455,7 +453,6 @@ assertPresence(
   [
     callableObjects,
     "microesnext-objects",
-    "microesnext-atoms",
     "microesnext-strings",
   ],
   [instanceOf, prototypeChain, typeOf],
@@ -472,7 +469,7 @@ assertPresence(
 );
 assertPresence(
   ["property-assignment"],
-  ["microesnext-objects", "microesnext-atoms", "microesnext-strings"],
+  ["microesnext-objects", "microesnext-strings"],
   [construction, receivers],
 );
 assertPresence(

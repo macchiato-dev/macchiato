@@ -1,7 +1,7 @@
 #![no_std]
 
 use microesnext_arena::Arena;
-use microesnext_atoms::Atoms;
+use microesnext_strings::atoms::Atoms;
 use microesnext_types::{Error, RootId, Value};
 
 /// Cached property identities for `{ value, done }`. Cursor-only builds do not
