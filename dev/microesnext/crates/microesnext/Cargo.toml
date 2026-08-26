@@ -432,6 +432,11 @@ path = "tests/arrays.rs"
 required-features = ["arrays"]
 
 [[test]]
+name = "array-indexing"
+path = "tests/array_indexing.rs"
+required-features = ["arrays"]
+
+[[test]]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["locals", "number-coercion", "number-negation", "number-operations"]

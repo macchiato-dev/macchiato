@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = [
   "arrays",
+  "array-indexing",
   "async-functions",
   "control-flow",
   "conditional-expressions",
@@ -44,6 +45,7 @@ default = [
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
+array-indexing = ["arrays"]
 async = ["microesnext-bytecode/async"]
 async-functions = [
   "async",

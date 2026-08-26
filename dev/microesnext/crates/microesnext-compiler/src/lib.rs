@@ -2510,6 +2510,20 @@ impl Parser<'_> {
                 kind = TermKind::General;
                 continue;
             }
+            #[cfg(feature = "array-indexing")]
+            if self.consume(b'[') {
+                self.expression(None)?;
+                if !self.consume(b']') {
+                    return Err(self.error("]"));
+                }
+                self.output.push(Opcode::GetIndex as u8);
+                #[cfg(feature = "method-calls")]
+                {
+                    method_call = false;
+                }
+                kind = TermKind::General;
+                continue;
+            }
             if self.consume(b'(') {
                 #[cfg(feature = "method-calls")]
                 self.call_suffix(method_call)?;
@@ -2559,12 +2573,26 @@ impl Parser<'_> {
             return Err(self.error("a constructor binding"));
         }
 
-        #[cfg(feature = "objects")]
-        while self.consume(b'.') {
-            self.whitespace();
-            let (start, end) = self.identifier()?;
-            self.output_atom_range(start, end);
-            self.output.push(Opcode::GetProperty as u8);
+        #[cfg(any(feature = "array-indexing", feature = "objects"))]
+        loop {
+            #[cfg(feature = "objects")]
+            if self.consume(b'.') {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                self.output_atom_range(start, end);
+                self.output.push(Opcode::GetProperty as u8);
+                continue;
+            }
+            #[cfg(feature = "array-indexing")]
+            if self.consume(b'[') {
+                self.expression(None)?;
+                if !self.consume(b']') {
+                    return Err(self.error("]"));
+                }
+                self.output.push(Opcode::GetIndex as u8);
+                continue;
+            }
+            break;
         }
         Ok(())
     }
@@ -2591,6 +2619,19 @@ impl Parser<'_> {
                 }
                 #[cfg(not(feature = "method-calls"))]
                 self.output.push(Opcode::GetProperty as u8);
+                continue;
+            }
+            #[cfg(feature = "array-indexing")]
+            if self.consume(b'[') {
+                self.expression(None)?;
+                if !self.consume(b']') {
+                    return Err(self.error("]"));
+                }
+                self.output.push(Opcode::GetIndex as u8);
+                #[cfg(feature = "method-calls")]
+                {
+                    method_call = false;
+                }
                 continue;
             }
             if self.consume(b'(') {
@@ -2775,15 +2816,30 @@ impl Parser<'_> {
                 (false, immediate.map_or(TermKind::General, TermKind::I30))
             }
         };
-        #[cfg(feature = "objects")]
+        #[cfg(any(feature = "array-indexing", feature = "objects"))]
         let mut kind = kind;
-        #[cfg(feature = "objects")]
-        while self.consume(b'.') {
-            self.whitespace();
-            let (start, end) = self.identifier()?;
-            self.output_atom_range(start, end);
-            self.output.push(Opcode::GetProperty as u8);
-            kind = TermKind::General;
+        #[cfg(any(feature = "array-indexing", feature = "objects"))]
+        loop {
+            #[cfg(feature = "objects")]
+            if self.consume(b'.') {
+                self.whitespace();
+                let (start, end) = self.identifier()?;
+                self.output_atom_range(start, end);
+                self.output.push(Opcode::GetProperty as u8);
+                kind = TermKind::General;
+                continue;
+            }
+            #[cfg(feature = "array-indexing")]
+            if self.consume(b'[') {
+                self.expression(None)?;
+                if !self.consume(b']') {
+                    return Err(self.error("]"));
+                }
+                self.output.push(Opcode::GetIndex as u8);
+                kind = TermKind::General;
+                continue;
+            }
+            break;
         }
         #[cfg(feature = "async")]
         if awaiting {
@@ -3307,6 +3363,31 @@ mod tests {
         assert_eq!(*code.last().unwrap(), Opcode::Return as u8);
     }
 
+    #[cfg(feature = "array-indexing")]
+    #[test]
+    fn compiles_computed_and_chained_array_index_reads() {
+        let computed = compile_script("return [7, 42][0 + 1];").unwrap();
+        assert!(computed.contains(&(Opcode::GetIndex as u8)));
+
+        let nested = compile_script("return [[1], [42]][1][0];").unwrap();
+        assert_eq!(
+            nested
+                .iter()
+                .filter(|opcode| **opcode == Opcode::GetIndex as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(all(feature = "arrays", not(feature = "array-indexing")))]
+    #[test]
+    fn reduced_array_compilers_leave_index_syntax_unconsumed() {
+        assert_eq!(
+            compile_script("return [7][0];").unwrap_err().expected,
+            "end of input"
+        );
+    }
+
     #[cfg(all(
         feature = "arrays",
         feature = "literal-expressions",
@@ -3322,9 +3403,7 @@ mod tests {
     fn reduced_array_literals_keep_the_numeric_value_parser() {
         assert!(compile_script("return [7];").is_ok());
         assert_eq!(
-            compile_script("let value = 7; return [value];")
-                .unwrap_err()
-                .expected,
+            compile_script("return [true];").unwrap_err().expected,
             "a number"
         );
     }
