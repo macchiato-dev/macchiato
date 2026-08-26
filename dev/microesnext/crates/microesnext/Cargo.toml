@@ -154,9 +154,10 @@ number-remainder = [
   "microesnext-vm/number-remainder",
 ]
 nonterminal-conditionals = ["control-flow"]
+nonterminal-exceptions = ["control-flow", "exceptions"]
 nested-conditionals = ["nonterminal-conditionals"]
 nested-loops = ["nested-conditionals"]
-nested-exceptions = ["exceptions"]
+nested-exceptions = ["nonterminal-exceptions"]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -441,6 +442,11 @@ required-features = ["locals", "nested-loops"]
 name = "nested-exceptions"
 path = "tests/nested_exceptions.rs"
 required-features = ["nested-exceptions"]
+
+[[test]]
+name = "nonterminal-exceptions"
+path = "tests/nonterminal_exceptions.rs"
+required-features = ["locals", "nonterminal-exceptions"]
 
 [[test]]
 name = "equality"

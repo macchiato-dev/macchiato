@@ -44,6 +44,33 @@ fn an_exception_region_can_be_nested_inside_a_catch() {
     );
 }
 
+#[cfg(feature = "locals")]
+#[test]
+fn nested_fallthrough_joins_its_parent_try_and_later_statements() {
+    assert_eq!(
+        run("let answer = 0; \
+             try { \
+               try { throw 1; } catch { answer = 42; } \
+             } catch { answer = 1; } \
+             return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[cfg(feature = "locals")]
+#[test]
+fn nested_fallthrough_inside_a_catch_releases_only_live_operands() {
+    assert_eq!(
+        run("let answer = 0; \
+             try { throw 1; } catch { \
+               try {} catch {} \
+               answer = 42; \
+             } \
+             return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
 #[test]
 fn thousands_of_exception_regions_use_guest_handlers_not_native_parser_frames() {
     let depth = 2_048;

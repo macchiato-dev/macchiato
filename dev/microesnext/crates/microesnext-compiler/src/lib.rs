@@ -434,8 +434,15 @@ enum ControlFrame {
 
 #[cfg(feature = "nested-exceptions")]
 enum ExceptionFrame {
-    Try { catch_patch: usize },
-    Catch { binding: Option<(usize, usize)> },
+    Try {
+        catch_patch: usize,
+    },
+    Catch {
+        binding: Option<(usize, usize)>,
+        join_patch: Option<usize>,
+        try_fallthrough: bool,
+        pending: bool,
+    },
 }
 
 impl Parser<'_> {
@@ -460,6 +467,18 @@ impl Parser<'_> {
             }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
+                #[cfg(feature = "nonterminal-exceptions")]
+                {
+                    #[cfg(feature = "nested-exceptions")]
+                    let abrupt = self.try_catch()?;
+                    #[cfg(not(feature = "nested-exceptions"))]
+                    let abrupt = self.nonterminal_try_catch()?;
+                    if abrupt && self.at_body_end() {
+                        return Ok(());
+                    }
+                    continue;
+                }
+                #[cfg(not(feature = "nonterminal-exceptions"))]
                 return self.try_catch();
             }
             return self.completion(None, false, false);
@@ -483,6 +502,18 @@ impl Parser<'_> {
             }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
+                #[cfg(feature = "nonterminal-exceptions")]
+                {
+                    #[cfg(feature = "nested-exceptions")]
+                    let abrupt = self.try_catch()?;
+                    #[cfg(not(feature = "nested-exceptions"))]
+                    let abrupt = self.nonterminal_try_catch()?;
+                    if abrupt && self.at_body_end() {
+                        return Ok(());
+                    }
+                    continue;
+                }
+                #[cfg(not(feature = "nonterminal-exceptions"))]
                 return self.try_catch();
             }
             return self.completion(None, false, false);
@@ -502,13 +533,28 @@ impl Parser<'_> {
             }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
+                #[cfg(feature = "nonterminal-exceptions")]
+                {
+                    #[cfg(feature = "nested-exceptions")]
+                    let abrupt = self.try_catch()?;
+                    #[cfg(not(feature = "nested-exceptions"))]
+                    let abrupt = self.nonterminal_try_catch()?;
+                    if abrupt && self.at_body_end() {
+                        return Ok(());
+                    }
+                    continue;
+                }
+                #[cfg(not(feature = "nonterminal-exceptions"))]
                 return self.try_catch();
             }
             return self.completion(None, false, false);
         }
     }
 
-    #[cfg(feature = "nonterminal-conditionals")]
+    #[cfg(any(
+        feature = "nonterminal-conditionals",
+        feature = "nonterminal-exceptions"
+    ))]
     fn at_body_end(&self) -> bool {
         self.source.get(self.offset).is_none() || self.source.get(self.offset) == Some(&b'}')
     }
@@ -1763,7 +1809,11 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(all(feature = "exceptions", not(feature = "nested-exceptions")))]
+    #[cfg(all(
+        feature = "exceptions",
+        not(feature = "nested-exceptions"),
+        not(feature = "nonterminal-exceptions")
+    ))]
     fn try_catch(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
@@ -1803,48 +1853,167 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(all(feature = "nonterminal-exceptions", not(feature = "nested-exceptions")))]
+    fn nonterminal_try_catch(&mut self) -> Result<bool, CompileError> {
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_patch = self.output.len() + 1;
+        self.output.push(Opcode::Try as u8);
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.statement_prefix()?;
+        self.whitespace();
+        let try_fallthrough = self.source.get(self.offset) == Some(&b'}');
+        let join_patch = if try_fallthrough {
+            self.output.push(Opcode::ConstImmediate as u8);
+            self.output.push(Immediate::Undefined as u8);
+            self.output.push(Opcode::EndTry as u8);
+            self.output.push(Opcode::Drop as u8);
+            self.output.push(Opcode::Jump as u8);
+            let patch = self.output.len();
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            Some(patch)
+        } else {
+            self.completion(None, true, false)?;
+            None
+        };
+        if !self.consume(b'}') || !self.try_word_after_whitespace(b"catch") {
+            return Err(self.error("} catch"));
+        }
+        let binding = if self.consume(b'(') {
+            self.whitespace();
+            let binding = self.identifier()?;
+            if !self.consume(b')') {
+                return Err(self.error(")"));
+            }
+            Some(binding)
+        } else {
+            None
+        };
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_offset = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(catch_patch);
+        self.statement_prefix()?;
+        self.whitespace();
+        let catch_fallthrough = self.source.get(self.offset) == Some(&b'}');
+        if catch_fallthrough {
+            self.output.push(Opcode::Drop as u8);
+        } else {
+            self.completion(binding, false, true)?;
+        }
+        if !self.consume(b'}') {
+            return Err(self.error("}"));
+        }
+        let join = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if let Some(patch) = join_patch {
+            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(patch);
+        }
+        self.whitespace();
+        Ok(!try_fallthrough && !catch_fallthrough)
+    }
+
     #[cfg(feature = "nested-exceptions")]
-    fn try_catch(&mut self) -> Result<(), CompileError> {
+    fn try_catch(&mut self) -> Result<bool, CompileError> {
         let mut frames = Vec::new();
         self.begin_exception(&mut frames)?;
         loop {
             self.statement_prefix()?;
             if self.try_word_after_whitespace(b"try") {
-                if matches!(frames.last(), Some(ExceptionFrame::Catch { .. })) {
-                    self.output.push(Opcode::Drop as u8);
+                if let Some(ExceptionFrame::Catch {
+                    binding, pending, ..
+                }) = frames.last_mut()
+                {
+                    if *pending {
+                        self.output.push(Opcode::Drop as u8);
+                        *binding = None;
+                        *pending = false;
+                    }
                 }
                 self.begin_exception(&mut frames)?;
                 continue;
             }
 
-            let close_handlers = frames
-                .iter()
-                .filter(|frame| matches!(frame, ExceptionFrame::Try { .. }))
-                .count();
-            let (binding, pending_exception) = match frames.last() {
-                Some(ExceptionFrame::Catch { binding }) => (*binding, true),
-                _ => (None, false),
-            };
-            self.nested_exception_completion(binding, close_handlers, pending_exception)?;
+            self.whitespace();
+            let fallthrough = self.source.get(self.offset) == Some(&b'}');
+            if !fallthrough {
+                let close_handlers = frames
+                    .iter()
+                    .filter(|frame| matches!(frame, ExceptionFrame::Try { .. }))
+                    .count();
+                let (binding, pending_exception) = match frames.last() {
+                    Some(ExceptionFrame::Catch {
+                        binding, pending, ..
+                    }) => (*binding, *pending),
+                    _ => (None, false),
+                };
+                self.nested_exception_completion(binding, close_handlers, pending_exception)?;
+            }
             if !self.consume(b'}') {
                 return Err(self.error("}"));
             }
 
+            let mut completed_abrupt = !fallthrough;
             loop {
                 let Some(frame) = frames.pop() else {
                     return Err(self.error("an active exception frame"));
                 };
                 match frame {
                     ExceptionFrame::Try { catch_patch } => {
+                        let try_fallthrough = !completed_abrupt;
+                        let join_patch = if try_fallthrough {
+                            self.output.push(Opcode::ConstImmediate as u8);
+                            self.output.push(Immediate::Undefined as u8);
+                            self.output.push(Opcode::EndTry as u8);
+                            self.output.push(Opcode::Drop as u8);
+                            self.output.push(Opcode::Jump as u8);
+                            let patch = self.output.len();
+                            self.output.extend_from_slice(&0_u32.to_le_bytes());
+                            Some(patch)
+                        } else {
+                            None
+                        };
                         let binding = self.catch_header(catch_patch)?;
-                        frames.push(ExceptionFrame::Catch { binding });
+                        frames.push(ExceptionFrame::Catch {
+                            binding,
+                            join_patch,
+                            try_fallthrough,
+                            pending: true,
+                        });
                         break;
                     }
-                    ExceptionFrame::Catch { .. } if frames.is_empty() => {
-                        self.whitespace();
-                        return Ok(());
-                    }
-                    ExceptionFrame::Catch { .. } => {
+                    ExceptionFrame::Catch {
+                        join_patch,
+                        try_fallthrough,
+                        pending,
+                        ..
+                    } => {
+                        let catch_fallthrough = !completed_abrupt;
+                        if catch_fallthrough && pending {
+                            self.output.push(Opcode::Drop as u8);
+                        }
+                        let join = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        if let Some(patch) = join_patch {
+                            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(patch);
+                        }
+                        completed_abrupt = !try_fallthrough && !catch_fallthrough;
+                        if frames.is_empty() {
+                            self.whitespace();
+                            return Ok(completed_abrupt);
+                        }
+                        if !completed_abrupt {
+                            break;
+                        }
                         if !self.consume(b'}') {
                             return Err(self.error("}"));
                         }
