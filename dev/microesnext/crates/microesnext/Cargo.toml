@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 control-flow = ["microesnext-vm/control-flow"]
 expression-statements = ["stack-operations"]
+implicit-completions = []
 constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
@@ -326,6 +327,11 @@ path = "tests/immediates.rs"
 name = "expression-statements"
 path = "tests/expression_statements.rs"
 required-features = ["expression-statements"]
+
+[[test]]
+name = "implicit-completions"
+path = "tests/implicit_completions.rs"
+required-features = ["implicit-completions"]
 
 [[test]]
 name = "locals"
