@@ -10,6 +10,7 @@ version.workspace = true
 [features]
 default = []
 control-flow = ["microesnext-vm/control-flow"]
+expression-statements = ["stack-operations"]
 constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
@@ -320,6 +321,11 @@ required-features = ["logical-operations", "strings"]
 [[test]]
 name = "immediates"
 path = "tests/immediates.rs"
+
+[[test]]
+name = "expression-statements"
+path = "tests/expression_statements.rs"
+required-features = ["expression-statements"]
 
 [[test]]
 name = "locals"
