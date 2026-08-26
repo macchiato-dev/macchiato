@@ -4,6 +4,11 @@ const core: Probe = ["core_probe", 42];
 const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
   [
     ["minimal", "", [core]],
+    [
+      "expression statements",
+      "expression-statements",
+      [core, ["expression_statements_probe", 1]],
+    ],
     ["arrays", "arrays", [core, ["arrays_probe", 42]]],
     [
       "array assignment expressions",
@@ -367,7 +372,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
     ],
     [
       "all",
-      "array-assignment-expressions,array-iterators,async-thenables,captured-assignment-expressions,class-expressions,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,function-arguments,instanceof,iterable-protocol,iterator-results,local-assignment-expressions,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
+      "array-assignment-expressions,array-iterators,async-thenables,captured-assignment-expressions,class-expressions,collection-entry-iterators,collection-iterators,construction,constructors,control-flow,environments,equality,exceptions,expression-statements,function-arguments,instanceof,iterable-protocol,iterator-results,local-assignment-expressions,logical-operations,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,string-number-coercion,string-operations,typeof,well-known-symbols,weak-collections",
       [
         core,
         ["arrays_probe", 42],
@@ -395,6 +400,7 @@ const configurations: readonly (readonly [string, string, readonly Probe[]])[] =
         ["errors_probe", 42],
         ["environments_probe", 42],
         ["equality_probe", 1],
+        ["expression_statements_probe", 1],
         ["number_equality_probe", 1],
         ["string_equality_probe", 1],
         ["closure_environments_probe", 42],

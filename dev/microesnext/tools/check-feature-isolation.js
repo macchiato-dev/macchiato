@@ -110,6 +110,11 @@ assertCompilerFeatures(
   ["functions", "locals", "logical-operations", "objects"],
 );
 assertCompilerFeatures(
+  ["expression-statements"],
+  ["stack-operations"],
+  ["exceptions", "functions", "locals", "objects"],
+);
+assertCompilerFeatures(
   ["array-indexing"],
   ["arrays"],
   ["atoms", "locals", "objects", "strings"],
@@ -531,6 +536,11 @@ assertPresence(
   ["local-assignment-expressions"],
   ["microesnext-locals", stackOperations],
   [environments, "microesnext-objects"],
+);
+assertPresence(
+  ["expression-statements"],
+  [stackOperations],
+  ["microesnext-exceptions", "microesnext-functions", "microesnext-objects"],
 );
 assertPresence(
   ["array-assignment-expressions"],

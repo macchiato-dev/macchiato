@@ -35,6 +35,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "exceptions",
         feature = "environments",
         feature = "equality",
+        feature = "expression-statements",
         feature = "function-arguments",
         feature = "functions",
         feature = "locals",
@@ -307,6 +308,30 @@ pub extern "C" fn local_assignment_expressions_probe() -> i32 {
         0,
         0,
         Opcode::ReturnLocals as u8,
+    ];
+    let mut memory = [0; 32];
+    matches!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(value)) if value.as_i30() == Some(42)
+    ) as i32
+}
+
+#[cfg(all(feature = "expression-statements", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn expression_statements_probe() -> i32 {
+    let code = [
+        Opcode::ConstI30 as u8,
+        7,
+        0,
+        0,
+        0,
+        Opcode::DropTop as u8,
+        Opcode::ConstI30 as u8,
+        42,
+        0,
+        0,
+        0,
+        Opcode::Return as u8,
     ];
     let mut memory = [0; 32];
     matches!(

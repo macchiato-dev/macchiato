@@ -33,6 +33,7 @@ collection-entry-iterators = [
   "microesnext/collection-entry-iterators",
 ]
 exceptions = ["microesnext/exceptions"]
+expression-statements = ["microesnext/expression-statements"]
 environments = ["microesnext/environments"]
 equality = ["microesnext/equality"]
 errors = ["microesnext/errors"]
