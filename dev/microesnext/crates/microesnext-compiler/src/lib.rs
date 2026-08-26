@@ -2991,6 +2991,13 @@ impl Parser<'_> {
     fn declaration_tail(&mut self) -> Result<(), CompileError> {
         loop {
             self.whitespace();
+            if self.consume_raw(b'{') {
+                return self.object_destructuring_declaration();
+            }
+            #[cfg(feature = "array-destructuring-declarations")]
+            if self.consume_raw(b'[') {
+                return self.array_destructuring_declaration();
+            }
             let (start, end) = self.identifier()?;
             if self
                 .locals
@@ -3019,9 +3026,14 @@ impl Parser<'_> {
                 captured: false,
             });
             if !self.consume(b',') {
-                return Ok(());
+                break;
             }
         }
+        if !self.consume(b';') {
+            return Err(self.error(";"));
+        }
+        self.whitespace();
+        Ok(())
     }
 
     #[cfg(feature = "object-destructuring-declarations")]
@@ -3118,7 +3130,7 @@ impl Parser<'_> {
         }
         self.output.push(Opcode::DropTop as u8);
         if self.consume(b',') {
-            self.declaration_tail()?;
+            return self.declaration_tail();
         }
         if !self.consume(b';') {
             return Err(self.error(";"));

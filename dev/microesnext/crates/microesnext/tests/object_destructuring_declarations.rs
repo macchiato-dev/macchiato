@@ -37,3 +37,16 @@ fn object_destructuring_can_precede_another_declarator() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn a_declaration_list_can_mix_multiple_object_patterns_and_a_binding() {
+    let code = compile_script(
+        "let first = { left: 20 }, second = { right: 20 }; let { left } = first, { right } = second, extra = 2; return left + right + extra;",
+    )
+    .unwrap();
+    let mut memory = [0; 512];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}
