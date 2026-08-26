@@ -606,6 +606,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | control flow | 7,460 | 2,965 |
 | conditional expressions | 8,014 | 3,194 |
 | nonterminal conditionals | 8,207 | 3,100 |
+| nested conditionals | 8,588 | 3,494 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -648,7 +649,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,970 | 7,858 |
-| default language slice | 49,703 | 17,680 |
+| default language slice | 50,410 | 18,005 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -669,6 +670,13 @@ Nonterminal conditionals are also compiler-only. Their 8,207 / 3,100 artifact
 adds 747 raw / 135 gzip bytes to the 7,460 / 2,965 control-flow compiler. The
 focused feature graph adds no bytecode capability beyond `control-flow`, while
 the omitted build retains the terminal conditional implementation.
+
+Nested conditionals extend that compiler to 8,588 / 3,494, an increment of
+381 raw / 394 gzip bytes over nonterminal conditionals. The larger gzip delta
+reflects the explicit frame-state loop rather than another repeated recursive
+parser path. A 2,048-level source and runtime probe completes without native
+parser or VM call frames. Omitting the feature preserves the nonterminal
+artifact exactly at 8,207 / 3,100 and adds no runtime capability.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler

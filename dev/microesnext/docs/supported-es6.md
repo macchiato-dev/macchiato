@@ -48,10 +48,11 @@ adds no opcode or runtime feature.
 The separate `nonterminal-conditionals` compiler gate lets either `if` branch
 fall through to later statements. A branch ending in `return` or `throw` is
 recognized as abrupt and receives no redundant join jump. Both alternate and
-join targets use function relocation when needed. This first nonterminal slice
-accepts ordinary expression and assignment statements inside each branch;
-nested control statements await the explicit iterative block-worklist layer so
-the Rust parser does not recurse with source nesting depth.
+join targets use function relocation when needed. The further
+`nested-conditionals` gate tracks consequent/alternate state, abruptness, and
+patch positions in an explicit allocation-using worklist. It accepts nested
+`if`/`else` without Rust recursion; a test compiles and executes 2,048 levels.
+Nested loops and exception regions remain later worklist frame kinds.
 
 Expression statements are independently selectable. Any expression accepted
 by the chosen compiler composition may be followed by `;` before a terminal

@@ -97,6 +97,10 @@ an explicit relational stopping condition.
   statements, while omitting the join jump after an abrupt branch. It reuses
   control-flow bytecode and relocates both targets inside function bodies;
   reduced control-flow compilers retain their smaller terminal-only parser.
+- `nested-conditionals` replaces recursive descent through conditional blocks
+  with explicit consequent/alternate frames in the compiler's allocation-using
+  worklist. Thousands of nested source branches therefore do not consume the
+  Rust stack, while nonnested compiler builds omit the frame type and loop.
 - `implicit-completions` is compiler-only too. It lowers `return;` and a script
   or function body reaching its end to the invariant `undefined` constant and
   existing return instruction. Its omitted build retains the previous
