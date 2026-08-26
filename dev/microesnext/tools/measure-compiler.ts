@@ -3,6 +3,7 @@ const builds = [
   ["control flow", "control-flow"],
   ["conditional expressions", "conditional-expressions"],
   ["nonterminal conditionals", "nonterminal-conditionals"],
+  ["nonterminal exceptions", "nonterminal-exceptions"],
   ["nested conditionals", "nested-conditionals"],
   ["nested loops", "nested-loops"],
   ["nested exceptions", "nested-exceptions"],
@@ -53,7 +54,7 @@ const builds = [
   ["recursive async functions", "recursive-async-functions"],
   [
     "default language slice",
-    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,implicit-completions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,nested-conditionals,nested-exceptions,nested-loops,nonterminal-conditionals,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
+    "array-assignment-expressions,array-indexing,arrays,async-functions,captured-assignment-expressions,class-default-constructors,class-expressions,class-methods,class-static-methods,conditional-expressions,construction,constructors,control-flow,equality,environments,exceptions,expression-statements,function-arguments,functions,implicit-completions,instanceof,literal-expressions,local-assignment-expressions,logical-operations,nested-conditionals,nested-exceptions,nested-loops,nonterminal-conditionals,nonterminal-exceptions,number-coercion,number-division,number-negation,number-operations,number-remainder,objects,property-assignment,property-assignment-expressions,receivers,recursive-async-functions,recursive-constructors,recursive-functions,source-positions,string-number-coercion,string-operations,typeof",
   ],
 ] as const;
 
@@ -103,6 +104,8 @@ for (const [name, features] of builds) {
     ? "while (false) { if (true) { while (false) {} } else {} } return 42;"
     : features === "nested-exceptions"
     ? "try { try { throw 1; } catch { throw 2; } } catch (error) { return error; }"
+    : features === "nonterminal-exceptions"
+    ? "try {} catch {} return 42;"
     : features === "nonterminal-conditionals"
     ? "if (true) {} else {} return 42;"
     : features === "conditional-expressions"
