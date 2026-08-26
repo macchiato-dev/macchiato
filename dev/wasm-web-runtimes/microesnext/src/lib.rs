@@ -1,8 +1,20 @@
 #![no_std]
 
+extern crate alloc;
+
+use alloc::{string::String, vec::Vec};
 use core::{cell::UnsafeCell, sync::atomic::{AtomicU32, Ordering}};
 
-use microesnext::{Machine, Outcome};
+use microesnext::{Error, Machine, Outcome, Value};
+use onig_sys::{
+    ONIG_MISMATCH, ONIG_NORMAL, ONIG_OPTION_IGNORECASE, ONIG_OPTION_MULTILINE,
+    ONIG_OPTION_NONE, ONIG_OPTION_SINGLELINE, OnigEncodingUTF8, OnigErrorInfo,
+    OnigRegex, OnigSyntaxOniguruma, onig_free, onig_new, onig_region_free,
+    onig_region_new, onig_search,
+};
+
+#[global_allocator]
+static ALLOCATOR: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
 
 static APPLICATION: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/application.bin"));
 static RESULT: AtomicU32 = AtomicU32::new(0);
@@ -15,12 +27,19 @@ static FUNCTION: AtomicU32 = AtomicU32::new(0);
 const OBJECT: u32 = 15;
 const OBJECT_CREATE: u32 = (1 << 29) + 1;
 const OBJECT_DEFINE_PROPERTY: u32 = (1 << 29) + 2;
+const REGEXP: u32 = 19;
+const REGEXP_TEST: u32 = (1 << 29) + 20;
+const REGEXP_EXEC: u32 = (1 << 29) + 21;
 const MATH: u32 = 12;
 const MATH_FUNCTION: u32 = (1 << 29) + 100;
 const UINT8_ARRAY: u32 = 26;
 const BRIDGE: u32 = 33;
 const GLOBAL_THIS: u32 = 41;
 const INSTALL_ARRAY_PROTOTYPE: u32 = 59;
+const FUNCTION_CALL: u32 = (1 << 29) + 60;
+const HOST_REFERENCE: u32 = 43;
+const RELEASE_HOST_REFERENCE: u32 = 53;
+const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -32,6 +51,180 @@ static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 1_048_576]));
 #[link(wasm_import_module = "host")]
 unsafe extern "C" {
     fn msg(offset: u32, capacity: u32) -> u32;
+}
+
+fn report_failure(stage: u32, detail: u32) {
+    let mut message = [0_u8; 64];
+    message[..5].copy_from_slice(b"DULE\x03");
+    let text = b"MicroESNext stopped with detail ";
+    message[5..5 + text.len()].copy_from_slice(text);
+    fn decimal(output: &mut [u8], mut value: u32) -> usize {
+        let mut digits = [0_u8; 10];
+        let mut count = 0;
+        loop {
+            digits[count] = b'0' + (value % 10) as u8;
+            count += 1;
+            value /= 10;
+            if value == 0 { break; }
+        }
+        for index in 0..count { output[index] = digits[count - index - 1]; }
+        count
+    }
+    let mut at = 5 + text.len();
+    at += decimal(&mut message[at..], detail);
+    message[at..at + 4].copy_from_slice(b" pc ");
+    at += 4;
+    at += decimal(&mut message[at..], PROGRAM_COUNTER.load(Ordering::Relaxed));
+    message[at..at + 4].copy_from_slice(b" fn ");
+    at += 4;
+    at += decimal(&mut message[at..], FUNCTION.load(Ordering::Relaxed));
+    message[4] = u8::try_from(stage.min(255)).unwrap_or(255);
+    unsafe { msg(message.as_mut_ptr() as u32, u32::try_from(at + 1).unwrap()) };
+}
+
+fn object_get(machine: &mut Machine<'_, '_>, object: Value, name: &[u8]) -> Result<Value, Error> {
+    let key = machine.intern_atom(name)?;
+    microesnext::objects::get(machine.arena(), object, key)
+}
+
+fn object_set(
+    machine: &mut Machine<'_, '_>,
+    object: Value,
+    name: &[u8],
+    value: Value,
+) -> Result<Value, Error> {
+    let key = machine.intern_atom(name)?;
+    microesnext::objects::set(machine.arena_mut(), object, key, value)
+}
+
+fn owned_string(machine: &Machine<'_, '_>, value: Value) -> Result<String, Error> {
+    core::str::from_utf8(machine.string_bytes(value)?)
+        .map(String::from)
+        .map_err(|_| Error::Type)
+}
+
+fn regexp_parts(
+    machine: &mut Machine<'_, '_>,
+    receiver: Value,
+) -> Result<(String, String, usize), Error> {
+    let pattern = object_get(machine, receiver, b"source")?;
+    let flags = object_get(machine, receiver, b"flags")?;
+    let last_index = object_get(machine, receiver, b"lastIndex")?
+        .as_i30()
+        .and_then(|value| usize::try_from(value).ok())
+        .unwrap_or(0);
+    Ok((owned_string(machine, pattern)?, owned_string(machine, flags)?, last_index))
+}
+
+struct NativeRegex(OnigRegex);
+
+impl Drop for NativeRegex {
+    fn drop(&mut self) {
+        unsafe { onig_free(self.0) };
+    }
+}
+
+fn compile_regexp(pattern: &str, flags: &str) -> Result<NativeRegex, Error> {
+    let mut options = ONIG_OPTION_NONE;
+    if flags.contains('i') { options |= ONIG_OPTION_IGNORECASE; }
+    // Oniguruma names these two options from Ruby's perspective. JavaScript's
+    // `s` makes dot match a newline, while `m` changes the anchors.
+    if flags.contains('s') { options |= ONIG_OPTION_MULTILINE; }
+    if flags.contains('m') { options |= ONIG_OPTION_SINGLELINE; }
+    let bytes = pattern.as_bytes();
+    let mut regex = core::ptr::null_mut();
+    let mut error = OnigErrorInfo {
+        enc: core::ptr::null_mut(),
+        par: core::ptr::null_mut(),
+        par_end: core::ptr::null_mut(),
+    };
+    let status = unsafe {
+        onig_new(
+            &mut regex,
+            bytes.as_ptr(),
+            bytes.as_ptr().add(bytes.len()),
+            options,
+            &raw mut OnigEncodingUTF8,
+            &raw mut OnigSyntaxOniguruma,
+            &mut error,
+        )
+    };
+    if status == ONIG_NORMAL as i32 && !regex.is_null() {
+        Ok(NativeRegex(regex))
+    } else {
+        Err(Error::Type)
+    }
+}
+
+fn utf16_to_byte(text: &str, index: usize) -> usize {
+    let mut units = 0;
+    for (byte, character) in text.char_indices() {
+        if units >= index { return byte; }
+        units += character.len_utf16();
+    }
+    text.len()
+}
+
+fn byte_to_utf16(text: &str, byte: usize) -> usize {
+    text.get(..byte).unwrap_or(text).encode_utf16().count()
+}
+
+fn regexp_match(
+    machine: &mut Machine<'_, '_>,
+    receiver: Value,
+    text: &str,
+) -> Result<Option<(usize, usize, Vec<Option<core::ops::Range<usize>>>)>, Error> {
+    let (pattern, flags, last_index) = regexp_parts(machine, receiver)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let start_units = if flags.contains('g') || flags.contains('y') { last_index } else { 0 };
+    let start = utf16_to_byte(text, start_units);
+    let bytes = text.as_bytes();
+    let region = unsafe { onig_region_new() };
+    if region.is_null() { return Err(Error::OutOfMemory); }
+    let status = unsafe {
+        onig_search(
+            regexp.0,
+            bytes.as_ptr(),
+            bytes.as_ptr().add(bytes.len()),
+            bytes.as_ptr().add(start),
+            bytes.as_ptr().add(bytes.len()),
+            region,
+            ONIG_OPTION_NONE,
+        )
+    };
+    if status == ONIG_MISMATCH || status < 0 {
+        unsafe { onig_region_free(region, 1) };
+        if flags.contains('g') || flags.contains('y') {
+            let zero = Value::from_i30(0).ok_or(Error::Type)?;
+            object_set(machine, receiver, b"lastIndex", zero)?;
+        }
+        return Ok(None);
+    }
+    let native = unsafe { &*region };
+    if native.num_regs <= 0 {
+        unsafe { onig_region_free(region, 1) };
+        return Ok(None);
+    }
+    let begins = unsafe { core::slice::from_raw_parts(native.beg, native.num_regs as usize) };
+    let ends = unsafe { core::slice::from_raw_parts(native.end, native.num_regs as usize) };
+    let begin = byte_to_utf16(text, begins[0] as usize);
+    let end = byte_to_utf16(text, ends[0] as usize);
+    if flags.contains('y') && begin != start_units {
+        unsafe { onig_region_free(region, 1) };
+        return Ok(None);
+    }
+    let groups = begins.iter().zip(ends).map(|(&begin, &end)| {
+        (begin >= 0 && end >= 0).then(|| {
+            byte_to_utf16(text, begin as usize)..byte_to_utf16(text, end as usize)
+        })
+    }).collect();
+    unsafe { onig_region_free(region, 1) };
+    if flags.contains('g') || flags.contains('y') {
+        let next = Value::from_i30(i32::try_from(end).map_err(|_| Error::Type)?)
+            .ok_or(Error::Type)?;
+        object_set(machine, receiver, b"lastIndex", next)?;
+    }
+    Ok(Some((begin, end, groups)))
 }
 
 #[unsafe(no_mangle)]
@@ -47,6 +240,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             return;
         }
     };
+    machine.install_function_call(microesnext::HostRef::new(FUNCTION_CALL).unwrap());
     let raw = loop {
         STAGE.fetch_add(1, Ordering::Relaxed);
         match machine.run() {
@@ -208,6 +402,66 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     break u32::MAX;
                 }
             }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == FUNCTION_CALL => {
+                if let Err(error) = machine.complete_function_call() {
+                    DETAIL.store(error as u32 + 1000, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == HOST_REFERENCE => {
+                let reference = machine.host_argument(0).unwrap_or(Value::UNDEFINED);
+                if let Err(error) = machine.complete_host_call(reference) {
+                    DETAIL.store(error as u32 + 1100, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. })
+                if function.index() == RELEASE_HOST_REFERENCE
+                    || function.index() == RELEASE_HOST_REFERENCE_LEASE =>
+            {
+                if let Err(error) = machine.complete_host_call(Value::UNDEFINED) {
+                    DETAIL.store(error as u32 + 1100, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == REGEXP_TEST || function.index() == REGEXP_EXEC =>
+            {
+                let result = (|| {
+                    let receiver = receiver.ok_or(Error::Type)?;
+                    let text = owned_string(&machine, machine.host_argument(0)?)?;
+                    let found = regexp_match(&mut machine, receiver, &text)?;
+                    if function.index() == REGEXP_TEST {
+                        return Ok(if found.is_some() { Value::TRUE } else { Value::FALSE });
+                    }
+                    let Some((begin, _end, groups)) = found else {
+                        return Ok(Value::NULL);
+                    };
+                    let mut result = microesnext::objects::arrays::new(machine.arena_mut())?;
+                    for (index, group) in groups.into_iter().enumerate() {
+                        let value = if let Some(range) = group {
+                            machine.new_string(&text.as_bytes()[range])?
+                        } else {
+                            Value::UNDEFINED
+                        };
+                        result = microesnext::objects::arrays::set(
+                            machine.arena_mut(), result, index, value,
+                        )?;
+                    }
+                    let index = Value::from_i30(i32::try_from(begin).map_err(|_| Error::Type)?)
+                        .ok_or(Error::Type)?;
+                    result = object_set(&mut machine, result, b"index", index)?;
+                    let input = machine.new_string(text.as_bytes())?;
+                    object_set(&mut machine, result, b"input", input)
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 900, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
             Ok(Outcome::HostCall { function, .. }) => {
                 DETAIL.store(function.index(), Ordering::Relaxed);
                 break u32::MAX - 1;
@@ -231,12 +485,60 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         }
                     }
                 }
+                if constructor.index() == REGEXP {
+                    let result = (|| {
+                        let pattern = machine.host_argument(0)?;
+                        let flags = machine.host_argument(1).unwrap_or(Value::UNDEFINED);
+                        let pattern_text = owned_string(&machine, pattern)?;
+                        let flags_text = if flags == Value::UNDEFINED {
+                            String::new()
+                        } else {
+                            owned_string(&machine, flags)?
+                        };
+                        compile_regexp(&pattern_text, &flags_text)?;
+                        let mut object = machine.new_object(Value::NULL)?;
+                        object = object_set(&mut machine, object, b"source", pattern)?;
+                        let flags = machine.new_string(flags_text.as_bytes())?;
+                        object = object_set(&mut machine, object, b"flags", flags)?;
+                        object = object_set(
+                            &mut machine,
+                            object,
+                            b"lastIndex",
+                            Value::from_i30(0).ok_or(Error::Type)?,
+                        )?;
+                        object = object_set(
+                            &mut machine,
+                            object,
+                            b"test",
+                            Value::from_host(microesnext::HostRef::new(REGEXP_TEST).unwrap()),
+                        )?;
+                        object_set(
+                            &mut machine,
+                            object,
+                            b"exec",
+                            Value::from_host(microesnext::HostRef::new(REGEXP_EXEC).unwrap()),
+                        )
+                    })();
+                    match result.and_then(|object| machine.complete_host_construct(object)) {
+                        Ok(()) => continue,
+                        Err(error) => {
+                            DETAIL.store(error as u32 + 900, Ordering::Relaxed);
+                            break u32::MAX;
+                        }
+                    }
+                }
                 DETAIL.store(constructor.index(), Ordering::Relaxed);
                 break u32::MAX - 5;
             }
             Ok(Outcome::HostGet { object, .. }) => {
                 DETAIL.store(object.index(), Ordering::Relaxed);
                 break u32::MAX - 2;
+            }
+            Ok(Outcome::HostSet { object, .. }) if object.index() == GLOBAL_THIS => {
+                if let Err(error) = machine.complete_host_operation(Value::UNDEFINED) {
+                    DETAIL.store(error as u32 + 1200, Ordering::Relaxed);
+                    break u32::MAX;
+                }
             }
             Ok(Outcome::HostSet { object, .. }) => {
                 DETAIL.store(object.index(), Ordering::Relaxed);
@@ -252,6 +554,9 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             _ => break u32::MAX,
         }
     };
+    if raw >= u32::MAX - 10 {
+        report_failure(STAGE.load(Ordering::Relaxed), DETAIL.load(Ordering::Relaxed));
+    }
     RESULT.store(raw, Ordering::Relaxed);
 }
 
@@ -285,7 +590,18 @@ pub extern "C" fn function() -> u32 {
     FUNCTION.load(Ordering::Relaxed)
 }
 
+#[cfg(all(not(test), target_os = "unknown"))]
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo<'_>) -> ! {
     core::arch::wasm32::unreachable()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::compile_regexp;
+
+    #[test]
+    fn embedded_regexp_accepts_codemirror_unicode_word_characters() {
+        assert!(compile_regexp(r"[\p{Alphabetic}\p{Number}_]", "u").is_ok());
+    }
 }

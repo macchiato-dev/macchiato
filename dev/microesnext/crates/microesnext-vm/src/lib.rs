@@ -71,6 +71,7 @@ enum HostCompletion {
     SetStatement,
     SetObject(Value),
     SetResult(Value),
+    SetAccessor(Value),
 }
 
 pub struct Machine<'code, 'memory> {
@@ -89,6 +90,8 @@ pub struct Machine<'code, 'memory> {
     host_completion: Option<HostCompletion>,
     #[cfg(all(feature = "arrays", feature = "objects"))]
     array_prototype: Option<RootId>,
+    #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+    function_call: Option<HostRef>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -121,6 +124,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: None,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: None,
+            #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+            function_call: None,
         }
     }
 
@@ -227,6 +232,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: None,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: None,
+            #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+            function_call: None,
         })
     }
 
@@ -299,6 +306,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             return Err(Error::Type);
         }
         self.core.arena().bytes(reference)
+    }
+
+    /// Allocate a guest string from UTF-8 supplied by the embedding runtime.
+    #[cfg(feature = "strings")]
+    pub fn new_string(&mut self, bytes: &[u8]) -> Result<Value, Error> {
+        microesnext_values::strings::new(self.core.arena_mut(), bytes)
     }
 
     /// Create a guest object for an embedding-provided intrinsic.
@@ -412,6 +425,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: self.host_completion,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: self.array_prototype,
+            #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+            function_call: self.function_call,
         })
     }
 
@@ -432,6 +447,27 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         self.host_call_receiver = None;
         self.core.arena_mut().push(value)
+    }
+
+    /// Continue a host-recognized `Function.prototype.call` as an ordinary
+    /// guest invocation. Its first argument becomes the receiver and never
+    /// crosses into a host-language implementation of JavaScript semantics.
+    #[cfg(all(feature = "host-bindings", feature = "method-calls", feature = "receivers"))]
+    pub fn complete_function_call(&mut self) -> Result<(), Error> {
+        let count = self.host_argument_count.take().ok_or(Error::Type)?;
+        let function = self.host_call_receiver.take().ok_or(Error::Type)?;
+        if count == 0 { return Err(Error::Type); }
+        let first = self.core.arena().stack_len().checked_sub(count).ok_or(Error::StackUnderflow)?;
+        let receiver = self.core.arena_mut().remove_stack_value_from_bottom(first)?;
+        let callable = unwrap_callable(self.core.arena(), function)?;
+        let target = entry(self.core.arena(), callable)?;
+        microesnext_bindings::receivers::append(self.core.arena_mut(), count - 1, receiver)?;
+        self.core.enter_call_with_arguments(callable, target, count)
+    }
+
+    #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+    pub fn install_function_call(&mut self, function: HostRef) {
+        self.function_call = Some(function);
     }
 
     #[cfg(feature = "host-bindings")]
@@ -455,6 +491,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             HostCompletion::SetStatement => Ok(()),
             HostCompletion::SetObject(object) => self.core.arena_mut().push(object),
             HostCompletion::SetResult(result) => self.core.arena_mut().push(result),
+            HostCompletion::SetAccessor(value) => {
+                self.core.arena_mut().push(value)?;
+                self.core.arena_mut().push(Value::UNDEFINED)
+            }
         }
     }
 
@@ -650,6 +690,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         method: true,
                     }));
                 }
+                #[cfg(all(feature = "host-bindings", feature = "callable-objects"))]
+                if self.string_bytes(key) == Ok(b"call")
+                    && entry(self.core.arena(), unwrap_callable(self.core.arena(), receiver)?).is_ok()
+                {
+                    let method = self.function_call.ok_or(Error::Type)?;
+                    self.core.arena_mut().push(receiver)?;
+                    self.core.arena_mut().push(Value::from_host(method))?;
+                    return Ok(None);
+                }
                 if microesnext_objects::arrays::is_array(self.core.arena(), receiver) {
                     let prototype = self.array_prototype.ok_or(Error::Type)?;
                     let method = get(self.core.arena(), self.root(prototype)?, key)?;
@@ -838,6 +887,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(all(feature = "getters", feature = "property-assignment"))]
             Opcode::SetPropertyAccessor => {
+                #[cfg(feature = "host-bindings")]
+                if let Some(object) = self.core.arena().stack_value(2)?.as_host() {
+                    let value = self.core.arena_mut().pop()?;
+                    let key = self.core.arena_mut().pop()?;
+                    self.core.arena_mut().pop()?;
+                    if self.host_completion.replace(HostCompletion::SetAccessor(value)).is_some() {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostSet { object, key, value }));
+                }
                 self.set_property_accessor()?;
                 Ok(None)
             }
