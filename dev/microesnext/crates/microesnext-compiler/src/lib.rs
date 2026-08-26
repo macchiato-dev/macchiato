@@ -4564,7 +4564,7 @@ impl Parser<'_> {
             let constructor_opcode = Opcode::ToConstructor;
             self.output.push(constructor_opcode as u8);
             #[cfg(feature = "recursive-constructors")]
-            if expression_name.is_some() {
+            if expression_name.is_some() && named_captured {
                 self.output.push(Opcode::RebindConstructorSelf as u8);
             }
         }
@@ -10507,9 +10507,11 @@ mod tests {
     #[cfg(feature = "recursive-constructors")]
     #[test]
     fn rebinds_only_named_constructor_expressions() {
-        let named =
-            compile_script("return function PrivateName() { return PrivateName; };").unwrap();
+        let named = compile_script("return function PrivateName() { return PrivateName; };").unwrap();
         assert!(named.contains(&(Opcode::RebindConstructorSelf as u8)));
+
+        let unused = compile_script("return function DescriptiveName() { return 42; };").unwrap();
+        assert!(!unused.contains(&(Opcode::RebindConstructorSelf as u8)));
 
         let declaration =
             compile_script("function declared() { return declared; } return declared;").unwrap();

@@ -262,6 +262,15 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     let _ = string_prototype;
+    let global_overlay = match machine.new_object(Value::NULL)
+        .and_then(|value| machine.retain(value))
+    {
+        Ok(root) => root,
+        Err(error) => {
+            DETAIL.store(error as u32 + 1400, Ordering::Relaxed);
+            return;
+        }
+    };
     let raw = loop {
         STAGE.fetch_add(1, Ordering::Relaxed);
         match machine.run() {
@@ -279,6 +288,17 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 machine.complete_host_operation(microesnext::Value::from_host(
                     microesnext::HostRef::new(BRIDGE).unwrap(),
                 )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. }) if object.index() == GLOBAL_THIS => {
+                let result = machine.root(global_overlay)
+                    .and_then(|overlay| microesnext::objects::get(machine.arena(), overlay, key));
+                match result.and_then(|value| machine.complete_host_operation(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1400, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
             }
             Ok(Outcome::HostGet { object, key, .. }) if object.index() == MATH => {
                 let operation = match machine.string_bytes(key) {
@@ -575,8 +595,11 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 DETAIL.store(object.index(), Ordering::Relaxed);
                 break u32::MAX - 2;
             }
-            Ok(Outcome::HostSet { object, .. }) if object.index() == GLOBAL_THIS => {
-                if let Err(error) = machine.complete_host_operation(Value::UNDEFINED) {
+            Ok(Outcome::HostSet { object, key, value }) if object.index() == GLOBAL_THIS => {
+                let result = machine.root(global_overlay)
+                    .and_then(|overlay| microesnext::objects::set(machine.arena_mut(), overlay, key, value))
+                    .map(|_| ());
+                if let Err(error) = result.and_then(|()| machine.complete_host_operation(Value::UNDEFINED)) {
                     DETAIL.store(error as u32 + 1200, Ordering::Relaxed);
                     break u32::MAX;
                 }
