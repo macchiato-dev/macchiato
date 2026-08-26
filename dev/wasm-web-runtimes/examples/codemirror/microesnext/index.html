@@ -10,7 +10,9 @@
 
   const status = document.querySelector(".runtime-status");
   try {
-    const response = await fetch("../generated/codemirror-microesnext.wasm");
+    const wasm = new URL(location.href).searchParams.get("wasm") ||
+      "../generated/codemirror-microesnext.wasm";
+    const response = await fetch(wasm);
     if (!response.ok) throw new Error(`Wasm response ${response.status}`);
     const module = await WebAssembly.compileStreaming(response);
     const machine = new WasmWebMachine(module, document, {
