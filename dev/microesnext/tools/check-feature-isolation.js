@@ -21,13 +21,13 @@ function packages(features) {
 function assertPresence(features, present, absent) {
   const graph = packages(features);
   for (const name of present) {
-    if (name === bindings) continue;
+    if (name === bindings || name === semantics) continue;
     if (!graph.has(name)) {
       throw new Error(`${features || "minimal"}: expected ${name}`);
     }
   }
   for (const name of absent) {
-    if (name === bindings) continue;
+    if (name === bindings || name === semantics) continue;
     if (graph.has(name)) {
       throw new Error(
         `${features || "minimal"}: unexpectedly contains ${name}`,
@@ -61,6 +61,35 @@ function assertBindingFeatures(features, present, absent) {
   for (const feature of absent) {
     if (tree.includes(`microesnext-bindings feature "${feature}"`)) {
       throw new Error(`${features || "minimal"}: unexpectedly contains bindings/${feature}`);
+    }
+  }
+}
+
+function assertSemanticFeatures(features, present, absent) {
+  if (!packages(features).has(semantics)) {
+    if (present.length > 0) {
+      throw new Error(`${features || "minimal"}: expected semantics`);
+    }
+    return;
+  }
+  const args = [
+    "tree",
+    "--package=microesnext",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-semantics",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-semantics feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: expected semantics/${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-semantics feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: unexpectedly contains semantics/${feature}`);
     }
   }
 }
@@ -110,8 +139,8 @@ const promiseResolvers = promises;
 const errors = "microesnext-errors";
 const receivers = bindings;
 const thenables = scheduler;
-const integerOperations = "microesnext-integer-operations";
 const semantics = "microesnext-semantics";
+const integerOperations = semantics;
 const equality = semantics;
 const logicalOperations = semantics;
 const typeOf = semantics;
@@ -729,5 +758,10 @@ assertBindingFeatures(["function-arguments"], ["locals", "parameters"], ["enviro
 assertBindingFeatures(["environments"], ["environments"], ["locals", "parameters", "receivers", "recursive-functions"]);
 assertBindingFeatures(["receivers"], ["locals", "parameters", "receivers"], ["environments", "recursive-functions"]);
 assertBindingFeatures(["recursive-functions"], ["environments", "recursive-functions"], ["parameters", "receivers"]);
+assertSemanticFeatures([], [], ["equality", "integer-operations", "logical-operations", "truthiness", "typeof"]);
+assertSemanticFeatures(["integer-operations"], ["integer-operations"], ["equality", "logical-operations", "truthiness", "typeof"]);
+assertSemanticFeatures(["equality"], ["equality"], ["integer-operations", "logical-operations", "truthiness", "typeof"]);
+assertSemanticFeatures(["logical-operations"], ["logical-operations", "truthiness"], ["equality", "integer-operations", "typeof"]);
+assertSemanticFeatures(["typeof"], ["typeof"], ["equality", "integer-operations", "logical-operations", "truthiness"]);
 
 console.log("feature dependency isolation verified");

@@ -9,10 +9,10 @@ pub use microesnext_vm_core::{Core, CoreOutcome};
 pub use microesnext_bindings::locals;
 
 #[cfg(feature = "integer-operations")]
-pub use microesnext_integer_operations as integer_operations;
+pub use microesnext_semantics::integer_operations;
 
 #[cfg(feature = "integer-negation")]
-pub use microesnext_integer_operations::negation as integer_negation;
+pub use microesnext_semantics::integer_operations::negation as integer_negation;
 
 #[cfg(feature = "instanceof")]
 pub use microesnext_objects::instanceof;

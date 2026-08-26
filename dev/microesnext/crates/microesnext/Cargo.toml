@@ -160,12 +160,14 @@ function-arguments = [
   "microesnext-compiler/function-arguments",
 ]
 integer-operations = [
-  "dep:microesnext-integer-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/integer-operations",
   "microesnext-vm/integer-operations",
   "microesnext-compiler/integer-operations",
 ]
 integer-negation = [
-  "dep:microesnext-integer-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/integer-operations",
   "microesnext-vm/integer-negation",
   "microesnext-compiler/integer-negation",
 ]
@@ -360,7 +362,6 @@ microesnext-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
-microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }

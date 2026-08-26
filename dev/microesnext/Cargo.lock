@@ -15,7 +15,6 @@ dependencies = [
  "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-execution",
- "microesnext-integer-operations",
  "microesnext-iterators",
  "microesnext-numbers",
  "microesnext-objects",
@@ -151,13 +150,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-integer-operations"
-version = "0.0.0"
-dependencies = [
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-iterators"
 version = "0.0.0"
 dependencies = [
@@ -254,7 +246,6 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-execution",
- "microesnext-integer-operations",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-promises",

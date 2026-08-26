@@ -838,7 +838,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "integer-negation")]
             Opcode::NegateI30 => {
                 let operand = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::negation::negate(operand)?;
+                let value = microesnext_semantics::integer_operations::negation::negate(operand)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -874,7 +874,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::SubtractI30 => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::subtract(left, right)?;
+                let value = microesnext_semantics::integer_operations::subtract(left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -882,7 +882,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::MultiplyI30 => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::multiply(left, right)?;
+                let value = microesnext_semantics::integer_operations::multiply(left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -890,7 +890,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::LessThanI30 => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::less_than(left, right)?;
+                let value = microesnext_semantics::integer_operations::less_than(left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -898,7 +898,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GreaterThanI30 => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
-                let value = microesnext_integer_operations::greater_than(left, right)?;
+                let value = microesnext_semantics::integer_operations::greater_than(left, right)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }

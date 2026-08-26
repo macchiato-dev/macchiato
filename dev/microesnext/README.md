@@ -151,8 +151,8 @@ an explicit relational stopping condition.
   `local-assignment-expressions` composition enables the arena's gated stack
   helpers, allowing an assignment to store one copy while returning the other
   without changing the local fast path.
-- `microesnext-integer-operations` supplies checked i30 negation, subtraction,
-  multiplication, and relational comparisons. The bytecode and VM features
+- The semantics `integer-operations` feature supplies checked i30 negation,
+  subtraction, multiplication, and relational comparisons. The bytecode and VM features
   decide which operations are reachable, so a unary-only build does not retain
   multiplication or comparison. `minimal-program` composes the same library
   with locals and control flow without adding floating-point storage or

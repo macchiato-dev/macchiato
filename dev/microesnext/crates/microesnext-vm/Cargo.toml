@@ -71,11 +71,13 @@ function-arguments = [
   "microesnext-bytecode/function-arguments",
 ]
 integer-operations = [
-  "dep:microesnext-integer-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/integer-operations",
   "microesnext-bytecode/integer-operations",
 ]
 integer-negation = [
-  "dep:microesnext-integer-operations",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/integer-operations",
   "microesnext-bytecode/integer-negation",
 ]
 instanceof = [
@@ -195,7 +197,6 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
