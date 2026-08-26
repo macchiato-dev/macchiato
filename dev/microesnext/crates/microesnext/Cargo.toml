@@ -79,6 +79,7 @@ array-assignment-expressions = [
   "microesnext-arrays/assignment-expressions",
   "microesnext-vm/array-assignment-expressions",
   "microesnext-compiler/array-assignment-expressions",
+  "microesnext-compiler/literal-expressions",
 ]
 array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
 async = [
@@ -127,6 +128,11 @@ objects = [
   "atoms",
   "microesnext-vm/objects",
   "microesnext-compiler/objects",
+]
+literal-expressions = [
+  "arrays",
+  "objects",
+  "microesnext-compiler/literal-expressions",
 ]
 property-assignment = [
   "objects",
@@ -539,6 +545,7 @@ required-features = [
   "arrays",
   "constructors",
   "function-arguments",
+  "literal-expressions",
   "objects",
   "receivers",
 ]
