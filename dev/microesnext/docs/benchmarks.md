@@ -606,9 +606,10 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | control flow | 7,460 | 2,965 |
 | conditional expressions | 8,014 | 3,194 |
 | nonterminal conditionals | 8,207 | 3,100 |
+| nonterminal exceptions | 9,713 | 3,503 |
 | nested conditionals | 8,588 | 3,494 |
 | nested loops | 8,410 | 3,546 |
-| nested exceptions | 9,223 | 3,984 |
+| nested exceptions | 11,449 | 4,515 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -651,7 +652,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,970 | 7,858 |
-| default language slice | 52,594 | 18,836 |
+| default language slice | 53,474 | 19,152 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -688,14 +689,20 @@ a 2,048-level loop source both compile and execute, including relocated targets
 inside functions. `nested-loops` adds only `control-flow` to the runtime graph.
 Omitting it preserves the nested-conditional artifact exactly at 8,588 / 3,494.
 
-Nested exceptions are compiler worklist machinery over the existing optional
-handler operations. Their focused compiler is 9,223 / 3,984 versus 7,121 /
-3,030 for terminal exceptions, an increment of 2,102 raw / 954 gzip bytes. The
-runtime graph is still exactly `exceptions`; it gains no nesting feature or
-depth counter. Live tests cover returns across multiple handlers, rethrows to
-an outer handler, nesting from a catch, and 2,048 active guest handler records.
-Omitting the feature preserves the terminal exception artifact exactly at
-7,121 / 3,030.
+Nonterminal exceptions compose handler cleanup with control-flow joins. Their
+focused compiler is 9,713 / 3,503 versus 7,121 / 3,030 for terminal exceptions,
+an increment of 2,592 raw / 473 gzip bytes. Normal try completion removes its
+handler and jumps over the catch; catch fallthrough discards its pending reason.
+Both targets relocate inside function bodies. Omitting the feature preserves
+the terminal exception artifact exactly at 7,121 / 3,030.
+
+Nested exceptions extend that join-aware parser with explicit worklist frames.
+Their focused compiler is 11,449 / 4,515 and their runtime graph remains exactly
+`control-flow` plus `exceptions`; the VM gains no nesting feature or depth
+counter. Live tests cover nested fallthrough, returns across multiple handlers,
+rethrows to an outer handler, nesting from a catch, and 2,048 active guest
+handler records. Omitting nesting preserves the nonterminal exception compiler
+at 9,713 / 3,503.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler

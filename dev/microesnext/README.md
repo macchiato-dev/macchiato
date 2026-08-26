@@ -109,6 +109,10 @@ an explicit relational stopping condition.
   existing optional handler bytecode. Returns close every live handler, throws
   retain the nearest handler, and omitting it preserves the smaller terminal
   exception parser rather than retaining dormant frame machinery.
+- `nonterminal-exceptions` lets normally completed `try` and `catch` bodies
+  join later statements. Its handler cleanup and jump patches compose into the
+  nested worklist, while terminal-only exception builds retain neither control
+  flow nor join bookkeeping.
 - `implicit-completions` is compiler-only too. It lowers `return;` and a script
   or function body reaching its end to the invariant `undefined` constant and
   existing return instruction. Its omitted build retains the previous

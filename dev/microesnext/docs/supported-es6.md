@@ -62,9 +62,12 @@ Exception regions now have their own independently removable
 `nested-exceptions` worklist. It tracks whether each source region is compiling
 its `try` or `catch` side, patches catch targets directly, and emits one
 `end_try` for every live handler crossed by a return. Throws continue through
-the runtime's existing nearest-handler chain. A test compiles and executes
-2,048 nested regions without Rust parser frames; the VM still has no source
-nesting counter or fixed depth.
+the runtime's existing nearest-handler chain. The prerequisite
+`nonterminal-exceptions` feature gives normally completed try and catch sides a
+direct join over the catch body, releasing the handler record or caught value
+before later statements. A test compiles and executes 2,048 nested regions
+without Rust parser frames; the VM still has no source nesting counter or fixed
+depth.
 
 Expression statements are independently selectable. Any expression accepted
 by the chosen compiler composition may be followed by `;` before a terminal
@@ -309,10 +312,10 @@ guest VM frames rather than consuming the native Rust stack.
 
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
-form, with nested terminal try/catch regions behind `nested-exceptions`. Catch
-targets are backpatched without an AST. Handler records and caught values live
-on the guest stack, survive `await`, and are removed on both normal and abrupt
-paths. General resumable statements, nested lexical environments, `finally`,
+form, with fallthrough joins behind `nonterminal-exceptions` and nested regions
+behind `nested-exceptions`. Catch targets are backpatched without an AST.
+Handler records and caught values live on the guest stack, survive `await`, and
+are removed on normal and abrupt paths. Nested lexical environments, `finally`,
 and the complete ECMAScript grammar remain future compiler work.
 
 ## Collections
