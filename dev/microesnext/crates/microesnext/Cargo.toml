@@ -381,6 +381,11 @@ path = "tests/control_flow.rs"
 required-features = ["control-flow", "locals"]
 
 [[test]]
+name = "conditional-expressions"
+path = "tests/conditional_expressions.rs"
+required-features = ["control-flow"]
+
+[[test]]
 name = "minimal-program"
 path = "tests/minimal_program.rs"
 required-features = ["minimal-program"]

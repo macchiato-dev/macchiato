@@ -1444,7 +1444,7 @@ impl Parser<'_> {
             }
         }
         self.offset = start;
-        let (used_binding, _) = self.logical_or(binding)?;
+        let (used_binding, _) = self.conditional(binding)?;
         Ok(used_binding)
     }
 
@@ -1454,8 +1454,49 @@ impl Parser<'_> {
         feature = "property-assignment-expressions"
     )))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
-        let (used_binding, _) = self.logical_or(binding)?;
+        let (used_binding, _) = self.conditional(binding)?;
         Ok(used_binding)
+    }
+
+    #[cfg(feature = "conditional-expressions")]
+    fn conditional(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, kind) = self.logical_or(binding)?;
+        if !self.consume(b'?') {
+            return Ok((used_binding, kind));
+        }
+
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let alternate_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.expression(None)?;
+        if !self.consume(b':') {
+            return Err(self.error(":"));
+        }
+        self.output.push(Opcode::Jump as u8);
+        let end_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+
+        let alternate = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[alternate_patch..alternate_patch + 4].copy_from_slice(&alternate.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(alternate_patch);
+
+        self.expression(None)?;
+        self.patch_expression_end(&[end_patch])?;
+        Ok((used_binding, TermKind::General))
+    }
+
+    #[cfg(not(feature = "conditional-expressions"))]
+    fn conditional(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.logical_or(binding)
     }
 
     #[cfg(any(
@@ -3162,6 +3203,33 @@ mod tests {
         assert_eq!(
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
+        );
+    }
+
+    #[cfg(feature = "conditional-expressions")]
+    #[test]
+    fn compiles_right_associative_conditional_expressions() {
+        let code = compile_script("return false ? 1 : true ? 2 : 3;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::JumpIfFalseBoolean as u8)
+                .count(),
+            2
+        );
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::Jump as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(all(feature = "control-flow", not(feature = "conditional-expressions")))]
+    #[test]
+    fn reduced_control_flow_compilers_leave_conditional_syntax_unconsumed() {
+        assert_eq!(
+            compile_script("return true ? 1 : 2;").unwrap_err().expected,
+            "end of input"
         );
     }
 

@@ -12,6 +12,7 @@ default = [
   "arrays",
   "async-functions",
   "control-flow",
+  "conditional-expressions",
   "constructors",
   "construction",
   "class-methods",
@@ -51,6 +52,7 @@ async-functions = [
 ]
 atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
+conditional-expressions = ["control-flow"]
 constructors = ["functions", "microesnext-bytecode/constructors"]
 construction = ["constructors", "receivers", "microesnext-bytecode/construction"]
 classes = [
