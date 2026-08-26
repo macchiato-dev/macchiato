@@ -93,6 +93,11 @@ an explicit relational stopping condition.
 - `conditional-expressions` is likewise compiler-only. It emits the existing
   typed truthiness and jump vocabulary for `condition ? consequent : alternate`,
   so removing the parser branch changes no runtime dispatch path.
+- `implicit-completions` is compiler-only too. It lowers `return;` and a script
+  or function body reaching its end to the invariant `undefined` constant and
+  existing return instruction. Its omitted build retains the previous
+  completion parser byte-for-byte rather than relying on optimization to erase
+  a shared conditional branch.
 - `class-static-methods` is also compiler-only. It installs the same
   non-constructible method wrapper directly on the class record instead of its
   prototype, so static calls reuse receiver-preserving method bytecode and

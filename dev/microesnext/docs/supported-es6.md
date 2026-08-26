@@ -55,6 +55,15 @@ top level and in function, method, constructor, loop, conditional, `try`, and
 the stack-operation dispatch; specialized local and property assignment
 statements retain their smaller direct paths.
 
+The compiler-only `implicit-completions` feature accepts explicit `return;`
+and bodies that reach their closing brace or the end of a script. Both produce
+the invariant `undefined` value through existing return bytecode. Fall-through
+from a terminal `try` closes its handler before returning; a fall-through catch
+discards the pending exception first. Constructors retain their existing
+receiver-return rule. Omitting the feature restores the original parser
+implementation, requires a value-bearing `return` or `throw`, and changes no
+runtime dependency or dispatch path.
+
 Property-assignment statements are separately gated from object literals and
 reads. The current source form accepts `local.name = value;` and constructor
 receiver initialization such as `this.name = value;`. Its opcode consumes the

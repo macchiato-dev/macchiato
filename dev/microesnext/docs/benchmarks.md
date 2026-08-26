@@ -641,12 +641,13 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | property assignment expressions | 11,619 | 4,787 |
 | basic functions | 13,184 | 5,564 |
 | function arguments | 14,148 | 5,953 |
+| implicit completions | 5,772 | 2,441 |
 | captured environments | 17,881 | 7,430 |
 | recursive named functions | 17,995 | 7,484 |
 | recursive constructors | 18,134 | 7,558 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,967 | 7,856 |
-| default language slice | 48,908 | 17,390 |
+| default language slice | 49,259 | 17,455 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -655,6 +656,13 @@ dependency graph contains only `microesnext-stack-operations`; it includes no
 exceptions, functions, objects, or locals. Reduced compilers leave the first
 ordinary expression statement unconsumed, while existing specialized
 assignment statements continue to compile without this gate.
+
+Implicit completions are compiler-only and therefore have no runtime row. The
+focused compiler is 5,772 / 2,441 versus the 5,471 / 2,378 minimal compiler,
+an increment of 301 raw / 63 gzip bytes. A separate `#[cfg]` implementation
+keeps the omitted completion function structurally identical to its earlier
+form: the independently measured expression-statements compiler remains
+exactly 6,175 / 2,607 after this addition.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
