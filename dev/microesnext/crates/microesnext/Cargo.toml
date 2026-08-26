@@ -38,6 +38,11 @@ class-expressions = ["class-static-methods", "stack-operations"]
 locals = ["dep:microesnext-locals", "microesnext-vm/locals"]
 local-assignment-expressions = ["locals", "stack-operations"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
+array-assignment-expressions = [
+  "arrays",
+  "dep:microesnext-array-assignment-expressions",
+  "microesnext-vm/array-assignment-expressions",
+]
 array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
 async = ["dep:microesnext-async"]
 async-functions = [
@@ -238,6 +243,7 @@ microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-array-iterators = { workspace = true, optional = true }
+microesnext-array-assignment-expressions = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }

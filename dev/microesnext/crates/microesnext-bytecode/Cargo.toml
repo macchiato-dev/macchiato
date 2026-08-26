@@ -45,6 +45,7 @@ constructors = []
 class-constructors = ["constructors"]
 captured-assignment-expressions = ["environments"]
 property-assignment-expressions = ["objects"]
+array-assignment-expressions = ["arrays"]
 construction = ["constructors", "receivers"]
 
 [dependencies]

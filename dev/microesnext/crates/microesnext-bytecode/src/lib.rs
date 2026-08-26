@@ -158,6 +158,8 @@ pub enum Opcode {
     StoreEnvironmentCellResult = 113,
     #[cfg(feature = "property-assignment-expressions")]
     SetPropertyResult = 114,
+    #[cfg(feature = "array-assignment-expressions")]
+    SetIndexResult = 115,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -307,6 +309,8 @@ impl TryFrom<u8> for Opcode {
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
             114 => Ok(Self::SetPropertyResult),
+            #[cfg(feature = "array-assignment-expressions")]
+            115 => Ok(Self::SetIndexResult),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -628,6 +632,18 @@ mod tests {
     #[test]
     fn omitted_property_assignment_expression_opcode_is_invalid() {
         assert!(Opcode::try_from(114).is_err());
+    }
+
+    #[cfg(feature = "array-assignment-expressions")]
+    #[test]
+    fn enabled_array_assignment_expression_opcode_is_decodable() {
+        assert_eq!(Opcode::try_from(115), Ok(Opcode::SetIndexResult));
+    }
+
+    #[cfg(not(feature = "array-assignment-expressions"))]
+    #[test]
+    fn omitted_array_assignment_expression_opcode_is_invalid() {
+        assert!(Opcode::try_from(115).is_err());
     }
 
     #[cfg(feature = "property-assignment")]

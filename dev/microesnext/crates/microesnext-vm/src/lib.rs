@@ -189,6 +189,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "equality",
         feature = "async-functions",
         feature = "captured-assignment-expressions",
+        feature = "array-assignment-expressions",
         feature = "property-assignment-expressions",
         feature = "promise-resolvers"
     ))]
@@ -723,6 +724,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "property-assignment-expressions")]
             Opcode::SetPropertyResult => {
                 microesnext_property_assignment_expressions::store_result(self.core.arena_mut())?;
+                Ok(None)
+            }
+            #[cfg(feature = "array-assignment-expressions")]
+            Opcode::SetIndexResult => {
+                microesnext_array_assignment_expressions::store_result(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]

@@ -26,6 +26,9 @@ pub use microesnext_method_calls as method_calls;
 #[cfg(feature = "arrays")]
 pub use microesnext_arrays as arrays;
 
+#[cfg(feature = "array-assignment-expressions")]
+pub use microesnext_array_assignment_expressions as array_assignment_expressions;
+
 #[cfg(feature = "array-iterators")]
 pub use microesnext_array_iterators as array_iterators;
 

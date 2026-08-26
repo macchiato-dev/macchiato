@@ -141,6 +141,11 @@ captured-assignment-expressions = [
   "dep:microesnext-captured-assignment-expressions",
   "microesnext-bytecode/captured-assignment-expressions",
 ]
+array-assignment-expressions = [
+  "arrays",
+  "dep:microesnext-array-assignment-expressions",
+  "microesnext-bytecode/array-assignment-expressions",
+]
 property-assignment-expressions = [
   "objects",
   "dep:microesnext-property-assignment-expressions",
@@ -182,6 +187,7 @@ microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
+microesnext-array-assignment-expressions = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-captured-assignment-expressions = { workspace = true, optional = true }

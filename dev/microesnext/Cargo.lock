@@ -7,6 +7,7 @@ name = "microesnext"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-array-assignment-expressions",
  "microesnext-array-iterators",
  "microesnext-arrays",
  "microesnext-async",
@@ -662,6 +663,7 @@ name = "microesnext-vm"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-array-assignment-expressions",
  "microesnext-arrays",
  "microesnext-async-functions",
  "microesnext-atoms",
