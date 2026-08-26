@@ -1393,15 +1393,32 @@ impl Parser<'_> {
         #[cfg(not(feature = "exceptions"))]
         let _ = (close_handler, pending_exception);
         self.whitespace();
-        let returning = if self.try_word(b"return") {
-            true
+        let (returning, undefined) = if self.try_word(b"return") {
+            self.whitespace();
+            (
+                true,
+                cfg!(feature = "implicit-completions") && self.consume_raw(b';'),
+            )
         } else if self.try_word(b"throw") {
-            false
+            (false, false)
+        } else if cfg!(feature = "implicit-completions")
+            && (self.source.get(self.offset).is_none()
+                || self.source.get(self.offset) == Some(&b'}'))
+        {
+            (true, true)
         } else {
             return Err(self.error("return or throw"));
         };
         #[cfg(feature = "exceptions")]
-        {
+        if pending_exception && undefined {
+            self.output.push(Opcode::Drop as u8);
+        }
+        if undefined {
+            self.output.push(Opcode::ConstImmediate as u8);
+            self.output.push(Immediate::Undefined as u8);
+        }
+        #[cfg(feature = "exceptions")]
+        if !undefined {
             let expression_start = self.output.len();
             let used_binding = self.expression(binding)?;
             if pending_exception && !used_binding {
@@ -1409,8 +1426,10 @@ impl Parser<'_> {
             }
         }
         #[cfg(not(feature = "exceptions"))]
-        self.expression(binding)?;
-        if self.consume(b';') {
+        if !undefined {
+            self.expression(binding)?;
+        }
+        if !undefined && self.consume(b';') {
             self.whitespace();
         }
         #[cfg(feature = "exceptions")]
@@ -3440,6 +3459,46 @@ mod tests {
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
         );
+    }
+
+    #[cfg(feature = "implicit-completions")]
+    #[test]
+    fn compiles_empty_returns_and_fallthrough_as_undefined() {
+        assert_eq!(
+            compile_script("").unwrap(),
+            [
+                Opcode::ConstImmediate as u8,
+                Immediate::Undefined as u8,
+                Opcode::Return as u8,
+            ]
+        );
+        assert_eq!(
+            compile_script("return;").unwrap(),
+            [
+                Opcode::ConstImmediate as u8,
+                Immediate::Undefined as u8,
+                Opcode::Return as u8,
+            ]
+        );
+    }
+
+    #[cfg(all(feature = "implicit-completions", feature = "expression-statements"))]
+    #[test]
+    fn compiles_statement_only_scripts_to_undefined_completion() {
+        let code = compile_script("1; true;").unwrap();
+        assert_eq!(code.last(), Some(&(Opcode::Return as u8)));
+        assert!(
+            code.windows(2).any(|bytes| {
+                bytes == [Opcode::ConstImmediate as u8, Immediate::Undefined as u8]
+            })
+        );
+    }
+
+    #[cfg(not(feature = "implicit-completions"))]
+    #[test]
+    fn reduced_compilers_require_explicit_value_completions() {
+        assert_eq!(compile_script("").unwrap_err().expected, "return or throw");
+        assert_eq!(compile_script("return;").unwrap_err().expected, "a number");
     }
 
     #[cfg(feature = "expression-statements")]

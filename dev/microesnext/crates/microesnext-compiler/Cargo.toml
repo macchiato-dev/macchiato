@@ -26,6 +26,7 @@ default = [
   "exceptions",
   "expression-statements",
   "function-arguments",
+  "implicit-completions",
   "instanceof",
   "literal-expressions",
   "local-assignment-expressions",
@@ -95,6 +96,7 @@ functions = [
   "microesnext-bytecode/functions",
 ]
 function-arguments = ["functions", "microesnext-bytecode/function-arguments"]
+implicit-completions = []
 integer-operations = ["microesnext-bytecode/integer-operations"]
 integer-negation = ["microesnext-bytecode/integer-negation"]
 instanceof = ["microesnext-bytecode/instanceof"]
