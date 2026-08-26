@@ -403,14 +403,14 @@ enum FunctionBody {
     Method,
 }
 
-#[cfg(feature = "nested-conditionals")]
+#[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
 #[derive(Clone, Copy)]
 enum ConditionalSide {
     Consequent,
     Alternate,
 }
 
-#[cfg(feature = "nested-conditionals")]
+#[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
 struct ConditionalFrame {
     alternate_patch: usize,
     join_patch: Option<usize>,
@@ -418,8 +418,26 @@ struct ConditionalFrame {
     side: ConditionalSide,
 }
 
+#[cfg(feature = "nested-loops")]
+enum ControlFrame {
+    Conditional {
+        alternate_patch: usize,
+        join_patch: Option<usize>,
+        consequent_abrupt: bool,
+        alternate: bool,
+    },
+    Loop {
+        start: u32,
+        exit_patch: usize,
+    },
+}
+
 impl Parser<'_> {
-    #[cfg(all(feature = "control-flow", feature = "nonterminal-conditionals"))]
+    #[cfg(all(
+        feature = "control-flow",
+        feature = "nonterminal-conditionals",
+        not(feature = "nested-loops")
+    ))]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
         loop {
             self.statement_prefix()?;
@@ -432,6 +450,29 @@ impl Parser<'_> {
             }
             if self.try_word_after_whitespace(b"while") {
                 self.while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "exceptions")]
+            if self.try_word_after_whitespace(b"try") {
+                return self.try_catch();
+            }
+            return self.completion(None, false, false);
+        }
+    }
+
+    #[cfg(feature = "nested-loops")]
+    fn terminal_statement(&mut self) -> Result<(), CompileError> {
+        loop {
+            self.statement_prefix()?;
+            if self.try_word_after_whitespace(b"if") {
+                let abrupt = self.control_statement(true)?;
+                if abrupt && self.at_body_end() {
+                    return Ok(());
+                }
+                continue;
+            }
+            if self.try_word_after_whitespace(b"while") {
+                self.control_statement(false)?;
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -551,7 +592,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "control-flow")]
+    #[cfg(all(feature = "control-flow", not(feature = "nested-loops")))]
     fn while_loop(&mut self) -> Result<(), CompileError> {
         let loop_start = u32::try_from(self.output.len())
             .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
@@ -637,7 +678,7 @@ impl Parser<'_> {
         Ok(consequent_abrupt && alternate_abrupt)
     }
 
-    #[cfg(feature = "nested-conditionals")]
+    #[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
     fn if_else(&mut self) -> Result<bool, CompileError> {
         let mut frames = Vec::new();
         self.begin_conditional(&mut frames)?;
@@ -710,7 +751,7 @@ impl Parser<'_> {
         }
     }
 
-    #[cfg(feature = "nested-conditionals")]
+    #[cfg(all(feature = "nested-conditionals", not(feature = "nested-loops")))]
     fn begin_conditional(
         &mut self,
         frames: &mut Vec<ConditionalFrame>,
@@ -735,6 +776,168 @@ impl Parser<'_> {
             consequent_abrupt: false,
             side: ConditionalSide::Consequent,
         });
+        Ok(())
+    }
+
+    #[cfg(feature = "nested-loops")]
+    fn control_statement(&mut self, conditional: bool) -> Result<bool, CompileError> {
+        let mut frames = Vec::new();
+        if conditional {
+            self.begin_control_conditional(&mut frames)?;
+        } else {
+            self.begin_control_loop(&mut frames)?;
+        }
+        loop {
+            self.statement_prefix()?;
+            self.whitespace();
+            if self.try_word(b"if") {
+                self.begin_control_conditional(&mut frames)?;
+                continue;
+            }
+            if self.try_word(b"while") {
+                self.begin_control_loop(&mut frames)?;
+                continue;
+            }
+            let branch_abrupt = if self.source.get(self.offset) == Some(&b'}') {
+                false
+            } else {
+                self.completion(None, false, false)?;
+                true
+            };
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+            let mut completed_abrupt = branch_abrupt;
+            loop {
+                let Some(frame) = frames.pop() else {
+                    return Err(self.error("an active control frame"));
+                };
+                match frame {
+                    ControlFrame::Conditional {
+                        alternate_patch,
+                        alternate: false,
+                        ..
+                    } => {
+                        let join_patch = if completed_abrupt {
+                            None
+                        } else {
+                            self.output.push(Opcode::Jump as u8);
+                            let patch = self.output.len();
+                            self.output.extend_from_slice(&0_u32.to_le_bytes());
+                            Some(patch)
+                        };
+                        if !self.try_word_after_whitespace(b"else") || !self.consume(b'{') {
+                            return Err(self.error("else {"));
+                        }
+                        let alternate = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        self.output[alternate_patch..alternate_patch + 4]
+                            .copy_from_slice(&alternate.to_le_bytes());
+                        #[cfg(feature = "functions")]
+                        self.relocations.push(alternate_patch);
+                        frames.push(ControlFrame::Conditional {
+                            alternate_patch,
+                            join_patch,
+                            consequent_abrupt: completed_abrupt,
+                            alternate: true,
+                        });
+                        break;
+                    }
+                    ControlFrame::Conditional {
+                        join_patch,
+                        consequent_abrupt,
+                        alternate: true,
+                        ..
+                    } => {
+                        if let Some(patch) = join_patch {
+                            let join = u32::try_from(self.output.len())
+                                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(patch);
+                        }
+                        completed_abrupt = consequent_abrupt && completed_abrupt;
+                    }
+                    ControlFrame::Loop { start, exit_patch } => {
+                        if !completed_abrupt {
+                            self.output.push(Opcode::Jump as u8);
+                            #[cfg(feature = "functions")]
+                            let start_patch = self.output.len();
+                            self.output.extend_from_slice(&start.to_le_bytes());
+                            #[cfg(feature = "functions")]
+                            self.relocations.push(start_patch);
+                        }
+                        let exit = u32::try_from(self.output.len())
+                            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                        self.output[exit_patch..exit_patch + 4]
+                            .copy_from_slice(&exit.to_le_bytes());
+                        #[cfg(feature = "functions")]
+                        self.relocations.push(exit_patch);
+                        completed_abrupt = false;
+                    }
+                }
+                if frames.is_empty() {
+                    self.whitespace();
+                    return Ok(completed_abrupt);
+                }
+                if completed_abrupt {
+                    if !self.consume(b'}') {
+                        return Err(self.error("}"));
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+
+    #[cfg(feature = "nested-loops")]
+    fn begin_control_conditional(
+        &mut self,
+        frames: &mut Vec<ControlFrame>,
+    ) -> Result<(), CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let alternate_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        frames.push(ControlFrame::Conditional {
+            alternate_patch,
+            join_patch: None,
+            consequent_abrupt: false,
+            alternate: false,
+        });
+        Ok(())
+    }
+
+    #[cfg(feature = "nested-loops")]
+    fn begin_control_loop(&mut self, frames: &mut Vec<ControlFrame>) -> Result<(), CompileError> {
+        let start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        frames.push(ControlFrame::Loop { start, exit_patch });
         Ok(())
     }
 
@@ -5107,6 +5310,38 @@ mod tests {
         for _ in 0..depth {
             source.push_str("} else { return 0; }");
         }
+
+        let code = compile_script(&source).unwrap();
+        assert!(code.len() > depth * 10);
+    }
+
+    #[cfg(feature = "nested-loops")]
+    #[test]
+    fn compiles_mixed_nested_loops_and_conditionals_from_one_worklist() {
+        let code = compile_script(
+            "let outer = true; let inner = false; \
+             while (outer) { \
+               if (true) { while (inner) {} } else {} \
+               outer = false; \
+             } \
+             return 42;",
+        )
+        .unwrap();
+        assert!(code.len() > 30);
+    }
+
+    #[cfg(feature = "nested-loops")]
+    #[test]
+    fn loop_source_depth_does_not_consume_the_rust_stack() {
+        let depth = 2_048;
+        let mut source = alloc::string::String::new();
+        for _ in 0..depth {
+            source.push_str("while (false) {");
+        }
+        for _ in 0..depth {
+            source.push('}');
+        }
+        source.push_str("return 42;");
 
         let code = compile_script(&source).unwrap();
         assert!(code.len() > depth * 10);

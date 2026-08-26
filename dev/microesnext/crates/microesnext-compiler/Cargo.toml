@@ -40,6 +40,7 @@ default = [
   "number-remainder",
   "nonterminal-conditionals",
   "nested-conditionals",
+  "nested-loops",
   "string-number-coercion",
   "typeof",
   "number-operations",
@@ -127,6 +128,7 @@ number-division = ["numbers", "microesnext-bytecode/number-division"]
 number-remainder = ["numbers", "microesnext-bytecode/number-remainder"]
 nonterminal-conditionals = ["control-flow"]
 nested-conditionals = ["nonterminal-conditionals"]
+nested-loops = ["nested-conditionals"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]

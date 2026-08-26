@@ -155,6 +155,7 @@ number-remainder = [
 ]
 nonterminal-conditionals = ["control-flow"]
 nested-conditionals = ["nonterminal-conditionals"]
+nested-loops = ["nested-conditionals"]
 string-number-coercion = [
   "number-coercion",
   "strings",
@@ -429,6 +430,11 @@ required-features = ["locals", "nonterminal-conditionals"]
 name = "nested-conditionals"
 path = "tests/nested_conditionals.rs"
 required-features = ["locals", "nested-conditionals"]
+
+[[test]]
+name = "nested-loops"
+path = "tests/nested_loops.rs"
+required-features = ["locals", "nested-loops"]
 
 [[test]]
 name = "equality"
