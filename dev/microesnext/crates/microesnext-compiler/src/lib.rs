@@ -4959,6 +4959,17 @@ impl Parser<'_> {
         self.output.push(Opcode::LoadCapture as u8);
         self.output.extend_from_slice(&capture.to_le_bytes());
         self.output.push(Opcode::LoadEnvironmentCell as u8);
+        if self.consume(b'.') {
+            self.whitespace();
+            let (start, end) = self.identifier()?;
+            self.output_atom_range(start, end);
+            self.output.push(Opcode::GetSuperMethod as u8);
+            if !self.consume(b'(') {
+                return Err(self.error("("));
+            }
+            self.call_suffix(true)?;
+            return Ok(());
+        }
         if !self.consume(b'(') {
             return Err(self.error("("));
         }

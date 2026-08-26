@@ -184,6 +184,8 @@ pub enum Opcode {
     ToGetter = 125,
     #[cfg(feature = "bitwise-operations")]
     BitwiseAndI30 = 126,
+    #[cfg(feature = "class-inheritance")]
+    GetSuperMethod = 127,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -351,6 +353,8 @@ impl TryFrom<u8> for Opcode {
             125 => Ok(Self::ToGetter),
             #[cfg(feature = "bitwise-operations")]
             126 => Ok(Self::BitwiseAndI30),
+            #[cfg(feature = "class-inheritance")]
+            127 => Ok(Self::GetSuperMethod),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

@@ -32,3 +32,19 @@ fn a_derived_constructor_calls_super_with_the_same_receiver() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn a_super_method_call_keeps_the_derived_receiver() {
+    let code = compile_script(
+        "let Base = class { answer() { return this.value; } }; \
+         let Derived = class extends Base { answer() { return super.answer(); } }; \
+         let value = new Derived(); value.value = 42; return value.answer();",
+    )
+    .unwrap();
+    let mut memory = [0; 2048];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(
+        machine.run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

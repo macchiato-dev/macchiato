@@ -327,6 +327,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
                 Ok(None)
             }
+            #[cfg(feature = "class-inheritance")]
+            Opcode::GetSuperMethod => {
+                let prototype_key = self.intern(b"prototype")?;
+                let key = self.core.arena_mut().pop()?;
+                let base = self.core.arena_mut().pop()?;
+                let base_prototype =
+                    microesnext_objects::get(self.core.arena(), base, prototype_key)?;
+                let method = microesnext_objects::get(self.core.arena(), base_prototype, key)?;
+                let receiver = microesnext_bindings::receivers::load(
+                    self.core.arena(),
+                    self.core.frame_base(),
+                )?;
+                self.core.arena_mut().push(receiver)?;
+                self.core.arena_mut().push(method)?;
+                Ok(None)
+            }
             #[cfg(feature = "objects")]
             Opcode::SetProperty => {
                 let value = self.core.arena_mut().pop()?;
