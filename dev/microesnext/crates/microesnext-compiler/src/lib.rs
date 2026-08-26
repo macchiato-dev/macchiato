@@ -1384,6 +1384,7 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "implicit-completions")]
     fn completion(
         &mut self,
         binding: Option<(usize, usize)>,
@@ -1395,15 +1396,11 @@ impl Parser<'_> {
         self.whitespace();
         let (returning, undefined) = if self.try_word(b"return") {
             self.whitespace();
-            (
-                true,
-                cfg!(feature = "implicit-completions") && self.consume_raw(b';'),
-            )
+            (true, self.consume_raw(b';'))
         } else if self.try_word(b"throw") {
             (false, false)
-        } else if cfg!(feature = "implicit-completions")
-            && (self.source.get(self.offset).is_none()
-                || self.source.get(self.offset) == Some(&b'}'))
+        } else if self.source.get(self.offset).is_none()
+            || self.source.get(self.offset) == Some(&b'}')
         {
             (true, true)
         } else {
@@ -1430,6 +1427,71 @@ impl Parser<'_> {
             self.expression(binding)?;
         }
         if !undefined && self.consume(b';') {
+            self.whitespace();
+        }
+        #[cfg(feature = "exceptions")]
+        if close_handler && returning {
+            self.output.push(Opcode::EndTry as u8);
+        }
+        if returning {
+            #[cfg(feature = "receivers")]
+            if self.receiver_frame {
+                self.output.push(Opcode::ReturnReceiverLocals as u8);
+                return Ok(());
+            }
+            #[cfg(feature = "locals")]
+            let plain_return = self.locals.is_empty() && {
+                #[cfg(feature = "functions")]
+                {
+                    !self.function_frame
+                }
+                #[cfg(not(feature = "functions"))]
+                {
+                    true
+                }
+            };
+            #[cfg(feature = "locals")]
+            self.output.push(if plain_return {
+                Opcode::Return as u8
+            } else {
+                Opcode::ReturnLocals as u8
+            });
+            #[cfg(not(feature = "locals"))]
+            self.output.push(Opcode::Return as u8);
+        } else {
+            self.output.push(Opcode::Throw as u8);
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "implicit-completions"))]
+    fn completion(
+        &mut self,
+        binding: Option<(usize, usize)>,
+        close_handler: bool,
+        pending_exception: bool,
+    ) -> Result<(), CompileError> {
+        #[cfg(not(feature = "exceptions"))]
+        let _ = (close_handler, pending_exception);
+        self.whitespace();
+        let returning = if self.try_word(b"return") {
+            true
+        } else if self.try_word(b"throw") {
+            false
+        } else {
+            return Err(self.error("return or throw"));
+        };
+        #[cfg(feature = "exceptions")]
+        {
+            let expression_start = self.output.len();
+            let used_binding = self.expression(binding)?;
+            if pending_exception && !used_binding {
+                self.output.insert(expression_start, Opcode::Drop as u8);
+            }
+        }
+        #[cfg(not(feature = "exceptions"))]
+        self.expression(binding)?;
+        if self.consume(b';') {
             self.whitespace();
         }
         #[cfg(feature = "exceptions")]
