@@ -3724,7 +3724,7 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        self.equality(binding)
+        self.bitwise_or(binding)
     }
 
     #[cfg(feature = "logical-operations")]
@@ -3732,17 +3732,55 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.equality(binding)?;
+        let (used_binding, mut kind) = self.bitwise_or(binding)?;
         let mut patches = Vec::new();
         while self.consume_bytes(b"&&") {
             self.output.push(Opcode::JumpIfFalsyOrPop as u8);
             patches.push(self.output.len());
             self.output.extend_from_slice(&0_u32.to_le_bytes());
-            self.equality(None)?;
+            self.bitwise_or(None)?;
             kind = TermKind::General;
         }
         self.patch_expression_end(&patches)?;
         Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "bitwise-operations")]
+    fn bitwise_or(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.equality(binding)?;
+        while self.consume_bitwise_or() {
+            let (_, right) = self.equality(None)?;
+            self.output.push(Opcode::BitwiseOrI30 as u8);
+            kind = match (kind, right) {
+                (TermKind::I30(left), TermKind::I30(right)) => TermKind::I30(left | right),
+                _ => TermKind::General,
+            };
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(feature = "bitwise-operations")]
+    fn consume_bitwise_or(&mut self) -> bool {
+        self.whitespace();
+        if self.source.get(self.offset) != Some(&b'|')
+            || self.source.get(self.offset + 1) == Some(&b'|')
+        {
+            return false;
+        }
+        self.offset += 1;
+        self.whitespace();
+        true
+    }
+
+    #[cfg(not(feature = "bitwise-operations"))]
+    fn bitwise_or(
+        &mut self,
+        binding: Option<(usize, usize)>,
+    ) -> Result<(bool, TermKind), CompileError> {
+        self.equality(binding)
     }
 
     #[cfg(any(feature = "conditional-expressions", feature = "logical-operations"))]
