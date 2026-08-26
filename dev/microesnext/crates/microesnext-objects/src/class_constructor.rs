@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
@@ -13,10 +11,8 @@ pub fn new(
     constructor_key: Value,
 ) -> Result<Value, Error> {
     if !microesnext_arena::closures::is_function(arena, callable)
-        || (function_prototype != Value::NULL
-            && !microesnext_objects::is_object(arena, function_prototype))
-        || (object_prototype != Value::NULL
-            && !microesnext_objects::is_object(arena, object_prototype))
+        || (function_prototype != Value::NULL && !crate::is_object(arena, function_prototype))
+        || (object_prototype != Value::NULL && !crate::is_object(arena, object_prototype))
     {
         return Err(Error::Type);
     }
@@ -100,13 +96,13 @@ mod tests {
         let root = arena.retain(constructor).unwrap();
         arena.compact(&mut []).unwrap();
         let constructor = arena.root(root).unwrap();
-        let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
+        let prototype = crate::get(&arena, constructor, prototype_key).unwrap();
 
         assert!(is_class_constructor(&arena, constructor));
-        assert!(microesnext_objects::is_object(&arena, constructor));
-        assert!(microesnext_objects::is_object(&arena, prototype));
+        assert!(crate::is_object(&arena, constructor));
+        assert!(crate::is_object(&arena, prototype));
         assert_eq!(
-            microesnext_objects::get(&arena, prototype, constructor_key),
+            crate::get(&arena, prototype, constructor_key),
             Ok(constructor)
         );
         assert_eq!(callable(&arena, constructor), Ok(closure));

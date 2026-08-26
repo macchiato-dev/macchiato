@@ -308,7 +308,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .ok_or(Error::Type)?
                     .intern(self.core.arena_mut(), b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
-                let function = microesnext_callable_objects::new_constructor(
+                let function = microesnext_objects::callable::new_constructor(
                     self.core.arena_mut(),
                     closure,
                     Value::NULL,
@@ -336,7 +336,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .ok_or(Error::Type)?
                     .intern(self.core.arena_mut(), b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
-                let constructor = microesnext_class_constructors::new(
+                let constructor = microesnext_objects::class_constructor::new(
                     self.core.arena_mut(),
                     closure,
                     Value::NULL,
@@ -350,8 +350,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "method-calls")]
             Opcode::ToMethod => {
                 let closure = self.core.arena_mut().pop()?;
-                let method =
-                    microesnext_callable_objects::new(self.core.arena_mut(), closure, Value::NULL)?;
+                let method = microesnext_objects::callable::new(
+                    self.core.arena_mut(),
+                    closure,
+                    Value::NULL,
+                )?;
                 self.core.arena_mut().push(method)?;
                 Ok(None)
             }
@@ -411,7 +414,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let function = self.core.arena_mut().pop()?;
                 #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
-                    microesnext_callable_objects::is_callable_object(self.core.arena(), function);
+                    microesnext_objects::callable::is_callable_object(self.core.arena(), function);
                 #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
                 let receiver_aware = false;
                 #[cfg(feature = "callable-objects")]
@@ -457,7 +460,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
                 #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
-                    microesnext_callable_objects::is_callable_object(self.core.arena(), function);
+                    microesnext_objects::callable::is_callable_object(self.core.arena(), function);
                 #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
                 let receiver_aware = false;
                 #[cfg(feature = "callable-objects")]
@@ -509,7 +512,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let (method, receiver) =
                     microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
                 let receiver_aware =
-                    microesnext_callable_objects::is_callable_object(self.core.arena(), method);
+                    microesnext_objects::callable::is_callable_object(self.core.arena(), method);
                 let function = unwrap_callable(self.core.arena(), method)?;
                 let target = entry(self.core.arena(), function)?;
                 if receiver_aware {
@@ -1202,8 +1205,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 #[cfg(feature = "callable-objects")]
 #[inline]
 fn unwrap_callable(arena: &microesnext_arena::Arena<'_>, value: Value) -> Result<Value, Error> {
-    if microesnext_callable_objects::is_callable_object(arena, value) {
-        microesnext_callable_objects::callable(arena, value)
+    if microesnext_objects::callable::is_callable_object(arena, value) {
+        microesnext_objects::callable::callable(arena, value)
     } else {
         Ok(value)
     }
@@ -1600,7 +1603,7 @@ mod tests {
         let closure =
             microesnext_arena::closures::capture_stack(machine.arena_mut(), 2, 0).unwrap();
         let function =
-            microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
+            microesnext_objects::callable::new(machine.arena_mut(), closure, Value::NULL).unwrap();
         machine.arena_mut().push(function).unwrap();
 
         assert_eq!(
@@ -1632,7 +1635,7 @@ mod tests {
             microesnext_objects::get(machine.arena(), prototype, constructor_key),
             Ok(function)
         );
-        assert!(microesnext_callable_objects::is_callable_object(
+        assert!(microesnext_objects::callable::is_callable_object(
             machine.arena(),
             function
         ));
@@ -1658,16 +1661,18 @@ mod tests {
         let prototype =
             microesnext_objects::get(machine.arena(), constructor, prototype_key).unwrap();
 
-        assert!(microesnext_class_constructors::is_class_constructor(
-            machine.arena(),
-            constructor
-        ));
+        assert!(
+            microesnext_objects::class_constructor::is_class_constructor(
+                machine.arena(),
+                constructor
+            )
+        );
         assert_eq!(
             microesnext_objects::get(machine.arena(), prototype, constructor_key),
             Ok(constructor)
         );
         assert_eq!(
-            microesnext_callable_objects::callable(machine.arena(), constructor),
+            microesnext_objects::callable::callable(machine.arena(), constructor),
             Err(Error::Type)
         );
     }
@@ -1687,7 +1692,7 @@ mod tests {
         let closure =
             microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let constructor =
-            microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
+            microesnext_objects::callable::new(machine.arena_mut(), closure, Value::NULL).unwrap();
         let constructor =
             microesnext_objects::set(machine.arena_mut(), constructor, prototype_key, prototype)
                 .unwrap();

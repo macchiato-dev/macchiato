@@ -48,10 +48,10 @@ pub use microesnext_async_thenables as async_thenables;
 pub use microesnext_collections as collections;
 
 #[cfg(feature = "callable-objects")]
-pub use microesnext_callable_objects as callable_objects;
+pub use microesnext_objects::callable as callable_objects;
 
 #[cfg(feature = "class-constructors")]
-pub use microesnext_class_constructors as class_constructors;
+pub use microesnext_objects::class_constructor as class_constructors;
 
 #[cfg(feature = "collection-iterators")]
 pub use microesnext_collections::iterators as collection_iterators;

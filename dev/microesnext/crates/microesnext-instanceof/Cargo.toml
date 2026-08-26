@@ -10,15 +10,12 @@ version.workspace = true
 [features]
 default = []
 class-constructors = [
-  "dep:microesnext-class-constructors",
   "microesnext-arena/class-constructors",
   "microesnext-objects/class-constructors",
 ]
 
 [dependencies]
 microesnext-arena = { workspace = true, features = ["callable-objects", "closures"] }
-microesnext-callable-objects.workspace = true
-microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, features = ["callable-objects", "prototype-chain"] }
 microesnext-types.workspace = true
 

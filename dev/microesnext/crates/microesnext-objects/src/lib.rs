@@ -2,6 +2,10 @@
 
 #[cfg(feature = "assignment-expressions")]
 pub mod assignment_expressions;
+#[cfg(feature = "callable-objects")]
+pub mod callable;
+#[cfg(feature = "class-constructors")]
+pub mod class_constructor;
 #[cfg(feature = "method-calls")]
 pub mod method_calls;
 #[cfg(feature = "prototype-chain")]

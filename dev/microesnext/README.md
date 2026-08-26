@@ -59,7 +59,7 @@ an explicit relational stopping condition.
 - The arena's gated `closures` module stores closure entries and captures for
   builds enabling the `functions` feature. Closure storage is not a separate
   semantic library; direct calls still remain in the base VM for now.
-- `microesnext-callable-objects` optionally wraps a compact closure in an
+- The objects `callable` module optionally wraps a compact closure in an
   ordinary property-bearing object. Calls unwrap it at a statically selected
   boundary. Its constructor path creates the `.prototype` / `.constructor`
   cycle in fixed arena records; closure-only and object-only machines retain
@@ -68,8 +68,8 @@ an explicit relational stopping condition.
   current prototype and applies the object-return rule. The VM composes it with
   receiver frames using two gated opcodes, without adding persistent machine
   state or changing the invariant call frame.
-- `microesnext-class-constructors` gives classes a distinct object record. A
-  class can use the same removable construction path, but ordinary call
+- The objects `class_constructor` module gives classes a distinct object record.
+  A class can use the same removable construction path, but ordinary call
   unwrapping does not accept it. The initial `classes` compiler slice supports
   constructor-only declarations; methods and inheritance remain separate.
 - The objects `method_calls` module preserves a member receiver beneath its

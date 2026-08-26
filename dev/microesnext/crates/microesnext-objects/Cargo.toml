@@ -9,8 +9,8 @@ version.workspace = true
 
 [features]
 default = []
-callable-objects = ["microesnext-arena/callable-objects"]
-class-constructors = ["microesnext-arena/class-constructors"]
+callable-objects = ["microesnext-arena/callable-objects", "microesnext-arena/closures"]
+class-constructors = ["microesnext-arena/class-constructors", "microesnext-arena/closures"]
 assignment-expressions = []
 method-calls = ["dep:microesnext-parameters"]
 prototype-chain = []

@@ -15,7 +15,7 @@ implicit-completions = []
 constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
-  "dep:microesnext-class-constructors",
+  "microesnext-objects/class-constructors",
   "microesnext-instanceof?/class-constructors",
   "microesnext-typeof?/class-constructors",
   "microesnext-vm/class-constructors",
@@ -87,7 +87,7 @@ functions = ["microesnext-arena/closures", "microesnext-vm/functions"]
 callable-objects = [
   "functions",
   "objects",
-  "dep:microesnext-callable-objects",
+  "microesnext-objects/callable-objects",
   "microesnext-vm/callable-objects",
   "microesnext-typeof?/callable-objects",
 ]
@@ -246,8 +246,6 @@ microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
-microesnext-callable-objects = { workspace = true, optional = true }
-microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }

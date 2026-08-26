@@ -22,13 +22,13 @@ pub fn ordinary(
 
 #[cfg(not(feature = "class-constructors"))]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_callable_objects::is_callable_object(arena, constructor)
+    microesnext_objects::callable::is_callable_object(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_callable_objects::is_callable_object(arena, constructor)
-        || microesnext_class_constructors::is_class_constructor(arena, constructor)
+    microesnext_objects::callable::is_callable_object(arena, constructor)
+        || microesnext_objects::class_constructor::is_class_constructor(arena, constructor)
 }
 
 #[cfg(test)]
@@ -47,7 +47,7 @@ mod tests {
         let instance = new_object(&mut arena, prototype).unwrap();
         let closure = capture_stack(&mut arena, 0, 0).unwrap();
         let constructor =
-            microesnext_callable_objects::new(&mut arena, closure, Value::NULL).unwrap();
+            microesnext_objects::callable::new(&mut arena, closure, Value::NULL).unwrap();
         let constructor = set(&mut arena, constructor, key, prototype).unwrap();
 
         assert_eq!(ordinary(&arena, instance, constructor, key), Ok(true));
@@ -63,7 +63,7 @@ mod tests {
         let value = new_object(&mut arena, Value::NULL).unwrap();
         let closure = capture_stack(&mut arena, 0, 0).unwrap();
         let constructor =
-            microesnext_callable_objects::new(&mut arena, closure, Value::NULL).unwrap();
+            microesnext_objects::callable::new(&mut arena, closure, Value::NULL).unwrap();
         let constructor = set(&mut arena, constructor, key, Value::TRUE).unwrap();
 
         assert_eq!(ordinary(&arena, value, Value::TRUE, key), Err(Error::Type));

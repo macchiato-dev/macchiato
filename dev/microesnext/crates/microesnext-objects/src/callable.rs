@@ -1,12 +1,10 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
 /// Wrap a compact closure in an ordinary object without changing the closure.
 pub fn new(arena: &mut Arena<'_>, callable: Value, prototype: Value) -> Result<Value, Error> {
     if !microesnext_arena::closures::is_function(arena, callable)
-        || (prototype != Value::NULL && !microesnext_objects::is_object(arena, prototype))
+        || (prototype != Value::NULL && !crate::is_object(arena, prototype))
     {
         return Err(Error::Type);
     }
@@ -31,10 +29,8 @@ pub fn new_constructor(
     constructor_key: Value,
 ) -> Result<Value, Error> {
     if !microesnext_arena::closures::is_function(arena, callable)
-        || (function_prototype != Value::NULL
-            && !microesnext_objects::is_object(arena, function_prototype))
-        || (object_prototype != Value::NULL
-            && !microesnext_objects::is_object(arena, object_prototype))
+        || (function_prototype != Value::NULL && !crate::is_object(arena, function_prototype))
+        || (object_prototype != Value::NULL && !crate::is_object(arena, object_prototype))
     {
         return Err(Error::Type);
     }
@@ -103,33 +99,24 @@ mod tests {
     fn composes_object_properties_and_prototypes_with_a_compact_closure() {
         let mut memory = [0; 160];
         let mut arena = Arena::with_root_capacity(&mut memory, 2);
-        let prototype = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
+        let prototype = crate::new_object(&mut arena, Value::NULL).unwrap();
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 12, 0).unwrap();
         let object = new(&mut arena, closure, prototype).unwrap();
 
         assert!(is_callable_object(&arena, object));
-        assert!(microesnext_objects::is_object(&arena, object));
-        assert_eq!(
-            microesnext_objects::prototype(&arena, object),
-            Ok(prototype)
-        );
+        assert!(crate::is_object(&arena, object));
+        assert_eq!(crate::prototype(&arena, object), Ok(prototype));
         assert_eq!(callable(&arena, object), Ok(closure));
 
         let key = Value::from_i30(7).unwrap();
-        let object = microesnext_objects::set(&mut arena, object, key, Value::TRUE).unwrap();
+        let object = crate::set(&mut arena, object, key, Value::TRUE).unwrap();
         let object_root = arena.retain(object).unwrap();
         let prototype_root = arena.retain(prototype).unwrap();
         arena.compact(&mut []).unwrap();
         let object = arena.root(object_root).unwrap();
         let prototype = arena.root(prototype_root).unwrap();
-        assert_eq!(
-            microesnext_objects::get(&arena, object, key),
-            Ok(Value::TRUE)
-        );
-        assert_eq!(
-            microesnext_objects::prototype(&arena, object),
-            Ok(prototype)
-        );
+        assert_eq!(crate::get(&arena, object, key), Ok(Value::TRUE));
+        assert_eq!(crate::prototype(&arena, object), Ok(prototype));
         assert!(microesnext_arena::closures::is_function(
             &arena,
             callable(&arena, object).unwrap()
@@ -165,13 +152,10 @@ mod tests {
         let root = arena.retain(function).unwrap();
         arena.compact(&mut []).unwrap();
         let function = arena.root(root).unwrap();
-        let prototype = microesnext_objects::get(&arena, function, prototype_key).unwrap();
+        let prototype = crate::get(&arena, function, prototype_key).unwrap();
 
-        assert!(microesnext_objects::is_object(&arena, prototype));
-        assert_eq!(
-            microesnext_objects::get(&arena, prototype, constructor_key),
-            Ok(function)
-        );
+        assert!(crate::is_object(&arena, prototype));
+        assert_eq!(crate::get(&arena, prototype, constructor_key), Ok(function));
         assert!(microesnext_arena::closures::is_function(
             &arena,
             callable(&arena, function).unwrap()

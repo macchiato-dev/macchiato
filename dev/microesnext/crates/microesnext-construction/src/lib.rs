@@ -34,29 +34,29 @@ pub fn prepare(
 #[cfg(not(feature = "class-constructors"))]
 #[inline(always)]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_callable_objects::is_callable_object(arena, constructor)
+    microesnext_objects::callable::is_callable_object(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 #[inline(always)]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_callable_objects::is_callable_object(arena, constructor)
-        || microesnext_class_constructors::is_class_constructor(arena, constructor)
+    microesnext_objects::callable::is_callable_object(arena, constructor)
+        || microesnext_objects::class_constructor::is_class_constructor(arena, constructor)
 }
 
 #[cfg(not(feature = "class-constructors"))]
 #[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
-    microesnext_callable_objects::callable(arena, constructor)
+    microesnext_objects::callable::callable(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 #[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
-    if microesnext_class_constructors::is_class_constructor(arena, constructor) {
-        microesnext_class_constructors::callable(arena, constructor)
+    if microesnext_objects::class_constructor::is_class_constructor(arena, constructor) {
+        microesnext_objects::class_constructor::callable(arena, constructor)
     } else {
-        microesnext_callable_objects::callable(arena, constructor)
+        microesnext_objects::callable::callable(arena, constructor)
     }
 }
 
@@ -80,7 +80,7 @@ mod tests {
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
-        let constructor = microesnext_callable_objects::new_constructor(
+        let constructor = microesnext_objects::callable::new_constructor(
             &mut arena,
             closure,
             Value::NULL,
@@ -109,7 +109,7 @@ mod tests {
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
-        let constructor = microesnext_class_constructors::new(
+        let constructor = microesnext_objects::class_constructor::new(
             &mut arena,
             closure,
             Value::NULL,
@@ -127,7 +127,7 @@ mod tests {
             Ok(prototype)
         );
         assert_eq!(
-            microesnext_callable_objects::callable(&arena, constructor),
+            microesnext_objects::callable::callable(&arena, constructor),
             Err(Error::Type)
         );
     }

@@ -99,7 +99,8 @@ mod tests {
         let mut memory = [0; 64];
         let mut arena = Arena::new(&mut memory);
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
-        let callable = microesnext_callable_objects::new(&mut arena, closure, Value::NULL).unwrap();
+        let callable =
+            microesnext_objects::callable::new(&mut arena, closure, Value::NULL).unwrap();
         assert_type(&mut arena, callable, b"function");
     }
 

@@ -12,8 +12,6 @@ dependencies = [
  "microesnext-async-functions",
  "microesnext-async-thenables",
  "microesnext-bytecode",
- "microesnext-callable-objects",
- "microesnext-class-constructors",
  "microesnext-collections",
  "microesnext-compiler",
  "microesnext-environments",
@@ -115,29 +113,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-callable-objects"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-capability-size"
 version = "0.0.0"
 dependencies = [
  "microesnext",
  "microesnext-arena",
-]
-
-[[package]]
-name = "microesnext-class-constructors"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-types",
 ]
 
 [[package]]
@@ -174,8 +154,6 @@ name = "microesnext-construction"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-callable-objects",
- "microesnext-class-constructors",
  "microesnext-objects",
  "microesnext-types",
 ]
@@ -238,8 +216,6 @@ name = "microesnext-instanceof"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-callable-objects",
- "microesnext-class-constructors",
  "microesnext-objects",
  "microesnext-types",
 ]
@@ -386,8 +362,8 @@ name = "microesnext-recursive-constructors"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-callable-objects",
  "microesnext-environments",
+ "microesnext-objects",
  "microesnext-recursive-functions",
  "microesnext-types",
 ]
@@ -455,7 +431,7 @@ name = "microesnext-typeof"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-callable-objects",
+ "microesnext-objects",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -472,8 +448,6 @@ dependencies = [
  "microesnext-arrays",
  "microesnext-async-functions",
  "microesnext-bytecode",
- "microesnext-callable-objects",
- "microesnext-class-constructors",
  "microesnext-compiler",
  "microesnext-construction",
  "microesnext-environments",

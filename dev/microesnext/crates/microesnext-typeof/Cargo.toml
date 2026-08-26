@@ -22,7 +22,7 @@ microesnext-strings.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-callable-objects.workspace = true
+microesnext-objects = { workspace = true, features = ["callable-objects"] }
 
 [lib]
 path = "src/lib.rs"
