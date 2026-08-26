@@ -1354,6 +1354,9 @@ impl Parser<'_> {
                 self.function_declaration(count_patch, true)?;
             } else if self.try_word(b"let") {
                 self.let_declaration(count_patch)?;
+            } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
+                #[cfg(feature = "var-declarations")]
+                self.let_declaration(count_patch)?;
             } else {
                 break;
             }
@@ -1366,6 +1369,9 @@ impl Parser<'_> {
         loop {
             self.whitespace();
             if self.try_word(b"let") {
+                self.let_declaration(count_patch)?;
+            } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
+                #[cfg(feature = "var-declarations")]
                 self.let_declaration(count_patch)?;
             } else {
                 return Ok(());
@@ -1675,7 +1681,13 @@ impl Parser<'_> {
     fn try_arrow_parameters(&mut self) -> Result<Option<Vec<Binding>>, CompileError> {
         let start = self.offset;
         let parameters = if self.source.get(self.offset) == Some(&b'(') {
-            self.function_parameters()?
+            match self.function_parameters() {
+                Ok(parameters) => parameters,
+                Err(_) => {
+                    self.offset = start;
+                    return Ok(None);
+                }
+            }
         } else {
             let Some(first) = self.source.get(self.offset) else {
                 return Ok(None);
@@ -3728,6 +3740,15 @@ impl Parser<'_> {
                 !asynchronous,
             )?;
             (false, TermKind::General)
+        } else if cfg!(feature = "parenthesized-expressions") && self.consume_raw(b'(') {
+            #[cfg(feature = "parenthesized-expressions")]
+            {
+                self.expression(None)?;
+                if !self.consume(b')') {
+                    return Err(self.error(")"));
+                }
+            }
+            (false, TermKind::General)
         } else if self.string_literal()? {
             (false, string_term_kind())
         } else if self.array_literal()? || self.object_literal()? {
@@ -4443,12 +4464,40 @@ impl Parser<'_> {
     }
 
     fn whitespace(&mut self) {
-        while self
-            .source
-            .get(self.offset)
-            .is_some_and(|byte| byte.is_ascii_whitespace())
-        {
-            self.offset += 1;
+        loop {
+            while self
+                .source
+                .get(self.offset)
+                .is_some_and(|byte| byte.is_ascii_whitespace())
+            {
+                self.offset += 1;
+            }
+            #[cfg(feature = "comments")]
+            if self.source[self.offset..].starts_with(b"//") {
+                self.offset += 2;
+                while self
+                    .source
+                    .get(self.offset)
+                    .is_some_and(|byte| !matches!(byte, b'\n' | b'\r'))
+                {
+                    self.offset += 1;
+                }
+                continue;
+            }
+            #[cfg(feature = "comments")]
+            if self.source[self.offset..].starts_with(b"/*") {
+                self.offset += 2;
+                while self.offset < self.source.len()
+                    && !self.source[self.offset..].starts_with(b"*/")
+                {
+                    self.offset += 1;
+                }
+                if self.offset < self.source.len() {
+                    self.offset += 2;
+                }
+                continue;
+            }
+            break;
         }
     }
 
@@ -4464,6 +4513,18 @@ impl Parser<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "comments")]
+    fn ignores_line_and_block_comments_between_tokens() {
+        assert!(compile_script("// heading\nreturn /* value */ 42;").is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "var-declarations")]
+    fn compiles_var_bindings_with_the_local_storage_model() {
+        assert!(compile_script("var answer = 42; return answer;").is_ok());
+    }
 
     #[cfg(feature = "locals")]
     fn unknown_add_opcode() -> Opcode {
@@ -5592,6 +5653,13 @@ mod tests {
                     .any(|bytes| { bytes == [Opcode::CallValueArguments as u8, 1, 0] })
             );
         }
+    }
+
+    #[test]
+    #[cfg(feature = "parenthesized-expressions")]
+    fn compiles_parenthesized_expressions_and_immediate_calls() {
+        assert!(compile_script("return (40 + 2);").is_ok());
+        assert!(compile_script("return (() => 42)();").is_ok());
     }
 
     #[cfg(feature = "constructors")]

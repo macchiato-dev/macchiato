@@ -20,6 +20,7 @@ default = [
   "class-methods",
   "class-static-methods",
   "class-expressions",
+  "comments",
   "class-default-constructors",
   "captured-assignment-expressions",
   "equality",
@@ -45,8 +46,10 @@ default = [
   "structured-statements",
   "string-number-coercion",
   "typeof",
+  "var-declarations",
   "number-operations",
   "objects",
+  "parenthesized-expressions",
   "property-assignment",
   "property-assignment-expressions",
   "receivers",
@@ -82,6 +85,7 @@ class-expressions = [
   "class-static-methods",
   "microesnext-bytecode/stack-operations",
 ]
+comments = []
 class-default-constructors = ["classes"]
 captured-assignment-expressions = [
   "environments",
@@ -136,6 +140,7 @@ nested-exceptions = ["nonterminal-exceptions"]
 structured-statements = ["nested-exceptions", "nested-loops"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
+parenthesized-expressions = []
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]
 recursive-async-functions = [
@@ -156,6 +161,7 @@ source-positions = []
 strings = ["microesnext-bytecode/strings"]
 string-operations = ["strings", "microesnext-bytecode/string-operations"]
 typeof = ["strings", "microesnext-bytecode/typeof"]
+var-declarations = ["locals"]
 
 [dependencies]
 microesnext-bytecode.workspace = true
