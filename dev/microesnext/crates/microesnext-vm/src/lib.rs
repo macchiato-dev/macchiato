@@ -188,6 +188,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "environments",
         feature = "equality",
         feature = "async-functions",
+        feature = "captured-assignment-expressions",
         feature = "promise-resolvers"
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
@@ -711,6 +712,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let value = self.core.arena_mut().pop()?;
                 let cell = self.core.arena_mut().pop()?;
                 microesnext_environments::set(self.core.arena_mut(), cell, value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "captured-assignment-expressions")]
+            Opcode::StoreEnvironmentCellResult => {
+                microesnext_captured_assignment_expressions::store_result(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]

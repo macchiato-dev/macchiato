@@ -43,6 +43,7 @@ typeof = ["strings"]
 instanceof = []
 constructors = []
 class-constructors = ["constructors"]
+captured-assignment-expressions = ["environments"]
 construction = ["constructors", "receivers"]
 
 [dependencies]

@@ -154,6 +154,8 @@ pub enum Opcode {
     CallMethodArguments = 111,
     #[cfg(feature = "stack-operations")]
     DuplicateTop = 112,
+    #[cfg(feature = "captured-assignment-expressions")]
+    StoreEnvironmentCellResult = 113,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -299,6 +301,8 @@ impl TryFrom<u8> for Opcode {
             111 => Ok(Self::CallMethodArguments),
             #[cfg(feature = "stack-operations")]
             112 => Ok(Self::DuplicateTop),
+            #[cfg(feature = "captured-assignment-expressions")]
+            113 => Ok(Self::StoreEnvironmentCellResult),
             _ => Err(Error::BadBytecode),
         }
     }
@@ -593,6 +597,21 @@ mod tests {
     #[test]
     fn omitted_stack_operation_is_invalid() {
         assert!(Opcode::try_from(112).is_err());
+    }
+
+    #[cfg(feature = "captured-assignment-expressions")]
+    #[test]
+    fn enabled_captured_assignment_opcode_is_decodable() {
+        assert_eq!(
+            Opcode::try_from(113),
+            Ok(Opcode::StoreEnvironmentCellResult)
+        );
+    }
+
+    #[cfg(not(feature = "captured-assignment-expressions"))]
+    #[test]
+    fn omitted_captured_assignment_opcode_is_invalid() {
+        assert!(Opcode::try_from(113).is_err());
     }
 
     #[cfg(feature = "property-assignment")]

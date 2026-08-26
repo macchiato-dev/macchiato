@@ -136,6 +136,11 @@ string-number-coercion = [
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
+captured-assignment-expressions = [
+  "environments",
+  "dep:microesnext-captured-assignment-expressions",
+  "microesnext-bytecode/captured-assignment-expressions",
+]
 recursive-functions = [
   "functions",
   "environments",
@@ -174,6 +179,7 @@ microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
+microesnext-captured-assignment-expressions = { workspace = true, optional = true }
 microesnext-construction = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
