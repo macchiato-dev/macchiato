@@ -315,6 +315,16 @@ struct Binding {
     captured: bool,
 }
 
+#[cfg(feature = "property-assignment-expressions")]
+#[derive(Clone, Copy)]
+enum PropertyAssignmentBase {
+    Local(Binding),
+    #[cfg(feature = "environments")]
+    Capture(Binding),
+    #[cfg(all(feature = "functions", feature = "receivers"))]
+    Receiver,
+}
+
 #[cfg(feature = "environments")]
 fn same_binding(left: Binding, right: Binding) -> bool {
     left.start == right.start && left.end == right.end
@@ -1382,10 +1392,15 @@ impl Parser<'_> {
 
     #[cfg(any(
         feature = "captured-assignment-expressions",
-        feature = "local-assignment-expressions"
+        feature = "local-assignment-expressions",
+        feature = "property-assignment-expressions"
     ))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         self.whitespace();
+        #[cfg(feature = "property-assignment-expressions")]
+        if self.property_assignment_expression()? {
+            return Ok(false);
+        }
         let start = self.offset;
         if let Some(local) = self.local_at_offset() {
             self.offset += local.end - local.start;
@@ -1435,7 +1450,8 @@ impl Parser<'_> {
 
     #[cfg(not(any(
         feature = "captured-assignment-expressions",
-        feature = "local-assignment-expressions"
+        feature = "local-assignment-expressions",
+        feature = "property-assignment-expressions"
     )))]
     fn expression(&mut self, binding: Option<(usize, usize)>) -> Result<bool, CompileError> {
         let (used_binding, _) = self.logical_or(binding)?;
@@ -1444,7 +1460,8 @@ impl Parser<'_> {
 
     #[cfg(any(
         feature = "captured-assignment-expressions",
-        feature = "local-assignment-expressions"
+        feature = "local-assignment-expressions",
+        feature = "property-assignment-expressions"
     ))]
     fn consume_plain_assignment(&mut self) -> bool {
         self.whitespace();
@@ -1455,6 +1472,90 @@ impl Parser<'_> {
         }
         self.offset += 1;
         true
+    }
+
+    #[cfg(feature = "property-assignment-expressions")]
+    fn property_assignment_expression(&mut self) -> Result<bool, CompileError> {
+        let start = self.offset;
+        let local = self.local_at_offset();
+
+        let base = if let Some(local) = local {
+            self.offset += local.end - local.start;
+            PropertyAssignmentBase::Local(local)
+        } else {
+            #[cfg(feature = "environments")]
+            if let Some(capture) = self.outer_binding_at_offset() {
+                self.offset += capture.end - capture.start;
+                PropertyAssignmentBase::Capture(capture)
+            } else {
+                #[cfg(all(feature = "functions", feature = "receivers"))]
+                if self.receiver_frame && self.try_word(b"this") {
+                    PropertyAssignmentBase::Receiver
+                } else {
+                    self.offset = start;
+                    return Ok(false);
+                }
+                #[cfg(not(all(feature = "functions", feature = "receivers")))]
+                {
+                    self.offset = start;
+                    return Ok(false);
+                }
+            }
+            #[cfg(not(feature = "environments"))]
+            {
+                #[cfg(all(feature = "functions", feature = "receivers"))]
+                if self.receiver_frame && self.try_word(b"this") {
+                    PropertyAssignmentBase::Receiver
+                } else {
+                    self.offset = start;
+                    return Ok(false);
+                }
+                #[cfg(not(all(feature = "functions", feature = "receivers")))]
+                {
+                    self.offset = start;
+                    return Ok(false);
+                }
+            }
+        };
+
+        let mut properties = Vec::new();
+        while self.consume(b'.') {
+            self.whitespace();
+            properties.push(self.identifier()?);
+        }
+        if properties.is_empty() || !self.consume_plain_assignment() {
+            self.offset = start;
+            return Ok(false);
+        }
+
+        match base {
+            PropertyAssignmentBase::Local(local) => {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&local.slot.to_le_bytes());
+                #[cfg(feature = "environments")]
+                if local.captured {
+                    self.output.push(Opcode::LoadEnvironmentCell as u8);
+                }
+            }
+            #[cfg(feature = "environments")]
+            PropertyAssignmentBase::Capture(capture) => {
+                let index = self.intern_capture(capture)?;
+                self.output.push(Opcode::LoadCapture as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
+                self.output.push(Opcode::LoadEnvironmentCell as u8);
+            }
+            #[cfg(all(feature = "functions", feature = "receivers"))]
+            PropertyAssignmentBase::Receiver => self.output.push(Opcode::LoadThis as u8),
+        }
+        let final_property = properties.pop().expect("a property was checked above");
+        for (property_start, property_end) in properties {
+            self.output_atom_range(property_start, property_end);
+            self.output.push(Opcode::GetProperty as u8);
+        }
+        self.output_atom_range(final_property.0, final_property.1);
+        self.expression(None)?;
+        self.output.push(Opcode::SetPropertyResult as u8);
+        Ok(true)
     }
 
     #[cfg(feature = "logical-operations")]
@@ -3062,6 +3163,44 @@ mod tests {
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
         );
+    }
+
+    #[cfg(feature = "property-assignment-expressions")]
+    #[test]
+    fn compiles_local_and_nested_property_assignment_expressions() {
+        let direct = compile_script("let object = {}; return object.value = 42;").unwrap();
+        assert!(direct.contains(&(Opcode::SetPropertyResult as u8)));
+
+        let nested = compile_script(
+            "let inner = {}; let outer = { inner: inner }; return outer.inner.value = 42;",
+        )
+        .unwrap();
+        assert!(nested.contains(&(Opcode::GetProperty as u8)));
+        assert!(nested.contains(&(Opcode::SetPropertyResult as u8)));
+    }
+
+    #[cfg(all(
+        feature = "property-assignment-expressions",
+        feature = "captured-assignment-expressions",
+        feature = "function-arguments"
+    ))]
+    #[test]
+    fn compiles_captured_property_assignment_expressions() {
+        let code = compile_script(
+            "let object = {}; let set = () => { return object.value = 42; }; return set();",
+        )
+        .unwrap();
+        assert!(code.contains(&(Opcode::LoadCapture as u8)));
+        assert!(code.contains(&(Opcode::SetPropertyResult as u8)));
+    }
+
+    #[cfg(all(feature = "property-assignment-expressions", feature = "receivers"))]
+    #[test]
+    fn compiles_receiver_property_assignment_expressions() {
+        let code =
+            compile_script("class Box { set() { return this.value = 42; } } return 0;").unwrap();
+        assert!(code.contains(&(Opcode::LoadThis as u8)));
+        assert!(code.contains(&(Opcode::SetPropertyResult as u8)));
     }
 
     #[cfg(feature = "exceptions")]

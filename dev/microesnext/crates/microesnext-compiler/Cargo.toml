@@ -38,6 +38,7 @@ default = [
   "number-operations",
   "objects",
   "property-assignment",
+  "property-assignment-expressions",
   "receivers",
   "source-positions",
 ]
@@ -68,6 +69,11 @@ class-default-constructors = ["classes"]
 captured-assignment-expressions = [
   "environments",
   "microesnext-bytecode/captured-assignment-expressions",
+]
+property-assignment-expressions = [
+  "locals",
+  "objects",
+  "microesnext-bytecode/property-assignment-expressions",
 ]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]

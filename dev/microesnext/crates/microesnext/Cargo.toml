@@ -335,6 +335,11 @@ required-features = [
 ]
 
 [[test]]
+name = "property-assignment-expressions"
+path = "tests/property_assignment_expressions.rs"
+required-features = ["locals", "objects", "property-assignment-expressions"]
+
+[[test]]
 name = "functions"
 path = "tests/functions.rs"
 required-features = [
