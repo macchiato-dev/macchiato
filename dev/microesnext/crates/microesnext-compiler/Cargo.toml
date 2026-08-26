@@ -24,6 +24,7 @@ default = [
   "captured-assignment-expressions",
   "equality",
   "exceptions",
+  "expression-statements",
   "function-arguments",
   "instanceof",
   "literal-expressions",
@@ -87,6 +88,7 @@ property-assignment-expressions = [
 ]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
+expression-statements = ["microesnext-bytecode/stack-operations"]
 environments = ["functions", "microesnext-bytecode/environments"]
 functions = [
   "locals",

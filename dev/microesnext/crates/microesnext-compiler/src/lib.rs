@@ -406,8 +406,7 @@ enum FunctionBody {
 impl Parser<'_> {
     #[cfg(feature = "control-flow")]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
-        self.property_assignments()?;
-        self.local_assignments()?;
+        self.statement_prefix()?;
         if self.try_word_after_whitespace(b"if") {
             self.if_else()
         } else if self.try_word_after_whitespace(b"while") {
@@ -423,13 +422,56 @@ impl Parser<'_> {
 
     #[cfg(not(feature = "control-flow"))]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
-        self.property_assignments()?;
-        self.local_assignments()?;
+        self.statement_prefix()?;
         #[cfg(feature = "exceptions")]
         if self.try_word_after_whitespace(b"try") {
             return self.try_catch();
         }
         self.completion(None, false, false)
+    }
+
+    #[cfg(feature = "expression-statements")]
+    fn statement_prefix(&mut self) -> Result<(), CompileError> {
+        loop {
+            self.property_assignments()?;
+            self.local_assignments()?;
+            self.whitespace();
+            if self.at_terminal_statement() {
+                return Ok(());
+            }
+            self.expression(None)?;
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+            self.output.push(Opcode::DropTop as u8);
+        }
+    }
+
+    #[cfg(not(feature = "expression-statements"))]
+    fn statement_prefix(&mut self) -> Result<(), CompileError> {
+        self.property_assignments()?;
+        self.local_assignments()
+    }
+
+    #[cfg(feature = "expression-statements")]
+    fn at_terminal_statement(&self) -> bool {
+        let Some(byte) = self.source.get(self.offset) else {
+            return true;
+        };
+        if *byte == b'}' {
+            return true;
+        }
+        self.word_at_offset(b"return")
+            || self.word_at_offset(b"throw")
+            || cfg!(feature = "control-flow")
+                && (self.word_at_offset(b"if") || self.word_at_offset(b"while"))
+            || cfg!(feature = "exceptions") && self.word_at_offset(b"try")
+    }
+
+    #[cfg(feature = "expression-statements")]
+    fn word_at_offset(&self, word: &[u8]) -> bool {
+        self.source[self.offset..].starts_with(word)
+            && self.identifier_end(self.offset + word.len())
     }
 
     #[cfg(feature = "functions")]
@@ -481,7 +523,7 @@ impl Parser<'_> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
-        self.local_assignments()?;
+        self.statement_prefix()?;
         if !self.consume(b'}') {
             return Err(self.error("}"));
         }
@@ -497,7 +539,7 @@ impl Parser<'_> {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
-        self.local_assignments()?;
+        self.statement_prefix()?;
         self.completion(None, false, false)
     }
 
@@ -517,6 +559,7 @@ impl Parser<'_> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
+        self.statement_prefix()?;
         self.completion(None, false, false)?;
         if !self.consume(b'}') || !self.try_word_after_whitespace(b"else") {
             return Err(self.error("} else"));
@@ -529,6 +572,7 @@ impl Parser<'_> {
         self.output[alternate_patch..alternate_patch + 4].copy_from_slice(&alternate.to_le_bytes());
         #[cfg(feature = "functions")]
         self.relocations.push(alternate_patch);
+        self.statement_prefix()?;
         self.completion(None, false, false)?;
         if !self.consume(b'}') {
             return Err(self.error("}"));
@@ -965,8 +1009,7 @@ impl Parser<'_> {
             }
             #[cfg(feature = "classes")]
             FunctionBody::ClassConstructor => {
-                body.property_assignments()?;
-                body.local_assignments()?;
+                body.statement_prefix()?;
                 body.whitespace();
                 if body.source.get(body.offset) == Some(&b'}') {
                     body.output.push(Opcode::LoadThis as u8);
@@ -1307,6 +1350,7 @@ impl Parser<'_> {
         let catch_patch = self.output.len() + 1;
         self.output.push(Opcode::Try as u8);
         self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.statement_prefix()?;
         self.completion(None, true, false)?;
         if !self.consume(b'}') || !self.try_word_after_whitespace(b"catch") {
             return Err(self.error("} catch"));
@@ -1329,6 +1373,7 @@ impl Parser<'_> {
         self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
         #[cfg(feature = "functions")]
         self.relocations.push(catch_patch);
+        self.statement_prefix()?;
         self.completion(binding, false, true)?;
         if !self.consume(b'}') {
             return Err(self.error("}"));
@@ -3392,6 +3437,60 @@ mod tests {
         assert_eq!(
             compile_script("throw 17;").unwrap(),
             [Opcode::ConstI30 as u8, 17, 0, 0, 0, Opcode::Throw as u8,]
+        );
+    }
+
+    #[cfg(feature = "expression-statements")]
+    #[test]
+    fn compiles_expression_statements_as_generic_discards() {
+        let code = compile_script("1; true; return 42;").unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::DropTop as u8)
+                .count(),
+            2
+        );
+    }
+
+    #[cfg(not(feature = "expression-statements"))]
+    #[test]
+    fn reduced_compilers_leave_expression_statements_unconsumed() {
+        assert_eq!(
+            compile_script("1; return 42;").unwrap_err().expected,
+            "return or throw"
+        );
+    }
+
+    #[cfg(all(
+        feature = "expression-statements",
+        feature = "array-assignment-expressions"
+    ))]
+    #[test]
+    fn compiles_array_assignment_statements_by_composition() {
+        let code = compile_script("let values = [0]; values[0] = 42; return values[0];").unwrap();
+        assert!(
+            code.windows(2).any(|opcodes| {
+                opcodes == [Opcode::SetIndexResult as u8, Opcode::DropTop as u8]
+            })
+        );
+    }
+
+    #[cfg(all(
+        feature = "expression-statements",
+        feature = "function-arguments",
+        feature = "control-flow"
+    ))]
+    #[test]
+    fn compiles_calls_before_function_and_branch_completions() {
+        let code = compile_script(
+            "let ping = () => { 1; return 0; }; if (true) { ping(); return 42; } else { ping(); return 0; }",
+        )
+        .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::DropTop as u8)
+                .count(),
+            3
         );
     }
 
