@@ -110,6 +110,11 @@ assertCompilerFeatures(
   ["functions", "locals", "logical-operations", "objects"],
 );
 assertCompilerFeatures(
+  ["nonterminal-conditionals"],
+  ["control-flow"],
+  ["exceptions", "functions", "locals", "stack-operations"],
+);
+assertCompilerFeatures(
   ["expression-statements"],
   ["stack-operations"],
   ["exceptions", "functions", "locals", "objects"],

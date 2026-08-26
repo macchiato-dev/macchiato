@@ -41,6 +41,7 @@ local-assignment-expressions = ["microesnext-compiler/local-assignment-expressio
 number-coercion = ["microesnext-compiler/number-coercion"]
 number-division = ["microesnext-compiler/number-division"]
 number-remainder = ["microesnext-compiler/number-remainder"]
+nonterminal-conditionals = ["microesnext-compiler/nonterminal-conditionals"]
 string-number-coercion = ["microesnext-compiler/string-number-coercion"]
 number-operations = ["microesnext-compiler/number-operations"]
 number-negation = ["microesnext-compiler/number-negation"]
