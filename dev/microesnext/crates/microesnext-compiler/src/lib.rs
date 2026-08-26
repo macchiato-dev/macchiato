@@ -691,6 +691,10 @@ impl Parser<'_> {
     fn statement_prefix(&mut self) -> Result<(), CompileError> {
         loop {
             self.local_declaration_statements()?;
+            #[cfg(feature = "array-destructuring-assignments")]
+            if self.array_destructuring_assignment()? {
+                continue;
+            }
             self.property_assignments()?;
             self.local_assignments()?;
             self.whitespace();
@@ -2646,6 +2650,55 @@ impl Parser<'_> {
                 return Err(self.error(";"));
             }
         }
+    }
+
+    #[cfg(feature = "array-destructuring-assignments")]
+    fn array_destructuring_assignment(&mut self) -> Result<bool, CompileError> {
+        self.whitespace();
+        let start = self.offset;
+        if !self.consume_raw(b'[') {
+            return Ok(false);
+        }
+        let mut bindings = Vec::new();
+        loop {
+            self.whitespace();
+            let Some(binding) = self.local_at_offset() else {
+                self.offset = start;
+                return Ok(false);
+            };
+            self.offset += binding.end - binding.start;
+            #[cfg(feature = "environments")]
+            if binding.captured {
+                return Err(self.error("uncaptured destructuring bindings"));
+            }
+            bindings.push(binding);
+            if self.consume(b']') {
+                break;
+            }
+            if !self.consume(b',') {
+                self.offset = start;
+                return Ok(false);
+            }
+        }
+        if !self.consume(b'=') {
+            self.offset = start;
+            return Ok(false);
+        }
+        self.expression(None)?;
+        for (index, binding) in bindings.into_iter().enumerate() {
+            let index = i32::try_from(index).map_err(|_| self.error("an array index"))?;
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output.push(Opcode::ConstI30 as u8);
+            self.output.extend_from_slice(&index.to_le_bytes());
+            self.output.push(Opcode::GetIndex as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&binding.slot.to_le_bytes());
+        }
+        self.output.push(Opcode::DropTop as u8);
+        if !self.consume(b';') {
+            return Err(self.error(";"));
+        }
+        Ok(true)
     }
 
     #[cfg(not(feature = "property-assignment"))]
@@ -6419,6 +6472,7 @@ mod tests {
                 .op(Opcode::Return)
                 .finish()
         );
+        #[cfg(not(feature = "template-literals"))]
         assert_eq!(
             compile_script("return `value: ${value}`;")
                 .unwrap_err()

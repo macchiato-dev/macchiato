@@ -122,6 +122,12 @@ array-assignment-expressions = [
   "microesnext-compiler/array-assignment-expressions",
   "microesnext-compiler/literal-expressions",
 ]
+array-destructuring-assignments = [
+  "arrays",
+  "local-assignment-expressions",
+  "stack-operations",
+  "microesnext-compiler/array-destructuring-assignments",
+]
 array-iterators = ["arrays", "iterators", "microesnext-objects/array-iterators"]
 async = [
   "dep:microesnext-scheduler",
@@ -437,6 +443,11 @@ required-features = ["strings"]
 name = "template-literals"
 path = "tests/template_literals.rs"
 required-features = ["template-literals", "locals"]
+
+[[test]]
+name = "array-destructuring-assignments"
+path = "tests/array_destructuring_assignments.rs"
+required-features = ["array-destructuring-assignments", "arrays", "locals"]
 
 [[test]]
 name = "source_logical"
