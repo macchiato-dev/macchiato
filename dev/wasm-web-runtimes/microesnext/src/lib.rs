@@ -23,10 +23,12 @@ static STAGE: AtomicU32 = AtomicU32::new(0);
 static PROGRAM_COUNTER: AtomicU32 = AtomicU32::new(0);
 static FRAME: AtomicU32 = AtomicU32::new(0);
 static FUNCTION: AtomicU32 = AtomicU32::new(0);
+static FAILURE_KEY_LENGTH: AtomicU32 = AtomicU32::new(0);
 
 const OBJECT: u32 = 15;
 const OBJECT_CREATE: u32 = (1 << 29) + 1;
 const OBJECT_DEFINE_PROPERTY: u32 = (1 << 29) + 2;
+const OBJECT_DEFINE_PROPERTIES: u32 = (1 << 29) + 3;
 const REGEXP: u32 = 19;
 const REGEXP_TEST: u32 = (1 << 29) + 20;
 const REGEXP_EXEC: u32 = (1 << 29) + 21;
@@ -45,6 +47,8 @@ const STRING: u32 = 22;
 const STRING_FROM_CHAR_CODE: u32 = (1 << 29) + 71;
 const SYMBOL: u32 = 23;
 const SYMBOL_FOR: u32 = (1 << 29) + 72;
+const HOST_NOW: u32 = 42;
+const RUNTIME_DATE_NOW: u32 = 55;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -52,14 +56,19 @@ struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 // only after the persistent machine is installed below.
 unsafe impl Sync for WordMemory {}
 static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 1_048_576]));
+struct KeyMemory(UnsafeCell<[u8; 32]>);
+unsafe impl Sync for KeyMemory {}
+static FAILURE_KEY: KeyMemory = KeyMemory(UnsafeCell::new([0; 32]));
 
 #[link(wasm_import_module = "host")]
 unsafe extern "C" {
     fn msg(offset: u32, capacity: u32) -> u32;
+    #[link_name = "now"]
+    fn host_now() -> f64;
 }
 
 fn report_failure(stage: u32, detail: u32) {
-    let mut message = [0_u8; 64];
+    let mut message = [0_u8; 128];
     message[..5].copy_from_slice(b"DULE\x03");
     let text = b"MicroESNext stopped with detail ";
     message[5..5 + text.len()].copy_from_slice(text);
@@ -83,8 +92,23 @@ fn report_failure(stage: u32, detail: u32) {
     message[at..at + 4].copy_from_slice(b" fn ");
     at += 4;
     at += decimal(&mut message[at..], FUNCTION.load(Ordering::Relaxed));
+    let key_length = FAILURE_KEY_LENGTH.load(Ordering::Relaxed) as usize;
+    if key_length > 0 && at + 5 + key_length <= message.len() {
+        message[at..at + 5].copy_from_slice(b" key ");
+        at += 5;
+        message[at..at + key_length]
+            .copy_from_slice(&unsafe { &*FAILURE_KEY.0.get() }[..key_length]);
+        at += key_length;
+    }
     message[4] = u8::try_from(stage.min(255)).unwrap_or(255);
     unsafe { msg(message.as_mut_ptr() as u32, u32::try_from(at + 1).unwrap()) };
+}
+
+fn remember_failure_key(machine: &Machine<'_, '_>, key: Value) {
+    let Ok(bytes) = machine.string_bytes(key) else { return };
+    let length = bytes.len().min(32);
+    unsafe { (&mut *FAILURE_KEY.0.get())[..length].copy_from_slice(&bytes[..length]) };
+    FAILURE_KEY_LENGTH.store(length as u32, Ordering::Relaxed);
 }
 
 fn object_get(machine: &mut Machine<'_, '_>, object: Value, name: &[u8]) -> Result<Value, Error> {
@@ -246,6 +270,11 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     machine.install_function_call(microesnext::HostRef::new(FUNCTION_CALL).unwrap());
+    machine.install_host_object_types(
+        (1_u64 << 9) | (1_u64 << 12) | (1_u64 << 37) | (1_u64 << 38)
+            | (1_u64 << 41) | (1_u64 << 45) | (1_u64 << 48) | (1_u64 << 49)
+            | (1_u64 << 58),
+    );
     let string_prototype = (|| {
         let prototype = machine.new_object(Value::NULL)?;
         object_set(
@@ -367,6 +396,14 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     microesnext::HostRef::new(OBJECT_DEFINE_PROPERTY).unwrap(),
                 )).unwrap();
             }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == OBJECT
+                    && machine.string_bytes(key) == Ok(b"defineProperties") =>
+            {
+                machine.complete_host_operation(Value::from_host(
+                    microesnext::HostRef::new(OBJECT_DEFINE_PROPERTIES).unwrap(),
+                )).unwrap();
+            }
             Ok(Outcome::HostCall { function, .. }) if function.index() == OBJECT_CREATE => {
                 let object = match machine.new_object(microesnext::Value::NULL) {
                     Ok(value) => value,
@@ -386,8 +423,45 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 let result = machine.host_argument(0)
                     .and_then(|object| Ok((object, machine.host_argument(1)?, machine.host_argument(2)?)))
                     .and_then(|(object, key, descriptor)| {
-                        machine.define_property(object, key, descriptor)
+                        if object.as_host().is_some_and(|host| host.index() == GLOBAL_THIS) {
+                            let overlay = machine.root(global_overlay)?;
+                            machine.define_property(overlay, key, descriptor)?;
+                            Ok(object)
+                        } else {
+                            machine.define_property(object, key, descriptor)
+                        }
                     });
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 600, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, .. })
+                if function.index() == OBJECT_DEFINE_PROPERTIES =>
+            {
+                let result = (|| {
+                    let descriptors = machine.host_argument(1).map_err(|_| 1_u32)?;
+                    let count = microesnext::objects::own_property_count(machine.arena(), descriptors)
+                        .map_err(|_| 2_u32)?;
+                    for index in 0..count {
+                        let descriptors = machine.host_argument(1).map_err(|_| 3_u32)?;
+                        let key = microesnext::objects::own_property_key(machine.arena(), descriptors, index)
+                            .map_err(|_| 4_u32)?;
+                        let descriptor = microesnext::objects::get(machine.arena(), descriptors, key)
+                            .map_err(|_| 5_u32)?;
+                        let object = machine.host_argument(0).map_err(|_| 6_u32)?;
+                        machine.define_property(object, key, descriptor).map_err(|_| 7_u32)?;
+                    }
+                    machine.host_argument(0).map_err(|_| 8_u32)
+                })();
+                if let Err(step) = result {
+                    DETAIL.store(1600 + step, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+                let result: Result<Value, Error> = Ok(result.unwrap());
                 match result.and_then(|value| machine.complete_host_call(value)) {
                     Ok(()) => {}
                     Err(error) => {
@@ -551,6 +625,18 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, .. })
+                if function.index() == HOST_NOW || function.index() == RUNTIME_DATE_NOW =>
+            {
+                let result = machine.new_number(unsafe { host_now() });
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1700, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, .. })
                 if function.index() == RELEASE_HOST_REFERENCE
                     || function.index() == RELEASE_HOST_REFERENCE_LEASE =>
             {
@@ -665,7 +751,8 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 DETAIL.store(constructor.index(), Ordering::Relaxed);
                 break u32::MAX - 5;
             }
-            Ok(Outcome::HostGet { object, .. }) => {
+            Ok(Outcome::HostGet { object, key, .. }) => {
+                remember_failure_key(&machine, key);
                 DETAIL.store(object.index(), Ordering::Relaxed);
                 break u32::MAX - 2;
             }

@@ -16,6 +16,9 @@ pub fn to_boolean(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
     if let Some(integer) = value.as_i30() {
         return Ok(integer != 0);
     }
+    if value.as_host().is_some() {
+        return Ok(true);
+    }
     let reference = value.as_ref().ok_or(Error::Type)?;
     #[cfg(feature = "numbers")]
     if let Some(number) = microesnext_values::numbers::try_get(arena, value)? {
@@ -43,6 +46,10 @@ mod tests {
         assert_eq!(to_boolean(&arena, Value::from_i30(0).unwrap()), Ok(false));
         assert_eq!(to_boolean(&arena, Value::TRUE), Ok(true));
         assert_eq!(to_boolean(&arena, Value::from_i30(-1).unwrap()), Ok(true));
+        assert_eq!(
+            to_boolean(&arena, Value::from_host(microesnext_types::HostRef::new(1).unwrap())),
+            Ok(true),
+        );
     }
 
     #[cfg(feature = "numbers")]

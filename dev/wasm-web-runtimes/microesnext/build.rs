@@ -27,6 +27,8 @@ fn main() {
     );
     let mut source = include_str!("array-prototype.js").to_owned();
     source.push('\n');
+    source.push_str(include_str!("collections.js"));
+    source.push('\n');
     if let Some(path) = env::var_os("MICROESNEXT_GUEST_ENVIRONMENT") {
         println!("cargo:rerun-if-changed={}", PathBuf::from(&path).display());
         source.push_str(&fs::read_to_string(path).expect("read MicroESNext guest environment"));

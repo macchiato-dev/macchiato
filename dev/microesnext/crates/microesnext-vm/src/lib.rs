@@ -94,6 +94,8 @@ pub struct Machine<'code, 'memory> {
     string_prototype: Option<RootId>,
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     function_call: Option<HostRef>,
+    #[cfg(feature = "host-bindings")]
+    host_object_types: u64,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -130,6 +132,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             string_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
+            #[cfg(feature = "host-bindings")]
+            host_object_types: 0,
         }
     }
 
@@ -240,6 +244,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             string_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
+            #[cfg(feature = "host-bindings")]
+            host_object_types: 0,
         })
     }
 
@@ -365,23 +371,50 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         key: Value,
         descriptor: Value,
     ) -> Result<Value, Error> {
+        let object_root = self.retain(object)?;
+        let key_root = self.retain(key)?;
+        let descriptor_root = self.retain(descriptor)?;
+        let result = self.define_rooted_property(object_root, key_root, descriptor_root);
+        self.release(descriptor_root)?;
+        self.release(key_root)?;
+        let object = self.release(object_root)?;
+        result.map(|_| object)
+    }
+
+    #[cfg(all(feature = "objects", feature = "getters", feature = "callable-objects"))]
+    fn define_rooted_property(
+        &mut self,
+        object_root: RootId,
+        key_root: RootId,
+        descriptor_root: RootId,
+    ) -> Result<(), Error> {
         let value_key = self.intern(b"value")?;
         let get_key = self.intern(b"get")?;
         let set_key = self.intern(b"set")?;
+        let descriptor = self.root(descriptor_root)?;
         let value = get(self.core.arena(), descriptor, value_key)?;
         if value != Value::UNDEFINED {
-            return set(self.core.arena_mut(), object, key, value);
+            let object = self.root(object_root)?;
+            let key = self.root(key_root)?;
+            set(self.core.arena_mut(), object, key, value)?;
+            return Ok(());
         }
+        let descriptor = self.root(descriptor_root)?;
         let getter = get(self.core.arena(), descriptor, get_key)?;
         if getter != Value::UNDEFINED {
             let getter = unwrap_callable(self.core.arena(), getter)?;
             let accessor = microesnext_objects::getters::new(self.core.arena_mut(), getter)?;
+            let object = self.root(object_root)?;
+            let key = self.root(key_root)?;
             set(self.core.arena_mut(), object, key, accessor)?;
         }
+        let descriptor = self.root(descriptor_root)?;
         let setter = get(self.core.arena(), descriptor, set_key)?;
         if setter != Value::UNDEFINED {
             let setter = unwrap_callable(self.core.arena(), setter)?;
             let accessor = microesnext_objects::getters::new_setter(self.core.arena_mut(), setter)?;
+            let object = self.root(object_root)?;
+            let key = self.root(key_root)?;
             let accessor = if let Some(current) =
                 microesnext_objects::get_own(self.core.arena(), object, key)?
             {
@@ -390,9 +423,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             } else {
                 accessor
             };
+            let object = self.root(object_root)?;
+            let key = self.root(key_root)?;
             set(self.core.arena_mut(), object, key, accessor)?;
         }
-        Ok(object)
+        Ok(())
     }
 
     pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
@@ -442,6 +477,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             string_prototype: self.string_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
+            #[cfg(feature = "host-bindings")]
+            host_object_types: self.host_object_types,
         })
     }
 
@@ -483,6 +520,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     pub fn install_function_call(&mut self, function: HostRef) {
         self.function_call = Some(function);
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn install_host_object_types(&mut self, object_types: u64) {
+        self.host_object_types = object_types;
     }
 
     #[cfg(feature = "host-bindings")]
@@ -1254,8 +1296,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "typeof")]
             Opcode::TypeOf => {
                 let value = self.core.arena_mut().pop()?;
-                let result =
-                    microesnext_semantics::r#typeof::type_of(self.core.arena_mut(), value)?;
+                #[cfg(feature = "host-bindings")]
+                let result = if let Some(host) = value.as_host() {
+                    let object = host.index() >= 64
+                        || self.host_object_types & (1_u64 << host.index()) != 0;
+                    self.intern(if object { b"object" } else { b"function" })?
+                } else {
+                    microesnext_semantics::r#typeof::type_of(self.core.arena_mut(), value)?
+                };
+                #[cfg(not(feature = "host-bindings"))]
+                let result = microesnext_semantics::r#typeof::type_of(self.core.arena_mut(), value)?;
                 self.core.arena_mut().push(result)?;
                 Ok(None)
             }
