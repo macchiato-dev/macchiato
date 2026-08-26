@@ -25,6 +25,22 @@ fn source_function_without_parameters_leaves_its_frame() {
 }
 
 #[test]
+fn function_declaration_is_initialized_before_execution_reaches_it() {
+    assert_eq!(
+        run("let value = answer(); function answer() { return 42; } return value;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn hoisted_function_keeps_sequential_loop_bindings_separate() {
+    assert_eq!(
+        run("let value = read(); function read() { let total = 0; for (let item of [1]) for (let index = 0; index < 1; index++) total = total + item; let seen = 0; for (let item of [1]) for (let index = 0; index < 1; index++) seen = seen + item; return total + seen; } return value;"),
+        Outcome::Complete(Value::from_i30(2).unwrap())
+    );
+}
+
+#[test]
 fn anonymous_function_expression_is_immediately_callable() {
     assert_eq!(
         run("return function (value) { return value; }(42);"),

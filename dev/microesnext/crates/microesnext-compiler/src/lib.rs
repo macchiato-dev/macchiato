@@ -298,6 +298,10 @@ fn compile_script_with_options_and_host_globals(
         #[cfg(feature = "functions")]
         functions: Vec::new(),
         #[cfg(feature = "functions")]
+        initialized_function_declarations: Vec::new(),
+        #[cfg(feature = "functions")]
+        hoisted_function_offsets: Vec::new(),
+        #[cfg(feature = "functions")]
         relocations: Vec::new(),
         #[cfg(feature = "functions")]
         function_frame: false,
@@ -329,6 +333,7 @@ fn compile_script_with_options_and_host_globals(
         let patch = parser.output.len();
         parser.output.extend_from_slice(&0_u16.to_le_bytes());
         let mut count_patch = Some(patch);
+        parser.initialize_hoisted_function_declarations(&mut count_patch)?;
         parser.frame_declarations(&mut count_patch)?;
         count_patch
     };
@@ -365,6 +370,10 @@ struct Parser<'source> {
     self_used: bool,
     #[cfg(feature = "functions")]
     functions: Vec<PendingFunction>,
+    #[cfg(feature = "functions")]
+    initialized_function_declarations: Vec<(usize, usize)>,
+    #[cfg(feature = "functions")]
+    hoisted_function_offsets: Vec<usize>,
     #[cfg(feature = "functions")]
     relocations: Vec<usize>,
     #[cfg(feature = "functions")]
@@ -3185,22 +3194,31 @@ impl Parser<'_> {
                         && self.source.get(name_end..).is_some_and(|tail| {
                             tail.iter().find(|byte| !byte.is_ascii_whitespace()) == Some(&b'(')
                         })
-                        && !self.locals.iter().any(|binding| {
+                    {
+                        if !self.function_frame
+                            && self.source[self.offset..offset]
+                            .windows(name_end - name_start)
+                            .any(|candidate| candidate == &self.source[name_start..name_end])
+                        {
+                            self.hoisted_function_offsets
+                                .push(offset + b"function".len());
+                        }
+                        if !self.locals.iter().any(|binding| {
                             self.source[binding.start..binding.end]
                                 == self.source[name_start..name_end]
-                        })
-                    {
-                        let slot = u16::try_from(self.locals.len())
-                            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
-                        self.locals.push(Binding {
-                            start: name_start,
-                            end: name_end,
-                            slot,
-                            default: None,
-                            hoisted: true,
-                            #[cfg(feature = "environments")]
-                            captured: false,
-                        });
+                        }) {
+                            let slot = u16::try_from(self.locals.len())
+                                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                            self.locals.push(Binding {
+                                start: name_start,
+                                end: name_end,
+                                slot,
+                                default: None,
+                                hoisted: true,
+                                #[cfg(feature = "environments")]
+                                captured: false,
+                            });
+                        }
                     }
                     previous_significant = Some(b'n');
                     offset = name_end.max(offset + 1);
@@ -3226,6 +3244,7 @@ impl Parser<'_> {
                         name_end += 1;
                     }
                     self.add_hoisted_binding(name_start, name_end)?;
+                    self.hoist_declaration_tail(name_end)?;
                     previous_significant = Some(b'r');
                     offset = name_end.max(offset + 1);
                 }
@@ -3261,6 +3280,80 @@ impl Parser<'_> {
             #[cfg(feature = "environments")]
             captured: false,
         });
+        Ok(())
+    }
+
+    #[cfg(feature = "functions")]
+    fn hoist_declaration_tail(
+        &mut self,
+        mut offset: usize,
+    ) -> Result<(), CompileError> {
+        let mut endings = Vec::new();
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            if let Some(delimiter) = quote {
+                offset += 1;
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => {
+                    quote = Some(byte);
+                    offset += 1;
+                }
+                b'(' => {
+                    endings.push(b')');
+                    offset += 1;
+                }
+                b'[' => {
+                    endings.push(b']');
+                    offset += 1;
+                }
+                b'{' => {
+                    endings.push(b'}');
+                    offset += 1;
+                }
+                b')' | b']' | b'}' if endings.last() == Some(&byte) => {
+                    endings.pop();
+                    offset += 1;
+                }
+                b';' if endings.is_empty() => return Ok(()),
+                b',' if endings.is_empty() => {
+                    offset += 1;
+                    while self.source.get(offset).is_some_and(u8::is_ascii_whitespace) {
+                        offset += 1;
+                    }
+                    let start = offset;
+                    while self.source.get(offset).is_some_and(|byte| {
+                        byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$')
+                    }) {
+                        offset += 1;
+                    }
+                    self.add_hoisted_binding(start, offset)?;
+                }
+                _ => offset += 1,
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "functions")]
+    fn initialize_hoisted_function_declarations(
+        &mut self,
+        count_patch: &mut Option<usize>,
+    ) -> Result<(), CompileError> {
+        let resume = self.offset;
+        for declaration_start in self.hoisted_function_offsets.clone() {
+            self.offset = declaration_start;
+            self.function_declaration(count_patch, false)?;
+            self.initialized_function_declarations
+                .push((declaration_start, self.offset));
+        }
+        self.offset = resume;
         Ok(())
     }
 
@@ -3752,6 +3845,15 @@ impl Parser<'_> {
         count_patch: &mut Option<usize>,
         asynchronous: bool,
     ) -> Result<(), CompileError> {
+        if let Some((_, end)) = self
+            .initialized_function_declarations
+            .iter()
+            .find(|(start, _)| *start == self.offset)
+        {
+            self.offset = *end;
+            self.whitespace();
+            return Ok(());
+        }
         if count_patch.is_none() {
             self.output.push(Opcode::InitLocals as u8);
             *count_patch = Some(self.output.len());
@@ -4383,6 +4485,8 @@ impl Parser<'_> {
             #[cfg(feature = "environments")]
             self_used: false,
             functions: Vec::new(),
+            initialized_function_declarations: Vec::new(),
+            hoisted_function_offsets: Vec::new(),
             relocations: Vec::new(),
             function_frame: true,
             #[cfg(feature = "for-statements")]
@@ -4407,6 +4511,8 @@ impl Parser<'_> {
             options: self.options,
         };
         body.hoist_function_declarations()?;
+        let mut body_count_patch = Some(1);
+        body.initialize_hoisted_function_declarations(&mut body_count_patch)?;
         #[cfg(feature = "default-parameters")]
         for (slot, (start, end)) in parameter_defaults {
             body.output.push(Opcode::LoadLocal as u8);
@@ -4467,7 +4573,6 @@ impl Parser<'_> {
                     .extend_from_slice(&property.local_slot.to_le_bytes());
             }
         }
-        let mut body_count_patch = Some(1);
         if !matches!(body_kind, FunctionBody::Expression) {
             body.frame_declarations(&mut body_count_patch)?;
         }
