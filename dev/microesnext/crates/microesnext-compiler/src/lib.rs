@@ -2119,6 +2119,10 @@ impl Parser<'_> {
             if self.consume_raw(b'[') {
                 return self.array_destructuring_declaration();
             }
+            #[cfg(feature = "object-destructuring-declarations")]
+            if self.consume_raw(b'{') {
+                return self.object_destructuring_declaration();
+            }
             let (start, end) = self.identifier()?;
             let existing = self.locals.iter().position(|binding| {
                 self.source[binding.start..binding.end] == self.source[start..end]
@@ -2235,6 +2239,64 @@ impl Parser<'_> {
                     .to_le_bytes(),
             );
             self.output.push(Opcode::GetIndex as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.locals.push(Binding {
+                start,
+                end,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+        }
+        self.output.push(Opcode::DropTop as u8);
+        if !self.consume(b';') {
+            return Err(self.error(";"));
+        }
+        self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "object-destructuring-declarations")]
+    fn object_destructuring_declaration(&mut self) -> Result<(), CompileError> {
+        let mut names = Vec::new();
+        loop {
+            self.whitespace();
+            names.push(self.identifier()?);
+            if self.consume(b'}') {
+                break;
+            }
+            if !self.consume(b',') {
+                return Err(self.error(", or }"));
+            }
+        }
+        for (index, (start, end)) in names.iter().enumerate() {
+            if self
+                .locals
+                .iter()
+                .any(|binding| self.source[binding.start..binding.end] == self.source[*start..*end])
+                || names[..index].iter().any(|(other_start, other_end)| {
+                    self.source[*other_start..*other_end] == self.source[*start..*end]
+                })
+            {
+                return Err(self.error("unique destructuring bindings"));
+            }
+        }
+        if !self.consume(b'=') {
+            return Err(self.error("="));
+        }
+        self.expression(None)?;
+        let first_slot = self.locals.len();
+        for (index, (start, end)) in names.into_iter().enumerate() {
+            let slot = first_slot
+                .checked_add(index)
+                .and_then(|slot| u16::try_from(slot).ok())
+                .ok_or_else(|| self.error("fewer than 65536 local bindings"))?;
+            self.output.push(Opcode::DuplicateTop as u8);
+            self.output_atom_range(start, end);
+            self.output.push(Opcode::GetProperty as u8);
             self.output.push(Opcode::StoreLocal as u8);
             self.output.extend_from_slice(&slot.to_le_bytes());
             self.locals.push(Binding {
@@ -5189,6 +5251,8 @@ impl Parser<'_> {
                 }
             }
             (false, TermKind::General)
+        } else if cfg!(feature = "regexp-literals") && self.regexp_literal()? {
+            (false, TermKind::General)
         } else if self.string_literal()? {
             (false, string_term_kind())
         } else if self.array_literal()? || self.object_literal()? {
@@ -5796,6 +5860,83 @@ impl Parser<'_> {
         Ok(())
     }
 
+    #[cfg(feature = "regexp-literals")]
+    fn regexp_literal(&mut self) -> Result<bool, CompileError> {
+        if self.source.get(self.offset) != Some(&b'/') {
+            return Ok(false);
+        }
+        let Some(host) = self
+            .host_globals
+            .iter()
+            .position(|name| name.as_slice() == b"RegExp")
+            .and_then(|index| u32::try_from(index).ok())
+        else {
+            return Err(self.error("a RegExp host global"));
+        };
+        self.offset += 1;
+        let pattern_start = self.offset;
+        let mut escaped = false;
+        let mut character_class = false;
+        loop {
+            let Some(byte) = self.source.get(self.offset).copied() else {
+                return Err(self.error("a closing /"));
+            };
+            if matches!(byte, b'\n' | b'\r') {
+                return Err(self.error("a single-line regular expression"));
+            }
+            if escaped {
+                escaped = false;
+                self.offset += 1;
+                continue;
+            }
+            match byte {
+                b'\\' => escaped = true,
+                b'[' => character_class = true,
+                b']' => character_class = false,
+                b'/' if !character_class => break,
+                _ => {}
+            }
+            self.offset += 1;
+        }
+        let pattern_end = self.offset;
+        self.offset += 1;
+        let flags_start = self.offset;
+        while self
+            .source
+            .get(self.offset)
+            .is_some_and(u8::is_ascii_alphabetic)
+        {
+            self.offset += 1;
+        }
+        let flags_end = self.offset;
+
+        self.output.push(Opcode::ConstHost as u8);
+        self.output.extend_from_slice(&host.to_le_bytes());
+        self.output_string_range(pattern_start, pattern_end)?;
+        if flags_end != flags_start {
+            self.output_string_range(flags_start, flags_end)?;
+        }
+        self.output.push(Opcode::ConstructValueArguments as u8);
+        let argument_count = if flags_end == flags_start {
+            1_u16
+        } else {
+            2_u16
+        };
+        self.output.extend_from_slice(&argument_count.to_le_bytes());
+        self.output.push(Opcode::SelectConstructedResult as u8);
+        Ok(true)
+    }
+
+    #[cfg(feature = "regexp-literals")]
+    fn output_string_range(&mut self, start: usize, end: usize) -> Result<(), CompileError> {
+        let length =
+            u16::try_from(end - start).map_err(|_| self.error("a string shorter than 64 KiB"))?;
+        self.output.push(Opcode::ConstString as u8);
+        self.output.extend_from_slice(&length.to_le_bytes());
+        self.output.extend_from_slice(&self.source[start..end]);
+        Ok(())
+    }
+
     #[cfg(not(feature = "strings"))]
     fn string_literal(&mut self) -> Result<bool, CompileError> {
         Ok(false)
@@ -6166,6 +6307,15 @@ mod tests {
             code.windows(5)
                 .any(|bytes| bytes == [Opcode::ConstHost as u8, 0, 0, 0, 0])
         );
+    }
+
+    #[test]
+    #[cfg(feature = "regexp-literals")]
+    fn compiles_regexp_literals_through_the_host_constructor() {
+        let code =
+            compile_script_with_host_globals("return /a\\/b[\\/]c/gi;", &["RegExp"]).unwrap();
+        assert!(code.contains(&(Opcode::ConstructValueArguments as u8)));
+        assert!(code.windows(2).any(|bytes| bytes == 2_u16.to_le_bytes()));
     }
 
     #[cfg(feature = "locals")]

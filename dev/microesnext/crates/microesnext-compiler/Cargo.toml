@@ -29,6 +29,7 @@ default = [
   "class-inheritance",
   "class-getters",
   "named-class-expressions",
+  "object-destructuring-declarations",
   "comments",
   "class-default-constructors",
   "compound-assignment-expressions",
@@ -68,6 +69,7 @@ default = [
   "property-assignment",
   "property-assignment-expressions",
   "receivers",
+  "regexp-literals",
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
@@ -203,6 +205,11 @@ structured-statements = ["nested-exceptions", "nested-loops"]
 string-number-coercion = ["number-coercion", "strings"]
 template-literals = ["strings", "string-operations"]
 objects = ["atoms", "microesnext-bytecode/objects"]
+object-destructuring-declarations = [
+  "locals",
+  "objects",
+  "microesnext-bytecode/stack-operations",
+]
 parenthesized-expressions = []
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]
 receivers = ["function-arguments", "microesnext-bytecode/receivers"]
@@ -215,6 +222,7 @@ recursive-functions = [
   "environments",
   "microesnext-bytecode/recursive-functions",
 ]
+regexp-literals = ["construction", "host-bindings", "strings"]
 recursive-constructors = [
   "constructors",
   "recursive-functions",

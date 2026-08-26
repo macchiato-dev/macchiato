@@ -14,6 +14,7 @@ const HOST_GLOBALS: &[&str] = &[
     "RangeError",
     "RegExp",
     "Set",
+    "Symbol",
     "TypeError",
     "Uint8Array",
     "WeakMap",
