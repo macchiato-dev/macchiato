@@ -272,9 +272,12 @@ GuestStyle.prototype = Object.create(GuestObject.prototype);
   function (name) {
     Object.defineProperty(GuestStyle.prototype, name, {
       set: function (value) {
-        var property = name.replace(/[A-Z]/g, function (letter) {
-          return "-" + letter.toLowerCase();
-        });
+        var property = "";
+        for (var index = 0; index < name.length; index++) {
+          var letter = name[index];
+          property += letter >= "A" && letter <= "Z"
+            ? "-" + letter.toLowerCase() : letter;
+        }
         if (value === "") {
           immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
           return;

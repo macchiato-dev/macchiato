@@ -613,9 +613,12 @@ GuestStyle.prototype = Object.create(GuestObject.prototype);
   function (name) {
     Object.defineProperty(GuestStyle.prototype, name, {
       set: function (value) {
-        var property = name.replace(/[A-Z]/g, function (letter) {
-          return "-" + letter.toLowerCase();
-        });
+        var property = "";
+        for (var index = 0; index < name.length; index++) {
+          var letter = name[index];
+          property += letter >= "A" && letter <= "Z"
+            ? "-" + letter.toLowerCase() : letter;
+        }
         if (value === "") {
           immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
           return;
@@ -1301,6 +1304,56 @@ globalThis.DOMRect = function DOMRect(x, y, width, height) {
 globalThis.DOMRectReadOnly = globalThis.DOMRect;
 
 var projectedClasses = Object.create(null), projectedClassCount = 0;
+// Keep replacement callbacks inside the guest. The host-backed RegExp only
+// finds ranges; application functions and replacement text remain JavaScript.
+String.prototype.replace = function (search, replacement) {
+  var source = String(this), output = "", at = 0, match;
+  function append(end) {
+    for (; at < end; at++) output += source[at];
+  }
+  function replacementFor(found) {
+    if (typeof replacement === "function") {
+      return String(replacement(found[0], found[1], found[2], found[3], found.index, source));
+    }
+    var text = String(replacement), result = "";
+    for (var index = 0; index < text.length; index++) {
+      if (text[index] === "$" && text[index + 1] === "&") {
+        result += found[0]; index++;
+      } else if (text[index] === "$" && /[1-9]/.test(text[index + 1])) {
+        result += found[+text[++index]] || "";
+      } else result += text[index];
+    }
+    return result;
+  }
+  if (typeof search === "string") {
+    var foundAt = -1;
+    for (var candidate = 0; candidate + search.length <= source.length; candidate++) {
+      var same = true;
+      for (var offset = 0; offset < search.length; offset++) {
+        if (source[candidate + offset] !== search[offset]) { same = false; break; }
+      }
+      if (same) { foundAt = candidate; break; }
+    }
+    if (foundAt < 0) return source;
+    match = [search]; match.index = foundAt;
+    append(foundAt); output += replacementFor(match); at = foundAt + search.length;
+  } else {
+    search.lastIndex = 0;
+    while ((match = search.exec(source))) {
+      append(match.index); output += replacementFor(match);
+      at = match.index + match[0].length;
+      var global = false;
+      for (var flag = 0; search.flags && flag < search.flags.length; flag++) {
+        if (search.flags[flag] === "g") global = true;
+      }
+      if (!global) break;
+      if (!match[0].length) search.lastIndex++;
+    }
+  }
+  append(source.length);
+  return output;
+};
+
 function projectClassToken(token) {
   if (/^[a-z_][a-z0-9_-]*$/i.test(token)) return token;
   return projectedClasses[token] ||
@@ -1813,6 +1866,15 @@ function GuestStylesheetNode() {
   this.parentNode = null;
   this._text = "";
 }
+function projectClassSelectors(source) {
+  var pattern = /\.([^\d\s.#:\[\]{};>+~(),][^\s.#:\[\]{};>+~(),]*)/g;
+  var output = "", at = 0, match;
+  while ((match = pattern.exec(source))) {
+    output += source.slice(at, match.index) + "." + projectClassToken(match[1]);
+    at = pattern.lastIndex;
+  }
+  return output + source.slice(at);
+}
 function projectStylesheet(source) {
   var output = "", at = 0;
   // Print-only UI is omitted. Keyframes cross the semantic CSS wire and are
@@ -1823,10 +1885,7 @@ function projectStylesheet(source) {
     var match = pattern.exec(source);
     if (!match) {
       output += source.slice(at);
-      output = output.replace(/\.([^\d\s.#:\[\]{};>+~(),][^\s.#:\[\]{};>+~(),]*)/g,
-        function (_, token) {
-          return "." + projectClassToken(token);
-        });
+      output = projectClassSelectors(output);
       return omitCssUrls(output);
     }
     output += source.slice(at, match.index);
@@ -2650,9 +2709,12 @@ Object.defineProperty(GuestElement.prototype, "classList", {
   }
 });
 function datasetAttribute(name) {
-  return "data-" + String(name).replace(/[A-Z]/g, function (letter) {
-    return "-" + letter.toLowerCase();
-  });
+  var source = String(name), result = "data-";
+  for (var index = 0; index < source.length; index++) {
+    var letter = source[index];
+    result += letter >= "A" && letter <= "Z" ? "-" + letter.toLowerCase() : letter;
+  }
+  return result;
 }
 Object.defineProperty(GuestElement.prototype, "dataset", {
   get: function () {

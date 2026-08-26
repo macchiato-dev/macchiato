@@ -59,6 +59,7 @@ const RUNTIME_DATE_NOW: u32 = 55;
 const PARSE_FLOAT: u32 = 46;
 const PARSE_INT: u32 = 47;
 const NUMBER_TO_STRING: u32 = (1 << 29) + 75;
+const STRING_REPLACE: u32 = (1 << 29) + 76;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -346,6 +347,46 @@ fn regexp_split(machine: &mut Machine<'_, '_>, separator: Value, text: &str)
     Ok(pieces)
 }
 
+fn regexp_replace(
+    machine: &mut Machine<'_, '_>, separator: Value, text: &str, replacement: &str,
+) -> Result<String, Error> {
+    let (pattern, flags, _) = regexp_parts(machine, separator)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let bytes = text.as_bytes();
+    let mut output = String::new();
+    let mut copied = 0;
+    let mut search = 0;
+    loop {
+        let region = unsafe { onig_region_new() };
+        if region.is_null() { return Err(Error::OutOfMemory); }
+        let status = unsafe {
+            onig_search(
+                regexp.0, bytes.as_ptr(), bytes.as_ptr().add(bytes.len()),
+                bytes.as_ptr().add(search), bytes.as_ptr().add(bytes.len()),
+                region, ONIG_OPTION_NONE,
+            )
+        };
+        if status == ONIG_MISMATCH || status < 0 {
+            unsafe { onig_region_free(region, 1) };
+            break;
+        }
+        let native = unsafe { &*region };
+        let begin = unsafe { *native.beg } as usize;
+        let end = unsafe { *native.end } as usize;
+        unsafe { onig_region_free(region, 1) };
+        output.push_str(&text[copied..begin]);
+        output.push_str(replacement);
+        copied = end;
+        if !flags.contains('g') { break; }
+        search = if end == begin {
+            end + text[end..].chars().next().map_or(1, char::len_utf8)
+        } else { end };
+        if search > bytes.len() { break; }
+    }
+    output.push_str(&text[copied..]);
+    Ok(output)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn onmsg(minimum_length: u32) {
     if minimum_length != 0 || RESULT.load(Ordering::Relaxed) != 0 {
@@ -396,6 +437,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             prototype,
             b"split",
             Value::from_host(microesnext::HostRef::new(STRING_SPLIT).unwrap()),
+        ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"replace",
+            Value::from_host(microesnext::HostRef::new(STRING_REPLACE).unwrap()),
         ))
     })();
     let string_prototype = match string_prototype.and_then(|value| {
@@ -900,6 +947,35 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_REPLACE =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(1_u32)?)
+                        .map_err(|_| 2_u32)?;
+                    let search = machine.host_argument(0).map_err(|_| 3_u32)?;
+                    let replacement_value = machine.host_argument(1).map_err(|_| 4_u32)?;
+                    let replacement = owned_string(&machine, replacement_value)
+                        .map_err(|_| 5_u32)?;
+                    let replaced = match owned_string(&machine, search) {
+                        Ok(search) => text.replacen(&search, &replacement, 1),
+                        Err(_) => regexp_replace(&mut machine, search, &text, &replacement)
+                            .map_err(|_| 6_u32)?,
+                    };
+                    machine.new_string(replaced.as_bytes()).map_err(|_| 7_u32)
+                })();
+                if let Err(step) = result.as_ref() {
+                    DETAIL.store(2600 + step, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+                match machine.complete_host_call(result.unwrap()) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2700, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == NUMBER_TO_STRING =>
             {
                 let result = (|| {
@@ -1246,5 +1322,7 @@ mod tests {
     #[test]
     fn embedded_regexp_accepts_codemirror_unicode_word_characters() {
         assert!(compile_regexp(r"[\p{Alphabetic}\p{Number}_]", "u").is_ok());
+        assert!(compile_regexp(r"\s*!important$", "i").is_ok());
+        assert!(compile_regexp(r"[A-Z]", "g").is_ok());
     }
 }
