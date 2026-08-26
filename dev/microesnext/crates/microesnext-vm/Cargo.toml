@@ -105,7 +105,6 @@ numbers = [
 number-operations = [
   "numbers",
   "integer-operations",
-  "microesnext-numbers/operations",
   "microesnext-bytecode/number-operations",
 ]
 number-negation = [
@@ -123,7 +122,6 @@ number-division = [
 ]
 number-remainder = [
   "numbers",
-  "microesnext-numbers/remainder",
   "microesnext-bytecode/number-remainder",
 ]
 string-number-coercion = [

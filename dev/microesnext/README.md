@@ -181,9 +181,8 @@ an explicit relational stopping condition.
 - `microesnext-numbers` supplies heap-backed IEEE-754 representation together
   with its small division, negation, and primitive-coercion helpers. VM opcode
   selection and dead-code elimination remove unused operators; they do not need
-  crate-level gates. Promoted arithmetic and remainder remain selectable while
-  their boundaries are measured. String coercion is gated because it introduces
-  the decimal parser. Integer-only builds do not link this crate.
+  crate-level gates. String coercion remains gated because it introduces the
+  decimal parser. Integer-only builds do not link this crate.
 - `microesnext-decimal-to-f64` is the shared, `no_std` decimal conversion
   boundary for source literals and string coercion. A small exact path handles
   common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.

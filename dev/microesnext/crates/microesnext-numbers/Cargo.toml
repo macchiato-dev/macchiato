@@ -9,8 +9,6 @@ version.workspace = true
 
 [features]
 default = []
-operations = []
-remainder = []
 string-coercion = ["dep:microesnext-decimal-to-f64"]
 
 [dependencies]

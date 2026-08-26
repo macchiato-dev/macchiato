@@ -129,7 +129,6 @@ numbers = [
 number-operations = [
   "numbers",
   "integer-operations",
-  "microesnext-numbers/operations",
   "microesnext-vm/number-operations",
 ]
 number-negation = [
@@ -147,7 +146,6 @@ number-division = [
 ]
 number-remainder = [
   "numbers",
-  "microesnext-numbers/remainder",
   "microesnext-vm/number-remainder",
 ]
 nonterminal-conditionals = ["control-flow"]

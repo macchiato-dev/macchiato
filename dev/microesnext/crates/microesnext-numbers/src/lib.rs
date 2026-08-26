@@ -5,9 +5,7 @@ extern crate self as microesnext_numbers;
 pub mod coercion;
 pub mod division;
 pub mod negation;
-#[cfg(feature = "operations")]
 pub mod operations;
-#[cfg(feature = "remainder")]
 pub mod remainder;
 #[cfg(feature = "string-coercion")]
 pub mod string_coercion;
