@@ -1011,6 +1011,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "bitwise-operations")]
+            Opcode::ShiftLeftI30 => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_semantics::bitwise_operations::shift_left(left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "equality")]
             Opcode::StrictEqual => {
                 let right = self.core.arena_mut().pop()?;

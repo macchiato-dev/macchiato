@@ -1419,7 +1419,9 @@ impl Parser<'_> {
                 if self.conditional_body_is_braced() {
                     self.begin_structured(&mut frames, StructuredStart::Conditional)?;
                 } else if self.single_if()? {
-                    return Err(self.error("a fallthrough path after a single-statement conditional"));
+                    return Err(
+                        self.error("a fallthrough path after a single-statement conditional")
+                    );
                 }
                 continue;
             }
@@ -3849,12 +3851,24 @@ impl Parser<'_> {
     #[cfg(feature = "bitwise-operations")]
     fn shift(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         let (used_binding, mut kind) = self.additive(binding)?;
-        while self.consume_bytes(b">>") {
+        loop {
+            let opcode = if self.consume_bytes(b">>") {
+                Opcode::ShiftRightI30
+            } else if self.consume_bytes(b"<<") {
+                Opcode::ShiftLeftI30
+            } else {
+                break;
+            };
             let (_, right) = self.additive(None)?;
-            self.output.push(Opcode::ShiftRightI30 as u8);
+            self.output.push(opcode as u8);
             kind = match (kind, right) {
                 (TermKind::I30(left), TermKind::I30(right)) => {
-                    TermKind::I30(left >> (right as u32 & 31))
+                    let shift = right as u32 & 31;
+                    TermKind::I30(if matches!(opcode, Opcode::ShiftRightI30) {
+                        left >> shift
+                    } else {
+                        left.wrapping_shl(shift)
+                    })
                 }
                 _ => TermKind::General,
             };
