@@ -464,8 +464,8 @@ pub fn park_continuation(
 
 #[cfg(all(test, feature = "promises"))]
 mod tests {
+    use microesnext_arena::closures::capture_stack;
     use microesnext_bytecode::Opcode;
-    use microesnext_functions::capture_stack;
     use microesnext_promises::{JobSlot, pending, settled_result, then};
 
     use super::*;

@@ -98,7 +98,7 @@ mod tests {
     fn classifies_callable_objects_as_functions() {
         let mut memory = [0; 64];
         let mut arena = Arena::new(&mut memory);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let callable = microesnext_callable_objects::new(&mut arena, closure, Value::NULL).unwrap();
         assert_type(&mut arena, callable, b"function");
     }

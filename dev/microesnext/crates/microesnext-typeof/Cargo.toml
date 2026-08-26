@@ -17,13 +17,12 @@ promise-resolvers = ["microesnext-arena/promise-resolvers"]
 symbols = ["microesnext-arena/symbols"]
 
 [dependencies]
-microesnext-arena.workspace = true
+microesnext-arena = { workspace = true, features = ["closures"] }
 microesnext-strings.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-callable-objects.workspace = true
-microesnext-functions.workspace = true
 
 [lib]
 path = "src/lib.rs"

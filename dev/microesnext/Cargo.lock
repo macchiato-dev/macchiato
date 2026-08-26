@@ -26,7 +26,6 @@ dependencies = [
  "microesnext-equality",
  "microesnext-errors",
  "microesnext-exceptions",
- "microesnext-functions",
  "microesnext-instanceof",
  "microesnext-integer-negation",
  "microesnext-integer-operations",
@@ -107,7 +106,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-async-functions",
  "microesnext-bytecode",
- "microesnext-functions",
  "microesnext-promise-resolution",
  "microesnext-promises",
  "microesnext-types",
@@ -127,10 +125,10 @@ dependencies = [
 name = "microesnext-async-thenables"
 version = "0.0.0"
 dependencies = [
+ "microesnext-arena",
  "microesnext-async",
  "microesnext-async-functions",
  "microesnext-bytecode",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-promises",
  "microesnext-thenables",
@@ -167,7 +165,6 @@ name = "microesnext-callable-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",
 ]
@@ -194,7 +191,6 @@ name = "microesnext-class-constructors"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",
 ]
@@ -254,7 +250,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-callable-objects",
  "microesnext-class-constructors",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",
 ]
@@ -313,21 +308,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-functions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-instanceof"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-callable-objects",
  "microesnext-class-constructors",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-prototype-chain",
  "microesnext-types",
@@ -352,7 +338,6 @@ name = "microesnext-iterable-protocol"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-types",
  "microesnext-well-known-symbols",
@@ -552,7 +537,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-callable-objects",
  "microesnext-environments",
- "microesnext-functions",
  "microesnext-recursive-functions",
  "microesnext-types",
 ]
@@ -563,7 +547,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-environments",
- "microesnext-functions",
  "microesnext-types",
 ]
 
@@ -623,9 +606,9 @@ dependencies = [
 name = "microesnext-thenables"
 version = "0.0.0"
 dependencies = [
+ "microesnext-arena",
  "microesnext-bytecode",
  "microesnext-compiler",
- "microesnext-functions",
  "microesnext-objects",
  "microesnext-promise-resolution",
  "microesnext-promise-resolvers",
@@ -649,7 +632,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-callable-objects",
- "microesnext-functions",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -676,7 +658,6 @@ dependencies = [
  "microesnext-environments",
  "microesnext-equality",
  "microesnext-exceptions",
- "microesnext-functions",
  "microesnext-instanceof",
  "microesnext-integer-negation",
  "microesnext-integer-operations",

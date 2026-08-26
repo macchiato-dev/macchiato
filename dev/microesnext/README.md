@@ -60,8 +60,9 @@ an explicit relational stopping condition.
 - `microesnext-instanceof` composes callable-object validation, ordinary
   `prototype` lookup, and prototype traversal without allocation. Custom
   `Symbol.hasInstance` dispatch remains a higher optional layer.
-- `microesnext-functions` supplies heap closures and captured values only to
-  builds enabling the `functions` feature. Direct calls remain in the base VM.
+- The arena's gated `closures` module stores closure entries and captures for
+  builds enabling the `functions` feature. Closure storage is not a separate
+  semantic library; direct calls still remain in the base VM for now.
 - `microesnext-callable-objects` optionally wraps a compact closure in an
   ordinary property-bearing object. Calls unwrap it at a statically selected
   boundary. Its constructor path creates the `.prototype` / `.constructor`

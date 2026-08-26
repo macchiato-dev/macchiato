@@ -157,7 +157,8 @@ mod tests {
         ];
         let mut memory = [0; 320];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 20);
-        let then = microesnext_functions::capture_stack(machine.arena_mut(), THEN, 0).unwrap();
+        let then =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), THEN, 0).unwrap();
         let then_key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let object = microesnext_objects::set(machine.arena_mut(), object, then_key, then).unwrap();
@@ -235,7 +236,8 @@ mod tests {
         ];
         let mut memory = [0; 384];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 24);
-        let then = microesnext_functions::capture_stack(machine.arena_mut(), THEN, 0).unwrap();
+        let then =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), THEN, 0).unwrap();
         let then_key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let object = microesnext_objects::set(machine.arena_mut(), object, then_key, then).unwrap();

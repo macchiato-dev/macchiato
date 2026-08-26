@@ -84,7 +84,7 @@ atoms = ["dep:microesnext-atoms", "strings", "microesnext-vm/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-vm/objects"]
 property-assignment = ["objects", "microesnext-vm/property-assignment"]
 prototype-chain = ["objects", "dep:microesnext-prototype-chain"]
-functions = ["dep:microesnext-functions", "microesnext-vm/functions"]
+functions = ["microesnext-arena/closures", "microesnext-vm/functions"]
 callable-objects = [
   "functions",
   "objects",
@@ -246,6 +246,7 @@ promise-jobs = [
 ]
 
 [dependencies]
+microesnext-arena.workspace = true
 microesnext-async = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
@@ -265,7 +266,6 @@ microesnext-promises = { workspace = true, optional = true }
 microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
 microesnext-promise-resolvers = { workspace = true, optional = true }
-microesnext-functions = { workspace = true, optional = true }
 microesnext-method-calls = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
@@ -307,7 +307,6 @@ microesnext-vm-core.workspace = true
 path = "src/lib.rs"
 
 [dev-dependencies]
-microesnext-arena.workspace = true
 microesnext-compiler.workspace = true
 
 [[test]]

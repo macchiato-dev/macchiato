@@ -27,7 +27,7 @@ microesnext-async-functions = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-bytecode.workspace = true
-microesnext-functions.workspace = true
+microesnext-arena = { workspace = true, features = ["closures"] }
 
 [lib]
 path = "src/lib.rs"

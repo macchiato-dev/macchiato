@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(feature = "closures")]
+pub mod closures;
+
 use microesnext_types::{Error, HeapRef, RootId, Value};
 
 const HEADER_WORDS: usize = 2;

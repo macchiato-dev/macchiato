@@ -15,14 +15,13 @@ class-constructors = [
 ]
 
 [dependencies]
-microesnext-arena.workspace = true
+microesnext-arena = { workspace = true, features = ["closures"] }
 microesnext-callable-objects.workspace = true
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-objects.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-functions.workspace = true
 microesnext-class-constructors.workspace = true
 
 [lib]

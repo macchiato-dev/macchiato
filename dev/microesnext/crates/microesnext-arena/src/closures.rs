@@ -1,6 +1,4 @@
-#![no_std]
-
-use microesnext_arena::{Arena, BlockKind};
+use crate::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
 pub fn is_function(arena: &Arena<'_>, value: Value) -> bool {

@@ -1,6 +1,8 @@
 #![no_std]
 
 use microesnext_arena::Arena;
+#[cfg(feature = "functions")]
+use microesnext_arena::closures::{capture, capture_stack, entry};
 #[cfg(feature = "arrays")]
 use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
 #[cfg(feature = "atoms")]
@@ -8,8 +10,6 @@ use microesnext_atoms::Atoms;
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "exceptions")]
 use microesnext_exceptions::Handlers;
-#[cfg(feature = "functions")]
-use microesnext_functions::{capture, capture_stack, entry};
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
 #[cfg(feature = "async")]
@@ -1588,7 +1588,8 @@ mod tests {
             .finish();
         let mut memory = [0; 96];
         let mut machine = Machine::new(&code, &mut memory);
-        let closure = microesnext_functions::capture_stack(machine.arena_mut(), 2, 0).unwrap();
+        let closure =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 2, 0).unwrap();
         let function =
             microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
         machine.arena_mut().push(function).unwrap();
@@ -1674,7 +1675,8 @@ mod tests {
         let prototype_key = machine.intern_atom(b"prototype").unwrap();
         let prototype = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let instance = microesnext_objects::new_object(machine.arena_mut(), prototype).unwrap();
-        let closure = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let closure =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let constructor =
             microesnext_callable_objects::new(machine.arena_mut(), closure, Value::NULL).unwrap();
         let constructor =
@@ -1692,7 +1694,8 @@ mod tests {
         let code = Builder::new().op(Opcode::Return).finish();
         let mut memory = [0; 64];
         let mut machine = Machine::new(&code, &mut memory);
-        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let function =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let argument = Value::from_i30(42).unwrap();
         assert_eq!(
             machine.call_closure(function, argument).unwrap(),
@@ -1710,7 +1713,8 @@ mod tests {
             .finish();
         let mut memory = [0; 64];
         let mut machine = Machine::new(&code, &mut memory);
-        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let function =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let argument = Value::from_i30(42).unwrap();
         assert_eq!(
             machine.call_closure(function, argument),
@@ -1730,7 +1734,8 @@ mod tests {
             .finish();
         let mut memory = [0; 128];
         let mut machine = Machine::new(&code, &mut memory);
-        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let function =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let destination = microesnext_promises::pending(machine.arena_mut()).unwrap();
         let pair = microesnext_promise_resolvers::new(machine.arena_mut(), destination).unwrap();
 
@@ -1763,7 +1768,8 @@ mod tests {
             .finish();
         let mut memory = [0; 64];
         let mut machine = Machine::new(&code, &mut memory);
-        let function = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let function =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let argument = Value::from_i30(42).unwrap();
 
         assert_eq!(

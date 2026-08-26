@@ -77,7 +77,7 @@ mod tests {
     fn creates_a_receiver_and_selects_the_ordinary_result() {
         let mut memory = [0; 224];
         let mut arena = Arena::new(&mut memory);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
         let constructor = microesnext_callable_objects::new_constructor(
@@ -92,7 +92,7 @@ mod tests {
         let (callable, receiver) = prepare(&mut arena, constructor, prototype_key).unwrap();
         let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
 
-        assert!(microesnext_functions::is_function(&arena, callable));
+        assert!(microesnext_arena::closures::is_function(&arena, callable));
         assert_eq!(
             microesnext_objects::prototype(&arena, receiver),
             Ok(prototype)
@@ -106,7 +106,7 @@ mod tests {
     fn prepares_a_class_without_making_it_an_ordinary_callable() {
         let mut memory = [0; 224];
         let mut arena = Arena::new(&mut memory);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
         let constructor = microesnext_class_constructors::new(
@@ -121,7 +121,7 @@ mod tests {
         let (callable, receiver) = prepare(&mut arena, constructor, prototype_key).unwrap();
         let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
 
-        assert!(microesnext_functions::is_function(&arena, callable));
+        assert!(microesnext_arena::closures::is_function(&arena, callable));
         assert_eq!(
             microesnext_objects::prototype(&arena, receiver),
             Ok(prototype)

@@ -464,7 +464,6 @@ assertPresence(
   ["callable-objects"],
   [
     callableObjects,
-    "microesnext-functions",
     "microesnext-objects",
     "microesnext-atoms",
     "microesnext-strings",
@@ -475,7 +474,6 @@ assertPresence(
   ["constructors"],
   [
     callableObjects,
-    "microesnext-functions",
     "microesnext-objects",
     "microesnext-atoms",
     "microesnext-strings",
@@ -488,7 +486,6 @@ assertPresence(
     construction,
     receivers,
     callableObjects,
-    "microesnext-functions",
     "microesnext-objects",
   ],
   [instanceOf, prototypeChain, typeOf],
@@ -496,7 +493,7 @@ assertPresence(
 assertPresence(
   ["property-assignment"],
   ["microesnext-objects", "microesnext-atoms", "microesnext-strings"],
-  [construction, receivers, "microesnext-functions"],
+  [construction, receivers],
 );
 assertPresence(
   ["recursive-constructors"],
@@ -514,7 +511,6 @@ assertPresence(
     instanceOf,
     prototypeChain,
     callableObjects,
-    "microesnext-functions",
     "microesnext-objects",
   ],
   [typeOf, "microesnext-numbers"],
@@ -543,7 +539,7 @@ assertPresence(
 );
 assertPresence(
   ["functions"],
-  ["microesnext-functions"],
+  [],
   [
     asyncFunctions,
     environments,
@@ -575,7 +571,7 @@ assertPresence(
 assertPresence(
   ["expression-statements"],
   [stackOperations],
-  ["microesnext-exceptions", "microesnext-functions", "microesnext-objects"],
+  ["microesnext-exceptions", "microesnext-objects"],
 );
 assertPresence(
   ["array-assignment-expressions"],
@@ -585,12 +581,12 @@ assertPresence(
 assertPresence(
   ["captured-assignment-expressions"],
   [capturedAssignmentExpressions, environments],
-  ["microesnext-functions", "microesnext-locals", "microesnext-objects", stackOperations],
+  ["microesnext-locals", "microesnext-objects", stackOperations],
 );
 assertPresence(
   ["property-assignment-expressions"],
   ["microesnext-objects", propertyAssignmentExpressions],
-  [capturedAssignmentExpressions, environments, "microesnext-functions", stackOperations],
+  [capturedAssignmentExpressions, environments, stackOperations],
 );
 assertPresence(
   ["function-arguments"],
@@ -607,7 +603,7 @@ assertPresence(
 );
 assertPresence(
   ["receivers"],
-  ["microesnext-functions", "microesnext-locals", parameters, receivers],
+  ["microesnext-locals", parameters, receivers],
   [asyncFunctions, environments, errors, promiseResolution, suspension],
 );
 assertPresence(
@@ -649,7 +645,6 @@ assertPresence(
   ["promise-resolvers"],
   [
     errors,
-    "microesnext-functions",
     "microesnext-locals",
     "microesnext-promises",
     parameters,
@@ -662,7 +657,6 @@ assertPresence(
   ["thenables"],
   [
     errors,
-    "microesnext-functions",
     "microesnext-objects",
     "microesnext-promises",
     promiseResolution,
@@ -683,7 +677,6 @@ assertPresence(
   [
     asyncFunctions,
     errors,
-    "microesnext-functions",
     "microesnext-promises",
     promiseResolution,
     suspension,
@@ -702,7 +695,6 @@ assertPresence(
   [
     asyncFunctions,
     asyncThenables,
-    "microesnext-functions",
     "microesnext-objects",
     "microesnext-promises",
     promiseResolution,
@@ -719,7 +711,6 @@ assertPresence(
     asyncFunctions,
     environments,
     errors,
-    "microesnext-functions",
     "microesnext-promises",
     promiseResolution,
     recursiveAsyncFunctions,
@@ -729,12 +720,12 @@ assertPresence(
 );
 assertPresence(
   ["recursive-functions"],
-  [environments, "microesnext-functions", recursiveFunctions],
+  [environments, recursiveFunctions],
   [errors, parameters, promiseResolution, recursiveAsyncFunctions, suspension],
 );
 assertPresence(
   ["environments", "functions", "locals"],
-  [environments, "microesnext-functions", "microesnext-locals"],
+  [environments, "microesnext-locals"],
   [
     asyncFunctions,
     errors,

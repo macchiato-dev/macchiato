@@ -8,13 +8,12 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-microesnext-arena.workspace = true
+microesnext-arena = { workspace = true, features = ["closures"] }
 microesnext-objects.workspace = true
 microesnext-types.workspace = true
 microesnext-well-known-symbols.workspace = true
 
 [dev-dependencies]
-microesnext-functions.workspace = true
 
 [lib]
 path = "src/lib.rs"

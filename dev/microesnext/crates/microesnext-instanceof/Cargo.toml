@@ -16,7 +16,7 @@ class-constructors = [
 ]
 
 [dependencies]
-microesnext-arena = { workspace = true, features = ["callable-objects"] }
+microesnext-arena = { workspace = true, features = ["callable-objects", "closures"] }
 microesnext-callable-objects.workspace = true
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, features = ["callable-objects"] }
@@ -24,7 +24,6 @@ microesnext-prototype-chain.workspace = true
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-functions.workspace = true
 
 [lib]
 path = "src/lib.rs"

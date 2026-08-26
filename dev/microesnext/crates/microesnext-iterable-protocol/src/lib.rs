@@ -41,13 +41,16 @@ mod tests {
         let mut arena = Arena::with_root_capacity(&mut memory, 2);
         let symbols = WellKnownSymbols::new(&mut arena).unwrap();
         let other_symbols = WellKnownSymbols::new(&mut arena).unwrap();
-        let method = microesnext_functions::capture_stack(&mut arena, 17, 0).unwrap();
+        let method = microesnext_arena::closures::capture_stack(&mut arena, 17, 0).unwrap();
         let prototype = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
         let prototype = define(&mut arena, prototype, &symbols, method).unwrap();
         let iterable = microesnext_objects::new_object(&mut arena, prototype).unwrap();
 
         let inherited = get(&arena, iterable, &symbols).unwrap().unwrap();
-        assert_eq!(microesnext_functions::entry(&arena, inherited), Ok(17));
+        assert_eq!(
+            microesnext_arena::closures::entry(&arena, inherited),
+            Ok(17)
+        );
         assert_eq!(get(&arena, iterable, &other_symbols), Ok(None));
     }
 }

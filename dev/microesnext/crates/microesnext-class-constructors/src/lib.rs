@@ -12,7 +12,7 @@ pub fn new(
     prototype_key: Value,
     constructor_key: Value,
 ) -> Result<Value, Error> {
-    if !microesnext_functions::is_function(arena, callable)
+    if !microesnext_arena::closures::is_function(arena, callable)
         || (function_prototype != Value::NULL
             && !microesnext_objects::is_object(arena, function_prototype))
         || (object_prototype != Value::NULL
@@ -85,7 +85,7 @@ mod tests {
     fn creates_a_distinct_constructor_with_a_prototype_cycle() {
         let mut memory = [0; 192];
         let mut arena = Arena::with_root_capacity(&mut memory, 1);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
         let constructor = new(

@@ -10,7 +10,7 @@ use microesnext_types::{Error, Value};
 /// expression needs wrapper identity from inside its own body.
 pub fn rebind(arena: &mut Arena<'_>, constructor: Value) -> Result<(), Error> {
     let closure = microesnext_callable_objects::callable(arena, constructor)?;
-    let cell = microesnext_functions::capture(arena, closure, 0)?;
+    let cell = microesnext_arena::closures::capture(arena, closure, 0)?;
     microesnext_environments::set(arena, cell, constructor)
 }
 
@@ -29,7 +29,7 @@ mod tests {
 
         rebind(&mut arena, constructor).unwrap();
         let closure = microesnext_callable_objects::callable(&arena, constructor).unwrap();
-        let cell = microesnext_functions::capture(&arena, closure, 0).unwrap();
+        let cell = microesnext_arena::closures::capture(&arena, closure, 0).unwrap();
         assert_eq!(microesnext_environments::get(&arena, cell), Ok(constructor));
     }
 }

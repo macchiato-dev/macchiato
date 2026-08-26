@@ -8,8 +8,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-microesnext-arena = { workspace = true, features = ["class-constructors"] }
-microesnext-functions.workspace = true
+microesnext-arena = { workspace = true, features = ["class-constructors", "closures"] }
 microesnext-objects = { workspace = true, features = ["class-constructors"] }
 microesnext-types.workspace = true
 

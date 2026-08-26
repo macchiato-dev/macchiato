@@ -131,7 +131,7 @@ pub fn prepare(
     }
 
     let then = get(machine.arena(), resolution, then_key)?;
-    if !microesnext_functions::is_function(machine.arena(), then) {
+    if !microesnext_arena::closures::is_function(machine.arena(), then) {
         settle(
             machine.arena_mut(),
             queue,
@@ -296,7 +296,7 @@ mod tests {
             .finish();
         let mut memory = [0; 192];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 10);
-        let then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let then = microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let object = microesnext_objects::set(
@@ -362,7 +362,7 @@ mod tests {
         let code = Builder::new().const_i30(7).op(Opcode::Throw).finish();
         let mut memory = [0; 160];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 8);
-        let then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let then = microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let object = microesnext_objects::set(machine.arena_mut(), object, key, then).unwrap();
@@ -399,12 +399,14 @@ mod tests {
             .arena_mut()
             .push(Value::from_i30(42).unwrap())
             .unwrap();
-        let inner_then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 1).unwrap();
+        let inner_then =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 1).unwrap();
         let key = Value::TRUE;
         let inner = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let inner = microesnext_objects::set(machine.arena_mut(), inner, key, inner_then).unwrap();
         machine.arena_mut().push(inner).unwrap();
-        let outer_then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 1).unwrap();
+        let outer_then =
+            microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 1).unwrap();
         let outer = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let outer = microesnext_objects::set(machine.arena_mut(), outer, key, outer_then).unwrap();
         let destination = pending(machine.arena_mut()).unwrap();
@@ -448,7 +450,7 @@ mod tests {
             .finish();
         let mut memory = [0; 192];
         let mut machine = Machine::with_root_capacity(&code, &mut memory, 8);
-        let then = microesnext_functions::capture_stack(machine.arena_mut(), 0, 0).unwrap();
+        let then = microesnext_arena::closures::capture_stack(machine.arena_mut(), 0, 0).unwrap();
         let key = Value::TRUE;
         let object = microesnext_objects::new_object(machine.arena_mut(), Value::NULL).unwrap();
         let object = microesnext_objects::set(machine.arena_mut(), object, key, then).unwrap();

@@ -18,8 +18,8 @@ pub fn capture_recursive_stack(
     let cell = microesnext_environments::new(arena, Value::UNDEFINED)?;
     let insertion = arena.stack_len() - capture_count;
     arena.insert_stack_value_from_bottom(insertion, cell)?;
-    let closure = microesnext_functions::capture_stack(arena, entry, capture_count + 1)?;
-    let moved_cell = microesnext_functions::capture(arena, closure, 0)?;
+    let closure = microesnext_arena::closures::capture_stack(arena, entry, capture_count + 1)?;
+    let moved_cell = microesnext_arena::closures::capture(arena, closure, 0)?;
     microesnext_environments::set(arena, moved_cell, closure)?;
     Ok(closure)
 }
@@ -37,10 +37,10 @@ mod tests {
         arena.push(closure).unwrap();
         arena.compact(&mut []).unwrap();
         let moved = arena.stack_value(0).unwrap();
-        let cell = microesnext_functions::capture(&arena, moved, 0).unwrap();
+        let cell = microesnext_arena::closures::capture(&arena, moved, 0).unwrap();
         assert_eq!(microesnext_environments::get(&arena, cell), Ok(moved));
         assert_eq!(
-            microesnext_functions::capture(&arena, moved, 1)
+            microesnext_arena::closures::capture(&arena, moved, 1)
                 .unwrap()
                 .as_i30(),
             Some(42)

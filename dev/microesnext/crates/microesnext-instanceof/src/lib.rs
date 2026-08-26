@@ -33,7 +33,7 @@ fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_functions::capture_stack;
+    use microesnext_arena::closures::capture_stack;
     use microesnext_objects::{new_object, set};
 
     use super::*;

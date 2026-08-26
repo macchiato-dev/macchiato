@@ -39,7 +39,7 @@ string-operations = [
 atoms = ["dep:microesnext-atoms", "strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 property-assignment = ["objects", "microesnext-bytecode/property-assignment"]
-functions = ["dep:microesnext-functions", "microesnext-bytecode/functions"]
+functions = ["microesnext-arena/closures", "microesnext-bytecode/functions"]
 callable-objects = [
   "functions",
   "objects",
@@ -195,7 +195,6 @@ microesnext-property-assignment-expressions = { workspace = true, optional = tru
 microesnext-construction = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
-microesnext-functions = { workspace = true, optional = true }
 microesnext-parameters = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }

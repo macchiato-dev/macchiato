@@ -5,7 +5,7 @@ use microesnext_types::{Error, Value};
 
 /// Wrap a compact closure in an ordinary object without changing the closure.
 pub fn new(arena: &mut Arena<'_>, callable: Value, prototype: Value) -> Result<Value, Error> {
-    if !microesnext_functions::is_function(arena, callable)
+    if !microesnext_arena::closures::is_function(arena, callable)
         || (prototype != Value::NULL && !microesnext_objects::is_object(arena, prototype))
     {
         return Err(Error::Type);
@@ -30,7 +30,7 @@ pub fn new_constructor(
     prototype_key: Value,
     constructor_key: Value,
 ) -> Result<Value, Error> {
-    if !microesnext_functions::is_function(arena, callable)
+    if !microesnext_arena::closures::is_function(arena, callable)
         || (function_prototype != Value::NULL
             && !microesnext_objects::is_object(arena, function_prototype))
         || (object_prototype != Value::NULL
@@ -104,7 +104,7 @@ mod tests {
         let mut memory = [0; 160];
         let mut arena = Arena::with_root_capacity(&mut memory, 2);
         let prototype = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
-        let closure = microesnext_functions::capture_stack(&mut arena, 12, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 12, 0).unwrap();
         let object = new(&mut arena, closure, prototype).unwrap();
 
         assert!(is_callable_object(&arena, object));
@@ -130,7 +130,7 @@ mod tests {
             microesnext_objects::prototype(&arena, object),
             Ok(prototype)
         );
-        assert!(microesnext_functions::is_function(
+        assert!(microesnext_arena::closures::is_function(
             &arena,
             callable(&arena, object).unwrap()
         ));
@@ -140,7 +140,7 @@ mod tests {
     fn rejects_non_closures_and_non_object_prototypes() {
         let mut memory = [0; 48];
         let mut arena = Arena::new(&mut memory);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
 
         assert_eq!(new(&mut arena, Value::TRUE, Value::NULL), Err(Error::Type));
         assert_eq!(new(&mut arena, closure, Value::TRUE), Err(Error::Type));
@@ -150,7 +150,7 @@ mod tests {
     fn creates_the_constructor_and_prototype_cycle() {
         let mut memory = [0; 192];
         let mut arena = Arena::with_root_capacity(&mut memory, 1);
-        let closure = microesnext_functions::capture_stack(&mut arena, 0, 0).unwrap();
+        let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
         let function = new_constructor(
@@ -172,7 +172,7 @@ mod tests {
             microesnext_objects::get(&arena, prototype, constructor_key),
             Ok(function)
         );
-        assert!(microesnext_functions::is_function(
+        assert!(microesnext_arena::closures::is_function(
             &arena,
             callable(&arena, function).unwrap()
         ));

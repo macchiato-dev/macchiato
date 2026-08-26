@@ -8,7 +8,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-microesnext-functions.workspace = true
+microesnext-arena = { workspace = true, features = ["closures"] }
 microesnext-objects.workspace = true
 microesnext-promise-resolution.workspace = true
 microesnext-promise-resolvers.workspace = true
