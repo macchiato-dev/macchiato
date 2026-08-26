@@ -112,6 +112,10 @@ an explicit relational stopping condition.
   cells while retaining the assigned value on the operand stack. Its dedicated
   inline operation avoids linking stack rotation or adding a preserving branch
   to ordinary environment assignment statements.
+- `microesnext-property-assignment-expressions` performs the corresponding
+  result-preserving object store. Its input is `[object, key, value]` and its
+  output is `[value]`, so object literals and assignment statements retain
+  their existing smaller store paths when expression assignment is omitted.
 - `microesnext-recursive-functions` composes closures with environment cells
   only for private self-bindings in named function expressions. Ordinary
   function builds do not resolve the crate or decode its constructor opcode.

@@ -226,8 +226,8 @@ class record can remain as the expression result while methods are installed.
 The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
 is 23,562 / 8,943. Omitting it leaves the class-method runtime exactly 32,689 /
 10,891 and its compiler at 20,901 / 7,940. With expressions
-included, the default compiler is 44,042 / 15,798 and the all-capability runtime
-is 108,176 / 34,382.
+included, the default compiler is 45,385 / 16,280 and the all-capability runtime
+is 108,987 / 34,624.
 
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
@@ -312,6 +312,7 @@ LTO from merely discarding an enabled but unused dependency.
 | JavaScript Number negation | 6,912 | 3,050 |
 | Objects with atoms and strings | 14,473 | 5,775 |
 | Property assignment | 16,352 | 6,302 |
+| Property assignment expressions | 15,713 | 6,242 |
 | Callable objects | 17,812 | 7,107 |
 | Constructible function objects | 20,106 | 7,695 |
 | Constructor receivers | 26,845 | 9,886 |
@@ -331,7 +332,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 108,176 | 34,382 |
+| All capabilities | 108,987 | 34,624 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -631,6 +632,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | locals | 8,346 | 3,519 |
 | local assignment expressions | 8,823 | 3,652 |
 | captured assignment expressions | 18,767 | 7,505 |
+| property assignment expressions | 11,626 | 4,793 |
 | basic functions | 13,184 | 5,569 |
 | function arguments | 14,148 | 5,953 |
 | captured environments | 17,878 | 7,430 |
@@ -638,7 +640,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,131 | 7,557 |
 | async functions | 14,224 | 5,938 |
 | recursive async functions | 18,966 | 7,846 |
-| default language slice | 44,042 | 15,798 |
+| default language slice | 45,385 | 16,280 |
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
@@ -651,6 +653,13 @@ runtime with a result-preserving store for a 7,186 / 3,047 live artifact. Their
 compiler is 18,767 / 7,505 versus 17,878 / 7,430 for captured environments.
 Omitting the feature removes its crate and opcode; it does not acquire the
 stack-operations crate used by uncaptured assignment.
+
+Property assignment expressions compose the 14,473 / 5,775 object runtime
+with a result-preserving object store for a 15,713 / 6,242 live artifact. Their
+compiler is 11,626 / 4,793. The compiler recognizes local, captured, receiver,
+and nested dot targets, while the focused runtime links neither environments
+nor stack operations. Omitting the feature removes its crate and opcode and
+leaves ordinary object reads and literal stores unchanged.
 
 The `literal-expressions` rows compose the ordinary expression parser with
 literal storage without changing either runtime. Numeric-only array and object

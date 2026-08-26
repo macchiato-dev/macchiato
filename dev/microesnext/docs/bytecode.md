@@ -85,6 +85,13 @@ cell between those states. This is deliberately distinct from
 and from `duplicate_top`, which cannot preserve a value around a cell without
 extra stack movement.
 
+Property assignment expressions use `set_property_result`. Its input is
+`[object, key, value]` and its output is `[value]`; the object store occurs
+between those states. Intermediate dot segments use ordinary `get_property`,
+so a nested target adds no specialized traversal instruction. The opcode is
+separate from `set_property`, which returns the object for literal assembly,
+and `set_property_statement`, which leaves no result.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and
