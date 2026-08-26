@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 microesnext = { path = "../../microesnext/crates/microesnext", features = ["full"] }
+libm = "0.2"
 
 [build-dependencies]
 microesnext-compiler = { path = "../../microesnext/crates/microesnext-compiler" }

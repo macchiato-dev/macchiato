@@ -31,6 +31,12 @@ pub enum Progress {
     #[cfg(feature = "host-bindings")]
     HostCall {
         function: HostRef,
+        receiver: Option<Value>,
+        argument_count: usize,
+    },
+    #[cfg(feature = "host-bindings")]
+    HostConstruct {
+        constructor: HostRef,
         argument_count: usize,
     },
     #[cfg(feature = "host-bindings")]
@@ -132,11 +138,17 @@ impl From<Outcome> for Progress {
             #[cfg(feature = "host-bindings")]
             Outcome::HostCall {
                 function,
+                receiver,
                 argument_count,
             } => Self::HostCall {
                 function,
+                receiver,
                 argument_count,
             },
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostConstruct { constructor, argument_count } => {
+                Self::HostConstruct { constructor, argument_count }
+            }
             #[cfg(feature = "host-bindings")]
             Outcome::HostGet {
                 object,
@@ -266,12 +278,18 @@ fn drive_functions<R: Resolver>(
             #[cfg(feature = "host-bindings")]
             Outcome::HostCall {
                 function,
+                receiver,
                 argument_count,
             } => {
                 return Ok(Progress::HostCall {
                     function,
+                    receiver,
                     argument_count,
                 });
+            }
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostConstruct { constructor, argument_count } => {
+                return Ok(Progress::HostConstruct { constructor, argument_count });
             }
             #[cfg(feature = "host-bindings")]
             Outcome::HostGet {
@@ -442,7 +460,7 @@ fn finish_progress<R: Resolver>(
         Progress::AsyncCall { .. } => Err(Error::Type),
         Progress::PromiseResolverCall => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
-        Progress::HostCall { .. } => Err(Error::Type),
+        Progress::HostCall { .. } | Progress::HostConstruct { .. } => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
         Progress::HostGet { .. } | Progress::HostSet { .. } => Err(Error::Type),
     }
@@ -482,7 +500,7 @@ fn finish_reaction<R: Resolver>(
         Outcome::AsyncCall { .. } => Err(Error::Type),
         Outcome::PromiseResolverCall => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
-        Outcome::HostCall { .. } => Err(Error::Type),
+        Outcome::HostCall { .. } | Outcome::HostConstruct { .. } => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
         Outcome::HostGet { .. } | Outcome::HostSet { .. } => Err(Error::Type),
     }

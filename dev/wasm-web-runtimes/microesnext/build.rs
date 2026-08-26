@@ -7,10 +7,11 @@ const HOST_GLOBALS: &[&str] = &[
     "IntersectionObserver", "JSON", "KeyboardEvent", "Map", "Math", "MutationObserver",
     "Number", "Object", "Promise", "Proxy", "RangeError", "RegExp", "ResizeObserver", "Set", "String", "Symbol",
     "SyntaxError", "TypeError", "Uint8Array", "Uint16Array", "Uint32Array", "WeakMap", "WeakRef", "WeakSet",
-    "Window", "cancelIdleCallback", "clearInterval", "clearTimeout", "console", "document",
+    "Window", "bridge", "cancelIdleCallback", "clearInterval", "clearTimeout", "console", "document",
     "gc", "getComputedStyle", "globalThis", "hostNow", "hostReference", "isFinite", "navigator", "parseFloat", "parseInt",
     "performance", "process", "queueMicrotask", "requestAnimationFrame", "requestIdleCallback",
     "releaseHostReference", "releaseHostReferenceLease", "runtimeDateNow", "setInterval", "setTimeout", "window",
+    "installArrayPrototype",
 ];
 
 fn main() {
@@ -24,15 +25,14 @@ fn main() {
             fs::read_to_string(path).expect("read MicroESNext application source")
         },
     );
-    let source = if let Some(path) = env::var_os("MICROESNEXT_GUEST_ENVIRONMENT") {
+    let mut source = include_str!("array-prototype.js").to_owned();
+    source.push('\n');
+    if let Some(path) = env::var_os("MICROESNEXT_GUEST_ENVIRONMENT") {
         println!("cargo:rerun-if-changed={}", PathBuf::from(&path).display());
-        let mut source = fs::read_to_string(path).expect("read MicroESNext guest environment");
+        source.push_str(&fs::read_to_string(path).expect("read MicroESNext guest environment"));
         source.push('\n');
-        source.push_str(&application);
-        source
-    } else {
-        application
-    };
+    }
+    source.push_str(&application);
     let bytecode = compile_script_with_host_globals(&source, HOST_GLOBALS).unwrap_or_else(|error| {
         panic!(
             "MicroESNext source failed at byte {}: expected {}",

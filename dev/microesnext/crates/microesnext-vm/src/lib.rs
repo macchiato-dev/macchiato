@@ -41,6 +41,12 @@ pub enum Outcome {
     #[cfg(feature = "host-bindings")]
     HostCall {
         function: HostRef,
+        receiver: Option<Value>,
+        argument_count: usize,
+    },
+    #[cfg(feature = "host-bindings")]
+    HostConstruct {
+        constructor: HostRef,
         argument_count: usize,
     },
     #[cfg(feature = "host-bindings")]
@@ -78,7 +84,11 @@ pub struct Machine<'code, 'memory> {
     #[cfg(feature = "host-bindings")]
     host_argument_count: Option<usize>,
     #[cfg(feature = "host-bindings")]
+    host_call_receiver: Option<Value>,
+    #[cfg(feature = "host-bindings")]
     host_completion: Option<HostCompletion>,
+    #[cfg(all(feature = "arrays", feature = "objects"))]
+    array_prototype: Option<RootId>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -106,7 +116,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "host-bindings")]
             host_argument_count: None,
             #[cfg(feature = "host-bindings")]
+            host_call_receiver: None,
+            #[cfg(feature = "host-bindings")]
             host_completion: None,
+            #[cfg(all(feature = "arrays", feature = "objects"))]
+            array_prototype: None,
         }
     }
 
@@ -208,7 +222,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "host-bindings")]
             host_argument_count: None,
             #[cfg(feature = "host-bindings")]
+            host_call_receiver: None,
+            #[cfg(feature = "host-bindings")]
             host_completion: None,
+            #[cfg(all(feature = "arrays", feature = "objects"))]
+            array_prototype: None,
         })
     }
 
@@ -234,6 +252,121 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[inline(always)]
     pub fn arena_mut(&mut self) -> &mut Arena<'memory> {
         self.core.arena_mut()
+    }
+
+    pub fn program_counter(&self) -> usize {
+        self.core.pc()
+    }
+
+    pub fn frame_base(&self) -> usize {
+        self.core.frame_base()
+    }
+
+    pub fn frame_header(&self) -> Result<Value, Error> {
+        self.core.arena().stack_value_from_bottom(self.core.frame_base())
+    }
+
+    #[cfg(feature = "functions")]
+    pub fn current_function_entry(&self) -> Result<usize, Error> {
+        let base = self.core.frame_base();
+        if base < 1 {
+            return Err(Error::Type);
+        }
+        let function = self.core.arena().stack_value_from_bottom(base - 1)?;
+        let function = unwrap_callable(self.core.arena(), function)?;
+        entry(self.core.arena(), function)
+    }
+
+    #[cfg(feature = "numbers")]
+    pub fn number(&self, value: Value) -> Result<f64, Error> {
+        if let Some(integer) = value.as_i30() {
+            Ok(integer as f64)
+        } else {
+            microesnext_values::numbers::get(self.core.arena(), value)
+        }
+    }
+
+    #[cfg(feature = "numbers")]
+    pub fn new_number(&mut self, value: f64) -> Result<Value, Error> {
+        microesnext_values::numbers::new(self.core.arena_mut(), value)
+    }
+
+    /// Borrow the UTF-8 bytes of a guest string while the machine is paused.
+    #[cfg(feature = "strings")]
+    pub fn string_bytes(&self, value: Value) -> Result<&[u8], Error> {
+        let reference = value.as_ref().ok_or(Error::Type)?;
+        if self.core.arena().kind(reference)? != microesnext_arena::BlockKind::String {
+            return Err(Error::Type);
+        }
+        self.core.arena().bytes(reference)
+    }
+
+    /// Create a guest object for an embedding-provided intrinsic.
+    #[cfg(feature = "objects")]
+    pub fn new_object(&mut self, prototype: Value) -> Result<Value, Error> {
+        new_object(self.core.arena_mut(), prototype)
+    }
+
+    #[cfg(feature = "arrays")]
+    pub fn new_bytes(&mut self, length: usize) -> Result<Value, Error> {
+        self.core
+            .arena_mut()
+            .allocate_zeroed_bytes(length, &mut [])
+            .map(Value::from_ref)
+    }
+
+    /// Borrow a guest byte array for a synchronous embedding operation.
+    #[cfg(feature = "arrays")]
+    pub fn bytes_mut(&mut self, value: Value) -> Result<&mut [u8], Error> {
+        self.core
+            .arena_mut()
+            .bytes_mut(value.as_ref().ok_or(Error::Type)?)
+    }
+
+    #[cfg(all(feature = "arrays", feature = "objects"))]
+    pub fn install_array_prototype(&mut self, prototype: Value) -> Result<(), Error> {
+        if let Some(root) = self.array_prototype.take() {
+            self.release(root)?;
+        }
+        self.array_prototype = Some(self.retain(prototype)?);
+        Ok(())
+    }
+
+    #[cfg(all(feature = "objects", feature = "getters", feature = "callable-objects"))]
+    pub fn define_property(
+        &mut self,
+        object: Value,
+        key: Value,
+        descriptor: Value,
+    ) -> Result<Value, Error> {
+        let value_key = self.intern(b"value")?;
+        let get_key = self.intern(b"get")?;
+        let set_key = self.intern(b"set")?;
+        let value = get(self.core.arena(), descriptor, value_key)?;
+        if value != Value::UNDEFINED {
+            return set(self.core.arena_mut(), object, key, value);
+        }
+        let getter = get(self.core.arena(), descriptor, get_key)?;
+        if getter != Value::UNDEFINED {
+            let getter = unwrap_callable(self.core.arena(), getter)?;
+            let accessor = microesnext_objects::getters::new(self.core.arena_mut(), getter)?;
+            set(self.core.arena_mut(), object, key, accessor)?;
+        }
+        let setter = get(self.core.arena(), descriptor, set_key)?;
+        if setter != Value::UNDEFINED {
+            let setter = unwrap_callable(self.core.arena(), setter)?;
+            let accessor = microesnext_objects::getters::new_setter(self.core.arena_mut(), setter)?;
+            let accessor = if let Some(current) =
+                microesnext_objects::get_own(self.core.arena(), object, key)?
+            {
+                microesnext_objects::getters::merge(self.core.arena_mut(), current, accessor)?
+                    .unwrap_or(accessor)
+            } else {
+                accessor
+            };
+            set(self.core.arena_mut(), object, key, accessor)?;
+        }
+        Ok(object)
     }
 
     pub fn retain(&mut self, value: Value) -> Result<RootId, Error> {
@@ -274,7 +407,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "host-bindings")]
             host_argument_count: self.host_argument_count,
             #[cfg(feature = "host-bindings")]
+            host_call_receiver: self.host_call_receiver,
+            #[cfg(feature = "host-bindings")]
             host_completion: self.host_completion,
+            #[cfg(all(feature = "arrays", feature = "objects"))]
+            array_prototype: self.array_prototype,
         })
     }
 
@@ -284,9 +421,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         if index >= count || count > self.core.arena().stack_len() {
             return Err(Error::Type);
         }
-        self.core
-            .arena()
-            .stack_value(self.core.arena().stack_len() - count + index)
+        self.core.arena().stack_value(count - index - 1)
     }
 
     #[cfg(feature = "host-bindings")]
@@ -295,6 +430,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         for _ in 0..count {
             self.core.arena_mut().pop()?;
         }
+        self.host_call_receiver = None;
+        self.core.arena_mut().push(value)
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn complete_host_construct(&mut self, value: Value) -> Result<(), Error> {
+        let count = self.host_argument_count.take().ok_or(Error::Type)?;
+        for _ in 0..count {
+            self.core.arena_mut().pop()?;
+        }
+        self.core.arena_mut().push(value)?;
         self.core.arena_mut().push(value)
     }
 
@@ -446,7 +592,23 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         method: false,
                     }));
                 }
-                let value = get(self.core.arena(), object, key)?;
+                let length_key = key.as_ref().is_some_and(|reference| {
+                    self.core.arena().bytes_equal(reference, b"length").unwrap_or(false)
+                });
+                let value = if length_key && microesnext_objects::arrays::is_array(self.core.arena(), object) {
+                    Value::from_i30(array_len(self.core.arena(), object)? as i32).ok_or(Error::Type)?
+                } else if length_key && object.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    .is_some_and(|kind| matches!(kind,
+                        microesnext_arena::BlockKind::Bytes | microesnext_arena::BlockKind::String))
+                {
+                    let length = self.core.arena().byte_len(object.as_ref().ok_or(Error::Type)?)?;
+                    Value::from_i30(length as i32).ok_or(Error::Type)?
+                } else if microesnext_objects::arrays::is_array(self.core.arena(), object) {
+                    let prototype = self.array_prototype.ok_or(Error::Type)?;
+                    get(self.core.arena(), self.root(prototype)?, key)?
+                } else {
+                    get(self.core.arena(), object, key)?
+                };
                 #[cfg(feature = "getters")]
                 if let Some(function) =
                     microesnext_objects::getters::callable(self.core.arena(), value)?
@@ -488,7 +650,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         method: true,
                     }));
                 }
-                microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
+                if microesnext_objects::arrays::is_array(self.core.arena(), receiver) {
+                    let prototype = self.array_prototype.ok_or(Error::Type)?;
+                    let method = get(self.core.arena(), self.root(prototype)?, key)?;
+                    self.core.arena_mut().push(receiver)?;
+                    self.core.arena_mut().push(method)?;
+                } else {
+                    microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
+                }
                 Ok(None)
             }
             #[cfg(feature = "class-inheritance")]
@@ -736,6 +905,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }
                     return Ok(Some(Outcome::HostCall {
                         function,
+                        receiver: None,
                         argument_count: 0,
                     }));
                 }
@@ -842,6 +1012,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut(),
                     argument_count,
                 )?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(constructor) = constructor.as_host() {
+                    if self.host_argument_count.replace(argument_count).is_some() {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostConstruct {
+                        constructor,
+                        argument_count,
+                    }));
+                }
                 let (function, receiver) = microesnext_objects::construction::prepare(
                     self.core.arena_mut(),
                     constructor,
@@ -1157,7 +1337,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let key = self.core.arena_mut().pop()?;
                 let target = self.core.arena_mut().pop()?;
                 let result = value;
-                if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                if target.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::Bytes)
+                {
+                    let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    self.core.arena_mut().set_byte(
+                        target.as_ref().ok_or(Error::Type)?, index,
+                        value.as_i30().ok_or(Error::Type)? as u8,
+                    )?;
+                } else if microesnext_objects::arrays::is_array(self.core.arena(), target) {
                     let index = key
                         .as_i30()
                         .and_then(|index| usize::try_from(index).ok())
@@ -1452,7 +1641,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetIndex => {
                 let key = self.core.arena_mut().pop()?;
                 let target = self.core.arena_mut().pop()?;
-                let value = if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                let value = if target.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::Bytes)
+                {
+                    let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    let reference = target.as_ref().ok_or(Error::Type)?;
+                    Value::from_i30(self.core.arena().byte(reference, index)? as i32)
+                        .ok_or(Error::Type)?
+                } else if microesnext_objects::arrays::is_array(self.core.arena(), target) {
                     let index = key
                         .as_i30()
                         .and_then(|index| usize::try_from(index).ok())
@@ -1593,7 +1790,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let value = self.core.arena_mut().pop()?;
                 let key = self.core.arena_mut().pop()?;
                 let target = self.core.arena_mut().pop()?;
-                let target = if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                let target = if target.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::Bytes)
+                {
+                    let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    let byte = value.as_i30().ok_or(Error::Type)? as u8;
+                    self.core.arena_mut().set_byte(target.as_ref().ok_or(Error::Type)?, index, byte)?;
+                    target
+                } else if microesnext_objects::arrays::is_array(self.core.arena(), target) {
                     let index = key
                         .as_i30()
                         .and_then(|index| usize::try_from(index).ok())
@@ -1923,6 +2128,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             return Ok(Some(Outcome::HostCall {
                 function,
+                receiver: None,
                 argument_count,
             }));
         }
@@ -1979,6 +2185,19 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     fn call_method_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
         let (method, receiver) =
             microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
+        #[cfg(feature = "host-bindings")]
+        if let Some(function) = method.as_host() {
+            if self.host_argument_count.replace(argument_count).is_some()
+                || self.host_call_receiver.replace(receiver).is_some()
+            {
+                return Err(Error::Type);
+            }
+            return Ok(Some(Outcome::HostCall {
+                function,
+                receiver: Some(receiver),
+                argument_count,
+            }));
+        }
         let receiver_aware =
             microesnext_objects::callable::is_callable_object(self.core.arena(), method);
         let function = unwrap_callable(self.core.arena(), method)?;
@@ -2073,6 +2292,7 @@ mod tests {
             machine.run().unwrap(),
             Outcome::HostCall {
                 function: HostRef::new(7).unwrap(),
+                receiver: None,
                 argument_count: 1,
             }
         );
@@ -2115,6 +2335,42 @@ mod tests {
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "objects", feature = "function-arguments"))]
+    fn preserves_the_receiver_for_a_host_method_call() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "return Object.create(null);",
+            &["Object"],
+        )
+        .unwrap();
+        let mut memory = [0; 128];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 2).unwrap();
+        let key = match machine.run().unwrap() {
+            Outcome::HostGet { object, key, method } => {
+                assert_eq!(object, HostRef::new(0).unwrap());
+                assert!(method);
+                key
+            }
+            outcome => panic!("unexpected outcome: {outcome:?}"),
+        };
+        assert_eq!(machine.string_bytes(key), Ok(&b"create"[..]));
+        machine
+            .complete_host_operation(Value::from_host(HostRef::new(7).unwrap()))
+            .unwrap();
+        assert_eq!(machine.arena().stack_len(), 2);
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::HostCall {
+                function: HostRef::new(7).unwrap(),
+                receiver: Some(Value::from_host(HostRef::new(0).unwrap())),
+                argument_count: 1,
+            })
+        );
+        assert_eq!(machine.host_argument(0), Ok(Value::NULL));
+        machine.complete_host_call(Value::NULL).unwrap();
+        assert_eq!(machine.run(), Ok(Outcome::Complete(Value::NULL)));
     }
 
     #[cfg(feature = "async-functions")]

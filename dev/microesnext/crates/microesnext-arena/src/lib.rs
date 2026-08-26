@@ -197,6 +197,30 @@ impl<'memory> Arena<'memory> {
         HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
     }
 
+    /// Allocate a zero-filled opaque byte block without requiring a temporary
+    /// host buffer of the same size.
+    pub fn allocate_zeroed_bytes(
+        &mut self,
+        length: usize,
+        roots: &mut [Value],
+    ) -> Result<HeapRef, Error> {
+        let data_words = length.div_ceil(4);
+        let block_length = HEADER_WORDS + 1 + data_words;
+        if self.heap_end + block_length > self.stack_start {
+            self.compact(roots)?;
+        }
+        if self.heap_end + block_length > self.stack_start {
+            return Err(Error::OutOfMemory);
+        }
+        let start = self.heap_end;
+        self.words[start] = block_length as u32;
+        self.words[start + 1] = BlockKind::Bytes as u32;
+        self.words[start + HEADER_WORDS] = length as u32;
+        self.words[start + HEADER_WORDS + 1..start + block_length].fill(0);
+        self.heap_end += block_length;
+        HeapRef::from_word_index(start as u32).ok_or(Error::OutOfMemory)
+    }
+
     /// Join two byte blocks directly into a new arena block. Source handles
     /// are rooted across compaction, so callers need no temporary allocator.
     pub fn concatenate_bytes(
@@ -706,11 +730,34 @@ impl<'memory> Arena<'memory> {
             .ok_or(Error::BadBytecode)
     }
 
+    pub fn set_byte(&mut self, reference: HeapRef, index: usize, value: u8) -> Result<(), Error> {
+        if self.kind(reference)? != BlockKind::Bytes {
+            return Err(Error::Type);
+        }
+        let length = self.byte_len(reference)?;
+        if index >= length {
+            return Err(Error::BadBytecode);
+        }
+        let start = self.block_start(reference)? + HEADER_WORDS + 1;
+        words_as_bytes_mut(&mut self.words[start..])[index] = value;
+        Ok(())
+    }
+
     /// Borrow a byte or string payload without copying it out of the arena.
     pub fn bytes(&self, reference: HeapRef) -> Result<&[u8], Error> {
         let length = self.byte_len(reference)?;
         let start = self.block_start(reference)? + HEADER_WORDS + 1;
         Ok(&words_as_bytes(&self.words[start..])[..length])
+    }
+
+    /// Mutably borrow a byte payload while the VM is paused at a host boundary.
+    pub fn bytes_mut(&mut self, reference: HeapRef) -> Result<&mut [u8], Error> {
+        if self.kind(reference)? != BlockKind::Bytes {
+            return Err(Error::Type);
+        }
+        let length = self.byte_len(reference)?;
+        let start = self.block_start(reference)? + HEADER_WORDS + 1;
+        Ok(&mut words_as_bytes_mut(&mut self.words[start..])[..length])
     }
 
     pub fn bytes_equal(&self, reference: HeapRef, bytes: &[u8]) -> Result<bool, Error> {

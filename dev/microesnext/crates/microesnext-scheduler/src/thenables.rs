@@ -259,7 +259,7 @@ fn run_inner(
             }
             Outcome::Await { .. } | Outcome::AsyncCall { .. } => return Err(Error::Type),
             #[cfg(feature = "host-bindings")]
-            Outcome::HostCall { .. } => return Err(Error::Type),
+            Outcome::HostCall { .. } | Outcome::HostConstruct { .. } => return Err(Error::Type),
             #[cfg(feature = "host-bindings")]
             Outcome::HostGet { .. } | Outcome::HostSet { .. } => return Err(Error::Type),
         };

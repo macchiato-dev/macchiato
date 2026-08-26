@@ -340,8 +340,7 @@ fn compile_script_with_options_and_host_globals(
     }
     #[cfg(feature = "locals")]
     if let Some(patch) = locals_patch {
-        let count = u16::try_from(parser.locals.len())
-            .map_err(|_| parser.error("fewer than 65536 local bindings"))?;
+        let count = parser.local_slot_count()?;
         parser.output[patch..patch + 2].copy_from_slice(&count.to_le_bytes());
     }
     parser.append_function_bodies()?;
@@ -644,6 +643,17 @@ enum IterationTarget {
 }
 
 impl Parser<'_> {
+    #[cfg(feature = "locals")]
+    fn local_slot_count(&self) -> Result<u16, CompileError> {
+        self.locals
+            .iter()
+            .map(|binding| binding.slot)
+            .max()
+            .map_or(Ok(0), |slot| {
+                slot.checked_add(1)
+                    .ok_or_else(|| self.error("fewer than 65536 local bindings"))
+            })
+    }
     #[cfg(all(
         feature = "control-flow",
         feature = "nonterminal-conditionals",
@@ -1912,8 +1922,7 @@ impl Parser<'_> {
             captured: false,
         });
         if self.function_frame {
-            let count = u16::try_from(self.locals.len())
-                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            let count = self.local_slot_count()?;
             self.output[1..3].copy_from_slice(&count.to_le_bytes());
         }
         self.output.push(Opcode::StoreLocal as u8);
@@ -3417,6 +3426,10 @@ impl Parser<'_> {
                     #[cfg(feature = "environments")]
                     captured: false,
                 });
+                if self.function_frame {
+                    let count = self.local_slot_count()?;
+                    self.output[1..3].copy_from_slice(&count.to_le_bytes());
+                }
             }
             if !self.consume(b',') {
                 break;
@@ -4458,8 +4471,7 @@ impl Parser<'_> {
         if !matches!(body_kind, FunctionBody::Expression) {
             body.frame_declarations(&mut body_count_patch)?;
         }
-        let body_local_count = u16::try_from(body.locals.len())
-            .map_err(|_| body.error("fewer than 65536 local bindings"))?;
+        let body_local_count = body.local_slot_count()?;
         body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
         match body_kind {
             FunctionBody::Block => {
@@ -4508,6 +4520,8 @@ impl Parser<'_> {
                 }
             }
         }
+        let body_local_count = body.local_slot_count()?;
+        body.output[1..3].copy_from_slice(&body_local_count.to_le_bytes());
         body.whitespace();
         body.append_function_bodies()?;
         self.offset = body.offset;
@@ -4869,8 +4883,7 @@ impl Parser<'_> {
                 captured: false,
             });
             if self.function_frame {
-                let count = u16::try_from(self.locals.len())
-                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let count = self.local_slot_count()?;
                 self.output[1..3].copy_from_slice(&count.to_le_bytes());
             }
             Some(slot)
@@ -5108,12 +5121,12 @@ impl Parser<'_> {
                 self.offset = start;
                 return Ok(());
             }
-            if binding.captured {
-                self.output.push(Opcode::LoadLocal as u8);
-                self.output.extend_from_slice(&binding.slot.to_le_bytes());
-            } else if let Some((capture, _)) = capture {
+            if let Some((capture, _)) = capture {
                 self.output.push(Opcode::LoadCapture as u8);
                 self.output.extend_from_slice(&capture.to_le_bytes());
+            } else if binding.captured {
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
             self.expression(None)?;
             if binding.captured || capture.is_some() {
@@ -5443,8 +5456,7 @@ impl Parser<'_> {
         if let Some(binding) = binding {
             self.locals.push(binding);
             if self.function_frame {
-                let count = u16::try_from(self.locals.len())
-                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let count = self.local_slot_count()?;
                 self.output[1..3].copy_from_slice(&count.to_le_bytes());
             }
             self.output.push(Opcode::StoreLocal as u8);
@@ -9615,6 +9627,25 @@ mod tests {
         )
         .unwrap();
         assert!(local.contains(&(Opcode::StoreEnvironmentCellResult as u8)));
+    }
+
+    #[cfg(all(feature = "environments", feature = "functions", feature = "arrays"))]
+    #[test]
+    fn statement_assignment_uses_the_forwarded_capture_cell() {
+        let code = compile_script(
+            "let value = []; function outer() { function read() { return value; } value = []; return read(); } return outer();",
+        )
+        .unwrap();
+        assert!(code.windows(5).any(|bytes| {
+            bytes
+                == [
+                    Opcode::LoadCapture as u8,
+                    0,
+                    0,
+                    Opcode::NewArray as u8,
+                    Opcode::StoreEnvironmentCell as u8,
+                ]
+        }));
     }
 
     #[cfg(all(
