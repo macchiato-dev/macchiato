@@ -115,7 +115,7 @@ method-calls = [
   "receivers",
   "microesnext-bytecode/method-calls",
 ]
-numbers = ["dep:microesnext-decimal-to-f64", "microesnext-bytecode/numbers"]
+numbers = ["dep:microesnext-values", "microesnext-values/decimal-to-f64", "microesnext-bytecode/numbers"]
 number-operations = [
   "integer-operations",
   "numbers",
@@ -159,7 +159,7 @@ typeof = ["strings", "microesnext-bytecode/typeof"]
 
 [dependencies]
 microesnext-bytecode.workspace = true
-microesnext-decimal-to-f64 = { workspace = true, optional = true }
+microesnext-values = { workspace = true, optional = true }
 
 [lib]
 path = "src/lib.rs"

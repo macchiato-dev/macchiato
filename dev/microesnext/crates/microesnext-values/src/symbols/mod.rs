@@ -1,5 +1,3 @@
-#![no_std]
-
 pub mod well_known;
 
 use microesnext_arena::{Arena, BlockKind};
@@ -29,7 +27,7 @@ pub fn description(arena: &Arena<'_>, symbol: Value) -> Result<Value, Error> {
     Ok(Value::from_raw(*description))
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "strings"))]
 mod tests {
     use super::*;
 
@@ -37,7 +35,7 @@ mod tests {
     fn symbols_are_unique_and_retain_descriptions_through_relocation() {
         let mut memory = [0; 48];
         let mut arena = Arena::with_root_capacity(&mut memory, 2);
-        let label = microesnext_strings::new(&mut arena, b"iterator").unwrap();
+        let label = crate::strings::new(&mut arena, b"iterator").unwrap();
         let first = new(&mut arena, label).unwrap();
         let second = new(&mut arena, Value::UNDEFINED).unwrap();
         assert_ne!(first, second);

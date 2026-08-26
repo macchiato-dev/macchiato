@@ -105,7 +105,8 @@ async-thenables = [
   "microesnext-scheduler/async-thenables",
 ]
 strings = [
-  "dep:microesnext-strings",
+  "dep:microesnext-values",
+  "microesnext-values/strings",
   "microesnext-vm/strings",
   "microesnext-collections?/string-keys",
   "microesnext-semantics?/string-values",
@@ -120,7 +121,7 @@ string-operations = [
   "microesnext-vm/string-operations",
   "microesnext-compiler/string-operations",
 ]
-symbols = ["dep:microesnext-symbols", "microesnext-semantics?/symbols"]
+symbols = ["dep:microesnext-values", "microesnext-values/symbols", "microesnext-semantics?/symbols"]
 well-known-symbols = ["symbols"]
 atoms = ["strings", "microesnext-vm/atoms"]
 objects = [
@@ -191,7 +192,8 @@ logical-operations = [
   "microesnext-compiler/logical-operations",
 ]
 numbers = [
-  "dep:microesnext-numbers",
+  "dep:microesnext-values",
+  "microesnext-values/numbers",
   "microesnext-vm/numbers",
   "microesnext-collections?/number-keys",
   "microesnext-semantics?/numbers",
@@ -247,7 +249,7 @@ structured-statements = [
 string-number-coercion = [
   "number-coercion",
   "strings",
-  "microesnext-numbers/string-coercion",
+  "microesnext-values/string-coercion",
   "microesnext-vm/string-number-coercion",
   "microesnext-compiler/string-number-coercion",
 ]
@@ -263,7 +265,7 @@ exceptions = [
   "microesnext-vm/exceptions",
   "microesnext-compiler/exceptions",
 ]
-errors = ["dep:microesnext-errors"]
+errors = ["dep:microesnext-values", "microesnext-values/errors"]
 environments = [
   "microesnext-bindings/environments",
   "microesnext-vm/environments",
@@ -363,12 +365,9 @@ microesnext-promises = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
-microesnext-errors = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
-microesnext-strings = { workspace = true, optional = true }
-microesnext-symbols = { workspace = true, optional = true }
+microesnext-values = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true

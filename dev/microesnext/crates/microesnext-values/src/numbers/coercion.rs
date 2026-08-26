@@ -18,7 +18,7 @@ pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error>
         Value::UNDEFINED => Ok(PrimitiveNumber::F64(f64::NAN)),
         Value::NULL | Value::FALSE => Ok(PrimitiveNumber::I30(0)),
         Value::TRUE => Ok(PrimitiveNumber::I30(1)),
-        _ => microesnext_numbers::get(arena, value).map(PrimitiveNumber::F64),
+        _ => crate::numbers::get(arena, value).map(PrimitiveNumber::F64),
     }
 }
 
@@ -37,7 +37,7 @@ pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
         }
         PrimitiveNumber::F64(number) => {
             if value == Value::UNDEFINED {
-                microesnext_numbers::new(arena, number)
+                crate::numbers::new(arena, number)
             } else {
                 Ok(value)
             }
@@ -66,12 +66,8 @@ mod tests {
             Some(1)
         );
         let undefined = to_number(&mut arena, Value::UNDEFINED).unwrap();
-        assert!(
-            microesnext_numbers::get(&arena, undefined)
-                .unwrap()
-                .is_nan()
-        );
-        let fraction = microesnext_numbers::new(&mut arena, 1.25).unwrap();
+        assert!(crate::numbers::get(&arena, undefined).unwrap().is_nan());
+        let fraction = crate::numbers::new(&mut arena, 1.25).unwrap();
         assert_eq!(to_number(&mut arena, fraction), Ok(fraction));
     }
 }

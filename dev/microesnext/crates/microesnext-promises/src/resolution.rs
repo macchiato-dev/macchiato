@@ -20,8 +20,11 @@ pub fn resolve_native(
 ) -> Result<Resolution, Error> {
     if promise == resolution {
         let mut live = [promise];
-        let reason =
-            microesnext_errors::new(arena, microesnext_errors::ErrorKind::Type, &mut live)?;
+        let reason = microesnext_values::errors::new(
+            arena,
+            microesnext_values::errors::ErrorKind::Type,
+            &mut live,
+        )?;
         settle(arena, queue, live[0], Settlement::Rejected, reason)?;
         return Ok(Resolution::Rejected(live[0]));
     }
@@ -169,8 +172,8 @@ mod tests {
             panic!("expected rejection")
         };
         assert_eq!(
-            microesnext_errors::kind(&arena, reason),
-            Ok(microesnext_errors::ErrorKind::Type)
+            microesnext_values::errors::kind(&arena, reason),
+            Ok(microesnext_values::errors::ErrorKind::Type)
         );
     }
 }

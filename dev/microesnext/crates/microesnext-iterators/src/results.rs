@@ -1,6 +1,6 @@
 use microesnext_arena::Arena;
-use microesnext_strings::atoms::Atoms;
 use microesnext_types::{Error, RootId, Value};
+use microesnext_values::strings::atoms::Atoms;
 
 /// Cached property identities for `{ value, done }`. Cursor-only builds do not
 /// need this object or its object/atom dependencies.

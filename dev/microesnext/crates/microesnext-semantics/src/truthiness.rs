@@ -18,7 +18,7 @@ pub fn to_boolean(arena: &Arena<'_>, value: Value) -> Result<bool, Error> {
     }
     let reference = value.as_ref().ok_or(Error::Type)?;
     #[cfg(feature = "numbers")]
-    if let Some(number) = microesnext_numbers::try_get(arena, value)? {
+    if let Some(number) = microesnext_values::numbers::try_get(arena, value)? {
         return Ok(number != 0.0 && !number.is_nan());
     }
     #[cfg(feature = "string-values")]
@@ -51,10 +51,10 @@ mod tests {
         let mut memory = [0; 32];
         let mut arena = Arena::new(&mut memory);
         for number in [-0.0, f64::NAN] {
-            let value = microesnext_numbers::new(&mut arena, number).unwrap();
+            let value = microesnext_values::numbers::new(&mut arena, number).unwrap();
             assert_eq!(to_boolean(&arena, value), Ok(false));
         }
-        let value = microesnext_numbers::new(&mut arena, 0.5).unwrap();
+        let value = microesnext_values::numbers::new(&mut arena, 0.5).unwrap();
         assert_eq!(to_boolean(&arena, value), Ok(true));
     }
 

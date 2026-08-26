@@ -1,10 +1,10 @@
-use crate::coercion::PrimitiveNumber;
+use crate::numbers::coercion::PrimitiveNumber;
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
 /// Apply `ToNumber` through the primitive and string-only compositions.
 pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error> {
-    match crate::coercion::coerce(arena, value) {
+    match crate::numbers::coercion::coerce(arena, value) {
         Ok(number) => return Ok(number),
         Err(Error::Type) => {}
         Err(error) => return Err(error),
@@ -17,7 +17,7 @@ pub fn coerce(arena: &Arena<'_>, value: Value) -> Result<PrimitiveNumber, Error>
 }
 
 pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
-    match crate::coercion::coerce(arena, value) {
+    match crate::numbers::coercion::coerce(arena, value) {
         Ok(number) => {
             if value.as_i30().is_some() || value.as_ref().is_some() {
                 return Ok(value);
@@ -34,7 +34,7 @@ pub fn to_number(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
 fn materialize(arena: &mut Arena<'_>, number: PrimitiveNumber) -> Result<Value, Error> {
     match number {
         PrimitiveNumber::I30(number) => Ok(Value::from_i30(number).unwrap()),
-        PrimitiveNumber::F64(number) => microesnext_numbers::new(arena, number),
+        PrimitiveNumber::F64(number) => crate::numbers::new(arena, number),
     }
 }
 
@@ -58,7 +58,7 @@ pub fn parse(bytes: &[u8]) -> f64 {
     if !decimal_grammar(source.as_bytes()) {
         return f64::NAN;
     }
-    microesnext_decimal_to_f64::parse(source.as_bytes()).unwrap_or(f64::NAN)
+    crate::decimal_to_f64::parse(source.as_bytes()).unwrap_or(f64::NAN)
 }
 
 fn is_javascript_whitespace(character: char) -> bool {

@@ -29,7 +29,8 @@ async-functions = [
 ]
 arrays = ["dep:microesnext-arrays", "microesnext-bytecode/arrays"]
 strings = [
-  "dep:microesnext-strings",
+  "dep:microesnext-values",
+  "microesnext-values/strings",
   "microesnext-bytecode/strings",
   "microesnext-semantics?/string-values",
 ]
@@ -104,7 +105,8 @@ method-calls = [
   "microesnext-bytecode/method-calls",
 ]
 numbers = [
-  "dep:microesnext-numbers",
+  "dep:microesnext-values",
+  "microesnext-values/numbers",
   "microesnext-bytecode/numbers",
   "microesnext-semantics?/numbers",
 ]
@@ -133,7 +135,7 @@ number-remainder = [
 string-number-coercion = [
   "number-coercion",
   "strings",
-  "microesnext-numbers/string-coercion",
+  "microesnext-values/string-coercion",
 ]
 exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-bindings", "microesnext-bindings/environments", "microesnext-bytecode/environments"]
@@ -197,11 +199,10 @@ microesnext-arrays = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
-microesnext-strings = { workspace = true, optional = true }
+microesnext-values = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true

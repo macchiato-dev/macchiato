@@ -8,22 +8,22 @@ pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
                 return Ok(value);
             }
         }
-        return microesnext_numbers::new(arena, -(number as f64));
+        return crate::numbers::new(arena, -(number as f64));
     }
-    let number = crate::coercion::coerce(arena, value)?;
+    let number = crate::numbers::coercion::coerce(arena, value)?;
     negate_coerced(arena, number)
 }
 
 #[inline(always)]
 pub fn negate_coerced(
     arena: &mut Arena<'_>,
-    number: crate::coercion::PrimitiveNumber,
+    number: crate::numbers::coercion::PrimitiveNumber,
 ) -> Result<Value, Error> {
     match number {
-        crate::coercion::PrimitiveNumber::I30(value) => {
-            microesnext_numbers::new(arena, -(value as f64))
+        crate::numbers::coercion::PrimitiveNumber::I30(value) => {
+            crate::numbers::new(arena, -(value as f64))
         }
-        crate::coercion::PrimitiveNumber::F64(value) => microesnext_numbers::new(arena, -value),
+        crate::numbers::coercion::PrimitiveNumber::F64(value) => crate::numbers::new(arena, -value),
     }
 }
 
@@ -42,15 +42,11 @@ mod tests {
             Some(-42)
         );
         let zero = negate(&mut arena, Value::from_i30(0).unwrap()).unwrap();
-        let zero = microesnext_numbers::get(&arena, zero).unwrap();
+        let zero = crate::numbers::get(&arena, zero).unwrap();
         assert_eq!(zero, 0.0);
         assert!(zero.is_sign_negative());
         assert_eq!(negate(&mut arena, Value::TRUE).unwrap().as_i30(), Some(-1));
         let undefined = negate(&mut arena, Value::UNDEFINED).unwrap();
-        assert!(
-            microesnext_numbers::get(&arena, undefined)
-                .unwrap()
-                .is_nan()
-        );
+        assert!(crate::numbers::get(&arena, undefined).unwrap().is_nan());
     }
 }

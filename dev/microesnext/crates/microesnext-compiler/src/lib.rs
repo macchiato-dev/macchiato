@@ -4329,7 +4329,7 @@ impl Parser<'_> {
         }
         #[cfg(feature = "numbers")]
         {
-            let value = microesnext_decimal_to_f64::parse(source.as_bytes())
+            let value = microesnext_values::decimal_to_f64::parse(source.as_bytes())
                 .ok_or_else(|| self.error("a number"))?;
             self.output.push(Opcode::ConstF64 as u8);
             self.output

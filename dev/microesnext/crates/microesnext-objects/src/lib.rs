@@ -166,7 +166,7 @@ const fn object_field_count(kind: BlockKind) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_strings::atoms::Atoms;
+    use microesnext_values::strings::atoms::Atoms;
 
     use super::*;
 

@@ -45,9 +45,9 @@ mod tests {
     }
 
     scalar_falsy_test!("numbers", handles_numbers_without_strings, |arena| {
-        microesnext_numbers::new(arena, f64::NAN).unwrap()
+        microesnext_values::numbers::new(arena, f64::NAN).unwrap()
     });
     scalar_falsy_test!("string-values", handles_strings_without_numbers, |arena| {
-        microesnext_strings::new(arena, b"").unwrap()
+        microesnext_values::strings::new(arena, b"").unwrap()
     });
 }

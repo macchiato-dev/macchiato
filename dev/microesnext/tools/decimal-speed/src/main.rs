@@ -25,10 +25,11 @@ fn compact(corpus: &[&str], iterations: usize) -> Duration {
     let started = Instant::now();
     let mut bits = 0_u64;
     for index in 0..iterations {
-        bits ^=
-            microesnext_decimal_to_f64::parse(black_box(corpus[index % corpus.len()].as_bytes()))
-                .unwrap()
-                .to_bits();
+        bits ^= microesnext_values::decimal_to_f64::parse(black_box(
+            corpus[index % corpus.len()].as_bytes(),
+        ))
+        .unwrap()
+        .to_bits();
     }
     black_box(bits);
     started.elapsed()

@@ -21,13 +21,13 @@ function packages(features) {
 function assertPresence(features, present, absent) {
   const graph = packages(features);
   for (const name of present) {
-    if (name === bindings || name === semantics) continue;
+    if (name === bindings || name === semantics || name === values) continue;
     if (!graph.has(name)) {
       throw new Error(`${features || "minimal"}: expected ${name}`);
     }
   }
   for (const name of absent) {
-    if (name === bindings || name === semantics) continue;
+    if (name === bindings || name === semantics || name === values) continue;
     if (graph.has(name)) {
       throw new Error(
         `${features || "minimal"}: unexpectedly contains ${name}`,
@@ -94,6 +94,35 @@ function assertSemanticFeatures(features, present, absent) {
   }
 }
 
+function assertValueFeatures(features, present, absent) {
+  if (!packages(features).has(values)) {
+    if (present.length > 0) {
+      throw new Error(`${features || "minimal"}: expected values`);
+    }
+    return;
+  }
+  const args = [
+    "tree",
+    "--package=microesnext",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-values",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-values feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: expected values/${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-values feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: unexpectedly contains values/${feature}`);
+    }
+  }
+}
+
 function compilerTree(features) {
   const args = [
     "tree",
@@ -136,7 +165,8 @@ const recursiveAsyncFunctions = execution;
 const promises = "microesnext-promises";
 const promiseResolution = promises;
 const promiseResolvers = promises;
-const errors = "microesnext-errors";
+const values = "microesnext-values";
+const errors = values;
 const receivers = bindings;
 const thenables = scheduler;
 const semantics = "microesnext-semantics";
@@ -438,76 +468,76 @@ assertPresence(
     asyncFunctions,
     environments,
     integerOperations,
-    "microesnext-numbers",
-    "microesnext-strings",
+    values,
+    values,
   ],
 );
 assertPresence(
   ["equality", "numbers"],
-  [equality, "microesnext-numbers"],
+  [equality, values],
   [
     "microesnext-objects",
-    "microesnext-strings",
+    values,
   ],
 );
 assertPresence(
   ["number-operations"],
-  [integerOperations, "microesnext-numbers"],
-  ["microesnext-strings"],
+  [integerOperations, values],
+  [values],
 );
 assertPresence(
   ["number-division"],
-  ["microesnext-numbers"],
-  [integerOperations, "microesnext-strings"],
+  [values],
+  [integerOperations, values],
 );
 assertPresence(
   ["number-remainder"],
-  ["microesnext-numbers"],
-  [integerOperations, "microesnext-strings"],
+  [values],
+  [integerOperations, values],
 );
 assertPresence(
   ["integer-negation"],
   [integerOperations],
-  ["microesnext-numbers"],
+  [values],
 );
 assertPresence(
   ["number-negation"],
-  [integerOperations, "microesnext-numbers"],
-  ["microesnext-strings"],
+  [integerOperations, values],
+  [values],
 );
 assertPresence(
   ["number-coercion"],
-  ["microesnext-numbers"],
-  [integerOperations, "microesnext-strings"],
+  [values],
+  [integerOperations, values],
 );
 assertPresence(
   ["string-number-coercion"],
-  ["microesnext-numbers", "microesnext-strings"],
+  [values, values],
   [integerOperations],
 );
 assertPresence(
   ["typeof"],
-  [typeOf, "microesnext-strings"],
-  [integerOperations, "microesnext-numbers", "microesnext-objects"],
+  [typeOf, values],
+  [integerOperations, values, "microesnext-objects"],
 );
 assertPresence(
   ["prototype-chain"],
-  ["microesnext-objects", "microesnext-strings"],
-  [typeOf, "microesnext-numbers"],
+  ["microesnext-objects", values],
+  [typeOf, values],
 );
 assertPresence(
   ["callable-objects"],
   [
     "microesnext-objects",
-    "microesnext-strings",
+    values,
   ],
-  [typeOf, "microesnext-numbers"],
+  [typeOf, values],
 );
 assertPresence(
   ["constructors"],
   [
     "microesnext-objects",
-    "microesnext-strings",
+    values,
   ],
   [typeOf],
 );
@@ -521,7 +551,7 @@ assertPresence(
 );
 assertPresence(
   ["property-assignment"],
-  ["microesnext-objects", "microesnext-strings"],
+  ["microesnext-objects", values],
   [receivers],
 );
 assertPresence(
@@ -537,7 +567,7 @@ assertPresence(
   [
     "microesnext-objects",
   ],
-  [typeOf, "microesnext-numbers"],
+  [typeOf, values],
 );
 assertPresence(
   ["minimal-program"],
@@ -545,19 +575,19 @@ assertPresence(
   [
     asyncFunctions,
     environments,
-    "microesnext-numbers",
-    "microesnext-strings",
+    values,
+    values,
   ],
 );
 assertPresence(
   ["logical-operations"],
   [semantics],
-  ["microesnext-numbers", "microesnext-strings"],
+  [values, values],
 );
 assertPresence(
   ["logical-operations", "numbers"],
-  [semantics, "microesnext-numbers"],
-  ["microesnext-strings"],
+  [semantics, values],
+  [values],
 );
 assertPresence(
   ["functions"],
@@ -763,5 +793,11 @@ assertSemanticFeatures(["integer-operations"], ["integer-operations"], ["equalit
 assertSemanticFeatures(["equality"], ["equality"], ["integer-operations", "logical-operations", "truthiness", "typeof"]);
 assertSemanticFeatures(["logical-operations"], ["logical-operations", "truthiness"], ["equality", "integer-operations", "typeof"]);
 assertSemanticFeatures(["typeof"], ["typeof"], ["equality", "integer-operations", "logical-operations", "truthiness"]);
+assertValueFeatures([], [], ["decimal-to-f64", "errors", "numbers", "string-coercion", "strings", "symbols"]);
+assertValueFeatures(["errors"], ["errors"], ["decimal-to-f64", "numbers", "string-coercion", "strings", "symbols"]);
+assertValueFeatures(["numbers"], ["numbers"], ["errors", "string-coercion", "strings", "symbols"]);
+assertValueFeatures(["strings"], ["strings"], ["decimal-to-f64", "errors", "numbers", "string-coercion", "symbols"]);
+assertValueFeatures(["symbols"], ["symbols"], ["decimal-to-f64", "errors", "numbers", "string-coercion", "strings"]);
+assertValueFeatures(["string-number-coercion"], ["decimal-to-f64", "numbers", "string-coercion", "strings"], ["errors", "symbols"]);
 
 console.log("feature dependency isolation verified");

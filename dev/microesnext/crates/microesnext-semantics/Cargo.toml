@@ -12,10 +12,10 @@ default = []
 equality = []
 integer-operations = []
 logical-operations = ["truthiness"]
-numbers = ["dep:microesnext-numbers"]
+numbers = ["dep:microesnext-values", "microesnext-values/numbers"]
 string-values = []
 truthiness = []
-typeof = ["dep:microesnext-strings", "microesnext-arena/closures"]
+typeof = ["dep:microesnext-values", "microesnext-values/strings", "microesnext-arena/closures"]
 async-functions = ["microesnext-arena/async-functions"]
 callable-objects = ["microesnext-arena/callable-objects"]
 class-constructors = ["microesnext-arena/class-constructors"]
@@ -24,13 +24,12 @@ symbols = ["microesnext-arena/symbols"]
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-numbers = { workspace = true, optional = true }
-microesnext-strings = { workspace = true, optional = true }
+microesnext-values = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-objects = { workspace = true, features = ["callable-objects"] }
-microesnext-strings.workspace = true
+microesnext-values = { workspace = true, features = ["numbers", "strings"] }
 
 [lib]
 path = "src/lib.rs"

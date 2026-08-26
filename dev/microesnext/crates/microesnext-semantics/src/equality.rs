@@ -11,8 +11,8 @@ pub fn same_value_zero(arena: &Arena<'_>, left: Value, right: Value) -> Result<b
     }
     #[cfg(feature = "numbers")]
     {
-        let left_number = microesnext_numbers::try_get(arena, left)?;
-        let right_number = microesnext_numbers::try_get(arena, right)?;
+        let left_number = microesnext_values::numbers::try_get(arena, left)?;
+        let right_number = microesnext_values::numbers::try_get(arena, right)?;
         if left_number.is_some() || right_number.is_some() {
             let (Some(left), Some(right)) = (left_number, right_number) else {
                 return Ok(false);
@@ -32,8 +32,8 @@ pub fn strict_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool
     let _ = arena;
     #[cfg(feature = "numbers")]
     {
-        let left_number = microesnext_numbers::try_get(arena, left)?;
-        let right_number = microesnext_numbers::try_get(arena, right)?;
+        let left_number = microesnext_values::numbers::try_get(arena, left)?;
+        let right_number = microesnext_values::numbers::try_get(arena, right)?;
         if left_number.is_some() || right_number.is_some() {
             let (Some(left), Some(right)) = (left_number, right_number) else {
                 return Ok(false);
@@ -88,11 +88,11 @@ mod tests {
     fn numbers_use_same_value_zero() {
         let mut memory = [0; 48];
         let mut arena = Arena::new(&mut memory);
-        let nan_a = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
-        let nan_b = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
+        let nan_a = microesnext_values::numbers::new(&mut arena, f64::NAN).unwrap();
+        let nan_b = microesnext_values::numbers::new(&mut arena, f64::NAN).unwrap();
         assert!(same_value_zero(&arena, nan_a, nan_b).unwrap());
-        let zero = microesnext_numbers::new(&mut arena, 0.0).unwrap();
-        let negative_zero = microesnext_numbers::new(&mut arena, -0.0).unwrap();
+        let zero = microesnext_values::numbers::new(&mut arena, 0.0).unwrap();
+        let negative_zero = microesnext_values::numbers::new(&mut arena, -0.0).unwrap();
         assert!(same_value_zero(&arena, zero, negative_zero).unwrap());
         assert!(!strict_equal(&arena, nan_a, nan_b).unwrap());
         assert!(strict_equal(&arena, zero, negative_zero).unwrap());
@@ -103,8 +103,8 @@ mod tests {
     fn separately_allocated_strings_compare_by_content() {
         let mut memory = [0; 48];
         let mut arena = Arena::new(&mut memory);
-        let left = microesnext_strings::new(&mut arena, b"key").unwrap();
-        let right = microesnext_strings::new(&mut arena, b"key").unwrap();
+        let left = microesnext_values::strings::new(&mut arena, b"key").unwrap();
+        let right = microesnext_values::strings::new(&mut arena, b"key").unwrap();
         assert_ne!(left, right);
         assert!(same_value_zero(&arena, left, right).unwrap());
         assert!(strict_equal(&arena, left, right).unwrap());

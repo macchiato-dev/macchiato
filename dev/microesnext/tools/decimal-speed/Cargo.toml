@@ -6,4 +6,4 @@ publish = false
 version.workspace = true
 
 [dependencies]
-microesnext-decimal-to-f64.workspace = true
+microesnext-values = { workspace = true, features = ["decimal-to-f64"] }

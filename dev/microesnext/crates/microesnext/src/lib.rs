@@ -33,7 +33,7 @@ pub use microesnext_arrays::assignment_expressions as array_assignment_expressio
 pub use microesnext_arrays::iterators as array_iterators;
 
 #[cfg(any(feature = "atoms", feature = "iterator-results"))]
-pub use microesnext_strings::atoms;
+pub use microesnext_values::strings::atoms;
 
 #[cfg(feature = "async")]
 pub use microesnext_scheduler::async_driver as r#async;
@@ -72,28 +72,28 @@ pub use microesnext_iterators::protocol as iterable_protocol;
 pub use microesnext_arena::closures as functions;
 #[cfg(feature = "function-arguments")]
 pub use microesnext_bindings::parameters;
-#[cfg(feature = "numbers")]
-pub use microesnext_numbers as numbers;
-#[cfg(feature = "number-coercion")]
-pub use microesnext_numbers::coercion as number_coercion;
-#[cfg(feature = "number-division")]
-pub use microesnext_numbers::division as number_division;
-#[cfg(feature = "number-negation")]
-pub use microesnext_numbers::negation as number_negation;
-#[cfg(feature = "number-operations")]
-pub use microesnext_numbers::operations as number_operations;
-#[cfg(feature = "number-remainder")]
-pub use microesnext_numbers::remainder as number_remainder;
-#[cfg(feature = "string-number-coercion")]
-pub use microesnext_numbers::string_coercion as string_number_coercion;
 #[cfg(feature = "typeof")]
 pub use microesnext_semantics::r#typeof;
+#[cfg(feature = "numbers")]
+pub use microesnext_values::numbers;
+#[cfg(feature = "number-coercion")]
+pub use microesnext_values::numbers::coercion as number_coercion;
+#[cfg(feature = "number-division")]
+pub use microesnext_values::numbers::division as number_division;
+#[cfg(feature = "number-negation")]
+pub use microesnext_values::numbers::negation as number_negation;
+#[cfg(feature = "number-operations")]
+pub use microesnext_values::numbers::operations as number_operations;
+#[cfg(feature = "number-remainder")]
+pub use microesnext_values::numbers::remainder as number_remainder;
+#[cfg(feature = "string-number-coercion")]
+pub use microesnext_values::numbers::string_coercion as string_number_coercion;
 
 #[cfg(feature = "exceptions")]
 pub use microesnext_exceptions as exceptions;
 
 #[cfg(feature = "errors")]
-pub use microesnext_errors as errors;
+pub use microesnext_values::errors;
 
 #[cfg(feature = "equality")]
 pub use microesnext_semantics::equality;
@@ -124,19 +124,19 @@ pub use microesnext_bindings::receivers;
 pub use microesnext_objects as objects;
 
 #[cfg(feature = "strings")]
-pub use microesnext_strings as strings;
+pub use microesnext_values::strings;
 
 #[cfg(feature = "stack-operations")]
 pub use microesnext_arena::stack_operations;
 
 #[cfg(feature = "string-operations")]
-pub use microesnext_strings::operations as string_operations;
+pub use microesnext_values::strings::operations as string_operations;
 
 #[cfg(feature = "symbols")]
-pub use microesnext_symbols as symbols;
+pub use microesnext_values::symbols;
 
 #[cfg(feature = "well-known-symbols")]
-pub use microesnext_symbols::well_known as well_known_symbols;
+pub use microesnext_values::symbols::well_known as well_known_symbols;
 
 #[cfg(feature = "weak-collections")]
 pub use microesnext_collections::weak as weak_collections;

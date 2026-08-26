@@ -1,7 +1,3 @@
-#![no_std]
-
-extern crate self as microesnext_numbers;
-
 pub mod coercion;
 pub mod division;
 pub mod negation;

@@ -25,7 +25,7 @@ microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-bindings = { workspace = true, features = ["recursive-functions"] }
-microesnext-strings.workspace = true
+microesnext-values = { workspace = true, features = ["strings"] }
 
 [lib]
 path = "src/lib.rs"

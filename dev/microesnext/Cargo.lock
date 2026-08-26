@@ -12,18 +12,15 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
- "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-execution",
  "microesnext-iterators",
- "microesnext-numbers",
  "microesnext-objects",
  "microesnext-promises",
  "microesnext-scheduler",
  "microesnext-semantics",
- "microesnext-strings",
- "microesnext-symbols",
  "microesnext-types",
+ "microesnext-values",
  "microesnext-vm",
  "microesnext-vm-core",
 ]
@@ -82,11 +79,10 @@ dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
  "microesnext-iterators",
- "microesnext-numbers",
  "microesnext-objects",
  "microesnext-semantics",
- "microesnext-strings",
  "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -94,7 +90,7 @@ name = "microesnext-compiler"
 version = "0.0.0"
 dependencies = [
  "microesnext-bytecode",
- "microesnext-decimal-to-f64",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -115,19 +111,7 @@ dependencies = [
 name = "microesnext-decimal-speed"
 version = "0.0.0"
 dependencies = [
- "microesnext-decimal-to-f64",
-]
-
-[[package]]
-name = "microesnext-decimal-to-f64"
-version = "0.0.0"
-
-[[package]]
-name = "microesnext-errors"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -155,18 +139,8 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-objects",
- "microesnext-strings",
- "microesnext-symbols",
  "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-numbers"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-decimal-to-f64",
- "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -175,8 +149,8 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-bindings",
- "microesnext-strings",
  "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -184,9 +158,9 @@ name = "microesnext-promises"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-errors",
  "microesnext-objects",
  "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -208,32 +182,22 @@ name = "microesnext-semantics"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-numbers",
  "microesnext-objects",
- "microesnext-strings",
  "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-strings"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-symbols"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-strings",
- "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
 name = "microesnext-types"
 version = "0.0.0"
+
+[[package]]
+name = "microesnext-values"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+]
 
 [[package]]
 name = "microesnext-vm"
@@ -246,12 +210,11 @@ dependencies = [
  "microesnext-compiler",
  "microesnext-exceptions",
  "microesnext-execution",
- "microesnext-numbers",
  "microesnext-objects",
  "microesnext-promises",
  "microesnext-semantics",
- "microesnext-strings",
  "microesnext-types",
+ "microesnext-values",
  "microesnext-vm-core",
 ]
 

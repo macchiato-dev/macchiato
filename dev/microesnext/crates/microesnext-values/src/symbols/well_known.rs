@@ -19,7 +19,7 @@ impl WellKnownSymbols {
         arena: &mut Arena<'_>,
         description: Value,
     ) -> Result<Self, Error> {
-        let iterator = crate::new(arena, description)?;
+        let iterator = super::new(arena, description)?;
         Ok(Self {
             iterator: arena.retain(iterator)?,
         })
@@ -34,7 +34,7 @@ impl WellKnownSymbols {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "strings"))]
 mod tests {
     use super::*;
 
@@ -42,12 +42,15 @@ mod tests {
     fn realm_identity_survives_relocation_without_a_string_dependency() {
         let mut memory = [0; 32];
         let mut arena = Arena::with_root_capacity(&mut memory, 1);
-        crate::new(&mut arena, Value::UNDEFINED).unwrap();
+        crate::symbols::new(&mut arena, Value::UNDEFINED).unwrap();
         let symbols = WellKnownSymbols::new(&mut arena).unwrap();
         let before = symbols.iterator(&arena).unwrap();
         arena.compact(&mut []).unwrap();
         let after = symbols.iterator(&arena).unwrap();
-        assert_eq!(crate::description(&arena, after), Ok(Value::UNDEFINED));
+        assert_eq!(
+            crate::symbols::description(&arena, after),
+            Ok(Value::UNDEFINED)
+        );
         assert_ne!(before.as_ref().unwrap(), after.as_ref().unwrap());
         symbols.release(&mut arena).unwrap();
     }
@@ -56,10 +59,10 @@ mod tests {
     fn a_caller_can_compose_the_standard_description() {
         let mut memory = [0; 48];
         let mut arena = Arena::with_root_capacity(&mut memory, 1);
-        let description = microesnext_strings::new(&mut arena, b"Symbol.iterator").unwrap();
+        let description = crate::strings::new(&mut arena, b"Symbol.iterator").unwrap();
         let symbols = WellKnownSymbols::with_iterator_description(&mut arena, description).unwrap();
         let symbol = symbols.iterator(&arena).unwrap();
-        let description = crate::description(&arena, symbol)
+        let description = crate::symbols::description(&arena, symbol)
             .unwrap()
             .as_ref()
             .unwrap();

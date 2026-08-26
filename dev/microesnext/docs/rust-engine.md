@@ -92,7 +92,7 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   they do not become Rust allocations merely because their implementations are
   split across crates.
 - Small integers remain immediate i30 values in the invariant core. Optional
-  IEEE-754 numbers use opaque two-word payloads from `microesnext-numbers`, so
+  IEEE-754 numbers use opaque two-word payloads from the values `numbers` feature, so
   arbitrary floating-point bits are never traced as guest references. Builds
   without `numbers` omit the arena block kind, typed opcodes, and implementation.
 - Unary integer and JavaScript Number negation are separate capability crates
@@ -128,7 +128,7 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Symbols are individually allocated identities whose optional descriptions do
   not participate in equality. Object and collection tables already compare
   compact `Value` identities, so symbols compose as keys without either table
-  depending on `microesnext-symbols`. The arena symbol kind is feature-gated.
+  depending on the values `symbols` module. The arena symbol kind is feature-gated.
 - Iterator positions are guest-arena state rather than native Rust cursors.
   The source-agnostic `microesnext-iterators` crate retains the iterable and
   current index across collection. Array and Map/Set traversal live in separate

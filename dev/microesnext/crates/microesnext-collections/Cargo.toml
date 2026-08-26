@@ -31,9 +31,8 @@ microesnext-iterators = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-numbers.workspace = true
 microesnext-objects.workspace = true
-microesnext-strings.workspace = true
+microesnext-values = { workspace = true, features = ["numbers", "strings"] }
 
 [lib]
 path = "src/lib.rs"

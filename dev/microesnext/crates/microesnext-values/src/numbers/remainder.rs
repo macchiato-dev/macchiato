@@ -9,14 +9,14 @@ pub fn remainder(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Val
         return Value::from_i30(left % right).ok_or(Error::Type);
     }
     let result = number(arena, left)? % number(arena, right)?;
-    microesnext_numbers::new(arena, result)
+    crate::numbers::new(arena, result)
 }
 
 fn number(arena: &Arena<'_>, value: Value) -> Result<f64, Error> {
     if let Some(value) = value.as_i30() {
         Ok(value as f64)
     } else {
-        microesnext_numbers::get(arena, value)
+        crate::numbers::get(arena, value)
     }
 }
 
@@ -35,9 +35,9 @@ mod tests {
             Some(1)
         );
 
-        let negative_zero = microesnext_numbers::new(&mut arena, -0.0).unwrap();
+        let negative_zero = crate::numbers::new(&mut arena, -0.0).unwrap();
         let result = remainder(&mut arena, negative_zero, three).unwrap();
-        let result = microesnext_numbers::get(&arena, result).unwrap();
+        let result = crate::numbers::get(&arena, result).unwrap();
         assert_eq!(result, 0.0);
         assert!(result.is_sign_negative());
     }

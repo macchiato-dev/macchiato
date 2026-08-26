@@ -1,5 +1,3 @@
-#![no_std]
-
 pub mod atoms;
 pub mod operations;
 

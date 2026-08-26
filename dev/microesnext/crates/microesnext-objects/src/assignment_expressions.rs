@@ -17,8 +17,8 @@ pub fn store_result(arena: &mut Arena<'_>) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_strings::atoms::Atoms;
     use microesnext_types::Value;
+    use microesnext_values::strings::atoms::Atoms;
 
     use super::*;
 

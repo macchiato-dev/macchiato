@@ -32,7 +32,7 @@ pub fn type_of(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
     } else {
         return Err(Error::Type);
     };
-    microesnext_strings::new(arena, name)
+    microesnext_values::strings::new(arena, name)
 }
 
 #[cfg(test)]
@@ -53,7 +53,7 @@ mod tests {
         assert_type(&mut arena, Value::TRUE, b"boolean");
         assert_type(&mut arena, Value::from_i30(42).unwrap(), b"number");
 
-        let string = microesnext_strings::new(&mut arena, b"value").unwrap();
+        let string = microesnext_values::strings::new(&mut arena, b"value").unwrap();
         assert_type(&mut arena, string, b"string");
         let object = arena
             .allocate_values(BlockKind::Object, &mut [], &mut [])

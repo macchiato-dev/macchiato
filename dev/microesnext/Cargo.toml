@@ -10,16 +10,12 @@ members = [
   "crates/microesnext-bindings",
   "crates/microesnext-compiler",
   "crates/microesnext-collections",
-  "crates/microesnext-decimal-to-f64",
-  "crates/microesnext-errors",
   "crates/microesnext-iterators",
   "crates/microesnext-semantics",
-  "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
   "crates/microesnext-promises",
-  "crates/microesnext-strings",
-  "crates/microesnext-symbols",
+  "crates/microesnext-values",
   "crates/microesnext-types",
   "crates/microesnext-vm",
   "crates/microesnext-vm-core",
@@ -48,16 +44,12 @@ microesnext-bytecode-core = { path = "crates/microesnext-bytecode-core", version
 microesnext-bindings = { path = "crates/microesnext-bindings", version = "0.0.0" }
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
-microesnext-decimal-to-f64 = { path = "crates/microesnext-decimal-to-f64", version = "0.0.0" }
-microesnext-errors = { path = "crates/microesnext-errors", version = "0.0.0" }
 microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.0" }
 microesnext-semantics = { path = "crates/microesnext-semantics", version = "0.0.0" }
-microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-promises = { path = "crates/microesnext-promises", version = "0.0.0" }
-microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
-microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
+microesnext-values = { path = "crates/microesnext-values", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
 microesnext-vm-core = { path = "crates/microesnext-vm-core", version = "0.0.0" }

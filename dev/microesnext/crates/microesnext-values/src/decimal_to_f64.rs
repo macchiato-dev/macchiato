@@ -1,5 +1,3 @@
-#![no_std]
-
 // Independent Rust implementation of Nigel Tao's Simple Decimal Conversion.
 // Rust core's Apache-2.0/MIT `dec2flt` slow path and the article at
 // nigeltao.github.io/blog/2020/parse-number-f64-simple.html informed the

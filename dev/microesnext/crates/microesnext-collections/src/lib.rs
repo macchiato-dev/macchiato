@@ -284,11 +284,11 @@ mod tests {
         let mut memory = [0; 128];
         let mut arena = Arena::new(&mut memory);
         let map = new_map(&mut arena).unwrap();
-        let nan_a = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
-        let nan_b = microesnext_numbers::new(&mut arena, f64::NAN).unwrap();
+        let nan_a = microesnext_values::numbers::new(&mut arena, f64::NAN).unwrap();
+        let nan_b = microesnext_values::numbers::new(&mut arena, f64::NAN).unwrap();
         let map = set(&mut arena, map, nan_a, Value::TRUE).unwrap();
         assert_eq!(get(&arena, map, nan_b), Ok(Value::TRUE));
-        let negative_zero = microesnext_numbers::new(&mut arena, -0.0).unwrap();
+        let negative_zero = microesnext_values::numbers::new(&mut arena, -0.0).unwrap();
         let map = set(&mut arena, map, negative_zero, Value::FALSE).unwrap();
         assert_eq!(
             get(&arena, map, Value::from_i30(0).unwrap()),
@@ -302,8 +302,8 @@ mod tests {
         let mut memory = [0; 128];
         let mut arena = Arena::new(&mut memory);
         let map = new_map(&mut arena).unwrap();
-        let left = microesnext_strings::new(&mut arena, b"key").unwrap();
-        let right = microesnext_strings::new(&mut arena, b"key").unwrap();
+        let left = microesnext_values::strings::new(&mut arena, b"key").unwrap();
+        let right = microesnext_values::strings::new(&mut arena, b"key").unwrap();
         let map = set(&mut arena, map, left, Value::TRUE).unwrap();
         assert_eq!(get(&arena, map, right), Ok(Value::TRUE));
     }

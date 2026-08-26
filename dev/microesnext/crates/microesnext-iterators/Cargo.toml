@@ -12,18 +12,19 @@ default = []
 protocol = [
   "microesnext-arena/closures",
   "dep:microesnext-objects",
-  "dep:microesnext-symbols",
+  "dep:microesnext-values",
+  "microesnext-values/symbols",
 ]
 results = [
   "dep:microesnext-objects",
-  "dep:microesnext-strings",
+  "dep:microesnext-values",
+  "microesnext-values/strings",
 ]
 
 [dependencies]
 microesnext-arena = { workspace = true, features = ["iterators"] }
 microesnext-objects = { workspace = true, optional = true }
-microesnext-strings = { workspace = true, optional = true }
-microesnext-symbols = { workspace = true, optional = true }
+microesnext-values = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [lib]

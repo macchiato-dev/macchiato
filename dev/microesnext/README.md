@@ -41,7 +41,7 @@ an explicit relational stopping condition.
   compiler-only `literal-expressions` composition upgrades numeric-only array
   and object values to arbitrary supported expressions while preserving the
   smaller specialized literal loops when omitted.
-- `microesnext-strings` supplies ordinary packed byte strings, strict
+- The values `strings` feature supplies ordinary packed byte strings, strict
   allocation-conscious concatenation, and an atom-table module. The VM retains
   atom state only when its `atoms` feature is selected; ordinary string literals
   neither allocate nor populate that table.
@@ -162,19 +162,19 @@ an explicit relational stopping condition.
   `logical-operations`, and `typeof` features retain only the selected paths.
   Optional number, string, symbol, and callable-record features add the
   corresponding JavaScript behavior without indirect dispatch.
-- `microesnext-numbers` supplies heap-backed IEEE-754 representation together
+- The values `numbers` feature supplies heap-backed IEEE-754 representation together
   with its small division, negation, and primitive-coercion helpers. VM opcode
   selection and dead-code elimination remove unused operators; they do not need
   crate-level gates. String coercion remains gated because it introduces the
   decimal parser. Integer-only builds do not link this crate.
-- `microesnext-decimal-to-f64` is the shared, `no_std` decimal conversion
+- The values `decimal-to-f64` feature is the shared, `no_std` decimal conversion
   boundary for source literals and string coercion. A small exact path handles
   common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
   Builds omitting both consumers do not link the crate.
 - Numeric helpers retain the existing i30 fast paths. Overflow falls through to
   boxed values only when promoted operations are selected; decimal string
   parsing remains separately removable with its dependency.
-- `microesnext-symbols` supplies unique, relocatable property-key identities.
+- The values `symbols` feature supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.
 - The symbols `well_known` module retains realm-owned identities. A realm can
@@ -207,7 +207,7 @@ an explicit relational stopping condition.
   `weak` module. Ephemeron tracing is retained only by that feature.
 - `microesnext-promises` contains compact promise records and a caller-owned,
   rooted FIFO job ring; it does not require a native allocator or Rust futures.
-- `microesnext-errors` supplies compact guest error identities without forcing
+- The values `errors` feature supplies compact guest error identities without forcing
   message strings, stacks, objects, or exception handlers into every build.
 - The Promise `resolution` feature optionally adopts native Promise results.
   Plain Promise storage does not retain the resolver path.

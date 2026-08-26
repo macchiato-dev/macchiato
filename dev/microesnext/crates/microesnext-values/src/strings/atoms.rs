@@ -26,7 +26,7 @@ impl Atoms {
             }
         }
 
-        let string = crate::new(arena, bytes)?;
+        let string = super::new(arena, bytes)?;
         let mut extra = [string];
         let table = self.table_ref(arena)?;
         let table = arena.extend_values(table, &mut extra, &mut [])?;

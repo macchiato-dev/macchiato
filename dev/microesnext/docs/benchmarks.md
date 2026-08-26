@@ -779,3 +779,12 @@ Receiver-aware calls decreased from 13,156 / 5,109 to 13,122 / 5,103. The
 feature graph checker separately verifies that `locals`, `parameters`,
 `receivers`, `environments`, and `recursive-functions` remain removable; the
 package consolidation therefore adds neither code nor runtime dispatch.
+
+Scalar representations are likewise modules of one feature-gated
+`microesnext-values` package. Consolidating strings and atoms, symbols,
+numbers, decimal conversion, and guest Error values leaves the focused live
+artifacts unchanged: errors are 2,520 / 1,195 bytes, numbers 5,311 / 2,422,
+strings 4,903 / 2,270, symbols 4,995 / 2,254, and string Number coercion
+14,599 / 6,608. The compiler selects only `decimal-to-f64`, whose feature does
+not enable the optional arena dependency. Package-level composition therefore
+does not turn build-time numeric parsing into a runtime value dependency.
