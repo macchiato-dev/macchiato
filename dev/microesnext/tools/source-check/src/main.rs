@@ -2,38 +2,6 @@ use std::{env, fs, process};
 
 use microesnext_compiler::compile_script_with_host_globals;
 
-const HOST_GLOBALS: &[&str] = &[
-    "Array",
-    "Date",
-    "Error",
-    "JSON",
-    "Map",
-    "Math",
-    "Object",
-    "Promise",
-    "RangeError",
-    "RegExp",
-    "Set",
-    "Symbol",
-    "TypeError",
-    "Uint8Array",
-    "WeakMap",
-    "WeakSet",
-    "clearInterval",
-    "clearTimeout",
-    "console",
-    "document",
-    "globalThis",
-    "parseFloat",
-    "parseInt",
-    "performance",
-    "queueMicrotask",
-    "requestAnimationFrame",
-    "setInterval",
-    "setTimeout",
-    "window",
-];
-
 fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = &source[..offset.min(source.len())];
     let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
@@ -55,16 +23,26 @@ fn excerpt(source: &str, offset: usize) -> &str {
 }
 
 fn main() {
-    let Some(path) = env::args_os().nth(1) else {
-        eprintln!("usage: microesnext-source-check <source.js>");
+    let mut arguments = env::args_os().skip(1);
+    let Some(path) = arguments.next() else {
+        eprintln!("usage: microesnext-source-check <source.js> [host-global ...]");
         process::exit(2);
     };
+    let host_globals = arguments
+        .map(|name| {
+            name.into_string().unwrap_or_else(|_| {
+                eprintln!("host globals must be UTF-8 JavaScript identifiers");
+                process::exit(2);
+            })
+        })
+        .collect::<Vec<_>>();
+    let host_globals = host_globals.iter().map(String::as_str).collect::<Vec<_>>();
     let source = fs::read_to_string(&path).unwrap_or_else(|error| {
         eprintln!("{}: {error}", path.to_string_lossy());
         process::exit(2);
     });
 
-    match compile_script_with_host_globals(&source, HOST_GLOBALS) {
+    match compile_script_with_host_globals(&source, &host_globals) {
         Ok(bytecode) => println!(
             "{}: {} source bytes -> {} bytecode bytes",
             path.to_string_lossy(),
