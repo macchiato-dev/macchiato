@@ -336,7 +336,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-decimal-to-f64",
- "microesnext-integer-negation",
  "microesnext-types",
 ]
 

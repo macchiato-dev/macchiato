@@ -135,17 +135,14 @@ number-operations = [
 number-negation = [
   "numbers",
   "integer-negation",
-  "microesnext-numbers/negation",
   "microesnext-vm/number-negation",
 ]
 number-coercion = [
   "numbers",
-  "microesnext-numbers/coercion",
   "microesnext-vm/number-coercion",
 ]
 number-division = [
   "numbers",
-  "microesnext-numbers/division",
   "microesnext-vm/number-division",
 ]
 number-remainder = [

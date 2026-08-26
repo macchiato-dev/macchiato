@@ -178,20 +178,19 @@ an explicit relational stopping condition.
   ordinary guest string. Optional number, symbol, async-closure, and resolver
   classifications are statically forwarded only when those representations
   coexist with `typeof`.
-- `microesnext-numbers` supplies heap-backed IEEE-754 representation with
-  independently gated arithmetic, division, remainder, negation, primitive
-  coercion, and string-coercion modules. Integer-only builds do not link this
-  crate; equality-only number builds do not retain arithmetic. Immediate
-  integers, booleans, and null stay allocation-free during coercion, while
-  undefined becomes boxed NaN. String coercion adds `StringNumericLiteral`
-  parsing only when selected.
+- `microesnext-numbers` supplies heap-backed IEEE-754 representation together
+  with its small division, negation, and primitive-coercion helpers. VM opcode
+  selection and dead-code elimination remove unused operators; they do not need
+  crate-level gates. Promoted arithmetic and remainder remain selectable while
+  their boundaries are measured. String coercion is gated because it introduces
+  the decimal parser. Integer-only builds do not link this crate.
 - `microesnext-decimal-to-f64` is the shared, `no_std` decimal conversion
   boundary for source literals and string coercion. A small exact path handles
   common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
   Builds omitting both consumers do not link the crate.
-- The numeric feature modules retain the existing i30 fast paths. Overflow
-  falls through to boxed values only when promoted operations are selected;
-  `/`, `%`, negation, and decimal string parsing remain separately removable.
+- Numeric helpers retain the existing i30 fast paths. Overflow falls through to
+  boxed values only when promoted operations are selected; decimal string
+  parsing remains separately removable with its dependency.
 - `microesnext-symbols` supplies unique, relocatable property-key identities.
   Optional descriptions are ordinary values, so the crate does not force the
   string, atom, object, or collection capability into a symbol-only build.

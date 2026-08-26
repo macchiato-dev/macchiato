@@ -111,17 +111,14 @@ number-operations = [
 number-negation = [
   "numbers",
   "integer-negation",
-  "microesnext-numbers/negation",
   "microesnext-bytecode/number-negation",
 ]
 number-coercion = [
   "numbers",
-  "microesnext-numbers/coercion",
   "microesnext-bytecode/number-coercion",
 ]
 number-division = [
   "numbers",
-  "microesnext-numbers/division",
   "microesnext-bytecode/number-division",
 ]
 number-remainder = [

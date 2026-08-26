@@ -4,7 +4,7 @@ use microesnext_types::{Error, Value};
 pub fn negate(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
     if let Some(number) = value.as_i30() {
         if number != 0 {
-            if let Ok(value) = microesnext_integer_negation::negate(value) {
+            if let Some(value) = number.checked_neg().and_then(Value::from_i30) {
                 return Ok(value);
             }
         }
