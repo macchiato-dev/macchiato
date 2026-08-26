@@ -24,13 +24,13 @@ pub use microesnext_semantics::logical_operations;
 pub use microesnext_objects::method_calls;
 
 #[cfg(feature = "arrays")]
-pub use microesnext_arrays as arrays;
+pub use microesnext_objects::arrays;
 
 #[cfg(feature = "array-assignment-expressions")]
-pub use microesnext_arrays::assignment_expressions as array_assignment_expressions;
+pub use microesnext_objects::arrays::assignment_expressions as array_assignment_expressions;
 
 #[cfg(feature = "array-iterators")]
-pub use microesnext_arrays::iterators as array_iterators;
+pub use microesnext_objects::arrays::iterators as array_iterators;
 
 #[cfg(any(feature = "atoms", feature = "iterator-results"))]
 pub use microesnext_values::strings::atoms;
@@ -45,7 +45,7 @@ pub use microesnext_execution::async_functions;
 pub use microesnext_scheduler::async_thenables;
 
 #[cfg(feature = "collections")]
-pub use microesnext_collections as collections;
+pub use microesnext_objects::collections;
 
 #[cfg(feature = "callable-objects")]
 pub use microesnext_objects::callable as callable_objects;
@@ -54,19 +54,19 @@ pub use microesnext_objects::callable as callable_objects;
 pub use microesnext_objects::class_constructor as class_constructors;
 
 #[cfg(feature = "collection-iterators")]
-pub use microesnext_collections::iterators as collection_iterators;
+pub use microesnext_objects::collections::iterators as collection_iterators;
 
 #[cfg(feature = "collection-entry-iterators")]
-pub use microesnext_collections::entry_iterators as collection_entry_iterators;
+pub use microesnext_objects::collections::entry_iterators as collection_entry_iterators;
 
 #[cfg(feature = "iterators")]
-pub use microesnext_iterators as iterators;
+pub use microesnext_objects::iterators;
 
 #[cfg(feature = "iterator-results")]
-pub use microesnext_iterators::results as iterator_results;
+pub use microesnext_objects::iterators::results as iterator_results;
 
 #[cfg(feature = "iterable-protocol")]
-pub use microesnext_iterators::protocol as iterable_protocol;
+pub use microesnext_objects::iterators::protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_arena::closures as functions;
@@ -139,7 +139,7 @@ pub use microesnext_values::symbols;
 pub use microesnext_values::symbols::well_known as well_known_symbols;
 
 #[cfg(feature = "weak-collections")]
-pub use microesnext_collections::weak as weak_collections;
+pub use microesnext_objects::collections::weak as weak_collections;
 
 #[cfg(feature = "promises")]
 pub use microesnext_promises as promises;

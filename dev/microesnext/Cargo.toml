@@ -2,14 +2,11 @@
 members = [
   "crates/microesnext",
   "crates/microesnext-arena",
-  "crates/microesnext-arrays",
   "crates/microesnext-scheduler",
   "crates/microesnext-execution",
   "crates/microesnext-bytecode",
   "crates/microesnext-bindings",
   "crates/microesnext-compiler",
-  "crates/microesnext-collections",
-  "crates/microesnext-iterators",
   "crates/microesnext-semantics",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -35,14 +32,11 @@ version = "0.0.0"
 [workspace.dependencies]
 microesnext = { path = "crates/microesnext", version = "0.0.0", default-features = false }
 microesnext-arena = { path = "crates/microesnext-arena", version = "0.0.0" }
-microesnext-arrays = { path = "crates/microesnext-arrays", version = "0.0.0" }
 microesnext-scheduler = { path = "crates/microesnext-scheduler", version = "0.0.0" }
 microesnext-execution = { path = "crates/microesnext-execution", version = "0.0.0" }
 microesnext-bytecode = { path = "crates/microesnext-bytecode", version = "0.0.0" }
 microesnext-bindings = { path = "crates/microesnext-bindings", version = "0.0.0" }
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
-microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
-microesnext-iterators = { path = "crates/microesnext-iterators", version = "0.0.0" }
 microesnext-semantics = { path = "crates/microesnext-semantics", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }

@@ -12,7 +12,7 @@ pub fn define(
     method: Value,
 ) -> Result<Value, Error> {
     let key = symbols.iterator(arena)?;
-    microesnext_objects::set(arena, object, key, method)
+    crate::set(arena, object, key, method)
 }
 
 /// Look up `[Symbol.iterator]`, including through the prototype chain. `null`
@@ -23,7 +23,7 @@ pub fn get(
     symbols: &WellKnownSymbols,
 ) -> Result<Option<Value>, Error> {
     let key = symbols.iterator(arena)?;
-    match microesnext_objects::get(arena, object, key)? {
+    match crate::get(arena, object, key)? {
         Value::NULL | Value::UNDEFINED => Ok(None),
         method => Ok(Some(method)),
     }
@@ -40,9 +40,9 @@ mod tests {
         let symbols = WellKnownSymbols::new(&mut arena).unwrap();
         let other_symbols = WellKnownSymbols::new(&mut arena).unwrap();
         let method = microesnext_arena::closures::capture_stack(&mut arena, 17, 0).unwrap();
-        let prototype = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
+        let prototype = crate::new_object(&mut arena, Value::NULL).unwrap();
         let prototype = define(&mut arena, prototype, &symbols, method).unwrap();
-        let iterable = microesnext_objects::new_object(&mut arena, prototype).unwrap();
+        let iterable = crate::new_object(&mut arena, prototype).unwrap();
 
         let inherited = get(&arena, iterable, &symbols).unwrap().unwrap();
         assert_eq!(

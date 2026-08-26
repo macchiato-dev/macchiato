@@ -176,7 +176,7 @@ fn i30(value: usize) -> Result<Value, Error> {
 
 #[cfg(test)]
 mod tests {
-    use microesnext_objects::new_object;
+    use crate::new_object;
 
     use super::*;
 

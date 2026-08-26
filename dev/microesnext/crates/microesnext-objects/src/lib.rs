@@ -1,5 +1,12 @@
 #![no_std]
 
+#[cfg(feature = "arrays")]
+pub mod arrays;
+#[cfg(feature = "collections")]
+pub mod collections;
+#[cfg(feature = "iterators")]
+pub mod iterators;
+
 #[cfg(feature = "assignment-expressions")]
 pub mod assignment_expressions;
 #[cfg(feature = "callable-objects")]

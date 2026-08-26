@@ -15,7 +15,7 @@ pub fn store_result(arena: &mut Arena<'_>) -> Result<(), Error> {
         .and_then(|index| usize::try_from(index).ok())
         .ok_or(Error::Type)?;
     let array = arena.pop()?;
-    crate::set(arena, array, index, value)?;
+    crate::arrays::set(arena, array, index, value)?;
     arena.push(value)
 }
 
@@ -29,7 +29,7 @@ mod tests {
     fn updates_the_index_and_retains_the_value() {
         let mut memory = [0; 128];
         let mut arena = Arena::new(&mut memory);
-        let array = crate::new(&mut arena).unwrap();
+        let array = crate::arrays::new(&mut arena).unwrap();
         let index = Value::from_i30(3).unwrap();
         let value = Value::from_i30(42).unwrap();
         arena.push(array).unwrap();
@@ -39,6 +39,6 @@ mod tests {
         store_result(&mut arena).unwrap();
 
         assert_eq!(arena.pop(), Ok(value));
-        assert_eq!(crate::get(&arena, array, 3), Ok(value));
+        assert_eq!(crate::arrays::get(&arena, array, 3), Ok(value));
     }
 }

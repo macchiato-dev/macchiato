@@ -179,7 +179,7 @@ an explicit relational stopping condition.
   string, atom, object, or collection capability into a symbol-only build.
 - The symbols `well_known` module retains realm-owned identities. A realm can
   omit description strings or compose them without changing ordinary symbols.
-- `microesnext-iterators` stores a source, cursor, and adapter tag in a
+- The objects `iterators` feature stores a source, cursor, and adapter tag in a
   relocatable guest object. Arrays and collections expose independently gated
   iterator modules, so adding array iteration does not pull in Map/Set storage,
   or the reverse.
@@ -196,14 +196,14 @@ an explicit relational stopping condition.
   types.
   Collections use raw compact identity in their standalone build; number and
   string comparison enters only when those capabilities are selected too.
-- `microesnext-collections` contains ordered, geometrically grown Map and Set
+- The objects `collections` feature contains ordered, geometrically grown Map and Set
   storage with live cursor semantics.
-- `microesnext-arrays` contains dense and sparse indexed storage with geometric
+- The objects `arrays` feature contains dense and sparse indexed storage with geometric
   growth, holes, and JavaScript length behavior.
 - The arrays `assignment-expressions` feature stores a computed index while
   retaining the assigned value. The compiler's separate `array-indexing` gate
   adds reads without runtime code; literal stores retain their smaller path.
-- `microesnext-collections` contains Map and Set plus an independently gated
+- The collections module contains Map and Set plus an independently gated
   `weak` module. Ephemeron tracing is retained only by that feature.
 - `microesnext-promises` contains compact promise records and a caller-owned,
   rooted FIFO job ring; it does not require a native allocator or Rust futures.

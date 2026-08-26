@@ -69,19 +69,20 @@ local-assignment-expressions = [
   "microesnext-compiler/local-assignment-expressions",
 ]
 arrays = [
-  "dep:microesnext-arrays",
+  "dep:microesnext-objects",
+  "microesnext-objects/arrays",
   "microesnext-vm/arrays",
   "microesnext-compiler/arrays",
   "microesnext-compiler/array-indexing",
 ]
 array-assignment-expressions = [
   "arrays",
-  "microesnext-arrays/assignment-expressions",
+  "microesnext-objects/array-assignment-expressions",
   "microesnext-vm/array-assignment-expressions",
   "microesnext-compiler/array-assignment-expressions",
   "microesnext-compiler/literal-expressions",
 ]
-array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
+array-iterators = ["arrays", "iterators", "microesnext-objects/array-iterators"]
 async = [
   "dep:microesnext-scheduler",
   "microesnext-scheduler/async",
@@ -108,7 +109,7 @@ strings = [
   "dep:microesnext-values",
   "microesnext-values/strings",
   "microesnext-vm/strings",
-  "microesnext-collections?/string-keys",
+  "microesnext-objects?/collection-string-keys",
   "microesnext-semantics?/string-values",
   "microesnext-compiler/strings",
 ]
@@ -195,7 +196,7 @@ numbers = [
   "dep:microesnext-values",
   "microesnext-values/numbers",
   "microesnext-vm/numbers",
-  "microesnext-collections?/number-keys",
+  "microesnext-objects?/collection-number-keys",
   "microesnext-semantics?/numbers",
   "microesnext-compiler/numbers",
 ]
@@ -310,26 +311,26 @@ receivers = [
   "microesnext-vm/receivers",
   "microesnext-compiler/receivers",
 ]
-collections = ["dep:microesnext-collections"]
-collection-iterators = ["collections", "iterators", "microesnext-collections/iterators"]
+collections = ["dep:microesnext-objects", "microesnext-objects/collections"]
+collection-iterators = ["collections", "iterators", "microesnext-objects/collection-iterators"]
 collection-entry-iterators = [
   "arrays",
   "collections",
   "iterators",
-  "microesnext-collections/entry-iterators",
+  "microesnext-objects/collection-entry-iterators",
 ]
-iterators = ["dep:microesnext-iterators"]
+iterators = ["dep:microesnext-objects", "microesnext-objects/iterators"]
 iterator-results = [
   "atoms",
-  "microesnext-iterators/results",
+  "microesnext-objects/iterator-results",
   "dep:microesnext-objects",
 ]
 iterable-protocol = [
-  "microesnext-iterators/protocol",
+  "microesnext-objects/iterator-protocol",
   "dep:microesnext-objects",
   "well-known-symbols",
 ]
-weak-collections = ["collections", "microesnext-collections/weak"]
+weak-collections = ["collections", "microesnext-objects/weak-collections"]
 promises = ["dep:microesnext-promises"]
 promise-resolution = [
   "promises",
@@ -359,11 +360,8 @@ promise-jobs = [
 microesnext-arena.workspace = true
 microesnext-scheduler = { workspace = true, optional = true }
 microesnext-execution = { workspace = true, optional = true }
-microesnext-arrays = { workspace = true, optional = true }
-microesnext-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
-microesnext-iterators = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }

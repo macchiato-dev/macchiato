@@ -130,7 +130,7 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   compact `Value` identities, so symbols compose as keys without either table
   depending on the values `symbols` module. The arena symbol kind is feature-gated.
 - Iterator positions are guest-arena state rather than native Rust cursors.
-  The source-agnostic `microesnext-iterators` crate retains the iterable and
+  The source-agnostic objects `iterators` module retains the iterable and
   current index across collection. Array and Map/Set traversal live in separate
   adapter crates, preserving both dependency and code-size isolation.
 - SameValueZero is capability-aware without runtime registration. A standalone

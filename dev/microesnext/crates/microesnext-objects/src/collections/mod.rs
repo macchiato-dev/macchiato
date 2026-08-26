@@ -1,10 +1,8 @@
-#![no_std]
-
-#[cfg(feature = "entry-iterators")]
+#[cfg(feature = "collection-entry-iterators")]
 pub mod entry_iterators;
-#[cfg(feature = "iterators")]
+#[cfg(feature = "collection-iterators")]
 pub mod iterators;
-#[cfg(feature = "weak")]
+#[cfg(feature = "weak-collections")]
 pub mod weak;
 
 use microesnext_arena::{Arena, BlockKind};
@@ -204,9 +202,9 @@ fn find(arena: &Arena<'_>, table: HeapRef, key: Value) -> Result<Option<usize>, 
 
 #[inline(always)]
 fn keys_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
-    #[cfg(any(feature = "number-keys", feature = "string-keys"))]
+    #[cfg(any(feature = "collection-number-keys", feature = "collection-string-keys"))]
     return microesnext_semantics::equality::same_value_zero(arena, left, right);
-    #[cfg(not(any(feature = "number-keys", feature = "string-keys")))]
+    #[cfg(not(any(feature = "collection-number-keys", feature = "collection-string-keys")))]
     {
         let _ = arena;
         Ok(left == right)
@@ -278,7 +276,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "number-keys")]
+    #[cfg(feature = "collection-number-keys")]
     #[test]
     fn numeric_keys_use_same_value_zero_when_numbers_are_composed() {
         let mut memory = [0; 128];
@@ -296,7 +294,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "string-keys")]
+    #[cfg(feature = "collection-string-keys")]
     #[test]
     fn string_keys_compare_by_content_when_strings_are_composed() {
         let mut memory = [0; 128];

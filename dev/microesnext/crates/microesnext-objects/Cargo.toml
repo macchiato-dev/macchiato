@@ -9,7 +9,37 @@ version.workspace = true
 
 [features]
 default = []
+arrays = []
+array-assignment-expressions = ["arrays"]
+array-iterators = ["arrays", "iterators"]
+iterators = ["microesnext-arena/iterators"]
+iterator-protocol = [
+  "iterators",
+  "microesnext-arena/closures",
+  "dep:microesnext-values",
+  "microesnext-values/symbols",
+]
+iterator-results = [
+  "iterators",
+  "dep:microesnext-values",
+  "microesnext-values/strings",
+]
 callable-objects = ["microesnext-arena/callable-objects", "microesnext-arena/closures"]
+collections = []
+collection-iterators = ["collections", "iterators"]
+collection-entry-iterators = ["collection-iterators", "arrays"]
+collection-number-keys = [
+  "collections",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-semantics/numbers",
+]
+collection-string-keys = [
+  "collections",
+  "dep:microesnext-semantics",
+  "microesnext-semantics/equality",
+  "microesnext-semantics/string-values",
+]
 class-constructors = ["microesnext-arena/class-constructors", "microesnext-arena/closures"]
 construction = ["callable-objects"]
 instanceof = ["callable-objects", "prototype-chain"]
@@ -17,11 +47,14 @@ assignment-expressions = []
 method-calls = ["dep:microesnext-bindings", "microesnext-bindings/parameters"]
 prototype-chain = []
 recursive-constructors = ["callable-objects", "dep:microesnext-bindings", "microesnext-bindings/environments"]
+weak-collections = ["collections", "microesnext-arena/ephemerons"]
 
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-bindings = { workspace = true, optional = true }
+microesnext-semantics = { workspace = true, optional = true }
 microesnext-types.workspace = true
+microesnext-values = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-bindings = { workspace = true, features = ["recursive-functions"] }

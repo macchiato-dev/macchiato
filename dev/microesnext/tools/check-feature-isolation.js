@@ -21,13 +21,13 @@ function packages(features) {
 function assertPresence(features, present, absent) {
   const graph = packages(features);
   for (const name of present) {
-    if (name === bindings || name === semantics || name === values) continue;
+    if (name === bindings || name === objects || name === semantics || name === values) continue;
     if (!graph.has(name)) {
       throw new Error(`${features || "minimal"}: expected ${name}`);
     }
   }
   for (const name of absent) {
-    if (name === bindings || name === semantics || name === values) continue;
+    if (name === bindings || name === objects || name === semantics || name === values) continue;
     if (graph.has(name)) {
       throw new Error(
         `${features || "minimal"}: unexpectedly contains ${name}`,
@@ -123,6 +123,35 @@ function assertValueFeatures(features, present, absent) {
   }
 }
 
+function assertObjectFeatures(features, present, absent) {
+  if (!packages(features).has(objects)) {
+    if (present.length > 0) {
+      throw new Error(`${features || "minimal"}: expected objects`);
+    }
+    return;
+  }
+  const args = [
+    "tree",
+    "--package=microesnext",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-objects",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-objects feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: expected objects/${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-objects feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: unexpectedly contains objects/${feature}`);
+    }
+  }
+}
+
 function compilerTree(features) {
   const args = [
     "tree",
@@ -166,6 +195,7 @@ const promises = "microesnext-promises";
 const promiseResolution = promises;
 const promiseResolvers = promises;
 const values = "microesnext-values";
+const objects = "microesnext-objects";
 const errors = values;
 const receivers = bindings;
 const thenables = scheduler;
@@ -476,7 +506,7 @@ assertPresence(
   ["equality", "numbers"],
   [equality, values],
   [
-    "microesnext-objects",
+    objects,
     values,
   ],
 );
@@ -518,17 +548,17 @@ assertPresence(
 assertPresence(
   ["typeof"],
   [typeOf, values],
-  [integerOperations, values, "microesnext-objects"],
+  [integerOperations, values, objects],
 );
 assertPresence(
   ["prototype-chain"],
-  ["microesnext-objects", values],
+  [objects, values],
   [typeOf, values],
 );
 assertPresence(
   ["callable-objects"],
   [
-    "microesnext-objects",
+    objects,
     values,
   ],
   [typeOf, values],
@@ -536,7 +566,7 @@ assertPresence(
 assertPresence(
   ["constructors"],
   [
-    "microesnext-objects",
+    objects,
     values,
   ],
   [typeOf],
@@ -545,13 +575,13 @@ assertPresence(
   ["construction"],
   [
     receivers,
-    "microesnext-objects",
+    objects,
   ],
   [typeOf],
 );
 assertPresence(
   ["property-assignment"],
-  ["microesnext-objects", values],
+  [objects, values],
   [receivers],
 );
 assertPresence(
@@ -565,7 +595,7 @@ assertPresence(
 assertPresence(
   ["instanceof"],
   [
-    "microesnext-objects",
+    objects,
   ],
   [typeOf, values],
 );
@@ -618,26 +648,26 @@ assertPresence(
 assertPresence(
   ["local-assignment-expressions"],
   [bindings],
-  [environments, "microesnext-objects"],
+  [environments, objects],
 );
 assertPresence(
   ["expression-statements"],
   [],
-  ["microesnext-exceptions", "microesnext-objects"],
+  ["microesnext-exceptions", objects],
 );
 assertPresence(
   ["array-assignment-expressions"],
-  ["microesnext-arrays"],
-  [environments, bindings, "microesnext-objects"],
+  [objects],
+  [environments, bindings, objects],
 );
 assertPresence(
   ["captured-assignment-expressions"],
   [environments],
-  [bindings, "microesnext-objects"],
+  [bindings, objects],
 );
 assertPresence(
   ["property-assignment-expressions"],
-  ["microesnext-objects"],
+  [objects],
   [environments],
 );
 assertPresence(
@@ -704,7 +734,7 @@ assertPresence(
   ["thenables"],
   [
     errors,
-    "microesnext-objects",
+    objects,
     promises,
     promiseResolution,
     promiseResolvers,
@@ -739,7 +769,7 @@ assertPresence(
   [
     asyncFunctions,
     asyncThenables,
-    "microesnext-objects",
+    objects,
     "microesnext-promises",
     promiseResolution,
     promiseResolvers,
@@ -799,5 +829,12 @@ assertValueFeatures(["numbers"], ["numbers"], ["errors", "string-coercion", "str
 assertValueFeatures(["strings"], ["strings"], ["decimal-to-f64", "errors", "numbers", "string-coercion", "symbols"]);
 assertValueFeatures(["symbols"], ["symbols"], ["decimal-to-f64", "errors", "numbers", "string-coercion", "strings"]);
 assertValueFeatures(["string-number-coercion"], ["decimal-to-f64", "numbers", "string-coercion", "strings"], ["errors", "symbols"]);
+assertObjectFeatures(["arrays"], ["arrays"], ["array-assignment-expressions", "array-iterators", "collections", "iterators"]);
+assertObjectFeatures(["array-assignment-expressions"], ["arrays", "array-assignment-expressions"], ["array-iterators", "collections", "iterators"]);
+assertObjectFeatures(["iterators"], ["iterators"], ["arrays", "collections", "iterator-protocol", "iterator-results"]);
+assertObjectFeatures(["array-iterators"], ["arrays", "array-iterators", "iterators"], ["collections"]);
+assertObjectFeatures(["collections"], ["collections"], ["arrays", "collection-iterators", "iterators", "weak-collections"]);
+assertObjectFeatures(["collection-entry-iterators"], ["arrays", "collection-entry-iterators", "collection-iterators", "collections", "iterators"], ["weak-collections"]);
+assertObjectFeatures(["weak-collections"], ["collections", "weak-collections"], ["arrays", "iterators"]);
 
 console.log("feature dependency isolation verified");

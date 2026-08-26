@@ -788,3 +788,11 @@ strings 4,903 / 2,270, symbols 4,995 / 2,254, and string Number coercion
 14,599 / 6,608. The compiler selects only `decimal-to-f64`, whose feature does
 not enable the optional arena dependency. Package-level composition therefore
 does not turn build-time numeric parsing into a runtime value dependency.
+
+Arrays, iterator cursors, and Map/Set storage are feature-gated modules of
+`microesnext-objects`. Their shared arena/table domain no longer requires four
+published packages. Raw focused Wasm remains exactly 8,768 bytes for arrays,
+3,599 for iterators, 3,285 for collections, 10,756 for array iteration, and
+13,542 for collection entry iteration. Weak collections remain a 2,051-byte
+composition. The object-package feature audit checks these modules separately,
+so package unification does not make one representation imply another.

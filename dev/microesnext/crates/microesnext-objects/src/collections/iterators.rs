@@ -1,8 +1,8 @@
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
-const KEYS: u16 = microesnext_iterators::kind::COLLECTION_KEYS;
-const VALUES: u16 = microesnext_iterators::kind::COLLECTION_VALUES;
+const KEYS: u16 = crate::iterators::kind::COLLECTION_KEYS;
+const VALUES: u16 = crate::iterators::kind::COLLECTION_VALUES;
 
 pub fn new_keys(arena: &mut Arena<'_>, collection: Value) -> Result<Value, Error> {
     new(arena, collection, KEYS)
@@ -13,12 +13,12 @@ pub fn new_values(arena: &mut Arena<'_>, collection: Value) -> Result<Value, Err
 }
 
 pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Error> {
-    let (collection, mut index, kind) = microesnext_iterators::state(arena, iterator)?;
+    let (collection, mut index, kind) = crate::iterators::state(arena, iterator)?;
     if kind != KEYS && kind != VALUES {
         return Err(Error::Type);
     }
-    let entry = crate::next_from(arena, collection, &mut index)?;
-    microesnext_iterators::set_index(arena, iterator, index)?;
+    let entry = crate::collections::next_from(arena, collection, &mut index)?;
+    crate::iterators::set_index(arena, iterator, index)?;
     let Some((key, value)) = entry else {
         return Ok(None);
     };
@@ -30,8 +30,8 @@ pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Err
 }
 
 fn new(arena: &mut Arena<'_>, collection: Value, kind: u16) -> Result<Value, Error> {
-    crate::len(arena, collection)?;
-    microesnext_iterators::new(arena, collection, kind)
+    crate::collections::len(arena, collection)?;
+    crate::iterators::new(arena, collection, kind)
 }
 
 #[cfg(test)]
@@ -46,14 +46,14 @@ mod tests {
     fn skips_deletions_and_observes_appends() {
         let mut memory = [0; 160];
         let mut arena = Arena::new(&mut memory);
-        let map = crate::new_map(&mut arena).unwrap();
-        let map = crate::set(&mut arena, map, integer(1), integer(10)).unwrap();
-        let map = crate::set(&mut arena, map, integer(2), integer(20)).unwrap();
+        let map = crate::collections::new_map(&mut arena).unwrap();
+        let map = crate::collections::set(&mut arena, map, integer(1), integer(10)).unwrap();
+        let map = crate::collections::set(&mut arena, map, integer(2), integer(20)).unwrap();
         let iterator = new_values(&mut arena, map).unwrap();
         assert_eq!(next(&mut arena, iterator), Ok(Some(integer(10))));
-        assert!(crate::delete(&mut arena, map, integer(2)).unwrap());
+        assert!(crate::collections::delete(&mut arena, map, integer(2)).unwrap());
         assert_eq!(
-            crate::set(&mut arena, map, integer(3), integer(30)).unwrap(),
+            crate::collections::set(&mut arena, map, integer(3), integer(30)).unwrap(),
             map
         );
         assert_eq!(next(&mut arena, iterator), Ok(Some(integer(30))));

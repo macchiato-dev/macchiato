@@ -1,8 +1,6 @@
-#![no_std]
-
-#[cfg(feature = "assignment-expressions")]
+#[cfg(feature = "array-assignment-expressions")]
 pub mod assignment_expressions;
-#[cfg(feature = "iterators")]
+#[cfg(feature = "array-iterators")]
 pub mod iterators;
 
 use microesnext_arena::{Arena, BlockKind};

@@ -3,8 +3,6 @@
 use microesnext_arena::Arena;
 #[cfg(feature = "functions")]
 use microesnext_arena::closures::{capture, capture_stack, entry};
-#[cfg(feature = "arrays")]
-use microesnext_arrays::{get as array_get, new as new_array, set as array_set};
 use microesnext_bytecode::Opcode;
 #[cfg(feature = "exceptions")]
 use microesnext_exceptions::Handlers;
@@ -12,6 +10,8 @@ use microesnext_exceptions::Handlers;
 use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]
 use microesnext_execution::suspension::{resume_context, suspend_context};
+#[cfg(feature = "arrays")]
+use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
 use microesnext_types::{Error, RootId, Value};
@@ -785,7 +785,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "array-assignment-expressions")]
             Opcode::SetIndexResult => {
-                microesnext_arrays::assignment_expressions::store_result(self.core.arena_mut())?;
+                microesnext_objects::arrays::assignment_expressions::store_result(
+                    self.core.arena_mut(),
+                )?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]

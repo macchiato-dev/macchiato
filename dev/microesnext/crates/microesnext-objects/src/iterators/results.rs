@@ -41,9 +41,9 @@ impl IteratorResultKeys {
     ) -> Result<Value, Error> {
         let value_key = arena.root(self.value)?;
         let done_key = arena.root(self.done)?;
-        let result = microesnext_objects::new_object(arena, prototype)?;
-        let result = microesnext_objects::set(arena, result, value_key, value)?;
-        microesnext_objects::set(
+        let result = crate::new_object(arena, prototype)?;
+        let result = crate::set(arena, result, value_key, value)?;
+        crate::set(
             arena,
             result,
             done_key,
@@ -92,19 +92,11 @@ mod tests {
         let value = atoms.intern(&mut arena, b"value").unwrap();
         let done = atoms.intern(&mut arena, b"done").unwrap();
         assert_eq!(
-            microesnext_objects::get(&arena, result, value)
-                .unwrap()
-                .as_i30(),
+            crate::get(&arena, result, value).unwrap().as_i30(),
             Some(42)
         );
-        assert_eq!(
-            microesnext_objects::get(&arena, result, done),
-            Ok(Value::FALSE)
-        );
-        assert_eq!(
-            microesnext_objects::prototype(&arena, result),
-            Ok(Value::NULL)
-        );
+        assert_eq!(crate::get(&arena, result, done), Ok(Value::FALSE));
+        assert_eq!(crate::prototype(&arena, result), Ok(Value::NULL));
     }
 
     #[test]
@@ -120,24 +112,16 @@ mod tests {
             .create_next(&mut arena, Value::NULL, Value::from_i30(7))
             .unwrap();
         assert_eq!(
-            microesnext_objects::get(&arena, present, value_key)
-                .unwrap()
-                .as_i30(),
+            crate::get(&arena, present, value_key).unwrap().as_i30(),
             Some(7)
         );
-        assert_eq!(
-            microesnext_objects::get(&arena, present, done_key),
-            Ok(Value::FALSE)
-        );
+        assert_eq!(crate::get(&arena, present, done_key), Ok(Value::FALSE));
 
         let exhausted = keys.create_next(&mut arena, Value::NULL, None).unwrap();
         assert_eq!(
-            microesnext_objects::get(&arena, exhausted, value_key),
+            crate::get(&arena, exhausted, value_key),
             Ok(Value::UNDEFINED)
         );
-        assert_eq!(
-            microesnext_objects::get(&arena, exhausted, done_key),
-            Ok(Value::TRUE)
-        );
+        assert_eq!(crate::get(&arena, exhausted, done_key), Ok(Value::TRUE));
     }
 }

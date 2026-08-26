@@ -1,8 +1,6 @@
-#![no_std]
-
-#[cfg(feature = "protocol")]
+#[cfg(feature = "iterator-protocol")]
 pub mod protocol;
-#[cfg(feature = "results")]
+#[cfg(feature = "iterator-results")]
 pub mod results;
 
 use microesnext_arena::{Arena, BlockKind};
