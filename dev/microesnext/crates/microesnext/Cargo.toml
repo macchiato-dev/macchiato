@@ -9,6 +9,21 @@ version.workspace = true
 
 [features]
 default = []
+full = [
+  "abstract-equality", "array-destructuring-assignments",
+  "array-destructuring-declarations", "array-spread", "array-update-expressions",
+  "async-thenables", "bitwise-operations", "captured-update-expressions",
+  "class-getters", "class-inheritance", "class-setters", "class-static-methods",
+  "compound-assignment-expressions", "default-parameters", "do-while-statements",
+  "finally-statements", "for-in-statements", "for-of-statements", "implicit-completions",
+  "in-expressions", "instanceof", "literal-expressions", "named-class-expressions",
+  "nested-exceptions", "number-division", "number-remainder",
+  "object-destructuring-assignments", "object-destructuring-declarations",
+  "object-spread", "property-update-expressions", "recursive-async-functions",
+  "recursive-constructors", "regexp-literals", "rest-parameters", "spread-calls",
+  "string-number-coercion", "switch-statements", "template-literals", "typeof",
+  "var-declarations", "void-expressions", "weak-collections", "well-known-symbols",
+]
 control-flow = [
   "microesnext-vm/control-flow",
   "microesnext-compiler/control-flow",

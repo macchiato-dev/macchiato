@@ -8,7 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-microesnext = { path = "../../microesnext/crates/microesnext", default-features = false }
+microesnext = { path = "../../microesnext/crates/microesnext", features = ["full"] }
 
 [build-dependencies]
 microesnext-compiler = { path = "../../microesnext/crates/microesnext-compiler" }

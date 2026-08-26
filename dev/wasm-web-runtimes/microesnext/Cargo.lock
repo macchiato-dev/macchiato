@@ -7,9 +7,14 @@ name = "microesnext"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-bindings",
  "microesnext-bytecode",
  "microesnext-execution",
+ "microesnext-objects",
+ "microesnext-scheduler",
+ "microesnext-semantics",
  "microesnext-types",
+ "microesnext-values",
  "microesnext-vm",
 ]
 
@@ -17,6 +22,14 @@ dependencies = [
 name = "microesnext-arena"
 version = "0.0.0"
 dependencies = [
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-bindings"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -40,8 +53,40 @@ name = "microesnext-execution"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-bindings",
  "microesnext-bytecode",
  "microesnext-types",
+ "microesnext-values",
+]
+
+[[package]]
+name = "microesnext-objects"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-bindings",
+ "microesnext-semantics",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-scheduler"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-execution",
+ "microesnext-objects",
+ "microesnext-types",
+ "microesnext-vm",
+]
+
+[[package]]
+name = "microesnext-semantics"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]
@@ -52,6 +97,7 @@ version = "0.0.0"
 name = "microesnext-values"
 version = "0.0.0"
 dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -60,9 +106,13 @@ name = "microesnext-vm"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-bindings",
  "microesnext-bytecode",
  "microesnext-execution",
+ "microesnext-objects",
+ "microesnext-semantics",
  "microesnext-types",
+ "microesnext-values",
 ]
 
 [[package]]

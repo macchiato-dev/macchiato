@@ -1400,12 +1400,12 @@ Object.defineProperty(GuestElement.prototype, "style", {
 });
 GuestElement.prototype.append = function () {
   var args = [];
-  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(index < 0 || arguments.length <= index ? undefined : arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("append"), args]);
 };
 GuestElement.prototype.replaceChildren = function () {
   var args = [];
-  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(index < 0 || arguments.length <= index ? undefined : arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 GuestElement.prototype.setAttribute = function (name, value) {
@@ -1959,8 +1959,8 @@ var NativeDate = Date;
 var runtimeDateNow = function runtimeDateNow() {
   return runtimePerformanceNow ? Math.round(runtimeEpochOrigin + runtimePerformanceNow() - runtimePerformanceOrigin) : hostCall(document.reference, "dateNow", []);
 };
-function GuestDate(value) {
-  return new NativeDate(arguments.length ? Number(value) : runtimeDateNow());
+function GuestDate() {
+  return new NativeDate(arguments.length ? Number(arguments.length <= 0 ? undefined : arguments[0]) : runtimeDateNow());
 }
 GuestDate.prototype = NativeDate.prototype;
 GuestDate.now = runtimeDateNow;
@@ -2349,7 +2349,7 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
   GuestCanvasContext.prototype[name] = function () {
     var args = [];
     for (var index = 0; index < arguments.length; index++) {
-      args.push(encode(Math.round(Number(arguments[index]) * 1024)));
+      args.push(encode(Math.round(Number(index < 0 || arguments.length <= index ? undefined : arguments[index]) * 1024)));
     }
     pendingOperations.push([3, this.reference, stringIndex(name), args]);
   };
@@ -3011,7 +3011,7 @@ globalThis.cancelIdleCallback = globalThis.clearTimeout;
 function reportConsole() {
   var parts = [];
   for (var index = 0; index < arguments.length; index++) {
-    var value = arguments[index];
+    var value = index < 0 || arguments.length <= index ? undefined : arguments[index];
     parts.push(value && value.stack ? String(value) + "\n" + value.stack : String(value));
   }
   globalThis.__wwcReportError(parts.join("\n"));
@@ -3296,7 +3296,7 @@ GuestObject.prototype.after = function (node) {
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {
-    var child = arguments[i];
+    var child = i < 0 || arguments.length <= i ? undefined : arguments[i];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     this.appendChild(child);
   }
@@ -3308,7 +3308,7 @@ GuestElement.prototype.replaceChildren = function () {
   }
   var args = [];
   for (var j = 0; j < arguments.length; j++) {
-    var child = arguments[j];
+    var child = j < 0 || arguments.length <= j ? undefined : arguments[j];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     detachGuestNode(child);
     childrenOf(this).push(child);
@@ -3371,7 +3371,7 @@ GuestClassList.prototype.contains = function (token) {
 GuestClassList.prototype.add = function () {
   var tokens = this.tokens();
   for (var index = 0; index < arguments.length; index++) {
-    var token = projectClassToken(String(arguments[index]));
+    var token = projectClassToken(String(index < 0 || arguments.length <= index ? undefined : arguments[index]));
     if (tokens.indexOf(token) < 0) tokens.push(token);
   }
   this.element.setAttribute("class", tokens.join(" "));
@@ -3379,7 +3379,7 @@ GuestClassList.prototype.add = function () {
 GuestClassList.prototype.remove = function () {
   var remove = [];
   for (var index = 0; index < arguments.length; index++) {
-    remove.push(projectClassToken(String(arguments[index])));
+    remove.push(projectClassToken(String(index < 0 || arguments.length <= index ? undefined : arguments[index])));
   }
   this.element.setAttribute("class", this.tokens().filter(function (token) {
     return remove.indexOf(token) < 0;

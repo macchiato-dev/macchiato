@@ -161,8 +161,8 @@ var runtimeDateNow = function () {
     runtimePerformanceNow() - runtimePerformanceOrigin) :
     hostCall(document.reference, "dateNow", []);
 };
-function GuestDate(value) {
-  return new NativeDate(arguments.length ? Number(value) : runtimeDateNow());
+function GuestDate(...values) {
+  return new NativeDate(values.length ? Number(values[0]) : runtimeDateNow());
 }
 GuestDate.prototype = NativeDate.prototype;
 GuestDate.now = runtimeDateNow;
@@ -513,10 +513,10 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
 ["arc", "beginPath", "clearRect", "closePath", "fill", "fillRect", "lineTo",
   "moveTo", "restore", "rotate", "save", "scale", "stroke", "strokeRect",
   "translate"].forEach(function (name) {
-  GuestCanvasContext.prototype[name] = function () {
+  GuestCanvasContext.prototype[name] = function (...values) {
     var args = [];
-    for (var index = 0; index < arguments.length; index++) {
-      args.push(encode(Math.round(Number(arguments[index]) * 1024)));
+    for (var index = 0; index < values.length; index++) {
+      args.push(encode(Math.round(Number(values[index]) * 1024)));
     }
     pendingOperations.push([3, this.reference, stringIndex(name), args]);
   };
@@ -1156,10 +1156,10 @@ globalThis.requestIdleCallback = function (callback) {
 };
 globalThis.cancelIdleCallback = globalThis.clearTimeout;
 
-function reportConsole() {
+function reportConsole(...values) {
   var parts = [];
-  for (var index = 0; index < arguments.length; index++) {
-    var value = arguments[index];
+  for (var index = 0; index < values.length; index++) {
+    var value = values[index];
     parts.push(value && value.stack ? String(value) + "\n" + value.stack : String(value));
   }
   globalThis.__wwcReportError(parts.join("\n"));
@@ -1435,21 +1435,21 @@ GuestObject.prototype.after = function (node) {
   var siblings = childrenOf(parent);
   parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
 };
-GuestElement.prototype.append = function () {
-  for (var i = 0; i < arguments.length; i++) {
-    var child = arguments[i];
+GuestElement.prototype.append = function (...values) {
+  for (var i = 0; i < values.length; i++) {
+    var child = values[i];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     this.appendChild(child);
   }
 };
-GuestElement.prototype.replaceChildren = function () {
+GuestElement.prototype.replaceChildren = function (...values) {
   var current = childrenOf(this).slice();
   for (var i = 0; i < current.length; i++) {
     detachGuestNode(current[i]);
   }
   var args = [];
-  for (var j = 0; j < arguments.length; j++) {
-    var child = arguments[j];
+  for (var j = 0; j < values.length; j++) {
+    var child = values[j];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     detachGuestNode(child);
     childrenOf(this).push(child);
@@ -1511,18 +1511,18 @@ GuestClassList.prototype.tokens = function () {
 GuestClassList.prototype.contains = function (token) {
   return this.tokens().indexOf(projectClassToken(String(token))) > -1;
 };
-GuestClassList.prototype.add = function () {
+GuestClassList.prototype.add = function (...values) {
   var tokens = this.tokens();
-  for (var index = 0; index < arguments.length; index++) {
-    var token = projectClassToken(String(arguments[index]));
+  for (var index = 0; index < values.length; index++) {
+    var token = projectClassToken(String(values[index]));
     if (tokens.indexOf(token) < 0) tokens.push(token);
   }
   this.element.setAttribute("class", tokens.join(" "));
 };
-GuestClassList.prototype.remove = function () {
+GuestClassList.prototype.remove = function (...values) {
   var remove = [];
-  for (var index = 0; index < arguments.length; index++) {
-    remove.push(projectClassToken(String(arguments[index])));
+  for (var index = 0; index < values.length; index++) {
+    remove.push(projectClassToken(String(values[index])));
   }
   this.element.setAttribute("class", this.tokens().filter(function (token) {
     return remove.indexOf(token) < 0;
