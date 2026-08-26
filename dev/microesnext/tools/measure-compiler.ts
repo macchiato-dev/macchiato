@@ -83,7 +83,7 @@ for (const [name, features] of builds) {
     : features === "local-assignment-expressions"
     ? "let left = 0; let right = 0; return left = right = 1;"
     : features === "property-assignment-expressions"
-    ? "let inner = {}; let outer = { inner: inner }; return outer.inner.value = 1;"
+    ? "let object = {}; return object.value = 1;"
     : features === "arrays,literal-expressions,locals"
     ? "let value = 1; return [value];"
     : features === "literal-expressions,locals,objects"
