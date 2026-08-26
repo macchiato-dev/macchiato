@@ -18,7 +18,6 @@ dependencies = [
  "microesnext-equality",
  "microesnext-errors",
  "microesnext-exceptions",
- "microesnext-instanceof",
  "microesnext-integer-negation",
  "microesnext-integer-operations",
  "microesnext-iterable-protocol",
@@ -150,15 +149,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-construction"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-core-loop"
 version = "0.0.0"
 dependencies = [
@@ -209,15 +199,6 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-types",
  "microesnext-vm-core",
-]
-
-[[package]]
-name = "microesnext-instanceof"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-types",
 ]
 
 [[package]]
@@ -295,7 +276,9 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-environments",
  "microesnext-parameters",
+ "microesnext-recursive-functions",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -354,17 +337,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-async-functions",
  "microesnext-environments",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-recursive-constructors"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-environments",
- "microesnext-objects",
- "microesnext-recursive-functions",
  "microesnext-types",
 ]
 
@@ -449,11 +421,9 @@ dependencies = [
  "microesnext-async-functions",
  "microesnext-bytecode",
  "microesnext-compiler",
- "microesnext-construction",
  "microesnext-environments",
  "microesnext-equality",
  "microesnext-exceptions",
- "microesnext-instanceof",
  "microesnext-integer-negation",
  "microesnext-integer-operations",
  "microesnext-locals",
@@ -465,7 +435,6 @@ dependencies = [
  "microesnext-promises",
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
- "microesnext-recursive-constructors",
  "microesnext-recursive-functions",
  "microesnext-strings",
  "microesnext-suspension",

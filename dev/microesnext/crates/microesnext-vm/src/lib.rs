@@ -361,7 +361,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "recursive-constructors")]
             Opcode::RebindConstructorSelf => {
                 let constructor = self.core.arena().stack_value(0)?;
-                microesnext_recursive_constructors::rebind(self.core.arena_mut(), constructor)?;
+                microesnext_objects::recursive_constructor::rebind(
+                    self.core.arena_mut(),
+                    constructor,
+                )?;
                 Ok(None)
             }
             #[cfg(feature = "async-functions")]
@@ -535,7 +538,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .intern(self.core.arena_mut(), b"prototype")?;
                 let constructor =
                     microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
-                let (function, receiver) = microesnext_construction::prepare(
+                let (function, receiver) = microesnext_objects::construction::prepare(
                     self.core.arena_mut(),
                     constructor,
                     prototype_key,
@@ -554,8 +557,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::SelectConstructedResult => {
                 let returned = self.core.arena_mut().pop()?;
                 let receiver = self.core.arena_mut().pop()?;
-                let result =
-                    microesnext_construction::select(self.core.arena(), receiver, returned);
+                let result = microesnext_objects::construction::select(
+                    self.core.arena(),
+                    receiver,
+                    returned,
+                );
                 self.core.arena_mut().push(result)?;
                 Ok(None)
             }
@@ -904,7 +910,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .intern(self.core.arena_mut(), b"prototype")?;
                 let constructor = self.core.arena_mut().pop()?;
                 let value = self.core.arena_mut().pop()?;
-                let result = microesnext_instanceof::ordinary(
+                let result = microesnext_objects::instanceof::ordinary(
                     self.core.arena(),
                     value,
                     constructor,

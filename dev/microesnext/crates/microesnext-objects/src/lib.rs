@@ -6,10 +6,16 @@ pub mod assignment_expressions;
 pub mod callable;
 #[cfg(feature = "class-constructors")]
 pub mod class_constructor;
+#[cfg(feature = "construction")]
+pub mod construction;
+#[cfg(feature = "instanceof")]
+pub mod instanceof;
 #[cfg(feature = "method-calls")]
 pub mod method_calls;
 #[cfg(feature = "prototype-chain")]
 pub mod prototype_chain;
+#[cfg(feature = "recursive-constructors")]
+pub mod recursive_constructor;
 
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};

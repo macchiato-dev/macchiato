@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
 
@@ -15,8 +13,8 @@ pub fn prepare(
     if !is_constructor(arena, constructor) {
         return Err(Error::Type);
     }
-    let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
-    if !microesnext_objects::is_object(arena, prototype) {
+    let prototype = crate::get(arena, constructor, prototype_key)?;
+    if !crate::is_object(arena, prototype) {
         return Err(Error::Type);
     }
 
@@ -34,35 +32,35 @@ pub fn prepare(
 #[cfg(not(feature = "class-constructors"))]
 #[inline(always)]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_objects::callable::is_callable_object(arena, constructor)
+    crate::callable::is_callable_object(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 #[inline(always)]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_objects::callable::is_callable_object(arena, constructor)
-        || microesnext_objects::class_constructor::is_class_constructor(arena, constructor)
+    crate::callable::is_callable_object(arena, constructor)
+        || crate::class_constructor::is_class_constructor(arena, constructor)
 }
 
 #[cfg(not(feature = "class-constructors"))]
 #[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
-    microesnext_objects::callable::callable(arena, constructor)
+    crate::callable::callable(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 #[inline(always)]
 fn constructor_callable(arena: &Arena<'_>, constructor: Value) -> Result<Value, Error> {
-    if microesnext_objects::class_constructor::is_class_constructor(arena, constructor) {
-        microesnext_objects::class_constructor::callable(arena, constructor)
+    if crate::class_constructor::is_class_constructor(arena, constructor) {
+        crate::class_constructor::callable(arena, constructor)
     } else {
-        microesnext_objects::callable::callable(arena, constructor)
+        crate::callable::callable(arena, constructor)
     }
 }
 
 /// Apply the ordinary constructor return rule without allocating.
 pub fn select(arena: &Arena<'_>, receiver: Value, returned: Value) -> Value {
-    if microesnext_objects::is_object(arena, returned) {
+    if crate::is_object(arena, returned) {
         returned
     } else {
         receiver
@@ -80,7 +78,7 @@ mod tests {
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
-        let constructor = microesnext_objects::callable::new_constructor(
+        let constructor = crate::callable::new_constructor(
             &mut arena,
             closure,
             Value::NULL,
@@ -90,13 +88,10 @@ mod tests {
         )
         .unwrap();
         let (callable, receiver) = prepare(&mut arena, constructor, prototype_key).unwrap();
-        let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
+        let prototype = crate::get(&arena, constructor, prototype_key).unwrap();
 
         assert!(microesnext_arena::closures::is_function(&arena, callable));
-        assert_eq!(
-            microesnext_objects::prototype(&arena, receiver),
-            Ok(prototype)
-        );
+        assert_eq!(crate::prototype(&arena, receiver), Ok(prototype));
         assert_eq!(select(&arena, receiver, Value::UNDEFINED), receiver);
         assert_eq!(select(&arena, receiver, prototype), prototype);
     }
@@ -109,7 +104,7 @@ mod tests {
         let closure = microesnext_arena::closures::capture_stack(&mut arena, 0, 0).unwrap();
         let prototype_key = Value::from_i30(1).unwrap();
         let constructor_key = Value::from_i30(2).unwrap();
-        let constructor = microesnext_objects::class_constructor::new(
+        let constructor = crate::class_constructor::new(
             &mut arena,
             closure,
             Value::NULL,
@@ -119,15 +114,12 @@ mod tests {
         )
         .unwrap();
         let (callable, receiver) = prepare(&mut arena, constructor, prototype_key).unwrap();
-        let prototype = microesnext_objects::get(&arena, constructor, prototype_key).unwrap();
+        let prototype = crate::get(&arena, constructor, prototype_key).unwrap();
 
         assert!(microesnext_arena::closures::is_function(&arena, callable));
+        assert_eq!(crate::prototype(&arena, receiver), Ok(prototype));
         assert_eq!(
-            microesnext_objects::prototype(&arena, receiver),
-            Ok(prototype)
-        );
-        assert_eq!(
-            microesnext_objects::callable::callable(&arena, constructor),
+            crate::callable::callable(&arena, constructor),
             Err(Error::Type)
         );
     }

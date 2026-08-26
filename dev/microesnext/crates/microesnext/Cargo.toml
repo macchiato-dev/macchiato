@@ -16,11 +16,15 @@ constructors = ["callable-objects", "microesnext-vm/constructors"]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
-  "microesnext-instanceof?/class-constructors",
   "microesnext-typeof?/class-constructors",
   "microesnext-vm/class-constructors",
 ]
-construction = ["constructors", "receivers", "microesnext-vm/construction"]
+construction = [
+  "constructors",
+  "receivers",
+  "microesnext-objects/construction",
+  "microesnext-vm/construction",
+]
 classes = [
   "class-constructors",
   "construction",
@@ -107,8 +111,7 @@ integer-negation = [
 ]
 instanceof = [
   "callable-objects",
-  "prototype-chain",
-  "dep:microesnext-instanceof",
+  "microesnext-objects/instanceof",
   "microesnext-vm/instanceof",
 ]
 minimal-program = ["control-flow", "integer-operations", "locals"]
@@ -182,6 +185,7 @@ recursive-functions = [
 recursive-constructors = [
   "constructors",
   "recursive-functions",
+  "microesnext-objects/recursive-constructors",
   "microesnext-vm/recursive-constructors",
 ]
 recursive-async-functions = [
@@ -255,7 +259,6 @@ microesnext-iterator-results = { workspace = true, optional = true }
 microesnext-iterable-protocol = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
 microesnext-integer-negation = { workspace = true, optional = true }
-microesnext-instanceof = { workspace = true, optional = true }
 microesnext-locals = { workspace = true, optional = true }
 microesnext-logical-operations = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }

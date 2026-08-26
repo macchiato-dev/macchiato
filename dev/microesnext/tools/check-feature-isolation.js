@@ -80,9 +80,6 @@ const integerNegation = "microesnext-integer-negation";
 const equality = "microesnext-equality";
 const logicalOperations = "microesnext-logical-operations";
 const typeOf = "microesnext-typeof";
-const construction = "microesnext-construction";
-const recursiveConstructors = "microesnext-recursive-constructors";
-const instanceOf = "microesnext-instanceof";
 
 assertCompilerFeatures(
   ["locals"],
@@ -451,35 +448,32 @@ assertPresence(
     "microesnext-objects",
     "microesnext-strings",
   ],
-  [instanceOf, typeOf],
+  [typeOf],
 );
 assertPresence(
   ["construction"],
   [
-    construction,
     receivers,
     "microesnext-objects",
   ],
-  [instanceOf, typeOf],
+  [typeOf],
 );
 assertPresence(
   ["property-assignment"],
   ["microesnext-objects", "microesnext-strings"],
-  [construction, receivers],
+  [receivers],
 );
 assertPresence(
   ["recursive-constructors"],
   [
-    recursiveConstructors,
     "microesnext-recursive-functions",
     "microesnext-environments",
   ],
-  [construction, instanceOf, receivers, typeOf],
+  [receivers, typeOf],
 );
 assertPresence(
   ["instanceof"],
   [
-    instanceOf,
     "microesnext-objects",
   ],
   [typeOf, "microesnext-numbers"],

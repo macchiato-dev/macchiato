@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
@@ -16,25 +14,25 @@ pub fn ordinary(
     if !is_constructor(arena, constructor) {
         return Err(Error::Type);
     }
-    let prototype = microesnext_objects::get(arena, constructor, prototype_key)?;
-    microesnext_objects::prototype_chain::contains(arena, value, prototype)
+    let prototype = crate::get(arena, constructor, prototype_key)?;
+    crate::prototype_chain::contains(arena, value, prototype)
 }
 
 #[cfg(not(feature = "class-constructors"))]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_objects::callable::is_callable_object(arena, constructor)
+    crate::callable::is_callable_object(arena, constructor)
 }
 
 #[cfg(feature = "class-constructors")]
 fn is_constructor(arena: &Arena<'_>, constructor: Value) -> bool {
-    microesnext_objects::callable::is_callable_object(arena, constructor)
-        || microesnext_objects::class_constructor::is_class_constructor(arena, constructor)
+    crate::callable::is_callable_object(arena, constructor)
+        || crate::class_constructor::is_class_constructor(arena, constructor)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{new_object, set};
     use microesnext_arena::closures::capture_stack;
-    use microesnext_objects::{new_object, set};
 
     use super::*;
 
@@ -46,8 +44,7 @@ mod tests {
         let prototype = new_object(&mut arena, Value::NULL).unwrap();
         let instance = new_object(&mut arena, prototype).unwrap();
         let closure = capture_stack(&mut arena, 0, 0).unwrap();
-        let constructor =
-            microesnext_objects::callable::new(&mut arena, closure, Value::NULL).unwrap();
+        let constructor = crate::callable::new(&mut arena, closure, Value::NULL).unwrap();
         let constructor = set(&mut arena, constructor, key, prototype).unwrap();
 
         assert_eq!(ordinary(&arena, instance, constructor, key), Ok(true));
@@ -62,8 +59,7 @@ mod tests {
         let key = Value::from_i30(1).unwrap();
         let value = new_object(&mut arena, Value::NULL).unwrap();
         let closure = capture_stack(&mut arena, 0, 0).unwrap();
-        let constructor =
-            microesnext_objects::callable::new(&mut arena, closure, Value::NULL).unwrap();
+        let constructor = crate::callable::new(&mut arena, closure, Value::NULL).unwrap();
         let constructor = set(&mut arena, constructor, key, Value::TRUE).unwrap();
 
         assert_eq!(ordinary(&arena, value, Value::TRUE, key), Err(Error::Type));

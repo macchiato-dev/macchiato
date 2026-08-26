@@ -15,7 +15,7 @@ pub use microesnext_integer_operations as integer_operations;
 pub use microesnext_integer_negation as integer_negation;
 
 #[cfg(feature = "instanceof")]
-pub use microesnext_instanceof as r#instanceof;
+pub use microesnext_objects::instanceof;
 
 #[cfg(feature = "logical-operations")]
 pub use microesnext_logical_operations as logical_operations;

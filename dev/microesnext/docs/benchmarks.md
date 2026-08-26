@@ -196,7 +196,7 @@ being 81 raw / 115 gzip bytes smaller than the initial direct-call parser. The
 source-to-VM tests exercise `this`, primitive fallback, explicit object returns,
 the resulting prototype chain, member constructor lookup, and postfix access to
 the selected result. Builds omitting `construction` do not decode its two
-opcodes or link `microesnext-construction`; the constructor-only compiler stays
+opcodes or retain the objects construction module; the constructor-only compiler stays
 exactly 13,264 / 5,615.
 
 The constructor-only `classes` composition uses a distinct class record while

@@ -53,8 +53,8 @@ an explicit relational stopping condition.
 - The objects `prototype_chain` module performs allocation-free traversal for
   `instanceof` and `Object.prototype.isPrototypeOf`; the VM feature determines
   whether any traversal call is retained.
-- `microesnext-instanceof` composes callable-object validation, ordinary
-  `prototype` lookup, and prototype traversal without allocation. Custom
+- The objects `instanceof` module composes callable validation, ordinary
+  `prototype` lookup, and traversal without allocation. Custom
   `Symbol.hasInstance` dispatch remains a higher optional layer.
 - The arena's gated `closures` module stores closure entries and captures for
   builds enabling the `functions` feature. Closure storage is not a separate
@@ -64,10 +64,10 @@ an explicit relational stopping condition.
   boundary. Its constructor path creates the `.prototype` / `.constructor`
   cycle in fixed arena records; closure-only and object-only machines retain
   their specialized paths and layouts.
-- `microesnext-construction` creates an ordinary receiver from a constructor's
-  current prototype and applies the object-return rule. The VM composes it with
-  receiver frames using two gated opcodes, without adding persistent machine
-  state or changing the invariant call frame.
+- The objects `construction` module creates an ordinary receiver from a
+  constructor's current prototype and applies the object-return rule. The VM
+  composes it with receiver frames using two gated opcodes, without persistent
+  machine state or changes to the invariant call frame.
 - The objects `class_constructor` module gives classes a distinct object record.
   A class can use the same removable construction path, but ordinary call
   unwrapping does not accept it. The initial `classes` compiler slice supports
@@ -123,9 +123,9 @@ an explicit relational stopping condition.
   constructors and the same instance and static method compositions as class
   declarations. Named class-expression identity remains a separate future
   slice.
-- `microesnext-recursive-constructors` allocation-freely rebinds a named
+- The objects `recursive_constructor` module allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
-  constructors and recursive closures do not link this cross-composition.
+  constructors and recursive closures do not retain this cross-composition.
 - `microesnext-parameters` composes evaluated arguments with lexical slots.
   Functions without parameters and locals outside calls do not link it.
 - `microesnext-receivers` adds hidden `this` values to selected call frames.
