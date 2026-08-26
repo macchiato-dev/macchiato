@@ -1,5 +1,10 @@
 #![no_std]
 
+#[cfg(feature = "protocol")]
+pub mod protocol;
+#[cfg(feature = "results")]
+pub mod results;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 

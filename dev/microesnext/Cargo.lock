@@ -20,8 +20,6 @@ dependencies = [
  "microesnext-exceptions",
  "microesnext-integer-negation",
  "microesnext-integer-operations",
- "microesnext-iterable-protocol",
- "microesnext-iterator-results",
  "microesnext-iterators",
  "microesnext-locals",
  "microesnext-logical-operations",
@@ -216,30 +214,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-iterable-protocol"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
- "microesnext-symbols",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-iterator-results"
+name = "microesnext-iterators"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-objects",
  "microesnext-strings",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-iterators"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
+ "microesnext-symbols",
  "microesnext-types",
 ]
 

@@ -197,11 +197,11 @@ an explicit relational stopping condition.
   or the reverse.
 - The collections `entry-iterators` feature adds pair-array allocation only
   for `Map.entries`; collection key/value and Set iteration do not link arrays.
-- `microesnext-iterator-results` allocates ordinary `{ value, done }` objects
-  with cached property identities. It is separate so cursor and adapter builds
-  do not acquire object, atom, or string storage. Its source-neutral boundary
-  converts an adapter's `Option<Value>` into live or exhausted result objects.
-- `microesnext-iterable-protocol` defines and resolves realm-local
+- The iterator `results` feature allocates ordinary `{ value, done }` objects
+  with cached property identities. Cursor-only builds do not acquire object,
+  atom, or string storage. Its source-neutral boundary converts an adapter's
+  `Option<Value>` into live or exhausted result objects.
+- The iterator `protocol` feature defines and resolves realm-local
   `[Symbol.iterator]` bindings through object prototypes. Function validation
   and invocation remain independently composable.
 - `microesnext-equality` composes SameValueZero for enabled scalar types.

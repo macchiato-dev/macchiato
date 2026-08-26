@@ -7,8 +7,23 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+default = []
+protocol = [
+  "microesnext-arena/closures",
+  "dep:microesnext-objects",
+  "dep:microesnext-symbols",
+]
+results = [
+  "dep:microesnext-objects",
+  "dep:microesnext-strings",
+]
+
 [dependencies]
 microesnext-arena = { workspace = true, features = ["iterators"] }
+microesnext-objects = { workspace = true, optional = true }
+microesnext-strings = { workspace = true, optional = true }
+microesnext-symbols = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [lib]

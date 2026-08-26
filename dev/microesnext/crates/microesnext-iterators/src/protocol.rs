@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_symbols::well_known::WellKnownSymbols;
 use microesnext_types::{Error, Value};

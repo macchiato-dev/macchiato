@@ -63,10 +63,10 @@ pub use microesnext_collections::entry_iterators as collection_entry_iterators;
 pub use microesnext_iterators as iterators;
 
 #[cfg(feature = "iterator-results")]
-pub use microesnext_iterator_results as iterator_results;
+pub use microesnext_iterators::results as iterator_results;
 
 #[cfg(feature = "iterable-protocol")]
-pub use microesnext_iterable_protocol as iterable_protocol;
+pub use microesnext_iterators::protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_arena::closures as functions;
