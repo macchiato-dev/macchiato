@@ -307,6 +307,8 @@ fn compile_script_with_options_and_host_globals(
         inactive_loop_locals: Vec::new(),
         #[cfg(feature = "locals")]
         inactive_catch_locals: Vec::new(),
+        #[cfg(feature = "finally-statements")]
+        active_finally: Vec::new(),
         #[cfg(feature = "receivers")]
         receiver_frame: false,
         #[cfg(feature = "receivers")]
@@ -380,6 +382,8 @@ struct Parser<'source> {
     inactive_loop_locals: Vec<u16>,
     #[cfg(feature = "locals")]
     inactive_catch_locals: Vec<u16>,
+    #[cfg(feature = "finally-statements")]
+    active_finally: Vec<(usize, usize)>,
     #[cfg(any(feature = "number-negation", feature = "number-operations"))]
     options: CompileOptions,
 }
@@ -729,7 +733,7 @@ impl Parser<'_> {
             if self.try_word_after_whitespace(b"try") {
                 #[cfg(feature = "structured-statements")]
                 {
-                    let abrupt = self.structured_statement(StructuredStart::Exception)?;
+                    let abrupt = self.single_try_statement()?;
                     if abrupt && self.at_body_end() {
                         return Ok(());
                     }
@@ -1679,6 +1683,57 @@ impl Parser<'_> {
         false
     }
 
+    #[cfg(feature = "finally-statements")]
+    fn block_close(&self, open: usize) -> Result<usize, CompileError> {
+        let mut offset = open + 1;
+        let mut depth = 1_usize;
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            offset += 1;
+            if let Some(delimiter) = quote {
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset) == Some(&b'/') {
+                offset += 1;
+                while self.source.get(offset).is_some_and(|byte| *byte != b'\n') {
+                    offset += 1;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset) == Some(&b'*') {
+                offset += 1;
+                while offset + 1 < self.source.len()
+                    && &self.source[offset..offset + 2] != b"*/"
+                {
+                    offset += 1;
+                }
+                offset = (offset + 2).min(self.source.len());
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => quote = Some(byte),
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok(offset - 1);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Err(CompileError {
+            #[cfg(feature = "source-positions")]
+            offset: open,
+            expected: "a closing brace",
+        })
+    }
+
     #[cfg(feature = "control-flow")]
     fn single_if(&mut self) -> Result<bool, CompileError> {
         if !self.consume(b'(') {
@@ -1824,7 +1879,121 @@ impl Parser<'_> {
 
     #[cfg(all(feature = "exceptions", feature = "structured-statements"))]
     fn single_try_statement(&mut self) -> Result<bool, CompileError> {
+        #[cfg(feature = "finally-statements")]
+        if let Some(abrupt) = self.try_finally()? {
+            return Ok(abrupt);
+        }
         self.structured_statement(StructuredStart::Exception)
+    }
+
+    #[cfg(feature = "finally-statements")]
+    fn try_finally(&mut self) -> Result<Option<bool>, CompileError> {
+        let start = self.offset;
+        self.whitespace();
+        if self.source.get(self.offset) != Some(&b'{') {
+            self.offset = start;
+            return Ok(None);
+        }
+        let try_open = self.offset;
+        let try_close = self.block_close(try_open)?;
+        let mut after_try = try_close + 1;
+        while self
+            .source
+            .get(after_try)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            after_try += 1;
+        }
+        if !self.source[after_try..].starts_with(b"finally")
+            || !self.identifier_end(after_try + b"finally".len())
+        {
+            self.offset = start;
+            return Ok(None);
+        }
+        let mut finally_open = after_try + b"finally".len();
+        while self
+            .source
+            .get(finally_open)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            finally_open += 1;
+        }
+        if self.source.get(finally_open) != Some(&b'{') {
+            return Err(self.error("{ after finally"));
+        }
+        let finally_close = self.block_close(finally_open)?;
+        let finally_range = (finally_open + 1, finally_close);
+
+        // The source has been classified as try/finally; compilation below
+        // deliberately bypasses the catch-only structured lowering.
+
+        self.offset = try_open + 1;
+        self.output.push(Opcode::Try as u8);
+        let catch_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        self.active_finally.push(finally_range);
+        let abrupt = self.control_block_body()?;
+        self.active_finally.pop();
+        if self.offset != try_close {
+            return Err(self.error("the end of the try block"));
+        }
+
+        let join_patch = if abrupt {
+            None
+        } else {
+            self.output.push(Opcode::ConstImmediate as u8);
+            self.output.push(Immediate::Undefined as u8);
+            self.output.push(Opcode::EndTry as u8);
+            self.output.push(Opcode::Drop as u8);
+            self.emit_finally(finally_range)?;
+            self.output.push(Opcode::Jump as u8);
+            let patch = self.output.len();
+            self.output.extend_from_slice(&0_u32.to_le_bytes());
+            Some(patch)
+        };
+
+        let catch = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(catch_patch);
+        self.emit_finally(finally_range)?;
+        self.output.push(Opcode::Throw as u8);
+
+        if let Some(patch) = join_patch {
+            let join = u32::try_from(self.output.len())
+                .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+            self.output[patch..patch + 4].copy_from_slice(&join.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(patch);
+        }
+        self.offset = finally_close + 1;
+        self.whitespace();
+        Ok(Some(abrupt))
+    }
+
+    #[cfg(feature = "finally-statements")]
+    fn emit_finally(&mut self, (start, end): (usize, usize)) -> Result<bool, CompileError> {
+        let resume = self.offset;
+        self.offset = start;
+        let abrupt = self.control_block_body()?;
+        if self.offset != end {
+            return Err(self.error("the end of the finally block"));
+        }
+        self.offset = resume;
+        Ok(abrupt)
+    }
+
+    #[cfg(feature = "finally-statements")]
+    fn emit_completion_finally(&mut self) -> Result<(), CompileError> {
+        let blocks = self.active_finally.clone();
+        for index in (0..blocks.len()).rev() {
+            self.output.push(Opcode::EndTry as u8);
+            self.active_finally.truncate(index);
+            self.emit_finally(blocks[index])?;
+        }
+        self.active_finally = blocks;
+        Ok(())
     }
 
     #[cfg(all(
@@ -2196,6 +2365,10 @@ impl Parser<'_> {
                 continue;
             }
             if self.try_word(b"try") {
+                #[cfg(feature = "finally-statements")]
+                if self.try_finally()?.is_some() {
+                    continue;
+                }
                 if let Some(StructuredFrame::Catch {
                     binding, pending, ..
                 }) = frames.last_mut()
@@ -3838,6 +4011,8 @@ impl Parser<'_> {
             inactive_loop_locals: Vec::new(),
             #[cfg(feature = "locals")]
             inactive_catch_locals: Vec::new(),
+            #[cfg(feature = "finally-statements")]
+            active_finally: Vec::new(),
             #[cfg(feature = "receivers")]
             receiver_frame,
             #[cfg(feature = "receivers")]
@@ -4925,6 +5100,8 @@ impl Parser<'_> {
         if close_handler && returning {
             self.output.push(Opcode::EndTry as u8);
         }
+        #[cfg(feature = "finally-statements")]
+        self.emit_completion_finally()?;
         if returning {
             #[cfg(feature = "receivers")]
             if self.receiver_frame {
@@ -4990,6 +5167,8 @@ impl Parser<'_> {
         if close_handler && returning {
             self.output.push(Opcode::EndTry as u8);
         }
+        #[cfg(feature = "finally-statements")]
+        self.emit_completion_finally()?;
         if returning {
             #[cfg(feature = "receivers")]
             if self.receiver_frame {

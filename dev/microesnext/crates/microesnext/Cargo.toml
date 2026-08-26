@@ -25,6 +25,7 @@ bitwise-operations = [
   "microesnext-compiler/bitwise-operations",
 ]
 expression-statements = ["stack-operations", "microesnext-compiler/expression-statements"]
+finally-statements = ["exceptions", "microesnext-compiler/finally-statements"]
 for-statements = [
   "control-flow",
   "expression-statements",
@@ -751,6 +752,11 @@ required-features = ["locals", "nested-loops"]
 name = "nested-exceptions"
 path = "tests/nested_exceptions.rs"
 required-features = ["nested-exceptions"]
+
+[[test]]
+name = "finally-statements"
+path = "tests/finally_statements.rs"
+required-features = ["finally-statements", "locals", "objects"]
 
 [[test]]
 name = "nonterminal-exceptions"

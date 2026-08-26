@@ -45,6 +45,7 @@ default = [
   "for-statements",
   "for-of-statements",
   "for-in-statements",
+  "finally-statements",
   "implicit-completions",
   "host-bindings",
   "instanceof",
@@ -170,6 +171,7 @@ property-update-expressions = [
 ]
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
+finally-statements = ["exceptions", "for-statements", "structured-statements"]
 expression-statements = ["microesnext-bytecode/stack-operations"]
 for-statements = ["control-flow", "expression-statements", "locals"]
 for-of-statements = ["arrays", "for-statements", "microesnext-bytecode/array-iterators"]
