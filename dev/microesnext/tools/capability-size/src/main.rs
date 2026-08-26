@@ -11,6 +11,7 @@
         feature = "promise-resolution",
         feature = "promise-resolvers",
         feature = "property-assignment",
+        feature = "property-assignment-expressions",
         feature = "receivers"
     )
 ))]
@@ -48,6 +49,7 @@ use microesnext::{Core, CoreOutcome};
         feature = "objects",
         feature = "promise-resolvers",
         feature = "property-assignment",
+        feature = "property-assignment-expressions",
         feature = "recursive-functions",
         feature = "recursive-constructors",
         feature = "recursive-async-functions",
@@ -332,6 +334,31 @@ pub extern "C" fn captured_assignment_expressions_probe() -> i32 {
         Ok(Outcome::Complete(result))
             if result == value
                 && microesnext::environments::get(machine.arena(), cell) == Ok(value)
+    ) as i32
+}
+
+#[cfg(all(feature = "property-assignment-expressions", target_arch = "wasm32"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn property_assignment_expressions_probe() -> i32 {
+    let code = [Opcode::SetPropertyResult as u8, Opcode::Return as u8];
+    let mut memory = [0; 96];
+    let mut machine = Machine::new(&code, &mut memory);
+    let Ok(object) = microesnext::objects::new_object(machine.arena_mut(), Value::NULL) else {
+        return 0;
+    };
+    let key = Value::from_i30(7).unwrap();
+    let value = Value::from_i30(42).unwrap();
+    if machine.arena_mut().push(object).is_err()
+        || machine.arena_mut().push(key).is_err()
+        || machine.arena_mut().push(value).is_err()
+    {
+        return 0;
+    }
+    matches!(
+        machine.run(),
+        Ok(Outcome::Complete(result))
+            if result == value
+                && microesnext::objects::get(machine.arena(), object, key) == Ok(value)
     ) as i32
 }
 
