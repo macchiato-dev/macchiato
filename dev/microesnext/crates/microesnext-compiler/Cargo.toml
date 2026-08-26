@@ -18,6 +18,7 @@ default = [
   "control-flow",
   "conditional-expressions",
   "constructors",
+  "default-parameters",
   "construction",
   "class-methods",
   "class-static-methods",
@@ -83,6 +84,7 @@ atoms = ["strings", "microesnext-bytecode/atoms"]
 control-flow = ["microesnext-bytecode/control-flow"]
 conditional-expressions = ["control-flow"]
 constructors = ["functions", "microesnext-bytecode/constructors"]
+default-parameters = ["control-flow", "equality", "function-arguments"]
 construction = ["constructors", "receivers", "microesnext-bytecode/construction"]
 classes = [
   "construction",

@@ -17,8 +17,15 @@ pub fn init_frame(
     count: usize,
     parameter_count: usize,
 ) -> Result<(), Error> {
-    if parameter_count > count || arena.stack_len() != base + parameter_count {
+    if parameter_count > count || arena.stack_len() < base {
         return Err(Error::BadBytecode);
+    }
+    let argument_count = arena.stack_len() - base;
+    for _ in parameter_count..argument_count {
+        arena.pop()?;
+    }
+    for _ in argument_count..parameter_count {
+        arena.push(Value::UNDEFINED)?;
     }
     arena.insert_stack_value_from_bottom(
         base,

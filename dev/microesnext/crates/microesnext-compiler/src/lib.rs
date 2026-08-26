@@ -285,8 +285,19 @@ fn compile_script_with_options_and_host_globals(
         options,
     };
     parser.whitespace();
+    #[cfg(feature = "functions")]
+    parser.hoist_function_declarations()?;
     #[cfg(feature = "locals")]
-    let locals_patch = parser.local_declarations()?;
+    let locals_patch = if parser.locals.is_empty() {
+        parser.local_declarations()?
+    } else {
+        parser.output.push(Opcode::InitLocals as u8);
+        let patch = parser.output.len();
+        parser.output.extend_from_slice(&0_u16.to_le_bytes());
+        let mut count_patch = Some(patch);
+        parser.frame_declarations(&mut count_patch)?;
+        count_patch
+    };
     #[cfg(not(feature = "locals"))]
     parser.local_declarations()?;
     parser.terminal_statement()?;
@@ -333,6 +344,8 @@ struct Binding {
     start: usize,
     end: usize,
     slot: u16,
+    default: Option<(usize, usize)>,
+    hoisted: bool,
     #[cfg(feature = "environments")]
     captured: bool,
 }
@@ -1654,6 +1667,119 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "functions")]
+    fn hoist_function_declarations(&mut self) -> Result<(), CompileError> {
+        let mut offset = self.offset;
+        let mut depth = 0_usize;
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            if let Some(delimiter) = quote {
+                offset += 1;
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset + 1) == Some(&b'/') {
+                offset += 2;
+                while self.source.get(offset).is_some_and(|byte| *byte != b'\n') {
+                    offset += 1;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset + 1) == Some(&b'*') {
+                offset += 2;
+                while offset + 1 < self.source.len() && &self.source[offset..offset + 2] != b"*/" {
+                    offset += 1;
+                }
+                offset = (offset + 2).min(self.source.len());
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => {
+                    quote = Some(byte);
+                    offset += 1;
+                }
+                b'{' => {
+                    depth += 1;
+                    offset += 1;
+                }
+                b'}' if depth == 0 => break,
+                b'}' => {
+                    depth -= 1;
+                    offset += 1;
+                }
+                b'f' if depth == 0
+                    && self.source[offset..].starts_with(b"function")
+                    && self.function_declaration_position(offset)
+                    && (offset == 0 || self.identifier_end_before(offset))
+                    && self.identifier_end(offset + b"function".len()) =>
+                {
+                    let mut name_start = offset + b"function".len();
+                    while self
+                        .source
+                        .get(name_start)
+                        .is_some_and(u8::is_ascii_whitespace)
+                    {
+                        name_start += 1;
+                    }
+                    let mut name_end = name_start;
+                    while self.source.get(name_end).is_some_and(|byte| {
+                        byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$'
+                    }) {
+                        name_end += 1;
+                    }
+                    if name_end > name_start
+                        && self.source.get(name_end..).is_some_and(|tail| {
+                            tail.iter().find(|byte| !byte.is_ascii_whitespace()) == Some(&b'(')
+                        })
+                        && !self.locals.iter().any(|binding| {
+                            self.source[binding.start..binding.end]
+                                == self.source[name_start..name_end]
+                        })
+                    {
+                        let slot = u16::try_from(self.locals.len())
+                            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                        self.locals.push(Binding {
+                            start: name_start,
+                            end: name_end,
+                            slot,
+                            default: None,
+                            hoisted: true,
+                            #[cfg(feature = "environments")]
+                            captured: false,
+                        });
+                    }
+                    offset = name_end.max(offset + 1);
+                }
+                _ => offset += 1,
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "functions")]
+    fn identifier_end_before(&self, offset: usize) -> bool {
+        !self
+            .source
+            .get(offset - 1)
+            .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
+    }
+
+    #[cfg(feature = "functions")]
+    fn function_declaration_position(&self, offset: usize) -> bool {
+        if offset == self.offset {
+            return true;
+        }
+        let mut previous = offset;
+        while previous > self.offset && self.source[previous - 1].is_ascii_whitespace() {
+            previous -= 1;
+        }
+        previous == self.offset || matches!(self.source.get(previous - 1), Some(b';' | b'}'))
+    }
+
+    #[cfg(feature = "functions")]
     fn frame_declarations(&mut self, count_patch: &mut Option<usize>) -> Result<(), CompileError> {
         loop {
             self.whitespace();
@@ -1729,6 +1855,8 @@ impl Parser<'_> {
                 start,
                 end,
                 slot,
+                default: None,
+                hoisted: false,
                 #[cfg(feature = "environments")]
                 captured: false,
             });
@@ -1792,20 +1920,29 @@ impl Parser<'_> {
         }
         self.whitespace();
         let (name_start, name_end) = self.identifier()?;
-        if self.locals.iter().any(|binding| {
+        let existing = self.locals.iter().position(|binding| {
             self.source[binding.start..binding.end] == self.source[name_start..name_end]
-        }) {
-            return Err(self.error("a unique local binding"));
-        }
-        let slot = u16::try_from(self.locals.len())
-            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
-        self.locals.push(Binding {
-            start: name_start,
-            end: name_end,
-            slot,
-            #[cfg(feature = "environments")]
-            captured: false,
         });
+        let slot = if let Some(index) = existing {
+            if !self.locals[index].hoisted {
+                return Err(self.error("a unique local binding"));
+            }
+            self.locals[index].hoisted = false;
+            self.locals[index].slot
+        } else {
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.locals.push(Binding {
+                start: name_start,
+                end: name_end,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+            slot
+        };
         let parameters = self.function_parameters()?;
         self.function_value(
             parameters,
@@ -1838,6 +1975,8 @@ impl Parser<'_> {
             start: name_start,
             end: name_end,
             slot,
+            default: None,
+            hoisted: false,
             #[cfg(feature = "environments")]
             captured: false,
         });
@@ -1890,6 +2029,8 @@ impl Parser<'_> {
             start: name_start,
             end: name_end,
             slot,
+            default: None,
+            hoisted: false,
             #[cfg(feature = "environments")]
             captured: false,
         });
@@ -2007,10 +2148,23 @@ impl Parser<'_> {
             }
             let slot = u16::try_from(parameters.len())
                 .map_err(|_| self.error("fewer than 65536 parameters"))?;
+            #[cfg(feature = "default-parameters")]
+            let default = if self.consume(b'=') {
+                let start = self.offset;
+                let end = self.parameter_default_end()?;
+                self.offset = end;
+                Some((start, end))
+            } else {
+                None
+            };
+            #[cfg(not(feature = "default-parameters"))]
+            let default = None;
             parameters.push(Binding {
                 start,
                 end,
                 slot,
+                default,
+                hoisted: false,
                 #[cfg(feature = "environments")]
                 captured: false,
             });
@@ -2021,6 +2175,37 @@ impl Parser<'_> {
                 return Err(self.error(", or )"));
             }
         }
+    }
+
+    #[cfg(feature = "default-parameters")]
+    fn parameter_default_end(&self) -> Result<usize, CompileError> {
+        let mut offset = self.offset;
+        let mut endings = Vec::new();
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            if let Some(delimiter) = quote {
+                offset += 1;
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            match byte {
+                b'\'' | b'"' | b'`' => quote = Some(byte),
+                b'(' => endings.push(b')'),
+                b'[' => endings.push(b']'),
+                b'{' => endings.push(b'}'),
+                b')' | b']' | b'}' if endings.last() == Some(&byte) => {
+                    endings.pop();
+                }
+                b',' | b')' if endings.is_empty() => return Ok(offset),
+                _ => {}
+            }
+            offset += 1;
+        }
+        Err(self.error(", or )"))
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
@@ -2057,6 +2242,8 @@ impl Parser<'_> {
                 start: name_start,
                 end: name_end,
                 slot: 0,
+                default: None,
+                hoisted: false,
                 #[cfg(feature = "environments")]
                 captured: false,
             }]
@@ -2088,6 +2275,11 @@ impl Parser<'_> {
         }
         let parameter_count = u16::try_from(parameters.len())
             .map_err(|_| self.error("fewer than 65536 parameters"))?;
+        #[cfg(feature = "default-parameters")]
+        let parameter_defaults: Vec<_> = parameters
+            .iter()
+            .filter_map(|binding| binding.default.map(|range| (binding.slot, range)))
+            .collect();
         #[cfg(feature = "environments")]
         let outer_bindings = {
             let mut bindings = self.outer_bindings.clone();
@@ -2114,6 +2306,32 @@ impl Parser<'_> {
             #[cfg(any(feature = "number-negation", feature = "number-operations"))]
             options: self.options,
         };
+        body.hoist_function_declarations()?;
+        #[cfg(feature = "default-parameters")]
+        for (slot, (start, end)) in parameter_defaults {
+            body.output.push(Opcode::LoadLocal as u8);
+            body.output.extend_from_slice(&slot.to_le_bytes());
+            body.output.push(Opcode::ConstImmediate as u8);
+            body.output.push(Immediate::Undefined as u8);
+            body.output.push(Opcode::StrictEqual as u8);
+            body.output.push(Opcode::JumpIfFalseBoolean as u8);
+            let skip_patch = body.output.len();
+            body.output.extend_from_slice(&0_u32.to_le_bytes());
+            let body_offset = body.offset;
+            body.offset = start;
+            body.expression(None)?;
+            body.whitespace();
+            if body.offset != end {
+                return Err(body.error("the end of a default parameter"));
+            }
+            body.offset = body_offset;
+            body.output.push(Opcode::StoreLocal as u8);
+            body.output.extend_from_slice(&slot.to_le_bytes());
+            let skip = u32::try_from(body.output.len())
+                .map_err(|_| body.error("bytecode smaller than 4 GiB"))?;
+            body.output[skip_patch..skip_patch + 4].copy_from_slice(&skip.to_le_bytes());
+            body.relocations.push(skip_patch);
+        }
         let mut body_count_patch = Some(1);
         if !matches!(body_kind, FunctionBody::Expression) {
             body.frame_declarations(&mut body_count_patch)?;
@@ -4218,6 +4436,8 @@ impl Parser<'_> {
                     start,
                     end,
                     slot: 0,
+                    default: None,
+                    hoisted: false,
                     #[cfg(feature = "environments")]
                     captured: true,
                 })

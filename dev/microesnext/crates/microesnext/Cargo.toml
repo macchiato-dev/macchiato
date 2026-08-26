@@ -37,6 +37,12 @@ constructors = [
   "microesnext-vm/constructors",
   "microesnext-compiler/constructors",
 ]
+default-parameters = [
+  "control-flow",
+  "equality",
+  "function-arguments",
+  "microesnext-compiler/default-parameters",
+]
 class-constructors = [
   "constructors",
   "microesnext-objects/class-constructors",
@@ -458,6 +464,11 @@ required-features = ["bitwise-operations", "integer-operations"]
 name = "abstract-equality"
 path = "tests/abstract_equality.rs"
 required-features = ["abstract-equality"]
+
+[[test]]
+name = "default-parameters"
+path = "tests/default_parameters.rs"
+required-features = ["default-parameters", "number-operations"]
 
 [[test]]
 name = "captured-assignment-expressions"

@@ -16,7 +16,7 @@ pub fn init_frame(
     count: usize,
     parameter_count: usize,
 ) -> Result<(), Error> {
-    if arena.stack_len() != base + parameter_count + 1 {
+    if arena.stack_len() <= base {
         return Err(Error::BadBytecode);
     }
     let receiver = arena.pop()?;
