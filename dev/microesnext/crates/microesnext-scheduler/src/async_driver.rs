@@ -33,6 +33,18 @@ pub enum Progress {
         function: HostRef,
         argument_count: usize,
     },
+    #[cfg(feature = "host-bindings")]
+    HostGet {
+        object: HostRef,
+        key: Value,
+        method: bool,
+    },
+    #[cfg(feature = "host-bindings")]
+    HostSet {
+        object: HostRef,
+        key: Value,
+        value: Value,
+    },
 }
 
 /// Statically selected Promise resolution policy. Drivers are generic over
@@ -125,6 +137,18 @@ impl From<Outcome> for Progress {
                 function,
                 argument_count,
             },
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostGet {
+                object,
+                key,
+                method,
+            } => Self::HostGet {
+                object,
+                key,
+                method,
+            },
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostSet { object, key, value } => Self::HostSet { object, key, value },
         }
     }
 }
@@ -248,6 +272,22 @@ fn drive_functions<R: Resolver>(
                     function,
                     argument_count,
                 });
+            }
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostGet {
+                object,
+                key,
+                method,
+            } => {
+                return Ok(Progress::HostGet {
+                    object,
+                    key,
+                    method,
+                });
+            }
+            #[cfg(feature = "host-bindings")]
+            Outcome::HostSet { object, key, value } => {
+                return Ok(Progress::HostSet { object, key, value });
             }
         };
     }
@@ -403,6 +443,8 @@ fn finish_progress<R: Resolver>(
         Progress::PromiseResolverCall => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
         Progress::HostCall { .. } => Err(Error::Type),
+        #[cfg(feature = "host-bindings")]
+        Progress::HostGet { .. } | Progress::HostSet { .. } => Err(Error::Type),
     }
 }
 
@@ -441,6 +483,8 @@ fn finish_reaction<R: Resolver>(
         Outcome::PromiseResolverCall => Err(Error::Type),
         #[cfg(feature = "host-bindings")]
         Outcome::HostCall { .. } => Err(Error::Type),
+        #[cfg(feature = "host-bindings")]
+        Outcome::HostGet { .. } | Outcome::HostSet { .. } => Err(Error::Type),
     }
 }
 

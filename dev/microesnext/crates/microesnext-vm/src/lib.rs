@@ -43,6 +43,28 @@ pub enum Outcome {
         function: HostRef,
         argument_count: usize,
     },
+    #[cfg(feature = "host-bindings")]
+    HostGet {
+        object: HostRef,
+        key: Value,
+        method: bool,
+    },
+    #[cfg(feature = "host-bindings")]
+    HostSet {
+        object: HostRef,
+        key: Value,
+        value: Value,
+    },
+}
+
+#[cfg(feature = "host-bindings")]
+#[derive(Clone, Copy)]
+enum HostCompletion {
+    Value,
+    Method(Value),
+    SetStatement,
+    SetObject(Value),
+    SetResult(Value),
 }
 
 pub struct Machine<'code, 'memory> {
@@ -55,6 +77,8 @@ pub struct Machine<'code, 'memory> {
     resolver_call: Option<microesnext_execution::promises::resolvers::Call>,
     #[cfg(feature = "host-bindings")]
     host_argument_count: Option<usize>,
+    #[cfg(feature = "host-bindings")]
+    host_completion: Option<HostCompletion>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -81,6 +105,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             resolver_call: None,
             #[cfg(feature = "host-bindings")]
             host_argument_count: None,
+            #[cfg(feature = "host-bindings")]
+            host_completion: None,
         }
     }
 
@@ -181,6 +207,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             resolver_call: None,
             #[cfg(feature = "host-bindings")]
             host_argument_count: None,
+            #[cfg(feature = "host-bindings")]
+            host_completion: None,
         })
     }
 
@@ -245,6 +273,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             resolver_call: self.resolver_call,
             #[cfg(feature = "host-bindings")]
             host_argument_count: self.host_argument_count,
+            #[cfg(feature = "host-bindings")]
+            host_completion: self.host_completion,
         })
     }
 
@@ -266,6 +296,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             self.core.arena_mut().pop()?;
         }
         self.core.arena_mut().push(value)
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn complete_host_operation(&mut self, value: Value) -> Result<(), Error> {
+        match self.host_completion.take().ok_or(Error::Type)? {
+            HostCompletion::Value => self.core.arena_mut().push(value),
+            HostCompletion::Method(receiver) => {
+                self.core.arena_mut().push(receiver)?;
+                self.core.arena_mut().push(value)
+            }
+            HostCompletion::SetStatement => Ok(()),
+            HostCompletion::SetObject(object) => self.core.arena_mut().push(object),
+            HostCompletion::SetResult(result) => self.core.arena_mut().push(result),
+        }
     }
 
     pub fn run(&mut self) -> Result<Outcome, Error> {
@@ -387,6 +431,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetProperty => {
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(object) = object.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::Value)
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostGet {
+                        object,
+                        key,
+                        method: false,
+                    }));
+                }
                 let value = get(self.core.arena(), object, key)?;
                 #[cfg(feature = "getters")]
                 if let Some(function) =
@@ -414,6 +473,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GetMethod => {
                 let key = self.core.arena_mut().pop()?;
                 let receiver = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(object) = receiver.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::Method(receiver))
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostGet {
+                        object,
+                        key,
+                        method: true,
+                    }));
+                }
                 microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
                 Ok(None)
             }
@@ -438,6 +512,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let mut value = self.core.arena_mut().pop()?;
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(host) = object.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::SetObject(object))
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostSet {
+                        object: host,
+                        key,
+                        value,
+                    }));
+                }
                 #[cfg(feature = "getters")]
                 if let Some(current) = microesnext_objects::get_own(self.core.arena(), object, key)?
                 {
@@ -466,6 +555,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let mut value = self.core.arena_mut().pop()?;
                 let key = self.core.arena_mut().pop()?;
                 let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(host) = object.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::SetStatement)
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostSet {
+                        object: host,
+                        key,
+                        value,
+                    }));
+                }
                 #[cfg(feature = "getters")]
                 if let Some(current) = microesnext_objects::get_own(self.core.arena(), object, key)?
                 {
@@ -1025,7 +1129,26 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "property-assignment-expressions")]
             Opcode::SetPropertyResult => {
-                microesnext_objects::assignment_expressions::store_result(self.core.arena_mut())?;
+                let value = self.core.arena_mut().pop()?;
+                let key = self.core.arena_mut().pop()?;
+                let object = self.core.arena_mut().pop()?;
+                #[cfg(feature = "host-bindings")]
+                if let Some(host) = object.as_host() {
+                    if self
+                        .host_completion
+                        .replace(HostCompletion::SetResult(value))
+                        .is_some()
+                    {
+                        return Err(Error::Type);
+                    }
+                    return Ok(Some(Outcome::HostSet {
+                        object: host,
+                        key,
+                        value,
+                    }));
+                }
+                set(self.core.arena_mut(), object, key, value)?;
+                self.core.arena_mut().push(value)?;
                 Ok(None)
             }
             #[cfg(feature = "array-assignment-expressions")]
@@ -1960,6 +2083,37 @@ mod tests {
         assert_eq!(
             machine.run(),
             Ok(Outcome::Complete(Value::from_i30(17).unwrap()))
+        );
+    }
+
+    #[test]
+    #[cfg(all(feature = "host-bindings", feature = "objects"))]
+    fn yields_host_properties_and_resumes_with_the_host_result() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "return environment.value;",
+            &["environment"],
+        )
+        .unwrap();
+        let mut memory = [0; 96];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 2).unwrap();
+        let key = match machine.run().unwrap() {
+            Outcome::HostGet {
+                object,
+                key,
+                method: false,
+            } => {
+                assert_eq!(object, HostRef::new(0).unwrap());
+                key
+            }
+            outcome => panic!("unexpected outcome: {outcome:?}"),
+        };
+        assert!(key.as_ref().is_some());
+        machine
+            .complete_host_operation(Value::from_i30(42).unwrap())
+            .unwrap();
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
         );
     }
 
