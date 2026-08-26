@@ -92,6 +92,8 @@ const construction = "microesnext-construction";
 const recursiveConstructors = "microesnext-recursive-constructors";
 const instanceOf = "microesnext-instanceof";
 const stackOperations = "microesnext-stack-operations";
+const capturedAssignmentExpressions =
+  "microesnext-captured-assignment-expressions";
 
 assertCompilerFeatures(
   ["locals"],
@@ -102,6 +104,11 @@ assertCompilerFeatures(
   ["local-assignment-expressions"],
   ["locals", "stack-operations"],
   ["environments", "functions", "property-assignment"],
+);
+assertCompilerFeatures(
+  ["captured-assignment-expressions"],
+  ["captured-assignment-expressions", "environments", "functions", "locals"],
+  ["property-assignment", "stack-operations"],
 );
 assertCompilerFeatures(
   ["functions"],
@@ -500,6 +507,11 @@ assertPresence(
   ["local-assignment-expressions"],
   ["microesnext-locals", stackOperations],
   [environments, "microesnext-objects"],
+);
+assertPresence(
+  ["captured-assignment-expressions"],
+  [capturedAssignmentExpressions, environments],
+  ["microesnext-functions", "microesnext-locals", "microesnext-objects", stackOperations],
 );
 assertPresence(
   ["function-arguments"],
