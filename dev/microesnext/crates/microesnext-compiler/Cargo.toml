@@ -28,6 +28,7 @@ default = [
   "expression-statements",
   "function-arguments",
   "implicit-completions",
+  "host-bindings",
   "instanceof",
   "literal-expressions",
   "local-assignment-expressions",
@@ -106,6 +107,7 @@ functions = [
 ]
 function-arguments = ["functions", "microesnext-bytecode/function-arguments"]
 implicit-completions = []
+host-bindings = ["microesnext-bytecode/host-bindings"]
 integer-operations = ["microesnext-bytecode/integer-operations"]
 integer-negation = ["microesnext-bytecode/integer-negation"]
 instanceof = ["microesnext-bytecode/instanceof"]

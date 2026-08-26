@@ -45,6 +45,7 @@ atoms = ["strings", "microesnext-bytecode/atoms"]
 objects = ["dep:microesnext-objects", "atoms", "microesnext-bytecode/objects"]
 property-assignment = ["objects", "microesnext-bytecode/property-assignment"]
 functions = ["microesnext-arena/closures", "microesnext-bytecode/functions"]
+host-bindings = ["microesnext-bytecode/host-bindings"]
 callable-objects = [
   "functions",
   "objects",

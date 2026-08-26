@@ -15,6 +15,8 @@ use microesnext_execution::suspension::{resume_context, suspend_context};
 use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
 #[cfg(feature = "objects")]
 use microesnext_objects::{get, new_object, set};
+#[cfg(feature = "host-bindings")]
+use microesnext_types::HostRef;
 use microesnext_types::{Error, RootId, Value};
 #[cfg(feature = "atoms")]
 use microesnext_values::strings::atoms::Atoms;
@@ -192,6 +194,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "function-arguments",
         feature = "integer-operations",
         feature = "integer-negation",
+        feature = "host-bindings",
         feature = "locals",
         feature = "logical-operations",
         feature = "numbers",
@@ -208,6 +211,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     ))]
     fn run_extension(&mut self, opcode: Opcode) -> Result<Option<Outcome>, Error> {
         match opcode {
+            #[cfg(feature = "host-bindings")]
+            Opcode::ConstHost => {
+                let reference = HostRef::new(self.core.next_u32()?).ok_or(Error::BadBytecode)?;
+                self.core.arena_mut().push(Value::from_host(reference))?;
+                Ok(None)
+            }
             #[cfg(feature = "stack-operations")]
             Opcode::DuplicateTop => {
                 microesnext_arena::stack_operations::duplicate_top(self.core.arena_mut())?;

@@ -146,6 +146,10 @@ functions = [
   "microesnext-vm/functions",
   "microesnext-compiler/functions",
 ]
+host-bindings = [
+  "microesnext-vm/host-bindings",
+  "microesnext-compiler/host-bindings",
+]
 callable-objects = [
   "functions",
   "objects",

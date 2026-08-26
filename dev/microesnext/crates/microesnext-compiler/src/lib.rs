@@ -234,12 +234,27 @@ impl Builder {
 /// AST or recursing on the native stack. This grows into the production parser
 /// while preserving direct bytecode emission.
 pub fn compile_script(source: &str) -> Result<Vec<u8>, CompileError> {
-    compile_script_with_options(source, CompileOptions::default())
+    compile_script_with_host_globals(source, &[])
+}
+
+pub fn compile_script_with_host_globals(
+    source: &str,
+    globals: &[&str],
+) -> Result<Vec<u8>, CompileError> {
+    compile_script_with_options_and_host_globals(source, CompileOptions::default(), globals)
 }
 
 pub fn compile_script_with_options(
     source: &str,
     options: CompileOptions,
+) -> Result<Vec<u8>, CompileError> {
+    compile_script_with_options_and_host_globals(source, options, &[])
+}
+
+fn compile_script_with_options_and_host_globals(
+    source: &str,
+    options: CompileOptions,
+    globals: &[&str],
 ) -> Result<Vec<u8>, CompileError> {
     #[cfg(not(any(feature = "number-negation", feature = "number-operations")))]
     let _ = options;
@@ -247,6 +262,11 @@ pub fn compile_script_with_options(
         source: source.as_bytes(),
         offset: 0,
         output: Vec::new(),
+        #[cfg(feature = "host-bindings")]
+        host_globals: globals
+            .iter()
+            .map(|name| name.as_bytes().to_vec())
+            .collect(),
         #[cfg(feature = "locals")]
         locals: Vec::new(),
         #[cfg(feature = "environments")]
@@ -287,6 +307,8 @@ struct Parser<'source> {
     source: &'source [u8],
     offset: usize,
     output: Vec<u8>,
+    #[cfg(feature = "host-bindings")]
+    host_globals: Vec<Vec<u8>>,
     #[cfg(feature = "locals")]
     locals: Vec<Binding>,
     #[cfg(feature = "environments")]
@@ -1742,6 +1764,8 @@ impl Parser<'_> {
             source: self.source,
             offset: self.offset,
             output: self.initial_function_frame(parameter_count, receiver_frame),
+            #[cfg(feature = "host-bindings")]
+            host_globals: self.host_globals.clone(),
             locals: parameters,
             #[cfg(feature = "environments")]
             outer_bindings,
@@ -3708,6 +3732,14 @@ impl Parser<'_> {
                 let _ = captured;
                 unreachable!()
             }
+        } else if let Some(host) = self.host_global_at_offset() {
+            #[cfg(feature = "host-bindings")]
+            {
+                self.offset += self.host_globals[host as usize].len();
+                self.output.push(Opcode::ConstHost as u8);
+                self.output.extend_from_slice(&host.to_le_bytes());
+            }
+            (false, TermKind::General)
         } else if self.receiver_term() {
             (false, TermKind::General)
         } else if cfg!(feature = "class-expressions") && self.try_word(b"class") {
@@ -4200,6 +4232,24 @@ impl Parser<'_> {
             .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
     }
 
+    #[cfg(feature = "host-bindings")]
+    fn host_global_at_offset(&self) -> Option<u32> {
+        self.host_globals
+            .iter()
+            .enumerate()
+            .find_map(|(index, name)| {
+                (self.source[self.offset..].starts_with(name)
+                    && self.identifier_end(self.offset + name.len()))
+                .then(|| u32::try_from(index).ok())
+                .flatten()
+            })
+    }
+
+    #[cfg(not(feature = "host-bindings"))]
+    fn host_global_at_offset(&self) -> Option<u32> {
+        None
+    }
+
     #[cfg(all(feature = "recursive-async-functions", feature = "recursive-functions"))]
     fn allows_named_function(&self, _asynchronous: bool) -> bool {
         true
@@ -4524,6 +4574,16 @@ mod tests {
     #[cfg(feature = "var-declarations")]
     fn compiles_var_bindings_with_the_local_storage_model() {
         assert!(compile_script("var answer = 42; return answer;").is_ok());
+    }
+
+    #[test]
+    #[cfg(feature = "host-bindings")]
+    fn compiles_named_host_globals_as_opaque_references() {
+        let code = compile_script_with_host_globals("return parseInt;", &["parseInt"]).unwrap();
+        assert!(
+            code.windows(5)
+                .any(|bytes| bytes == [Opcode::ConstHost as u8, 0, 0, 0, 0])
+        );
     }
 
     #[cfg(feature = "locals")]

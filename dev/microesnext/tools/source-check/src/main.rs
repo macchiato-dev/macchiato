@@ -1,6 +1,37 @@
 use std::{env, fs, process};
 
-use microesnext_compiler::compile_script;
+use microesnext_compiler::compile_script_with_host_globals;
+
+const HOST_GLOBALS: &[&str] = &[
+    "Array",
+    "Date",
+    "Error",
+    "JSON",
+    "Map",
+    "Math",
+    "Object",
+    "Promise",
+    "RangeError",
+    "RegExp",
+    "Set",
+    "TypeError",
+    "Uint8Array",
+    "WeakMap",
+    "WeakSet",
+    "clearInterval",
+    "clearTimeout",
+    "console",
+    "document",
+    "globalThis",
+    "parseFloat",
+    "parseInt",
+    "performance",
+    "queueMicrotask",
+    "requestAnimationFrame",
+    "setInterval",
+    "setTimeout",
+    "window",
+];
 
 fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = &source[..offset.min(source.len())];
@@ -32,7 +63,7 @@ fn main() {
         process::exit(2);
     });
 
-    match compile_script(&source) {
+    match compile_script_with_host_globals(&source, HOST_GLOBALS) {
         Ok(bytecode) => println!(
             "{}: {} source bytes -> {} bytecode bytes",
             path.to_string_lossy(),

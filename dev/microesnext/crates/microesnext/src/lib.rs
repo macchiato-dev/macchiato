@@ -2,7 +2,7 @@
 
 pub use microesnext_bytecode as bytecode;
 pub use microesnext_execution::core::{Core, CoreOutcome};
-pub use microesnext_types::{Error, HeapRef, Value};
+pub use microesnext_types::{Error, HeapRef, HostRef, Value};
 pub use microesnext_vm::{Machine, Outcome};
 
 #[cfg(feature = "locals")]

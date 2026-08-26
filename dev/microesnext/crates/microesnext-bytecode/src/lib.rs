@@ -164,6 +164,8 @@ pub enum Opcode {
     SetIndexResult = 115,
     #[cfg(feature = "stack-operations")]
     DropTop = 116,
+    #[cfg(feature = "host-bindings")]
+    ConstHost = 117,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -311,6 +313,8 @@ impl TryFrom<u8> for Opcode {
             112 => Ok(Self::DuplicateTop),
             #[cfg(feature = "stack-operations")]
             116 => Ok(Self::DropTop),
+            #[cfg(feature = "host-bindings")]
+            117 => Ok(Self::ConstHost),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
