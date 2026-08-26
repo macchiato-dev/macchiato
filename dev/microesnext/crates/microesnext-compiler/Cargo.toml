@@ -41,6 +41,7 @@ default = [
   "nonterminal-conditionals",
   "nested-conditionals",
   "nested-loops",
+  "nested-exceptions",
   "string-number-coercion",
   "typeof",
   "number-operations",
@@ -129,6 +130,7 @@ number-remainder = ["numbers", "microesnext-bytecode/number-remainder"]
 nonterminal-conditionals = ["control-flow"]
 nested-conditionals = ["nonterminal-conditionals"]
 nested-loops = ["nested-conditionals"]
+nested-exceptions = ["exceptions"]
 string-number-coercion = ["number-coercion", "strings"]
 objects = ["atoms", "microesnext-bytecode/objects"]
 property-assignment = ["locals", "objects", "microesnext-bytecode/property-assignment"]

@@ -432,6 +432,12 @@ enum ControlFrame {
     },
 }
 
+#[cfg(feature = "nested-exceptions")]
+enum ExceptionFrame {
+    Try { catch_patch: usize },
+    Catch { binding: Option<(usize, usize)> },
+}
+
 impl Parser<'_> {
     #[cfg(all(
         feature = "control-flow",
@@ -1757,7 +1763,7 @@ impl Parser<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "exceptions")]
+    #[cfg(all(feature = "exceptions", not(feature = "nested-exceptions")))]
     fn try_catch(&mut self) -> Result<(), CompileError> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
@@ -1794,6 +1800,123 @@ impl Parser<'_> {
             return Err(self.error("}"));
         }
         self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    fn try_catch(&mut self) -> Result<(), CompileError> {
+        let mut frames = Vec::new();
+        self.begin_exception(&mut frames)?;
+        loop {
+            self.statement_prefix()?;
+            if self.try_word_after_whitespace(b"try") {
+                if matches!(frames.last(), Some(ExceptionFrame::Catch { .. })) {
+                    self.output.push(Opcode::Drop as u8);
+                }
+                self.begin_exception(&mut frames)?;
+                continue;
+            }
+
+            let close_handlers = frames
+                .iter()
+                .filter(|frame| matches!(frame, ExceptionFrame::Try { .. }))
+                .count();
+            let (binding, pending_exception) = match frames.last() {
+                Some(ExceptionFrame::Catch { binding }) => (*binding, true),
+                _ => (None, false),
+            };
+            self.nested_exception_completion(binding, close_handlers, pending_exception)?;
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+
+            loop {
+                let Some(frame) = frames.pop() else {
+                    return Err(self.error("an active exception frame"));
+                };
+                match frame {
+                    ExceptionFrame::Try { catch_patch } => {
+                        let binding = self.catch_header(catch_patch)?;
+                        frames.push(ExceptionFrame::Catch { binding });
+                        break;
+                    }
+                    ExceptionFrame::Catch { .. } if frames.is_empty() => {
+                        self.whitespace();
+                        return Ok(());
+                    }
+                    ExceptionFrame::Catch { .. } => {
+                        if !self.consume(b'}') {
+                            return Err(self.error("}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    fn begin_exception(&mut self, frames: &mut Vec<ExceptionFrame>) -> Result<(), CompileError> {
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_patch = self.output.len() + 1;
+        self.output.push(Opcode::Try as u8);
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        frames.push(ExceptionFrame::Try { catch_patch });
+        Ok(())
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    fn catch_header(&mut self, catch_patch: usize) -> Result<Option<(usize, usize)>, CompileError> {
+        if !self.try_word_after_whitespace(b"catch") {
+            return Err(self.error("catch"));
+        }
+        let binding = if self.consume(b'(') {
+            self.whitespace();
+            let binding = self.identifier()?;
+            if !self.consume(b')') {
+                return Err(self.error(")"));
+            }
+            Some(binding)
+        } else {
+            None
+        };
+        if !self.consume(b'{') {
+            return Err(self.error("{"));
+        }
+        let catch_offset = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[catch_patch..catch_patch + 4].copy_from_slice(&catch_offset.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(catch_patch);
+        Ok(binding)
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    fn nested_exception_completion(
+        &mut self,
+        binding: Option<(usize, usize)>,
+        close_handlers: usize,
+        pending_exception: bool,
+    ) -> Result<(), CompileError> {
+        self.whitespace();
+        let returning = self.source[self.offset..].starts_with(b"return")
+            && self.identifier_end(self.offset + b"return".len())
+            || cfg!(feature = "implicit-completions")
+                && (self.source.get(self.offset).is_none()
+                    || self.source.get(self.offset) == Some(&b'}'));
+        self.completion(binding, false, pending_exception)?;
+        if returning {
+            let return_offset = self
+                .output
+                .len()
+                .checked_sub(1)
+                .ok_or_else(|| self.error("a return instruction"))?;
+            self.output.splice(
+                return_offset..return_offset,
+                core::iter::repeat_n(Opcode::EndTry as u8, close_handlers),
+            );
+        }
         Ok(())
     }
 
@@ -4115,6 +4238,44 @@ mod tests {
         );
         let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
         assert_eq!(code[target], Opcode::Drop as u8);
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    #[test]
+    fn compiles_nested_exception_regions_from_an_explicit_worklist() {
+        let code =
+            compile_script("try { try { return 42; } catch { return 1; } } catch { return 2; }")
+                .unwrap();
+        assert_eq!(
+            code.iter()
+                .filter(|opcode| **opcode == Opcode::Try as u8)
+                .count(),
+            2
+        );
+        assert!(code.windows(3).any(|ops| {
+            ops == [
+                Opcode::EndTry as u8,
+                Opcode::EndTry as u8,
+                Opcode::Return as u8,
+            ]
+        }));
+    }
+
+    #[cfg(feature = "nested-exceptions")]
+    #[test]
+    fn exception_source_depth_does_not_consume_the_rust_stack() {
+        let depth = 2_048;
+        let mut source = alloc::string::String::new();
+        for _ in 0..depth {
+            source.push_str("try {");
+        }
+        source.push_str("return 42;");
+        for _ in 0..depth {
+            source.push_str("} catch { return 0; }");
+        }
+
+        let code = compile_script(&source).unwrap();
+        assert!(code.len() > depth * 12);
     }
 
     #[cfg(feature = "arrays")]
