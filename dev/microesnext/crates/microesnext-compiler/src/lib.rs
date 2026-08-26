@@ -3536,6 +3536,12 @@ mod tests {
         let nested = compile_script("let values = [[0]]; return values[0][0] = 42;").unwrap();
         assert!(nested.contains(&(Opcode::GetIndex as u8)));
         assert!(nested.contains(&(Opcode::SetIndexResult as u8)));
+
+        let receiver =
+            compile_script("class Box { set() { return this.items[0] = 42; } } return 0;").unwrap();
+        assert!(receiver.contains(&(Opcode::LoadThis as u8)));
+        assert!(receiver.contains(&(Opcode::GetProperty as u8)));
+        assert!(receiver.contains(&(Opcode::SetIndexResult as u8)));
     }
 
     #[cfg(all(

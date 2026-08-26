@@ -448,6 +448,17 @@ path = "tests/array_assignment_expressions.rs"
 required-features = ["array-assignment-expressions", "arrays", "locals"]
 
 [[test]]
+name = "captured-array-assignment-expressions"
+path = "tests/captured_array_assignment_expressions.rs"
+required-features = [
+  "array-assignment-expressions",
+  "arrays",
+  "environments",
+  "function-arguments",
+  "objects",
+]
+
+[[test]]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["locals", "number-coercion", "number-negation", "number-operations"]
