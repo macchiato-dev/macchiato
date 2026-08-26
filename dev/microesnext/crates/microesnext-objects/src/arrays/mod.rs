@@ -10,6 +10,13 @@ const INITIAL_CAPACITY: usize = 8;
 const LENGTH: usize = 0;
 const STORAGE: usize = 1;
 
+pub fn is_array(arena: &Arena<'_>, value: Value) -> bool {
+    value
+        .as_ref()
+        .and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::Array)
+}
+
 pub fn new(arena: &mut Arena<'_>) -> Result<Value, Error> {
     let storage = arena.allocate_repeated_values(
         BlockKind::ArrayStorage,

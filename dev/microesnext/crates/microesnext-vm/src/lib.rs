@@ -1030,9 +1030,23 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "array-assignment-expressions")]
             Opcode::SetIndexResult => {
-                microesnext_objects::arrays::assignment_expressions::store_result(
-                    self.core.arena_mut(),
-                )?;
+                let value = self.core.arena_mut().pop()?;
+                let key = self.core.arena_mut().pop()?;
+                let target = self.core.arena_mut().pop()?;
+                let result = value;
+                if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                    let index = key
+                        .as_i30()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    array_set(self.core.arena_mut(), target, index, value)?;
+                } else {
+                    #[cfg(feature = "objects")]
+                    set(self.core.arena_mut(), target, key, value)?;
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::Type);
+                }
+                self.core.arena_mut().push(result)?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]
@@ -1313,15 +1327,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "arrays")]
             Opcode::GetIndex => {
-                let index = self
-                    .core
-                    .arena_mut()
-                    .pop()?
-                    .as_i30()
-                    .and_then(|index| usize::try_from(index).ok())
-                    .ok_or(Error::Type)?;
-                let array = self.core.arena_mut().pop()?;
-                let value = array_get(self.core.arena(), array, index)?;
+                let key = self.core.arena_mut().pop()?;
+                let target = self.core.arena_mut().pop()?;
+                let value = if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                    let index = key
+                        .as_i30()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    array_get(self.core.arena(), target, index)?
+                } else {
+                    #[cfg(feature = "objects")]
+                    {
+                        get(self.core.arena(), target, key)?
+                    }
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::Type);
+                };
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -1447,16 +1468,23 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "arrays")]
             Opcode::SetIndex => {
                 let value = self.core.arena_mut().pop()?;
-                let index = self
-                    .core
-                    .arena_mut()
-                    .pop()?
-                    .as_i30()
-                    .and_then(|index| usize::try_from(index).ok())
-                    .ok_or(Error::Type)?;
-                let array = self.core.arena_mut().pop()?;
-                let array = array_set(self.core.arena_mut(), array, index, value)?;
-                self.core.arena_mut().push(array)?;
+                let key = self.core.arena_mut().pop()?;
+                let target = self.core.arena_mut().pop()?;
+                let target = if microesnext_objects::arrays::is_array(self.core.arena(), target) {
+                    let index = key
+                        .as_i30()
+                        .and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    array_set(self.core.arena_mut(), target, index, value)?
+                } else {
+                    #[cfg(feature = "objects")]
+                    {
+                        set(self.core.arena_mut(), target, key, value)?
+                    }
+                    #[cfg(not(feature = "objects"))]
+                    return Err(Error::Type);
+                };
+                self.core.arena_mut().push(target)?;
                 Ok(None)
             }
             #[cfg(feature = "array-spread")]
