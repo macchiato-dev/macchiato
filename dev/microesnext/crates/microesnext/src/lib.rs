@@ -30,7 +30,7 @@ pub use microesnext_arrays as arrays;
 pub use microesnext_array_assignment_expressions as array_assignment_expressions;
 
 #[cfg(feature = "array-iterators")]
-pub use microesnext_array_iterators as array_iterators;
+pub use microesnext_arrays::iterators as array_iterators;
 
 #[cfg(any(feature = "atoms", feature = "iterator-results"))]
 pub use microesnext_atoms as atoms;
@@ -54,10 +54,10 @@ pub use microesnext_callable_objects as callable_objects;
 pub use microesnext_class_constructors as class_constructors;
 
 #[cfg(feature = "collection-iterators")]
-pub use microesnext_collection_iterators as collection_iterators;
+pub use microesnext_collections::iterators as collection_iterators;
 
 #[cfg(feature = "collection-entry-iterators")]
-pub use microesnext_collection_entry_iterators as collection_entry_iterators;
+pub use microesnext_collections::entry_iterators as collection_entry_iterators;
 
 #[cfg(feature = "iterators")]
 pub use microesnext_iterators as iterators;

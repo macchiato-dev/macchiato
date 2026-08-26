@@ -203,11 +203,11 @@ an explicit relational stopping condition.
   A realm can omit description strings or compose them without changing the
   ordinary symbol crate.
 - `microesnext-iterators` stores a source, cursor, and adapter tag in a
-  relocatable guest object. `microesnext-array-iterators` and
-  `microesnext-collection-iterators` are separate adapters, so adding array
-  iteration does not pull in Map/Set storage, or the reverse.
-- `microesnext-collection-entry-iterators` adds pair-array allocation only for
-  `Map.entries`; collection key/value and Set iteration do not link arrays.
+  relocatable guest object. Arrays and collections expose independently gated
+  iterator modules, so adding array iteration does not pull in Map/Set storage,
+  or the reverse.
+- The collections `entry-iterators` feature adds pair-array allocation only
+  for `Map.entries`; collection key/value and Set iteration do not link arrays.
 - `microesnext-iterator-results` allocates ordinary `{ value, done }` objects
   with cached property identities. It is separate so cursor and adapter builds
   do not acquire object, atom, or string storage. Its source-neutral boundary

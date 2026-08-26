@@ -34,10 +34,7 @@ members = [
   "crates/microesnext-logical-operations",
   "crates/microesnext-method-calls",
   "crates/microesnext-integer-negation",
-  "crates/microesnext-array-iterators",
   "crates/microesnext-array-assignment-expressions",
-  "crates/microesnext-collection-iterators",
-  "crates/microesnext-collection-entry-iterators",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -106,10 +103,7 @@ microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
 microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
 microesnext-method-calls = { path = "crates/microesnext-method-calls", version = "0.0.0" }
 microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
-microesnext-array-iterators = { path = "crates/microesnext-array-iterators", version = "0.0.0" }
 microesnext-array-assignment-expressions = { path = "crates/microesnext-array-assignment-expressions", version = "0.0.0" }
-microesnext-collection-iterators = { path = "crates/microesnext-collection-iterators", version = "0.0.0" }
-microesnext-collection-entry-iterators = { path = "crates/microesnext-collection-entry-iterators", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }

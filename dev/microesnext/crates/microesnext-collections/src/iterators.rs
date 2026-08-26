@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
@@ -19,7 +17,7 @@ pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Err
     if kind != KEYS && kind != VALUES {
         return Err(Error::Type);
     }
-    let entry = microesnext_collections::next_from(arena, collection, &mut index)?;
+    let entry = crate::next_from(arena, collection, &mut index)?;
     microesnext_iterators::set_index(arena, iterator, index)?;
     let Some((key, value)) = entry else {
         return Ok(None);
@@ -32,7 +30,7 @@ pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Err
 }
 
 fn new(arena: &mut Arena<'_>, collection: Value, kind: u16) -> Result<Value, Error> {
-    microesnext_collections::len(arena, collection)?;
+    crate::len(arena, collection)?;
     microesnext_iterators::new(arena, collection, kind)
 }
 
@@ -48,14 +46,14 @@ mod tests {
     fn skips_deletions_and_observes_appends() {
         let mut memory = [0; 160];
         let mut arena = Arena::new(&mut memory);
-        let map = microesnext_collections::new_map(&mut arena).unwrap();
-        let map = microesnext_collections::set(&mut arena, map, integer(1), integer(10)).unwrap();
-        let map = microesnext_collections::set(&mut arena, map, integer(2), integer(20)).unwrap();
+        let map = crate::new_map(&mut arena).unwrap();
+        let map = crate::set(&mut arena, map, integer(1), integer(10)).unwrap();
+        let map = crate::set(&mut arena, map, integer(2), integer(20)).unwrap();
         let iterator = new_values(&mut arena, map).unwrap();
         assert_eq!(next(&mut arena, iterator), Ok(Some(integer(10))));
-        assert!(microesnext_collections::delete(&mut arena, map, integer(2)).unwrap());
+        assert!(crate::delete(&mut arena, map, integer(2)).unwrap());
         assert_eq!(
-            microesnext_collections::set(&mut arena, map, integer(3), integer(30)).unwrap(),
+            crate::set(&mut arena, map, integer(3), integer(30)).unwrap(),
             map
         );
         assert_eq!(next(&mut arena, iterator), Ok(Some(integer(30))));

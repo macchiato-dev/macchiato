@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(feature = "iterators")]
+pub mod iterators;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 

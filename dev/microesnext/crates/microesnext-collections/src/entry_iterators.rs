@@ -1,12 +1,10 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
 const ENTRIES: u16 = microesnext_iterators::kind::COLLECTION_ENTRIES;
 
 pub fn new(arena: &mut Arena<'_>, map: Value) -> Result<Value, Error> {
-    microesnext_collections::len(arena, map)?;
+    crate::len(arena, map)?;
     microesnext_iterators::new(arena, map, ENTRIES)
 }
 
@@ -17,7 +15,7 @@ pub fn next(arena: &mut Arena<'_>, iterator: Value) -> Result<Option<Value>, Err
     if kind != ENTRIES {
         return Err(Error::Type);
     }
-    let entry = microesnext_collections::next_from(arena, map, &mut index)?;
+    let entry = crate::next_from(arena, map, &mut index)?;
     microesnext_iterators::set_index(arena, iterator, index)?;
     let Some((key, value)) = entry else {
         return Ok(None);
@@ -39,20 +37,20 @@ mod tests {
         let ten = Value::from_i30(10).unwrap();
         let two = Value::from_i30(2).unwrap();
         let twenty = Value::from_i30(20).unwrap();
-        let map = microesnext_collections::new_map(&mut arena).unwrap();
-        let map = microesnext_collections::set(&mut arena, map, one, ten).unwrap();
-        let map = microesnext_collections::set(&mut arena, map, two, twenty).unwrap();
+        let map = crate::new_map(&mut arena).unwrap();
+        let map = crate::set(&mut arena, map, one, ten).unwrap();
+        let map = crate::set(&mut arena, map, two, twenty).unwrap();
         let iterator = new(&mut arena, map).unwrap();
 
         assert_eq!(
-            microesnext_collection_iterators::next(&mut arena, iterator),
+            crate::iterators::next(&mut arena, iterator),
             Err(Error::Type)
         );
 
         let pair = next(&mut arena, iterator).unwrap().unwrap();
         assert_eq!(microesnext_arrays::get(&arena, pair, 0), Ok(one));
         assert_eq!(microesnext_arrays::get(&arena, pair, 1), Ok(ten));
-        assert!(microesnext_collections::delete(&mut arena, map, two).unwrap());
+        assert!(crate::delete(&mut arena, map, two).unwrap());
         assert_eq!(next(&mut arena, iterator), Ok(None));
     }
 }

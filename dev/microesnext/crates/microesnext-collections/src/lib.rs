@@ -1,5 +1,9 @@
 #![no_std]
 
+#[cfg(feature = "entry-iterators")]
+pub mod entry_iterators;
+#[cfg(feature = "iterators")]
+pub mod iterators;
 #[cfg(feature = "weak")]
 pub mod weak;
 

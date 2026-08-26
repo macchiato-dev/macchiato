@@ -8,7 +8,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-array-assignment-expressions",
- "microesnext-array-iterators",
  "microesnext-arrays",
  "microesnext-async",
  "microesnext-async-functions",
@@ -18,8 +17,6 @@ dependencies = [
  "microesnext-callable-objects",
  "microesnext-captured-assignment-expressions",
  "microesnext-class-constructors",
- "microesnext-collection-entry-iterators",
- "microesnext-collection-iterators",
  "microesnext-collections",
  "microesnext-compiler",
  "microesnext-environments",
@@ -75,20 +72,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-array-iterators"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-arrays",
- "microesnext-iterators",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-arrays"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-iterators",
  "microesnext-types",
 ]
 
@@ -189,33 +177,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-collection-entry-iterators"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-arrays",
- "microesnext-collection-iterators",
- "microesnext-collections",
- "microesnext-iterators",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-collection-iterators"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-collections",
- "microesnext-iterators",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-collections"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
+ "microesnext-arrays",
  "microesnext-equality",
+ "microesnext-iterators",
  "microesnext-numbers",
  "microesnext-objects",
  "microesnext-strings",

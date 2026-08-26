@@ -45,7 +45,7 @@ array-assignment-expressions = [
   "dep:microesnext-array-assignment-expressions",
   "microesnext-vm/array-assignment-expressions",
 ]
-array-iterators = ["arrays", "iterators", "dep:microesnext-array-iterators"]
+array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
 async = ["dep:microesnext-async"]
 async-functions = [
   "async",
@@ -202,12 +202,12 @@ receivers = [
   "microesnext-vm/receivers",
 ]
 collections = ["dep:microesnext-collections"]
-collection-iterators = ["collections", "iterators", "dep:microesnext-collection-iterators"]
+collection-iterators = ["collections", "iterators", "microesnext-collections/iterators"]
 collection-entry-iterators = [
   "arrays",
   "collections",
   "iterators",
-  "dep:microesnext-collection-entry-iterators",
+  "microesnext-collections/entry-iterators",
 ]
 iterators = ["dep:microesnext-iterators"]
 iterator-results = [
@@ -251,7 +251,6 @@ microesnext-async = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
-microesnext-array-iterators = { workspace = true, optional = true }
 microesnext-array-assignment-expressions = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
@@ -259,8 +258,6 @@ microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
 microesnext-captured-assignment-expressions = { workspace = true, optional = true }
 microesnext-property-assignment-expressions = { workspace = true, optional = true }
-microesnext-collection-iterators = { workspace = true, optional = true }
-microesnext-collection-entry-iterators = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
