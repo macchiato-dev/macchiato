@@ -517,6 +517,11 @@ impl Parser<'_> {
                 self.while_loop()?;
                 continue;
             }
+            #[cfg(feature = "for-statements")]
+            if self.try_word_after_whitespace(b"for") {
+                self.for_loop()?;
+                continue;
+            }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
                 #[cfg(feature = "nonterminal-exceptions")]
@@ -556,6 +561,11 @@ impl Parser<'_> {
                 self.structured_statement(StructuredStart::Loop)?;
                 #[cfg(not(feature = "structured-statements"))]
                 self.control_statement(false)?;
+                continue;
+            }
+            #[cfg(feature = "for-statements")]
+            if self.try_word_after_whitespace(b"for") {
+                self.for_loop()?;
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -599,6 +609,11 @@ impl Parser<'_> {
             }
             if self.try_word_after_whitespace(b"while") {
                 self.while_loop()?;
+                continue;
+            }
+            #[cfg(feature = "for-statements")]
+            if self.try_word_after_whitespace(b"for") {
+                self.for_loop()?;
                 continue;
             }
             #[cfg(feature = "exceptions")]
@@ -673,7 +688,9 @@ impl Parser<'_> {
         self.word_at_offset(b"return")
             || self.word_at_offset(b"throw")
             || cfg!(feature = "control-flow")
-                && (self.word_at_offset(b"if") || self.word_at_offset(b"while"))
+                && (self.word_at_offset(b"if")
+                    || self.word_at_offset(b"while")
+                    || cfg!(feature = "for-statements") && self.word_at_offset(b"for"))
             || cfg!(feature = "exceptions") && self.word_at_offset(b"try")
     }
 
@@ -736,6 +753,90 @@ impl Parser<'_> {
         if !self.consume(b'}') {
             return Err(self.error("}"));
         }
+        self.output.push(Opcode::Jump as u8);
+        #[cfg(feature = "functions")]
+        let loop_patch = self.output.len();
+        self.output.extend_from_slice(&loop_start.to_le_bytes());
+        let exit = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        #[cfg(feature = "functions")]
+        {
+            self.relocations.push(exit_patch);
+            self.relocations.push(loop_patch);
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn for_loop(&mut self) -> Result<(), CompileError> {
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        let mut initialized_locals = Some(0);
+        if self.try_word_after_whitespace(b"let")
+            || self.try_word_after_whitespace(b"var")
+            || self.try_word_after_whitespace(b"const")
+        {
+            self.let_declaration(&mut initialized_locals)?;
+        } else if !self.consume(b';') {
+            self.expression(None)?;
+            self.output.push(Opcode::DropTop as u8);
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
+
+        let loop_start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if self.consume(b';') {
+            self.output.push(Opcode::ConstImmediate as u8);
+            self.output.push(Immediate::True as u8);
+        } else {
+            self.expression(None)?;
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+
+        // The update appears before the body in source but executes after it.
+        // Compile it directly into a small side buffer, then append it at the
+        // loop's back edge without constructing an AST.
+        #[cfg(feature = "functions")]
+        let relocation_count = self.relocations.len();
+        #[cfg(feature = "functions")]
+        let function_count = self.functions.len();
+        let prefix = core::mem::take(&mut self.output);
+        if self.source.get(self.offset) != Some(&b')') {
+            self.expression(None)?;
+            self.output.push(Opcode::DropTop as u8);
+        }
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        let update = core::mem::replace(&mut self.output, prefix);
+        #[cfg(feature = "functions")]
+        if self.relocations.len() != relocation_count || self.functions.len() != function_count {
+            return Err(self.error("a for update without nested control flow or functions"));
+        }
+
+        if self.consume(b'{') {
+            self.statement_prefix()?;
+            if !self.consume(b'}') {
+                return Err(self.error("}"));
+            }
+        } else {
+            self.expression(None)?;
+            self.output.push(Opcode::DropTop as u8);
+            if !self.consume(b';') {
+                return Err(self.error(";"));
+            }
+        }
+        self.output.extend_from_slice(&update);
         self.output.push(Opcode::Jump as u8);
         #[cfg(feature = "functions")]
         let loop_patch = self.output.len();

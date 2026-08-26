@@ -27,6 +27,7 @@ default = [
   "exceptions",
   "expression-statements",
   "function-arguments",
+  "for-statements",
   "implicit-completions",
   "host-bindings",
   "instanceof",
@@ -101,6 +102,7 @@ property-assignment-expressions = [
 equality = ["microesnext-bytecode/equality"]
 exceptions = ["microesnext-bytecode/exceptions"]
 expression-statements = ["microesnext-bytecode/stack-operations"]
+for-statements = ["control-flow", "expression-statements", "locals"]
 environments = ["functions", "microesnext-bytecode/environments"]
 functions = [
   "locals",

@@ -15,6 +15,12 @@ control-flow = [
   "microesnext-compiler/conditional-expressions",
 ]
 expression-statements = ["stack-operations", "microesnext-compiler/expression-statements"]
+for-statements = [
+  "control-flow",
+  "expression-statements",
+  "locals",
+  "microesnext-compiler/for-statements",
+]
 implicit-completions = ["microesnext-compiler/implicit-completions"]
 constructors = [
   "callable-objects",
@@ -427,6 +433,11 @@ required-features = ["local-assignment-expressions"]
 name = "update-expressions"
 path = "tests/update_expressions.rs"
 required-features = ["expression-statements", "update-expressions"]
+
+[[test]]
+name = "for-statements"
+path = "tests/for_statements.rs"
+required-features = ["for-statements", "update-expressions"]
 
 [[test]]
 name = "captured-assignment-expressions"
