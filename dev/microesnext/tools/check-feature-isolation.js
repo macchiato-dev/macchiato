@@ -135,6 +135,11 @@ assertCompilerFeatures(
   ["functions", "locals", "stack-operations"],
 );
 assertCompilerFeatures(
+  ["structured-statements"],
+  ["control-flow", "exceptions"],
+  ["functions", "locals", "stack-operations"],
+);
+assertCompilerFeatures(
   ["expression-statements"],
   ["stack-operations"],
   ["exceptions", "functions", "locals", "objects"],
