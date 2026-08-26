@@ -1977,17 +1977,21 @@ impl Parser<'_> {
             if existing.is_some_and(|index| !self.locals[index].hoisted) {
                 return Err(self.error("a unique local binding"));
             }
-            if !self.consume(b'=') {
-                return Err(self.error("="));
-            }
+            let initialized = self.consume(b'=');
             let existing_binding = existing.map(|index| self.locals[index]);
+            let should_store = initialized || existing.is_none();
             #[cfg(feature = "environments")]
-            if existing_binding.is_some_and(|binding| binding.captured) {
+            if should_store && existing_binding.is_some_and(|binding| binding.captured) {
                 let binding = existing_binding.expect("checked captured binding");
                 self.output.push(Opcode::LoadLocal as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
-            self.expression(None)?;
+            if initialized {
+                self.expression(None)?;
+            } else if should_store {
+                self.output.push(Opcode::ConstImmediate as u8);
+                self.output.push(Immediate::Undefined as u8);
+            }
             let slot = if let Some(index) = existing {
                 self.locals[index].hoisted = false;
                 self.locals[index].slot
@@ -1997,20 +2001,22 @@ impl Parser<'_> {
             };
             #[cfg(feature = "environments")]
             let captured = existing_binding.is_some_and(|binding| binding.captured);
-            #[cfg(feature = "environments")]
-            self.output.push(if captured {
-                Opcode::StoreEnvironmentCell
-            } else {
-                Opcode::StoreLocal
-            } as u8);
-            #[cfg(not(feature = "environments"))]
-            self.output.push(Opcode::StoreLocal as u8);
-            #[cfg(feature = "environments")]
-            if !captured {
+            if should_store {
+                #[cfg(feature = "environments")]
+                self.output.push(if captured {
+                    Opcode::StoreEnvironmentCell
+                } else {
+                    Opcode::StoreLocal
+                } as u8);
+                #[cfg(not(feature = "environments"))]
+                self.output.push(Opcode::StoreLocal as u8);
+                #[cfg(feature = "environments")]
+                if !captured {
+                    self.output.extend_from_slice(&slot.to_le_bytes());
+                }
+                #[cfg(not(feature = "environments"))]
                 self.output.extend_from_slice(&slot.to_le_bytes());
             }
-            #[cfg(not(feature = "environments"))]
-            self.output.extend_from_slice(&slot.to_le_bytes());
             if existing.is_none() {
                 self.locals.push(Binding {
                     start,

@@ -453,7 +453,12 @@ required-features = ["array-destructuring-assignments", "arrays", "locals"]
 [[test]]
 name = "hoisted-var-declarations"
 path = "tests/hoisted_var_declarations.rs"
-required-features = ["environments", "functions", "var-declarations"]
+required-features = [
+  "environments",
+  "functions",
+  "local-assignment-expressions",
+  "var-declarations",
+]
 
 [[test]]
 name = "source_logical"
