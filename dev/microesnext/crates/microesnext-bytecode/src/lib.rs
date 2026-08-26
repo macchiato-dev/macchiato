@@ -190,6 +190,8 @@ pub enum Opcode {
     NewArrayIterator = 128,
     #[cfg(feature = "array-iterators")]
     ArrayIteratorNext = 129,
+    #[cfg(feature = "stack-operations")]
+    DuplicatePair = 130,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -363,6 +365,8 @@ impl TryFrom<u8> for Opcode {
             128 => Ok(Self::NewArrayIterator),
             #[cfg(feature = "array-iterators")]
             129 => Ok(Self::ArrayIteratorNext),
+            #[cfg(feature = "stack-operations")]
+            130 => Ok(Self::DuplicatePair),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

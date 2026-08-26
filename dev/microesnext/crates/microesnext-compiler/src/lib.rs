@@ -1164,6 +1164,11 @@ impl Parser<'_> {
     fn single_control_body(&mut self) -> Result<bool, CompileError> {
         self.whitespace();
         #[cfg(feature = "for-statements")]
+        if self.try_word(b"for") {
+            self.for_loop()?;
+            return Ok(false);
+        }
+        #[cfg(feature = "for-statements")]
         if self.try_word(b"break") {
             if !self.consume(b';') {
                 return Err(self.error(";"));
@@ -2880,12 +2885,33 @@ impl Parser<'_> {
             }
             self.whitespace();
             let (key_start, key_end) = self.identifier()?;
-            if !self.consume(b'=') {
+            #[cfg(feature = "compound-assignment-expressions")]
+            let compound = self.consume_compound_addition();
+            #[cfg(not(feature = "compound-assignment-expressions"))]
+            let compound: Option<bool> = None;
+            if compound.is_none() && !self.consume(b'=') {
                 self.offset = source_start;
                 self.output.truncate(output_start);
                 return Ok(());
             }
             self.output_atom_range(key_start, key_end);
+            if let Some(subtracting) = compound {
+                self.output.push(Opcode::DuplicatePair as u8);
+                self.output.push(Opcode::GetProperty as u8);
+                self.output.push(Opcode::ToNumber as u8);
+                self.expression(None)?;
+                self.output.push(Opcode::ToNumber as u8);
+                self.output.push(if subtracting {
+                    Opcode::SubtractNumber as u8
+                } else {
+                    Opcode::AddNumber as u8
+                });
+                self.output.push(Opcode::SetPropertyStatement as u8);
+                if !self.consume(b';') {
+                    return Err(self.error(";"));
+                }
+                continue;
+            }
             self.expression(None)?;
             self.output.push(Opcode::SetPropertyStatement as u8);
             if !self.consume(b';') {
@@ -3756,7 +3782,15 @@ impl Parser<'_> {
             self.whitespace();
             properties.push(self.identifier()?);
         }
-        if properties.is_empty() || !self.consume_plain_assignment() {
+        if properties.is_empty() {
+            self.offset = start;
+            return Ok(false);
+        }
+        #[cfg(feature = "compound-assignment-expressions")]
+        let compound = self.consume_compound_addition();
+        #[cfg(not(feature = "compound-assignment-expressions"))]
+        let compound: Option<bool> = None;
+        if compound.is_none() && !self.consume_plain_assignment() {
             self.offset = start;
             return Ok(false);
         }
@@ -3768,6 +3802,20 @@ impl Parser<'_> {
             self.output.push(Opcode::GetProperty as u8);
         }
         self.output_atom_range(final_property.0, final_property.1);
+        if let Some(subtracting) = compound {
+            self.output.push(Opcode::DuplicatePair as u8);
+            self.output.push(Opcode::GetProperty as u8);
+            self.output.push(Opcode::ToNumber as u8);
+            self.expression(None)?;
+            self.output.push(Opcode::ToNumber as u8);
+            self.output.push(if subtracting {
+                Opcode::SubtractNumber as u8
+            } else {
+                Opcode::AddNumber as u8
+            });
+            self.output.push(Opcode::SetPropertyResult as u8);
+            return Ok(true);
+        }
         self.expression(None)?;
         self.output.push(Opcode::SetPropertyResult as u8);
         Ok(true)

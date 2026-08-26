@@ -41,6 +41,16 @@ fn braced_conditionals_do_not_require_an_else_branch() {
 }
 
 #[test]
+fn a_single_statement_conditional_can_control_a_for_loop() {
+    assert_eq!(
+        run(
+            "let answer = 0; if (true) for (let value of [20, 22]) { answer += value; } return answer;"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

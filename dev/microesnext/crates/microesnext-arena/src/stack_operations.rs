@@ -8,6 +8,15 @@ pub fn duplicate_top(arena: &mut Arena<'_>) -> Result<(), Error> {
     arena.push(value)
 }
 
+/// Duplicate the top pair while preserving its order.
+#[inline(always)]
+pub fn duplicate_pair(arena: &mut Arena<'_>) -> Result<(), Error> {
+    let lower = arena.stack_value(1)?;
+    let upper = arena.stack_value(0)?;
+    arena.push(lower)?;
+    arena.push(upper)
+}
+
 /// Discard the top operand without coupling ordinary expressions to exceptions.
 #[inline(always)]
 pub fn drop_top(arena: &mut Arena<'_>) -> Result<(), Error> {
@@ -41,6 +50,20 @@ mod tests {
         arena.push(Value::from_i30(42).unwrap()).unwrap();
 
         drop_top(&mut arena).unwrap();
+        assert_eq!(arena.pop(), Ok(Value::TRUE));
+    }
+
+    #[test]
+    fn duplicates_the_top_pair_in_order() {
+        let mut memory = [0; 16];
+        let mut arena = Arena::new(&mut memory);
+        arena.push(Value::TRUE).unwrap();
+        arena.push(Value::from_i30(42).unwrap()).unwrap();
+
+        duplicate_pair(&mut arena).unwrap();
+        assert_eq!(arena.pop().unwrap().as_i30(), Some(42));
+        assert_eq!(arena.pop(), Ok(Value::TRUE));
+        assert_eq!(arena.pop().unwrap().as_i30(), Some(42));
         assert_eq!(arena.pop(), Ok(Value::TRUE));
     }
 }

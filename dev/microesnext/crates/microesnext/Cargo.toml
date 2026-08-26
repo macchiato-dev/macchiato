@@ -523,6 +523,7 @@ path = "tests/for_statements.rs"
 required-features = [
   "arrays",
   "compound-assignment-expressions",
+  "class-expressions",
   "for-of-statements",
   "for-statements",
   "update-expressions",
@@ -546,7 +547,13 @@ required-features = ["default-parameters", "number-operations"]
 [[test]]
 name = "compound-assignment-expressions"
 path = "tests/compound_assignment_expressions.rs"
-required-features = ["compound-assignment-expressions", "expression-statements"]
+required-features = [
+  "compound-assignment-expressions",
+  "expression-statements",
+  "locals",
+  "objects",
+  "property-assignment",
+]
 
 [[test]]
 name = "captured-assignment-expressions"
@@ -651,7 +658,12 @@ required-features = ["locals", "nonterminal-exceptions"]
 [[test]]
 name = "structured-statements"
 path = "tests/structured_statements.rs"
-required-features = ["structured-statements"]
+required-features = [
+  "arrays",
+  "compound-assignment-expressions",
+  "for-of-statements",
+  "structured-statements",
+]
 
 [[test]]
 name = "equality"

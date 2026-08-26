@@ -258,6 +258,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 Ok(None)
             }
             #[cfg(feature = "stack-operations")]
+            Opcode::DuplicatePair => {
+                microesnext_arena::stack_operations::duplicate_pair(self.core.arena_mut())?;
+                Ok(None)
+            }
+            #[cfg(feature = "stack-operations")]
             Opcode::DropTop => {
                 microesnext_arena::stack_operations::drop_top(self.core.arena_mut())?;
                 Ok(None)
