@@ -79,6 +79,14 @@ fn sibling_branches_can_reuse_a_local_name() {
 }
 
 #[test]
+fn nested_unbraced_while_loops_execute_their_single_body() {
+    assert_eq!(
+        run("let answer = 40; if (true) { while (answer < 42) answer += 1; } return answer;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn abrupt_control_bodies_reach_an_enclosing_guest_handler() {
     assert_eq!(
         run("try { \

@@ -594,7 +594,11 @@ impl Parser<'_> {
             }
             if self.try_word_after_whitespace(b"while") {
                 #[cfg(feature = "structured-statements")]
-                self.structured_statement(StructuredStart::Loop)?;
+                if self.conditional_body_is_braced() {
+                    self.structured_statement(StructuredStart::Loop)?;
+                } else {
+                    self.single_while_loop()?;
+                }
                 #[cfg(not(feature = "structured-statements"))]
                 self.control_statement(false)?;
                 continue;
@@ -816,6 +820,41 @@ impl Parser<'_> {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
+        Ok(())
+    }
+
+    #[cfg(feature = "control-flow")]
+    fn single_while_loop(&mut self) -> Result<(), CompileError> {
+        let loop_start = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        if !self.consume(b'(') {
+            return Err(self.error("("));
+        }
+        self.expression(None)?;
+        if !self.consume(b')') {
+            return Err(self.error(")"));
+        }
+        self.output.push(Opcode::ToBoolean as u8);
+        self.output.push(Opcode::JumpIfFalseBoolean as u8);
+        let exit_patch = self.output.len();
+        self.output.extend_from_slice(&0_u32.to_le_bytes());
+        #[cfg(feature = "for-statements")]
+        self.loop_breaks.push(Vec::new());
+        let abrupt = self.single_control_body()?;
+        if !abrupt {
+            self.output.push(Opcode::Jump as u8);
+            let loop_patch = self.output.len();
+            self.output.extend_from_slice(&loop_start.to_le_bytes());
+            #[cfg(feature = "functions")]
+            self.relocations.push(loop_patch);
+        }
+        let exit = u32::try_from(self.output.len())
+            .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+        self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+        #[cfg(feature = "functions")]
+        self.relocations.push(exit_patch);
+        #[cfg(feature = "for-statements")]
+        self.patch_loop_breaks(exit)?;
         Ok(())
     }
 
@@ -1062,7 +1101,11 @@ impl Parser<'_> {
             }
             if self.try_word(b"while") {
                 #[cfg(feature = "structured-statements")]
-                self.structured_statement(StructuredStart::Loop)?;
+                if self.conditional_body_is_braced() {
+                    self.structured_statement(StructuredStart::Loop)?;
+                } else {
+                    self.single_while_loop()?;
+                }
                 #[cfg(not(feature = "structured-statements"))]
                 self.while_loop()?;
                 continue;
@@ -1539,7 +1582,11 @@ impl Parser<'_> {
                 continue;
             }
             if self.try_word(b"while") {
-                self.begin_structured(&mut frames, StructuredStart::Loop)?;
+                if self.conditional_body_is_braced() {
+                    self.begin_structured(&mut frames, StructuredStart::Loop)?;
+                } else {
+                    self.single_while_loop()?;
+                }
                 continue;
             }
             #[cfg(feature = "for-statements")]
@@ -4190,6 +4237,7 @@ impl Parser<'_> {
                             break;
                         }
                     }
+                    continue;
                 }
                 b'[' => endings.push(b']'),
                 b'(' => endings.push(b')'),
