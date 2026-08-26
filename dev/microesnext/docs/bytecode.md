@@ -72,6 +72,12 @@ expression result. A class with no methods needs no duplication. This avoids a
 persistent temporary local and leaves declaration-only class bytecode and its
 runtime unchanged.
 
+Uncaptured local assignment expressions reuse that same `duplicate_top`
+instruction. The right-hand value is duplicated, `store_local` consumes one
+copy, and the other remains as the expression result. Statement assignment
+continues to emit only `store_local`; builds omitting assignment expressions do
+not decode stack duplication merely because they support mutable locals.
+
 ## Receivers
 
 Receiver-aware functions use `init_receiver_frame`, `load_this`, and

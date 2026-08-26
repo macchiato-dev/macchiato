@@ -226,8 +226,8 @@ class record can remain as the expression result while methods are installed.
 The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
 is 23,562 / 8,943. Omitting it leaves the class-method runtime exactly 32,689 /
 10,891 and its compiler at 20,901 / 7,940. With expressions
-included, the default compiler is 42,861 / 15,686 and the all-capability runtime
-is 107,208 / 34,141.
+included, the default compiler is 43,362 / 15,838 and the all-capability runtime
+is 107,477 / 34,182.
 
 Private identity for named constructor expressions is separately removable.
 The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
@@ -299,6 +299,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Receiver-aware calls | 13,156 | 5,109 |
 | Iterator cursor | 3,599 | 1,630 |
 | Lexical locals | 4,012 | 1,798 |
+| Local assignment expressions | 4,786 | 2,066 |
 | Iterator result objects | 13,778 | 5,360 |
 | Iterable protocol binding | 10,275 | 4,197 |
 | Number representation | 5,311 | 2,422 |
@@ -329,7 +330,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 107,208 | 34,141 |
+| All capabilities | 107,477 | 34,182 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -627,6 +628,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | `instanceof` | 5,956 | 2,586 |
 | property assignment | 11,317 | 4,571 |
 | locals | 8,346 | 3,519 |
+| local assignment expressions | 8,823 | 3,652 |
 | basic functions | 13,184 | 5,569 |
 | function arguments | 14,148 | 5,953 |
 | captured environments | 17,878 | 7,430 |
@@ -634,7 +636,13 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,131 | 7,557 |
 | async functions | 14,224 | 5,938 |
 | recursive async functions | 18,966 | 7,846 |
-| default language slice | 42,861 | 15,686 |
+| default language slice | 43,362 | 15,838 |
+
+Local assignment expressions compose the 4,012 / 1,798 locals runtime with
+the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
+is 8,823 / 3,652, an increment of 477 raw / 133 gzip bytes over locals alone.
+Omitting the feature retains the former locals artifacts exactly and leaves
+plain assignment unconsumed in expression position.
 
 The `literal-expressions` rows compose the ordinary expression parser with
 literal storage without changing either runtime. Numeric-only array and object

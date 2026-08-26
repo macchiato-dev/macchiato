@@ -117,7 +117,10 @@ an explicit relational stopping condition.
   ordinary recursive-function builds.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
-  cannot move them; literal-only machines omit the crate entirely.
+  cannot move them; literal-only machines omit the crate entirely. The facade's
+  `local-assignment-expressions` composition adds the separately gated
+  `microesnext-stack-operations` crate, allowing an assignment to store one
+  copy while returning the other without changing the local fast path.
 - `microesnext-integer-operations` supplies checked i30 subtraction,
   multiplication, and relational comparisons. The `minimal-program` feature
   composes it with locals and control flow without adding floating-point

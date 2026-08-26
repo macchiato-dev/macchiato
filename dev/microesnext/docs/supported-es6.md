@@ -42,9 +42,13 @@ Property-assignment statements are separately gated from object literals and
 reads. The current source form accepts `local.name = value;` and constructor
 receiver initialization such as `this.name = value;`. Its opcode consumes the
 object, interned key, and value without leaving an unused expression result, so
-it needs no general stack-cleanup feature. Assignment expressions, computed
-keys, chained assignment, and direct writes through an outer capture remain
-separate work.
+it needs no general stack-cleanup feature. The independent
+`local-assignment-expressions` composition adds plain `=` for uncaptured lexical
+locals. It is right-associative, so `left = right = value` stores and evaluates
+in JavaScript order, and the expression returns the stored value. Captured
+environment cells, property targets, computed keys, and compound assignment
+remain separate compositions because they need different storage and stack
+mechanics.
 
 Array and object literals keep a compact numeric-value parser when
 `literal-expressions` is omitted. Enabling that compiler-only composition lets
