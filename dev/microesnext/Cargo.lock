@@ -496,6 +496,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "microesnext-property-assignment-expressions"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
+ "microesnext-atoms",
+ "microesnext-objects",
+ "microesnext-types",
+]
+
+[[package]]
 name = "microesnext-prototype-chain"
 version = "0.0.0"
 dependencies = [
