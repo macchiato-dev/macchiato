@@ -19,6 +19,7 @@ closures = []
 iterators = []
 numbers = []
 promise-resolvers = []
+stack-operations = []
 symbols = []
 
 [dependencies]

@@ -657,8 +657,8 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
 961 core, and its compiler is 6,175 / 2,607 versus 5,471 / 2,378. The runtime
-dependency graph contains only `microesnext-stack-operations`; it includes no
-exceptions, functions, objects, or locals. Reduced compilers leave the first
+dependency graph enables only the arena's `stack-operations` module; it includes
+no exceptions, functions, objects, or locals. Reduced compilers leave the first
 ordinary expression statement unconsumed, while existing specialized
 assignment statements continue to compile without this gate.
 

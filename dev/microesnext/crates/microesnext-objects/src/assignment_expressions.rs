@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::Error;
 
@@ -13,7 +11,7 @@ pub fn store_result(arena: &mut Arena<'_>) -> Result<(), Error> {
     let value = arena.pop()?;
     let key = arena.pop()?;
     let object = arena.pop()?;
-    microesnext_objects::set(arena, object, key, value)?;
+    crate::set(arena, object, key, value)?;
     arena.push(value)
 }
 
@@ -29,7 +27,7 @@ mod tests {
         let mut memory = [0; 512];
         let mut arena = Arena::with_root_capacity(&mut memory, 4);
         let mut atoms = Atoms::new(&mut arena).unwrap();
-        let object = microesnext_objects::new_object(&mut arena, Value::NULL).unwrap();
+        let object = crate::new_object(&mut arena, Value::NULL).unwrap();
         let key = atoms.intern(&mut arena, b"answer").unwrap();
         let value = Value::from_i30(42).unwrap();
         arena.push(object).unwrap();
@@ -39,6 +37,6 @@ mod tests {
         store_result(&mut arena).unwrap();
 
         assert_eq!(arena.pop(), Ok(value));
-        assert_eq!(microesnext_objects::get(&arena, object, key), Ok(value));
+        assert_eq!(crate::get(&arena, object, key), Ok(value));
     }
 }

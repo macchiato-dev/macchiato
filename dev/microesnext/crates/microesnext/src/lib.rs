@@ -27,7 +27,7 @@ pub use microesnext_method_calls as method_calls;
 pub use microesnext_arrays as arrays;
 
 #[cfg(feature = "array-assignment-expressions")]
-pub use microesnext_array_assignment_expressions as array_assignment_expressions;
+pub use microesnext_arrays::assignment_expressions as array_assignment_expressions;
 
 #[cfg(feature = "array-iterators")]
 pub use microesnext_arrays::iterators as array_iterators;
@@ -102,10 +102,10 @@ pub use microesnext_equality as equality;
 pub use microesnext_environments as environments;
 
 #[cfg(feature = "captured-assignment-expressions")]
-pub use microesnext_captured_assignment_expressions as captured_assignment_expressions;
+pub use microesnext_environments::assignment_expressions as captured_assignment_expressions;
 
 #[cfg(feature = "property-assignment-expressions")]
-pub use microesnext_property_assignment_expressions as property_assignment_expressions;
+pub use microesnext_objects::assignment_expressions as property_assignment_expressions;
 
 #[cfg(feature = "recursive-functions")]
 pub use microesnext_recursive_functions as recursive_functions;
@@ -127,7 +127,7 @@ pub use microesnext_objects as objects;
 pub use microesnext_strings as strings;
 
 #[cfg(feature = "stack-operations")]
-pub use microesnext_stack_operations as stack_operations;
+pub use microesnext_arena::stack_operations;
 
 #[cfg(feature = "string-operations")]
 pub use microesnext_string_operations as string_operations;

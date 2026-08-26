@@ -1,5 +1,7 @@
 #![no_std]
 
+#[cfg(feature = "assignment-expressions")]
+pub mod assignment_expressions;
 #[cfg(feature = "iterators")]
 pub mod iterators;
 

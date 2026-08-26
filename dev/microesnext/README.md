@@ -81,9 +81,9 @@ an explicit relational stopping condition.
   `class-methods` composition stores receiver-aware, non-constructible callable
   objects on a class prototype; constructor-only class builds retain neither
   its stack operations nor its three opcodes.
-- `microesnext-stack-operations` supplies independently removable operand
-  duplication and discard operations. Class expressions duplicate their class
-  record only while installing properties. The separate compiler-only
+- The arena's `stack-operations` feature supplies removable operand duplication
+  and discard helpers. Class expressions duplicate their class record only
+  while installing properties. The separate compiler-only
   `expression-statements` gate emits a generic discard for any supported
   expression followed by `;`; it does not reuse exception unwinding or add a
   statement-specific path to each expression capability.
@@ -138,14 +138,10 @@ an explicit relational stopping condition.
 - `microesnext-environments` supplies traced one-value cells for bindings that
   genuinely escape into closures. The compiler shares a cell across sibling
   closures and outer writes; uncaptured locals remain direct stack words.
-- `microesnext-captured-assignment-expressions` stores through one of those
-  cells while retaining the assigned value on the operand stack. Its dedicated
-  inline operation avoids linking stack rotation or adding a preserving branch
-  to ordinary environment assignment statements.
-- `microesnext-property-assignment-expressions` performs the corresponding
-  result-preserving object store. Its input is `[object, key, value]` and its
-  output is `[value]`, so object literals and assignment statements retain
-  their existing smaller store paths when expression assignment is omitted.
+- The environments `assignment-expressions` feature stores through a cell
+  while retaining the assigned value on the operand stack. The corresponding
+  objects feature performs a result-preserving property store. Their dedicated
+  inline operations leave ordinary assignment statements on smaller paths.
 - `microesnext-recursive-functions` composes closures with environment cells
   only for private self-bindings in named function expressions. Ordinary
   function builds do not resolve the crate or decode its constructor opcode.
@@ -156,9 +152,9 @@ an explicit relational stopping condition.
 - `microesnext-locals` supplies validated lexical stack slots. Local loads and
   stores use bottom-relative positions, so temporary operands and suspension
   cannot move them; literal-only machines omit the crate entirely. The facade's
-  `local-assignment-expressions` composition adds the separately gated
-  `microesnext-stack-operations` crate, allowing an assignment to store one
-  copy while returning the other without changing the local fast path.
+  `local-assignment-expressions` composition enables the arena's gated stack
+  helpers, allowing an assignment to store one copy while returning the other
+  without changing the local fast path.
 - `microesnext-integer-operations` supplies checked i30 subtraction,
   multiplication, and relational comparisons. The `minimal-program` feature
   composes it with locals and control flow without adding floating-point
@@ -222,10 +218,9 @@ an explicit relational stopping condition.
   storage with live cursor semantics.
 - `microesnext-arrays` contains dense and sparse indexed storage with geometric
   growth, holes, and JavaScript length behavior.
-- `microesnext-array-assignment-expressions` stores a computed array index while
+- The arrays `assignment-expressions` feature stores a computed index while
   retaining the assigned value. The compiler's separate `array-indexing` gate
-  adds reads without adding runtime code; literal stores keep their existing
-  object-preserving path when expression assignment is omitted.
+  adds reads without runtime code; literal stores retain their smaller path.
 - `microesnext-collections` contains Map and Set plus an independently gated
   `weak` module. Ephemeron tracing is retained only by that feature.
 - `microesnext-promises` contains compact promise records and a caller-owned,

@@ -2,6 +2,8 @@
 
 #[cfg(feature = "closures")]
 pub mod closures;
+#[cfg(feature = "stack-operations")]
+pub mod stack_operations;
 
 use microesnext_types::{Error, HeapRef, RootId, Value};
 

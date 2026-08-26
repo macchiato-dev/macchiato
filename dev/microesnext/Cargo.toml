@@ -13,8 +13,6 @@ members = [
   "crates/microesnext-collections",
   "crates/microesnext-callable-objects",
   "crates/microesnext-class-constructors",
-  "crates/microesnext-captured-assignment-expressions",
-  "crates/microesnext-property-assignment-expressions",
   "crates/microesnext-construction",
   "crates/microesnext-decimal-to-f64",
   "crates/microesnext-recursive-functions",
@@ -34,7 +32,6 @@ members = [
   "crates/microesnext-logical-operations",
   "crates/microesnext-method-calls",
   "crates/microesnext-integer-negation",
-  "crates/microesnext-array-assignment-expressions",
   "crates/microesnext-numbers",
   "crates/microesnext-exceptions",
   "crates/microesnext-objects",
@@ -44,7 +41,6 @@ members = [
   "crates/microesnext-promise-resolvers",
   "crates/microesnext-suspension",
   "crates/microesnext-strings",
-  "crates/microesnext-stack-operations",
   "crates/microesnext-string-operations",
   "crates/microesnext-symbols",
   "crates/microesnext-thenables",
@@ -82,8 +78,6 @@ microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0"
 microesnext-collections = { path = "crates/microesnext-collections", version = "0.0.0" }
 microesnext-callable-objects = { path = "crates/microesnext-callable-objects", version = "0.0.0" }
 microesnext-class-constructors = { path = "crates/microesnext-class-constructors", version = "0.0.0" }
-microesnext-captured-assignment-expressions = { path = "crates/microesnext-captured-assignment-expressions", version = "0.0.0" }
-microesnext-property-assignment-expressions = { path = "crates/microesnext-property-assignment-expressions", version = "0.0.0" }
 microesnext-construction = { path = "crates/microesnext-construction", version = "0.0.0" }
 microesnext-decimal-to-f64 = { path = "crates/microesnext-decimal-to-f64", version = "0.0.0" }
 microesnext-recursive-functions = { path = "crates/microesnext-recursive-functions", version = "0.0.0" }
@@ -103,7 +97,6 @@ microesnext-locals = { path = "crates/microesnext-locals", version = "0.0.0" }
 microesnext-logical-operations = { path = "crates/microesnext-logical-operations", version = "0.0.0" }
 microesnext-method-calls = { path = "crates/microesnext-method-calls", version = "0.0.0" }
 microesnext-integer-negation = { path = "crates/microesnext-integer-negation", version = "0.0.0" }
-microesnext-array-assignment-expressions = { path = "crates/microesnext-array-assignment-expressions", version = "0.0.0" }
 microesnext-numbers = { path = "crates/microesnext-numbers", version = "0.0.0" }
 microesnext-exceptions = { path = "crates/microesnext-exceptions", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
@@ -113,7 +106,6 @@ microesnext-promise-resolution = { path = "crates/microesnext-promise-resolution
 microesnext-promise-resolvers = { path = "crates/microesnext-promise-resolvers", version = "0.0.0" }
 microesnext-suspension = { path = "crates/microesnext-suspension", version = "0.0.0" }
 microesnext-strings = { path = "crates/microesnext-strings", version = "0.0.0" }
-microesnext-stack-operations = { path = "crates/microesnext-stack-operations", version = "0.0.0" }
 microesnext-string-operations = { path = "crates/microesnext-string-operations", version = "0.0.0" }
 microesnext-symbols = { path = "crates/microesnext-symbols", version = "0.0.0" }
 microesnext-thenables = { path = "crates/microesnext-thenables", version = "0.0.0" }

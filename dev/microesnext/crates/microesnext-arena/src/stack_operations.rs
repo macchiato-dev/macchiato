@@ -1,6 +1,4 @@
-#![no_std]
-
-use microesnext_arena::Arena;
+use crate::Arena;
 use microesnext_types::Error;
 
 /// Duplicate the top operand without retaining another root or allocation.

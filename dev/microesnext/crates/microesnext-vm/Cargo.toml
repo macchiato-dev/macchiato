@@ -28,7 +28,7 @@ strings = [
   "microesnext-truthiness?/strings",
 ]
 stack-operations = [
-  "dep:microesnext-stack-operations",
+  "microesnext-arena/stack-operations",
   "microesnext-bytecode/stack-operations",
 ]
 string-operations = [
@@ -138,17 +138,17 @@ exceptions = ["dep:microesnext-exceptions", "microesnext-bytecode/exceptions"]
 environments = ["dep:microesnext-environments", "microesnext-bytecode/environments"]
 captured-assignment-expressions = [
   "environments",
-  "dep:microesnext-captured-assignment-expressions",
+  "microesnext-environments/assignment-expressions",
   "microesnext-bytecode/captured-assignment-expressions",
 ]
 array-assignment-expressions = [
   "arrays",
-  "dep:microesnext-array-assignment-expressions",
+  "microesnext-arrays/assignment-expressions",
   "microesnext-bytecode/array-assignment-expressions",
 ]
 property-assignment-expressions = [
   "objects",
-  "dep:microesnext-property-assignment-expressions",
+  "microesnext-objects/assignment-expressions",
   "microesnext-bytecode/property-assignment-expressions",
 ]
 recursive-functions = [
@@ -187,11 +187,8 @@ microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
 microesnext-arrays = { workspace = true, optional = true }
-microesnext-array-assignment-expressions = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
-microesnext-captured-assignment-expressions = { workspace = true, optional = true }
-microesnext-property-assignment-expressions = { workspace = true, optional = true }
 microesnext-construction = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
@@ -215,7 +212,6 @@ microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-suspension = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
-microesnext-stack-operations = { workspace = true, optional = true }
 microesnext-string-operations = { workspace = true, optional = true }
 microesnext-truthiness = { workspace = true, optional = true }
 microesnext-typeof = { workspace = true, optional = true }

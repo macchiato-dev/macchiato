@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(feature = "assignment-expressions")]
+pub mod assignment_expressions;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 

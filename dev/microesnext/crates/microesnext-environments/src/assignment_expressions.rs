@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::Error;
 
@@ -12,7 +10,7 @@ use microesnext_types::Error;
 pub fn store_result(arena: &mut Arena<'_>) -> Result<(), Error> {
     let value = arena.pop()?;
     let cell = arena.pop()?;
-    microesnext_environments::set(arena, cell, value)?;
+    crate::set(arena, cell, value)?;
     arena.push(value)
 }
 
@@ -26,7 +24,7 @@ mod tests {
     fn updates_the_cell_and_retains_the_value() {
         let mut memory = [0; 24];
         let mut arena = Arena::new(&mut memory);
-        let cell = microesnext_environments::new(&mut arena, Value::UNDEFINED).unwrap();
+        let cell = crate::new(&mut arena, Value::UNDEFINED).unwrap();
         let value = Value::from_i30(42).unwrap();
         arena.push(cell).unwrap();
         arena.push(value).unwrap();
@@ -34,6 +32,6 @@ mod tests {
         store_result(&mut arena).unwrap();
 
         assert_eq!(arena.pop(), Ok(value));
-        assert_eq!(microesnext_environments::get(&arena, cell), Ok(value));
+        assert_eq!(crate::get(&arena, cell), Ok(value));
     }
 }

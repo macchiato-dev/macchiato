@@ -198,12 +198,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         match opcode {
             #[cfg(feature = "stack-operations")]
             Opcode::DuplicateTop => {
-                microesnext_stack_operations::duplicate_top(self.core.arena_mut())?;
+                microesnext_arena::stack_operations::duplicate_top(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "stack-operations")]
             Opcode::DropTop => {
-                microesnext_stack_operations::drop_top(self.core.arena_mut())?;
+                microesnext_arena::stack_operations::drop_top(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "async")]
@@ -725,17 +725,19 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "captured-assignment-expressions")]
             Opcode::StoreEnvironmentCellResult => {
-                microesnext_captured_assignment_expressions::store_result(self.core.arena_mut())?;
+                microesnext_environments::assignment_expressions::store_result(
+                    self.core.arena_mut(),
+                )?;
                 Ok(None)
             }
             #[cfg(feature = "property-assignment-expressions")]
             Opcode::SetPropertyResult => {
-                microesnext_property_assignment_expressions::store_result(self.core.arena_mut())?;
+                microesnext_objects::assignment_expressions::store_result(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "array-assignment-expressions")]
             Opcode::SetIndexResult => {
-                microesnext_array_assignment_expressions::store_result(self.core.arena_mut())?;
+                microesnext_arrays::assignment_expressions::store_result(self.core.arena_mut())?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]

@@ -42,7 +42,7 @@ local-assignment-expressions = ["locals", "stack-operations"]
 arrays = ["dep:microesnext-arrays", "microesnext-vm/arrays"]
 array-assignment-expressions = [
   "arrays",
-  "dep:microesnext-array-assignment-expressions",
+  "microesnext-arrays/assignment-expressions",
   "microesnext-vm/array-assignment-expressions",
 ]
 array-iterators = ["arrays", "iterators", "microesnext-arrays/iterators"]
@@ -70,7 +70,7 @@ strings = [
   "microesnext-logical-operations?/strings",
 ]
 stack-operations = [
-  "dep:microesnext-stack-operations",
+  "microesnext-arena/stack-operations",
   "microesnext-vm/stack-operations",
 ]
 string-operations = [
@@ -171,12 +171,12 @@ errors = ["dep:microesnext-errors"]
 environments = ["dep:microesnext-environments", "microesnext-vm/environments"]
 captured-assignment-expressions = [
   "environments",
-  "dep:microesnext-captured-assignment-expressions",
+  "microesnext-environments/assignment-expressions",
   "microesnext-vm/captured-assignment-expressions",
 ]
 property-assignment-expressions = [
   "objects",
-  "dep:microesnext-property-assignment-expressions",
+  "microesnext-objects/assignment-expressions",
   "microesnext-vm/property-assignment-expressions",
 ]
 recursive-functions = [
@@ -251,13 +251,10 @@ microesnext-async = { workspace = true, optional = true }
 microesnext-async-functions = { workspace = true, optional = true }
 microesnext-async-thenables = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
-microesnext-array-assignment-expressions = { workspace = true, optional = true }
 microesnext-atoms = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-callable-objects = { workspace = true, optional = true }
 microesnext-class-constructors = { workspace = true, optional = true }
-microesnext-captured-assignment-expressions = { workspace = true, optional = true }
-microesnext-property-assignment-expressions = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
 microesnext-prototype-chain = { workspace = true, optional = true }
 microesnext-promise-resolution = { workspace = true, optional = true }
@@ -283,7 +280,6 @@ microesnext-recursive-async-functions = { workspace = true, optional = true }
 microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
-microesnext-stack-operations = { workspace = true, optional = true }
 microesnext-string-operations = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }
 microesnext-thenables = { workspace = true, optional = true }

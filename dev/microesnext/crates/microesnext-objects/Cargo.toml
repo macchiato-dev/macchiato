@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 callable-objects = ["microesnext-arena/callable-objects"]
 class-constructors = ["microesnext-arena/class-constructors"]
+assignment-expressions = []
 
 [dependencies]
 microesnext-arena.workspace = true

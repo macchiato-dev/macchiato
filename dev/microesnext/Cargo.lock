@@ -7,7 +7,6 @@ name = "microesnext"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-array-assignment-expressions",
  "microesnext-arrays",
  "microesnext-async",
  "microesnext-async-functions",
@@ -15,7 +14,6 @@ dependencies = [
  "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
- "microesnext-captured-assignment-expressions",
  "microesnext-class-constructors",
  "microesnext-collections",
  "microesnext-compiler",
@@ -38,12 +36,10 @@ dependencies = [
  "microesnext-promise-resolution",
  "microesnext-promise-resolvers",
  "microesnext-promises",
- "microesnext-property-assignment-expressions",
  "microesnext-prototype-chain",
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-functions",
- "microesnext-stack-operations",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-symbols",
@@ -59,15 +55,6 @@ dependencies = [
 name = "microesnext-arena"
 version = "0.0.0"
 dependencies = [
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-array-assignment-expressions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-arrays",
  "microesnext-types",
 ]
 
@@ -156,15 +143,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext",
  "microesnext-arena",
-]
-
-[[package]]
-name = "microesnext-captured-assignment-expressions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-environments",
- "microesnext-types",
 ]
 
 [[package]]
@@ -409,16 +387,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-property-assignment-expressions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-atoms",
- "microesnext-objects",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-prototype-chain"
 version = "0.0.0"
 dependencies = [
@@ -464,14 +432,6 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-environments",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-stack-operations"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -551,13 +511,11 @@ name = "microesnext-vm"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-array-assignment-expressions",
  "microesnext-arrays",
  "microesnext-async-functions",
  "microesnext-atoms",
  "microesnext-bytecode",
  "microesnext-callable-objects",
- "microesnext-captured-assignment-expressions",
  "microesnext-class-constructors",
  "microesnext-compiler",
  "microesnext-construction",
@@ -575,13 +533,11 @@ dependencies = [
  "microesnext-parameters",
  "microesnext-promise-resolvers",
  "microesnext-promises",
- "microesnext-property-assignment-expressions",
  "microesnext-prototype-chain",
  "microesnext-receivers",
  "microesnext-recursive-async-functions",
  "microesnext-recursive-constructors",
  "microesnext-recursive-functions",
- "microesnext-stack-operations",
  "microesnext-string-operations",
  "microesnext-strings",
  "microesnext-suspension",
