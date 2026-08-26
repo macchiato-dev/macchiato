@@ -608,6 +608,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | nonterminal conditionals | 8,207 | 3,100 |
 | nested conditionals | 8,588 | 3,494 |
 | nested loops | 8,410 | 3,546 |
+| nested exceptions | 9,223 | 3,984 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -650,7 +651,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,970 | 7,858 |
-| default language slice | 50,631 | 17,938 |
+| default language slice | 52,594 | 18,836 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
@@ -686,6 +687,15 @@ than the conditional-only implementation. A mixed loop/conditional program and
 a 2,048-level loop source both compile and execute, including relocated targets
 inside functions. `nested-loops` adds only `control-flow` to the runtime graph.
 Omitting it preserves the nested-conditional artifact exactly at 8,588 / 3,494.
+
+Nested exceptions are compiler worklist machinery over the existing optional
+handler operations. Their focused compiler is 9,223 / 3,984 versus 7,121 /
+3,030 for terminal exceptions, an increment of 2,102 raw / 954 gzip bytes. The
+runtime graph is still exactly `exceptions`; it gains no nesting feature or
+depth counter. Live tests cover returns across multiple handlers, rethrows to
+an outer handler, nesting from a catch, and 2,048 active guest handler records.
+Omitting the feature preserves the terminal exception artifact exactly at
+7,121 / 3,030.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler

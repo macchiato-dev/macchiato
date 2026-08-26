@@ -56,7 +56,15 @@ The further `nested-loops` gate adds loop start and exit frames to that same
 worklist. Loops and conditionals may be interleaved to arbitrary source depth;
 back edges, exits, joins, and function-body relocations remain direct bytecode
 patches. Its own 2,048-level compile-and-run test consumes no Rust parser
-frames. Exception regions remain a later worklist frame kind.
+frames. Exception regions use the independently removable worklist below.
+
+Exception regions now have their own independently removable
+`nested-exceptions` worklist. It tracks whether each source region is compiling
+its `try` or `catch` side, patches catch targets directly, and emits one
+`end_try` for every live handler crossed by a return. Throws continue through
+the runtime's existing nearest-handler chain. A test compiles and executes
+2,048 nested regions without Rust parser frames; the VM still has no source
+nesting counter or fixed depth.
 
 Expression statements are independently selectable. Any expression accepted
 by the chosen compiler composition may be followed by `;` before a terminal
@@ -301,9 +309,10 @@ guest VM frames rather than consuming the native Rust stack.
 
 The Rust vertical slice directly emits bytecode for a deliberately narrow
 `try { return|throw expression } catch [(name)] { return|throw expression }`
-form. Catch targets are backpatched without an AST. Its handler and caught
-value live on the guest stack, survive `await`, and are removed on both normal
-and abrupt paths. General statements, nested lexical environments, `finally`,
+form, with nested terminal try/catch regions behind `nested-exceptions`. Catch
+targets are backpatched without an AST. Handler records and caught values live
+on the guest stack, survive `await`, and are removed on both normal and abrupt
+paths. General resumable statements, nested lexical environments, `finally`,
 and the complete ECMAScript grammar remain future compiler work.
 
 ## Collections

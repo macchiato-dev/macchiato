@@ -105,6 +105,10 @@ an explicit relational stopping condition.
   interleaved `while` and `if` blocks compile without Rust recursion. It emits
   the existing control-flow vocabulary; builds that stop at nested
   conditionals retain the smaller, conditional-only implementation exactly.
+- `nested-exceptions` uses a separate explicit try/catch worklist and emits the
+  existing optional handler bytecode. Returns close every live handler, throws
+  retain the nearest handler, and omitting it preserves the smaller terminal
+  exception parser rather than retaining dormant frame machinery.
 - `implicit-completions` is compiler-only too. It lowers `return;` and a script
   or function body reaching its end to the invariant `undefined` constant and
   existing return instruction. Its omitted build retains the previous
