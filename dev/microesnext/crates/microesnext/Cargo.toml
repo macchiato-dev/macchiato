@@ -86,6 +86,11 @@ class-expressions = [
   "stack-operations",
   "microesnext-compiler/class-expressions",
 ]
+named-class-expressions = [
+  "class-expressions",
+  "captured-assignment-expressions",
+  "microesnext-compiler/named-class-expressions",
+]
 locals = [
   "dep:microesnext-bindings",
   "microesnext-bindings/locals",
@@ -697,6 +702,11 @@ required-features = ["class-methods", "locals", "objects"]
 name = "class-expressions"
 path = "tests/class_expressions.rs"
 required-features = ["class-expressions", "locals", "objects"]
+
+[[test]]
+name = "named-class-expressions"
+path = "tests/named_class_expressions.rs"
+required-features = ["named-class-expressions", "equality", "locals", "objects"]
 
 [[test]]
 name = "recursive-constructors"

@@ -4709,6 +4709,13 @@ impl Parser<'_> {
                 let _ = captured;
                 unreachable!()
             }
+        } else if let Some(host) = self.host_global_at_offset() {
+            #[cfg(feature = "host-bindings")]
+            {
+                self.offset += self.host_globals[host as usize].len();
+                self.output.push(Opcode::ConstHost as u8);
+                self.output.extend_from_slice(&host.to_le_bytes());
+            }
         } else {
             return Err(self.error("a constructor binding"));
         }
@@ -4806,6 +4813,33 @@ impl Parser<'_> {
 
     #[cfg(feature = "class-expressions")]
     fn class_expression(&mut self) -> Result<(), CompileError> {
+        self.whitespace();
+        #[cfg(feature = "named-class-expressions")]
+        let named_slot = if self.source.get(self.offset) == Some(&b'{') {
+            None
+        } else {
+            let (start, end) = self.identifier()?;
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.locals.push(Binding {
+                start,
+                end,
+                slot,
+                default: None,
+                hoisted: false,
+                captured: true,
+            });
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.output.push(Opcode::NewEnvironmentCell as u8);
+            self.output.push(Opcode::StoreLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            self.output.push(Opcode::LoadLocal as u8);
+            self.output.extend_from_slice(&slot.to_le_bytes());
+            Some(slot)
+        };
+        #[cfg(not(feature = "named-class-expressions"))]
+        let named_slot: Option<u16> = None;
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
@@ -4821,6 +4855,10 @@ impl Parser<'_> {
             )?;
         } else {
             self.default_class_value();
+        }
+        #[cfg(feature = "named-class-expressions")]
+        if named_slot.is_some() {
+            self.output.push(Opcode::StoreEnvironmentCellResult as u8);
         }
         loop {
             self.whitespace();

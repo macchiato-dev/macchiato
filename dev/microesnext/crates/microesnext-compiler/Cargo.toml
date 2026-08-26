@@ -23,6 +23,7 @@ default = [
   "class-methods",
   "class-static-methods",
   "class-expressions",
+  "named-class-expressions",
   "comments",
   "class-default-constructors",
   "compound-assignment-expressions",
@@ -105,6 +106,7 @@ class-expressions = [
   "class-static-methods",
   "microesnext-bytecode/stack-operations",
 ]
+named-class-expressions = ["class-expressions", "captured-assignment-expressions"]
 comments = []
 class-default-constructors = ["classes"]
 captured-assignment-expressions = [
