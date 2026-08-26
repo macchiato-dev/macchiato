@@ -1,9 +1,9 @@
 #![no_std]
 
 pub use microesnext_bytecode as bytecode;
+pub use microesnext_execution::core::{Core, CoreOutcome};
 pub use microesnext_types::{Error, HeapRef, Value};
 pub use microesnext_vm::{Machine, Outcome};
-pub use microesnext_vm_core::{Core, CoreOutcome};
 
 #[cfg(feature = "locals")]
 pub use microesnext_bindings::locals;

@@ -93,7 +93,6 @@ async-functions = [
   "functions",
   "promises",
   "promise-resolution",
-  "dep:microesnext-execution",
   "microesnext-execution/async-functions",
   "microesnext-scheduler/functions",
   "microesnext-vm/async-functions",
@@ -262,7 +261,6 @@ typeof = [
   "microesnext-compiler/typeof",
 ]
 exceptions = [
-  "dep:microesnext-execution",
   "microesnext-execution/exceptions",
   "microesnext-vm/exceptions",
   "microesnext-compiler/exceptions",
@@ -332,7 +330,7 @@ iterable-protocol = [
   "well-known-symbols",
 ]
 weak-collections = ["collections", "microesnext-objects/weak-collections"]
-promises = ["dep:microesnext-execution", "microesnext-execution/promises"]
+promises = ["microesnext-execution/promises"]
 promise-resolution = [
   "promises",
   "microesnext-execution/promise-resolution",
@@ -360,7 +358,7 @@ promise-jobs = [
 [dependencies]
 microesnext-arena.workspace = true
 microesnext-scheduler = { workspace = true, optional = true }
-microesnext-execution = { workspace = true, optional = true }
+microesnext-execution = { workspace = true, features = ["core"] }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
@@ -368,7 +366,6 @@ microesnext-values = { workspace = true, optional = true }
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
 microesnext-vm.workspace = true
-microesnext-vm-core.workspace = true
 
 [lib]
 path = "src/lib.rs"

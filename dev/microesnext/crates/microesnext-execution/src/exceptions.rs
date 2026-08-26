@@ -1,5 +1,5 @@
+use crate::core::Core;
 use microesnext_types::{Error, Value};
-use microesnext_vm_core::Core;
 
 /// The active guest handler chain. Records themselves live on the guest stack;
 /// this state only points to the nearest record by logical stack depth.
@@ -77,9 +77,9 @@ fn pop_i30(core: &mut Core<'_, '_>) -> Result<i32, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::{Core, CoreOutcome};
     use microesnext_bytecode::Opcode;
     use microesnext_types::Value;
-    use microesnext_vm_core::{Core, CoreOutcome};
 
     use super::Handlers;
 

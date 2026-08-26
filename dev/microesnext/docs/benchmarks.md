@@ -248,9 +248,10 @@ omit this source operation do not decode its opcode.
 
 After Promise jobs were added, the facade benchmark began varying with enabled
 features even though it executed only integer opcodes. The hot interpreter was
-therefore extracted into `microesnext-vm-core`, and its byte readers and raw
-base-opcode constants into the bytecode `core` module. Neither layer has
-capability features. Optional opcode bytes return to the typed VM wrapper;
+first extracted into `microesnext-vm-core` and now lives in the independently
+gated execution `core` module; its byte readers and raw base-opcode constants
+live in the bytecode `core` module. Neither core layer has capability features.
+Optional opcode bytes return to the typed VM wrapper;
 base bytecodes remain in a state type and dispatch loop whose compiled Rust
 surface does not vary with the selected capabilities.
 
@@ -346,6 +347,11 @@ smaller execution builds or adding runtime dispatch.
 
 Folding exception-handler state into its own `microesnext-execution` feature
 also preserved the exception probe at 3,846 raw Wasm bytes.
+
+Moving the invariant VM core into the execution crate preserved the minimal
+artifact at 1,984 bytes, async suspension at 6,455 bytes, Promise storage at
+4,840 bytes, and exceptions at 3,846 bytes. The core remains a separately gated
+module with the same direct dispatch loop and no optional capability state.
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -519,8 +525,8 @@ interning; source-level objects compose both capabilities and use the distinct
 
 Handler state belongs to the optional `Machine` wrapper; `Core` has one layout
 and one opcode loop in every feature configuration. `cargo tree -p
-microesnext --no-default-features` contains neither the exception nor
-suspension crate. Adding the corresponding feature links the implementation
+microesnext --no-default-features` enables neither the exception nor
+suspension module. Adding the corresponding feature links the implementation
 through the VM wrapper.
 
 Five alternating direct-loop samples after the extraction measured
@@ -532,7 +538,7 @@ identical timing.
 These are probes rather than estimates of a complete language build. They do
 prove the relevant artifact property: omitted capabilities are absent from the
 final Wasm, while enabled rows contain live exported calls into that crate.
-Moving suspend/resume/restore out of `microesnext-vm-core` and into the optional
+Keeping suspend/resume/restore outside the execution `core` module and in the optional
 execution `suspension` feature leaves the invariant core untouched. The
 isolated live async probe is 6,455 bytes (2,856 gzip). Enabling `async` adds the crate
 through the VM; disabling it also removes resume operations from the public

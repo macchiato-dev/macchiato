@@ -1,6 +1,6 @@
+use crate::core::Core;
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, RootId, Value};
-use microesnext_vm_core::Core;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Frame {

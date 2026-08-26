@@ -9,8 +9,9 @@ version.workspace = true
 
 [features]
 default = []
-async-functions = ["microesnext-arena/async-functions"]
-exceptions = []
+async-functions = ["core", "microesnext-arena/async-functions"]
+core = ["dep:microesnext-bytecode"]
+exceptions = ["core"]
 promises = []
 promise-resolution = [
   "promises",
@@ -26,17 +27,18 @@ recursive-async-functions = [
   "dep:microesnext-bindings",
   "microesnext-bindings/environments",
 ]
-suspension = []
+suspension = ["core"]
 
 [dependencies]
 microesnext-arena.workspace = true
+microesnext-bytecode = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-types.workspace = true
 microesnext-values = { workspace = true, optional = true }
-microesnext-vm-core.workspace = true
 
 [dev-dependencies]
-microesnext-bytecode.workspace = true
+microesnext-bytecode = { workspace = true, features = ["async", "control-flow", "locals"] }
+microesnext-compiler.workspace = true
 microesnext-objects.workspace = true
 
 [lib]

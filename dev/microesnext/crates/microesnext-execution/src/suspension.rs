@@ -1,5 +1,5 @@
+use crate::core::Core;
 use microesnext_types::{Error, RootId, Value};
-use microesnext_vm_core::Core;
 
 /// Snapshot a complete execution context without consuming an awaited value.
 pub fn suspend_context(
@@ -82,8 +82,8 @@ pub fn restore_value(core: &mut Core<'_, '_>, continuation: Value) -> Result<Opt
 
 #[cfg(test)]
 mod tests {
+    use crate::core::Core;
     use microesnext_types::Value;
-    use microesnext_vm_core::Core;
 
     use super::{resume, resume_context, suspend, suspend_context};
 

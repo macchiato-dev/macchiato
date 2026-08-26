@@ -4,6 +4,7 @@ use microesnext_arena::Arena;
 #[cfg(feature = "functions")]
 use microesnext_arena::closures::{capture, capture_stack, entry};
 use microesnext_bytecode::Opcode;
+use microesnext_execution::core::{Core, CoreOutcome};
 #[cfg(feature = "exceptions")]
 use microesnext_execution::exceptions::Handlers;
 #[cfg(feature = "async")]
@@ -17,7 +18,6 @@ use microesnext_objects::{get, new_object, set};
 use microesnext_types::{Error, RootId, Value};
 #[cfg(feature = "atoms")]
 use microesnext_values::strings::atoms::Atoms;
-use microesnext_vm_core::{Core, CoreOutcome};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Outcome {

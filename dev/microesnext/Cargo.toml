@@ -12,7 +12,6 @@ members = [
   "crates/microesnext-values",
   "crates/microesnext-types",
   "crates/microesnext-vm",
-  "crates/microesnext-vm-core",
   "tools/capability-size",
   "tools/compiler-size",
   "tools/core-loop",
@@ -40,7 +39,6 @@ microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
 microesnext-values = { path = "crates/microesnext-values", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
-microesnext-vm-core = { path = "crates/microesnext-vm-core", version = "0.0.0" }
 
 [profile.release]
 codegen-units = 1

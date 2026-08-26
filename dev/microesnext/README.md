@@ -205,8 +205,9 @@ an explicit relational stopping condition.
   adds reads without runtime code; literal stores retain their smaller path.
 - The collections module contains Map and Set plus an independently gated
   `weak` module. Ephemeron tracing is retained only by that feature.
-- `microesnext-promises` contains compact promise records and a caller-owned,
-  rooted FIFO job ring; it does not require a native allocator or Rust futures.
+- The execution `promises` feature contains compact promise records and a
+  caller-owned, rooted FIFO job ring; it does not require a native allocator
+  or Rust futures.
 - The values `errors` feature supplies compact guest error identities without forcing
   message strings, stacks, objects, or exception handlers into every build.
 - The Promise `resolution` feature optionally adopts native Promise results.
@@ -219,13 +220,11 @@ an explicit relational stopping condition.
   schedules guest `then` code instead of running it during property resolution;
   resolving to another thenable produces another rooted job rather than native
   recursion. Builds without `thenables` link none of this composition.
-- `microesnext-exceptions` owns explicit guest handler-chain bookkeeping and
-  stack unwinding only for builds enabling the `exceptions` feature. Handler
-  records remain guest-stack words; the invariant opcode core has no exception
-  state.
-- `microesnext-execution` contains independently gated stack suspension, async
-  closure records, bounded caller frames, and recursive async construction.
-  A plain synchronous VM retains none of those paths.
+- `microesnext-execution` contains the invariant interpreter core plus
+  independently gated Promise state, exception handlers, stack suspension,
+  async closure records, bounded caller frames, and recursive async
+  construction. Promise-only users do not pull in bytecode or the core;
+  ordinary synchronous machines retain none of the optional execution paths.
 - `microesnext-vm` is the synchronous interpreter and suspension boundary.
 - `microesnext-scheduler` contains independently gated async driving, Promise
   jobs, object-thenable jobs, and async-thenable resolution policies.
@@ -286,7 +285,7 @@ npm run check:features
 
 It is a regression signal rather than a claim that noisy wall-clock timings can
 prove identical performance. The structural performance gate is stronger: the
-minimal dependency graph excludes capability crates, and the hot loop reads
+minimal feature graph excludes capability modules, and the hot loop reads
 raw opcode bytes from `microesnext-bytecode::core`. It uses a direct match with
 no feature-dependent enum, trait objects, registries, or dynamic callbacks.
 Only an extension byte crosses into the typed capability wrapper. Local and
@@ -294,7 +293,7 @@ control-flow instructions use that same static boundary. This keeps the raw
 base loop byte-for-byte independent of those optional instruction families;
 there is no trait object, registry, or runtime feature lookup.
 `check:features` inspects Cargo's resolved graph and fails if representative
-minimal or narrowly composed builds acquire unrelated capability crates.
+minimal or narrowly composed builds acquire unrelated capability features.
 
 This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
 Macchiato repository are consumers and comparison points, not source

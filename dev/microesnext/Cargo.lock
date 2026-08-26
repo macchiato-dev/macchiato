@@ -17,7 +17,6 @@ dependencies = [
  "microesnext-types",
  "microesnext-values",
  "microesnext-vm",
- "microesnext-vm-core",
 ]
 
 [[package]]
@@ -86,10 +85,10 @@ dependencies = [
  "microesnext-arena",
  "microesnext-bindings",
  "microesnext-bytecode",
+ "microesnext-compiler",
  "microesnext-objects",
  "microesnext-types",
  "microesnext-values",
- "microesnext-vm-core",
 ]
 
 [[package]]
@@ -151,15 +150,4 @@ dependencies = [
  "microesnext-semantics",
  "microesnext-types",
  "microesnext-values",
- "microesnext-vm-core",
-]
-
-[[package]]
-name = "microesnext-vm-core"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-bytecode",
- "microesnext-compiler",
- "microesnext-types",
 ]

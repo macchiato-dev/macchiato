@@ -24,21 +24,22 @@ The following rules preserve the properties for which MicroQuickJS is useful.
 - Collection traces and compacts the arena. Debug tests must relocate live
   graphs frequently enough to expose stale offsets.
 - Bytecode and immutable built-ins may be shared outside the mutable arena.
-- Capabilities are separate crates linked statically. The base opcode loop does
-  not use trait objects, dynamic registries, or callbacks for omitted features.
+- Capabilities are independent Cargo features within a small set of coherent
+  crates linked statically. The base opcode loop does not use trait objects,
+  dynamic registries, or callbacks for omitted features.
 - Capability bytecodes are feature-gated at decoding as well as execution.
   Bytes assigned to an omitted capability are invalid rather than accepted by
   a larger universal enum and rejected later by the VM wrapper.
-- `microesnext-vm-core` reads raw bytes and depends only on the invariant
-  `microesnext-bytecode::core` vocabulary. It returns any non-core byte to the
-  feature-gated typed decoder in `microesnext-vm`; the raw core is deliberately
-  not an independent validator for extension opcodes.
+- The execution crate's `core` module reads raw bytes and depends only on the
+  invariant `microesnext-bytecode::core` vocabulary. It returns any non-core
+  byte to the feature-gated typed decoder in `microesnext-vm`; the raw core is
+  deliberately not an independent validator for extension opcodes.
 - An awaited computation is a heap-resident VM frame. Rust `async fn` and its
   compiler-generated future are host integration options, not its guest
   representation.
 - The optional execution `suspension` feature owns conversion between a live
   VM stack and a rooted continuation. The arena supplies generic stack-snapshot
-  storage, but `microesnext-vm-core` contains no suspend, resume, or restore
+  storage, but the execution `core` module contains no suspend, resume, or restore
   algorithm. Builds without `async` do not expose those machine operations.
 - An async JavaScript call cannot suspend its ordinary caller at the first
   `await`. The optional execution `async-functions` layer therefore packages
@@ -48,7 +49,7 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   that promise's reaction path. A bounded caller-owned frame array permits
   nested async entry without a native recursive call or hidden allocation.
 - Guest exception handlers are explicit records in the guest stack. The
-  optional `microesnext-exceptions` crate owns the handler-chain pointer and
+  optional execution `exceptions` module owns the handler-chain pointer and
   stack operations; `microesnext-vm` composes it only behind the `exceptions`
   feature, and the invariant opcode core has no exception state. A throw
   restores the recorded operand and call-frame depths without unwinding the
@@ -95,14 +96,14 @@ The following rules preserve the properties for which MicroQuickJS is useful.
   IEEE-754 numbers use opaque two-word payloads from the values `numbers` feature, so
   arbitrary floating-point bits are never traced as guest references. Builds
   without `numbers` omit the arena block kind, typed opcodes, and implementation.
-- Unary integer and JavaScript Number negation are separate capability crates
+- Unary integer and JavaScript Number negation are separate capability modules
   from binary arithmetic. The promoted path preserves negative zero, while a
   build needing only multiplication or comparison retains neither negation
-  crate nor either negation opcode.
+  implementation nor either negation opcode.
 - Division and remainder are separate from each other and from ordinary
   arithmetic. This is not only taxonomy: linked Wasm showed that floating `%`
   retains a substantially larger helper than `/`. A division-only machine has
-  no remainder opcode, crate, or dispatch branch.
+  no remainder opcode, implementation, or dispatch branch.
 - Primitive Number coercion is a further capability boundary. Its typed result
   lets promoted negation consume a coercion result once, while its pre-existing
   i30 branch remains ahead of coercion. Unary plus materializes a boxed value

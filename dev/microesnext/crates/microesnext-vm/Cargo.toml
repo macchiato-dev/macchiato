@@ -16,7 +16,6 @@ control-flow = [
 ]
 locals = ["dep:microesnext-bindings", "microesnext-bindings/locals", "microesnext-bytecode/locals"]
 async = [
-  "dep:microesnext-execution",
   "microesnext-execution/suspension",
   "microesnext-bytecode/async",
 ]
@@ -138,7 +137,6 @@ string-number-coercion = [
   "microesnext-values/string-coercion",
 ]
 exceptions = [
-  "dep:microesnext-execution",
   "microesnext-execution/exceptions",
   "microesnext-bytecode/exceptions",
 ]
@@ -183,7 +181,6 @@ receivers = [
 ]
 promise-resolvers = [
   "function-arguments",
-  "dep:microesnext-execution",
   "microesnext-execution/promise-resolvers",
   "microesnext-semantics?/promise-resolvers",
 ]
@@ -198,16 +195,14 @@ typeof = [
 microesnext-arena.workspace = true
 microesnext-bytecode.workspace = true
 microesnext-types.workspace = true
-microesnext-vm-core.workspace = true
 microesnext-objects = { workspace = true, optional = true }
 microesnext-bindings = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
-microesnext-execution = { workspace = true, optional = true }
+microesnext-execution = { workspace = true, features = ["core"] }
 microesnext-values = { workspace = true, optional = true }
 
 [dev-dependencies]
 microesnext-compiler.workspace = true
-microesnext-execution = { workspace = true, features = ["promise-resolvers"] }
 
 [lib]
 path = "src/lib.rs"

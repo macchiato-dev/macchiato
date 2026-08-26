@@ -169,7 +169,7 @@ function assertExecutionFeatures(features, present, absent) {
   ];
   if (features.length > 0) args.push("--features", features.join(","));
   const tree = execFileSync(cargo, args, { encoding: "utf8" });
-  for (const feature of present) {
+  for (const feature of ["core", ...present]) {
     if (!tree.includes(`microesnext-execution feature "${feature}"`)) {
       throw new Error(`${features || "minimal"}: expected execution/${feature}`);
     }
