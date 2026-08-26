@@ -12,14 +12,14 @@ default = []
 async-functions = ["microesnext-arena/async-functions"]
 recursive-async-functions = [
   "async-functions",
-  "dep:microesnext-environments",
-  "microesnext-arena/environments",
+  "dep:microesnext-bindings",
+  "microesnext-bindings/environments",
 ]
 suspension = []
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-environments = { workspace = true, optional = true }
+microesnext-bindings = { workspace = true, optional = true }
 microesnext-types.workspace = true
 microesnext-vm-core.workspace = true
 

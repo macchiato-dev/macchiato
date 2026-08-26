@@ -8,22 +8,18 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
+ "microesnext-bindings",
  "microesnext-bytecode",
  "microesnext-collections",
  "microesnext-compiler",
- "microesnext-environments",
  "microesnext-errors",
  "microesnext-exceptions",
  "microesnext-execution",
  "microesnext-integer-operations",
  "microesnext-iterators",
- "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
- "microesnext-parameters",
  "microesnext-promises",
- "microesnext-receivers",
- "microesnext-recursive-functions",
  "microesnext-scheduler",
  "microesnext-semantics",
  "microesnext-strings",
@@ -46,6 +42,14 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-iterators",
+ "microesnext-types",
+]
+
+[[package]]
+name = "microesnext-bindings"
+version = "0.0.0"
+dependencies = [
+ "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -120,14 +124,6 @@ name = "microesnext-decimal-to-f64"
 version = "0.0.0"
 
 [[package]]
-name = "microesnext-environments"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-errors"
 version = "0.0.0"
 dependencies = [
@@ -149,7 +145,7 @@ name = "microesnext-execution"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-environments",
+ "microesnext-bindings",
  "microesnext-types",
  "microesnext-vm-core",
 ]
@@ -173,14 +169,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "microesnext-locals"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-types",
-]
-
-[[package]]
 name = "microesnext-numbers"
 version = "0.0.0"
 dependencies = [
@@ -194,18 +182,8 @@ name = "microesnext-objects"
 version = "0.0.0"
 dependencies = [
  "microesnext-arena",
- "microesnext-environments",
- "microesnext-parameters",
- "microesnext-recursive-functions",
+ "microesnext-bindings",
  "microesnext-strings",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-parameters"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
  "microesnext-types",
 ]
 
@@ -216,25 +194,6 @@ dependencies = [
  "microesnext-arena",
  "microesnext-errors",
  "microesnext-objects",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-receivers"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-locals",
- "microesnext-parameters",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-recursive-functions"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-environments",
  "microesnext-types",
 ]
 
@@ -290,19 +249,15 @@ version = "0.0.0"
 dependencies = [
  "microesnext-arena",
  "microesnext-arrays",
+ "microesnext-bindings",
  "microesnext-bytecode",
  "microesnext-compiler",
- "microesnext-environments",
  "microesnext-exceptions",
  "microesnext-execution",
  "microesnext-integer-operations",
- "microesnext-locals",
  "microesnext-numbers",
  "microesnext-objects",
- "microesnext-parameters",
  "microesnext-promises",
- "microesnext-receivers",
- "microesnext-recursive-functions",
  "microesnext-semantics",
  "microesnext-strings",
  "microesnext-types",

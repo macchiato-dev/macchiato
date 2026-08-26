@@ -14,18 +14,17 @@ class-constructors = ["microesnext-arena/class-constructors", "microesnext-arena
 construction = ["callable-objects"]
 instanceof = ["callable-objects", "prototype-chain"]
 assignment-expressions = []
-method-calls = ["dep:microesnext-parameters"]
+method-calls = ["dep:microesnext-bindings", "microesnext-bindings/parameters"]
 prototype-chain = []
-recursive-constructors = ["callable-objects", "dep:microesnext-environments"]
+recursive-constructors = ["callable-objects", "dep:microesnext-bindings", "microesnext-bindings/environments"]
 
 [dependencies]
 microesnext-arena.workspace = true
-microesnext-environments = { workspace = true, optional = true }
-microesnext-parameters = { workspace = true, optional = true }
+microesnext-bindings = { workspace = true, optional = true }
 microesnext-types.workspace = true
 
 [dev-dependencies]
-microesnext-recursive-functions.workspace = true
+microesnext-bindings = { workspace = true, features = ["recursive-functions"] }
 microesnext-strings.workspace = true
 
 [lib]

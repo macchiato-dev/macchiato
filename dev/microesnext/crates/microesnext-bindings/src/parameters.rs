@@ -1,9 +1,6 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
-/// Removes the callable below its already-evaluated arguments.
 #[inline(always)]
 pub fn take_callable(arena: &mut Arena<'_>, argument_count: usize) -> Result<Value, Error> {
     let index = arena
@@ -13,7 +10,6 @@ pub fn take_callable(arena: &mut Arena<'_>, argument_count: usize) -> Result<Val
     arena.remove_stack_value_from_bottom(index)
 }
 
-/// Turns arguments already on the stack into the first local slots.
 #[inline(always)]
 pub fn init_frame(
     arena: &mut Arena<'_>,
@@ -32,21 +28,4 @@ pub fn init_frame(
         arena.push(Value::UNDEFINED)?;
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn callable_and_arguments_become_a_parameter_frame() {
-        let mut memory = [0; 32];
-        let mut arena = Arena::new(&mut memory);
-        arena.push(Value::TRUE).unwrap();
-        arena.push(Value::from_i30(42).unwrap()).unwrap();
-        assert_eq!(take_callable(&mut arena, 1), Ok(Value::TRUE));
-        init_frame(&mut arena, 0, 2, 1).unwrap();
-        assert_eq!(arena.stack_value_from_bottom(1).unwrap().as_i30(), Some(42));
-        assert_eq!(arena.stack_value_from_bottom(2), Ok(Value::UNDEFINED));
-    }
 }

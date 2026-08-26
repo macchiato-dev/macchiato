@@ -6,7 +6,7 @@ pub use microesnext_vm::{Machine, Outcome};
 pub use microesnext_vm_core::{Core, CoreOutcome};
 
 #[cfg(feature = "locals")]
-pub use microesnext_locals as locals;
+pub use microesnext_bindings::locals;
 
 #[cfg(feature = "integer-operations")]
 pub use microesnext_integer_operations as integer_operations;
@@ -70,6 +70,8 @@ pub use microesnext_iterators::protocol as iterable_protocol;
 
 #[cfg(feature = "functions")]
 pub use microesnext_arena::closures as functions;
+#[cfg(feature = "function-arguments")]
+pub use microesnext_bindings::parameters;
 #[cfg(feature = "numbers")]
 pub use microesnext_numbers as numbers;
 #[cfg(feature = "number-coercion")]
@@ -84,8 +86,6 @@ pub use microesnext_numbers::operations as number_operations;
 pub use microesnext_numbers::remainder as number_remainder;
 #[cfg(feature = "string-number-coercion")]
 pub use microesnext_numbers::string_coercion as string_number_coercion;
-#[cfg(feature = "function-arguments")]
-pub use microesnext_parameters as parameters;
 #[cfg(feature = "typeof")]
 pub use microesnext_semantics::r#typeof;
 
@@ -99,22 +99,22 @@ pub use microesnext_errors as errors;
 pub use microesnext_semantics::equality;
 
 #[cfg(feature = "environments")]
-pub use microesnext_environments as environments;
+pub use microesnext_bindings::environments;
 
 #[cfg(feature = "captured-assignment-expressions")]
-pub use microesnext_environments::assignment_expressions as captured_assignment_expressions;
+pub use microesnext_bindings::environments::assignment_expressions as captured_assignment_expressions;
 
 #[cfg(feature = "property-assignment-expressions")]
 pub use microesnext_objects::assignment_expressions as property_assignment_expressions;
 
 #[cfg(feature = "recursive-functions")]
-pub use microesnext_recursive_functions as recursive_functions;
+pub use microesnext_bindings::recursive_functions;
 
 #[cfg(feature = "recursive-async-functions")]
 pub use microesnext_execution::recursive_async_functions;
 
 #[cfg(feature = "receivers")]
-pub use microesnext_receivers as receivers;
+pub use microesnext_bindings::receivers;
 
 #[cfg(any(
     feature = "objects",

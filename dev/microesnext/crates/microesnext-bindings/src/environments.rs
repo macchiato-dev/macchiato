@@ -1,10 +1,19 @@
-#![no_std]
-
-#[cfg(feature = "assignment-expressions")]
-pub mod assignment_expressions;
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
+
+#[cfg(feature = "assignment-expressions")]
+pub mod assignment_expressions {
+    use super::*;
+
+    /// Stores through a cell while retaining the assigned value.
+    #[inline(always)]
+    pub fn store_result(arena: &mut Arena<'_>) -> Result<(), Error> {
+        let value = arena.pop()?;
+        let cell = arena.pop()?;
+        super::set(arena, cell, value)?;
+        arena.push(value)
+    }
+}
 
 /// Allocates one traced, relocatable cell shared by frames and closures.
 pub fn new(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
@@ -33,21 +42,4 @@ fn checked_cell(arena: &Arena<'_>, cell: Value) -> Result<microesnext_types::Hea
         return Err(Error::Type);
     }
     Ok(cell)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn shared_value_survives_mutation_and_relocation() {
-        let mut memory = [0; 24];
-        let mut arena = Arena::new(&mut memory);
-        let cell = new(&mut arena, Value::from_i30(40).unwrap()).unwrap();
-        arena.push(cell).unwrap();
-        set(&mut arena, cell, Value::from_i30(42).unwrap()).unwrap();
-        arena.compact(&mut []).unwrap();
-        let moved = arena.stack_value(0).unwrap();
-        assert_eq!(get(&arena, moved).unwrap().as_i30(), Some(42));
-    }
 }

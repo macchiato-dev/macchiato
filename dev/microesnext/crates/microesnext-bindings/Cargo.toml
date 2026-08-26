@@ -1,0 +1,27 @@
+[package]
+name = "microesnext-bindings"
+description = "Optional lexical bindings and call frames for MicroESNext"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = []
+environments = ["microesnext-arena/environments"]
+assignment-expressions = ["environments"]
+locals = []
+parameters = []
+receivers = ["locals", "parameters"]
+recursive-functions = [
+  "environments",
+  "microesnext-arena/closures",
+]
+
+[dependencies]
+microesnext-arena.workspace = true
+microesnext-types.workspace = true
+
+[lib]
+path = "src/lib.rs"

@@ -10,12 +10,12 @@ pub fn capture_recursive_async_stack(
     if capture_count > arena.stack_len() {
         return Err(Error::StackUnderflow);
     }
-    let cell = microesnext_environments::new(arena, Value::UNDEFINED)?;
+    let cell = microesnext_bindings::environments::new(arena, Value::UNDEFINED)?;
     let insertion = arena.stack_len() - capture_count;
     arena.insert_stack_value_from_bottom(insertion, cell)?;
     let closure = crate::async_functions::capture_stack(arena, entry, capture_count + 1)?;
     let moved_cell = crate::async_functions::capture(arena, closure, 0)?;
-    microesnext_environments::set(arena, moved_cell, closure)?;
+    microesnext_bindings::environments::set(arena, moved_cell, closure)?;
     Ok(closure)
 }
 
@@ -32,6 +32,9 @@ mod tests {
         arena.compact(&mut []).unwrap();
         let moved = arena.stack_value(0).unwrap();
         let cell = crate::async_functions::capture(&arena, moved, 0).unwrap();
-        assert_eq!(microesnext_environments::get(&arena, cell), Ok(moved));
+        assert_eq!(
+            microesnext_bindings::environments::get(&arena, cell),
+            Ok(moved)
+        );
     }
 }

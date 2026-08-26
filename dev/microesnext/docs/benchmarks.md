@@ -769,3 +769,13 @@ structural and scalar syntax. Re-run it with:
 ```sh
 npm run measure:compiler
 ```
+
+The lexical binding implementation now lives in one feature-gated
+`microesnext-bindings` crate instead of five packages with the same arena and
+frame representation. Exact pre/post builds kept environment cells at 6,285 /
+2,728 bytes, closures with shared environments at 11,173 / 4,434, recursive
+functions at 10,414 / 4,048, and functions with parameters at 10,897 / 4,357.
+Receiver-aware calls decreased from 13,156 / 5,109 to 13,122 / 5,103. The
+feature graph checker separately verifies that `locals`, `parameters`,
+`receivers`, `environments`, and `recursive-functions` remain removable; the
+package consolidation therefore adds neither code nor runtime dispatch.

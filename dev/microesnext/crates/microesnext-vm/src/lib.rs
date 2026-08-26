@@ -393,7 +393,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 if target as usize >= self.core.code().len() {
                     return Err(Error::BadBytecode);
                 }
-                let closure = microesnext_recursive_functions::capture_recursive_stack(
+                let closure = microesnext_bindings::recursive_functions::capture_recursive_stack(
                     self.core.arena_mut(),
                     target,
                     capture_count,
@@ -436,7 +436,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let target = entry(self.core.arena(), function)?;
                 #[cfg(feature = "receivers")]
                 if receiver_aware {
-                    microesnext_receivers::append(self.core.arena_mut(), 0, Value::UNDEFINED)?;
+                    microesnext_bindings::receivers::append(
+                        self.core.arena_mut(),
+                        0,
+                        Value::UNDEFINED,
+                    )?;
                     self.core.enter_call_with_arguments(function, target, 1)?;
                 } else {
                     self.core.enter_call(function, target)?;
@@ -448,8 +452,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "function-arguments")]
             Opcode::CallValueArguments => {
                 let argument_count = self.core.next_u16()? as usize;
-                let function =
-                    microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                let function = microesnext_bindings::parameters::take_callable(
+                    self.core.arena_mut(),
+                    argument_count,
+                )?;
                 #[cfg(all(feature = "callable-objects", feature = "receivers"))]
                 let receiver_aware =
                     microesnext_objects::callable::is_callable_object(self.core.arena(), function);
@@ -482,7 +488,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let target = entry(self.core.arena(), function)?;
                 #[cfg(feature = "receivers")]
                 if receiver_aware {
-                    microesnext_receivers::append(
+                    microesnext_bindings::receivers::append(
                         self.core.arena_mut(),
                         argument_count,
                         Value::UNDEFINED,
@@ -508,7 +514,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let function = unwrap_callable(self.core.arena(), method)?;
                 let target = entry(self.core.arena(), function)?;
                 if receiver_aware {
-                    microesnext_receivers::append(self.core.arena_mut(), argument_count, receiver)?;
+                    microesnext_bindings::receivers::append(
+                        self.core.arena_mut(),
+                        argument_count,
+                        receiver,
+                    )?;
                     self.core
                         .enter_call_with_arguments(function, target, argument_count + 1)?;
                 } else {
@@ -525,8 +535,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .as_mut()
                     .ok_or(Error::Type)?
                     .intern(self.core.arena_mut(), b"prototype")?;
-                let constructor =
-                    microesnext_parameters::take_callable(self.core.arena_mut(), argument_count)?;
+                let constructor = microesnext_bindings::parameters::take_callable(
+                    self.core.arena_mut(),
+                    argument_count,
+                )?;
                 let (function, receiver) = microesnext_objects::construction::prepare(
                     self.core.arena_mut(),
                     constructor,
@@ -536,7 +548,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core
                     .arena_mut()
                     .insert_stack_value_from_bottom(preserved_index, receiver)?;
-                microesnext_receivers::append(self.core.arena_mut(), argument_count, receiver)?;
+                microesnext_bindings::receivers::append(
+                    self.core.arena_mut(),
+                    argument_count,
+                    receiver,
+                )?;
                 let target = entry(self.core.arena(), function)?;
                 self.core
                     .enter_call_with_arguments(function, target, argument_count + 1)?;
@@ -664,7 +680,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::InitLocals => {
                 let count = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_locals::init(self.core.arena_mut(), base, count)?;
+                microesnext_bindings::locals::init(self.core.arena_mut(), base, count)?;
                 Ok(None)
             }
             #[cfg(feature = "function-arguments")]
@@ -672,7 +688,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let count = self.core.next_u16()? as usize;
                 let parameter_count = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_parameters::init_frame(
+                microesnext_bindings::parameters::init_frame(
                     self.core.arena_mut(),
                     base,
                     count,
@@ -685,7 +701,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let count = self.core.next_u16()? as usize;
                 let parameter_count = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_receivers::init_frame(
+                microesnext_bindings::receivers::init_frame(
                     self.core.arena_mut(),
                     base,
                     count,
@@ -695,8 +711,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "receivers")]
             Opcode::LoadThis => {
-                let receiver =
-                    microesnext_receivers::load(self.core.arena(), self.core.frame_base())?;
+                let receiver = microesnext_bindings::receivers::load(
+                    self.core.arena(),
+                    self.core.frame_base(),
+                )?;
                 self.core.arena_mut().push(receiver)?;
                 Ok(None)
             }
@@ -704,7 +722,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::ReturnReceiverLocals => {
                 let result = self.core.arena_mut().pop()?;
                 let base = self.core.frame_base();
-                microesnext_receivers::leave(self.core.arena_mut(), base)?;
+                microesnext_bindings::receivers::leave(self.core.arena_mut(), base)?;
                 match self.core.return_value(result)? {
                     Some(CoreOutcome::Complete(value)) => Ok(Some(Outcome::Complete(value))),
                     Some(_) => Err(Error::BadBytecode),
@@ -714,14 +732,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "environments")]
             Opcode::NewEnvironmentCell => {
                 let value = self.core.arena_mut().pop()?;
-                let cell = microesnext_environments::new(self.core.arena_mut(), value)?;
+                let cell = microesnext_bindings::environments::new(self.core.arena_mut(), value)?;
                 self.core.arena_mut().push(cell)?;
                 Ok(None)
             }
             #[cfg(feature = "environments")]
             Opcode::LoadEnvironmentCell => {
                 let cell = self.core.arena_mut().pop()?;
-                let value = microesnext_environments::get(self.core.arena(), cell)?;
+                let value = microesnext_bindings::environments::get(self.core.arena(), cell)?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -729,12 +747,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StoreEnvironmentCell => {
                 let value = self.core.arena_mut().pop()?;
                 let cell = self.core.arena_mut().pop()?;
-                microesnext_environments::set(self.core.arena_mut(), cell, value)?;
+                microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
                 Ok(None)
             }
             #[cfg(feature = "captured-assignment-expressions")]
             Opcode::StoreEnvironmentCellResult => {
-                microesnext_environments::assignment_expressions::store_result(
+                microesnext_bindings::environments::assignment_expressions::store_result(
                     self.core.arena_mut(),
                 )?;
                 Ok(None)
@@ -752,8 +770,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "locals")]
             Opcode::LoadLocal => {
                 let slot = self.core.next_u16()? as usize;
-                let value =
-                    microesnext_locals::load(self.core.arena(), self.core.frame_base(), slot)?;
+                let value = microesnext_bindings::locals::load(
+                    self.core.arena(),
+                    self.core.frame_base(),
+                    slot,
+                )?;
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -761,14 +782,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StoreLocal => {
                 let slot = self.core.next_u16()? as usize;
                 let base = self.core.frame_base();
-                microesnext_locals::store(self.core.arena_mut(), base, slot)?;
+                microesnext_bindings::locals::store(self.core.arena_mut(), base, slot)?;
                 Ok(None)
             }
             #[cfg(feature = "locals")]
             Opcode::ReturnLocals => {
                 let result = self.core.arena_mut().pop()?;
                 let base = self.core.frame_base();
-                microesnext_locals::leave(self.core.arena_mut(), base)?;
+                microesnext_bindings::locals::leave(self.core.arena_mut(), base)?;
                 match self.core.return_value(result)? {
                     Some(CoreOutcome::Complete(value)) => Ok(Some(Outcome::Complete(value))),
                     Some(_) => Err(Error::BadBytecode),
@@ -1060,9 +1081,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 return Err(error);
             }
         }
-        if let Err(error) =
-            microesnext_receivers::append(self.core.arena_mut(), arguments.len(), receiver)
-        {
+        if let Err(error) = microesnext_bindings::receivers::append(
+            self.core.arena_mut(),
+            arguments.len(),
+            receiver,
+        ) {
             self.core.abandon();
             return Err(error);
         }

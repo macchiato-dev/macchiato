@@ -21,15 +21,46 @@ function packages(features) {
 function assertPresence(features, present, absent) {
   const graph = packages(features);
   for (const name of present) {
+    if (name === bindings) continue;
     if (!graph.has(name)) {
       throw new Error(`${features || "minimal"}: expected ${name}`);
     }
   }
   for (const name of absent) {
+    if (name === bindings) continue;
     if (graph.has(name)) {
       throw new Error(
         `${features || "minimal"}: unexpectedly contains ${name}`,
       );
+    }
+  }
+}
+
+function assertBindingFeatures(features, present, absent) {
+  if (!packages(features).has(bindings)) {
+    if (present.length > 0) {
+      throw new Error(`${features || "minimal"}: expected bindings`);
+    }
+    return;
+  }
+  const args = [
+    "tree",
+    "--package=microesnext",
+    "--no-default-features",
+    "--target=wasm32-unknown-unknown",
+    "--edges=features",
+    "--invert=microesnext-bindings",
+  ];
+  if (features.length > 0) args.push("--features", features.join(","));
+  const tree = execFileSync(cargo, args, { encoding: "utf8" });
+  for (const feature of present) {
+    if (!tree.includes(`microesnext-bindings feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: expected bindings/${feature}`);
+    }
+  }
+  for (const feature of absent) {
+    if (tree.includes(`microesnext-bindings feature "${feature}"`)) {
+      throw new Error(`${features || "minimal"}: unexpectedly contains bindings/${feature}`);
     }
   }
 }
@@ -63,11 +94,12 @@ function assertCompilerFeatures(features, present, absent) {
   }
 }
 
-const environments = "microesnext-environments";
-const parameters = "microesnext-parameters";
+const bindings = "microesnext-bindings";
+const environments = bindings;
+const parameters = bindings;
 const execution = "microesnext-execution";
 const suspension = execution;
-const recursiveFunctions = "microesnext-recursive-functions";
+const recursiveFunctions = bindings;
 const asyncFunctions = execution;
 const scheduler = "microesnext-scheduler";
 const asyncThenables = scheduler;
@@ -76,7 +108,7 @@ const promises = "microesnext-promises";
 const promiseResolution = promises;
 const promiseResolvers = promises;
 const errors = "microesnext-errors";
-const receivers = "microesnext-receivers";
+const receivers = bindings;
 const thenables = scheduler;
 const integerOperations = "microesnext-integer-operations";
 const semantics = "microesnext-semantics";
@@ -466,8 +498,8 @@ assertPresence(
 assertPresence(
   ["recursive-constructors"],
   [
-    "microesnext-recursive-functions",
-    "microesnext-environments",
+    bindings,
+    bindings,
   ],
   [receivers, typeOf],
 );
@@ -480,7 +512,7 @@ assertPresence(
 );
 assertPresence(
   ["minimal-program"],
-  [integerOperations, "microesnext-locals", semantics],
+  [integerOperations, bindings, semantics],
   [
     asyncFunctions,
     environments,
@@ -513,7 +545,7 @@ assertPresence(
 );
 assertPresence(
   ["locals"],
-  ["microesnext-locals"],
+  [bindings],
   [
     asyncFunctions,
     environments,
@@ -526,7 +558,7 @@ assertPresence(
 );
 assertPresence(
   ["local-assignment-expressions"],
-  ["microesnext-locals"],
+  [bindings],
   [environments, "microesnext-objects"],
 );
 assertPresence(
@@ -537,12 +569,12 @@ assertPresence(
 assertPresence(
   ["array-assignment-expressions"],
   ["microesnext-arrays"],
-  [environments, "microesnext-locals", "microesnext-objects"],
+  [environments, bindings, "microesnext-objects"],
 );
 assertPresence(
   ["captured-assignment-expressions"],
   [environments],
-  ["microesnext-locals", "microesnext-objects"],
+  [bindings, "microesnext-objects"],
 );
 assertPresence(
   ["property-assignment-expressions"],
@@ -564,7 +596,7 @@ assertPresence(
 );
 assertPresence(
   ["receivers"],
-  ["microesnext-locals", parameters, receivers],
+  [bindings, parameters, receivers],
   [asyncFunctions, environments, errors, promiseResolution, suspension],
 );
 assertPresence(
@@ -603,7 +635,7 @@ assertPresence(
   ["promise-resolvers"],
   [
     errors,
-    "microesnext-locals",
+    bindings,
     promises,
     parameters,
   ],
@@ -679,7 +711,7 @@ assertPresence(
 );
 assertPresence(
   ["environments", "functions", "locals"],
-  [environments, "microesnext-locals"],
+  [environments, bindings],
   [
     asyncFunctions,
     errors,
@@ -690,5 +722,12 @@ assertPresence(
     suspension,
   ],
 );
+
+assertBindingFeatures([], [], ["environments", "locals", "parameters", "receivers", "recursive-functions"]);
+assertBindingFeatures(["locals"], ["locals"], ["environments", "parameters", "receivers", "recursive-functions"]);
+assertBindingFeatures(["function-arguments"], ["locals", "parameters"], ["environments", "receivers", "recursive-functions"]);
+assertBindingFeatures(["environments"], ["environments"], ["locals", "parameters", "receivers", "recursive-functions"]);
+assertBindingFeatures(["receivers"], ["locals", "parameters", "receivers"], ["environments", "recursive-functions"]);
+assertBindingFeatures(["recursive-functions"], ["environments", "recursive-functions"], ["parameters", "receivers"]);
 
 console.log("feature dependency isolation verified");

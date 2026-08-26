@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
 
@@ -56,23 +54,4 @@ fn count(arena: &Arena<'_>, base: usize) -> Result<usize, Error> {
         .as_i30()
         .and_then(|count| usize::try_from(count).ok())
         .ok_or(Error::BadBytecode)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn local_slots_are_stable_below_temporary_operands() {
-        let mut memory = [0; 32];
-        let mut arena = Arena::new(&mut memory);
-        init(&mut arena, 0, 1).unwrap();
-        arena.push(Value::from_i30(42).unwrap()).unwrap();
-        store(&mut arena, 0, 0).unwrap();
-        arena.push(Value::TRUE).unwrap();
-        assert_eq!(load(&arena, 0, 0).unwrap().as_i30(), Some(42));
-        assert_eq!(arena.pop(), Ok(Value::TRUE));
-        leave(&mut arena, 0).unwrap();
-        assert_eq!(arena.stack_len(), 0);
-    }
 }

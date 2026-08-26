@@ -58,7 +58,8 @@ class-expressions = [
   "microesnext-compiler/class-expressions",
 ]
 locals = [
-  "dep:microesnext-locals",
+  "dep:microesnext-bindings",
+  "microesnext-bindings/locals",
   "microesnext-vm/locals",
   "microesnext-compiler/locals",
 ]
@@ -148,7 +149,7 @@ callable-objects = [
 function-arguments = [
   "functions",
   "locals",
-  "dep:microesnext-parameters",
+  "microesnext-bindings/parameters",
   "microesnext-vm/function-arguments",
   "microesnext-compiler/function-arguments",
 ]
@@ -256,13 +257,13 @@ exceptions = [
 ]
 errors = ["dep:microesnext-errors"]
 environments = [
-  "dep:microesnext-environments",
+  "microesnext-bindings/environments",
   "microesnext-vm/environments",
   "microesnext-compiler/environments",
 ]
 captured-assignment-expressions = [
   "environments",
-  "microesnext-environments/assignment-expressions",
+  "microesnext-bindings/assignment-expressions",
   "microesnext-vm/captured-assignment-expressions",
   "microesnext-compiler/captured-assignment-expressions",
 ]
@@ -275,7 +276,7 @@ property-assignment-expressions = [
 recursive-functions = [
   "functions",
   "environments",
-  "dep:microesnext-recursive-functions",
+  "microesnext-bindings/recursive-functions",
   "microesnext-vm/recursive-functions",
   "microesnext-compiler/recursive-functions",
 ]
@@ -295,7 +296,7 @@ recursive-async-functions = [
 ]
 receivers = [
   "function-arguments",
-  "dep:microesnext-receivers",
+  "microesnext-bindings/receivers",
   "microesnext-vm/receivers",
   "microesnext-compiler/receivers",
 ]
@@ -351,17 +352,13 @@ microesnext-execution = { workspace = true, optional = true }
 microesnext-arrays = { workspace = true, optional = true }
 microesnext-collections = { workspace = true, optional = true }
 microesnext-promises = { workspace = true, optional = true }
-microesnext-parameters = { workspace = true, optional = true }
+microesnext-bindings = { workspace = true, optional = true }
 microesnext-iterators = { workspace = true, optional = true }
 microesnext-integer-operations = { workspace = true, optional = true }
-microesnext-locals = { workspace = true, optional = true }
 microesnext-semantics = { workspace = true, optional = true }
 microesnext-numbers = { workspace = true, optional = true }
 microesnext-exceptions = { workspace = true, optional = true }
-microesnext-environments = { workspace = true, optional = true }
 microesnext-errors = { workspace = true, optional = true }
-microesnext-recursive-functions = { workspace = true, optional = true }
-microesnext-receivers = { workspace = true, optional = true }
 microesnext-objects = { workspace = true, optional = true }
 microesnext-strings = { workspace = true, optional = true }
 microesnext-symbols = { workspace = true, optional = true }

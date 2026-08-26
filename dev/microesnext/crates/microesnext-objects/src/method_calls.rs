@@ -10,7 +10,7 @@ pub fn load(arena: &mut Arena<'_>, receiver: Value, key: Value) -> Result<(), Er
 
 /// Remove a method and its preserved receiver from below evaluated arguments.
 pub fn take(arena: &mut Arena<'_>, argument_count: usize) -> Result<(Value, Value), Error> {
-    let method = microesnext_parameters::take_callable(arena, argument_count)?;
+    let method = microesnext_bindings::parameters::take_callable(arena, argument_count)?;
     let receiver_index = arena
         .stack_len()
         .checked_sub(argument_count + 1)

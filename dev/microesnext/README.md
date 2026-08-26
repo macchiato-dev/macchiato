@@ -126,27 +126,28 @@ an explicit relational stopping condition.
 - The objects `recursive_constructor` module allocation-freely rebinds a named
   function expression's private self cell to its constructor wrapper. Ordinary
   constructors and recursive closures do not retain this cross-composition.
-- `microesnext-parameters` composes evaluated arguments with lexical slots.
-  Functions without parameters and locals outside calls do not link it.
-- `microesnext-receivers` adds hidden `this` values to selected call frames.
+- `microesnext-bindings` groups feature-gated lexical and call-frame machinery
+  that shares the same arena representation. Its `parameters` feature composes
+  evaluated arguments with lexical slots; functions without arguments omit it.
+  Its `receivers` feature adds hidden `this` values to selected call frames.
   Receiver slots live after ordinary locals, so existing local access remains
-  unchanged and builds without methods or thenables do not link the crate.
-- `microesnext-environments` supplies traced one-value cells for bindings that
+  unchanged and builds without methods or thenables omit that module.
+- The bindings `environments` feature supplies traced one-value cells that
   genuinely escape into closures. The compiler shares a cell across sibling
   closures and outer writes; uncaptured locals remain direct stack words.
 - The environments `assignment-expressions` feature stores through a cell
   while retaining the assigned value on the operand stack. The corresponding
   objects feature performs a result-preserving property store. Their dedicated
   inline operations leave ordinary assignment statements on smaller paths.
-- `microesnext-recursive-functions` composes closures with environment cells
+- The bindings `recursive-functions` feature composes closures with cells
   only for private self-bindings in named function expressions. Ordinary
-  function builds do not resolve the crate or decode its constructor opcode.
+  function builds do not retain the module or decode its constructor opcode.
 - The execution `recursive-async-functions` feature performs the corresponding
   composition for named async expressions. It reuses async closure storage and
   an environment cell without entering ordinary recursive-function builds.
-- `microesnext-locals` supplies validated lexical stack slots. Local loads and
+- The bindings `locals` feature supplies validated lexical stack slots. Loads and
   stores use bottom-relative positions, so temporary operands and suspension
-  cannot move them; literal-only machines omit the crate entirely. The facade's
+  cannot move them; literal-only machines omit the bindings crate. The facade's
   `local-assignment-expressions` composition enables the arena's gated stack
   helpers, allowing an assignment to store one copy while returning the other
   without changing the local fast path.
