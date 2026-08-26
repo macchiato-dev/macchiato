@@ -22,6 +22,16 @@ fn statement_only_functions_fall_through_with_undefined() {
     );
 }
 
+#[cfg(all(feature = "control-flow", feature = "expression-statements"))]
+#[test]
+fn terminal_branches_and_loops_fall_through_with_undefined() {
+    assert_eq!(
+        run("if (true) { 1; } else { throw 7; }"),
+        Outcome::Complete(Value::UNDEFINED)
+    );
+    assert_eq!(run("while (false) {}"), Outcome::Complete(Value::UNDEFINED));
+}
+
 #[cfg(all(
     feature = "exceptions",
     feature = "expression-statements",
@@ -37,4 +47,23 @@ fn fallthrough_closes_try_handlers_and_discards_pending_catches() {
         run("try { throw 7; } catch { 1; }"),
         Outcome::Complete(Value::UNDEFINED)
     );
+}
+
+#[cfg(all(
+    feature = "classes",
+    feature = "construction",
+    feature = "instanceof",
+    feature = "objects"
+))]
+#[test]
+fn empty_constructor_returns_preserve_the_receiver() {
+    let code = compile_script(
+        "class Empty { constructor() { return; } } \
+         return new Empty() instanceof Empty;",
+    )
+    .unwrap();
+    let mut memory = [0; 768];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+
+    assert_eq!(machine.run().unwrap(), Outcome::Complete(Value::TRUE));
 }
