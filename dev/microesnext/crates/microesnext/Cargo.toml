@@ -459,6 +459,16 @@ required-features = [
 ]
 
 [[test]]
+name = "receiver-array-assignment-expressions"
+path = "tests/receiver_array_assignment_expressions.rs"
+required-features = [
+  "array-assignment-expressions",
+  "class-methods",
+  "construction",
+  "property-assignment",
+]
+
+[[test]]
 name = "numbers"
 path = "tests/numbers.rs"
 required-features = ["locals", "number-coercion", "number-negation", "number-operations"]
