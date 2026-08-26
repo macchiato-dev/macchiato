@@ -129,6 +129,13 @@ These instructions belong to `logical-operations`, not basic `control-flow`.
 Consequently a machine needing loops and `if` but no logical expressions does
 not decode them or link their truthiness composition.
 
+Conditional source expressions need no additional instruction. The compiler
+emits `to_boolean`, `jump_if_false_boolean`, the consequent, an unconditional
+`jump`, and the alternate. Both targets use ordinary relocation records when
+the expression is inside an appended function body. Thus a runtime capable of
+`if` already has the complete execution vocabulary, while a reduced compiler
+can omit the `?:` parser branch independently.
+
 ## Numeric targets
 
 `const_f64` belongs to number representation; `add_number`,

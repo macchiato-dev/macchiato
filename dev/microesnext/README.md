@@ -89,6 +89,9 @@ an explicit relational stopping condition.
   receiver-aware body and class-record opcode sequence when a base class omits
   `constructor`. Explicit-constructor compiler builds do not retain that parser
   branch or synthesis code, and the runtime has no corresponding feature.
+- `conditional-expressions` is likewise compiler-only. It emits the existing
+  typed truthiness and jump vocabulary for `condition ? consequent : alternate`,
+  so removing the parser branch changes no runtime dispatch path.
 - `class-static-methods` is also compiler-only. It installs the same
   non-constructible method wrapper directly on the class record instead of its
   prototype, so static calls reuse receiver-preserving method bytecode and

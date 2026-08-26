@@ -38,6 +38,13 @@ independent parser feature. Object literals and property access compose the
 object, atom, and string bytecode vocabulary, without adding those paths to an
 array-only or scalar-only generator.
 
+Conditional expressions are a compiler-only composition over control flow.
+They evaluate the condition once, apply the runtime's selected truthiness
+policy, execute exactly one branch, and associate from the right. Their branch
+targets use the same relocation path inside nested functions as loops and
+logical operators. Omitting `conditional-expressions` leaves `?` unconsumed and
+adds no opcode or runtime feature.
+
 Property-assignment statements are separately gated from object literals and
 reads. The current source form accepts `local.name = value;` and constructor
 receiver initialization such as `this.name = value;`. Its opcode consumes the
