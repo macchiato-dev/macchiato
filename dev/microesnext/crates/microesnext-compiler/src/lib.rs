@@ -6557,6 +6557,25 @@ impl Parser<'_> {
                 }
                 continue;
             }
+            if escaped == b'u' {
+                let mut value = 0_u32;
+                for index in 0..4 {
+                    let nibble = self
+                        .source
+                        .get(self.offset + index)
+                        .copied()
+                        .and_then(hex_nibble)
+                        .ok_or_else(|| self.error("four hexadecimal Unicode escape digits"))?;
+                    value = value << 4 | u32::from(nibble);
+                }
+                self.offset += 4;
+                let character = char::from_u32(value)
+                    .ok_or_else(|| self.error("a Unicode scalar value in a string escape"))?;
+                let mut utf8 = [0; 4];
+                self.output
+                    .extend_from_slice(character.encode_utf8(&mut utf8).as_bytes());
+                continue;
+            }
             self.output.push(match escaped {
                 b'b' => 0x08,
                 b'f' => 0x0c,
@@ -7983,6 +8002,13 @@ mod tests {
             compile_script("return '\\x41\\x80';").unwrap(),
             Builder::new()
                 .string(&[b'A', 0xc2, 0x80])
+                .op(Opcode::Return)
+                .finish()
+        );
+        assert_eq!(
+            compile_script("return '\\u037c';").unwrap(),
+            Builder::new()
+                .string("ͼ".as_bytes())
                 .op(Opcode::Return)
                 .finish()
         );
