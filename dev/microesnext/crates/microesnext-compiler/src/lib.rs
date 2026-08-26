@@ -4890,9 +4890,13 @@ impl Parser<'_> {
             if let Some(subtracting) = compound {
                 self.output.push(Opcode::DuplicatePair as u8);
                 self.output.push(Opcode::GetProperty as u8);
-                self.output.push(Opcode::ToNumber as u8);
+                if subtracting {
+                    self.output.push(Opcode::ToNumber as u8);
+                }
                 self.expression(None)?;
-                self.output.push(Opcode::ToNumber as u8);
+                if subtracting {
+                    self.output.push(Opcode::ToNumber as u8);
+                }
                 self.output.push(if subtracting {
                     Opcode::SubtractNumber as u8
                 } else {
@@ -5820,9 +5824,13 @@ impl Parser<'_> {
                 self.output.extend_from_slice(&index.to_le_bytes());
                 self.output.push(Opcode::DuplicateTop as u8);
                 self.output.push(Opcode::LoadEnvironmentCell as u8);
-                self.output.push(Opcode::ToNumber as u8);
+                if opcode != Opcode::AddNumber {
+                    self.output.push(Opcode::ToNumber as u8);
+                }
                 self.expression(None)?;
-                self.output.push(Opcode::ToNumber as u8);
+                if opcode != Opcode::AddNumber {
+                    self.output.push(Opcode::ToNumber as u8);
+                }
                 self.output.push(opcode as u8);
                 self.output.push(Opcode::StoreEnvironmentCellResult as u8);
                 return Ok(false);
@@ -5889,9 +5897,13 @@ impl Parser<'_> {
             self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::LoadEnvironmentCell as u8);
         }
-        self.output.push(Opcode::ToNumber as u8);
+        if opcode != Opcode::AddNumber {
+            self.output.push(Opcode::ToNumber as u8);
+        }
         self.expression(None)?;
-        self.output.push(Opcode::ToNumber as u8);
+        if opcode != Opcode::AddNumber {
+            self.output.push(Opcode::ToNumber as u8);
+        }
         self.output.push(opcode as u8);
         #[cfg(feature = "environments")]
         if local.captured {
@@ -6252,9 +6264,13 @@ impl Parser<'_> {
         if let Some(subtracting) = compound {
             self.output.push(Opcode::DuplicatePair as u8);
             self.output.push(Opcode::GetProperty as u8);
-            self.output.push(Opcode::ToNumber as u8);
+            if subtracting {
+                self.output.push(Opcode::ToNumber as u8);
+            }
             self.expression(None)?;
-            self.output.push(Opcode::ToNumber as u8);
+            if subtracting {
+                self.output.push(Opcode::ToNumber as u8);
+            }
             self.output.push(if subtracting {
                 Opcode::SubtractNumber as u8
             } else {
@@ -6381,9 +6397,13 @@ impl Parser<'_> {
             } else {
                 Opcode::GetIndex as u8
             });
-            self.output.push(Opcode::ToNumber as u8);
+            if subtracting {
+                self.output.push(Opcode::ToNumber as u8);
+            }
             self.expression(None)?;
-            self.output.push(Opcode::ToNumber as u8);
+            if subtracting {
+                self.output.push(Opcode::ToNumber as u8);
+            }
             self.output.push(if subtracting {
                 Opcode::SubtractNumber as u8
             } else {
