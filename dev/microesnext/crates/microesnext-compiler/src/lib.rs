@@ -396,6 +396,33 @@ struct Binding {
     captured: bool,
 }
 
+#[cfg(feature = "functions")]
+struct FunctionParameters {
+    locals: Vec<Binding>,
+    count: u16,
+    destructured: Vec<DestructuredParameter>,
+}
+
+#[cfg(feature = "functions")]
+impl FunctionParameters {
+    fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+}
+
+#[cfg(feature = "functions")]
+struct DestructuredParameter {
+    parameter_slot: u16,
+    properties: Vec<DestructuredProperty>,
+}
+
+#[cfg(feature = "functions")]
+struct DestructuredProperty {
+    key_start: usize,
+    key_end: usize,
+    local_slot: u16,
+}
+
 #[cfg(any(
     feature = "array-assignment-expressions",
     feature = "property-assignment-expressions"
@@ -2411,7 +2438,75 @@ impl Parser<'_> {
     fn local_declarations(&mut self) -> Result<Option<usize>, CompileError> {
         let mut count_patch = None;
         self.frame_declarations(&mut count_patch)?;
+        if count_patch.is_none() && self.has_catch_binding() {
+            self.output.push(Opcode::InitLocals as u8);
+            count_patch = Some(self.output.len());
+            self.output.extend_from_slice(&0_u16.to_le_bytes());
+        }
         Ok(count_patch)
+    }
+
+    #[cfg(feature = "exceptions")]
+    fn has_catch_binding(&self) -> bool {
+        let mut offset = self.offset;
+        let mut quote = None;
+        while let Some(byte) = self.source.get(offset).copied() {
+            if let Some(delimiter) = quote {
+                offset += 1;
+                if byte == b'\\' {
+                    offset += usize::from(offset < self.source.len());
+                } else if byte == delimiter {
+                    quote = None;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset + 1) == Some(&b'/') {
+                offset += 2;
+                while self.source.get(offset).is_some_and(|byte| *byte != b'\n') {
+                    offset += 1;
+                }
+                continue;
+            }
+            if byte == b'/' && self.source.get(offset + 1) == Some(&b'*') {
+                offset += 2;
+                while offset + 1 < self.source.len() && &self.source[offset..offset + 2] != b"*/" {
+                    offset += 1;
+                }
+                offset = (offset + 2).min(self.source.len());
+                continue;
+            }
+            if matches!(byte, b'\'' | b'"' | b'`') {
+                quote = Some(byte);
+                offset += 1;
+                continue;
+            }
+            if self.source[offset..].starts_with(b"catch")
+                && (offset == 0
+                    || !self.source[offset - 1].is_ascii_alphanumeric()
+                        && !matches!(self.source[offset - 1], b'_' | b'$'))
+            {
+                let mut next = offset + b"catch".len();
+                if !self
+                    .source
+                    .get(next)
+                    .is_some_and(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$'))
+                {
+                    while self.source.get(next).is_some_and(u8::is_ascii_whitespace) {
+                        next += 1;
+                    }
+                    if self.source.get(next) == Some(&b'(') {
+                        return true;
+                    }
+                }
+            }
+            offset += 1;
+        }
+        false
+    }
+
+    #[cfg(not(feature = "exceptions"))]
+    const fn has_catch_binding(&self) -> bool {
+        false
     }
 
     #[cfg(feature = "functions")]
@@ -3252,14 +3347,20 @@ impl Parser<'_> {
     }
 
     #[cfg(feature = "function-arguments")]
-    fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
+    fn function_parameters(&mut self) -> Result<FunctionParameters, CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
         self.whitespace();
         let mut parameters = Vec::new();
+        let mut destructured_names = Vec::new();
+        let mut raw_destructured = Vec::new();
         if self.consume_raw(b')') {
-            return Ok(parameters);
+            return Ok(FunctionParameters {
+                locals: parameters,
+                count: 0,
+                destructured: Vec::new(),
+            });
         }
         loop {
             self.whitespace();
@@ -3267,14 +3368,71 @@ impl Parser<'_> {
             let rest = self.consume_bytes(b"...");
             #[cfg(not(feature = "rest-parameters"))]
             let rest = false;
+            let parameter_slot = u16::try_from(parameters.len())
+                .map_err(|_| self.error("fewer than 65536 parameters"))?;
+            if self.consume_raw(b'{') {
+                let pattern_start = self.offset - 1;
+                let mut properties = Vec::new();
+                self.whitespace();
+                if !self.consume_raw(b'}') {
+                    loop {
+                        self.whitespace();
+                        let (key_start, key_end) = self.identifier()?;
+                        let (start, end) = if self.consume(b':') {
+                            self.whitespace();
+                            self.identifier()?
+                        } else {
+                            (key_start, key_end)
+                        };
+                        if parameters.iter().any(|binding: &Binding| {
+                            self.source[binding.start..binding.end] == self.source[start..end]
+                        }) || destructured_names.iter().any(|&(other_start, other_end)| {
+                            self.source[other_start..other_end] == self.source[start..end]
+                        }) {
+                            return Err(self.error("a unique parameter binding"));
+                        }
+                        destructured_names.push((start, end));
+                        properties.push((key_start, key_end, start, end));
+                        if self.consume(b'}') {
+                            break;
+                        }
+                        if !self.consume(b',') {
+                            return Err(self.error(", or }"));
+                        }
+                    }
+                }
+                parameters.push(Binding {
+                    start: pattern_start,
+                    end: pattern_start + 1,
+                    slot: parameter_slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                });
+                // Local slots for destructured names are assigned after every
+                // incoming argument has claimed its positional slot.
+                raw_destructured.push((parameter_slot, properties));
+                if rest {
+                    return Err(self.error("an identifier after ..."));
+                }
+                if self.consume(b')') {
+                    break;
+                }
+                if !self.consume(b',') {
+                    return Err(self.error(", or )"));
+                }
+                continue;
+            }
             let (start, end) = self.identifier()?;
             if parameters.iter().any(|binding: &Binding| {
                 self.source[binding.start..binding.end] == self.source[start..end]
+            }) || destructured_names.iter().any(|&(other_start, other_end)| {
+                self.source[other_start..other_end] == self.source[start..end]
             }) {
                 return Err(self.error("a unique parameter binding"));
             }
-            let slot = u16::try_from(parameters.len())
-                .map_err(|_| self.error("fewer than 65536 parameters"))?;
+            let slot = parameter_slot;
             #[cfg(feature = "default-parameters")]
             let default = if self.consume(b'=') {
                 let start = self.offset;
@@ -3299,15 +3457,48 @@ impl Parser<'_> {
                 if !self.consume(b')') {
                     return Err(self.error(") after a rest parameter"));
                 }
-                return Ok(parameters);
+                break;
             }
             if self.consume(b')') {
-                return Ok(parameters);
+                break;
             }
             if !self.consume(b',') {
                 return Err(self.error(", or )"));
             }
         }
+        let count = u16::try_from(parameters.len())
+            .map_err(|_| self.error("fewer than 65536 parameters"))?;
+        let mut destructured = Vec::new();
+        for (parameter_slot, properties) in raw_destructured {
+            let mut materialized = Vec::new();
+            for (key_start, key_end, start, end) in properties {
+                let local_slot = u16::try_from(parameters.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                parameters.push(Binding {
+                    start,
+                    end,
+                    slot: local_slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                });
+                materialized.push(DestructuredProperty {
+                    key_start,
+                    key_end,
+                    local_slot,
+                });
+            }
+            destructured.push(DestructuredParameter {
+                parameter_slot,
+                properties: materialized,
+            });
+        }
+        Ok(FunctionParameters {
+            locals: parameters,
+            count,
+            destructured,
+        })
     }
 
     #[cfg(feature = "default-parameters")]
@@ -3342,18 +3533,22 @@ impl Parser<'_> {
     }
 
     #[cfg(all(feature = "functions", not(feature = "function-arguments")))]
-    fn function_parameters(&mut self) -> Result<Vec<Binding>, CompileError> {
+    fn function_parameters(&mut self) -> Result<FunctionParameters, CompileError> {
         if !self.consume(b'(') {
             return Err(self.error("("));
         }
         if !self.consume(b')') {
             return Err(self.error(")"));
         }
-        Ok(Vec::new())
+        Ok(FunctionParameters {
+            locals: Vec::new(),
+            count: 0,
+            destructured: Vec::new(),
+        })
     }
 
     #[cfg(feature = "functions")]
-    fn try_arrow_parameters(&mut self) -> Result<Option<Vec<Binding>>, CompileError> {
+    fn try_arrow_parameters(&mut self) -> Result<Option<FunctionParameters>, CompileError> {
         let start = self.offset;
         let parameters = if self.source.get(self.offset) == Some(&b'(') {
             match self.function_parameters() {
@@ -3371,15 +3566,19 @@ impl Parser<'_> {
                 return Ok(None);
             }
             let (name_start, name_end) = self.identifier()?;
-            vec![Binding {
-                start: name_start,
-                end: name_end,
-                slot: 0,
-                default: None,
-                hoisted: false,
-                #[cfg(feature = "environments")]
-                captured: false,
-            }]
+            FunctionParameters {
+                locals: vec![Binding {
+                    start: name_start,
+                    end: name_end,
+                    slot: 0,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                }],
+                count: 1,
+                destructured: Vec::new(),
+            }
         };
         self.whitespace();
         if !self.source[self.offset..].starts_with(b"=>") {
@@ -3393,7 +3592,7 @@ impl Parser<'_> {
     #[cfg(feature = "functions")]
     fn function_value(
         &mut self,
-        parameters: Vec<Binding>,
+        parameters: FunctionParameters,
         destination: Option<u16>,
         body_kind: FunctionBody,
         expression_name: Option<Binding>,
@@ -3410,19 +3609,24 @@ impl Parser<'_> {
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
-        let parameter_count = u16::try_from(parameters.len())
-            .map_err(|_| self.error("fewer than 65536 parameters"))?;
+        let parameter_count = parameters.count;
         #[cfg(feature = "rest-parameters")]
-        let rest_parameter = parameters.last().is_some_and(|binding| {
-            binding.start >= 3 && &self.source[binding.start - 3..binding.start] == b"..."
-        });
+        let rest_parameter = parameters
+            .locals
+            .get(usize::from(parameter_count.saturating_sub(1)))
+            .is_some_and(|binding| {
+                binding.start >= 3 && &self.source[binding.start - 3..binding.start] == b"..."
+            });
         #[cfg(not(feature = "rest-parameters"))]
         let rest_parameter = false;
         #[cfg(feature = "default-parameters")]
         let parameter_defaults: Vec<_> = parameters
+            .locals
             .iter()
+            .take(usize::from(parameter_count))
             .filter_map(|binding| binding.default.map(|range| (binding.slot, range)))
             .collect();
+        let destructured_parameters = parameters.destructured;
         #[cfg(feature = "environments")]
         let outer_bindings = {
             let mut bindings = self.outer_bindings.clone();
@@ -3436,7 +3640,7 @@ impl Parser<'_> {
             output: self.initial_function_frame(parameter_count, receiver_frame, rest_parameter),
             #[cfg(feature = "host-bindings")]
             host_globals: self.host_globals.clone(),
-            locals: parameters,
+            locals: parameters.locals,
             #[cfg(feature = "environments")]
             outer_bindings,
             #[cfg(feature = "environments")]
@@ -3492,6 +3696,18 @@ impl Parser<'_> {
                 .map_err(|_| body.error("bytecode smaller than 4 GiB"))?;
             body.output[skip_patch..skip_patch + 4].copy_from_slice(&skip.to_le_bytes());
             body.relocations.push(skip_patch);
+        }
+        for parameter in destructured_parameters {
+            for property in parameter.properties {
+                body.output.push(Opcode::LoadLocal as u8);
+                body.output
+                    .extend_from_slice(&parameter.parameter_slot.to_le_bytes());
+                body.output_atom_range(property.key_start, property.key_end);
+                body.output.push(Opcode::GetProperty as u8);
+                body.output.push(Opcode::StoreLocal as u8);
+                body.output
+                    .extend_from_slice(&property.local_slot.to_le_bytes());
+            }
         }
         let mut body_count_patch = Some(1);
         if !matches!(body_kind, FunctionBody::Expression) {
@@ -7854,8 +8070,11 @@ mod tests {
     #[test]
     fn backpatches_a_directly_emitted_catch_target() {
         let code = compile_script("try { throw 17; } catch (error) { return error; }").unwrap();
-        assert_eq!(code[0], Opcode::Try as u8);
-        let target = u32::from_le_bytes(code[1..5].try_into().unwrap()) as usize;
+        let try_at = code
+            .iter()
+            .position(|opcode| *opcode == Opcode::Try as u8)
+            .unwrap();
+        let target = u32::from_le_bytes(code[try_at + 1..try_at + 5].try_into().unwrap()) as usize;
         assert_eq!(code[target], Opcode::StoreLocal as u8);
         assert!(code[target..].contains(&(Opcode::LoadLocal as u8)));
         assert_eq!(*code.last().unwrap(), Opcode::ReturnLocals as u8);

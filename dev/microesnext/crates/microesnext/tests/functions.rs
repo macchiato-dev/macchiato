@@ -69,6 +69,16 @@ fn arrow_block_body_uses_the_shared_function_frame() {
 }
 
 #[test]
+fn arrow_parameters_destructure_object_properties_into_local_bindings() {
+    assert_eq!(
+        run(
+            "let add = ({ left, right: value }) => left + value; return add({ left: 40, right: 2 });"
+        ),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
 fn source_function_receives_multiple_arguments_in_order() {
     assert_eq!(
         run("function add(left, right) { return left + right; } return add(40, 2);"),
