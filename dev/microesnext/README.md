@@ -238,8 +238,8 @@ an explicit relational stopping condition.
   retaining the assigned value. The compiler's separate `array-indexing` gate
   adds reads without adding runtime code; literal stores keep their existing
   object-preserving path when expression assignment is omitted.
-- `microesnext-weak-collections` contains WeakMap and WeakSet storage as a
-  separate capability because ephemerons alter collector tracing.
+- `microesnext-collections` contains Map and Set plus an independently gated
+  `weak` module. Ephemeron tracing is retained only by that feature.
 - `microesnext-promises` contains compact promise records and a caller-owned,
   rooted FIFO job ring; it does not require a native allocator or Rust futures.
 - `microesnext-errors` supplies compact guest error identities without forcing

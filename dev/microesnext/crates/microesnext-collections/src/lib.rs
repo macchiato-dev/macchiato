@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(feature = "weak")]
+pub mod weak;
+
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 

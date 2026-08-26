@@ -1,5 +1,3 @@
-#![no_std]
-
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, HeapRef, Value};
 

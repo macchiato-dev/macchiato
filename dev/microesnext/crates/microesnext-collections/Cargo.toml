@@ -11,6 +11,7 @@ version.workspace = true
 default = []
 number-keys = ["dep:microesnext-equality", "microesnext-equality/numbers"]
 string-keys = ["dep:microesnext-equality", "microesnext-equality/strings"]
+weak = ["microesnext-arena/ephemerons"]
 
 [dependencies]
 microesnext-arena.workspace = true
@@ -19,6 +20,7 @@ microesnext-types.workspace = true
 
 [dev-dependencies]
 microesnext-numbers.workspace = true
+microesnext-objects.workspace = true
 microesnext-strings.workspace = true
 
 [lib]

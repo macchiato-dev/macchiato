@@ -61,7 +61,6 @@ dependencies = [
  "microesnext-types",
  "microesnext-vm",
  "microesnext-vm-core",
- "microesnext-weak-collections",
  "microesnext-well-known-symbols",
 ]
 
@@ -224,6 +223,7 @@ dependencies = [
  "microesnext-arena",
  "microesnext-equality",
  "microesnext-numbers",
+ "microesnext-objects",
  "microesnext-strings",
  "microesnext-types",
 ]
@@ -699,15 +699,6 @@ dependencies = [
  "microesnext-bytecode",
  "microesnext-bytecode-core",
  "microesnext-compiler",
- "microesnext-types",
-]
-
-[[package]]
-name = "microesnext-weak-collections"
-version = "0.0.0"
-dependencies = [
- "microesnext-arena",
- "microesnext-objects",
  "microesnext-types",
 ]
 

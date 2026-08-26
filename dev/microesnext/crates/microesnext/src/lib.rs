@@ -139,7 +139,7 @@ pub use microesnext_symbols as symbols;
 pub use microesnext_well_known_symbols as well_known_symbols;
 
 #[cfg(feature = "weak-collections")]
-pub use microesnext_weak_collections as weak_collections;
+pub use microesnext_collections::weak as weak_collections;
 
 #[cfg(feature = "promises")]
 pub use microesnext_promises as promises;
