@@ -268,7 +268,7 @@ capability penalty, but do not prove mathematical equality. The stronger gate
 is structural: optional crates and their typed opcodes cannot enter the raw
 base loop.
 
-## Final Wasm capability sizes, 2026-08-25
+## Final Wasm capability sizes, 2026-08-26
 
 `tools/measure-capabilities.ts` builds an exported, allocator-free Wasm probe
 for each capability. Every row exercises the named implementation, preventing
@@ -277,6 +277,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Build | Wasm bytes | Gzip bytes |
 | --- | ---: | ---: |
 | Minimal | 1,984 | 961 |
+| Expression statements | 2,691 | 1,329 |
 | Arrays | 8,768 | 3,532 |
 | Array assignment expressions | 10,034 | 4,006 |
 | Array iterators | 10,756 | 4,205 |
@@ -333,7 +334,7 @@ LTO from merely discarding an enabled but unused dependency.
 | Object thenable assimilation | 34,353 | 12,618 |
 | Async return thenable assimilation | 46,429 | 16,350 |
 | Weak collections | 2,051 | 1,001 |
-| All capabilities | 109,821 | 34,862 |
+| All capabilities | 110,159 | 34,934 |
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -619,6 +620,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | static class methods | 21,028 | 8,002 |
 | anonymous class expressions | 23,560 | 8,946 |
 | exceptions | 7,004 | 2,947 |
+| expression statements | 6,175 | 2,607 |
 | logical operations | 7,293 | 3,256 |
 | bounded integer operations | 6,632 | 2,728 |
 | bounded numeric negation | 5,791 | 2,503 |
@@ -644,7 +646,15 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,134 | 7,558 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,967 | 7,856 |
-| default language slice | 48,615 | 17,302 |
+| default language slice | 48,908 | 17,390 |
+
+Expression statements add one generic stack discard to the invariant source
+compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
+961 core, and its compiler is 6,175 / 2,607 versus 5,471 / 2,378. The runtime
+dependency graph contains only `microesnext-stack-operations`; it includes no
+exceptions, functions, objects, or locals. Reduced compilers leave the first
+ordinary expression statement unconsumed, while existing specialized
+assignment statements continue to compile without this gate.
 
 Local assignment expressions compose the 4,012 / 1,798 locals runtime with
 the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler

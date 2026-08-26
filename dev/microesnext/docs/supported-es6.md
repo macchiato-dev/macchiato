@@ -45,6 +45,16 @@ targets use the same relocation path inside nested functions as loops and
 logical operators. Omitting `conditional-expressions` leaves `?` unconsumed and
 adds no opcode or runtime feature.
 
+Expression statements are independently selectable. Any expression accepted
+by the chosen compiler composition may be followed by `;` before a terminal
+completion, including calls and result-preserving property or array
+assignments. The compiler emits one generic `DropTop` operation, so adding a
+new expression family does not require another statement opcode. This works at
+top level and in function, method, constructor, loop, conditional, `try`, and
+`catch` bodies. Omitting `expression-statements` removes its parser loop and
+the stack-operation dispatch; specialized local and property assignment
+statements retain their smaller direct paths.
+
 Property-assignment statements are separately gated from object literals and
 reads. The current source form accepts `local.name = value;` and constructor
 receiver initialization such as `this.name = value;`. Its opcode consumes the

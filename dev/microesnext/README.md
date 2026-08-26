@@ -80,11 +80,12 @@ an explicit relational stopping condition.
   `class-methods` composition stores receiver-aware, non-constructible callable
   objects on a class prototype; constructor-only class builds retain neither
   its stack operations nor its three opcodes.
-- `microesnext-stack-operations` supplies the independently removable
-  top-of-stack duplication used while a class expression is decorated. The
-  compiler keeps one class record as the expression result and duplicates it
-  only for each property installation; declaration-only class builds retain
-  neither the crate nor its opcode.
+- `microesnext-stack-operations` supplies independently removable operand
+  duplication and discard operations. Class expressions duplicate their class
+  record only while installing properties. The separate compiler-only
+  `expression-statements` gate emits a generic discard for any supported
+  expression followed by `;`; it does not reuse exception unwinding or add a
+  statement-specific path to each expression capability.
 - `class-default-constructors` is compiler-only: it synthesizes the same compact
   receiver-aware body and class-record opcode sequence when a base class omits
   `constructor`. Explicit-constructor compiler builds do not retain that parser
