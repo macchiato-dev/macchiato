@@ -115,6 +115,11 @@ assertCompilerFeatures(
   ["exceptions", "functions", "locals", "stack-operations"],
 );
 assertCompilerFeatures(
+  ["nested-conditionals"],
+  ["control-flow"],
+  ["exceptions", "functions", "locals", "stack-operations"],
+);
+assertCompilerFeatures(
   ["expression-statements"],
   ["stack-operations"],
   ["exceptions", "functions", "locals", "objects"],
