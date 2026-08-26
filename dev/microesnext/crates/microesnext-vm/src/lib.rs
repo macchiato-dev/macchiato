@@ -90,6 +90,8 @@ pub struct Machine<'code, 'memory> {
     host_completion: Option<HostCompletion>,
     #[cfg(all(feature = "arrays", feature = "objects"))]
     array_prototype: Option<RootId>,
+    #[cfg(all(feature = "strings", feature = "objects"))]
+    string_prototype: Option<RootId>,
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     function_call: Option<HostRef>,
 }
@@ -124,6 +126,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: None,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: None,
+            #[cfg(all(feature = "strings", feature = "objects"))]
+            string_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
         }
@@ -232,6 +236,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: None,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: None,
+            #[cfg(all(feature = "strings", feature = "objects"))]
+            string_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
         })
@@ -345,6 +351,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Ok(())
     }
 
+    #[cfg(all(feature = "strings", feature = "objects"))]
+    pub fn install_string_prototype(&mut self, prototype: Value) -> Result<(), Error> {
+        if let Some(root) = self.string_prototype.take() { self.release(root)?; }
+        self.string_prototype = Some(self.retain(prototype)?);
+        Ok(())
+    }
+
     #[cfg(all(feature = "objects", feature = "getters", feature = "callable-objects"))]
     pub fn define_property(
         &mut self,
@@ -425,6 +438,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_completion: self.host_completion,
             #[cfg(all(feature = "arrays", feature = "objects"))]
             array_prototype: self.array_prototype,
+            #[cfg(all(feature = "strings", feature = "objects"))]
+            string_prototype: self.string_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
         })
@@ -701,6 +716,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 }
                 if microesnext_objects::arrays::is_array(self.core.arena(), receiver) {
                     let prototype = self.array_prototype.ok_or(Error::Type)?;
+                    let method = get(self.core.arena(), self.root(prototype)?, key)?;
+                    self.core.arena_mut().push(receiver)?;
+                    self.core.arena_mut().push(method)?;
+                } else if self.string_bytes(receiver).is_ok() {
+                    let prototype = self.string_prototype.ok_or(Error::Type)?;
                     let method = get(self.core.arena(), self.root(prototype)?, key)?;
                     self.core.arena_mut().push(receiver)?;
                     self.core.arena_mut().push(method)?;

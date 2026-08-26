@@ -40,6 +40,7 @@ const FUNCTION_CALL: u32 = (1 << 29) + 60;
 const HOST_REFERENCE: u32 = 43;
 const RELEASE_HOST_REFERENCE: u32 = 53;
 const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
+const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
 
 struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
 
@@ -241,6 +242,26 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     machine.install_function_call(microesnext::HostRef::new(FUNCTION_CALL).unwrap());
+    let string_prototype = (|| {
+        let prototype = machine.new_object(Value::NULL)?;
+        object_set(
+            &mut machine,
+            prototype,
+            b"charCodeAt",
+            Value::from_host(microesnext::HostRef::new(STRING_CHAR_CODE_AT).unwrap()),
+        )
+    })();
+    let string_prototype = match string_prototype.and_then(|value| {
+        machine.install_string_prototype(value)?;
+        Ok(value)
+    }) {
+        Ok(value) => value,
+        Err(error) => {
+            DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+            return;
+        }
+    };
+    let _ = string_prototype;
     let raw = loop {
         STAGE.fetch_add(1, Ordering::Relaxed);
         match machine.run() {
@@ -413,6 +434,26 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 if let Err(error) = machine.complete_host_call(reference) {
                     DETAIL.store(error as u32 + 1100, Ordering::Relaxed);
                     break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_CHAR_CODE_AT =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let index = machine.host_argument(0)?.as_i30().ok_or(Error::Type)?;
+                    let code = usize::try_from(index).ok()
+                        .and_then(|index| text.encode_utf16().nth(index))
+                        .map(i32::from)
+                        .unwrap_or(0);
+                    Value::from_i30(code).ok_or(Error::Type)
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
                 }
             }
             Ok(Outcome::HostCall { function, .. })
