@@ -200,6 +200,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 microesnext_stack_operations::duplicate_top(self.core.arena_mut())?;
                 Ok(None)
             }
+            #[cfg(feature = "stack-operations")]
+            Opcode::DropTop => {
+                microesnext_stack_operations::drop_top(self.core.arena_mut())?;
+                Ok(None)
+            }
             #[cfg(feature = "async")]
             Opcode::Await => {
                 let handler_depth = self.current_handler_depth();

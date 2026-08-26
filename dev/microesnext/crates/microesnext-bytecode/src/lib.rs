@@ -160,6 +160,8 @@ pub enum Opcode {
     SetPropertyResult = 114,
     #[cfg(feature = "array-assignment-expressions")]
     SetIndexResult = 115,
+    #[cfg(feature = "stack-operations")]
+    DropTop = 116,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -305,6 +307,8 @@ impl TryFrom<u8> for Opcode {
             111 => Ok(Self::CallMethodArguments),
             #[cfg(feature = "stack-operations")]
             112 => Ok(Self::DuplicateTop),
+            #[cfg(feature = "stack-operations")]
+            116 => Ok(Self::DropTop),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
@@ -599,12 +603,14 @@ mod tests {
     #[test]
     fn enabled_stack_operation_is_decodable() {
         assert_eq!(Opcode::try_from(112), Ok(Opcode::DuplicateTop));
+        assert_eq!(Opcode::try_from(116), Ok(Opcode::DropTop));
     }
 
     #[cfg(not(feature = "stack-operations"))]
     #[test]
     fn omitted_stack_operation_is_invalid() {
         assert!(Opcode::try_from(112).is_err());
+        assert!(Opcode::try_from(116).is_err());
     }
 
     #[cfg(feature = "captured-assignment-expressions")]
