@@ -25,3 +25,11 @@ fn a_nested_property_assignment_returns_and_stores_its_value() {
         Outcome::Complete(Value::from_i30(42).unwrap())
     );
 }
+
+#[test]
+fn property_and_local_assignment_targets_compose_right_to_left() {
+    assert_eq!(
+        run("let object = {}; let result = 0; result = object.value = 42; return result;"),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}

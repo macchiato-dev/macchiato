@@ -3325,6 +3325,21 @@ mod tests {
     }
 
     #[cfg(all(
+        feature = "locals",
+        feature = "objects",
+        not(feature = "property-assignment-expressions")
+    ))]
+    #[test]
+    fn reduced_object_compilers_leave_property_assignment_expressions_unconsumed() {
+        assert_eq!(
+            compile_script("let object = {}; return object.value = 42;")
+                .unwrap_err()
+                .expected,
+            "end of input"
+        );
+    }
+
+    #[cfg(all(
         feature = "objects",
         feature = "literal-expressions",
         feature = "locals"
