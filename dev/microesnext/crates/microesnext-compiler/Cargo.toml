@@ -10,6 +10,8 @@ version.workspace = true
 [features]
 default = [
   "arrays",
+  "abstract-equality",
+  "bitwise-operations",
   "array-indexing",
   "array-assignment-expressions",
   "async-functions",
@@ -59,6 +61,12 @@ default = [
   "source-positions",
 ]
 arrays = ["microesnext-bytecode/arrays"]
+abstract-equality = [
+  "equality",
+  "logical-operations",
+  "microesnext-bytecode/abstract-equality",
+]
+bitwise-operations = ["microesnext-bytecode/bitwise-operations"]
 array-indexing = ["arrays"]
 array-assignment-expressions = [
   "array-indexing",

@@ -12,7 +12,7 @@ fn run(source: &str) -> Outcome {
 #[test]
 fn prefix_and_postfix_updates_preserve_their_javascript_results() {
     assert_eq!(
-        run("let value = 40; let old = value++; let new = ++value; return old + new;"),
+        run("let value = 40; let old = value++; let current = ++value; return old + current;"),
         Outcome::Complete(Value::from_i30(82).unwrap())
     );
 }

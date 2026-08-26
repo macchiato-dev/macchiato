@@ -166,6 +166,10 @@ pub enum Opcode {
     DropTop = 116,
     #[cfg(feature = "host-bindings")]
     ConstHost = 117,
+    #[cfg(feature = "bitwise-operations")]
+    ShiftRightI30 = 118,
+    #[cfg(feature = "abstract-equality")]
+    AbstractEqual = 119,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -315,6 +319,10 @@ impl TryFrom<u8> for Opcode {
             116 => Ok(Self::DropTop),
             #[cfg(feature = "host-bindings")]
             117 => Ok(Self::ConstHost),
+            #[cfg(feature = "bitwise-operations")]
+            118 => Ok(Self::ShiftRightI30),
+            #[cfg(feature = "abstract-equality")]
+            119 => Ok(Self::AbstractEqual),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]

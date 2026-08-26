@@ -51,3 +51,16 @@ fn source_while_updates_stable_local_slots() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn declarations_can_follow_control_flow() {
+    let code = compile_script(
+        "let first = 1; if (false) return 0; const later = 41; return first + later;",
+    )
+    .unwrap();
+    let mut memory = [0; 192];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

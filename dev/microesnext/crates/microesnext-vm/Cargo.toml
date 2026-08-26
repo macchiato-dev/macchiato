@@ -76,6 +76,11 @@ integer-operations = [
   "microesnext-semantics/integer-operations",
   "microesnext-bytecode/integer-operations",
 ]
+bitwise-operations = [
+  "dep:microesnext-semantics",
+  "microesnext-semantics/bitwise-operations",
+  "microesnext-bytecode/bitwise-operations",
+]
 integer-negation = [
   "dep:microesnext-semantics",
   "microesnext-semantics/integer-operations",
@@ -90,6 +95,11 @@ equality = [
   "dep:microesnext-semantics",
   "microesnext-semantics/equality",
   "microesnext-bytecode/equality",
+]
+abstract-equality = [
+  "equality",
+  "microesnext-semantics/abstract-equality",
+  "microesnext-bytecode/abstract-equality",
 ]
 logical-operations = [
   "dep:microesnext-semantics",

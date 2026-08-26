@@ -672,6 +672,7 @@ impl Parser<'_> {
     #[cfg(feature = "expression-statements")]
     fn statement_prefix(&mut self) -> Result<(), CompileError> {
         loop {
+            self.local_declaration_statements()?;
             self.property_assignments()?;
             self.local_assignments()?;
             self.whitespace();
@@ -688,6 +689,7 @@ impl Parser<'_> {
 
     #[cfg(not(feature = "expression-statements"))]
     fn statement_prefix(&mut self) -> Result<(), CompileError> {
+        self.local_declaration_statements()?;
         self.property_assignments()?;
         self.local_assignments()
     }
@@ -841,9 +843,17 @@ impl Parser<'_> {
         }
 
         if self.consume(b'{') {
-            self.statement_prefix()?;
+            let abrupt = self.control_block_body()?;
             if !self.consume(b'}') {
                 return Err(self.error("}"));
+            }
+            if abrupt {
+                let exit = u32::try_from(self.output.len())
+                    .map_err(|_| self.error("bytecode smaller than 4 GiB"))?;
+                self.output[exit_patch..exit_patch + 4].copy_from_slice(&exit.to_le_bytes());
+                #[cfg(feature = "functions")]
+                self.relocations.push(exit_patch);
+                return Ok(());
             }
         } else {
             self.expression(None)?;
@@ -866,6 +876,52 @@ impl Parser<'_> {
             self.relocations.push(loop_patch);
         }
         Ok(())
+    }
+
+    #[cfg(feature = "for-statements")]
+    fn control_block_body(&mut self) -> Result<bool, CompileError> {
+        loop {
+            self.statement_prefix()?;
+            self.whitespace();
+            if self.source.get(self.offset) == Some(&b'}') {
+                return Ok(false);
+            }
+            if self.try_word(b"if") {
+                let abrupt = if self.conditional_body_is_braced() {
+                    #[cfg(feature = "structured-statements")]
+                    {
+                        self.structured_statement(StructuredStart::Conditional)?
+                    }
+                    #[cfg(not(feature = "structured-statements"))]
+                    {
+                        self.if_else()?;
+                        false
+                    }
+                } else {
+                    self.single_if()?
+                };
+                if abrupt && self.source.get(self.offset) == Some(&b'}') {
+                    return Ok(true);
+                }
+                continue;
+            }
+            if self.try_word(b"while") {
+                #[cfg(feature = "structured-statements")]
+                self.structured_statement(StructuredStart::Loop)?;
+                #[cfg(not(feature = "structured-statements"))]
+                self.while_loop()?;
+                continue;
+            }
+            if self.try_word(b"for") {
+                self.for_loop()?;
+                continue;
+            }
+            if self.word_at_offset(b"return") || self.word_at_offset(b"throw") {
+                self.completion(None, false, false)?;
+                return Ok(true);
+            }
+            return Err(self.error("a statement or }"));
+        }
     }
 
     #[cfg(feature = "control-flow")]
@@ -1613,6 +1669,8 @@ impl Parser<'_> {
             } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
                 #[cfg(feature = "var-declarations")]
                 self.let_declaration(count_patch)?;
+            } else if self.try_word(b"const") {
+                self.let_declaration(count_patch)?;
             } else {
                 break;
             }
@@ -1628,6 +1686,8 @@ impl Parser<'_> {
                 self.let_declaration(count_patch)?;
             } else if cfg!(feature = "var-declarations") && self.try_word(b"var") {
                 #[cfg(feature = "var-declarations")]
+                self.let_declaration(count_patch)?;
+            } else if self.try_word(b"const") {
                 self.let_declaration(count_patch)?;
             } else {
                 return Ok(());
@@ -1680,6 +1740,42 @@ impl Parser<'_> {
             return Err(self.error(";"));
         }
         self.whitespace();
+        Ok(())
+    }
+
+    #[cfg(feature = "locals")]
+    fn local_declaration_statements(&mut self) -> Result<(), CompileError> {
+        let mut initialized_locals = Some(0);
+        loop {
+            self.whitespace();
+            #[cfg(feature = "functions")]
+            if self.try_word(b"function") {
+                self.function_declaration(&mut initialized_locals, false)?;
+                continue;
+            }
+            #[cfg(feature = "classes")]
+            if self.try_word(b"class") {
+                self.class_declaration(&mut initialized_locals)?;
+                continue;
+            }
+            #[cfg(feature = "async-functions")]
+            if self.try_async_function() {
+                self.function_declaration(&mut initialized_locals, true)?;
+                continue;
+            }
+            if self.try_word(b"let")
+                || self.try_word(b"const")
+                || cfg!(feature = "var-declarations") && self.try_word(b"var")
+            {
+                self.let_declaration(&mut initialized_locals)?;
+            } else {
+                return Ok(());
+            }
+        }
+    }
+
+    #[cfg(not(feature = "locals"))]
+    fn local_declaration_statements(&mut self) -> Result<(), CompileError> {
         Ok(())
     }
 
@@ -3261,6 +3357,24 @@ impl Parser<'_> {
                 Opcode::StrictEqual
             } else if self.consume_bytes(b"!==") {
                 Opcode::StrictNotEqual
+            } else if cfg!(feature = "abstract-equality") && self.consume_bytes(b"==") {
+                #[cfg(feature = "abstract-equality")]
+                {
+                    Opcode::AbstractEqual
+                }
+                #[cfg(not(feature = "abstract-equality"))]
+                unreachable!()
+            } else if cfg!(feature = "abstract-equality") && self.consume_bytes(b"!=") {
+                #[cfg(feature = "abstract-equality")]
+                {
+                    self.relational(None)?;
+                    self.output.push(Opcode::AbstractEqual as u8);
+                    self.output.push(Opcode::LogicalNot as u8);
+                    kind = TermKind::General;
+                    continue;
+                }
+                #[cfg(not(feature = "abstract-equality"))]
+                unreachable!()
             } else {
                 break;
             };
@@ -3284,19 +3398,21 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.additive(binding)?;
+        let (used_binding, mut kind) = self.shift(binding)?;
         loop {
-            let less = if self.consume(b'<') {
-                true
-            } else if self.consume(b'>') {
-                false
-            } else {
+            let Some((less, inverted)) = self.relational_operator() else {
                 break;
             };
-            let (_, right) = self.additive(None)?;
+            let (_, right) = self.shift(None)?;
             let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
             let opcode = self.relational_opcode(less, immediate);
             self.output.push(opcode as u8);
+            #[cfg(feature = "logical-operations")]
+            if inverted {
+                self.output.push(Opcode::LogicalNot as u8);
+            }
+            #[cfg(not(feature = "logical-operations"))]
+            debug_assert!(!inverted);
             kind = TermKind::General;
         }
         Ok((used_binding, kind))
@@ -3307,23 +3423,22 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.additive(binding)?;
+        let (used_binding, mut kind) = self.shift(binding)?;
         loop {
-            let relation = if self.consume(b'<') {
-                Some(true)
-            } else if self.consume(b'>') {
-                Some(false)
-            } else {
-                None
-            };
-            if let Some(less) = relation {
-                let (_, right) = self.additive(None)?;
+            if let Some((less, inverted)) = self.relational_operator() {
+                let (_, right) = self.shift(None)?;
                 let immediate = matches!((kind, right), (TermKind::I30(_), TermKind::I30(_)));
                 let opcode = self.relational_opcode(less, immediate);
                 self.output.push(opcode as u8);
+                #[cfg(feature = "logical-operations")]
+                if inverted {
+                    self.output.push(Opcode::LogicalNot as u8);
+                }
+                #[cfg(not(feature = "logical-operations"))]
+                debug_assert!(!inverted);
                 kind = TermKind::General;
             } else if self.consume_instanceof() {
-                self.additive(None)?;
+                self.shift(None)?;
                 self.output.push(Opcode::InstanceOf as u8);
                 kind = TermKind::General;
             } else {
@@ -3333,14 +3448,34 @@ impl Parser<'_> {
         Ok((used_binding, kind))
     }
 
+    #[cfg(feature = "integer-operations")]
+    fn relational_operator(&mut self) -> Option<(bool, bool)> {
+        #[cfg(feature = "logical-operations")]
+        {
+            if self.consume_bytes(b"<=") {
+                return Some((false, true));
+            }
+            if self.consume_bytes(b">=") {
+                return Some((true, true));
+            }
+        }
+        if self.consume(b'<') {
+            Some((true, false))
+        } else if self.consume(b'>') {
+            Some((false, false))
+        } else {
+            None
+        }
+    }
+
     #[cfg(all(feature = "instanceof", not(feature = "integer-operations")))]
     fn relational(
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
-        let (used_binding, mut kind) = self.additive(binding)?;
+        let (used_binding, mut kind) = self.shift(binding)?;
         while self.consume_instanceof() {
-            self.additive(None)?;
+            self.shift(None)?;
             self.output.push(Opcode::InstanceOf as u8);
             kind = TermKind::General;
         }
@@ -3352,6 +3487,27 @@ impl Parser<'_> {
         &mut self,
         binding: Option<(usize, usize)>,
     ) -> Result<(bool, TermKind), CompileError> {
+        self.shift(binding)
+    }
+
+    #[cfg(feature = "bitwise-operations")]
+    fn shift(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
+        let (used_binding, mut kind) = self.additive(binding)?;
+        while self.consume_bytes(b">>") {
+            let (_, right) = self.additive(None)?;
+            self.output.push(Opcode::ShiftRightI30 as u8);
+            kind = match (kind, right) {
+                (TermKind::I30(left), TermKind::I30(right)) => {
+                    TermKind::I30(left >> (right as u32 & 31))
+                }
+                _ => TermKind::General,
+            };
+        }
+        Ok((used_binding, kind))
+    }
+
+    #[cfg(not(feature = "bitwise-operations"))]
+    fn shift(&mut self, binding: Option<(usize, usize)>) -> Result<(bool, TermKind), CompileError> {
         self.additive(binding)
     }
 
@@ -4802,6 +4958,7 @@ impl Parser<'_> {
     #[cfg(any(
         feature = "equality",
         feature = "logical-operations",
+        feature = "bitwise-operations",
         feature = "update-expressions"
     ))]
     fn consume_bytes(&mut self, bytes: &[u8]) -> bool {

@@ -51,6 +51,18 @@ pub fn strict_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool
     Ok(false)
 }
 
+/// Implements the allocation-free portion of JavaScript abstract equality.
+/// Object-to-primitive conversion remains a separate removable capability.
+pub fn abstract_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    if strict_equal(arena, left, right)? {
+        return Ok(true);
+    }
+    Ok(matches!(
+        (left, right),
+        (Value::NULL, Value::UNDEFINED) | (Value::UNDEFINED, Value::NULL)
+    ))
+}
+
 #[cfg(feature = "string-values")]
 fn string_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
     let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) else {

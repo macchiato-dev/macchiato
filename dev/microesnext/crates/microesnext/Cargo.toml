@@ -14,6 +14,16 @@ control-flow = [
   "microesnext-compiler/control-flow",
   "microesnext-compiler/conditional-expressions",
 ]
+abstract-equality = [
+  "equality",
+  "logical-operations",
+  "microesnext-vm/abstract-equality",
+  "microesnext-compiler/abstract-equality",
+]
+bitwise-operations = [
+  "microesnext-vm/bitwise-operations",
+  "microesnext-compiler/bitwise-operations",
+]
 expression-statements = ["stack-operations", "microesnext-compiler/expression-statements"]
 for-statements = [
   "control-flow",
@@ -438,6 +448,16 @@ required-features = ["expression-statements", "update-expressions"]
 name = "for-statements"
 path = "tests/for_statements.rs"
 required-features = ["for-statements", "update-expressions"]
+
+[[test]]
+name = "bitwise-operations"
+path = "tests/bitwise_operations.rs"
+required-features = ["bitwise-operations", "integer-operations"]
+
+[[test]]
+name = "abstract-equality"
+path = "tests/abstract_equality.rs"
+required-features = ["abstract-equality"]
 
 [[test]]
 name = "captured-assignment-expressions"

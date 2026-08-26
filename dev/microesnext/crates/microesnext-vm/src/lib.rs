@@ -226,6 +226,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "functions",
         feature = "function-arguments",
         feature = "integer-operations",
+        feature = "bitwise-operations",
         feature = "integer-negation",
         feature = "host-bindings",
         feature = "locals",
@@ -236,6 +237,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "exceptions",
         feature = "environments",
         feature = "equality",
+        feature = "abstract-equality",
         feature = "async-functions",
         feature = "captured-assignment-expressions",
         feature = "array-assignment-expressions",
@@ -1001,12 +1003,34 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
+            #[cfg(feature = "bitwise-operations")]
+            Opcode::ShiftRightI30 => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let value = microesnext_semantics::bitwise_operations::shift_right(left, right)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
             #[cfg(feature = "equality")]
             Opcode::StrictEqual => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
                 let equal =
                     microesnext_semantics::equality::strict_equal(self.core.arena(), left, right)?;
+                self.core
+                    .arena_mut()
+                    .push(if equal { Value::TRUE } else { Value::FALSE })?;
+                Ok(None)
+            }
+            #[cfg(feature = "abstract-equality")]
+            Opcode::AbstractEqual => {
+                let right = self.core.arena_mut().pop()?;
+                let left = self.core.arena_mut().pop()?;
+                let equal = microesnext_semantics::equality::abstract_equal(
+                    self.core.arena(),
+                    left,
+                    right,
+                )?;
                 self.core
                     .arena_mut()
                     .push(if equal { Value::TRUE } else { Value::FALSE })?;
@@ -1131,6 +1155,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "objects",
         feature = "functions",
         feature = "integer-operations",
+        feature = "bitwise-operations",
         feature = "integer-negation",
         feature = "locals",
         feature = "logical-operations",
@@ -1139,6 +1164,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         feature = "number-coercion",
         feature = "exceptions",
         feature = "equality",
+        feature = "abstract-equality",
         feature = "environments",
         feature = "async-functions",
         feature = "promise-resolvers",
