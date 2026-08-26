@@ -3033,6 +3033,18 @@ mod tests {
         assert!(compile_script("let value = 7; return [value];").is_ok());
     }
 
+    #[cfg(all(feature = "arrays", not(feature = "literal-expressions")))]
+    #[test]
+    fn reduced_array_literals_keep_the_numeric_value_parser() {
+        assert!(compile_script("return [7];").is_ok());
+        assert_eq!(
+            compile_script("let value = 7; return [value];")
+                .unwrap_err()
+                .expected,
+            "a number"
+        );
+    }
+
     #[cfg(all(
         feature = "objects",
         feature = "literal-expressions",
