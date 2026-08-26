@@ -92,6 +92,8 @@ pub struct Machine<'code, 'memory> {
     array_prototype: Option<RootId>,
     #[cfg(all(feature = "strings", feature = "objects"))]
     string_prototype: Option<RootId>,
+    #[cfg(feature = "objects")]
+    object_prototype: Option<RootId>,
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     function_call: Option<HostRef>,
     #[cfg(feature = "host-bindings")]
@@ -130,6 +132,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: None,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: None,
+            #[cfg(feature = "objects")]
+            object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
             #[cfg(feature = "host-bindings")]
@@ -242,6 +246,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: None,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: None,
+            #[cfg(feature = "objects")]
+            object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
             #[cfg(feature = "host-bindings")]
@@ -375,6 +381,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         Ok(())
     }
 
+    #[cfg(feature = "objects")]
+    pub fn install_object_prototype(&mut self, prototype: Value) -> Result<(), Error> {
+        if let Some(root) = self.object_prototype.take() { self.release(root)?; }
+        self.object_prototype = Some(self.retain(prototype)?);
+        Ok(())
+    }
+
     #[cfg(all(feature = "objects", feature = "getters", feature = "callable-objects"))]
     pub fn define_property(
         &mut self,
@@ -487,6 +500,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             array_prototype: self.array_prototype,
             #[cfg(all(feature = "strings", feature = "objects"))]
             string_prototype: self.string_prototype,
+            #[cfg(feature = "objects")]
+            object_prototype: self.object_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
             #[cfg(feature = "host-bindings")]
@@ -678,7 +693,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(feature = "objects")]
             Opcode::NewObject => {
-                let object = new_object(self.core.arena_mut(), Value::NULL)?;
+                let prototype = self.object_prototype
+                    .map(|root| self.core.arena().root(root))
+                    .transpose()?
+                    .unwrap_or(Value::NULL);
+                let object = new_object(self.core.arena_mut(), prototype)?;
                 self.core.arena_mut().push(object)?;
                 Ok(None)
             }
@@ -896,11 +915,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut().push(closure)?;
                     return Ok(None);
                 }
+                let object_prototype = self.object_prototype
+                    .map(|root| self.core.arena().root(root))
+                    .transpose()?
+                    .unwrap_or(Value::NULL);
                 let function = microesnext_objects::callable::new_constructor(
                     self.core.arena_mut(),
                     closure,
                     Value::NULL,
-                    Value::NULL,
+                    object_prototype,
                     prototype_key,
                     constructor_key,
                 )?;
@@ -913,11 +936,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let constructor_key = self.intern(b"constructor")?;
                 let prototype_key = self.intern(b"prototype")?;
                 let closure = self.core.arena_mut().pop()?;
+                let object_prototype = self.object_prototype
+                    .map(|root| self.core.arena().root(root))
+                    .transpose()?
+                    .unwrap_or(Value::NULL);
                 let constructor = microesnext_objects::class_constructor::new(
                     self.core.arena_mut(),
                     closure,
                     Value::NULL,
-                    Value::NULL,
+                    object_prototype,
                     prototype_key,
                     constructor_key,
                 )?;
@@ -1795,6 +1822,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let reference = target.as_ref().ok_or(Error::Type)?;
                     Value::from_i30(self.core.arena().byte(reference, index)? as i32)
                         .ok_or(Error::Type)?
+                } else if let Ok(bytes) = self.string_bytes(target) {
+                    let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
+                        .ok_or(Error::Type)?;
+                    let text = core::str::from_utf8(bytes).map_err(|_| Error::Type)?;
+                    let Some(character) = text.chars().nth(index) else {
+                        self.core.arena_mut().push(Value::UNDEFINED)?;
+                        return Ok(None);
+                    };
+                    let mut encoded = [0_u8; 4];
+                    let bytes = character.encode_utf8(&mut encoded).as_bytes();
+                    let length = bytes.len();
+                    let mut owned = [0_u8; 4];
+                    owned[..length].copy_from_slice(bytes);
+                    microesnext_values::strings::new(
+                        self.core.arena_mut(), &owned[..length],
+                    )?
                 } else if microesnext_objects::arrays::is_array(self.core.arena(), target) {
                     let index = key
                         .as_i30()

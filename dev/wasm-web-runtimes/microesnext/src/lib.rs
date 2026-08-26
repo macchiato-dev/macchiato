@@ -32,6 +32,7 @@ const OBJECT_CREATE: u32 = (1 << 29) + 1;
 const OBJECT_DEFINE_PROPERTY: u32 = (1 << 29) + 2;
 const OBJECT_DEFINE_PROPERTIES: u32 = (1 << 29) + 3;
 const OBJECT_KEYS: u32 = (1 << 29) + 4;
+const OBJECT_HAS_OWN_PROPERTY: u32 = (1 << 29) + 5;
 const REGEXP: u32 = 19;
 const REGEXP_TEST: u32 = (1 << 29) + 20;
 const REGEXP_EXEC: u32 = (1 << 29) + 21;
@@ -114,14 +115,21 @@ fn report_failure(stage: u32, detail: u32) {
 
 fn remember_failure_key(machine: &Machine<'_, '_>, key: Value) {
     let Ok(bytes) = machine.string_bytes(key) else { return };
+    remember_failure_bytes(bytes);
+}
+
+fn remember_failure_bytes(bytes: &[u8]) {
     let length = bytes.len().min(32);
     unsafe { (&mut *FAILURE_KEY.0.get())[..length].copy_from_slice(&bytes[..length]) };
     FAILURE_KEY_LENGTH.store(length as u32, Ordering::Relaxed);
 }
 
 fn object_get(machine: &mut Machine<'_, '_>, object: Value, name: &[u8]) -> Result<Value, Error> {
+    let object = machine.retain(object)?;
     let key = machine.intern_atom(name)?;
-    microesnext::objects::get(machine.arena(), object, key)
+    let value = microesnext::objects::get(machine.arena(), machine.root(object)?, key)?;
+    machine.release(object)?;
+    Ok(value)
 }
 
 fn object_set(
@@ -130,8 +138,17 @@ fn object_set(
     name: &[u8],
     value: Value,
 ) -> Result<Value, Error> {
+    let object = machine.retain(object)?;
+    let value = machine.retain(value)?;
     let key = machine.intern_atom(name)?;
-    microesnext::objects::set(machine.arena_mut(), object, key, value)
+    let object_value = machine.root(object)?;
+    let value_value = machine.root(value)?;
+    let object_value = microesnext::objects::set(
+        machine.arena_mut(), object_value, key, value_value,
+    )?;
+    machine.release(value)?;
+    machine.release(object)?;
+    Ok(object_value)
 }
 
 fn owned_string(machine: &Machine<'_, '_>, value: Value) -> Result<String, Error> {
@@ -140,17 +157,36 @@ fn owned_string(machine: &Machine<'_, '_>, value: Value) -> Result<String, Error
         .map_err(|_| Error::Type)
 }
 
+fn owned_primitive_string(machine: &mut Machine<'_, '_>, value: Value) -> Result<String, Error> {
+    if let Ok(string) = owned_string(machine, value) {
+        return Ok(string);
+    }
+    if let Ok(Some(number)) = microesnext::numbers::try_get(machine.arena(), value) {
+        use core::fmt::Write;
+        let mut string = String::new();
+        write!(&mut string, "{number}").map_err(|_| Error::Type)?;
+        return Ok(string);
+    }
+    let string = microesnext::strings::from_primitive(machine.arena_mut(), value)?;
+    owned_string(machine, string)
+}
+
 fn regexp_parts(
     machine: &mut Machine<'_, '_>,
     receiver: Value,
 ) -> Result<(String, String, usize), Error> {
+    remember_failure_bytes(b"regexp-source");
     let pattern = object_get(machine, receiver, b"source")?;
+    let pattern = owned_string(machine, pattern)?;
+    remember_failure_bytes(b"regexp-flags");
     let flags = object_get(machine, receiver, b"flags")?;
+    let flags = owned_string(machine, flags)?;
+    remember_failure_bytes(b"regexp-last-index");
     let last_index = object_get(machine, receiver, b"lastIndex")?
         .as_i30()
         .and_then(|value| usize::try_from(value).ok())
         .unwrap_or(0);
-    Ok((owned_string(machine, pattern)?, owned_string(machine, flags)?, last_index))
+    Ok((pattern, flags, last_index))
 }
 
 struct NativeRegex(OnigRegex);
@@ -212,7 +248,10 @@ fn regexp_match(
     text: &str,
 ) -> Result<Option<(usize, usize, Vec<Option<core::ops::Range<usize>>>)>, Error> {
     let (pattern, flags, last_index) = regexp_parts(machine, receiver)?;
-    let regexp = compile_regexp(&pattern, &flags)?;
+    remember_failure_bytes(pattern.as_bytes());
+    let regexp = compile_regexp(&pattern, &flags).map_err(|error| {
+        error
+    })?;
     let start_units = if flags.contains('g') || flags.contains('y') { last_index } else { 0 };
     let start = utf16_to_byte(text, start_units);
     let bytes = text.as_bytes();
@@ -283,8 +322,26 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             | (1_u64 << 41) | (1_u64 << 45) | (1_u64 << 48) | (1_u64 << 49)
             | (1_u64 << 58),
     );
-    let string_prototype = (|| {
+    let object_prototype = (|| {
         let prototype = machine.new_object(Value::NULL)?;
+        let prototype = object_set(
+            &mut machine,
+            prototype,
+            b"hasOwnProperty",
+            Value::from_host(microesnext::HostRef::new(OBJECT_HAS_OWN_PROPERTY).unwrap()),
+        )?;
+        machine.install_object_prototype(prototype)?;
+        machine.retain(prototype)
+    })();
+    let object_prototype = match object_prototype {
+        Ok(root) => root,
+        Err(error) => {
+            DETAIL.store(error as u32 + 2400, Ordering::Relaxed);
+            return;
+        }
+    };
+    let string_prototype = (|| {
+        let prototype = machine.new_object(machine.root(object_prototype)?)?;
         object_set(
             &mut machine,
             prototype,
@@ -339,6 +396,19 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 machine.complete_host_operation(microesnext::Value::from_host(
                     microesnext::HostRef::new(OBJECT_CREATE).unwrap(),
                 )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == OBJECT && machine.string_bytes(key) == Ok(b"prototype") =>
+            {
+                match machine.root(object_prototype)
+                    .and_then(|value| machine.complete_host_operation(value))
+                {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2400, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
             }
             Ok(Outcome::HostGet { object, key, .. })
                 if object.index() == GLOBAL_THIS && machine.string_bytes(key) == Ok(b"bridge") =>
@@ -522,6 +592,35 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     }
                 }
             }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == OBJECT_HAS_OWN_PROPERTY =>
+            {
+                remember_failure_bytes(b"has-own-receiver");
+                let result = (|| {
+                    let object = machine.retain(receiver.ok_or(Error::Type)?)?;
+                    remember_failure_bytes(b"has-own-key");
+                    let argument = machine.host_argument(0)?;
+                    let key = owned_primitive_string(&mut machine, argument)?;
+                    let key = machine.intern_atom(key.as_bytes())?;
+                    remember_failure_bytes(b"has-own-get");
+                    let own = microesnext::objects::get_own(
+                        machine.arena(), machine.root(object)?, key,
+                    )?.is_some();
+                    machine.release(object)?;
+                    Ok(if own {
+                        Value::TRUE
+                    } else {
+                        Value::FALSE
+                    })
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2500, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
             Ok(Outcome::HostCall { function, .. })
                 if function.index() == OBJECT_DEFINE_PROPERTIES =>
             {
@@ -612,7 +711,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         break u32::MAX;
                     }
                 };
-                let capacity = match machine.host_argument(1)
+                let request_length = match machine.host_argument(1)
                     .and_then(|value| value.as_i30().ok_or(microesnext::Error::Type))
                     .and_then(|value| u32::try_from(value).map_err(|_| microesnext::Error::Type))
                 {
@@ -630,7 +729,11 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                             break u32::MAX;
                         }
                     };
-                    unsafe { msg(buffer.as_mut_ptr() as u32, capacity) }
+                    if request_length as usize > buffer.len() {
+                        DETAIL.store(request_length, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                    unsafe { msg(buffer.as_mut_ptr() as u32, buffer.len() as u32) }
                 };
                 let Some(result) = i32::try_from(result).ok().and_then(microesnext::Value::from_i30) else {
                     DETAIL.store(result, Ordering::Relaxed);
@@ -689,6 +792,19 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == STRING => {
+                let result = machine.host_argument(0)
+                    .or(Ok(Value::UNDEFINED))
+                    .and_then(|value| owned_primitive_string(&mut machine, value))
+                    .and_then(|value| machine.new_string(value.as_bytes()));
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2300, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }
@@ -827,9 +943,13 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == REGEXP_TEST || function.index() == REGEXP_EXEC =>
             {
+                remember_failure_bytes(b"regexp-parts");
                 let result = (|| {
                     let receiver = receiver.ok_or(Error::Type)?;
-                    let text = owned_string(&machine, machine.host_argument(0)?)?;
+                    remember_failure_bytes(b"regexp-text");
+                    let argument = machine.host_argument(0)?;
+                    let text = owned_primitive_string(&mut machine, argument)?;
+                    remember_failure_bytes(b"regexp-match");
                     let found = regexp_match(&mut machine, receiver, &text)?;
                     if function.index() == REGEXP_TEST {
                         return Ok(if found.is_some() { Value::TRUE } else { Value::FALSE });
