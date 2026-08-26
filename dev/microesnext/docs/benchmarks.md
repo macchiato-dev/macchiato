@@ -283,67 +283,79 @@ LTO from merely discarding an enabled but unused dependency.
 | Arrays | 8,768 | 3,532 |
 | Array assignment expressions | 10,034 | 4,006 |
 | Array iterators | 10,756 | 4,205 |
-| Atoms with strings | 9,779 | 4,219 |
+| Atoms | 11,903 | 5,005 |
 | Async suspension | 6,455 | 2,856 |
-| Async functions | 23,191 | 8,840 |
+| Async functions | 23,176 | 8,853 |
 | Collections | 3,285 | 1,507 |
-| Control flow and base truthiness | 3,486 | 1,657 |
-| Control flow with number/string truthiness | 8,708 | 3,736 |
-| Collection iterators | 10,170 | 4,091 |
-| Collection entry iterators | 13,542 | 4,979 |
-| Collections with number/string equality | 14,617 | 5,655 |
+| Control flow | 3,486 | 1,657 |
+| Minimal programmable runtime | 6,506 | 2,526 |
+| Control flow with scalar truthiness | 8,708 | 3,738 |
+| Collection iterators | 10,170 | 4,092 |
+| Collection entry iterators | 13,542 | 4,980 |
+| Collection value equality | 14,617 | 5,654 |
 | Exceptions | 3,846 | 1,761 |
-| Shared environment cells | 6,285 | 2,728 |
-| Captured assignment expressions | 7,186 | 3,047 |
+| Shared environment cells | 6,285 | 2,729 |
+| Strict equality | 2,890 | 1,337 |
+| Strict equality with numbers | 7,484 | 3,262 |
+| Strict equality with scalar values | 9,480 | 3,949 |
 | Guest errors | 2,520 | 1,195 |
-| Closures with shared environments | 11,173 | 4,432 |
+| Closures with shared environments | 11,158 | 4,441 |
 | Functions | 6,962 | 3,034 |
-| Recursive functions | 10,414 | 4,044 |
-| Recursive async functions | 25,797 | 9,524 |
+| Recursive functions | 10,395 | 4,058 |
+| Recursive async functions | 25,797 | 9,527 |
 | Functions with local parameters | 10,897 | 4,357 |
-| Receiver-aware calls | 13,156 | 5,109 |
-| Iterator cursor | 3,599 | 1,630 |
+| Receiver-aware calls | 13,122 | 5,103 |
+| Iterator cursor | 3,599 | 1,629 |
 | Lexical locals | 4,012 | 1,798 |
-| Local assignment expressions | 4,786 | 2,066 |
-| Iterator result objects | 13,778 | 5,360 |
-| Iterable protocol binding | 10,275 | 4,197 |
+| Logical operations | 3,428 | 1,647 |
+| Bounded numeric negation | 2,587 | 1,279 |
+| Logical operations with numbers | 7,502 | 3,271 |
+| Logical operations with strings | 7,151 | 3,096 |
+| Iterator result objects | 13,793 | 5,361 |
+| Iterable protocol binding | 10,288 | 4,205 |
 | Number representation | 5,311 | 2,422 |
-| Primitive Number coercion | 6,371 | 2,823 |
-| String Number coercion | 14,599 | 6,608 |
-| Promoted number operations | 9,382 | 3,309 |
-| Number division | 6,494 | 2,878 |
-| Number remainder | 9,311 | 4,240 |
-| JavaScript Number negation | 6,898 | 3,040 |
-| Objects with atoms and strings | 14,473 | 5,775 |
-| Property assignment | 16,352 | 6,302 |
-| Property assignment expressions | 15,713 | 6,242 |
-| Callable objects | 17,812 | 7,107 |
-| Constructible function objects | 20,106 | 7,695 |
-| Constructor receivers | 26,845 | 9,886 |
-| Ordinary construction | 27,444 | 9,825 |
-| Constructor-only classes | 30,301 | 10,377 |
-| Classes with instance methods | 32,689 | 10,891 |
-| Anonymous class expressions | 33,060 | 11,025 |
-| Recursive constructors | 23,517 | 8,554 |
-| Ordinary `instanceof` | 20,311 | 7,791 |
+| Primitive Number coercion | 6,371 | 2,826 |
+| String Number coercion | 14,599 | 6,609 |
+| Promoted number operations | 9,382 | 3,310 |
+| Number division | 6,494 | 2,880 |
+| Number remainder | 9,311 | 4,242 |
+| JavaScript Number negation | 6,898 | 3,042 |
+| Objects with atoms and strings | 14,641 | 5,784 |
+| Property assignment | 16,531 | 6,312 |
+| Functions and objects | 17,085 | 6,727 |
+| Callable objects | 17,994 | 7,132 |
+| Constructible function objects | 19,999 | 7,712 |
+| Constructor receivers | 26,920 | 9,873 |
+| Ordinary construction | 27,539 | 9,855 |
+| Constructor-only classes | 30,285 | 10,411 |
+| Classes with instance methods | 32,687 | 10,947 |
+| Anonymous class expressions | 33,158 | 11,116 |
+| Local assignment expressions | 4,881 | 2,093 |
+| Captured assignment expressions | 7,186 | 3,052 |
+| Property assignment expressions | 15,892 | 6,251 |
+| Recursive constructors | 23,329 | 8,534 |
+| Ordinary `instanceof` | 20,567 | 7,856 |
+| Prototype chain | 15,381 | 6,029 |
 | Strings only | 4,903 | 2,270 |
 | `typeof` | 6,642 | 3,024 |
 | Symbols | 4,995 | 2,254 |
 | Well-known symbols | 5,525 | 2,448 |
 | Promises | 4,840 | 2,237 |
-| Native Promise resolution | 12,664 | 5,239 |
-| One-shot Promise resolvers | 20,494 | 7,884 |
-| Object thenable assimilation | 34,387 | 12,615 |
-| Async return thenable assimilation | 46,454 | 16,345 |
-| Weak collections | 2,051 | 1,001 |
-| All capabilities | 110,159 | 34,934 |
+| Native Promise resolution | 12,664 | 5,242 |
+| One-shot Promise resolvers | 20,479 | 7,911 |
+| Object thenable assimilation | 34,297 | 12,623 |
+| Async return thenable assimilation | 46,364 | 16,342 |
+| Weak collections | 2,051 | 1,002 |
+| All capabilities | 110,463 | 35,120 |
 
 Moving Promise state, resolution, and one-shot resolvers into independently
-gated `microesnext-execution` modules preserved their raw Wasm sizes exactly:
-4,840, 12,664, and 20,494 bytes. Async suspension remained 6,455 bytes, while
-the async-functions probe decreased from 23,191 to 23,176 bytes. The shared
-crate therefore removes a package boundary without forcing Promise code into
-smaller execution builds or adding runtime dispatch.
+gated `microesnext-execution` modules initially preserved their raw Wasm sizes
+exactly. After the invariant core joined the same crate, the final Promise and
+native-resolution rows remain 4,840 and 12,664 bytes, while one-shot resolvers
+decreased from 20,494 to 20,479 bytes. Async suspension remains 6,455 bytes and
+async functions decreased from 23,191 to 23,176 bytes. The shared crate removes
+package boundaries without forcing Promise code into smaller execution builds
+or adding runtime dispatch.
 
 Folding exception-handler state into its own `microesnext-execution` feature
 also preserved the exception probe at 3,846 raw Wasm bytes.
@@ -352,6 +364,11 @@ Moving the invariant VM core into the execution crate preserved the minimal
 artifact at 1,984 bytes, async suspension at 6,455 bytes, Promise storage at
 4,840 bytes, and exceptions at 3,846 bytes. The core remains a separately gated
 module with the same direct dispatch loop and no optional capability state.
+Five alternating native runs after the 12-crate consolidation measured the
+minimal core at 3.17–3.20 ns/instruction and a broad composition at
+3.17–3.19 ns/instruction. This run detects no feature-induced slowdown in the
+invariant loop; the feature graph and final Wasm probes separately establish
+that omitted implementations are absent.
 
 The all-capabilities row selects string concatenation, primitive and string
 Number coercion, Number negation, division, remainder, `typeof`, callable
@@ -629,6 +646,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | nested conditionals | 8,588 | 3,494 |
 | nested loops | 8,410 | 3,546 |
 | nested exceptions | 11,449 | 4,515 |
+| structured statements | 11,643 | 4,852 |
 | array literals | 6,224 | 2,677 |
 | array indexing | 6,460 | 2,814 |
 | array assignment expressions | 11,176 | 4,590 |
@@ -671,7 +689,7 @@ memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
 | recursive constructors | 18,137 | 7,564 |
 | async functions | 14,224 | 5,936 |
 | recursive async functions | 18,970 | 7,858 |
-| default language slice | 53,474 | 19,152 |
+| default language slice | 52,591 | 18,833 |
 
 Expression statements add one generic stack discard to the invariant source
 compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
