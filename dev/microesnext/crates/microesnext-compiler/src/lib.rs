@@ -406,17 +406,20 @@ enum FunctionBody {
 impl Parser<'_> {
     #[cfg(feature = "control-flow")]
     fn terminal_statement(&mut self) -> Result<(), CompileError> {
-        self.statement_prefix()?;
-        if self.try_word_after_whitespace(b"if") {
-            self.if_else()
-        } else if self.try_word_after_whitespace(b"while") {
-            self.while_loop()
-        } else {
+        loop {
+            self.statement_prefix()?;
+            if self.try_word_after_whitespace(b"if") {
+                return self.if_else();
+            }
+            if self.try_word_after_whitespace(b"while") {
+                self.while_loop()?;
+                continue;
+            }
             #[cfg(feature = "exceptions")]
             if self.try_word_after_whitespace(b"try") {
                 return self.try_catch();
             }
-            self.completion(None, false, false)
+            return self.completion(None, false, false);
         }
     }
 
@@ -539,8 +542,7 @@ impl Parser<'_> {
             self.relocations.push(exit_patch);
             self.relocations.push(loop_patch);
         }
-        self.statement_prefix()?;
-        self.completion(None, false, false)
+        Ok(())
     }
 
     #[cfg(feature = "control-flow")]
