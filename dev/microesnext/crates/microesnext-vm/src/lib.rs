@@ -1961,11 +1961,21 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         self.core.arena_mut(), &owned[..length],
                     )?
                 } else if microesnext_objects::arrays::is_array(self.core.arena(), target) {
-                    let index = key
-                        .as_i30()
-                        .and_then(|index| usize::try_from(index).ok())
-                        .ok_or(Error::Type)?;
-                    array_get(self.core.arena(), target, index)?
+                    if let Some(index) = key.as_i30().and_then(|index| usize::try_from(index).ok()) {
+                        array_get(self.core.arena(), target, index)?
+                    } else {
+                        let key = self.intern_string_value(key)?;
+                        let length_key = key.as_ref().is_some_and(|reference| {
+                            self.core.arena().bytes_equal(reference, b"length").unwrap_or(false)
+                        });
+                        if length_key {
+                            Value::from_i30(array_len(self.core.arena(), target)? as i32)
+                                .ok_or(Error::Type)?
+                        } else {
+                            let prototype = self.array_prototype.ok_or(Error::Type)?;
+                            get(self.core.arena(), self.root(prototype)?, key)?
+                        }
+                    }
                 } else {
                     #[cfg(feature = "objects")]
                     {

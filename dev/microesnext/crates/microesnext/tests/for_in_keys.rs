@@ -74,3 +74,11 @@ fn computed_property_reads_intern_dynamic_string_keys() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
 }
+
+#[test]
+fn computed_array_length_accepts_a_dynamic_string_key() {
+    let code = compile_script("let key = 'len' + 'gth'; return [1, 2, 3][key];").unwrap();
+    let mut memory = [0_u32; 512];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(3).unwrap())));
+}
