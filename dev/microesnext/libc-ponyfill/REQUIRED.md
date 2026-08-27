@@ -30,13 +30,14 @@ the general-purpose WASI-libc headers is omitted unless this build needs it.
   - `malloc(size)` and `free(pointer)`
   - `abort()` and `exit(status)`
   - `abs(value)`
+- `stdio.h`
+  - `printf(format, ...)`
 - Compiler headers
   - `stdarg.h`: variable-argument builtins
   - `stddef.h`: `size_t`
 
 ## Next to excerpt
 
-- The formatting declarations retained by the selected build configuration.
 - Floating-point classifications and operations.
 - `jmp_buf`, `setjmp`, and `longjmp`.
 
