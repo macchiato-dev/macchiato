@@ -327,6 +327,12 @@ impl Parser<'_> {
 fn class_escape(escape: u8, ranges: &mut Vec<(u32, u32)>) -> bool {
     match escape.to_ascii_lowercase() {
         b'd' => ranges.push((b'0' as u32, b'9' as u32 + 1)),
+        b's' => ranges.extend([
+            (0x0009, 0x000e), (0x0020, 0x0021), (0x00a0, 0x00a1),
+            (0x1680, 0x1681), (0x2000, 0x200b), (0x2028, 0x202a),
+            (0x202f, 0x2030), (0x205f, 0x2060), (0x3000, 0x3001),
+            (0xfeff, 0xff00),
+        ]),
         b'w' => ranges.extend([(b'0' as u32, b'9' as u32 + 1),
             (b'A' as u32, b'Z' as u32 + 1), (b'_' as u32, b'_' as u32 + 1),
             (b'a' as u32, b'z' as u32 + 1)]),
@@ -430,6 +436,8 @@ mod tests {
         assert!(matches("^@keyframes\\s+$", "i", "@keyframes "));
         assert!(matches("^[a-z_]+$", "i", "cm"));
         assert!(matches("^[a-z0-9_-]+$", "i", "cm-blink"));
+        assert!(matches("^[^\\s]+$", "", "cm-scroller"));
+        assert!(!matches("^[^\\s]+$", "", "cm scroller"));
         assert!(matches(
             "^@keyframes\\s+([a-z_][a-z0-9_-]*)$",
             "i",

@@ -276,7 +276,11 @@ template-literals = [
   "microesnext-compiler/template-literals",
 ]
 symbols = ["dep:microesnext-values", "microesnext-values/symbols", "microesnext-semantics?/symbols"]
-well-known-symbols = ["symbols"]
+well-known-symbols = [
+  "symbols",
+  "microesnext-compiler/well-known-symbols",
+  "microesnext-vm/well-known-symbols",
+]
 atoms = ["strings", "microesnext-vm/atoms"]
 objects = [
   "dep:microesnext-objects",

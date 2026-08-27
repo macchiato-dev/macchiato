@@ -172,6 +172,45 @@ fn externally_entered_closure_preserves_host_backed_getter_results() {
 }
 
 #[test]
+fn externally_entered_closure_preserves_composed_host_backed_getters() {
+    let code = compile_script_with_host_globals(
+        "function stringIndex(name) { return name.length; } \
+         function immediate(operation) { return host(operation[3]); } \
+         let Measurements = class { \
+           constructor() { this.reference = 7; } \
+           get scrollHeight() { \
+             return immediate([1, this.reference, stringIndex('scrollHeight'), 10]); \
+           } \
+           get clientHeight() { \
+             return immediate([1, this.reference, stringIndex('clientHeight'), 5]); \
+           } \
+         }; \
+         let element = new Measurements(); \
+         function measure() { return element.scrollHeight - element.clientHeight - 4; } \
+         return measure;",
+        &["host"],
+    )
+    .unwrap();
+    let mut memory = [0; 8192];
+    let mut machine = Machine::with_objects(&code, &mut memory, 12).unwrap();
+    let Outcome::Complete(function) = machine.run().unwrap() else {
+        panic!("expected the startup closure")
+    };
+    let mut outcome = machine
+        .call_closure_with_receiver(function, Value::UNDEFINED, &[])
+        .unwrap();
+    for expected in [10, 5] {
+        let Outcome::HostCall { .. } = outcome else {
+            panic!("expected a getter host call")
+        };
+        assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(expected));
+        machine.complete_host_call(Value::from_i30(expected).unwrap()).unwrap();
+        outcome = machine.run().unwrap();
+    }
+    assert_eq!(outcome, Outcome::Complete(Value::from_i30(1).unwrap()));
+}
+
+#[test]
 fn an_instance_with_getters_can_assign_several_plain_properties() {
     let code = compile_script(
         "let Rule = class { constructor(tags, mode, context, next) { \

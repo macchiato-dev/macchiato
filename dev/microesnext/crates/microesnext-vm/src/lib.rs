@@ -804,6 +804,34 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
     }
 
+    /// Complete a host property read while preserving a guest accessor.
+    ///
+    /// A host-backed facade may store its actual properties in a guest object.
+    /// Returning an accessor wrapper as an ordinary host result would expose
+    /// that implementation object rather than invoking its getter.
+    #[cfg(all(feature = "host-bindings", feature = "getters", feature = "receivers"))]
+    pub fn complete_host_property_get(
+        &mut self,
+        value: Value,
+        receiver: Value,
+    ) -> Result<(), Error> {
+        match self.host_completion.take().ok_or(Error::Type)? {
+            HostCompletion::Value => {}
+            completion => {
+                self.host_completion = Some(completion);
+                return self.complete_host_operation(value);
+            }
+        }
+        let Some(function) = microesnext_objects::getters::callable(
+            self.core.arena(), value,
+        )? else {
+            return self.core.arena_mut().push(value);
+        };
+        let target = entry(self.core.arena(), function)?;
+        microesnext_bindings::receivers::append(self.core.arena_mut(), 0, receiver)?;
+        self.core.enter_call_with_arguments(function, target, 1)
+    }
+
     pub fn run(&mut self) -> Result<Outcome, Error> {
         loop {
             match self.core.run()? {
@@ -2160,6 +2188,25 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         receiver: None,
                         argument_count: 2,
                     }));
+                }
+                #[cfg(feature = "well-known-symbols")]
+                {
+                    let has_instance_key = self
+                        .atoms
+                        .as_mut()
+                        .ok_or(Error::Type)?
+                        .intern(self.core.arena_mut(), b"@@hasInstance")?;
+                    let method = get(self.core.arena(), constructor, has_instance_key)?;
+                    if method != Value::UNDEFINED {
+                        let function = unwrap_callable(self.core.arena(), method)?;
+                        let target = entry(self.core.arena(), function)?;
+                        self.core.arena_mut().push(value)?;
+                        microesnext_bindings::receivers::append(
+                            self.core.arena_mut(), 1, constructor,
+                        )?;
+                        self.core.enter_call_with_arguments(function, target, 2)?;
+                        return Ok(None);
+                    }
                 }
                 let result = microesnext_objects::instanceof::ordinary(
                     self.core.arena(),

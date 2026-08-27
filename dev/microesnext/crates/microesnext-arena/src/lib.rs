@@ -1,5 +1,9 @@
 #![no_std]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
+
 #[cfg(feature = "closures")]
 pub mod closures;
 #[cfg(feature = "stack-operations")]
@@ -877,22 +881,37 @@ impl<'memory> Arena<'memory> {
             }
         }
 
+        // Capture forwarding addresses once. The original tiny compactor
+        // recomputed each address by scanning every preceding block, which is
+        // quadratic for browser applications with many short-lived objects.
+        let mut forwarding = Vec::new();
+        let mut read = self.heap_base;
+        let mut write = self.heap_base;
+        while read < self.heap_end {
+            let length = (self.words[read] & LENGTH_MASK) as usize;
+            if self.words[read] & MARK != 0 {
+                forwarding.push((read, write));
+                write += length;
+            }
+            read += length;
+        }
+
         for group in groups.iter_mut() {
             for root in group.iter_mut() {
-                *root = self.forward_value(*root)?;
+                *root = Self::forward_value(&forwarding, *root)?;
             }
         }
         for slot in 0..self.root_capacity {
             if self.root_allocated(slot) {
                 let index = self.root_values_start() + slot;
-                self.words[index] = self
-                    .forward_value(Value::from_raw(self.words[index]))?
-                    .raw();
+                self.words[index] = Self::forward_value(
+                    &forwarding, Value::from_raw(self.words[index]),
+                )?.raw();
             }
         }
         for index in self.stack_start..self.words.len() {
             let value = Value::from_raw(self.words[index]);
-            self.words[index] = self.forward_value(value)?.raw();
+            self.words[index] = Self::forward_value(&forwarding, value)?.raw();
         }
 
         let mut cursor = self.heap_base;
@@ -901,18 +920,18 @@ impl<'memory> Arena<'memory> {
             if self.words[cursor] & MARK != 0 {
                 #[cfg(feature = "ephemerons")]
                 if self.words[cursor + 1] == BlockKind::WeakTable as u32 {
-                    self.rewrite_ephemeron_table(cursor, length)?;
+                    self.rewrite_ephemeron_table(cursor, length, &forwarding)?;
                 } else if !opaque_kind(self.words[cursor + 1]) {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         let value = Value::from_raw(self.words[index]);
-                        self.words[index] = self.forward_value(value)?.raw();
+                        self.words[index] = Self::forward_value(&forwarding, value)?.raw();
                     }
                 }
                 #[cfg(not(feature = "ephemerons"))]
                 if !opaque_kind(self.words[cursor + 1]) {
                     for index in cursor + HEADER_WORDS..cursor + length {
                         let value = Value::from_raw(self.words[index]);
-                        self.words[index] = self.forward_value(value)?.raw();
+                        self.words[index] = Self::forward_value(&forwarding, value)?.raw();
                     }
                 }
             }
@@ -988,7 +1007,9 @@ impl<'memory> Arena<'memory> {
     }
 
     #[cfg(feature = "ephemerons")]
-    fn rewrite_ephemeron_table(&mut self, start: usize, length: usize) -> Result<(), Error> {
+    fn rewrite_ephemeron_table(
+        &mut self, start: usize, length: usize, forwarding: &[(usize, usize)],
+    ) -> Result<(), Error> {
         let count_index = start + HEADER_WORDS;
         let used_index = count_index + 1;
         let used = Value::from_raw(self.words[used_index])
@@ -1013,9 +1034,9 @@ impl<'memory> Arena<'memory> {
                 self.words[value_index] = Value::UNDEFINED.raw();
                 continue;
             }
-            self.words[key_index] = self.forward_value(key)?.raw();
+            self.words[key_index] = Self::forward_value(forwarding, key)?.raw();
             let value = Value::from_raw(self.words[value_index]);
-            self.words[value_index] = self.forward_value(value)?.raw();
+            self.words[value_index] = Self::forward_value(forwarding, value)?.raw();
             count += 1;
         }
         self.words[count_index] = Value::from_i30(count)
@@ -1024,23 +1045,14 @@ impl<'memory> Arena<'memory> {
         Ok(())
     }
 
-    fn forward_value(&self, value: Value) -> Result<Value, Error> {
+    fn forward_value(forwarding: &[(usize, usize)], value: Value) -> Result<Value, Error> {
         let Some(reference) = value.as_ref() else {
             return Ok(value);
         };
-        let old = self.block_start(reference)?;
-        if self.words[old] & MARK == 0 {
-            return Err(Error::DanglingReference);
-        }
-        let mut read = self.heap_base;
-        let mut forwarded = self.heap_base;
-        while read < old {
-            let length = (self.words[read] & LENGTH_MASK) as usize;
-            if self.words[read] & MARK != 0 {
-                forwarded += length;
-            }
-            read += length;
-        }
+        let old = reference.word_index() as usize;
+        let index = forwarding.binary_search_by_key(&old, |entry| entry.0)
+            .map_err(|_| Error::DanglingReference)?;
+        let forwarded = forwarding[index].1;
         let reference =
             HeapRef::from_word_index(forwarded as u32).ok_or(Error::DanglingReference)?;
         Ok(Value::from_ref(reference))

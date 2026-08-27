@@ -39,10 +39,10 @@ fn main() {
         // The browser facade replaces selected globals in JavaScript. Keep
         // those replacements lexical for application code without teaching
         // the Rust engine anything about DOM constructor names.
-        source.push_str("\n(function (DOMRect, Date, IntersectionObserver, MutationObserver, ResizeObserver, Window, window) {\n");
+        source.push_str("\n(function (DOMRect, Date, FileReader, IntersectionObserver, KeyboardEvent, MutationObserver, ResizeObserver, Window, cancelIdleCallback, clearInterval, clearTimeout, getComputedStyle, navigator, performance, queueMicrotask, requestAnimationFrame, requestIdleCallback, setInterval, setTimeout, window) {\n");
         source.push_str(&application);
         source.push_str("\nvar microESNextMarker = document.getElementById(\"editor\"); microESNextMarker.setAttribute(\"data-children\", String(microESNextMarker.childNodes.length)); dispatch(-1);\n");
-        source.push_str("})(globalThis.DOMRect, globalThis.Date, globalThis.IntersectionObserver, globalThis.MutationObserver, globalThis.ResizeObserver, globalThis.Window, globalThis.window);\n");
+        source.push_str("})(globalThis.DOMRect, globalThis.Date, globalThis.FileReader, globalThis.IntersectionObserver, globalThis.KeyboardEvent, globalThis.MutationObserver, globalThis.ResizeObserver, globalThis.Window, globalThis.cancelIdleCallback, globalThis.clearInterval, globalThis.clearTimeout, globalThis.getComputedStyle, globalThis.navigator, globalThis.performance, globalThis.queueMicrotask, globalThis.requestAnimationFrame, globalThis.requestIdleCallback, globalThis.setInterval, globalThis.setTimeout, globalThis.window);\n");
     } else {
         source.push_str(&application);
     }

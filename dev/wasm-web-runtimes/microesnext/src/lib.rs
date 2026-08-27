@@ -41,6 +41,7 @@ const REGEXP: u32 = 19;
 const REGEXP_TEST: u32 = (1 << 29) + 20;
 const REGEXP_EXEC: u32 = (1 << 29) + 21;
 const MATH: u32 = 12;
+const NUMBER: u32 = 14;
 const MATH_FUNCTION: u32 = (1 << 29) + 100;
 const ARRAY_IS_ARRAY: u32 = (1 << 29) + 200;
 const UINT8_ARRAY: u32 = 26;
@@ -94,6 +95,9 @@ struct Runtime {
 struct RuntimeMemory(UnsafeCell<Option<Runtime>>);
 unsafe impl Sync for RuntimeMemory {}
 static RUNTIME: RuntimeMemory = RuntimeMemory(UnsafeCell::new(None));
+struct PendingEventMemory(UnsafeCell<Vec<u32>>);
+unsafe impl Sync for PendingEventMemory {}
+static PENDING_EVENTS: PendingEventMemory = PendingEventMemory(UnsafeCell::new(Vec::new()));
 struct KeyMemory(UnsafeCell<[u8; 192]>);
 unsafe impl Sync for KeyMemory {}
 static FAILURE_KEY: KeyMemory = KeyMemory(UnsafeCell::new([0; 192]));
@@ -106,7 +110,7 @@ unsafe extern "C" {
 }
 
 fn report_failure(stage: u32, detail: u32) {
-    let mut message = [0_u8; 256];
+    let mut message = [0_u8; 512];
     message[..5].copy_from_slice(b"DULE\x03");
     let text = b"MicroESNext stopped with detail ";
     message[5..5 + text.len()].copy_from_slice(text);
@@ -149,9 +153,27 @@ fn remember_failure_key(machine: &Machine<'_, '_>, key: Value) {
 }
 
 fn remember_failure_bytes(bytes: &[u8]) {
-    let length = bytes.len().min(96);
+    let length = bytes.len().min(192);
     unsafe { (&mut *FAILURE_KEY.0.get())[..length].copy_from_slice(&bytes[..length]) };
     FAILURE_KEY_LENGTH.store(length as u32, Ordering::Relaxed);
+}
+
+fn queue_pending_event(message: u32) {
+    // Browser APIs such as focus() may synchronously emit an event while the
+    // guest is inside a host call. Consume it immediately, then dispatch it as
+    // soon as the suspended host call returns to the interpreter.
+    let events = unsafe { &mut *PENDING_EVENTS.0.get() };
+    if events.len() < 32 { events.push(message); }
+}
+
+fn take_pending_event() -> Option<u32> {
+    let events = unsafe { &mut *PENDING_EVENTS.0.get() };
+    if events.is_empty() { None } else { Some(events.remove(0)) }
+}
+
+fn event_value(machine: &mut Machine<'_, '_>, message: u32) -> Result<Value, Error> {
+    i32::try_from(message).ok().and_then(Value::from_i30)
+        .map_or_else(|| machine.new_number(f64::from(message)), Ok)
 }
 
 fn object_get(machine: &mut Machine<'_, '_>, object: Value, name: &[u8]) -> Result<Value, Error> {
@@ -374,15 +396,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 return;
             }
             let message = u32::from_le_bytes(delivery);
-            match i32::try_from(message).ok().and_then(Value::from_i30) {
-                Some(message) => message,
-                None => match runtime.machine.new_number(f64::from(message)) {
-                    Ok(message) => message,
-                    Err(_) => {
-                        unsafe { *RUNTIME.0.get() = Some(runtime); }
-                        return;
-                    }
-                },
+            match event_value(&mut runtime.machine, message) {
+                Ok(message) => message,
+                Err(_) => {
+                    unsafe { *RUNTIME.0.get() = Some(runtime); }
+                    return;
+                }
             }
         };
         let outcome = runtime.dispatch
@@ -401,13 +420,29 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             }
         };
         if raw < u32::MAX - 10 {
+            // Event dispatch is a natural safe point: the interpreter stack is
+            // settled and retained roots are registered with the arena.
+            let needs_collection = runtime.machine.arena().heap_words() > 2_000_000;
+            if needs_collection && let Err(error) = runtime.machine.arena_mut().compact(&mut []) {
+                DETAIL.store(error as u32 + 3300, Ordering::Relaxed);
+                report_failure(STAGE.load(Ordering::Relaxed), DETAIL.load(Ordering::Relaxed));
+                return;
+            }
             unsafe { *RUNTIME.0.get() = Some(runtime); }
         } else {
             report_failure(STAGE.load(Ordering::Relaxed), DETAIL.load(Ordering::Relaxed));
         }
         return;
     }
-    if minimum_length != 0 || RESULT.load(Ordering::Relaxed) != 0 {
+    if minimum_length != 0 {
+        let mut delivery = [0_u8; 4];
+        let length = unsafe { msg(delivery.as_mut_ptr() as u32, delivery.len() as u32) };
+        if length == delivery.len() as u32 {
+            queue_pending_event(u32::from_le_bytes(delivery));
+        }
+        return;
+    }
+    if RESULT.load(Ordering::Relaxed) != 0 {
         return;
     }
     let words: &'static mut [u32] = unsafe { &mut *WORDS.0.get() };
@@ -580,7 +615,24 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
         FAILURE_KEY_LENGTH.store(0, Ordering::Relaxed);
         let outcome = pending_outcome.take().map_or_else(|| machine.run(), Ok);
         match outcome {
-            Ok(Outcome::Complete(value)) => break value.raw(),
+            Ok(Outcome::Complete(value)) => {
+                if let (Some(message), Some(dispatch)) = (take_pending_event(), runtime.dispatch) {
+                    let outcome = event_value(machine, message)
+                        .and_then(|argument| machine.root(dispatch).and_then(|dispatch| {
+                            machine.call_closure_with_receiver(
+                                dispatch, Value::UNDEFINED, &[argument],
+                            )
+                        }));
+                    match outcome {
+                        Ok(outcome) => { pending_outcome = Some(outcome); continue; }
+                        Err(error) => {
+                            DETAIL.store(error as u32 + 3275, Ordering::Relaxed);
+                            break u32::MAX;
+                        }
+                    }
+                }
+                break value.raw();
+            }
             Ok(Outcome::Throw(value)) => {
                 if let Ok(message) = object_get(&mut machine, value, b"message") {
                     if let Ok(bytes) = machine.string_bytes(message) {
@@ -644,12 +696,22 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                     microesnext::HostRef::new(STRING_REPLACE).unwrap(),
                 )).unwrap();
             }
-            Ok(Outcome::HostGet { object, key, .. })
+            Ok(Outcome::HostGet { object, key, method })
                 if object.index() == GLOBAL_THIS || object.index() == WINDOW =>
             {
                 let result = machine.root(global_overlay)
                     .and_then(|overlay| microesnext::objects::get(machine.arena(), overlay, key));
-                match result.and_then(|value| machine.complete_host_operation(value)) {
+                let result = result.and_then(|value| {
+                    if method {
+                        machine.complete_host_operation(value)
+                    } else {
+                        machine.complete_host_property_get(
+                            value,
+                            Value::from_host(object),
+                        )
+                    }
+                });
+                match result {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 1400, Ordering::Relaxed);
@@ -696,6 +758,13 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
             {
                 machine.complete_host_operation(Value::from_host(
                     microesnext::HostRef::new(RUNTIME_DATE_NOW).unwrap(),
+                )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == NUMBER && machine.string_bytes(key) == Ok(b"isFinite") =>
+            {
+                machine.complete_host_operation(Value::from_host(
+                    microesnext::HostRef::new(IS_FINITE).unwrap(),
                 )).unwrap();
             }
             Ok(Outcome::HostGet { object, key, .. }) if object.index() == SYMBOL => {
@@ -1792,6 +1861,10 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                         machine.frame_header().map_or(999_u32, Value::raw),
                         error
                     );
+                    context.push_str("; stack=");
+                    for value in machine.arena().stack_values().take(16) {
+                        let _ = write!(context, "{},", describe(Some(value)));
+                    }
                     remember_failure_bytes(context.as_bytes());
                 }
                 if machine.last_method_key().and_then(|key| machine.string_bytes(key).ok()) == Some(b"slice") {

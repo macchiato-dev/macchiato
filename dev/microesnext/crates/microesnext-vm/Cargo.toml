@@ -124,6 +124,7 @@ instanceof = [
   "microesnext-objects/instanceof",
   "microesnext-bytecode/instanceof",
 ]
+well-known-symbols = ["instanceof", "receivers"]
 equality = [
   "dep:microesnext-semantics",
   "microesnext-semantics/equality",

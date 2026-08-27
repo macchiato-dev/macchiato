@@ -24,6 +24,82 @@ fn a_host_defined_getter_can_return_a_primitive() {
     );
 }
 
+#[test]
+fn externally_entered_closure_reads_host_defined_getters() {
+    let code = compile_script_with_host_globals(
+        "function Measurements() {} \
+         var prototype = Measurements.prototype; \
+         function install(name, value) { \
+           Object.defineProperty(prototype, name, { \
+             get: function () { return host(value)[0]; } \
+           }); \
+         } \
+         install('scrollTop', 0); \
+         install('scrollHeight', 10); \
+         install('clientHeight', 5); \
+         var element = new Measurements(); \
+         function measure() { \
+           return element.scrollTop > Math.max(1, \
+             element.scrollHeight - element.clientHeight - 4); \
+         } \
+         function descend(depth) { return depth ? descend(depth - 1) : measure(); } \
+         return function () { return descend(12); };",
+        &["Object", "host", "Math"],
+    )
+    .unwrap();
+    let mut memory = [0; 8192];
+    let mut machine = Machine::with_objects(&code, &mut memory, 12).unwrap();
+    let define_property = HostRef::new(20).unwrap();
+    for _ in 0..3 {
+        assert!(matches!(machine.run(), Ok(Outcome::HostGet { .. })));
+        machine.complete_host_operation(Value::from_host(define_property)).unwrap();
+        assert!(matches!(machine.run(), Ok(Outcome::HostCall { .. })));
+        let object = machine.host_argument(0).unwrap();
+        let key = machine.host_argument(1).unwrap();
+        let descriptor = machine.host_argument(2).unwrap();
+        let object = machine.define_property(object, key, descriptor).unwrap();
+        machine.complete_host_call(object).unwrap();
+    }
+    let Outcome::Complete(function) = machine.run().unwrap() else {
+        panic!("expected the startup closure")
+    };
+    let outcome = machine
+        .call_closure_with_receiver(function, Value::UNDEFINED, &[])
+        .unwrap();
+    let complete_getter = |machine: &mut Machine<'_, '_>, outcome: Outcome, expected| {
+        let Outcome::HostCall { function, .. } = outcome else {
+            panic!("expected a getter host call");
+        };
+        assert_eq!(function, HostRef::new(1).unwrap());
+        assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(expected));
+        let array = microesnext::arrays::new(machine.arena_mut()).unwrap();
+        let array = microesnext::arrays::set(
+            machine.arena_mut(), array, 0, Value::from_i30(expected).unwrap(),
+        )
+        .unwrap();
+        machine.complete_host_call(array).unwrap();
+        machine.run().unwrap()
+    };
+    let outcome = complete_getter(&mut machine, outcome, 0);
+    let Outcome::HostGet { object, .. } = outcome else {
+        panic!("expected Math.max lookup");
+    };
+    assert_eq!(object, HostRef::new(2).unwrap());
+    let maximum = HostRef::new(21).unwrap();
+    machine.complete_host_operation(Value::from_host(maximum)).unwrap();
+    let outcome = machine.run().unwrap();
+    let outcome = complete_getter(&mut machine, outcome, 10);
+    let outcome = complete_getter(&mut machine, outcome, 5);
+    let Outcome::HostCall { function, argument_count, .. } = outcome else {
+        panic!("expected Math.max call");
+    };
+    assert_eq!(function, maximum);
+    assert_eq!(argument_count, 2);
+    machine.complete_host_call(Value::from_i30(1).unwrap()).unwrap();
+    let outcome = machine.run().unwrap();
+    assert_eq!(outcome, Outcome::Complete(Value::FALSE));
+}
+
 fn run_host_defined_getter(descriptor: &str, expected: Value) {
     let source = format!(
         "var prototype = {{}}; Object.defineProperty(prototype, 'head', {{ {descriptor} }}); \

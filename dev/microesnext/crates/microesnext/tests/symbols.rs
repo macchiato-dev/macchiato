@@ -1,4 +1,4 @@
-use microesnext::{Value, objects, symbols};
+use microesnext::{Machine, Outcome, Value, objects, symbols};
 use microesnext_arena::Arena;
 
 #[test]
@@ -21,4 +21,17 @@ fn symbols_compose_as_distinct_property_keys_without_object_changes() {
     let second = arena.root(second_root).unwrap();
     assert_eq!(objects::get(&arena, object, first), Ok(Value::TRUE));
     assert_eq!(objects::get(&arena, object, second), Ok(Value::FALSE));
+}
+
+#[test]
+fn instanceof_calls_a_well_known_has_instance_method() {
+    let code = microesnext_compiler::compile_script(
+        "function Type() {} \
+         Type['@@hasInstance'] = function (value) { return value === 42; }; \
+         return 42 instanceof Type;",
+    )
+    .unwrap();
+    let mut memory = [0; 2048];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
 }

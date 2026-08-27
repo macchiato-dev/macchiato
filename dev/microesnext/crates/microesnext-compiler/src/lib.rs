@@ -7070,6 +7070,8 @@ impl Parser<'_> {
             if self.consume_instanceof() {
                 self.shift(None)?;
                 self.output.push(Opcode::InstanceOf as u8);
+                #[cfg(feature = "well-known-symbols")]
+                self.output.push(Opcode::ToBoolean as u8);
                 kind = TermKind::General;
                 continue;
             }
