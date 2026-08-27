@@ -3195,10 +3195,14 @@ impl Parser<'_> {
                             tail.iter().find(|byte| !byte.is_ascii_whitespace()) == Some(&b'(')
                         })
                     {
+                        // Top-level declarations are always initialized before
+                        // module code. Nested parsers retain the earlier-use
+                        // shortcut until their lexical pre-pass also models
+                        // block-scoped declarations.
                         if !self.function_frame
-                            && self.source[self.offset..offset]
-                            .windows(name_end - name_start)
-                            .any(|candidate| candidate == &self.source[name_start..name_end])
+                            || self.source[self.offset..offset]
+                                .windows(name_end - name_start)
+                                .any(|candidate| candidate == &self.source[name_start..name_end])
                         {
                             self.hoisted_function_offsets
                                 .push(offset + b"function".len());
@@ -3248,6 +3252,42 @@ impl Parser<'_> {
                     previous_significant = Some(b'r');
                     offset = name_end.max(offset + 1);
                 }
+                b'l' if depth == 0
+                    && matches!(previous_significant, None | Some(b';' | b'}'))
+                    && self.source[offset..].starts_with(b"let")
+                    && (offset == 0 || self.identifier_end_before(offset))
+                    && self.identifier_end(offset + b"let".len()) =>
+                {
+                    let mut name_start = offset + b"let".len();
+                    while self.source.get(name_start).is_some_and(u8::is_ascii_whitespace) {
+                        name_start += 1;
+                    }
+                    if let Some(name_end) = self.hoist_lexical_binding(name_start)? {
+                        self.hoist_declaration_tail(name_end)?;
+                        offset = name_end.max(offset + 1);
+                    } else {
+                        offset = name_start.max(offset + 1);
+                    }
+                    previous_significant = Some(b't');
+                }
+                b'c' if depth == 0
+                    && matches!(previous_significant, None | Some(b';' | b'}'))
+                    && self.source[offset..].starts_with(b"const")
+                    && (offset == 0 || self.identifier_end_before(offset))
+                    && self.identifier_end(offset + b"const".len()) =>
+                {
+                    let mut name_start = offset + b"const".len();
+                    while self.source.get(name_start).is_some_and(u8::is_ascii_whitespace) {
+                        name_start += 1;
+                    }
+                    if let Some(name_end) = self.hoist_lexical_binding(name_start)? {
+                        self.hoist_declaration_tail(name_end)?;
+                        offset = name_end.max(offset + 1);
+                    } else {
+                        offset = name_start.max(offset + 1);
+                    }
+                    previous_significant = Some(b't');
+                }
                 _ => {
                     if !byte.is_ascii_whitespace() {
                         previous_significant = Some(byte);
@@ -3281,6 +3321,35 @@ impl Parser<'_> {
             captured: false,
         });
         Ok(())
+    }
+
+    #[cfg(feature = "functions")]
+    fn hoist_lexical_binding(&mut self, start: usize) -> Result<Option<usize>, CompileError> {
+        #[cfg(feature = "object-destructuring-declarations")]
+        if self.source.get(start) == Some(&b'{') {
+            let resume = self.offset;
+            self.offset = start + 1;
+            let mut properties = Vec::new();
+            let parsed = self.object_destructuring_properties(&mut properties, &[]);
+            let end = self.offset;
+            self.offset = resume;
+            parsed?;
+            for (_, (name_start, name_end), _) in properties {
+                self.add_hoisted_binding(name_start, name_end)?;
+            }
+            return Ok(Some(end));
+        }
+        let mut end = start;
+        while self.source.get(end).is_some_and(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$')
+        }) {
+            end += 1;
+        }
+        if end == start {
+            return Ok(None);
+        }
+        self.add_hoisted_binding(start, end)?;
+        Ok(Some(end))
     }
 
     #[cfg(feature = "functions")]
@@ -3610,12 +3679,21 @@ impl Parser<'_> {
                 return self.array_destructuring_declaration();
             }
             let (start, end) = self.identifier()?;
-            if self
+            let existing = self
                 .locals
                 .iter()
-                .any(|binding| self.source[binding.start..binding.end] == self.source[start..end])
-            {
+                .position(|binding| {
+                    self.source[binding.start..binding.end] == self.source[start..end]
+                });
+            if existing.is_some_and(|index| !self.locals[index].hoisted) {
                 return Err(self.error("a unique local binding"));
+            }
+            let existing_binding = existing.map(|index| self.locals[index]);
+            #[cfg(feature = "environments")]
+            if existing_binding.is_some_and(|binding| binding.captured) {
+                let binding = existing_binding.expect("checked captured binding");
+                self.output.push(Opcode::LoadLocalRaw as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
             }
             if self.consume(b'=') {
                 self.expression(None)?;
@@ -3623,19 +3701,38 @@ impl Parser<'_> {
                 self.output.push(Opcode::ConstImmediate as u8);
                 self.output.push(Immediate::Undefined as u8);
             }
-            let slot = u16::try_from(self.locals.len())
-                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            let slot = existing_binding.map_or_else(
+                || u16::try_from(self.locals.len()),
+                |binding| Ok(binding.slot),
+            )
+            .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            #[cfg(feature = "environments")]
+            self.output.push(if existing_binding.is_some_and(|binding| binding.captured) {
+                Opcode::StoreEnvironmentCell
+            } else {
+                Opcode::StoreLocal
+            } as u8);
+            #[cfg(not(feature = "environments"))]
             self.output.push(Opcode::StoreLocal as u8);
+            #[cfg(feature = "environments")]
+            if !existing_binding.is_some_and(|binding| binding.captured) {
+                self.output.extend_from_slice(&slot.to_le_bytes());
+            }
+            #[cfg(not(feature = "environments"))]
             self.output.extend_from_slice(&slot.to_le_bytes());
-            self.locals.push(Binding {
-                start,
-                end,
-                slot,
-                default: None,
-                hoisted: false,
-                #[cfg(feature = "environments")]
-                captured: false,
-            });
+            if let Some(index) = existing {
+                self.locals[index].hoisted = false;
+            } else {
+                self.locals.push(Binding {
+                    start,
+                    end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                });
+            }
             if !self.consume(b',') {
                 break;
             }
@@ -3655,7 +3752,11 @@ impl Parser<'_> {
             if self
                 .locals
                 .iter()
-                .any(|binding| self.source[binding.start..binding.end] == self.source[*start..*end])
+                .any(|binding| {
+                    !binding.hoisted
+                        && self.source[binding.start..binding.end]
+                            == self.source[*start..*end]
+                })
                 || properties[..index]
                     .iter()
                     .any(|(_, (other_start, other_end), _)| {
@@ -3665,17 +3766,55 @@ impl Parser<'_> {
                 return Err(self.error("unique destructuring bindings"));
             }
         }
+        let mut bindings = Vec::with_capacity(properties.len());
+        for (_, (start, end), _) in &properties {
+            if let Some(index) = self.locals.iter().position(|binding| {
+                self.source[binding.start..binding.end] == self.source[*start..*end]
+            }) {
+                self.locals[index].hoisted = false;
+                bindings.push(self.locals[index]);
+            } else {
+                let slot = u16::try_from(self.locals.len())
+                    .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+                let binding = Binding {
+                    start: *start,
+                    end: *end,
+                    slot,
+                    default: None,
+                    hoisted: false,
+                    #[cfg(feature = "environments")]
+                    captured: false,
+                };
+                self.locals.push(binding);
+                bindings.push(binding);
+            }
+        }
         if !self.consume(b'=') {
             return Err(self.error("="));
         }
         self.expression(None)?;
         let resume = self.offset;
-        let first_slot = self.locals.len();
-        for (index, (path, (start, end), default)) in properties.into_iter().enumerate() {
-            let slot = first_slot
-                .checked_add(index)
-                .and_then(|slot| u16::try_from(slot).ok())
-                .ok_or_else(|| self.error("fewer than 65536 local bindings"))?;
+        #[cfg(feature = "environments")]
+        let needs_temporary = bindings.iter().any(|binding| binding.captured);
+        #[cfg(not(feature = "environments"))]
+        let needs_temporary = false;
+        let temporary = if needs_temporary {
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
+            self.locals.push(Binding {
+                start: resume,
+                end: resume,
+                slot,
+                default: None,
+                hoisted: false,
+                #[cfg(feature = "environments")]
+                captured: false,
+            });
+            Some(slot)
+        } else {
+            None
+        };
+        for ((path, _, default), binding) in properties.into_iter().zip(bindings) {
             self.output.push(Opcode::DuplicateTop as u8);
             for (key_start, key_end) in path {
                 self.output_atom_range(key_start, key_end);
@@ -3703,19 +3842,31 @@ impl Parser<'_> {
                 #[cfg(feature = "functions")]
                 self.relocations.push(keep_patch);
             }
-            self.output.push(Opcode::StoreLocal as u8);
-            self.output.extend_from_slice(&slot.to_le_bytes());
-            self.locals.push(Binding {
-                start,
-                end,
-                slot,
-                default: None,
-                hoisted: false,
-                #[cfg(feature = "environments")]
-                captured: false,
-            });
+            #[cfg(feature = "environments")]
+            if binding.captured {
+                let temporary = temporary.expect("captured declarations allocate a temporary");
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&temporary.to_le_bytes());
+                self.output.push(Opcode::LoadLocalRaw as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                self.output.push(Opcode::LoadLocal as u8);
+                self.output.extend_from_slice(&temporary.to_le_bytes());
+                self.output.push(Opcode::StoreEnvironmentCell as u8);
+            } else {
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
+            #[cfg(not(feature = "environments"))]
+            {
+                self.output.push(Opcode::StoreLocal as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+            }
         }
         self.output.push(Opcode::DropTop as u8);
+        if self.function_frame {
+            let count = self.local_slot_count()?;
+            self.output[1..3].copy_from_slice(&count.to_le_bytes());
+        }
         if self.consume(b',') {
             return self.declaration_tail();
         }
@@ -8928,10 +9079,23 @@ impl Parser<'_> {
             let name = &self.source[binding.start..binding.end];
             !self.inactive_loop_locals.contains(&binding.slot)
                 && !self.inactive_catch_locals.contains(&binding.slot)
+                && !(binding.hoisted
+                    && self.offset < binding.start
+                    && self.is_lexical_declaration(*binding))
                 && !name.is_empty()
                 && self.source[self.offset..].starts_with(name)
                 && self.identifier_end(self.offset + name.len())
         })
+    }
+
+    #[cfg(feature = "locals")]
+    fn is_lexical_declaration(&self, binding: Binding) -> bool {
+        let mut end = binding.start;
+        while end > 0 && self.source[end - 1].is_ascii_whitespace() {
+            end -= 1;
+        }
+        (end >= 3 && &self.source[end - 3..end] == b"let")
+            || (end >= 5 && &self.source[end - 5..end] == b"const")
     }
 
     #[cfg(feature = "environments")]
@@ -10796,6 +10960,15 @@ mod tests {
                 .all(|target| { code[*target] == function_frame_opcode() as u8 })
         );
         assert_ne!(closure_targets[0], closure_targets[1]);
+    }
+
+    #[cfg(feature = "functions")]
+    #[test]
+    fn compiles_a_hoisted_nested_function_with_its_own_lexical_local() {
+        compile_script(
+            "function outer(data) { let { cursor, max = 1 } = data; function first() { take(0); } function take(min) { let nodes = []; let count = 0, stop = -1; while (cursor.pos > min) { let { id, start, end } = cursor; if (stop < 0) stop = end - max; nodes.push(id, start, end); count++; cursor.next(); } return nodes.length; } first(); return 1; } return outer({ cursor: { pos: 0 } });",
+        )
+        .unwrap();
     }
 
     #[cfg(feature = "environments")]

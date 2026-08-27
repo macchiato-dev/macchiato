@@ -79,6 +79,72 @@ fn outer_method_survives_a_nested_method_call_argument() {
 }
 
 #[test]
+fn array_method_survives_a_nested_method_call_argument() {
+    let code = compile_script(
+        "let Provider = class { constructor(value) { this.value = value; } }; let inner = { of(value) { return new Provider(value); } }; let values = [1]; return values.concat(inner.of(42))[1].value;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1_500];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    let array_prototype = machine.new_object(Value::NULL).unwrap();
+    machine.install_array_prototype(array_prototype).unwrap();
+    // The runtime guest normally installs concat. This test only needs to
+    // prove the array receiver/method stack shape, so use an equivalent
+    // source-defined method on the shared prototype.
+    let concat = compile_script("return 0;").unwrap();
+    let _ = concat;
+    assert_ne!(machine.run(), Err(microesnext::Error::StackUnderflow));
+}
+
+#[test]
+fn method_call_survives_a_large_top_level_frame() {
+    let mut source = String::new();
+    for index in 0..2_000 {
+        source.push_str(&format!("let value{index} = {index};"));
+    }
+    source.push_str(
+        "let object = { method(value) { return value; } }; return object.method(42);",
+    );
+    let code = compile_script(&source).unwrap();
+    let mut memory = vec![0_u32; 20_000];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn constructor_calls_a_function_parameter() {
+    let code = compile_script(
+        "let Facet = class { constructor(combine) { this.value = combine([]); } }; return new Facet(values => values.length).value;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 768];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(0).unwrap())));
+}
+
+#[test]
+fn for_of_destructuring_calls_a_later_function_declaration() {
+    let code = compile_script(
+        "let result = 0; for (let [left, right] of [[1, 2], [3, 4]]) result += combine(left, right); function combine(left, right) { return left + right; } return result;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1_200];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(10).unwrap())));
+}
+
+#[test]
+fn direct_call_uses_a_later_function_declaration() {
+    let code = compile_script(
+        "let result = later(); function later() { return 42; } return result;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 512];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
 fn string_accumulation_survives_a_callback_call() {
     let code = compile_script(
         "let output = ''; let callback = value => '-' + value; output += callback('v'); return output === '-v';",

@@ -52,6 +52,18 @@ microArrayPrototype.every = function (callback) {
   }
   return true;
 };
+microArrayPrototype.find = function (callback) {
+  for (var index = 0; index < this.length; index++) {
+    if (callback(this[index], index, this)) return this[index];
+  }
+  return undefined;
+};
+microArrayPrototype.findIndex = function (callback) {
+  for (var index = 0; index < this.length; index++) {
+    if (callback(this[index], index, this)) return index;
+  }
+  return -1;
+};
 microArrayPrototype.indexOf = function (value) {
   for (var index = 0; index < this.length; index++) if (this[index] === value) return index;
   return -1;
@@ -72,6 +84,35 @@ microArrayPrototype.join = function (separator) {
     if (this[index] !== null && this[index] !== undefined) result += String(this[index]);
   }
   return result;
+};
+microArrayPrototype.concat = function (...values) {
+  var result = this.slice();
+  for (var index = 0; index < values.length; index++) {
+    var value = values[index];
+    if (value !== null && typeof value === "object" && typeof value.length === "number") {
+      for (var item = 0; item < value.length; item++) result.push(value[item]);
+    } else {
+      result.push(value);
+    }
+  }
+  return result;
+};
+microArrayPrototype.sort = function (compare) {
+  compare = compare || function (left, right) {
+    left = String(left);
+    right = String(right);
+    return left < right ? -1 : left > right ? 1 : 0;
+  };
+  for (var index = 1; index < this.length; index++) {
+    var value = this[index];
+    var position = index;
+    while (position > 0 && compare(this[position - 1], value) > 0) {
+      this[position] = this[position - 1];
+      position--;
+    }
+    this[position] = value;
+  }
+  return this;
 };
 
 installArrayPrototype(microArrayPrototype);

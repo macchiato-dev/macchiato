@@ -63,3 +63,16 @@ fn nested_object_patterns_follow_each_property_path() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn a_hoisted_nested_function_captures_a_destructured_binding() {
+    let code = compile_script(
+        "function outer(source) { let { value = 1 } = source; let result = read(); function read() { return value; } return result; } return outer({ value: 42 });",
+    )
+    .unwrap();
+    let mut memory = [0; 768];
+    assert_eq!(
+        Machine::new(&code, &mut memory).run(),
+        Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
+    );
+}

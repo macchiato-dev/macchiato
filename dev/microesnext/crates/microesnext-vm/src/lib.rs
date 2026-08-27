@@ -104,6 +104,10 @@ pub struct Machine<'code, 'memory> {
     last_method_receiver: Option<Value>,
     last_constructor: Option<Value>,
     last_opcode: Option<Opcode>,
+    last_method_value: Option<Value>,
+    last_call_value: Option<Value>,
+    last_left_operand: Option<Value>,
+    last_right_operand: Option<Value>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -150,6 +154,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_receiver: None,
             last_constructor: None,
             last_opcode: None,
+            last_method_value: None,
+            last_call_value: None,
+            last_left_operand: None,
+            last_right_operand: None,
         }
     }
 
@@ -270,6 +278,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_receiver: None,
             last_constructor: None,
             last_opcode: None,
+            last_method_value: None,
+            last_call_value: None,
+            last_left_operand: None,
+            last_right_operand: None,
         })
     }
 
@@ -326,6 +338,18 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn last_opcode(&self) -> Option<Opcode> {
         self.last_opcode
+    }
+
+    pub fn last_method_value(&self) -> Option<Value> {
+        self.last_method_value
+    }
+
+    pub fn last_call_value(&self) -> Option<Value> {
+        self.last_call_value
+    }
+
+    pub fn last_operands(&self) -> (Option<Value>, Option<Value>) {
+        (self.last_left_operand, self.last_right_operand)
     }
 
     pub fn frame_base(&self) -> usize {
@@ -553,6 +577,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_receiver: self.last_method_receiver,
             last_constructor: self.last_constructor,
             last_opcode: self.last_opcode,
+            last_method_value: self.last_method_value,
+            last_call_value: self.last_call_value,
+            last_left_operand: self.last_left_operand,
+            last_right_operand: self.last_right_operand,
         })
     }
 
@@ -641,6 +669,19 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 CoreOutcome::Extension(opcode) => {
                     let opcode = Opcode::try_from(opcode)?;
                     self.last_opcode = Some(opcode);
+                    let numeric = match opcode {
+                        #[cfg(feature = "number-operations")]
+                        Opcode::AddNumber | Opcode::SubtractNumber | Opcode::MultiplyNumber => true,
+                        #[cfg(feature = "number-division")]
+                        Opcode::DivideNumber => true,
+                        #[cfg(feature = "number-remainder")]
+                        Opcode::RemainderNumber => true,
+                        _ => false,
+                    };
+                    if numeric {
+                        self.last_right_operand = self.core.arena().stack_value(0).ok();
+                        self.last_left_operand = self.core.arena().stack_value(1).ok();
+                    }
                     if let Some(outcome) = self.run_extension(opcode)? {
                         return Ok(outcome);
                     }
@@ -857,6 +898,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 } else {
                     microesnext_objects::method_calls::load(self.core.arena_mut(), receiver, key)?;
                 }
+                self.last_method_value = self.core.arena().stack_value(0).ok();
                 Ok(None)
             }
             #[cfg(feature = "class-inheritance")]
@@ -2482,6 +2524,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     fn call_value_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
         let function =
             microesnext_bindings::parameters::take_callable(self.core.arena_mut(), argument_count)?;
+        self.last_call_value = Some(function);
         #[cfg(feature = "host-bindings")]
         if let Some(function) = function.as_host() {
             if self.host_argument_count.replace(argument_count).is_some() {
@@ -2546,6 +2589,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     fn call_method_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
         let (method, receiver) =
             microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
+        self.last_call_value = Some(method);
         #[cfg(feature = "host-bindings")]
         if let Some(function) = method.as_host() {
             if self.host_argument_count.replace(argument_count).is_some() {
@@ -2563,7 +2607,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let receiver_aware =
             microesnext_objects::callable::is_callable_object(self.core.arena(), method);
         if method == Value::UNDEFINED {
-            return Err(Error::DanglingReference);
+            return Err(Error::StackUnderflow);
         }
         let function = unwrap_callable(self.core.arena(), method).map_err(|_| Error::InvalidRoot)?;
         let target = entry(self.core.arena(), function)?;
@@ -2593,8 +2637,6 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let value = self.core.arena_mut().pop()?;
         let key = self.core.arena_mut().pop()?;
         let object = self.core.arena_mut().pop()?;
-        self.last_method_key = Some(key);
-        self.last_method_receiver = Some(object);
         let current = get(self.core.arena(), object, key)?;
         if let Some(function) =
             microesnext_objects::getters::setter_callable(self.core.arena(), current)?
