@@ -55,3 +55,11 @@ fn conditionally_created_closure_does_not_control_captured_parameter_storage() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
 }
+
+#[test]
+fn string_addition_formats_boxed_numbers() {
+    let code = compile_script("return 'opacity: ' + 0.5 === 'opacity: 0.5';").unwrap();
+    let mut memory = [0_u32; 512];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
+}

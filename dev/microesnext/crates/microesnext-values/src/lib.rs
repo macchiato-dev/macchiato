@@ -1,5 +1,8 @@
 #![no_std]
 
+#[cfg(all(feature = "numbers", feature = "strings"))]
+extern crate alloc;
+
 #[cfg(feature = "decimal-to-f64")]
 pub mod decimal_to_f64;
 #[cfg(feature = "errors")]

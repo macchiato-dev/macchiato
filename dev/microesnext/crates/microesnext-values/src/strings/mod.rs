@@ -3,6 +3,8 @@ pub mod operations;
 
 use microesnext_arena::{Arena, BlockKind};
 use microesnext_types::{Error, Value};
+#[cfg(feature = "numbers")]
+use alloc::string::ToString;
 
 /// Allocate an ordinary, unrooted guest string. The caller decides its
 /// lifetime just like any other guest value; atom retention is a separate
@@ -16,9 +18,15 @@ pub fn new(arena: &mut Arena<'_>, bytes: &[u8]) -> Result<Value, Error> {
 /// Converts the primitive values needed by template literals without `alloc`.
 pub fn from_primitive(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
     if let Some(reference) = value.as_ref() {
-        return (arena.kind(reference)? == BlockKind::String)
-            .then_some(value)
-            .ok_or(Error::Type);
+        return match arena.kind(reference)? {
+            BlockKind::String => Ok(value),
+            #[cfg(feature = "numbers")]
+            BlockKind::Number => {
+                let text = crate::numbers::get(arena, value)?.to_string();
+                new(arena, text.as_bytes())
+            }
+            _ => Err(Error::Type),
+        };
     }
     if let Some(integer) = value.as_i30() {
         let mut digits = [0_u8; 11];
