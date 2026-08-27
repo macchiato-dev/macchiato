@@ -1,0 +1,16 @@
+[package]
+name = "microesnext"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "Incremental Rust reimplementation of MicroQuickJS"
+
+[lib]
+path = "src/lib.rs"
+
+[features]
+default = []
+
+[build-dependencies]
+cc = "1.2"
