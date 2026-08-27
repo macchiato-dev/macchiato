@@ -1,10 +1,12 @@
 # MicroQuickJS source outline
 
-This is a qualitative map of the MicroQuickJS snapshot currently kept in
-`dev/microquickjs-experiment/src`. The ranges are one-based and inclusive. At
-each level they proceed from top to bottom without gaps, so every source line
-has a place in the outline. Filenames are intentionally repeated to make
-sections convenient to copy, paste, and rearrange.
+This is a qualitative map of the MicroQuickJS source set represented in
+`dev/microquickjs-experiment/src`. It excludes locally added companion files,
+such as `microesnext.c`, that are not MicroQuickJS source. The ranges are
+one-based and inclusive. At each level they proceed from top to bottom without
+gaps, so every included source line has a place in the outline. Filenames are
+intentionally repeated to make sections convenient to copy, paste, and
+rearrange.
 
 The outline covers implementation files, headers, templates, the build file,
 examples, and executable tests. It leaves out `LICENSE`, `Changelog`, and
@@ -202,14 +204,6 @@ examples, and executable tests. It leaves out `LICENSE`, `Changelog`, and
   - `example.c[171:244]` - Adds printing and clock functions that make the embedded environment useful to ordinary scripts.
   - `example.c[245:272]` - Implements logging and file loading for source or bytecode input.
   - `example.c[273:308]` - Allocates a fixed machine buffer, creates a context, runs a program, reports errors, and frees the host allocation.
-
-- `microesnext.c[1:973]` - Experimental native collection and promise behavior added during the Rust-engine investigation.
-  - `microesnext.c[1:315]` - Implements Map, Set, WeakMap, and WeakSet operations over the compact collection primitives, including iteration and receiver checks.
-  - `microesnext.c[316:440]` - Defines array helpers, promise state access, resolver closures, reaction jobs, and raw settlement.
-  - `microesnext.c[441:644]` - Implements promise resolution, including self-resolution, promise adoption, thenable assimilation, and chained reactions.
-  - `microesnext.c[645:789]` - Connects promise settlement to suspended async frames and exposes constructor, `then`, `catch`, `resolve`, and `reject` behavior.
-  - `microesnext.c[790:933]` - Implements `all`, `race`, and `finally`, using arrays as compact reaction records and counters.
-  - `microesnext.c[934:973]` - Drains queued promise reactions and propagates fulfillment, rejection, or handler exceptions into the next promise.
 
 - `Makefile[1:152]` - Builds the native shell, examples, generated standard library, tests, and installable artifacts.
   - `Makefile[1:56]` - Selects compiler and platform flags, feature switches, generated files, and object sets.
