@@ -8482,30 +8482,69 @@ impl Parser<'_> {
         if !self.consume(b'{') {
             return Err(self.error("{"));
         }
-        if self.try_word_after_whitespace(b"constructor") {
-            let parameters = self.function_parameters()?;
-            self.function_value(
-                parameters,
-                None,
-                FunctionBody::ClassConstructor,
-                None,
-                false,
-                true,
-                false,
-            )?;
-        } else {
-            self.default_class_value();
-        }
-        #[cfg(feature = "named-class-expressions")]
-        if named_slot.is_some() {
-            self.output.push(Opcode::StoreEnvironmentCellResult as u8);
-        }
+        let class_start = self.output.len();
+        let mut constructor = None;
         loop {
             self.whitespace();
             if self.consume_raw(b'}') {
                 break;
             }
-            self.class_expression_method()?;
+            if self.word_at_offset(b"constructor") {
+                if constructor.is_some() {
+                    return Err(self.error("one class constructor"));
+                }
+                self.try_word(b"constructor");
+                let parameters = self.function_parameters()?;
+                let start = self.output.len();
+                self.function_value(
+                    parameters,
+                    None,
+                    FunctionBody::ClassConstructor,
+                    None,
+                    false,
+                    true,
+                    false,
+                )?;
+                #[cfg(feature = "named-class-expressions")]
+                if named_slot.is_some() {
+                    self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+                }
+                constructor = Some((start, self.output.len()));
+            } else {
+                self.class_expression_method()?;
+            }
+        }
+        let (constructor_start, constructor_end) = if let Some(range) = constructor {
+            range
+        } else {
+            let start = self.output.len();
+            self.default_class_value();
+            #[cfg(feature = "named-class-expressions")]
+            if named_slot.is_some() {
+                self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+            }
+            (start, self.output.len())
+        };
+        if constructor_start != class_start {
+            let constructor = self.output[constructor_start..constructor_end].to_vec();
+            self.output.drain(constructor_start..constructor_end);
+            self.output.splice(class_start..class_start, constructor);
+            let width = constructor_end - constructor_start;
+            let moved = |position: usize| {
+                if (constructor_start..constructor_end).contains(&position) {
+                    class_start + position - constructor_start
+                } else if (class_start..constructor_start).contains(&position) {
+                    position + width
+                } else {
+                    position
+                }
+            };
+            for function in &mut self.functions {
+                function.target_patch = moved(function.target_patch);
+            }
+            for relocation in &mut self.relocations {
+                *relocation = moved(*relocation);
+            }
         }
         #[cfg(feature = "class-inheritance")]
         if inherited {
