@@ -6,3 +6,5 @@
 //! baseline lives in `c/`; subsequent changes will establish its build before
 //! replacing bounded parts with Rust that shares the same live machine.
 
+#[allow(dead_code)] // Called by the linked C engine in wasm32 builds.
+mod ponyfill;

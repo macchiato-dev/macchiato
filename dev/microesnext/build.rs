@@ -70,6 +70,12 @@ fn main() {
 
     println!("cargo:rerun-if-changed=libc-ponyfill");
 
+    // The library targets wasm32 only. Native Cargo builds exist solely for
+    // the allocation-free Rust test harness and do not compile the C engine.
+    if env::var("TARGET").as_deref() != Ok("wasm32-unknown-unknown") {
+        return;
+    }
+
     let builder = compile_rom_builder(&c, &libc, &out);
     generate_atoms(&builder, &out);
 
