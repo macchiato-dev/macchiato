@@ -1969,7 +1969,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 } else {
                     #[cfg(feature = "objects")]
                     {
-                        get(self.core.arena(), target, key)?
+                        let target_root = self.retain(target)?;
+                        let key = self.intern_string_value(key)?;
+                        let value = get(self.core.arena(), self.root(target_root)?, key)?;
+                        self.release(target_root)?;
+                        value
                     }
                     #[cfg(not(feature = "objects"))]
                     return Err(Error::Type);

@@ -63,3 +63,14 @@ fn string_addition_formats_boxed_numbers() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
 }
+
+#[test]
+fn computed_property_reads_intern_dynamic_string_keys() {
+    let code = compile_script(
+        "let scopes = { '&light': 'light-theme' }; let key = '&' + 'light'; return scopes[key] === 'light-theme';",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 768];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::TRUE)));
+}
