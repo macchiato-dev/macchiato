@@ -5,13 +5,13 @@ edition = "2024"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 dlmalloc = { version = "0.2", features = ["global"] }
 microesnext = { path = "../../microesnext/crates/microesnext", features = ["full"] }
 libm = "0.2"
-onig_sys = { version = "69.9", default-features = false }
+microesnext-regexp = { path = "../../microesnext/crates/microesnext-regexp" }
 
 [build-dependencies]
 microesnext-compiler = { path = "../../microesnext/crates/microesnext-compiler" }

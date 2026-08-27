@@ -82,20 +82,14 @@ console.log(`microquickjs multi: ${(await stat(microMultiDestination)).size} byt
 }
 
 const microESNextRuntime = resolve(example, "../../microesnext");
-const emsdk = process.env.EMSDK || "/root/emsdk";
-const emcc = resolve(emsdk, "upstream/emscripten/emcc");
-execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-emscripten"], {
+execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
   cwd: microESNextRuntime,
   env: { ...process.env, MICROESNEXT_GUEST_ENVIRONMENT: canonicalEnvironment,
-    MICROESNEXT_APPLICATION_SOURCE: resolve(example, "generated/codemirror-simple.js"),
-    CFLAGS_wasm32_unknown_emscripten: "-fPIC" },
+    MICROESNEXT_APPLICATION_SOURCE: resolve(example, "generated/codemirror-simple.js") },
   stdio: "inherit",
 });
 const microESNextOutput = resolve(microESNextRuntime,
-  "target/wasm32-unknown-emscripten/release/libwasm_web_machine_microesnext_runtime.a");
+  "target/wasm32-unknown-unknown/release/wasm_web_machine_microesnext_runtime.wasm");
 const microESNextDestination = resolve(example, "generated/codemirror-microesnext.wasm");
-execFileSync(emcc, [microESNextOutput, "-o", microESNextDestination, "-Os", "--no-entry",
-  "-s", "STANDALONE_WASM=1", "-s", "ALLOW_MEMORY_GROWTH=1", "-s", "FILESYSTEM=0",
-  "-s", "EXPORTED_FUNCTIONS=['_onmsg','_result','_detail','_stage','_program_counter','_frame','_function']"],
-{ stdio: "inherit" });
+await copyFile(microESNextOutput, microESNextDestination);
 console.log(`microesnext: ${(await stat(microESNextDestination)).size} bytes`);

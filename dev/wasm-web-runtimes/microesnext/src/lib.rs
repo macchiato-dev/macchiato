@@ -6,12 +6,6 @@ use alloc::{string::{String, ToString}, vec, vec::Vec};
 use core::{cell::UnsafeCell, sync::atomic::{AtomicU32, Ordering}};
 
 use microesnext::{Error, Machine, Outcome, Value};
-use onig_sys::{
-    ONIG_MISMATCH, ONIG_NORMAL, ONIG_OPTION_IGNORECASE, ONIG_OPTION_MULTILINE,
-    ONIG_OPTION_NONE, ONIG_OPTION_SINGLELINE, OnigEncodingUTF8, OnigErrorInfo,
-    OnigRegex, OnigSyntaxOniguruma, onig_free, onig_new, onig_region_free,
-    onig_region_new, onig_search,
-};
 
 #[global_allocator]
 static ALLOCATOR: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
@@ -221,200 +215,38 @@ fn regexp_parts(
     Ok((pattern, flags, last_index))
 }
 
-struct NativeRegex(OnigRegex);
+// The old Oniguruma experiment remains unreachable only until the direct
+// MicroQuickJS-to-Rust port is wired in. Keeping these failure points explicit
+// prevents a build from silently regaining Emscripten or libc.
+struct NativeRegex;
 
-impl Drop for NativeRegex {
-    fn drop(&mut self) {
-        unsafe { onig_free(self.0) };
-    }
-}
-
-fn compile_regexp(pattern: &str, flags: &str) -> Result<NativeRegex, Error> {
-    let mut options = ONIG_OPTION_NONE;
-    if flags.contains('i') { options |= ONIG_OPTION_IGNORECASE; }
-    // Oniguruma names these two options from Ruby's perspective. JavaScript's
-    // `s` makes dot match a newline, while `m` changes the anchors.
-    if flags.contains('s') { options |= ONIG_OPTION_MULTILINE; }
-    if flags.contains('m') { options |= ONIG_OPTION_SINGLELINE; }
-    let bytes = pattern.as_bytes();
-    let mut regex = core::ptr::null_mut();
-    let mut error = OnigErrorInfo {
-        enc: core::ptr::null_mut(),
-        par: core::ptr::null_mut(),
-        par_end: core::ptr::null_mut(),
-    };
-    let status = unsafe {
-        onig_new(
-            &mut regex,
-            bytes.as_ptr(),
-            bytes.as_ptr().add(bytes.len()),
-            options,
-            &raw mut OnigEncodingUTF8,
-            &raw mut OnigSyntaxOniguruma,
-            &mut error,
-        )
-    };
-    if status == ONIG_NORMAL as i32 && !regex.is_null() {
-        Ok(NativeRegex(regex))
-    } else {
-        Err(Error::Type)
-    }
-}
-
-fn utf16_to_byte(text: &str, index: usize) -> usize {
-    let mut units = 0;
-    for (byte, character) in text.char_indices() {
-        if units >= index { return byte; }
-        units += character.len_utf16();
-    }
-    text.len()
-}
-
-fn byte_to_utf16(text: &str, byte: usize) -> usize {
-    text.get(..byte).unwrap_or(text).encode_utf16().count()
+fn compile_regexp(_: &str, _: &str) -> Result<NativeRegex, Error> {
+    Err(Error::Type)
 }
 
 fn regexp_match(
-    machine: &mut Machine<'_, '_>,
-    receiver: Value,
-    text: &str,
+    _: &mut Machine<'_, '_>,
+    _: Value,
+    _: &str,
 ) -> Result<Option<(usize, usize, Vec<Option<core::ops::Range<usize>>>)>, Error> {
-    let (pattern, flags, last_index) = regexp_parts(machine, receiver)?;
-    remember_failure_bytes(pattern.as_bytes());
-    let regexp = compile_regexp(&pattern, &flags).map_err(|error| {
-        error
-    })?;
-    let start_units = if flags.contains('g') || flags.contains('y') { last_index } else { 0 };
-    let start = utf16_to_byte(text, start_units);
-    let bytes = text.as_bytes();
-    let region = unsafe { onig_region_new() };
-    if region.is_null() { return Err(Error::OutOfMemory); }
-    let status = unsafe {
-        onig_search(
-            regexp.0,
-            bytes.as_ptr(),
-            bytes.as_ptr().add(bytes.len()),
-            bytes.as_ptr().add(start),
-            bytes.as_ptr().add(bytes.len()),
-            region,
-            ONIG_OPTION_NONE,
-        )
-    };
-    if status == ONIG_MISMATCH || status < 0 {
-        unsafe { onig_region_free(region, 1) };
-        if flags.contains('g') || flags.contains('y') {
-            let zero = Value::from_i30(0).ok_or(Error::Type)?;
-            object_set(machine, receiver, b"lastIndex", zero)?;
-        }
-        return Ok(None);
-    }
-    let native = unsafe { &*region };
-    if native.num_regs <= 0 {
-        unsafe { onig_region_free(region, 1) };
-        return Ok(None);
-    }
-    let begins = unsafe { core::slice::from_raw_parts(native.beg, native.num_regs as usize) };
-    let ends = unsafe { core::slice::from_raw_parts(native.end, native.num_regs as usize) };
-    let begin = byte_to_utf16(text, begins[0] as usize);
-    let end = byte_to_utf16(text, ends[0] as usize);
-    if flags.contains('y') && begin != start_units {
-        unsafe { onig_region_free(region, 1) };
-        return Ok(None);
-    }
-    let groups = begins.iter().zip(ends).map(|(&begin, &end)| {
-        (begin >= 0 && end >= 0).then(|| {
-            byte_to_utf16(text, begin as usize)..byte_to_utf16(text, end as usize)
-        })
-    }).collect();
-    unsafe { onig_region_free(region, 1) };
-    if flags.contains('g') || flags.contains('y') {
-        let next = Value::from_i30(i32::try_from(end).map_err(|_| Error::Type)?)
-            .ok_or(Error::Type)?;
-        object_set(machine, receiver, b"lastIndex", next)?;
-    }
-    Ok(Some((begin, end, groups)))
+    Err(Error::Type)
 }
 
-fn regexp_split(machine: &mut Machine<'_, '_>, separator: Value, text: &str)
-    -> Result<Vec<String>, Error>
-{
-    let (pattern, flags, _) = regexp_parts(machine, separator)?;
-    let regexp = compile_regexp(&pattern, &flags)?;
-    let bytes = text.as_bytes();
-    let mut pieces = Vec::new();
-    let mut start = 0;
-    while start <= bytes.len() {
-        let region = unsafe { onig_region_new() };
-        if region.is_null() { return Err(Error::OutOfMemory); }
-        let status = unsafe {
-            onig_search(
-                regexp.0,
-                bytes.as_ptr(),
-                bytes.as_ptr().add(bytes.len()),
-                bytes.as_ptr().add(start),
-                bytes.as_ptr().add(bytes.len()),
-                region,
-                ONIG_OPTION_NONE,
-            )
-        };
-        if status == ONIG_MISMATCH || status < 0 {
-            unsafe { onig_region_free(region, 1) };
-            break;
-        }
-        let native = unsafe { &*region };
-        let begin = unsafe { *native.beg } as usize;
-        let end = unsafe { *native.end } as usize;
-        unsafe { onig_region_free(region, 1) };
-        pieces.push(String::from(&text[start..begin]));
-        if end == begin {
-            let advance = text[end..].chars().next().map_or(1, char::len_utf8);
-            start = end.saturating_add(advance).min(bytes.len());
-        } else {
-            start = end;
-        }
-    }
-    pieces.push(String::from(&text[start.min(bytes.len())..]));
-    Ok(pieces)
+fn regexp_split(
+    _: &mut Machine<'_, '_>,
+    _: Value,
+    _: &str,
+) -> Result<Vec<String>, Error> {
+    Err(Error::Type)
 }
 
 fn regexp_replace(
-    machine: &mut Machine<'_, '_>, separator: Value, text: &str, replacement: &str,
+    _: &mut Machine<'_, '_>,
+    _: Value,
+    _: &str,
+    _: &str,
 ) -> Result<String, Error> {
-    let (pattern, flags, _) = regexp_parts(machine, separator)?;
-    let regexp = compile_regexp(&pattern, &flags)?;
-    let bytes = text.as_bytes();
-    let mut output = String::new();
-    let mut copied = 0;
-    let mut search = 0;
-    loop {
-        let region = unsafe { onig_region_new() };
-        if region.is_null() { return Err(Error::OutOfMemory); }
-        let status = unsafe {
-            onig_search(
-                regexp.0, bytes.as_ptr(), bytes.as_ptr().add(bytes.len()),
-                bytes.as_ptr().add(search), bytes.as_ptr().add(bytes.len()),
-                region, ONIG_OPTION_NONE,
-            )
-        };
-        if status == ONIG_MISMATCH || status < 0 {
-            unsafe { onig_region_free(region, 1) };
-            break;
-        }
-        let native = unsafe { &*region };
-        let begin = unsafe { *native.beg } as usize;
-        let end = unsafe { *native.end } as usize;
-        unsafe { onig_region_free(region, 1) };
-        output.push_str(&text[copied..begin]);
-        output.push_str(replacement);
-        copied = end;
-        if !flags.contains('g') { break; }
-        search = if end == begin {
-            end + text[end..].chars().next().map_or(1, char::len_utf8)
-        } else { end };
-        if search > bytes.len() { break; }
-    }
-    output.push_str(&text[copied..]);
-    Ok(output)
+    Err(Error::Type)
 }
 
 #[unsafe(no_mangle)]
@@ -1166,7 +998,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         .and_then(Value::as_i30)
                         .unwrap_or(10);
                     if !(2..=36).contains(&radix) { return Err(Error::Type); }
-                    let text = if radix == 10 || number.fract() != 0.0 {
+                    let text = if radix == 10 || number != libm::trunc(number) {
                         number.to_string()
                     } else {
                         let mut value = number as i64;
@@ -1697,16 +1529,4 @@ pub extern "C" fn function() -> u32 {
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo<'_>) -> ! {
     core::arch::wasm32::unreachable()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::compile_regexp;
-
-    #[test]
-    fn embedded_regexp_accepts_codemirror_unicode_word_characters() {
-        assert!(compile_regexp(r"[\p{Alphabetic}\p{Number}_]", "u").is_ok());
-        assert!(compile_regexp(r"\s*!important$", "i").is_ok());
-        assert!(compile_regexp(r"[A-Z]", "g").is_ok());
-    }
 }
