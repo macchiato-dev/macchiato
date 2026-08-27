@@ -215,38 +215,114 @@ fn regexp_parts(
     Ok((pattern, flags, last_index))
 }
 
-// The old Oniguruma experiment remains unreachable only until the direct
-// MicroQuickJS-to-Rust port is wired in. Keeping these failure points explicit
-// prevents a build from silently regaining Emscripten or libc.
-struct NativeRegex;
+struct NativeRegex {
+    bytecode: Vec<u8>,
+    global: bool,
+    sticky: bool,
+}
 
-fn compile_regexp(_: &str, _: &str) -> Result<NativeRegex, Error> {
-    Err(Error::Type)
+fn compile_regexp(pattern: &str, flags: &str) -> Result<NativeRegex, Error> {
+    let bytecode = microesnext_regexp::compile(pattern, flags).map_err(|_| Error::Type)?;
+    Ok(NativeRegex {
+        bytecode,
+        global: flags.contains('g'),
+        sticky: flags.contains('y'),
+    })
+}
+
+fn utf16_to_byte(text: &str, index: usize) -> usize {
+    let mut units = 0;
+    for (byte, character) in text.char_indices() {
+        if units >= index { return byte; }
+        units += character.len_utf16();
+    }
+    text.len()
+}
+
+fn byte_to_utf16(text: &str, byte: usize) -> usize {
+    text.get(..byte).unwrap_or(text).encode_utf16().count()
+}
+
+fn native_match(
+    regexp: &NativeRegex, text: &str, start: usize,
+) -> Result<Option<(usize, usize, Vec<Option<core::ops::Range<usize>>>)>, Error> {
+    let captures_count = regexp.bytecode[2] as usize;
+    let registers = regexp.bytecode[3] as usize;
+    let mut captures = vec![u32::MAX; captures_count * 2 + registers];
+    let matched = microesnext_regexp::execute(
+        &regexp.bytecode, text.as_bytes(), start, &mut captures,
+        microesnext_regexp::Limits::default(),
+    ).map_err(|_| Error::Type)?;
+    if !matched { return Ok(None); }
+    let groups: Vec<_> = captures[..captures_count * 2].chunks_exact(2).map(|capture| {
+        (capture[0] != u32::MAX && capture[1] != u32::MAX).then(|| {
+            byte_to_utf16(text, capture[0] as usize)..byte_to_utf16(text, capture[1] as usize)
+        })
+    }).collect();
+    let whole = groups.first().and_then(Clone::clone).ok_or(Error::Type)?;
+    Ok(Some((whole.start, whole.end, groups)))
 }
 
 fn regexp_match(
-    _: &mut Machine<'_, '_>,
-    _: Value,
-    _: &str,
+    machine: &mut Machine<'_, '_>, receiver: Value, text: &str,
 ) -> Result<Option<(usize, usize, Vec<Option<core::ops::Range<usize>>>)>, Error> {
-    Err(Error::Type)
+    let (pattern, flags, last_index) = regexp_parts(machine, receiver)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let start_units = if regexp.global || regexp.sticky { last_index } else { 0 };
+    let found = native_match(&regexp, text, utf16_to_byte(text, start_units))?;
+    if regexp.global || regexp.sticky {
+        let next = found.as_ref().map_or(0, |found| found.1);
+        let next = Value::from_i30(i32::try_from(next).map_err(|_| Error::Type)?)
+            .ok_or(Error::Type)?;
+        object_set(machine, receiver, b"lastIndex", next)?;
+    }
+    Ok(found)
 }
 
 fn regexp_split(
-    _: &mut Machine<'_, '_>,
-    _: Value,
-    _: &str,
+    machine: &mut Machine<'_, '_>, separator: Value, text: &str,
 ) -> Result<Vec<String>, Error> {
-    Err(Error::Type)
+    let (pattern, flags, _) = regexp_parts(machine, separator)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let mut pieces = Vec::new();
+    let mut start = 0usize;
+    while start <= text.len() {
+        let Some((begin, end, _)) = native_match(&regexp, text, start)? else { break };
+        let begin = utf16_to_byte(text, begin);
+        let end = utf16_to_byte(text, end);
+        pieces.push(String::from(&text[start..begin]));
+        start = if end == begin {
+            end + text[end..].chars().next().map_or(1, char::len_utf8)
+        } else { end };
+        start = start.min(text.len());
+    }
+    pieces.push(String::from(&text[start..]));
+    Ok(pieces)
 }
 
 fn regexp_replace(
-    _: &mut Machine<'_, '_>,
-    _: Value,
-    _: &str,
-    _: &str,
+    machine: &mut Machine<'_, '_>, separator: Value, text: &str, replacement: &str,
 ) -> Result<String, Error> {
-    Err(Error::Type)
+    let (pattern, flags, _) = regexp_parts(machine, separator)?;
+    let regexp = compile_regexp(&pattern, &flags)?;
+    let mut output = String::new();
+    let mut copied = 0usize;
+    let mut search = 0usize;
+    loop {
+        let Some((begin, end, _)) = native_match(&regexp, text, search)? else { break };
+        let begin = utf16_to_byte(text, begin);
+        let end = utf16_to_byte(text, end);
+        output.push_str(&text[copied..begin]);
+        output.push_str(replacement);
+        copied = end;
+        if !regexp.global { break; }
+        search = if end == begin {
+            end + text[end..].chars().next().map_or(1, char::len_utf8)
+        } else { end };
+        if search > text.len() { break; }
+    }
+    output.push_str(&text[copied..]);
+    Ok(output)
 }
 
 #[unsafe(no_mangle)]
