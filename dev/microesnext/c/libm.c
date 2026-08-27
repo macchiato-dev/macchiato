@@ -30,11 +30,11 @@
  * is preserved.
  * ====================================================
  */
-#include <stdio.h>
-#include <inttypes.h>
-#include <math.h>
+#include "ponyfill/stdio.h"
+#include "ponyfill/inttypes.h"
+#include "ponyfill/math.h"
 #define NDEBUG
-#include <assert.h>
+#include "ponyfill/assert.h"
 
 #include "cutils.h"
 #include "libm.h"

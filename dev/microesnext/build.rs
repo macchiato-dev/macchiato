@@ -2,7 +2,7 @@ use std::{env, fs, path::{Path, PathBuf}, process::Command};
 
 const ENGINE_SOURCES: &[&str] = &["cutils.c", "dtoa.c", "libm.c", "mquickjs.c"];
 
-fn compile_rom_builder(c: &Path, out: &Path) -> PathBuf {
+fn compile_rom_builder(c: &Path, libc: &Path, out: &Path) -> PathBuf {
     let host = env::var("HOST").expect("Cargo provides HOST");
     let compiler = cc::Build::new()
         .host(&host)
@@ -17,6 +17,7 @@ fn compile_rom_builder(c: &Path, out: &Path) -> PathBuf {
     if compiler.is_like_msvc() {
         command
             .arg(format!("/I{}", c.display()))
+            .arg(format!("/I{}", libc.display()))
             .arg(format!("/I{}", c.join("generator").display()))
             .arg(c.join("generator/mquickjs_build.c"))
             .arg(c.join("generator/mqjs_stdlib.c"))
@@ -25,6 +26,7 @@ fn compile_rom_builder(c: &Path, out: &Path) -> PathBuf {
         command
             .args(["-std=c11", "-O2", "-D_GNU_SOURCE"])
             .arg("-I").arg(c)
+            .arg("-I").arg(libc)
             .arg("-I").arg(c.join("generator"))
             .arg(c.join("generator/mquickjs_build.c"))
             .arg(c.join("generator/mqjs_stdlib.c"))
@@ -52,6 +54,7 @@ fn main() {
         .expect("Cargo provides CARGO_MANIFEST_DIR"));
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo provides OUT_DIR"));
     let c = root.join("c");
+    let libc = root.join("libc-ponyfill/include");
 
     for file in ENGINE_SOURCES {
         println!("cargo:rerun-if-changed=c/{file}");
@@ -65,12 +68,15 @@ fn main() {
         println!("cargo:rerun-if-changed=c/{file}");
     }
 
-    let builder = compile_rom_builder(&c, &out);
+    println!("cargo:rerun-if-changed=libc-ponyfill");
+
+    let builder = compile_rom_builder(&c, &libc, &out);
     generate_atoms(&builder, &out);
 
     let mut build = cc::Build::new();
     build
         .include(&c)
+        .include(&libc)
         .include(&out)
         .define("CONFIG_SMALL", None)
         .flag_if_supported("-std=c11")

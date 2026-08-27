@@ -25,8 +25,8 @@
 #ifndef CUTILS_H
 #define CUTILS_H
 
-#include <stdlib.h>
-#include <inttypes.h>
+#include "ponyfill/stdlib.h"
+#include "ponyfill/inttypes.h"
 
 /* set if CPU is big endian */
 #undef WORDS_BIGENDIAN

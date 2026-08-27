@@ -22,10 +22,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include "ponyfill/stdlib.h"
+#include "ponyfill/stdio.h"
+#include "stdarg.h"
+#include "ponyfill/string.h"
 
 #include "cutils.h"
 

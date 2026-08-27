@@ -22,14 +22,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <inttypes.h>
-#include <string.h>
-#include <assert.h>
-#include <math.h>
-#include <setjmp.h>
+#include "ponyfill/stdlib.h"
+#include "ponyfill/stdio.h"
+#include "stdarg.h"
+#include "ponyfill/inttypes.h"
+#include "ponyfill/string.h"
+#include "ponyfill/assert.h"
+#include "ponyfill/math.h"
+#include "ponyfill/setjmp.h"
 
 #include "cutils.h"
 #include "dtoa.h"
