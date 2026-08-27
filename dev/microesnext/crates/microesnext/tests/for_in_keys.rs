@@ -82,3 +82,14 @@ fn computed_array_length_accepts_a_dynamic_string_key() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(3).unwrap())));
 }
+
+#[test]
+fn repeated_closure_creation_does_not_nest_environment_cells() {
+    let code = compile_script(
+        "function read(value) { for (let i = 0; i < 2; i++) { let callback = () => value; callback(); } return value; } return read(42);",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1024];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}

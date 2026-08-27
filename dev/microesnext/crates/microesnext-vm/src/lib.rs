@@ -1496,7 +1496,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "environments")]
             Opcode::NewEnvironmentCell => {
                 let value = self.core.arena_mut().pop()?;
-                let cell = microesnext_bindings::environments::new(self.core.arena_mut(), value)?;
+                let cell = if value.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::EnvironmentCell)
+                {
+                    value
+                } else {
+                    microesnext_bindings::environments::new(self.core.arena_mut(), value)?
+                };
                 self.core.arena_mut().push(cell)?;
                 Ok(None)
             }
@@ -1964,7 +1970,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     if let Some(index) = key.as_i30().and_then(|index| usize::try_from(index).ok()) {
                         array_get(self.core.arena(), target, index)?
                     } else {
-                        let key = self.intern_string_value(key)?;
+                        let key = if key.as_ref().is_some_and(|reference| {
+                            self.core.arena().kind(reference) == Ok(microesnext_arena::BlockKind::String)
+                        }) {
+                            self.intern_string_value(key)?
+                        } else {
+                            key
+                        };
                         let length_key = key.as_ref().is_some_and(|reference| {
                             self.core.arena().bytes_equal(reference, b"length").unwrap_or(false)
                         });
@@ -1980,7 +1992,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     #[cfg(feature = "objects")]
                     {
                         let target_root = self.retain(target)?;
-                        let key = self.intern_string_value(key)?;
+                        let key = if key.as_ref().is_some_and(|reference| {
+                            self.core.arena().kind(reference) == Ok(microesnext_arena::BlockKind::String)
+                        }) {
+                            self.intern_string_value(key)?
+                        } else {
+                            key
+                        };
                         let value = get(self.core.arena(), self.root(target_root)?, key)?;
                         self.release(target_root)?;
                         value
