@@ -2,8 +2,7 @@
  * Excerpted from wasi-libc's libc-top-half/musl/include/stdint.h and
  * arch/wasm32/bits/stdint.h. See ../../README.md and the license files.
  */
-#ifndef MICROESNEXT_STDINT_H
-#define MICROESNEXT_STDINT_H
+#pragma once
 
 typedef __INT8_TYPE__ int8_t;
 typedef __INT16_TYPE__ int16_t;
@@ -20,5 +19,3 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 #define INT32_MAX __INT32_MAX__
 #define INT64_MAX __INT64_MAX__
 #define INTPTR_MAX __INTPTR_MAX__
-
-#endif

@@ -4,6 +4,9 @@ This is a positive inventory of the C declarations consumed by the
 MicroQuickJS engine. A declaration belongs in `include/ponyfill/` only when it
 appears here.
 
+Excerpted headers use `#pragma once`. Other conditional preprocessing from
+the general-purpose WASI-libc headers is omitted unless this build needs it.
+
 ## Confirmed
 
 - `assert.h`
@@ -23,13 +26,16 @@ appears here.
   - `PRIo32`
   - `PRIo64`
   - `PRIu64`
+- `stdlib.h`
+  - `malloc(size)` and `free(pointer)`
+  - `abort()` and `exit(status)`
+  - `abs(value)`
 - Compiler headers
   - `stdarg.h`: variable-argument builtins
   - `stddef.h`: `size_t`
 
 ## Next to excerpt
 
-- Allocation, termination, and absolute-value functions.
 - The formatting declarations retained by the selected build configuration.
 - Floating-point classifications and operations.
 - `jmp_buf`, `setjmp`, and `longjmp`.
