@@ -17,17 +17,17 @@ fn compile_rom_builder(c: &Path, out: &Path) -> PathBuf {
     if compiler.is_like_msvc() {
         command
             .arg(format!("/I{}", c.display()))
-            .arg(format!("/I{}", c.join("build").display()))
-            .arg(c.join("build/mquickjs_build.c"))
-            .arg(c.join("build/mqjs_stdlib.c"))
+            .arg(format!("/I{}", c.join("generator").display()))
+            .arg(c.join("generator/mquickjs_build.c"))
+            .arg(c.join("generator/mqjs_stdlib.c"))
             .arg(format!("/Fe{}", executable.display()));
     } else {
         command
             .args(["-std=c11", "-O2", "-D_GNU_SOURCE"])
             .arg("-I").arg(c)
-            .arg("-I").arg(c.join("build"))
-            .arg(c.join("build/mquickjs_build.c"))
-            .arg(c.join("build/mqjs_stdlib.c"))
+            .arg("-I").arg(c.join("generator"))
+            .arg(c.join("generator/mquickjs_build.c"))
+            .arg(c.join("generator/mqjs_stdlib.c"))
             .arg("-o").arg(&executable);
     }
     let status = command.status().expect("run the host C compiler");
@@ -59,8 +59,8 @@ fn main() {
     for file in [
         "cutils.h", "dtoa.h", "libm.h", "mquickjs.h", "mquickjs_opcode.h",
         "mquickjs_priv.h", "softfp_template.h", "softfp_template_icvt.h",
-        "build/list.h", "build/mquickjs_build.c", "build/mquickjs_build.h",
-        "build/mqjs_stdlib.c",
+        "generator/list.h", "generator/mquickjs_build.c",
+        "generator/mquickjs_build.h", "generator/mqjs_stdlib.c",
     ] {
         println!("cargo:rerun-if-changed=c/{file}");
     }

@@ -12,7 +12,7 @@ The baseline was copied without modification from a fresh checkout of
 
 - `src/` is the Rust crate. Rust replacements will enter here a bounded piece
   at a time.
-- `c/` is the retained MicroQuickJS implementation. Its `build/` subdirectory
+- `c/` is the retained MicroQuickJS implementation. Its `generator/` subdirectory
   contains only the source generator needed to create the atom header.
 - `docs/` contains source maps and design notes.
 
