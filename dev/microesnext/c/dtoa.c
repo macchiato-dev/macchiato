@@ -27,7 +27,6 @@
 #include "ponyfill/inttypes.h"
 #include "ponyfill/string.h"
 #include "ponyfill/assert.h"
-#include "ponyfill/ctype.h"
 #include "ponyfill/math.h"
 
 #include "cutils.h"

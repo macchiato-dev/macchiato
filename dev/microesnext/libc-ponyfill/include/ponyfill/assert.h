@@ -1,23 +1,19 @@
-#include "ponyfill/features.h"
+/*
+ * Excerpted from wasi-libc's libc-top-half/musl/include/assert.h.
+ * See ../../README.md and the accompanying wasi-libc license files.
+ */
+#ifndef MICROESNEXT_ASSERT_H
+#define MICROESNEXT_ASSERT_H
 
-#undef assert
+_Noreturn void __assert_fail(const char *expression, const char *file,
+                             int line, const char *function);
 
 #ifdef NDEBUG
-#define	assert(x) (void)0
+#define assert(expression) ((void)0)
 #else
-#define assert(x) ((void)((x) || (__assert_fail(#x, __FILE__, __LINE__, __func__),0)))
+#define assert(expression) \
+    ((void)((expression) || \
+            (__assert_fail(#expression, __FILE__, __LINE__, __func__), 0)))
 #endif
 
-#if __STDC_VERSION__ >= 201112L && !defined(__cplusplus)
-#define static_assert _Static_assert
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-_Noreturn void __assert_fail (const char *, const char *, int, const char *);
-
-#ifdef __cplusplus
-}
 #endif

@@ -10,10 +10,9 @@ The files under `include/ponyfill/` were copied from Fedora's
 directory structure is retained below `ponyfill/`, and internal includes were
 changed to reference that explicit namespace.
 
-The direct headers selected for MicroQuickJS are:
+The direct headers initially selected for MicroQuickJS are:
 
 - `assert.h`
-- `ctype.h`
 - `inttypes.h`
 - `math.h`
 - `setjmp.h`
@@ -23,8 +22,8 @@ The direct headers selected for MicroQuickJS are:
 - `string.h`
 
 The remaining copied headers are the transitive declarations used by that
-set. Each header is being reduced to the declarations MicroQuickJS consumes;
-`string.h` is the first completed excerpt. `stdarg.h` and `stddef.h` remain
-compiler-provided headers and therefore are not vendored here.
+set. Each header is being reduced to the declarations in [REQUIRED.md](REQUIRED.md).
+`stdarg.h` and `stddef.h` remain compiler-provided headers and therefore are
+not vendored here.
 
 The unmodified wasi-libc license texts are included alongside this file.
