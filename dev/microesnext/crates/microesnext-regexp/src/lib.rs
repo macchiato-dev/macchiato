@@ -6,11 +6,15 @@
 //! each translated region can be reviewed and differentially tested.
 
 mod bytecode;
+#[cfg(feature = "execute")]
+mod execute;
 
 pub use bytecode::{
     Flags, OpCode, HEADER_CAPTURE_COUNT, HEADER_FLAGS, HEADER_LEN,
     HEADER_REGISTER_COUNT,
 };
+#[cfg(feature = "execute")]
+pub use execute::{execute, Limits};
 
 /// A captured half-open range in the input's UTF-16 code units.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
