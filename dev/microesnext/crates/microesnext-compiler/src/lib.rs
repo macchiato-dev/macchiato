@@ -109,6 +109,13 @@ impl Builder {
         self
     }
 
+    #[cfg(all(feature = "locals", feature = "environments"))]
+    pub fn load_local_raw(mut self, slot: u16) -> Self {
+        self.code.push(Opcode::LoadLocalRaw as u8);
+        self.code.extend_from_slice(&slot.to_le_bytes());
+        self
+    }
+
     #[cfg(feature = "locals")]
     pub fn store_local(mut self, slot: u16) -> Self {
         self.code.push(Opcode::StoreLocal as u8);
@@ -4653,7 +4660,7 @@ impl Parser<'_> {
             #[cfg(feature = "receivers")]
             receiver_capture: (lexical_receiver
                 && (self.receiver_frame || self.receiver_capture.is_some()))
-            .then_some(0),
+            .then_some(u16::from(expression_name.is_some())),
             #[cfg(feature = "class-inheritance")]
             super_binding: Self::body_accepts_super(body_kind)
                 .then_some(self.super_binding)
@@ -6139,8 +6146,11 @@ impl Parser<'_> {
         self.output.extend_from_slice(&local.slot.to_le_bytes());
         #[cfg(feature = "environments")]
         if local.captured {
-            self.output.push(Opcode::DuplicateTop as u8);
-            self.output.push(Opcode::LoadEnvironmentCell as u8);
+            self.output.push(Opcode::UpdateEnvironmentCell as u8);
+            self.output.push(
+                u8::from(subtracting || postfix_decrement) | if prefix { 2 } else { 0 },
+            );
+            return Ok(true);
         }
         if !prefix {
             self.output.push(Opcode::DuplicateTop as u8);
@@ -6157,9 +6167,7 @@ impl Parser<'_> {
             self.output.push(Opcode::DuplicateTop as u8);
         }
         #[cfg(feature = "environments")]
-        if local.captured {
-            self.output.push(Opcode::StoreEnvironmentCell as u8);
-        } else {
+        {
             self.output.push(Opcode::StoreLocal as u8);
             self.output.extend_from_slice(&local.slot.to_le_bytes());
         }
@@ -9179,7 +9187,11 @@ impl Parser<'_> {
             self.captures.push(binding);
             self.captures.len() - 1
         };
-        u16::try_from(index + usize::from(self.receiver_capture.is_some()))
+        let receiver_precedes = self.receiver_capture.is_some()
+            && !self
+                .self_binding
+                .is_some_and(|self_binding| same_binding(self_binding, binding));
+        u16::try_from(index + usize::from(receiver_precedes))
             .map_err(|_| self.error("fewer than 65536 captures"))
     }
 

@@ -13,6 +13,20 @@ microArrayPrototype.pop = function () {
   this.length = this.length - 1;
   return value;
 };
+microArrayPrototype.shift = function () {
+  if (!this.length) return undefined;
+  var value = this[0];
+  for (var index = 1; index < this.length; index++) this[index - 1] = this[index];
+  this.length = this.length - 1;
+  return value;
+};
+microArrayPrototype.unshift = function (...values) {
+  for (var index = this.length - 1; index >= 0; index--) {
+    this[index + values.length] = this[index];
+  }
+  for (var value = 0; value < values.length; value++) this[value] = values[value];
+  return this.length;
+};
 microArrayPrototype.map = function (callback) {
   var result = [];
   for (var index = 0; index < this.length; index++) result.push(callback(this[index], index, this));

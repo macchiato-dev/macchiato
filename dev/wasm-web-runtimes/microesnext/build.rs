@@ -34,9 +34,16 @@ fn main() {
         source.push_str(&fs::read_to_string(path).expect("read MicroESNext guest environment"));
         source.push('\n');
     }
-    source.push_str(&application);
     if env::var_os("MICROESNEXT_GUEST_ENVIRONMENT").is_some() {
+        // The browser facade replaces selected globals in JavaScript. Keep
+        // those replacements lexical for application code without teaching
+        // the Rust engine anything about DOM constructor names.
+        source.push_str("\n(function (DOMRect, Date, IntersectionObserver, MutationObserver, ResizeObserver, Window, window) {\n");
+        source.push_str(&application);
         source.push_str("\nvar microESNextMarker = document.getElementById(\"editor\"); microESNextMarker.setAttribute(\"data-children\", String(microESNextMarker.childNodes.length)); dispatch(-1);\n");
+        source.push_str("})(globalThis.DOMRect, globalThis.Date, globalThis.IntersectionObserver, globalThis.MutationObserver, globalThis.ResizeObserver, globalThis.Window, globalThis.window);\n");
+    } else {
+        source.push_str(&application);
     }
     let bytecode = compile_script_with_host_globals(&source, HOST_GLOBALS).unwrap_or_else(|error| {
         panic!(

@@ -163,3 +163,41 @@ fn a_bound_function_keeps_its_receiver_and_leading_arguments() {
     machine.complete_function_bind().unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
 }
+
+#[test]
+fn a_defaulted_destructured_local_can_be_reassigned() {
+    let code = compile_script(
+        "function update(spec) { let { add = [], sort = false } = spec; \
+         if (sort) add = []; return add.length; } \
+         return update({add: [1, 2], sort: true});",
+    ).unwrap();
+    let mut memory = [0; 2048];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(0).unwrap())));
+}
+
+#[test]
+fn a_captured_local_survives_a_synchronous_callback() {
+    let code = compile_script(
+        "function call(callback) { callback(); } \
+         function count() { let value = 1; call(() => value++); value++; return value; } \
+         return count();",
+    )
+    .unwrap();
+    let mut memory = [0; 2048];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(3).unwrap())));
+}
+
+#[test]
+fn a_recursive_arrow_keeps_its_lexical_receiver() {
+    let code = compile_script(
+        "let Counter = class { constructor() { this.answer = 42; } \
+         run() { let descend = value => value ? descend(value - 1) : this.answer; \
+         return descend(3); } }; return new Counter().run();",
+    )
+    .unwrap();
+    let mut memory = [0; 2048];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}

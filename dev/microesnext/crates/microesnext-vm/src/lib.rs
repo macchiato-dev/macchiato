@@ -101,6 +101,8 @@ pub struct Machine<'code, 'memory> {
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     function_bind: Option<HostRef>,
     #[cfg(feature = "host-bindings")]
+    host_instanceof: Option<HostRef>,
+    #[cfg(feature = "host-bindings")]
     host_object_types: u64,
     last_method_key: Option<Value>,
     last_method_receiver: Option<Value>,
@@ -208,6 +210,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
             function_bind: None,
+            host_instanceof: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
             last_method_key: None,
@@ -334,6 +337,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
             function_bind: None,
+            host_instanceof: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
             last_method_key: None,
@@ -648,6 +652,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
             function_bind: self.function_bind,
+            host_instanceof: self.host_instanceof,
             #[cfg(feature = "host-bindings")]
             host_object_types: self.host_object_types,
             last_method_key: self.last_method_key,
@@ -685,16 +690,28 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     /// guest invocation. Its first argument becomes the receiver and never
     /// crosses into a host-language implementation of JavaScript semantics.
     #[cfg(all(feature = "host-bindings", feature = "method-calls", feature = "receivers"))]
-    pub fn complete_function_call(&mut self) -> Result<(), Error> {
+    pub fn complete_function_call(&mut self) -> Result<Option<Outcome>, Error> {
         let count = self.host_argument_count.take().ok_or(Error::Type)?;
         let function = self.host_call_receiver.take().ok_or(Error::Type)?;
         if count == 0 { return Err(Error::Type); }
         let first = self.core.arena().stack_len().checked_sub(count).ok_or(Error::StackUnderflow)?;
         let receiver = self.core.arena_mut().remove_stack_value_from_bottom(first)?;
+        #[cfg(feature = "host-bindings")]
+        if let Some(function) = function.as_host() {
+            let argument_count = count - 1;
+            self.host_argument_count = Some(argument_count);
+            self.host_call_receiver = Some(receiver);
+            return Ok(Some(Outcome::HostCall {
+                function,
+                receiver: Some(receiver),
+                argument_count,
+            }));
+        }
         let callable = unwrap_callable(self.core.arena(), function)?;
         let target = entry(self.core.arena(), callable)?;
         microesnext_bindings::receivers::append(self.core.arena_mut(), count - 1, receiver)?;
-        self.core.enter_call_with_arguments(callable, target, count)
+        self.core.enter_call_with_arguments(callable, target, count)?;
+        Ok(None)
     }
 
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
@@ -705,6 +722,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     pub fn install_function_bind(&mut self, function: HostRef) {
         self.function_bind = Some(function);
+    }
+
+    #[cfg(feature = "host-bindings")]
+    pub fn install_host_instanceof(&mut self, function: HostRef) {
+        self.host_instanceof = Some(function);
     }
 
     /// Complete `Function.prototype.bind` without moving the target into the
@@ -987,6 +1009,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 self.last_method_receiver = Some(receiver);
                 #[cfg(feature = "host-bindings")]
                 if let Some(object) = receiver.as_host() {
+                    if self.string_bytes(key) == Ok(b"call") {
+                        let method = self.function_call.ok_or(Error::Type)?;
+                        self.core.arena_mut().push(receiver)?;
+                        self.core.arena_mut().push(Value::from_host(method))?;
+                        return Ok(None);
+                    }
                     if self
                         .host_completion
                         .replace(HostCompletion::Method(receiver))
@@ -1127,9 +1155,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }));
                 }
                 if microesnext_objects::arrays::is_array(self.core.arena(), object) {
-                    microesnext_objects::arrays::set_property(
-                        self.core.arena_mut(), object, key, value,
-                    )?;
+                    self.set_array_property(object, key, value)?;
                     return Ok(None);
                 }
                 #[cfg(feature = "getters")]
@@ -1576,10 +1602,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
                 #[cfg(feature = "string-number-coercion")]
-                let value = microesnext_values::numbers::operations::less_than_primitives(
-                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
-                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
-                );
+                let value = if let (Ok(left), Ok(right)) =
+                    (self.string_bytes(left), self.string_bytes(right))
+                {
+                    if left < right { Value::TRUE } else { Value::FALSE }
+                } else {
+                    microesnext_values::numbers::operations::less_than_primitives(
+                        microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
+                        microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
+                    )
+                };
                 #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_values::numbers::operations::less_than(
                     self.core.arena(),
@@ -1594,10 +1626,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
                 #[cfg(feature = "string-number-coercion")]
-                let value = microesnext_values::numbers::operations::greater_than_primitives(
-                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
-                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
-                );
+                let value = if let (Ok(left), Ok(right)) =
+                    (self.string_bytes(left), self.string_bytes(right))
+                {
+                    if left > right { Value::TRUE } else { Value::FALSE }
+                } else {
+                    microesnext_values::numbers::operations::greater_than_primitives(
+                        microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
+                        microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
+                    )
+                };
                 #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_values::numbers::operations::greater_than(
                     self.core.arena(),
@@ -1744,6 +1782,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StoreEnvironmentCell => {
                 let value = self.core.arena_mut().pop()?;
                 let cell = self.core.arena_mut().pop()?;
+                self.last_left_operand = Some(cell);
+                self.last_right_operand = Some(value);
                 microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
                 Ok(None)
             }
@@ -1807,9 +1847,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     }));
                 }
                 if microesnext_objects::arrays::is_array(self.core.arena(), object) {
-                    microesnext_objects::arrays::set_property(
-                        self.core.arena_mut(), object, key, value,
-                    )?;
+                    self.set_array_property(object, key, value)?;
                 } else {
                     set(self.core.arena_mut(), object, key, value)?;
                 }
@@ -2110,6 +2148,19 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .intern(self.core.arena_mut(), b"prototype")?;
                 let constructor = self.core.arena_mut().pop()?;
                 let value = self.core.arena_mut().pop()?;
+                self.last_left_operand = Some(value);
+                self.last_right_operand = Some(constructor);
+                #[cfg(feature = "host-bindings")]
+                if constructor.as_host().is_some() {
+                    self.core.arena_mut().push(value)?;
+                    self.core.arena_mut().push(constructor)?;
+                    if self.host_argument_count.replace(2).is_some() { return Err(Error::Type); }
+                    return Ok(Some(Outcome::HostCall {
+                        function: self.host_instanceof.ok_or(Error::Type)?,
+                        receiver: None,
+                        argument_count: 2,
+                    }));
+                }
                 let result = microesnext_objects::instanceof::ordinary(
                     self.core.arena(),
                     value,
@@ -2836,9 +2887,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let object = self.core.arena_mut().pop()?;
         if microesnext_objects::arrays::is_array(self.core.arena(), object) {
             self.core.arena_mut().push(value)?;
-            microesnext_objects::arrays::set_property(
-                self.core.arena_mut(), object, key, value,
-            )?;
+            self.set_array_property(object, key, value)?;
             let value = self.core.arena_mut().pop()?;
             self.core.arena_mut().push(value)?;
             self.core.arena_mut().push(Value::UNDEFINED)?;
@@ -2862,6 +2911,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             let value = self.core.arena_mut().pop()?;
             self.core.arena_mut().push(value)?;
             self.core.arena_mut().push(Value::UNDEFINED)?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "arrays")]
+    fn set_array_property(&mut self, array: Value, key: Value, value: Value) -> Result<(), Error> {
+        if self.string_bytes(key) == Ok(b"length") {
+            let length = value.as_i30().and_then(|value| usize::try_from(value).ok())
+                .ok_or(Error::Type)?;
+            microesnext_objects::arrays::set_len(self.core.arena_mut(), array, length)?;
+        } else {
+            microesnext_objects::arrays::set_property(
+                self.core.arena_mut(), array, key, value,
+            )?;
         }
         Ok(())
     }
@@ -3732,11 +3795,10 @@ mod tests {
             .const_i30(40)
             .new_environment_cell()
             .store_local(0)
-            .load_local(0)
+            .load_local_raw(0)
             .const_i30(42)
             .store_environment_cell()
             .load_local(0)
-            .load_environment_cell()
             .op(Opcode::ReturnLocals)
             .finish();
         let mut memory = [0; 64];

@@ -125,6 +125,19 @@ pub fn delete(arena: &mut Arena<'_>, array: Value, index: usize) -> Result<bool,
     Ok(existed)
 }
 
+pub fn set_len(arena: &mut Arena<'_>, array: Value, length: usize) -> Result<Value, Error> {
+    if length >= (1 << 29) { return Err(Error::OutOfMemory); }
+    let old = len(arena, array)?;
+    let storage = storage_ref(arena, array)?;
+    let capacity = arena.values(storage)?.len();
+    for index in length..old.min(capacity) {
+        arena.set_value(storage, index, Value::EMPTY)?;
+    }
+    let reference = array_ref(arena, array)?;
+    arena.set_value(reference, LENGTH, i30(length)?)?;
+    Ok(array)
+}
+
 pub fn get_property(arena: &Arena<'_>, array: Value, key: Value) -> Result<Option<Value>, Error> {
     let properties = properties_ref(arena, array)?;
     let entries = arena.values(properties)?;

@@ -74,6 +74,8 @@ const STRING_TO_LOWER_CASE: u32 = (1 << 29) + 77;
 const STRING_SLICE: u32 = (1 << 29) + 78;
 const STRING_TO_UPPER_CASE: u32 = (1 << 29) + 79;
 const STRING_INDEX_OF: u32 = (1 << 29) + 80;
+const STRING_TRIM: u32 = (1 << 29) + 81;
+const HOST_INSTANCEOF: u32 = (1 << 29) + 82;
 
 struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
 
@@ -188,6 +190,7 @@ fn owned_string(machine: &Machine<'_, '_>, value: Value) -> Result<String, Error
         .map(String::from)
         .map_err(|_| Error::Type)
 }
+
 
 fn owned_primitive_string(machine: &mut Machine<'_, '_>, value: Value) -> Result<String, Error> {
     if let Ok(string) = owned_string(machine, value) {
@@ -346,6 +349,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
     };
     machine.install_function_call(microesnext::HostRef::new(FUNCTION_CALL).unwrap());
     machine.install_function_bind(microesnext::HostRef::new(FUNCTION_BIND).unwrap());
+    machine.install_host_instanceof(microesnext::HostRef::new(HOST_INSTANCEOF).unwrap());
     machine.install_host_object_types(
         (1_u64 << 9) | (1_u64 << 12) | (1_u64 << 37) | (1_u64 << 38)
             | (1_u64 << 41) | (1_u64 << 45) | (1_u64 << 48) | (1_u64 << 49)
@@ -413,6 +417,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             b"indexOf",
             Value::from_host(microesnext::HostRef::new(STRING_INDEX_OF).unwrap()),
         ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"trim",
+            Value::from_host(microesnext::HostRef::new(STRING_TRIM).unwrap()),
+        ))
     })();
     let string_prototype = match string_prototype.and_then(|value| {
         machine.install_string_prototype(value)?;
@@ -458,10 +468,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             return;
         }
     };
+    let mut pending_outcome = None;
     let raw = loop {
         STAGE.fetch_add(1, Ordering::Relaxed);
         FAILURE_KEY_LENGTH.store(0, Ordering::Relaxed);
-        match machine.run() {
+        let outcome = pending_outcome.take().map_or_else(|| machine.run(), Ok);
+        match outcome {
             Ok(Outcome::Complete(value)) => break value.raw(),
             Ok(Outcome::Throw(value)) => {
                 if let Ok(message) = object_get(&mut machine, value, b"message") {
@@ -873,6 +885,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 if microesnext::objects::get(machine.arena(), prototype, key)
                     .map_or(true, |value| value == microesnext::Value::UNDEFINED)
                 {
+                    remember_failure_bytes(b"array prototype missing slice");
                     DETAIL.store(prototype.raw(), Ordering::Relaxed);
                     break u32::MAX;
                 }
@@ -910,14 +923,25 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         }
                     };
                     if request_length as usize > buffer.len() {
+                        remember_failure_bytes(b"bridge request exceeds buffer");
                         DETAIL.store(request_length, Ordering::Relaxed);
                         break u32::MAX;
                     }
                     unsafe { msg(buffer.as_mut_ptr() as u32, buffer.len() as u32) }
                 };
-                let Some(result) = i32::try_from(result).ok().and_then(microesnext::Value::from_i30) else {
-                    DETAIL.store(result, Ordering::Relaxed);
-                    break u32::MAX;
+                let result = i32::try_from(result)
+                    .ok()
+                    .and_then(microesnext::Value::from_i30)
+                    .map_or_else(
+                        || machine.new_number(f64::from(result)),
+                        Ok,
+                    );
+                let result = match result {
+                    Ok(result) => result,
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 800, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
                 };
                 if let Err(error) = machine.complete_host_call(result) {
                     DETAIL.store(error as u32 + 800, Ordering::Relaxed);
@@ -925,14 +949,34 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, .. }) if function.index() == FUNCTION_CALL => {
-                if let Err(error) = machine.complete_function_call() {
-                    DETAIL.store(error as u32 + 1000, Ordering::Relaxed);
-                    break u32::MAX;
+                match machine.complete_function_call() {
+                    Ok(outcome) => pending_outcome = outcome,
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 1000, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
                 }
             }
             Ok(Outcome::HostCall { function, .. }) if function.index() == FUNCTION_BIND => {
                 if let Err(error) = machine.complete_function_bind() {
                     DETAIL.store(error as u32 + 1020, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == HOST_INSTANCEOF => {
+                let result = (|| {
+                    let value = machine.host_argument(0)?;
+                    let constructor = machine.host_argument(1)?.as_host().ok_or(Error::Type)?;
+                    let matches = match constructor.index() {
+                        UINT8_ARRAY => machine.bytes_mut(value).is_ok(),
+                        UINT16_ARRAY | UINT32_ARRAY =>
+                            microesnext::objects::arrays::is_array(machine.arena(), value),
+                        _ => false,
+                    };
+                    machine.complete_host_call(if matches { Value::TRUE } else { Value::FALSE })
+                })();
+                if let Err(error) = result {
+                    DETAIL.store(error as u32 + 1030, Ordering::Relaxed);
                     break u32::MAX;
                 }
             }
@@ -1162,6 +1206,17 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_TRIM =>
+            {
+                let result = receiver.ok_or(Error::Type)
+                    .and_then(|value| owned_string(&machine, value))
+                    .and_then(|value| machine.new_string(value.trim().as_bytes()));
+                if let Err(error) = result.and_then(|value| machine.complete_host_call(value)) {
+                    DETAIL.store(error as u32 + 2890, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == NUMBER_TO_STRING =>
             {
                 let result = (|| {
@@ -1299,17 +1354,21 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     }
                 }
             }
-            Ok(Outcome::HostCall { function, receiver, .. })
+            Ok(Outcome::HostCall { function, receiver, argument_count })
                 if function.index() == REGEXP_TEST || function.index() == REGEXP_EXEC =>
             {
+                let debug_argument = machine.host_argument(0).ok();
+                let mut regexp_step = 0_u8;
                 remember_failure_bytes(b"regexp-parts");
                 let result = (|| {
                     let receiver = receiver.ok_or(Error::Type)?;
                     remember_failure_bytes(b"regexp-text");
                     let argument = machine.host_argument(0)?;
                     let text = owned_primitive_string(&mut machine, argument)?;
+                    regexp_step = 1;
                     remember_failure_bytes(b"regexp-match");
                     let found = regexp_match(&mut machine, receiver, &text)?;
+                    regexp_step = 2;
                     if function.index() == REGEXP_TEST {
                         return Ok(if found.is_some() { Value::TRUE } else { Value::FALSE });
                     }
@@ -1337,6 +1396,43 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     let input = machine.new_string(text.as_bytes())?;
                     object_set(&mut machine, result, b"input", input)
                 })();
+                if let Err(error) = result.as_ref() {
+                    use core::fmt::Write;
+                    let argument_kind = debug_argument
+                        .and_then(Value::as_ref)
+                        .and_then(|reference| machine.arena().kind(reference).ok());
+                    let receiver_kind = receiver
+                        .and_then(Value::as_ref)
+                        .and_then(|reference| machine.arena().kind(reference).ok());
+                    let mut context = String::from("regexp call");
+                    let _ = write!(
+                        context,
+                        "; step={regexp_step}; argc={argument_count}; receiver={receiver_kind:?}; argument={argument_kind:?}; error={error:?}",
+                    );
+                    if let Some(argument) = debug_argument {
+                        if let Ok(bytes) = machine.string_bytes(argument) {
+                            if let Err(error) = core::str::from_utf8(bytes) {
+                                let _ = write!(context, "; len={}; invalid_utf8_at={}; around={:02x?}",
+                                    bytes.len(), error.valid_up_to(),
+                                    &bytes[error.valid_up_to().saturating_sub(4)..
+                                        bytes.len().min(error.valid_up_to() + 8)]);
+                            }
+                        }
+                    }
+                    if let Some(receiver) = receiver {
+                        if let Ok(source) = object_get(&mut machine, receiver, b"source")
+                            .and_then(|value| owned_string(&machine, value))
+                        {
+                            let _ = write!(context, "; source={source}");
+                        }
+                        if let Ok(flags) = object_get(&mut machine, receiver, b"flags")
+                            .and_then(|value| owned_string(&machine, value))
+                        {
+                            let _ = write!(context, "; flags={flags}");
+                        }
+                    }
+                    remember_failure_bytes(context.as_bytes());
+                }
                 match result.and_then(|value| machine.complete_host_call(value)) {
                     Ok(()) => {}
                     Err(error) => {
@@ -1346,6 +1442,16 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, .. }) => {
+                remember_failure_bytes(b"unknown host call");
+                PROGRAM_COUNTER.store(machine.program_counter() as u32, Ordering::Relaxed);
+                FRAME.store(
+                    machine.frame_header().map_or(u32::MAX, Value::raw),
+                    Ordering::Relaxed,
+                );
+                FUNCTION.store(
+                    machine.current_function_entry().map_or(u32::MAX, |value| value as u32),
+                    Ordering::Relaxed,
+                );
                 DETAIL.store(function.index(), Ordering::Relaxed);
                 break u32::MAX - 1;
             }
