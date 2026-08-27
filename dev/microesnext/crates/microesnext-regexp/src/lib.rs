@@ -6,6 +6,8 @@
 //! each translated region can be reviewed and differentially tested.
 
 mod bytecode;
+#[cfg(feature = "compile")]
+mod compile;
 #[cfg(feature = "execute")]
 mod execute;
 
@@ -13,6 +15,8 @@ pub use bytecode::{
     Flags, OpCode, HEADER_CAPTURE_COUNT, HEADER_FLAGS, HEADER_LEN,
     HEADER_REGISTER_COUNT,
 };
+#[cfg(feature = "compile")]
+pub use compile::compile;
 #[cfg(feature = "execute")]
 pub use execute::{execute, Limits};
 
