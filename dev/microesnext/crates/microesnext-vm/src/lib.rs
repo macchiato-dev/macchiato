@@ -98,6 +98,8 @@ pub struct Machine<'code, 'memory> {
     object_prototype: Option<RootId>,
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     function_call: Option<HostRef>,
+    #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+    function_bind: Option<HostRef>,
     #[cfg(feature = "host-bindings")]
     host_object_types: u64,
     last_method_key: Option<Value>,
@@ -204,6 +206,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
+            function_bind: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
             last_method_key: None,
@@ -328,6 +331,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
+            function_bind: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
             last_method_key: None,
@@ -636,6 +640,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             object_prototype: self.object_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
+            function_bind: self.function_bind,
             #[cfg(feature = "host-bindings")]
             host_object_types: self.host_object_types,
             last_method_key: self.last_method_key,
@@ -687,6 +692,53 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
     pub fn install_function_call(&mut self, function: HostRef) {
         self.function_call = Some(function);
+    }
+
+    #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
+    pub fn install_function_bind(&mut self, function: HostRef) {
+        self.function_bind = Some(function);
+    }
+
+    /// Complete `Function.prototype.bind` without moving the target into the
+    /// embedding host. Bound arguments remain ordinary guest values.
+    #[cfg(all(
+        feature = "host-bindings",
+        feature = "method-calls",
+        feature = "receivers",
+        feature = "arrays",
+        feature = "callable-objects"
+    ))]
+    pub fn complete_function_bind(&mut self) -> Result<(), Error> {
+        let count = self.host_argument_count.take().ok_or(Error::Type)?;
+        let target = self.host_call_receiver.take().ok_or(Error::Type)?;
+        let target_root = self.retain(target)?;
+        let receiver = if count == 0 {
+            Value::UNDEFINED
+        } else {
+            self.core.arena().stack_value_from_bottom(
+                self.core.arena().stack_len().checked_sub(count).ok_or(Error::StackUnderflow)?
+            )?
+        };
+        let receiver_root = self.retain(receiver)?;
+        let arguments = new_array(self.core.arena_mut())?;
+        let arguments_root = self.retain(arguments)?;
+        let first = self.core.arena().stack_len().checked_sub(count).ok_or(Error::StackUnderflow)?;
+        for index in 1..count {
+            let value = self.core.arena().stack_value_from_bottom(first + index)?;
+            let arguments = self.root(arguments_root)?;
+            array_set(self.core.arena_mut(), arguments, index - 1, value)?;
+        }
+        for _ in 0..count { self.core.arena_mut().pop()?; }
+        let target = self.root(target_root)?;
+        let receiver = self.root(receiver_root)?;
+        let arguments = self.root(arguments_root)?;
+        let bound = microesnext_objects::callable::bind(
+            self.core.arena_mut(), target, receiver, arguments,
+        )?;
+        self.release(arguments_root)?;
+        self.release(receiver_root)?;
+        self.release(target_root)?;
+        self.core.arena_mut().push(bound)
     }
 
     #[cfg(feature = "host-bindings")]
@@ -939,6 +991,15 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     && entry(self.core.arena(), unwrap_callable(self.core.arena(), receiver)?).is_ok()
                 {
                     let method = self.function_call.ok_or(Error::Type)?;
+                    self.core.arena_mut().push(receiver)?;
+                    self.core.arena_mut().push(Value::from_host(method))?;
+                    return Ok(None);
+                }
+                #[cfg(all(feature = "host-bindings", feature = "callable-objects"))]
+                if self.string_bytes(key) == Ok(b"bind")
+                    && entry(self.core.arena(), unwrap_callable(self.core.arena(), receiver)?).is_ok()
+                {
+                    let method = self.function_bind.ok_or(Error::Type)?;
                     self.core.arena_mut().push(receiver)?;
                     self.core.arena_mut().push(Value::from_host(method))?;
                     return Ok(None);
@@ -2581,8 +2642,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     }
 
     #[cfg(feature = "function-arguments")]
-    fn call_value_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
-        let function =
+    fn call_value_arguments(&mut self, mut argument_count: usize) -> Result<Option<Outcome>, Error> {
+        let mut function =
             microesnext_bindings::parameters::take_callable(self.core.arena_mut(), argument_count)?;
         self.last_call_value = Some(function);
         #[cfg(feature = "host-bindings")]
@@ -2597,8 +2658,25 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }));
         }
         #[cfg(all(feature = "callable-objects", feature = "receivers"))]
-        let receiver_aware =
-            microesnext_objects::callable::is_callable_object(self.core.arena(), function);
+        let mut bound_receiver = None;
+        #[cfg(all(feature = "callable-objects", feature = "receivers"))]
+        if microesnext_objects::callable::is_bound(self.core.arena(), function) {
+            let (target, receiver, arguments) =
+                microesnext_objects::callable::bound_parts(self.core.arena(), function)?;
+            let length = array_len(self.core.arena(), arguments)?;
+            let first = self.core.arena().stack_len().checked_sub(argument_count)
+                .ok_or(Error::StackUnderflow)?;
+            for index in 0..length {
+                let value = array_get(self.core.arena(), arguments, index)?;
+                self.core.arena_mut().insert_stack_value_from_bottom(first + index, value)?;
+            }
+            argument_count += length;
+            function = target;
+            bound_receiver = Some(receiver);
+        }
+        #[cfg(all(feature = "callable-objects", feature = "receivers"))]
+        let receiver_aware = bound_receiver.is_some()
+            || microesnext_objects::callable::is_callable_object(self.core.arena(), function);
         #[cfg(all(feature = "receivers", not(feature = "callable-objects")))]
         let receiver_aware = false;
         #[cfg(feature = "callable-objects")]
@@ -2631,7 +2709,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             microesnext_bindings::receivers::append(
                 self.core.arena_mut(),
                 argument_count,
-                Value::UNDEFINED,
+                bound_receiver.unwrap_or(Value::UNDEFINED),
             )?;
             self.core
                 .enter_call_with_arguments(function, target, argument_count + 1)?;
@@ -2646,8 +2724,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     }
 
     #[cfg(feature = "method-calls")]
-    fn call_method_arguments(&mut self, argument_count: usize) -> Result<Option<Outcome>, Error> {
-        let (method, receiver) =
+    fn call_method_arguments(&mut self, mut argument_count: usize) -> Result<Option<Outcome>, Error> {
+        let (mut method, mut receiver) =
             microesnext_objects::method_calls::take(self.core.arena_mut(), argument_count)?;
         self.last_call_value = Some(method);
         #[cfg(feature = "host-bindings")]
@@ -2664,8 +2742,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 argument_count,
             }));
         }
-        let receiver_aware =
-            microesnext_objects::callable::is_callable_object(self.core.arena(), method);
+        if microesnext_objects::callable::is_bound(self.core.arena(), method) {
+            let (target, bound_receiver, arguments) =
+                microesnext_objects::callable::bound_parts(self.core.arena(), method)?;
+            let length = array_len(self.core.arena(), arguments)?;
+            let first = self.core.arena().stack_len().checked_sub(argument_count)
+                .ok_or(Error::StackUnderflow)?;
+            for index in 0..length {
+                let value = array_get(self.core.arena(), arguments, index)?;
+                self.core.arena_mut().insert_stack_value_from_bottom(first + index, value)?;
+            }
+            argument_count += length;
+            method = target;
+            receiver = bound_receiver;
+        }
+        let receiver_aware = microesnext_objects::callable::is_callable_object(self.core.arena(), method)
+            || self.last_call_value.is_some_and(|value| microesnext_objects::callable::is_bound(self.core.arena(), value));
         if method == Value::UNDEFINED {
             return Err(Error::StackUnderflow);
         }

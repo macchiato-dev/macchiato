@@ -22,6 +22,7 @@ static SYMBOL_SEQUENCE: AtomicU32 = AtomicU32::new(0);
 
 const OBJECT: u32 = 15;
 const ARRAY: u32 = 0;
+const BOOLEAN: u32 = 1;
 const PROXY: u32 = 17;
 const ERROR: u32 = 4;
 const RANGE_ERROR: u32 = 18;
@@ -49,7 +50,9 @@ const BRIDGE: u32 = 33;
 const GLOBAL_THIS: u32 = 41;
 const INSTALL_ARRAY_PROTOTYPE: u32 = 59;
 const FUNCTION_CALL: u32 = (1 << 29) + 60;
+const FUNCTION_BIND: u32 = (1 << 29) + 61;
 const HOST_REFERENCE: u32 = 43;
+const IS_FINITE: u32 = 44;
 const RELEASE_HOST_REFERENCE: u32 = 53;
 const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
@@ -68,6 +71,7 @@ const NUMBER_TO_STRING: u32 = (1 << 29) + 75;
 const STRING_REPLACE: u32 = (1 << 29) + 76;
 const STRING_TO_LOWER_CASE: u32 = (1 << 29) + 77;
 const STRING_SLICE: u32 = (1 << 29) + 78;
+const STRING_TO_UPPER_CASE: u32 = (1 << 29) + 79;
 
 struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
 
@@ -339,6 +343,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         }
     };
     machine.install_function_call(microesnext::HostRef::new(FUNCTION_CALL).unwrap());
+    machine.install_function_bind(microesnext::HostRef::new(FUNCTION_BIND).unwrap());
     machine.install_host_object_types(
         (1_u64 << 9) | (1_u64 << 12) | (1_u64 << 37) | (1_u64 << 38)
             | (1_u64 << 41) | (1_u64 << 45) | (1_u64 << 48) | (1_u64 << 49)
@@ -387,6 +392,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             prototype,
             b"toLowerCase",
             Value::from_host(microesnext::HostRef::new(STRING_TO_LOWER_CASE).unwrap()),
+        ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"toUpperCase",
+            Value::from_host(microesnext::HostRef::new(STRING_TO_UPPER_CASE).unwrap()),
         ))
         .and_then(|prototype| object_set(
             &mut machine,
@@ -552,6 +563,13 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     }
                 }
             }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == DATE && machine.string_bytes(key) == Ok(b"now") =>
+            {
+                machine.complete_host_operation(Value::from_host(
+                    microesnext::HostRef::new(RUNTIME_DATE_NOW).unwrap(),
+                )).unwrap();
+            }
             Ok(Outcome::HostGet { object, key, .. }) if object.index() == SYMBOL => {
                 let result = match machine.string_bytes(key) {
                     Ok(b"hasInstance") => machine.intern_atom(b"@@hasInstance"),
@@ -637,6 +655,16 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 };
                 if let Err(error) = machine.complete_host_call(object) {
                     DETAIL.store(error as u32 + 200, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == BOOLEAN => {
+                let value = machine.host_argument(0).unwrap_or(Value::UNDEFINED);
+                let result = microesnext::logical_operations::is_truthy(machine.arena(), value)
+                    .map(|truthy| if truthy { Value::TRUE } else { Value::FALSE })
+                    .and_then(|value| machine.complete_host_call(value));
+                if let Err(error) = result {
+                    DETAIL.store(error as u32 + 2600, Ordering::Relaxed);
                     break u32::MAX;
                 }
             }
@@ -892,10 +920,26 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     break u32::MAX;
                 }
             }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == FUNCTION_BIND => {
+                if let Err(error) = machine.complete_function_bind() {
+                    DETAIL.store(error as u32 + 1020, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
             Ok(Outcome::HostCall { function, .. }) if function.index() == HOST_REFERENCE => {
                 let reference = machine.host_argument(0).unwrap_or(Value::UNDEFINED);
                 if let Err(error) = machine.complete_host_call(reference) {
                     DETAIL.store(error as u32 + 1100, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == IS_FINITE => {
+                let result = machine.host_argument(0)
+                    .and_then(|value| machine.number(value))
+                    .map(|number| if number.is_finite() { Value::TRUE } else { Value::FALSE })
+                    .and_then(|value| machine.complete_host_call(value));
+                if let Err(error) = result {
+                    DETAIL.store(error as u32 + 2875, Ordering::Relaxed);
                     break u32::MAX;
                 }
             }
@@ -1029,6 +1073,20 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 2800, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_TO_UPPER_CASE =>
+            {
+                let result = receiver.ok_or(Error::Type)
+                    .and_then(|value| owned_string(&machine, value))
+                    .and_then(|value| machine.new_string(value.to_uppercase().as_bytes()));
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2825, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }

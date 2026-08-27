@@ -134,5 +134,13 @@ microArrayPrototype.sort = function (compare) {
   }
   return this;
 };
+microArrayPrototype.reverse = function () {
+  for (var left = 0, right = this.length - 1; left < right; left++, right--) {
+    var value = this[left];
+    this[left] = this[right];
+    this[right] = value;
+  }
+  return this;
+};
 
 installArrayPrototype(microArrayPrototype);

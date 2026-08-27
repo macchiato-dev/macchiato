@@ -17,6 +17,8 @@ pub fn type_of(arena: &mut Arena<'_>, value: Value) -> Result<Value, Error> {
             BlockKind::Closure => b"function",
             #[cfg(feature = "callable-objects")]
             BlockKind::CallableObject => b"function",
+            #[cfg(feature = "callable-objects")]
+            BlockKind::BoundCallable => b"function",
             #[cfg(feature = "class-constructors")]
             BlockKind::ClassConstructor => b"function",
             #[cfg(feature = "numbers")]

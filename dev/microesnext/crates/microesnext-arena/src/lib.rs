@@ -56,6 +56,8 @@ pub enum BlockKind {
     ClassConstructor = 29,
     #[cfg(feature = "getters")]
     Getter = 30,
+    #[cfg(feature = "callable-objects")]
+    BoundCallable = 31,
 }
 
 #[inline(always)]
@@ -809,6 +811,8 @@ impl<'memory> Arena<'memory> {
             29 => Ok(BlockKind::ClassConstructor),
             #[cfg(feature = "getters")]
             30 => Ok(BlockKind::Getter),
+            #[cfg(feature = "callable-objects")]
+            31 => Ok(BlockKind::BoundCallable),
             _ => Err(Error::DanglingReference),
         }
     }

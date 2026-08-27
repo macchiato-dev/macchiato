@@ -91,6 +91,41 @@ pub fn is_callable_object(arena: &Arena<'_>, value: Value) -> bool {
         == Some(BlockKind::CallableObject)
 }
 
+/// Bind a callable to a receiver and an optional leading argument array.
+pub fn bind(
+    arena: &mut Arena<'_>,
+    callable: Value,
+    receiver: Value,
+    arguments: Value,
+) -> Result<Value, Error> {
+    let callable = if is_callable_object(arena, callable) {
+        self::callable(arena, callable)?
+    } else {
+        callable
+    };
+    if !microesnext_arena::closures::is_function(arena, callable)
+        || !crate::arrays::is_array(arena, arguments)
+    {
+        return Err(Error::Type);
+    }
+    let mut fields = [callable, receiver, arguments];
+    let reference = arena.allocate_values(BlockKind::BoundCallable, &mut fields, &mut [])?;
+    Ok(Value::from_ref(reference))
+}
+
+pub fn is_bound(arena: &Arena<'_>, value: Value) -> bool {
+    value.as_ref().and_then(|reference| arena.kind(reference).ok())
+        == Some(BlockKind::BoundCallable)
+}
+
+pub fn bound_parts(arena: &Arena<'_>, value: Value) -> Result<(Value, Value, Value), Error> {
+    let reference = value.as_ref().ok_or(Error::Type)?;
+    if arena.kind(reference)? != BlockKind::BoundCallable { return Err(Error::Type); }
+    let values = arena.values(reference)?;
+    if values.len() != 3 { return Err(Error::DanglingReference); }
+    Ok((Value::from_raw(values[0]), Value::from_raw(values[1]), Value::from_raw(values[2])))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

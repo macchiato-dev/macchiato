@@ -235,6 +235,8 @@ const fn is_object_kind(kind: BlockKind) -> bool {
         BlockKind::Object => true,
         #[cfg(feature = "callable-objects")]
         BlockKind::CallableObject => true,
+        #[cfg(feature = "callable-objects")]
+        BlockKind::BoundCallable => true,
         #[cfg(feature = "class-constructors")]
         BlockKind::ClassConstructor => true,
         _ => false,
@@ -248,6 +250,8 @@ const fn object_field_count(kind: BlockKind) -> usize {
         BlockKind::Object => 2,
         #[cfg(feature = "callable-objects")]
         BlockKind::CallableObject => 3,
+        #[cfg(feature = "callable-objects")]
+        BlockKind::BoundCallable => 0,
         #[cfg(feature = "class-constructors")]
         BlockKind::ClassConstructor => 3,
         _ => 0,
