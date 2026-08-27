@@ -6,6 +6,7 @@ const example = resolve(new URL(".", import.meta.url).pathname);
 const runtime = resolve(example, "../../quickjs");
 const environment = resolve(example, "src/microquickjs-dom.js");
 const canonicalEnvironment = resolve(example, "generated/canonical-dom.js");
+const microESNextEnvironment = resolve(example, "generated/microesnext-dom.js");
 const output = resolve(runtime,
   "target/wasm32-unknown-unknown/release/wasm_web_container_quickjs_runtime.wasm");
 const requestedTargets = new Set((process.env.CODEMIRROR_TARGETS ||
@@ -82,14 +83,22 @@ console.log(`microquickjs multi: ${(await stat(microMultiDestination)).size} byt
 }
 
 const microESNextRuntime = resolve(example, "../../microesnext");
-execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
-  cwd: microESNextRuntime,
-  env: { ...process.env, MICROESNEXT_GUEST_ENVIRONMENT: canonicalEnvironment,
-    MICROESNEXT_APPLICATION_SOURCE: resolve(example, "generated/codemirror-simple.js") },
-  stdio: "inherit",
-});
 const microESNextOutput = resolve(microESNextRuntime,
   "target/wasm32-unknown-unknown/release/wasm_web_machine_microesnext_runtime.wasm");
-const microESNextDestination = resolve(example, "generated/codemirror-microesnext.wasm");
-await copyFile(microESNextOutput, microESNextDestination);
-console.log(`microesnext: ${(await stat(microESNextDestination)).size} bytes`);
+for (const name of ["simple", "multi"]) {
+  if (!requestedTargets.has(name)) continue;
+  execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+    cwd: microESNextRuntime,
+    env: { ...process.env, MICROESNEXT_GUEST_ENVIRONMENT: microESNextEnvironment,
+      MICROESNEXT_APPLICATION_SOURCE: resolve(example,
+        name !== "simple" ?
+          `generated/codemirror-${name}-microesnext.js` :
+          `generated/codemirror-${name}.js`) },
+    stdio: "inherit",
+  });
+  const filename = name === "simple" ? "codemirror-microesnext.wasm" :
+    `codemirror-${name}-microesnext.wasm`;
+  const destination = resolve(example, `generated/${filename}`);
+  await copyFile(microESNextOutput, destination);
+  console.log(`microesnext ${name}: ${(await stat(destination)).size} bytes`);
+}

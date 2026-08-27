@@ -11,7 +11,7 @@ const machineModule = resolve(root,
 const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
   ".wasm": "application/wasm" };
 
-test("tabbed editors preserve state and search across files in both runtimes", async (context) => {
+test("tabbed editors preserve state and search across files in all runtimes", async (context) => {
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://example.test").pathname;
     if (pathname === "/wasm-web-machine.js") {
@@ -30,27 +30,19 @@ test("tabbed editors preserve state and search across files in both runtimes", a
     }
   }).listen(0, "127.0.0.1");
   await new Promise(resolveReady => server.once("listening", resolveReady));
-  const browser = await chromium.launch();
   context.after(async () => {
-    await browser.close();
     await new Promise(resolveClosed => server.close(resolveClosed));
   });
   const base = `http://127.0.0.1:${server.address().port}`;
 
-  const smoke = await browser.newPage();
-  const smokeErrors = [];
-  smoke.on("pageerror", error => smokeErrors.push(error.stack || error.message));
-  await smoke.goto(`${base}/microesnext/`);
-  await smoke.waitForSelector("body[data-ready]");
-  assert.equal(await smoke.locator("#status").innerText(),
-    "MicroESNext executed 40 + 2 in WebAssembly.");
-  assert.deepEqual(smokeErrors, []);
-  await smoke.close();
-
   for (const [runtime, path] of [
     ["quickjs", "/multi/"],
     ["microquickjs", "/microquickjs/multi/"],
+    ["microesnext", "/microesnext/multi/"],
   ]) {
+    // A fresh browser also verifies a cold runtime load and lets the previous
+    // Wasm linear memory be returned before starting the next engine.
+    const browser = await chromium.launch();
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
     const errors = [];
     page.on("pageerror", error => errors.push(error.stack || error.message));
@@ -77,7 +69,8 @@ test("tabbed editors preserve state and search across files in both runtimes", a
     await page.getByRole("tab", { name: "example.ts" }).click();
     assert.match(await content.innerText(), /\/\/ preserved/);
     assert.deepEqual(errors, []);
-    await page.screenshot({ path: `/root/artifacts/${runtime}-multi-codemirror.png` });
+    await page.screenshot({ path: `/root/macchiato-work/${runtime}-multi-codemirror.png` });
     await page.close();
+    await browser.close();
   }
 });

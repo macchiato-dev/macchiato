@@ -10,7 +10,15 @@ const ponyfills = new URL("generated/microquickjs-ponyfills.js", import.meta.url
 const microModern = new URL("generated/codemirror-micro-modern.js", import.meta.url).pathname;
 const micro = new URL("generated/codemirror-micro.js", import.meta.url).pathname;
 const microRuntime = new URL("generated/microquickjs-runtime.js", import.meta.url).pathname;
+const microESNextMulti = new URL(
+  "generated/codemirror-multi-microesnext.js", import.meta.url).pathname;
+const microESNextMultiModern = new URL(
+  "generated/codemirror-multi-microesnext-modern.js", import.meta.url).pathname;
 const canonicalEnvironment = new URL("generated/canonical-dom.js", import.meta.url);
+const microESNextEnvironment = new URL(
+  "generated/microesnext-dom.js", import.meta.url);
+const microESNextPromise = new URL(
+  "generated/microesnext-promise.js", import.meta.url);
 
 await mkdir(generated, { recursive: true });
 
@@ -42,6 +50,17 @@ await writeFile(canonicalEnvironment,
       "};")
     .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
   "\n" + fullEngineSurface);
+
+await build({
+  entryPoints: [new URL("src/microesnext-promise.js", import.meta.url).pathname],
+  bundle: true,
+  format: "iife",
+  target: "es2022",
+  outfile: microESNextPromise.pathname,
+});
+await writeFile(microESNextEnvironment,
+  await readFile(microESNextPromise, "utf8") + "\n" +
+  await readFile(canonicalEnvironment, "utf8"));
 
 const workspace = new URL("../../", import.meta.url);
 const fixtureFiles = {
@@ -87,6 +106,13 @@ for (const [entry, outfile] of [
 }
 
 await build({
+  entryPoints: [new URL("src/multi-microesnext-entry.js", import.meta.url).pathname],
+  bundle: true,
+  format: "iife",
+  target: "es2022",
+  outfile: microESNextMultiModern,
+});
+await build({
   entryPoints: [new URL("src/microquickjs-ponyfills.js", import.meta.url).pathname],
   bundle: true,
   format: "iife",
@@ -109,6 +135,14 @@ const lowerForMicroQuickJS = async source => (await transformAsync(source, {
 
 const modernApplication = await readFile(modern, "utf8");
 await writeFile(microModern, modernApplication);
+const lowerForMicroESNext = source => source
+  .replace(/!--([A-Za-z_$][\w$]*)\.depth/g,
+    "!($1.depth = $1.depth - 1)")
+  .replace("function crelt() {", "function crelt(...arguments) {")
+  .replace("constructor() {\n      super(...arguments);",
+    "constructor() {\n      super();");
+await writeFile(microESNextMulti, lowerForMicroESNext(
+  await readFile(microESNextMultiModern, "utf8")));
 await writeFile(micro, await lowerForMicroQuickJS(modernApplication));
 await writeFile(new URL("generated/codemirror-multi-micro.js", import.meta.url),
   await lowerForMicroQuickJS(await readFile(

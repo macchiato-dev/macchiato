@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in MicroESNext</title>
+<link rel="stylesheet" href="../../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-multi-microesnext.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document);
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroESNext multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
