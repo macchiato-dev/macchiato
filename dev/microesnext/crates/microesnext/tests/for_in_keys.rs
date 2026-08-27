@@ -93,3 +93,47 @@ fn repeated_closure_creation_does_not_nest_environment_cells() {
     let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
     assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
 }
+
+#[test]
+fn static_factory_preserves_instance_prototype_methods() {
+    let code = compile_script(
+        "let Facet = class Inner { static define() { return new Inner(); } of(value) { return value; } }; let keymap = Facet.define(); for (let i = 0; i < 80; i++) { let churn = { value: [i, i + 1] }; } return keymap.of(42);",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1536];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn instance_method_constructs_an_anonymous_class_with_arguments() {
+    let code = compile_script(
+        "let nextID = 0; let Provider = class { constructor(deps, facet, kind, value) { this.deps = deps; this.facet = facet; this.kind = kind; this.value = value; this.id = nextID++; } }; let Facet = class Inner { static define() { return new Inner(); } of(value) { return new Provider([], this, 0, value); } }; let facet = Facet.define(); for (let i = 0; i < 40; i++) { let churn = { name: 'allocation-' + i, values: [i, i + 1, i + 2] }; } let provider = facet.of({ answer: 42 }); return provider.value.answer;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1536];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn class_methods_keep_independent_capture_tables() {
+    let code = compile_script(
+        "let count = 0; let Provider = class { constructor(value) { this.value = value; } }; let Facet = class Inner { constructor() { this.id = count++; } get reader() { return this; } static define() { return new Inner(); } of(value) { return new Provider(value); } compute() { return count; } }; return Facet.define().of(42).value;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn class_method_captures_a_later_lexical_binding() {
+    let code = compile_script(
+        "var Facet = class { of(value) { return new Provider(value); } }; var Provider = class { constructor(value) { this.value = value; } }; return new Facet().of(42).value;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 1024];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}

@@ -96,7 +96,7 @@ pub fn get_own(arena: &Arena<'_>, object: Value, key: Value) -> Result<Option<Va
         return Err(Error::DanglingReference);
     }
     for pair in entries.chunks_exact(2) {
-        if Value::from_raw(pair[0]) == key {
+        if property_keys_equal(arena, Value::from_raw(pair[0]), key)? {
             return Ok(Some(Value::from_raw(pair[1])));
         }
     }
@@ -135,7 +135,7 @@ pub fn set(arena: &mut Arena<'_>, object: Value, key: Value, value: Value) -> Re
         return Err(Error::DanglingReference);
     }
     for index in (0..entries.len()).step_by(2) {
-        if Value::from_raw(entries[index]) == key {
+        if property_keys_equal(arena, Value::from_raw(entries[index]), key)? {
             arena.set_value(properties, index + 1, value)?;
             return Ok(object);
         }
@@ -165,13 +165,30 @@ pub fn delete(arena: &mut Arena<'_>, object: Value, key: Value) -> Result<bool, 
         return Err(Error::DanglingReference);
     }
     for index in (0..entries.len()).step_by(2) {
-        if Value::from_raw(entries[index]) == key {
+        if property_keys_equal(arena, Value::from_raw(entries[index]), key)? {
             arena.set_value(properties, index, Value::EMPTY)?;
             arena.set_value(properties, index + 1, Value::EMPTY)?;
             return Ok(true);
         }
     }
     Ok(true)
+}
+
+/// Property-name strings compare by contents, even when one came from the
+/// atom table and the other was constructed dynamically. Symbols and all
+/// other keys retain identity semantics.
+fn property_keys_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    if left == right {
+        return Ok(true);
+    }
+    let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) else {
+        return Ok(false);
+    };
+    let is_string = |kind| matches!(kind, BlockKind::Bytes | BlockKind::String);
+    if !is_string(arena.kind(left)?) || !is_string(arena.kind(right)?) {
+        return Ok(false);
+    }
+    Ok(arena.bytes(left)? == arena.bytes(right)?)
 }
 
 pub fn prototype(arena: &Arena<'_>, object: Value) -> Result<Value, Error> {

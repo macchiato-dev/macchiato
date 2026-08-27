@@ -102,6 +102,7 @@ pub struct Machine<'code, 'memory> {
     host_object_types: u64,
     last_method_key: Option<Value>,
     last_method_receiver: Option<Value>,
+    last_constructor: Option<Value>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -146,6 +147,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_object_types: 0,
             last_method_key: None,
             last_method_receiver: None,
+            last_constructor: None,
         }
     }
 
@@ -264,6 +266,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_object_types: 0,
             last_method_key: None,
             last_method_receiver: None,
+            last_constructor: None,
         })
     }
 
@@ -312,6 +315,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn last_method_receiver(&self) -> Option<Value> {
         self.last_method_receiver
+    }
+
+    pub fn last_constructor(&self) -> Option<Value> {
+        self.last_constructor
     }
 
     pub fn frame_base(&self) -> usize {
@@ -537,6 +544,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             host_object_types: self.host_object_types,
             last_method_key: self.last_method_key,
             last_method_receiver: self.last_method_receiver,
+            last_constructor: self.last_constructor,
         })
     }
 
@@ -1217,6 +1225,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     self.core.arena_mut(),
                     argument_count,
                 )?;
+                self.last_constructor = Some(constructor);
                 #[cfg(feature = "host-bindings")]
                 if let Some(constructor) = constructor.as_host() {
                     if self.host_argument_count.replace(argument_count).is_some() {
@@ -2575,6 +2584,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let value = self.core.arena_mut().pop()?;
         let key = self.core.arena_mut().pop()?;
         let object = self.core.arena_mut().pop()?;
+        self.last_method_key = Some(key);
+        self.last_method_receiver = Some(object);
         let current = get(self.core.arena(), object, key)?;
         if let Some(function) =
             microesnext_objects::getters::setter_callable(self.core.arena(), current)?
@@ -2585,7 +2596,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             microesnext_bindings::receivers::append(self.core.arena_mut(), 1, object)?;
             self.core.enter_call_with_arguments(function, target, 2)?;
         } else {
+            // `set` may compact the arena while extending the property table.
+            // Keep the expression result on the VM stack so compaction updates
+            // it before the assignment expression places it back on top.
+            self.core.arena_mut().push(value)?;
             set(self.core.arena_mut(), object, key, value)?;
+            let value = self.core.arena_mut().pop()?;
             self.core.arena_mut().push(value)?;
             self.core.arena_mut().push(Value::UNDEFINED)?;
         }

@@ -1989,29 +1989,14 @@ globalThis.DOMRectReadOnly = globalThis.DOMRect;
 var projectedClasses = Object.create(null),
   projectedClassCount = 0;
 String.prototype.replace = function (search, replacement) {
+  if (typeof replacement !== "function") {
+    return globalThis.__wwcStringReplace(String(this), search, replacement);
+  }
   var source = String(this),
     output = "",
     at = 0,
-    match;
-  function append(end) {
-    for (; at < end; at++) output += source[at];
-  }
-  function replacementFor(found) {
-    if (typeof replacement === "function") {
-      return String(replacement(found[0], found[1], found[2], found[3], found.index, source));
-    }
-    var text = String(replacement),
-      result = "";
-    for (var index = 0; index < text.length; index++) {
-      if (text[index] === "$" && text[index + 1] === "&") {
-        result += found[0];
-        index++;
-      } else if (text[index] === "$" && text[index + 1] >= "1" && text[index + 1] <= "9") {
-        result += found[+text[++index]] || "";
-      } else result += text[index];
-    }
-    return result;
-  }
+    match = null,
+    global = false;
   if (typeof search === "string") {
     var foundAt = -1;
     for (var candidate = 0; candidate + search.length <= source.length; candidate++) {
@@ -2030,24 +2015,36 @@ String.prototype.replace = function (search, replacement) {
     if (foundAt < 0) return source;
     match = [search];
     match.index = foundAt;
-    append(foundAt);
-    output += replacementFor(match);
-    at = foundAt + search.length;
   } else {
     search.lastIndex = 0;
-    while (match = search.exec(source)) {
-      append(match.index);
-      output += replacementFor(match);
-      at = match.index + match[0].length;
-      var global = false;
-      for (var flag = 0; search.flags && flag < search.flags.length; flag++) {
-        if (search.flags[flag] === "g") global = true;
-      }
-      if (!global) break;
-      if (!match[0].length) search.lastIndex++;
+    match = search.exec(source);
+    for (var flag = 0; search.flags && flag < search.flags.length; flag++) {
+      if (search.flags[flag] === "g") global = true;
     }
   }
-  append(source.length);
+  while (match) {
+    for (; at < match.index; at++) output += source[at];
+    var inserted = "";
+    if (typeof replacement === "function") {
+      inserted = String(replacement(match[0], match[1], match[2], match[3], match.index, source));
+    } else {
+      var text = String(replacement);
+      for (var index = 0; index < text.length; index++) {
+        if (text[index] === "$" && text[index + 1] === "&") {
+          inserted += match[0];
+          index++;
+        } else if (text[index] === "$" && text[index + 1] >= "1" && text[index + 1] <= "9") {
+          inserted += match[+text[++index]] || "";
+        } else inserted += text[index];
+      }
+    }
+    output += inserted;
+    at = match.index + match[0].length;
+    if (!global) break;
+    if (!match[0].length) search.lastIndex++;
+    match = search.exec(source);
+  }
+  for (; at < source.length; at++) output += source[at];
   return output;
 };
 function projectClassToken(token) {
