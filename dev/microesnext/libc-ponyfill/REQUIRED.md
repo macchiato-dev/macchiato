@@ -15,13 +15,20 @@ appears here.
   - `memmove(dest, src, count)`
   - `memset(dest, value, count)`
   - `strlen(string)`
+- `stdint.h`
+  - Exact-width signed and unsigned 8-, 16-, 32-, and 64-bit types
+  - `intptr_t` and `uintptr_t`
+  - `INT32_MIN`, `INT32_MAX`, `INT64_MAX`, and `INTPTR_MAX`
+- `inttypes.h`
+  - `PRIo32`
+  - `PRIo64`
+  - `PRIu64`
 - Compiler headers
   - `stdarg.h`: variable-argument builtins
   - `stddef.h`: `size_t`
 
 ## Next to excerpt
 
-- Fixed-width integer types and the five `PRI` format macros.
 - Allocation, termination, and absolute-value functions.
 - The formatting declarations retained by the selected build configuration.
 - Floating-point classifications and operations.

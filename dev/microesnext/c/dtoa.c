@@ -23,8 +23,6 @@
  */
 #include "ponyfill/stdlib.h"
 #include "ponyfill/stdio.h"
-#include "stdarg.h"
-#include "ponyfill/inttypes.h"
 #include "ponyfill/string.h"
 #include "ponyfill/assert.h"
 #include "ponyfill/math.h"
