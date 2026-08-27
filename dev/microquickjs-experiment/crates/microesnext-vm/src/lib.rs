@@ -209,7 +209,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             object_prototype: None,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: None,
+            #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_bind: None,
+            #[cfg(feature = "host-bindings")]
             host_instanceof: None,
             #[cfg(feature = "host-bindings")]
             host_object_types: 0,
@@ -516,6 +518,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
     }
 
     /// Inspect the currently installed array prototype from an embedding.
+    #[cfg(all(feature = "arrays", feature = "objects"))]
     pub fn array_prototype_value(&self) -> Result<Option<Value>, Error> {
         self.array_prototype.map(|root| self.root(root)).transpose()
     }
@@ -659,7 +662,9 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             object_prototype: self.object_prototype,
             #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_call: self.function_call,
+            #[cfg(all(feature = "host-bindings", feature = "method-calls"))]
             function_bind: self.function_bind,
+            #[cfg(feature = "host-bindings")]
             host_instanceof: self.host_instanceof,
             #[cfg(feature = "host-bindings")]
             host_object_types: self.host_object_types,
@@ -1990,17 +1995,6 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 } else {
                     value
                 };
-                #[cfg(feature = "getters")]
-                if let Some(function) =
-                    microesnext_objects::getters::callable(self.core.arena(), value)?
-                {
-                    let target_entry = entry(self.core.arena(), function)?;
-                    microesnext_bindings::receivers::append(
-                        self.core.arena_mut(), 0, target,
-                    )?;
-                    self.core.enter_call_with_arguments(function, target_entry, 1)?;
-                    return Ok(None);
-                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -2404,6 +2398,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     #[cfg(not(feature = "objects"))]
                     return Err(Error::Type);
                 };
+                #[cfg(feature = "getters")]
+                if let Some(function) =
+                    microesnext_objects::getters::callable(self.core.arena(), value)?
+                {
+                    let target_entry = entry(self.core.arena(), function)?;
+                    microesnext_bindings::receivers::append(
+                        self.core.arena_mut(), 0, target,
+                    )?;
+                    self.core.enter_call_with_arguments(function, target_entry, 1)?;
+                    return Ok(None);
+                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }

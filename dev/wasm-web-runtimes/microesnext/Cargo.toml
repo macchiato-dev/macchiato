@@ -9,12 +9,12 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlmalloc = { version = "0.2", features = ["global"] }
-microesnext = { path = "../../microesnext/crates/microesnext", features = ["full"] }
+microesnext = { path = "../../microquickjs-experiment/crates/microesnext", features = ["full"] }
 libm = "0.2"
-microesnext-regexp = { path = "../../microesnext/crates/microesnext-regexp" }
+microesnext-regexp = { path = "../../microquickjs-experiment/crates/microesnext-regexp" }
 
 [build-dependencies]
-microesnext-compiler = { path = "../../microesnext/crates/microesnext-compiler" }
+microesnext-compiler = { path = "../../microquickjs-experiment/crates/microesnext-compiler" }
 
 [profile.release]
 codegen-units = 1

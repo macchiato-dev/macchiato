@@ -1,22 +1,155 @@
-# MicroESNext
+# MicroQuickJS Experiment
 
-MicroESNext is an experimental small JavaScript engine being rebuilt in Rust
-around the compact-machine lessons of
-[MicroQuickJS](https://github.com/bellard/mquickjs). It uses four-byte tagged
-values, relocatable word offsets, one bounded address space, stack bytecode,
-and no native recursion for guest calls. Async suspension is part of the VM
-frame design rather than a translation to Rust futures.
+This directory preserves a runnable research prototype formerly called
+MicroESNext. It explores a Rust-native JavaScript engine inspired by
+[MicroQuickJS](https://github.com/bellard/mquickjs), including four-byte tagged
+values, relocatable word offsets, a bounded address space, stack bytecode, and
+guest calls that do not recurse through the native stack.
 
-The previous C implementation remains temporarily in `src/` as a behavioral
-oracle. New engine code lives in the Cargo workspace under `crates/`; it does
-not link to that C implementation.
+This is not a complete or conforming JavaScript engine. It is kept because its
+tests and browser demos exercised useful ideas: removable language
+capabilities, a `no_std` interpreter, asynchronous suspension represented in
+VM frames, host references, and CodeMirror running through a sandboxed DOM
+bridge. The internal crate and API names remain `microesnext` so the research
+artifact stays runnable without a disruptive cosmetic rewrite.
 
-The 1,984-byte Wasm build is the interpreter kernel: it proves the fixed core
-can execute bytecode, but is not presented as the smallest generally useful
-language runtime. The first practical boundary is the 6,506-byte minimal
-programmable runtime. It composes locals, boolean control flow, and removable
-i30 arithmetic and comparisons, and executes a compiled factorial loop with
-an explicit relational stopping condition.
+## Status and scope
+
+The prototype is wrapped up rather than developed toward production. Changes
+should be limited to keeping its existing tests and demonstrations runnable,
+fixing a regression that blocks a documented demonstration, or improving the
+accuracy of this record. Passing tests prove only the behavior they exercise.
+They do not establish ECMAScript conformance, memory safety for arbitrary
+programs, or suitability for hostile code.
+
+The wrap-up demonstration is the three-file tabbed CodeMirror example with
+search across files. It also runs on the repository's QuickJS and MicroQuickJS
+runtimes, making it a useful differential fixture. The larger `full` page is
+preserved as an incomplete stress fixture, not a wrap-up requirement: opening
+search after its completion and folding interactions can still expose a raw
+getter to numeric coercion and stop the guest. The prototype remains
+observably slower than MicroQuickJS in this workload, and interaction testing
+has uncovered semantic and lifetime bugs that unit tests did not predict.
+
+Run the focused regression suite used by the wrap-up with:
+
+```sh
+cd dev/microquickjs-experiment
+cargo test -p microesnext --features full --test host-define-property
+```
+
+The package-level preservation suite also builds the retained C reference and
+passes with:
+
+```sh
+npm test
+```
+
+Build the CodeMirror artifacts from the repository root with:
+
+```sh
+CODEMIRROR_TARGETS=multi \
+  node dev/wasm-web-runtimes/examples/codemirror/build-wasm.js
+```
+
+The browser regression tests are:
+
+```sh
+node --test \
+  dev/wasm-web-runtimes/examples/codemirror/test/multi-browser.test.js
+```
+
+A comprehensive `cargo test --workspace --all-features` is intentionally
+recorded as non-green: it reaches
+`computed_object_properties_use_object_keys_not_array_offsets` and exhausts
+that test's small fixed arena. Bare `cargo test --workspace` also attempts to
+compile feature-dependent integration tests against the empty default feature
+set because those tests do not declare Cargo `required-features`. These are
+preserved limitations, not wrap-up gates.
+
+## Memory-management limitation
+
+The Rust-native implementation does **not** reproduce MicroQuickJS's compact
+memory system. Similar vocabulary and four-byte values should not obscure the
+difference. In particular, this prototype does not exactly reproduce
+MicroQuickJS's:
+
+- single compact heap and opposing VM-stack layout;
+- internal pointer and offset representation;
+- complete root set and rooting lifetimes;
+- allocation and object lifetime rules;
+- mark traversal and garbage-collection behavior; or
+- pointer-threaded relocation and in-place heap compaction.
+
+The prototype instead composes Rust crates around its own arena, roots, block
+kinds, and feature boundaries. That made isolated ideas easy to test, but it
+also introduced abstraction boundaries and bookkeeping that differ from the
+engine used as inspiration. Correct behavior in a small test therefore does
+not prove that a reference remains valid through every allocation, callback,
+or collection point. This architectural mismatch is also a likely contributor
+to the CodeMirror performance gap; it should not be papered over with isolated
+micro-optimizations.
+
+## Correctness and performance record
+
+- The parser and compiler implement a deliberately incomplete subset of
+  JavaScript. Unsupported and untested syntax remains unsupported.
+- Host-object, event, accessor, selection, drag, timer, and garbage-collection
+  interactions have required fixes discovered through browser use.
+- The full CodeMirror fixture is preserved specifically because it exceeds the
+  supported demonstration and records remaining failures. It is not a claim
+  that arbitrary CodeMirror extensions or browser applications work.
+- The capability crate graph grew more elaborate than the corresponding
+  compact MicroQuickJS mechanisms. Feature isolation measurements are useful
+  research data, but the number of boundaries is not the desired final design.
+- Browser startup and editing are slower than the MicroQuickJS demonstration.
+  No stable performance guarantee is recorded for this prototype.
+- The old C sources under `src/` are reference material. The Rust engine does
+  not share a live MicroQuickJS context with them.
+
+## Next experiment: replace MicroQuickJS in place
+
+The follow-up should begin with an exact C build of MicroQuickJS, including its
+real allocator, heap, stack, roots, garbage collector, and compactor. Its build
+should follow the working MicroQuickJS runtime in
+`dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime`:
+compile the vendored C engine and the small Rust/Wasm boundary into one module,
+then load ordinary MicroQuickJS bytecode. Rust code will share the live
+machine's `JSValue`s, pointers or offsets, heap, VM stack, and roots—not
+communicate with a second engine over RPC.
+
+The intended destination is a complete rewrite in Rust, reached incrementally
+rather than by constructing another engine beside MicroQuickJS. C remains the
+working migration substrate until each bounded replacement is proven. During
+that process MicroQuickJS's large C translation unit may be split into focused
+C files to improve navigation and auditing without changing its representation
+or behavior. Such moves need mechanical or differential verification so code
+organization is not confused with an engine rewrite.
+
+The first Rust crate should be a small, explicitly unsafe compatibility layer
+over the exact C layouts and operations. Persistent identities remain traced
+MicroQuickJS values or offsets. A raw pointer or Rust reference must never
+survive an operation that can allocate or collect; code must root the value and
+reacquire its address afterward.
+
+Groups of functionality may have parallel C and safe-Rust implementations in
+the same process. A build-time choice or narrow dispatch point can run either
+implementation against the same representation. Differential tests should
+compare results, exceptions, roots, and heap invariants before the C version is
+removed. Performance-critical loops may use narrowly scoped unsafe Rust when
+measurement justifies it, while the bulk of each replacement can use safe Rust
+above the compatibility layer.
+
+The allocator and collector should be among the last systems replaced. This
+keeps every earlier change grounded in MicroQuickJS's actual memory semantics
+and avoids constructing another engine that merely resembles it. ESNext
+features should begin only after the unchanged C baseline and each replacement
+stage pass the same bytecode, behavior, compaction, and browser-demo tests.
+
+## Implemented capability inventory
+
+The list below records experiments present in the prototype. It is an inventory
+of code and feature gates, not a completeness or conformance statement.
 
 ## Crates and removable capabilities
 

@@ -92,6 +92,7 @@ pub fn is_callable_object(arena: &Arena<'_>, value: Value) -> bool {
 }
 
 /// Bind a callable to a receiver and an optional leading argument array.
+#[cfg(feature = "arrays")]
 pub fn bind(
     arena: &mut Arena<'_>,
     callable: Value,

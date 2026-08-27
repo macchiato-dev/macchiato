@@ -25,6 +25,31 @@ fn a_host_defined_getter_can_return_a_primitive() {
 }
 
 #[test]
+fn a_computed_property_read_invokes_a_getter() {
+    let code = compile_script_with_host_globals(
+        "var object = {}; Object.defineProperty(object, 'answer', { \
+           get: function () { return 42; } \
+         }); return object['answer'];",
+        &["Object"],
+    )
+    .unwrap();
+    let mut memory = [0; 4096];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    let define_property = HostRef::new(20).unwrap();
+
+    assert!(matches!(machine.run(), Ok(Outcome::HostGet { .. })));
+    machine.complete_host_operation(Value::from_host(define_property)).unwrap();
+    assert!(matches!(machine.run(), Ok(Outcome::HostCall { .. })));
+    let object = machine.host_argument(0).unwrap();
+    let key = machine.host_argument(1).unwrap();
+    let descriptor = machine.host_argument(2).unwrap();
+    let object = machine.define_property(object, key, descriptor).unwrap();
+    machine.complete_host_call(object).unwrap();
+
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
 fn externally_entered_closure_reads_host_defined_getters() {
     let code = compile_script_with_host_globals(
         "function Measurements() {} \
