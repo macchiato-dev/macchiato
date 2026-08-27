@@ -1,0 +1,29 @@
+#![no_std]
+
+//! A direct Rust translation of MicroQuickJS's regexp engine.
+//!
+//! Names and bytecode layout intentionally remain close to the C reference so
+//! each translated region can be reviewed and differentially tested.
+
+mod bytecode;
+
+pub use bytecode::{
+    Flags, OpCode, HEADER_CAPTURE_COUNT, HEADER_FLAGS, HEADER_LEN,
+    HEADER_REGISTER_COUNT,
+};
+
+/// A captured half-open range in the input's UTF-16 code units.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Capture {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Error {
+    InvalidBytecode,
+    InvalidPattern,
+    OutOfMemory,
+    StackOverflow,
+    Timeout,
+}
