@@ -1,0 +1,15 @@
+[package]
+name = "microesnext-oniguruma"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[features]
+default = []
+
+[build-dependencies]
+cc = "1"
+

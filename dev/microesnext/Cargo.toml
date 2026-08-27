@@ -9,6 +9,7 @@ members = [
   "crates/microesnext-compiler",
   "crates/microesnext-semantics",
   "crates/microesnext-objects",
+  "crates/microesnext-oniguruma",
   "crates/microesnext-values",
   "crates/microesnext-types",
   "crates/microesnext-vm",
@@ -37,6 +38,7 @@ microesnext-bindings = { path = "crates/microesnext-bindings", version = "0.0.0"
 microesnext-compiler = { path = "crates/microesnext-compiler", version = "0.0.0" }
 microesnext-semantics = { path = "crates/microesnext-semantics", version = "0.0.0" }
 microesnext-objects = { path = "crates/microesnext-objects", version = "0.0.0" }
+microesnext-oniguruma = { path = "crates/microesnext-oniguruma", version = "0.0.0" }
 microesnext-values = { path = "crates/microesnext-values", version = "0.0.0" }
 microesnext-types = { path = "crates/microesnext-types", version = "0.0.0" }
 microesnext-vm = { path = "crates/microesnext-vm", version = "0.0.0" }
