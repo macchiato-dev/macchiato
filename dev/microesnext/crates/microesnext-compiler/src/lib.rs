@@ -5407,6 +5407,20 @@ impl Parser<'_> {
         self.output.push(Opcode::SetPropertyResult as u8);
     }
 
+    #[cfg(feature = "array-assignment-expressions")]
+    fn emit_index_assignment_result(&mut self) {
+        // A computed property can resolve to an inherited setter just like a
+        // dotted property. The accessor opcode accepts the same object, key,
+        // value stack shape and also retains the assignment-expression value.
+        #[cfg(feature = "class-setters")]
+        {
+            self.output.push(Opcode::SetPropertyAccessor as u8);
+            self.output.push(Opcode::DropTop as u8);
+        }
+        #[cfg(not(feature = "class-setters"))]
+        self.output.push(Opcode::SetIndexResult as u8);
+    }
+
     #[cfg(not(feature = "property-assignment"))]
     fn property_assignments(&mut self) -> Result<(), CompileError> {
         Ok(())
@@ -6621,7 +6635,7 @@ impl Parser<'_> {
             if property {
                 self.emit_property_assignment_result();
             } else {
-                self.output.push(Opcode::SetIndexResult as u8);
+                self.emit_index_assignment_result();
             }
             return Ok(true);
         }
@@ -6637,7 +6651,7 @@ impl Parser<'_> {
             if property {
                 self.emit_property_assignment_result();
             } else {
-                self.output.push(Opcode::SetIndexResult as u8);
+                self.emit_index_assignment_result();
             }
             return Ok(true);
         }
@@ -6663,7 +6677,7 @@ impl Parser<'_> {
             if property {
                 self.emit_property_assignment_result();
             } else {
-                self.output.push(Opcode::SetIndexResult as u8);
+                self.emit_index_assignment_result();
             }
             return Ok(true);
         }
@@ -6671,7 +6685,7 @@ impl Parser<'_> {
         if property {
             self.emit_property_assignment_result();
         } else {
-            self.output.push(Opcode::SetIndexResult as u8);
+            self.emit_index_assignment_result();
         }
         Ok(true)
     }
@@ -9725,11 +9739,11 @@ mod tests {
     #[test]
     fn compiles_array_assignment_statements_by_composition() {
         let code = compile_script("let values = [0]; values[0] = 42; return values[0];").unwrap();
-        assert!(
-            code.windows(2).any(|opcodes| {
-                opcodes == [Opcode::SetIndexResult as u8, Opcode::DropTop as u8]
-            })
-        );
+        assert!(code.windows(3).any(|opcodes| opcodes == [
+            Opcode::SetPropertyAccessor as u8,
+            Opcode::DropTop as u8,
+            Opcode::DropTop as u8,
+        ]));
     }
 
     #[cfg(all(
@@ -9986,17 +10000,17 @@ mod tests {
         let computed =
             compile_script("let values = [0, 0]; let index = 1; return values[index] = 42;")
                 .unwrap();
-        assert!(computed.contains(&(Opcode::SetIndexResult as u8)));
+        assert!(computed.contains(&(Opcode::SetPropertyAccessor as u8)));
 
         let nested = compile_script("let values = [[0]]; return values[0][0] = 42;").unwrap();
         assert!(nested.contains(&(Opcode::GetIndex as u8)));
-        assert!(nested.contains(&(Opcode::SetIndexResult as u8)));
+        assert!(nested.contains(&(Opcode::SetPropertyAccessor as u8)));
 
         let receiver =
             compile_script("class Box { set() { return this.items[0] = 42; } } return 0;").unwrap();
         assert!(receiver.contains(&(Opcode::LoadThis as u8)));
         assert!(receiver.contains(&(Opcode::GetProperty as u8)));
-        assert!(receiver.contains(&(Opcode::SetIndexResult as u8)));
+        assert!(receiver.contains(&(Opcode::SetPropertyAccessor as u8)));
     }
 
     #[cfg(all(
@@ -10076,13 +10090,13 @@ mod tests {
         let outer =
             compile_script("let value = 1; let set = () => { return value = 42; }; return set();")
                 .unwrap();
-        assert!(outer.contains(&(Opcode::StoreEnvironmentCellResult as u8)));
+        assert!(outer.contains(&(Opcode::StoreCaptureResult as u8)));
 
         let local = compile_script(
             "let value = 1; let read = () => value; let assigned = value = 42; return read();",
         )
         .unwrap();
-        assert!(local.contains(&(Opcode::StoreEnvironmentCellResult as u8)));
+        assert!(local.contains(&(Opcode::StoreLocalCellResult as u8)));
     }
 
     #[cfg(all(feature = "environments", feature = "functions", feature = "arrays"))]
@@ -10092,14 +10106,13 @@ mod tests {
             "let value = []; function outer() { function read() { return value; } value = []; return read(); } return outer();",
         )
         .unwrap();
-        assert!(code.windows(5).any(|bytes| {
+        assert!(code.windows(4).any(|bytes| {
             bytes
                 == [
-                    Opcode::LoadCapture as u8,
-                    0,
-                    0,
                     Opcode::NewArray as u8,
-                    Opcode::StoreEnvironmentCell as u8,
+                    Opcode::StoreCaptureResult as u8,
+                    0,
+                    0,
                 ]
         }));
     }

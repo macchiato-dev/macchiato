@@ -121,6 +121,124 @@ fn run_host_defined_getter(descriptor: &str, expected: Value) {
 }
 
 #[test]
+fn assignment_invokes_a_setter_inherited_from_the_prototype() {
+    let code = compile_script_with_host_globals(
+        "function Element() {} \
+         var seen = 0; \
+         Object.defineProperty(Element.prototype, 'onkeyup', { \
+           set: function (callback) { seen = callback(); } \
+         }); \
+         var element = new Element(); \
+         element.onkeyup = function () { return 42; }; \
+         return seen;",
+        &["Object"],
+    )
+    .unwrap();
+    let mut memory = [0; 8192];
+    let mut machine = Machine::with_objects(&code, &mut memory, 12).unwrap();
+    let define_property = HostRef::new(20).unwrap();
+
+    let first = machine.run();
+    assert!(matches!(first, Ok(Outcome::HostGet { .. })), "{first:?}");
+    machine.complete_host_operation(Value::from_host(define_property)).unwrap();
+    assert!(matches!(machine.run(), Ok(Outcome::HostCall { .. })));
+    let object = machine.host_argument(0).unwrap();
+    let key = machine.host_argument(1).unwrap();
+    let descriptor = machine.host_argument(2).unwrap();
+    let object = machine.define_property(object, key, descriptor).unwrap();
+    machine.complete_host_call(object).unwrap();
+
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn computed_assignment_invokes_an_inherited_setter() {
+    let code = compile_script_with_host_globals(
+        "function Element() {} \
+         var seen = 0; \
+         Object.defineProperty(Element.prototype, 'onkeyup', { \
+           set: function (callback) { seen = callback(); } \
+         }); \
+         var element = new Element(); \
+         element['onkeyup'] = function () { return 42; }; \
+         return seen;",
+        &["Object"],
+    )
+    .unwrap();
+    let mut memory = [0; 8192];
+    let mut machine = Machine::with_objects(&code, &mut memory, 12).unwrap();
+    let define_property = HostRef::new(20).unwrap();
+
+    assert!(matches!(machine.run(), Ok(Outcome::HostGet { .. })));
+    machine.complete_host_operation(Value::from_host(define_property)).unwrap();
+    assert!(matches!(machine.run(), Ok(Outcome::HostCall { .. })));
+    let object = machine.host_argument(0).unwrap();
+    let key = machine.host_argument(1).unwrap();
+    let descriptor = machine.host_argument(2).unwrap();
+    let object = machine.define_property(object, key, descriptor).unwrap();
+    machine.complete_host_call(object).unwrap();
+
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
+fn computed_array_assignment_keeps_array_bookkeeping_intact() {
+    let code = microesnext_compiler::compile_script(
+        "var values = []; \
+         function push(value) { values[values.length] = value; return values.length; } \
+         return push(10) * 100 + push(20) * 10 + values[0] + values[1];",
+    )
+    .unwrap();
+    let mut memory = [0; 4096];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(150).unwrap())));
+}
+
+#[test]
+fn loop_defined_inherited_setters_retain_their_property_names() {
+    let code = compile_script_with_host_globals(
+        "function Element() {} \
+         var seen = ''; \
+         function install(type) { \
+           Object.defineProperty(Element.prototype, 'on' + type, { \
+             set: function () { seen = seen + type; } \
+           }); \
+         } \
+         install('change'); \
+         install('keyup'); \
+         var element = new Element(); \
+         element.onkeyup = function () {}; \
+         return seen;",
+        &["Object"],
+    )
+    .unwrap();
+    let mut memory = [0; 16384];
+    let mut machine = Machine::with_objects(&code, &mut memory, 16).unwrap();
+    let define_property = HostRef::new(20).unwrap();
+
+    let mut defined = 0;
+    let value = loop {
+        match machine.run().unwrap() {
+            Outcome::HostGet { .. } => {
+                machine.complete_host_operation(Value::from_host(define_property)).unwrap();
+            }
+            Outcome::HostCall { .. } => {
+                let object = machine.host_argument(0).unwrap();
+                let key = machine.host_argument(1).unwrap();
+                let descriptor = machine.host_argument(2).unwrap();
+                let object = machine.define_property(object, key, descriptor).unwrap();
+                machine.complete_host_call(object).unwrap();
+                defined += 1;
+            }
+            Outcome::Complete(value) => break value,
+            outcome => panic!("unexpected {outcome:?}"),
+        }
+    };
+    assert_eq!(defined, 2);
+    assert_eq!(machine.string_bytes(value), Ok(b"keyup".as_slice()));
+}
+
+#[test]
 fn a_host_defined_getter_can_return_an_object() {
     let code = compile_script_with_host_globals(
         "var prototype = {}; \

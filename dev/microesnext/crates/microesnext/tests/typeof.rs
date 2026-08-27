@@ -61,3 +61,18 @@ fn typeof_classifies_a_closure_function_argument() {
     let Outcome::Complete(value) = machine.run().unwrap() else { panic!("expected value") };
     assert!(machine.arena().bytes_equal(value.as_ref().unwrap(), b"function").unwrap());
 }
+
+#[test]
+fn typeof_classifies_a_bound_function_as_a_function() {
+    let code = compile_script(
+        "function callback() {} var bound = callback.bind({}); return typeof bound;",
+    ).unwrap();
+    let mut memory = [0; 768];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    let bind = microesnext::HostRef::new(7).unwrap();
+    machine.install_function_bind(bind);
+    assert!(matches!(machine.run(), Ok(Outcome::HostCall { function, .. }) if function == bind));
+    machine.complete_function_bind().unwrap();
+    let Outcome::Complete(value) = machine.run().unwrap() else { panic!() };
+    assert!(machine.arena().bytes_equal(value.as_ref().unwrap(), b"function").unwrap());
+}

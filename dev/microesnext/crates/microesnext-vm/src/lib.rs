@@ -1990,6 +1990,17 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 } else {
                     value
                 };
+                #[cfg(feature = "getters")]
+                if let Some(function) =
+                    microesnext_objects::getters::callable(self.core.arena(), value)?
+                {
+                    let target_entry = entry(self.core.arena(), function)?;
+                    microesnext_bindings::receivers::append(
+                        self.core.arena_mut(), 0, target,
+                    )?;
+                    self.core.enter_call_with_arguments(function, target_entry, 1)?;
+                    return Ok(None);
+                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -2999,9 +3010,27 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let value = self.core.arena_mut().pop()?;
         let key = self.core.arena_mut().pop()?;
         let object = self.core.arena_mut().pop()?;
+        if object.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+            == Some(microesnext_arena::BlockKind::Bytes)
+        {
+            let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
+                .ok_or(Error::Type)?;
+            self.core.arena_mut().set_byte(
+                object.as_ref().ok_or(Error::Type)?,
+                index,
+                value.as_i30().ok_or(Error::Type)? as u8,
+            )?;
+            self.core.arena_mut().push(value)?;
+            self.core.arena_mut().push(Value::UNDEFINED)?;
+            return Ok(());
+        }
         if microesnext_objects::arrays::is_array(self.core.arena(), object) {
             self.core.arena_mut().push(value)?;
-            self.set_array_property(object, key, value)?;
+            if let Some(index) = key.as_i30().and_then(|index| usize::try_from(index).ok()) {
+                array_set(self.core.arena_mut(), object, index, value)?;
+            } else {
+                self.set_array_property(object, key, value)?;
+            }
             let value = self.core.arena_mut().pop()?;
             self.core.arena_mut().push(value)?;
             self.core.arena_mut().push(Value::UNDEFINED)?;

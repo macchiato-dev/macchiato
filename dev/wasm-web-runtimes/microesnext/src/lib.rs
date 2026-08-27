@@ -1614,10 +1614,12 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                         let argument = machine.host_argument(0).ok();
                         let mut context = String::from("numeric parser argument ");
                         use core::fmt::Write;
-                        let _ = write!(&mut context, "raw={} host={:?} ref={:?}",
+                        let _ = write!(&mut context, "raw={} host={:?} ref={:?} kind={:?}",
                             argument.map_or(u32::MAX, Value::raw),
                             argument.and_then(Value::as_host),
-                            argument.and_then(Value::as_ref));
+                            argument.and_then(Value::as_ref),
+                            argument.and_then(Value::as_ref)
+                                .and_then(|reference| machine.arena().kind(reference).ok()));
                         remember_failure_bytes(context.as_bytes());
                         DETAIL.store(error as u32 + 2100, Ordering::Relaxed);
                         break u32::MAX;
