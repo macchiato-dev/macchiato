@@ -5,13 +5,13 @@ use microesnext_compiler::compile_script_with_host_globals_and_source_map;
 const HOST_GLOBALS: &[&str] = &[
     "Array", "Boolean", "DOMRect", "Date", "Error", "FileReader", "Function", "Intl",
     "IntersectionObserver", "JSON", "KeyboardEvent", "Map", "Math", "MutationObserver",
-    "Number", "Object", "Promise", "Proxy", "RangeError", "RegExp", "ResizeObserver", "Set", "String", "Symbol",
+    "Number", "Object", "__reservedPromise", "Proxy", "RangeError", "RegExp", "ResizeObserver", "Set", "String", "Symbol",
     "SyntaxError", "TypeError", "Uint8Array", "Uint16Array", "Uint32Array", "WeakMap", "WeakRef", "WeakSet",
     "Window", "bridge", "cancelIdleCallback", "clearInterval", "clearTimeout", "console", "document",
     "gc", "getComputedStyle", "globalThis", "hostNow", "hostReference", "isFinite", "navigator", "parseFloat", "parseInt",
     "performance", "process", "queueMicrotask", "requestAnimationFrame", "requestIdleCallback",
     "releaseHostReference", "releaseHostReferenceLease", "runtimeDateNow", "setInterval", "setTimeout", "window",
-    "installArrayPrototype",
+    "installArrayPrototype", "isNaN", "microESNextImmediate",
 ];
 
 fn main() {
@@ -39,10 +39,11 @@ fn main() {
         // The browser facade replaces selected globals in JavaScript. Keep
         // those replacements lexical for application code without teaching
         // the Rust engine anything about DOM constructor names.
-        source.push_str("\n(function (DOMRect, Date, FileReader, IntersectionObserver, KeyboardEvent, MutationObserver, ResizeObserver, Window, cancelIdleCallback, clearInterval, clearTimeout, getComputedStyle, navigator, performance, queueMicrotask, requestAnimationFrame, requestIdleCallback, setInterval, setTimeout, window) {\n");
+        source.push_str("\nvar Promise = globalThis.Promise;\n");
+        source.push_str("\n(function (DOMRect, Date, FileReader, IntersectionObserver, KeyboardEvent, MutationObserver, ResizeObserver, Window, cancelIdleCallback, clearInterval, clearTimeout, devicePixelRatio, getComputedStyle, innerHeight, innerWidth, navigator, pageXOffset, pageYOffset, performance, queueMicrotask, requestAnimationFrame, requestIdleCallback, setInterval, setTimeout, window) {\n");
         source.push_str(&application);
-        source.push_str("\nvar microESNextMarker = document.getElementById(\"editor\"); microESNextMarker.setAttribute(\"data-children\", String(microESNextMarker.childNodes.length)); dispatch(-1);\n");
-        source.push_str("})(globalThis.DOMRect, globalThis.Date, globalThis.FileReader, globalThis.IntersectionObserver, globalThis.KeyboardEvent, globalThis.MutationObserver, globalThis.ResizeObserver, globalThis.Window, globalThis.cancelIdleCallback, globalThis.clearInterval, globalThis.clearTimeout, globalThis.getComputedStyle, globalThis.navigator, globalThis.performance, globalThis.queueMicrotask, globalThis.requestAnimationFrame, globalThis.requestIdleCallback, globalThis.setInterval, globalThis.setTimeout, globalThis.window);\n");
+        source.push_str("\nvar microESNextMarker = document.getElementById(\"editor\"); if (microESNextMarker) microESNextMarker.setAttribute(\"data-children\", String(microESNextMarker.childNodes.length)); dispatch(-1);\n");
+        source.push_str("})(globalThis.DOMRect, globalThis.Date, globalThis.FileReader, globalThis.IntersectionObserver, globalThis.KeyboardEvent, globalThis.MutationObserver, globalThis.ResizeObserver, globalThis.Window, globalThis.cancelIdleCallback, globalThis.clearInterval, globalThis.clearTimeout, globalThis.devicePixelRatio, globalThis.getComputedStyle, globalThis.innerHeight, globalThis.innerWidth, globalThis.navigator, globalThis.pageXOffset, globalThis.pageYOffset, globalThis.performance, globalThis.queueMicrotask, globalThis.requestAnimationFrame, globalThis.requestIdleCallback, globalThis.setInterval, globalThis.setTimeout, globalThis.window);\n");
     } else {
         source.push_str(&application);
     }

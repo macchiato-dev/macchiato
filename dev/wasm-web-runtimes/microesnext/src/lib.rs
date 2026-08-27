@@ -58,6 +58,8 @@ const IS_FINITE: u32 = 44;
 const RELEASE_HOST_REFERENCE: u32 = 53;
 const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
+const STRING_CHAR_AT: u32 = (1 << 29) + 84;
+const STRING_SEARCH: u32 = (1 << 29) + 85;
 const STRING_SPLIT: u32 = (1 << 29) + 74;
 const STRING: u32 = 22;
 const STRING_FROM_CHAR_CODE: u32 = (1 << 29) + 71;
@@ -77,13 +79,15 @@ const STRING_TO_UPPER_CASE: u32 = (1 << 29) + 79;
 const STRING_INDEX_OF: u32 = (1 << 29) + 80;
 const STRING_TRIM: u32 = (1 << 29) + 81;
 const HOST_INSTANCEOF: u32 = (1 << 29) + 82;
+const NUMBER_IS_INTEGER: u32 = (1 << 29) + 83;
+const IS_NAN: u32 = 60;
 
-struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
+struct WordMemory(UnsafeCell<[u32; 8_388_608]>);
 
 // WebAssembly calls this runtime on one thread. Reentrant delivery is handled
 // only after the persistent machine is installed below.
 unsafe impl Sync for WordMemory {}
-static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 4_194_304]));
+static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 8_388_608]));
 struct Runtime {
     machine: Machine<'static, 'static>,
     object_prototype: RootId,
@@ -91,6 +95,7 @@ struct Runtime {
     date_prototype: RootId,
     global_overlay: RootId,
     dispatch: Option<RootId>,
+    next_collection_words: usize,
 }
 struct RuntimeMemory(UnsafeCell<Option<Runtime>>);
 unsafe impl Sync for RuntimeMemory {}
@@ -224,11 +229,14 @@ fn owned_string(machine: &Machine<'_, '_>, value: Value) -> Result<String, Error
         .map_err(|_| Error::Type)
 }
 
-
 fn owned_primitive_string(machine: &mut Machine<'_, '_>, value: Value) -> Result<String, Error> {
     if let Ok(string) = owned_string(machine, value) {
         return Ok(string);
     }
+    if value == Value::UNDEFINED { return Ok(String::from("undefined")); }
+    if value == Value::NULL { return Ok(String::from("null")); }
+    if value == Value::TRUE { return Ok(String::from("true")); }
+    if value == Value::FALSE { return Ok(String::from("false")); }
     if let Ok(Some(number)) = microesnext::numbers::try_get(machine.arena(), value) {
         use core::fmt::Write;
         let mut string = String::new();
@@ -422,11 +430,16 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         if raw < u32::MAX - 10 {
             // Event dispatch is a natural safe point: the interpreter stack is
             // settled and retained roots are registered with the arena.
-            let needs_collection = runtime.machine.arena().heap_words() > 2_000_000;
+            let needs_collection = runtime.machine.arena().heap_words() >=
+                runtime.next_collection_words;
             if needs_collection && let Err(error) = runtime.machine.arena_mut().compact(&mut []) {
                 DETAIL.store(error as u32 + 3300, Ordering::Relaxed);
                 report_failure(STAGE.load(Ordering::Relaxed), DETAIL.load(Ordering::Relaxed));
                 return;
+            }
+            if needs_collection {
+                runtime.next_collection_words = runtime.machine.arena().heap_words()
+                    .saturating_add(2_000_000);
             }
             unsafe { *RUNTIME.0.get() = Some(runtime); }
         } else {
@@ -487,6 +500,18 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             b"charCodeAt",
             Value::from_host(microesnext::HostRef::new(STRING_CHAR_CODE_AT).unwrap()),
         )
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"charAt",
+            Value::from_host(microesnext::HostRef::new(STRING_CHAR_AT).unwrap()),
+        ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"search",
+            Value::from_host(microesnext::HostRef::new(STRING_SEARCH).unwrap()),
+        ))
         .and_then(|prototype| object_set(
             &mut machine,
             prototype,
@@ -581,6 +606,7 @@ pub extern "C" fn onmsg(minimum_length: u32) {
         date_prototype,
         global_overlay,
         dispatch: None,
+        next_collection_words: 2_000_000,
     };
     let raw = drive(&mut runtime, None);
     if raw < u32::MAX - 10 {
@@ -765,6 +791,13 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
             {
                 machine.complete_host_operation(Value::from_host(
                     microesnext::HostRef::new(IS_FINITE).unwrap(),
+                )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == NUMBER && machine.string_bytes(key) == Ok(b"isInteger") =>
+            {
+                machine.complete_host_operation(Value::from_host(
+                    microesnext::HostRef::new(NUMBER_IS_INTEGER).unwrap(),
                 )).unwrap();
             }
             Ok(Outcome::HostGet { object, key, .. }) if object.index() == SYMBOL => {
@@ -1172,6 +1205,27 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                     break u32::MAX;
                 }
             }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == NUMBER_IS_INTEGER => {
+                let result = machine.host_argument(0).map(|value| {
+                    let integer = value.as_i30().is_some() || machine.number(value)
+                        .is_ok_and(|number| number.is_finite() && libm::trunc(number) == number);
+                    if integer { Value::TRUE } else { Value::FALSE }
+                }).and_then(|value| machine.complete_host_call(value));
+                if let Err(error) = result {
+                    DETAIL.store(error as u32 + 2895, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, .. }) if function.index() == IS_NAN => {
+                let result = machine.host_argument(0)
+                    .and_then(|value| machine.number(value))
+                    .map(|number| if number.is_nan() { Value::TRUE } else { Value::FALSE })
+                    .and_then(|value| machine.complete_host_call(value));
+                if let Err(error) = result {
+                    DETAIL.store(error as u32 + 2880, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
             Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == STRING_CHAR_CODE_AT =>
             {
@@ -1190,6 +1244,51 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                         DETAIL.store(error as u32 + 1300, Ordering::Relaxed);
                         break u32::MAX;
                     }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_CHAR_AT =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let index = machine.host_argument(0)?.as_i30().ok_or(Error::Type)?;
+                    let index = usize::try_from(index).ok();
+                    let mut position = 0;
+                    let character = text.chars().find(|character| {
+                        let found = index == Some(position);
+                        if !found { position += character.len_utf16(); }
+                        found
+                    });
+                    let mut bytes = [0_u8; 4];
+                    let bytes = character.map_or(&[][..], |character| {
+                        character.encode_utf8(&mut bytes).as_bytes()
+                    });
+                    machine.new_string(bytes)
+                })();
+                if let Err(error) = result.and_then(|value| machine.complete_host_call(value)) {
+                    DETAIL.store(error as u32 + 1325, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_SEARCH =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let search = machine.host_argument(0)?;
+                    let found = if let Ok(search) = owned_string(&machine, search) {
+                        text.find(&search).map(|byte| byte_to_utf16(&text, byte))
+                    } else {
+                        let (pattern, flags, _) = regexp_parts(&mut machine, search)?;
+                        let regexp = compile_regexp(&pattern, &flags)?;
+                        native_match(&regexp, &text, 0)?.map(|found| found.0)
+                    };
+                    Value::from_i30(found.and_then(|index| i32::try_from(index).ok())
+                        .unwrap_or(-1)).ok_or(Error::Type)
+                })();
+                if let Err(error) = result.and_then(|value| machine.complete_host_call(value)) {
+                    DETAIL.store(error as u32 + 1350, Ordering::Relaxed);
+                    break u32::MAX;
                 }
             }
             Ok(Outcome::HostCall { function, argument_count, .. })
@@ -1213,14 +1312,8 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
             }
             Ok(Outcome::HostCall { function, .. }) if function.index() == STRING => {
                 let argument = machine.host_argument(0).unwrap_or(Value::UNDEFINED);
-                let argument_kind = argument.as_ref()
-                    .and_then(|reference| machine.arena().kind(reference).ok());
-                let mut step = 0_u8;
                 let result = owned_primitive_string(&mut machine, argument)
-                    .and_then(|value| {
-                        step = 1;
-                        machine.new_string(value.as_bytes())
-                    });
+                    .and_then(|value| machine.new_string(value.as_bytes()));
                 match result.and_then(|value| machine.complete_host_call(value)) {
                     Ok(()) => {}
                     Err(error) => {
@@ -1301,7 +1394,7 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                         .map_err(|_| 2_u32)?;
                     let search = machine.host_argument(offset).map_err(|_| 3_u32)?;
                     let replacement_value = machine.host_argument(offset + 1).map_err(|_| 4_u32)?;
-                    let replacement = owned_string(&machine, replacement_value)
+                    let replacement = owned_primitive_string(&mut machine, replacement_value)
                         .map_err(|_| 5_u32)?;
                     let replaced = match owned_string(&machine, search) {
                         Ok(search) => text.replacen(&search, &replacement, 1),
@@ -1580,7 +1673,8 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                     let Some((begin, _end, groups)) = found else {
                         return Ok(Value::NULL);
                     };
-                    let mut result = machine.new_object(Value::NULL)?;
+                    let result = machine.new_object(Value::NULL)?;
+                    let result_root = machine.retain(result)?;
                     let group_count = groups.len();
                     for (index, group) in groups.into_iter().enumerate() {
                         let value = if let Some(range) = group {
@@ -1592,16 +1686,25 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                         };
                         let key = Value::from_i30(i32::try_from(index).map_err(|_| Error::Type)?)
                             .ok_or(Error::Type)?;
-                        result = object_set_key(&mut machine, result, key, value)?;
+                        let result = machine.root(result_root)?;
+                        let result = object_set_key(&mut machine, result, key, value)?;
+                        machine.arena_mut().set_root(result_root, result)?;
                     }
                     let length = Value::from_i30(i32::try_from(group_count).map_err(|_| Error::Type)?)
                         .ok_or(Error::Type)?;
-                    result = object_set(&mut machine, result, b"length", length)?;
+                    let result = machine.root(result_root)?;
+                    let result = object_set(&mut machine, result, b"length", length)?;
+                    machine.arena_mut().set_root(result_root, result)?;
                     let index = Value::from_i30(i32::try_from(begin).map_err(|_| Error::Type)?)
                         .ok_or(Error::Type)?;
-                    result = object_set(&mut machine, result, b"index", index)?;
+                    let result = machine.root(result_root)?;
+                    let result = object_set(&mut machine, result, b"index", index)?;
+                    machine.arena_mut().set_root(result_root, result)?;
                     let input = machine.new_string(text.as_bytes())?;
-                    object_set(&mut machine, result, b"input", input)
+                    let result = machine.root(result_root)?;
+                    let result = object_set(&mut machine, result, b"input", input)?;
+                    machine.arena_mut().set_root(result_root, result)?;
+                    machine.release(result_root)
                 })();
                 if let Err(error) = result.as_ref() {
                     use core::fmt::Write;
@@ -1848,13 +1951,18 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                             .map_or(value.raw(), |kind| 200 + kind as u32)
                     });
                     let (left, right) = machine.last_operands();
+                    let capture_one = machine.active_capture(1).ok();
                     let _ = write!(
                         context,
-                        "; op={:?}; call={}; left={}; right={}; target={}; sp={}; base={}; frame={}; error={:?}",
+                        "; op={:?}; call={}; left={}/{}; right={}/{}; capture1={}/{}; target={}; sp={}; base={}; frame={}; error={:?}",
                         opcode,
                         call,
+                        left.map_or(999_u32, Value::raw),
                         describe(left),
+                        right.map_or(999_u32, Value::raw),
                         describe(right),
+                        capture_one.map_or(999_u32, Value::raw),
+                        describe(capture_one),
                         describe(machine.last_property_target()),
                         machine.stack_len(),
                         machine.frame_base(),

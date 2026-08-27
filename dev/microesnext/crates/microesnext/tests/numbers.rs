@@ -14,6 +14,14 @@ fn source_fractional_addition_uses_optional_numbers() {
 }
 
 #[test]
+fn source_compares_positive_and_negative_immediate_integers() {
+    let code = compile_script("return 51 > -1;").unwrap();
+    let mut memory = [0; 48];
+    let mut machine = Machine::new(&code, &mut memory);
+    assert_eq!(machine.run(), Ok(Outcome::Complete(microesnext::Value::TRUE)));
+}
+
+#[test]
 fn number_bytecode_promotes_arithmetic_and_compares_it() {
     let code = Builder::new()
         .const_i30((1 << 29) - 1)

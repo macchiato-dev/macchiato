@@ -5470,16 +5470,15 @@ impl Parser<'_> {
                 self.offset = start;
                 return Ok(());
             }
-            if let Some((capture, _)) = capture {
-                self.output.push(Opcode::LoadCapture as u8);
-                self.output.extend_from_slice(&capture.to_le_bytes());
-            } else if binding.captured {
-                self.output.push(Opcode::LoadLocalRaw as u8);
-                self.output.extend_from_slice(&binding.slot.to_le_bytes());
-            }
             self.expression(None)?;
-            if binding.captured || capture.is_some() {
-                self.output.push(Opcode::StoreEnvironmentCell as u8);
+            if let Some((capture, _)) = capture {
+                self.output.push(Opcode::StoreCaptureResult as u8);
+                self.output.extend_from_slice(&capture.to_le_bytes());
+                self.output.push(Opcode::DropTop as u8);
+            } else if binding.captured {
+                self.output.push(Opcode::StoreLocalCellResult as u8);
+                self.output.extend_from_slice(&binding.slot.to_le_bytes());
+                self.output.push(Opcode::DropTop as u8);
             } else {
                 self.output.push(Opcode::StoreLocal as u8);
                 self.output.extend_from_slice(&binding.slot.to_le_bytes());
@@ -6031,10 +6030,9 @@ impl Parser<'_> {
             if local.captured && self.consume_plain_assignment() {
                 #[cfg(feature = "captured-assignment-expressions")]
                 {
-                    self.output.push(Opcode::LoadLocalRaw as u8);
-                    self.output.extend_from_slice(&local.slot.to_le_bytes());
                     self.expression(None)?;
-                    self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+                    self.output.push(Opcode::StoreLocalCellResult as u8);
+                    self.output.extend_from_slice(&local.slot.to_le_bytes());
                     return Ok(false);
                 }
             }
@@ -6077,10 +6075,9 @@ impl Parser<'_> {
             }
             if self.consume_plain_assignment() {
                 let index = self.intern_capture(capture)?;
-                self.output.push(Opcode::LoadCapture as u8);
-                self.output.extend_from_slice(&index.to_le_bytes());
                 self.expression(None)?;
-                self.output.push(Opcode::StoreEnvironmentCellResult as u8);
+                self.output.push(Opcode::StoreCaptureResult as u8);
+                self.output.extend_from_slice(&index.to_le_bytes());
                 return Ok(false);
             }
         }

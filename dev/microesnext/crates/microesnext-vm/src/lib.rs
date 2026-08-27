@@ -427,6 +427,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         self.core.frame_base()
     }
 
+    /// Returns a capture from the currently executing closure for diagnostics.
+    #[cfg(feature = "functions")]
+    pub fn active_capture(&self, index: usize) -> Result<Value, Error> {
+        let function_index = self.core.frame_base().checked_sub(1).ok_or(Error::Type)?;
+        let function = self.core.arena().stack_value_from_bottom(function_index)?;
+        capture(self.core.arena(), function, index)
+    }
+
     pub fn stack_len(&self) -> usize {
         self.core.arena().stack_len()
     }
@@ -1662,6 +1670,8 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GreaterThanNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
+                self.last_left_operand = Some(left);
+                self.last_right_operand = Some(right);
                 #[cfg(feature = "string-number-coercion")]
                 let value = if let (Ok(left), Ok(right)) =
                     (self.string_bytes(left), self.string_bytes(right))
@@ -1829,6 +1839,30 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 microesnext_bindings::environments::assignment_expressions::store_result(
                     self.core.arena_mut(),
                 )?;
+                Ok(None)
+            }
+            #[cfg(feature = "captured-assignment-expressions")]
+            Opcode::StoreCaptureResult => {
+                let index = self.core.next_u16()? as usize;
+                let value = self.core.arena_mut().pop()?;
+                let function_index = self.core.frame_base().checked_sub(1).ok_or(Error::Type)?;
+                let function = self.core.arena().stack_value_from_bottom(function_index)?;
+                let cell = capture(self.core.arena(), function, index)?;
+                microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
+                self.core.arena_mut().push(value)?;
+                Ok(None)
+            }
+            #[cfg(feature = "captured-assignment-expressions")]
+            Opcode::StoreLocalCellResult => {
+                let slot = self.core.next_u16()? as usize;
+                let value = self.core.arena_mut().pop()?;
+                let cell = microesnext_bindings::locals::load(
+                    self.core.arena(), self.core.frame_base(), slot,
+                )?;
+                self.last_left_operand = Some(cell);
+                self.last_right_operand = Some(value);
+                microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
+                self.core.arena_mut().push(value)?;
                 Ok(None)
             }
             #[cfg(feature = "captured-update-expressions")]

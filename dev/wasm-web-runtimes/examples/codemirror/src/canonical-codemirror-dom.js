@@ -191,12 +191,19 @@ globalThis.DOMRect = function DOMRect(x, y, width, height) {
 globalThis.DOMRectReadOnly = globalThis.DOMRect;
 
 var projectedClasses = Object.create(null), projectedClassCount = 0;
+var runtimeStringReplace = String.prototype.replace;
 // Keep replacement callbacks inside the guest. The host-backed RegExp only
 // finds ranges; application functions and replacement text remain JavaScript.
 String.prototype.replace = function (search, replacement) {
-  if (typeof replacement !== "function") {
+  if (!globalThis.__wwcStringReplace) {
+    return runtimeStringReplace.call(this, search, replacement);
+  }
+  var replacementType = typeof replacement;
+  if (replacementType === "string" || replacementType === "number" ||
+      replacementType === "boolean" || replacement === null || replacement === undefined) {
     return globalThis.__wwcStringReplace(this, search, replacement);
   }
+  var replacementIsFunction = true;
   var source = String(this), output = "", at = 0, match = null, global = false;
   if (typeof search === "string") {
     var foundAt = -1;
@@ -219,7 +226,7 @@ String.prototype.replace = function (search, replacement) {
   while (match) {
     for (; at < match.index; at++) output += source[at];
     var inserted = "";
-    if (typeof replacement === "function") {
+    if (replacementIsFunction) {
       inserted = String(replacement(
         match[0], match[1], match[2], match[3], match.index, source));
     } else {
@@ -1121,26 +1128,16 @@ globalThis.cancelAnimationFrame = function (handle) {
 };
 globalThis.setImmediate = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
-  var token = { active: true, index: -1 };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return token;
+  return index;
 };
 globalThis.setTimeout = function (callback, delay) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var token = { active: true, index: -1 };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   hostCall(document.reference, "timerOnce", [delay, index]);
-  return token;
+  return index;
 };
 var intervalCallbacks = Object.create(null);
 globalThis.setInterval = function (callback, delay) {
@@ -1193,9 +1190,8 @@ globalThis.matchMedia = function (query) {
   return result;
 };
 globalThis.clearTimeout = function (handle) {
-  if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;
-  handle.active = false;
-  retireOneShotCallback(handle.index);
+  if (!Number.isInteger(handle)) return;
+  retireOneShotCallback(handle);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
 globalThis.queueMicrotask = function (callback) {

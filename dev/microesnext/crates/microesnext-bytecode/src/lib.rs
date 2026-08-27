@@ -228,6 +228,10 @@ pub enum Opcode {
     DeleteProperty = 147,
     #[cfg(feature = "locals")]
     LoadLocalRaw = 148,
+    #[cfg(feature = "captured-assignment-expressions")]
+    StoreCaptureResult = 149,
+    #[cfg(feature = "captured-assignment-expressions")]
+    StoreLocalCellResult = 150,
 }
 
 impl TryFrom<u8> for Opcode {
@@ -439,6 +443,10 @@ impl TryFrom<u8> for Opcode {
             147 => Ok(Self::DeleteProperty),
             #[cfg(feature = "locals")]
             148 => Ok(Self::LoadLocalRaw),
+            #[cfg(feature = "captured-assignment-expressions")]
+            149 => Ok(Self::StoreCaptureResult),
+            #[cfg(feature = "captured-assignment-expressions")]
+            150 => Ok(Self::StoreLocalCellResult),
             #[cfg(feature = "captured-assignment-expressions")]
             113 => Ok(Self::StoreEnvironmentCellResult),
             #[cfg(feature = "property-assignment-expressions")]
