@@ -60,6 +60,7 @@ const RELEASE_HOST_REFERENCE_LEASE: u32 = 54;
 const STRING_CHAR_CODE_AT: u32 = (1 << 29) + 70;
 const STRING_CHAR_AT: u32 = (1 << 29) + 84;
 const STRING_SEARCH: u32 = (1 << 29) + 85;
+const STRING_LOCALE_COMPARE: u32 = (1 << 29) + 86;
 const STRING_SPLIT: u32 = (1 << 29) + 74;
 const STRING: u32 = 22;
 const STRING_FROM_CHAR_CODE: u32 = (1 << 29) + 71;
@@ -511,6 +512,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             prototype,
             b"search",
             Value::from_host(microesnext::HostRef::new(STRING_SEARCH).unwrap()),
+        ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"localeCompare",
+            Value::from_host(microesnext::HostRef::new(STRING_LOCALE_COMPARE).unwrap()),
         ))
         .and_then(|prototype| object_set(
             &mut machine,
@@ -1291,6 +1298,23 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                     break u32::MAX;
                 }
             }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_LOCALE_COMPARE =>
+            {
+                let result = (|| {
+                    let left = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let right = owned_string(&machine, machine.host_argument(0)?)?;
+                    Value::from_i30(match left.cmp(&right) {
+                        core::cmp::Ordering::Less => -1,
+                        core::cmp::Ordering::Equal => 0,
+                        core::cmp::Ordering::Greater => 1,
+                    }).ok_or(Error::Type)
+                })();
+                if let Err(error) = result.and_then(|value| machine.complete_host_call(value)) {
+                    DETAIL.store(error as u32 + 1375, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
             Ok(Outcome::HostCall { function, argument_count, .. })
                 if function.index() == STRING_FROM_CHAR_CODE =>
             {
@@ -1557,17 +1581,20 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                 if function.index() == PARSE_INT || function.index() == PARSE_FLOAT =>
             {
                 let result = (|| {
-                    let text = owned_string(&machine, machine.host_argument(0)?)?;
+                    let argument = machine.host_argument(0)?;
+                    let text = owned_primitive_string(&mut machine, argument)?;
                     if function.index() == PARSE_FLOAT {
-                        let number = text.trim().parse::<f64>().map_err(|_| Error::Type)?;
+                        let number = text.trim().parse::<f64>().unwrap_or(f64::NAN);
                         return machine.new_number(number);
                     }
                     let radix = machine.host_argument(1).ok()
                         .filter(|value| *value != Value::UNDEFINED)
                         .and_then(Value::as_i30)
                         .unwrap_or(10);
-                    let radix = u32::try_from(radix).ok().filter(|radix| (2..=36).contains(radix))
-                        .ok_or(Error::Type)?;
+                    let Some(radix) = u32::try_from(radix).ok()
+                        .filter(|radix| (2..=36).contains(radix)) else {
+                            return machine.new_number(f64::NAN);
+                        };
                     let trimmed = text.trim_start();
                     let (negative, digits) = trimmed.strip_prefix('-').map_or(
                         (false, trimmed), |digits| (true, digits),
@@ -1575,14 +1602,23 @@ fn drive(runtime: &mut Runtime, mut pending_outcome: Option<Outcome>) -> u32 {
                     let digits = digits.strip_prefix('+').unwrap_or(digits);
                     let length = digits.chars().take_while(|character| character.to_digit(radix).is_some())
                         .map(char::len_utf8).sum::<usize>();
-                    if length == 0 { return Err(Error::Type); }
-                    let mut number = i32::from_str_radix(&digits[..length], radix).map_err(|_| Error::Type)?;
-                    if negative { number = -number; }
-                    Value::from_i30(number).ok_or(Error::Type)
+                    if length == 0 { return machine.new_number(f64::NAN); }
+                    let number = i64::from_str_radix(&digits[..length], radix)
+                        .map(|number| if negative { -number } else { number })
+                        .map_or(f64::NAN, |number| number as f64);
+                    machine.new_number(number)
                 })();
                 match result.and_then(|value| machine.complete_host_call(value)) {
                     Ok(()) => {}
                     Err(error) => {
+                        let argument = machine.host_argument(0).ok();
+                        let mut context = String::from("numeric parser argument ");
+                        use core::fmt::Write;
+                        let _ = write!(&mut context, "raw={} host={:?} ref={:?}",
+                            argument.map_or(u32::MAX, Value::raw),
+                            argument.and_then(Value::as_host),
+                            argument.and_then(Value::as_ref));
+                        remember_failure_bytes(context.as_bytes());
                         DETAIL.store(error as u32 + 2100, Ordering::Relaxed);
                         break u32::MAX;
                     }

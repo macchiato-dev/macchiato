@@ -1856,12 +1856,20 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::StoreLocalCellResult => {
                 let slot = self.core.next_u16()? as usize;
                 let value = self.core.arena_mut().pop()?;
+                let base = self.core.frame_base();
                 let cell = microesnext_bindings::locals::load(
-                    self.core.arena(), self.core.frame_base(), slot,
+                    self.core.arena(), base, slot,
                 )?;
                 self.last_left_operand = Some(cell);
                 self.last_right_operand = Some(value);
-                microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
+                if cell.as_ref().and_then(|reference| self.core.arena().kind(reference).ok())
+                    == Some(microesnext_arena::BlockKind::EnvironmentCell)
+                {
+                    microesnext_bindings::environments::set(self.core.arena_mut(), cell, value)?;
+                } else {
+                    self.core.arena_mut().push(value)?;
+                    microesnext_bindings::locals::store(self.core.arena_mut(), base, slot)?;
+                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }

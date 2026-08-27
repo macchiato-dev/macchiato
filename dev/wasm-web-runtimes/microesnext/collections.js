@@ -36,6 +36,11 @@ MicroMap.prototype.delete = function (key) {
   return true;
 };
 
+MicroMap.prototype.clear = function () {
+  this._keys.length = 0;
+  this._values.length = 0;
+};
+
 function MicroSet(values) {
   this._map = new MicroMap();
   if (values) for (var index = 0; index < values.length; index++) this.add(values[index]);
@@ -47,6 +52,7 @@ MicroSet.prototype.add = function (value) {
 };
 MicroSet.prototype.has = function (value) { return this._map.has(value); };
 MicroSet.prototype.delete = function (value) { return this._map.delete(value); };
+MicroSet.prototype.clear = function () { this._map.clear(); };
 
 var Map = MicroMap;
 var WeakMap = MicroMap;

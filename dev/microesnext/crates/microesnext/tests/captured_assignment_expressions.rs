@@ -160,3 +160,43 @@ fn captured_cells_survive_an_externally_started_callback_frame() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn loop_callback_frames_do_not_overwrite_their_callers_locals() {
+    let source = "function walk(desc, callback) { \
+            for (let posA = 0, posB = 0, index = 0; index < desc.length;) { \
+                let length = desc[index++], inserted = desc[index++]; \
+                if (inserted < 0) { posA += length; posB += length; } \
+                else { \
+                    let endA = posA + length, endB = posB + inserted, text = null; \
+                    callback(posA, endA, posB, endB, text); \
+                    posA = endA; posB = endB; \
+                } \
+            } \
+        } \
+        function identity(value) { return value; } \
+        let field = { update(value) { \
+            walk([0, 1], () => value = identity(value)); \
+            value = identity(value); \
+            return value.answer; \
+        } }; \
+        return field.update({ answer: 42 });";
+    assert_eq!(
+        run(source),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
+
+#[test]
+fn assignment_before_a_conditional_closure_boxes_a_parameter_lazily() {
+    let source = "function update(value, create) { \
+            if (create) { let read = () => value; read(); } \
+            value = { answer: 42 }; \
+            return value.answer; \
+        } \
+        return update({ answer: 1 }, false);";
+    assert_eq!(
+        run(source),
+        Outcome::Complete(Value::from_i30(42).unwrap())
+    );
+}
