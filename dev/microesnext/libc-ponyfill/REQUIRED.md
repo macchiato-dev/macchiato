@@ -18,6 +18,8 @@ the general-purpose WASI-libc headers is omitted unless this build needs it.
   - `memmove(dest, src, count)`
   - `memset(dest, value, count)`
   - `strlen(string)`
+  - Implemented in allocation-free Rust derived from Rust compiler-builtins'
+    loops and checked against wasi-libc behavior.
 - `stdint.h`
   - Exact-width signed and unsigned 8-, 16-, 32-, and 64-bit types
   - `intptr_t` and `uintptr_t`

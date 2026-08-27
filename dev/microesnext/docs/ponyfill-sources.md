@@ -18,10 +18,13 @@ memory primitives intended for target specialization. Rust compiler-builtins
 uses small pointer loops for these two operations and reserves word-wise paths
 for copying and filling.
 
-The initial Rust implementations follow compiler-builtins' pointer arithmetic
-and wasi-libc's exact `memcmp` result: the unsigned-byte difference at the first
-mismatch. This is small and allocation-free. SIMD or word-at-a-time variants
-should be justified by wasm measurements before they replace it.
+The initial Rust implementations follow compiler-builtins' pointer arithmetic,
+copy direction, and byte loops. They preserve wasi-libc's exact `memcmp`
+result: the unsigned-byte difference at the first mismatch. Rust
+compiler-builtins adds aligned word paths above a small-copy threshold, while
+wasi-libc adds optional wasm SIMD paths. The initial implementation stays
+scalar and allocation-free; either optimization should be justified by wasm
+measurements before it replaces the readable baseline.
 
 MicroQuickJS's `js_malloc(ctx, size, mtag)` remains the engine allocator. It is
 context-bound, tags every object, cooperates with collection and compaction,

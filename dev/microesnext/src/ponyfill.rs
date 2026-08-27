@@ -5,6 +5,81 @@
 
 use core::ffi::{c_char, c_int, c_void};
 
+unsafe fn copy_forward(mut dest: *mut u8, mut src: *const u8, count: usize) {
+    let end = dest.wrapping_add(count);
+    while dest < end {
+        unsafe { *dest = *src };
+        dest = dest.wrapping_add(1);
+        src = src.wrapping_add(1);
+    }
+}
+
+unsafe fn copy_backward(mut dest: *mut u8, mut src: *const u8, count: usize) {
+    let start = dest;
+    dest = dest.wrapping_add(count);
+    src = src.wrapping_add(count);
+    while dest > start {
+        dest = dest.wrapping_sub(1);
+        src = src.wrapping_sub(1);
+        unsafe { *dest = *src };
+    }
+}
+
+/// Copies `count` non-overlapping bytes and returns `dest`.
+///
+/// # Safety
+///
+/// The ranges must be valid for `count` bytes and must not overlap.
+#[cfg_attr(target_arch = "wasm32", unsafe(no_mangle))]
+pub unsafe extern "C" fn memcpy(
+    dest: *mut c_void,
+    src: *const c_void,
+    count: usize,
+) -> *mut c_void {
+    unsafe { copy_forward(dest.cast(), src.cast(), count) };
+    dest
+}
+
+/// Copies `count` bytes between ranges that may overlap and returns `dest`.
+///
+/// # Safety
+///
+/// Both ranges must be valid for `count` bytes.
+#[cfg_attr(target_arch = "wasm32", unsafe(no_mangle))]
+pub unsafe extern "C" fn memmove(
+    dest: *mut c_void,
+    src: *const c_void,
+    count: usize,
+) -> *mut c_void {
+    let distance = (dest as usize).wrapping_sub(src as usize);
+    if distance >= count {
+        unsafe { copy_forward(dest.cast(), src.cast(), count) };
+    } else {
+        unsafe { copy_backward(dest.cast(), src.cast(), count) };
+    }
+    dest
+}
+
+/// Fills `count` bytes with the low byte of `value` and returns `dest`.
+///
+/// # Safety
+///
+/// `dest` must be writable for `count` bytes.
+#[cfg_attr(target_arch = "wasm32", unsafe(no_mangle))]
+pub unsafe extern "C" fn memset(
+    dest: *mut c_void,
+    value: c_int,
+    count: usize,
+) -> *mut c_void {
+    let mut cursor = dest.cast::<u8>();
+    let end = cursor.wrapping_add(count);
+    while cursor < end {
+        unsafe { *cursor = value as u8 };
+        cursor = cursor.wrapping_add(1);
+    }
+    dest
+}
+
 /// Compares the first `count` bytes and returns the first unsigned difference.
 ///
 /// # Safety
@@ -47,7 +122,7 @@ pub unsafe extern "C" fn strlen(mut string: *const c_char) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{memcmp, strlen};
+    use super::{memcmp, memcpy, memmove, memset, strlen};
     use core::ffi::c_char;
 
     struct CompareCase {
@@ -95,6 +170,101 @@ mod tests {
         for (bytes, expected) in LENGTH_CASES {
             let actual = unsafe { strlen(bytes.as_ptr().cast::<c_char>()) };
             assert_eq!(actual, *expected);
+        }
+    }
+
+    struct CopyCase {
+        source: &'static [u8],
+        initial: &'static [u8],
+        count: usize,
+        expected: &'static [u8],
+    }
+
+    const COPY_CASES: &[CopyCase] = &[
+        CopyCase { source: b"", initial: b"", count: 0, expected: b"" },
+        CopyCase {
+            source: b"rust", initial: b"----", count: 4, expected: b"rust",
+        },
+        CopyCase {
+            source: b"wasm", initial: b".....", count: 3, expected: b"was..",
+        },
+    ];
+
+    #[test]
+    fn copy_cases() {
+        for case in COPY_CASES {
+            let mut actual = case.initial.to_vec();
+            let returned = unsafe {
+                memcpy(
+                    actual.as_mut_ptr().cast(),
+                    case.source.as_ptr().cast(),
+                    case.count,
+                )
+            };
+            assert_eq!(returned, actual.as_mut_ptr().cast());
+            assert_eq!(actual, case.expected);
+        }
+    }
+
+    struct MoveCase {
+        initial: &'static [u8],
+        dest: usize,
+        src: usize,
+        count: usize,
+        expected: &'static [u8],
+    }
+
+    const MOVE_CASES: &[MoveCase] = &[
+        MoveCase {
+            initial: b"abcdef", dest: 0, src: 2, count: 4, expected: b"cdefef",
+        },
+        MoveCase {
+            initial: b"abcdef", dest: 2, src: 0, count: 4, expected: b"ababcd",
+        },
+        MoveCase {
+            initial: b"abcdef", dest: 1, src: 1, count: 4, expected: b"abcdef",
+        },
+    ];
+
+    #[test]
+    fn move_cases() {
+        for case in MOVE_CASES {
+            let mut actual = case.initial.to_vec();
+            unsafe {
+                memmove(
+                    actual.as_mut_ptr().add(case.dest).cast(),
+                    actual.as_ptr().add(case.src).cast(),
+                    case.count,
+                );
+            }
+            assert_eq!(actual, case.expected);
+        }
+    }
+
+    struct SetCase {
+        initial: &'static [u8],
+        value: i32,
+        count: usize,
+        expected: &'static [u8],
+    }
+
+    const SET_CASES: &[SetCase] = &[
+        SetCase { initial: b"", value: 1, count: 0, expected: b"" },
+        SetCase { initial: b"----", value: 0, count: 3, expected: b"\0\0\0-" },
+        SetCase {
+            initial: b"...", value: 0x1ff, count: 3, expected: &[0xff; 3],
+        },
+    ];
+
+    #[test]
+    fn set_cases() {
+        for case in SET_CASES {
+            let mut actual = case.initial.to_vec();
+            let returned = unsafe {
+                memset(actual.as_mut_ptr().cast(), case.value, case.count)
+            };
+            assert_eq!(returned, actual.as_mut_ptr().cast());
+            assert_eq!(actual, case.expected);
         }
     }
 }
