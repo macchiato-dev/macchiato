@@ -76,6 +76,26 @@ microArrayPrototype.slice = function (start, end) {
   for (var index = start; index < end && index < length; index++) result.push(this[index]);
   return result;
 };
+microArrayPrototype.splice = function (start, deleteCount, ...items) {
+  var length = this.length;
+  start = start < 0 ? Math.max(length + start, 0) : Math.min(start, length);
+  deleteCount = deleteCount === undefined ? length - start : Math.max(0, Math.min(deleteCount, length - start));
+  var removed = this.slice(start, start + deleteCount);
+  var difference = items.length - deleteCount;
+  var index;
+  if (difference > 0) {
+    for (index = length - 1; index >= start + deleteCount; index--) {
+      this[index + difference] = this[index];
+    }
+  } else if (difference < 0) {
+    for (index = start + deleteCount; index < length; index++) {
+      this[index + difference] = this[index];
+    }
+    this.length = length + difference;
+  }
+  for (index = 0; index < items.length; index++) this[start + index] = items[index];
+  return removed;
+};
 microArrayPrototype.join = function (separator) {
   separator = separator === undefined ? "," : String(separator);
   var result = "";

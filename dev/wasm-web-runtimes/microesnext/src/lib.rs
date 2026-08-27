@@ -34,6 +34,8 @@ const RANGE_ERROR: u32 = 18;
 const SYNTAX_ERROR: u32 = 24;
 const TYPE_ERROR: u32 = 25;
 const DATE: u32 = 3;
+const INTL: u32 = 7;
+const PROCESS: u32 = 49;
 const OBJECT_CREATE: u32 = (1 << 29) + 1;
 const OBJECT_DEFINE_PROPERTY: u32 = (1 << 29) + 2;
 const OBJECT_DEFINE_PROPERTIES: u32 = (1 << 29) + 3;
@@ -47,6 +49,8 @@ const MATH: u32 = 12;
 const MATH_FUNCTION: u32 = (1 << 29) + 100;
 const ARRAY_IS_ARRAY: u32 = (1 << 29) + 200;
 const UINT8_ARRAY: u32 = 26;
+const UINT16_ARRAY: u32 = 27;
+const UINT32_ARRAY: u32 = 28;
 const BRIDGE: u32 = 33;
 const GLOBAL_THIS: u32 = 41;
 const INSTALL_ARRAY_PROTOTYPE: u32 = 59;
@@ -69,13 +73,14 @@ const PARSE_INT: u32 = 47;
 const NUMBER_TO_STRING: u32 = (1 << 29) + 75;
 const STRING_REPLACE: u32 = (1 << 29) + 76;
 const STRING_TO_LOWER_CASE: u32 = (1 << 29) + 77;
+const STRING_SLICE: u32 = (1 << 29) + 78;
 
-struct WordMemory(UnsafeCell<[u32; 1_048_576]>);
+struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
 
 // WebAssembly calls this runtime on one thread. Reentrant delivery is handled
 // only after the persistent machine is installed below.
 unsafe impl Sync for WordMemory {}
-static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 1_048_576]));
+static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 4_194_304]));
 struct KeyMemory(UnsafeCell<[u8; 96]>);
 unsafe impl Sync for KeyMemory {}
 static FAILURE_KEY: KeyMemory = KeyMemory(UnsafeCell::new([0; 96]));
@@ -113,12 +118,13 @@ fn report_failure(stage: u32, detail: u32) {
     at += 4;
     at += decimal(&mut message[at..], FUNCTION.load(Ordering::Relaxed));
     let key_length = FAILURE_KEY_LENGTH.load(Ordering::Relaxed) as usize;
-    if key_length > 0 && at + 5 + key_length <= message.len() {
+    if key_length > 0 && at + 5 < message.len() {
         message[at..at + 5].copy_from_slice(b" key ");
         at += 5;
-        message[at..at + key_length]
-            .copy_from_slice(&unsafe { &*FAILURE_KEY.0.get() }[..key_length]);
-        at += key_length;
+        let shown = key_length.min(message.len() - at);
+        message[at..at + shown]
+            .copy_from_slice(&unsafe { &*FAILURE_KEY.0.get() }[..shown]);
+        at += shown;
     }
     message[4] = u8::try_from(stage.min(255)).unwrap_or(255);
     unsafe { msg(message.as_mut_ptr() as u32, u32::try_from(at + 1).unwrap()) };
@@ -474,6 +480,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             b"toLowerCase",
             Value::from_host(microesnext::HostRef::new(STRING_TO_LOWER_CASE).unwrap()),
         ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"slice",
+            Value::from_host(microesnext::HostRef::new(STRING_SLICE).unwrap()),
+        ))
     })();
     let string_prototype = match string_prototype.and_then(|value| {
         machine.install_string_prototype(value)?;
@@ -539,6 +551,18 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 machine.complete_host_operation(Value::from_host(
                     microesnext::HostRef::new(ARRAY_IS_ARRAY).unwrap(),
                 )).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == INTL && machine.string_bytes(key) == Ok(b"Segmenter") =>
+            {
+                // CodeMirror feature-detects Segmenter and has its own Unicode
+                // word-boundary fallback when a runtime does not provide it.
+                machine.complete_host_operation(Value::UNDEFINED).unwrap();
+            }
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == PROCESS && machine.string_bytes(key) == Ok(b"env") =>
+            {
+                machine.complete_host_operation(Value::UNDEFINED).unwrap();
             }
             Ok(Outcome::HostGet { object, key, .. })
                 if object.index() == OBJECT && machine.string_bytes(key) == Ok(b"create") =>
@@ -899,8 +923,10 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         break u32::MAX;
                     }
                 };
-                let key = machine.intern_atom(b"forEach").unwrap();
-                if microesnext::objects::get(machine.arena(), prototype, key).is_err() {
+                let key = machine.intern_atom(b"slice").unwrap();
+                if microesnext::objects::get(machine.arena(), prototype, key)
+                    .map_or(true, |value| value == microesnext::Value::UNDEFINED)
+                {
                     DETAIL.store(prototype.raw(), Ordering::Relaxed);
                     break u32::MAX;
                 }
@@ -1095,6 +1121,36 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     Ok(()) => {}
                     Err(error) => {
                         DETAIL.store(error as u32 + 2800, Ordering::Relaxed);
+                        break u32::MAX;
+                    }
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_SLICE =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let units: Vec<u16> = text.encode_utf16().collect();
+                    let length = i32::try_from(units.len()).map_err(|_| Error::Type)?;
+                    let relative = |value: Option<Value>, default: i32| {
+                        value
+                            .filter(|value| *value != Value::UNDEFINED)
+                            .and_then(Value::as_i30)
+                            .unwrap_or(default)
+                    };
+                    let clamp = |value: i32| {
+                        if value < 0 { (length + value).max(0) } else { value.min(length) }
+                    };
+                    let start = clamp(relative(machine.host_argument(0).ok(), 0));
+                    let end = clamp(relative(machine.host_argument(1).ok(), length));
+                    let end = end.max(start);
+                    let sliced = String::from_utf16_lossy(&units[start as usize..end as usize]);
+                    machine.new_string(sliced.as_bytes())
+                })();
+                match result.and_then(|value| machine.complete_host_call(value)) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        DETAIL.store(error as u32 + 2850, Ordering::Relaxed);
                         break u32::MAX;
                     }
                 }
@@ -1356,6 +1412,31 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                         }
                     }
                 }
+                if [UINT16_ARRAY, UINT32_ARRAY].contains(&constructor.index()) {
+                    let length = machine.host_argument(0).ok().and_then(Value::as_i30)
+                        .and_then(|value| usize::try_from(value).ok());
+                    let Some(length) = length else {
+                        DETAIL.store(310, Ordering::Relaxed);
+                        break u32::MAX;
+                    };
+                    let result = (|| {
+                        let mut array = microesnext::arrays::new(machine.arena_mut())?;
+                        for index in 0..length {
+                            array = microesnext::arrays::set(
+                                machine.arena_mut(), array, index,
+                                Value::from_i30(0).ok_or(Error::Type)?,
+                            )?;
+                        }
+                        machine.complete_host_construct(array)
+                    })();
+                    match result {
+                        Ok(()) => continue,
+                        Err(error) => {
+                            DETAIL.store(error as u32 + 310, Ordering::Relaxed);
+                            break u32::MAX;
+                        }
+                    }
+                }
                 if constructor.index() == REGEXP {
                     let result = (|| {
                         let pattern = machine.host_argument(0).map_err(|_| 1_u32)?;
@@ -1447,14 +1528,49 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     let (left, right) = machine.last_operands();
                     let _ = write!(
                         context,
-                        "; op={:?}; call={}; left={}; right={}; error={:?}",
+                        "; op={:?}; call={}; left={}; right={}; sp={}; base={}; frame={}; error={:?}",
                         opcode,
                         call,
                         describe(left),
                         describe(right),
+                        machine.stack_len(),
+                        machine.frame_base(),
+                        machine.frame_header().map_or(999_u32, Value::raw),
                         error
                     );
                     remember_failure_bytes(context.as_bytes());
+                }
+                if machine.last_method_key().and_then(|key| machine.string_bytes(key).ok()) == Some(b"slice") {
+                    if let Ok(Some(prototype)) = machine.array_prototype_value() {
+                        let mut context = String::from("array prototype ");
+                        if let Some(key) = machine.last_method_key() {
+                            if let Ok(value) = microesnext::objects::get(machine.arena(), prototype, key) {
+                                use core::fmt::Write;
+                                let _ = write!(context, "requested={}; ", value.raw());
+                            }
+                        }
+                        context.push_str("keys=");
+                        if let Ok(count) = microesnext::objects::own_property_count(machine.arena(), prototype) {
+                            use core::fmt::Write;
+                            let _ = write!(context, "{} ", count);
+                            for index in 0..count {
+                                if let Ok(key) = microesnext::objects::own_property_key(machine.arena(), prototype, index) {
+                                    if let Ok(bytes) = machine.string_bytes(key) {
+                                        if let Ok(text) = core::str::from_utf8(bytes) {
+                                            context.push_str(text);
+                                            if text == "slice" {
+                                                if let Ok(value) = microesnext::objects::get(machine.arena(), prototype, key) {
+                                                    let _ = write!(context, "={}", value.raw());
+                                                }
+                                            }
+                                            context.push(',');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        remember_failure_bytes(context.as_bytes());
+                    }
                 }
                 let receiver_detail = || machine.last_method_receiver().map_or(2, |receiver| {
                     if receiver.as_i30().is_some() { 101 }

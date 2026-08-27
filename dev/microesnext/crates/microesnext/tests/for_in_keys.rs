@@ -35,6 +35,72 @@ fn ordinary_method_keeps_its_receiver_with_multiple_arguments() {
 }
 
 #[test]
+fn receiver_method_with_an_omitted_argument_returns_an_array() {
+    let code = compile_script(
+        "let object = { length: 2, first: 40, second: 2, slice: function (start, end) { let length = this.length; start = start === undefined ? 0 : start; end = end === undefined ? length : end; let result = []; if (start < end) result[result.length] = this.first; if (start + 1 < end) result[result.length] = this.second; return result; } }; return object.slice(0).length;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(2).unwrap())));
+}
+
+#[test]
+fn assigned_slice_method_returns_after_ternary_parameter_defaults() {
+    let code = compile_script(
+        "let object = { length: 2 }; object[0] = 40; object[1] = 2; object.slice = function (start, end) { var length = this.length; start = start === undefined ? 0 : start < 0 ? length + start : start; end = end === undefined ? length : end < 0 ? length + end : end; var result = []; for (var index = start; index < end && index < length; index++) result[result.length] = this[index]; return result; }; return object.slice(0).length;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 4096];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(2).unwrap())));
+}
+
+#[test]
+fn method_returns_after_calling_a_method_on_its_local_result() {
+    let code = compile_script(
+        "let object = { length: 2 }; object[0] = 40; object[1] = 2; object.slice = function (start, end) { var length = this.length; start = start === undefined ? 0 : start; end = end === undefined ? length : end; var result = { length: 0, push: function (...values) { for (var at = 0; at < values.length; at++) { this[this.length] = values[at]; this.length = this.length + 1; } return this.length; } }; for (var index = start; index < end; index++) result.push(this[index]); return result; }; return object.slice(0).length;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 4096];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(2).unwrap())));
+}
+
+#[test]
+fn rest_method_can_append_its_values_to_its_receiver() {
+    let code = compile_script(
+        "let result = { length: 0, push: function (...values) { for (var at = 0; at < values.length; at++) { this[this.length] = values[at]; this.length = this.length + 1; } return this.length; } }; return result.push(40);",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(1).unwrap())));
+}
+
+#[test]
+fn conditional_expression_keeps_a_receiver_method_result() {
+    let code = compile_script(
+        "let object = { slice: function (start, end) { return [start, end]; } }; let value = true ? object.slice(0, 1) : null; return value.length;",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(2).unwrap())));
+}
+
+#[test]
+fn sequential_property_assignments_keep_the_last_method() {
+    let code = compile_script(
+        "let object = {}; object.first = function () { return 1; }; object.second = function () { return 2; }; object.slice = function () { return 42; }; return object.slice();",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}
+
+#[test]
 fn method_and_receiver_survive_allocating_argument_evaluation() {
     let code = compile_script(
         "let object = { method(value) { return value.answer; } }; function argument() { for (let i = 0; i < 80; i++) { let churn = { values: [i, i + 1] }; } return { answer: 42 }; } return object.method(argument());",

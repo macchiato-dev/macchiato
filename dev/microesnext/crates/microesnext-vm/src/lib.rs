@@ -11,7 +11,7 @@ use microesnext_execution::exceptions::Handlers;
 use microesnext_execution::suspension::{restore, restore_value, resume, resume_value, suspend};
 #[cfg(feature = "async-functions")]
 use microesnext_execution::suspension::{resume_context, suspend_context};
-#[cfg(any(feature = "array-spread", feature = "spread-calls"))]
+#[cfg(feature = "arrays")]
 use microesnext_objects::arrays::len as array_len;
 #[cfg(feature = "arrays")]
 use microesnext_objects::arrays::{get as array_get, new as new_array, set as array_set};
@@ -111,6 +111,62 @@ pub struct Machine<'code, 'memory> {
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
+    #[cfg(all(feature = "arrays", feature = "string-operations"))]
+    fn string_from_primitive(&mut self, value: Value) -> Result<Value, Error> {
+        if !microesnext_objects::arrays::is_array(self.core.arena(), value) {
+            return microesnext_values::strings::from_primitive(self.core.arena_mut(), value);
+        }
+
+        let array_root = self.retain(value)?;
+        let empty = microesnext_values::strings::new(self.core.arena_mut(), b"")?;
+        let result_root = self.retain(empty)?;
+        let length = array_len(self.core.arena(), self.root(array_root)?)?;
+        for index in 0..length {
+            if index > 0 {
+                let comma = microesnext_values::strings::new(self.core.arena_mut(), b",")?;
+                let comma_root = self.retain(comma)?;
+                let result = self.root(result_root)?;
+                let comma = self.root(comma_root)?;
+                let joined = microesnext_values::strings::operations::concatenate(
+                    self.core.arena_mut(),
+                    result,
+                    comma,
+                )?;
+                self.core.arena_mut().set_root(result_root, joined)?;
+                self.release(comma_root)?;
+            }
+            let element = array_get(self.core.arena(), self.root(array_root)?, index)?;
+            if element == Value::NULL || element == Value::UNDEFINED {
+                continue;
+            }
+            let element_root = self.retain(element)?;
+            let element = self.root(element_root)?;
+            let text = microesnext_values::strings::from_primitive(
+                self.core.arena_mut(),
+                element,
+            )?;
+            self.core.arena_mut().set_root(element_root, text)?;
+            let result = self.root(result_root)?;
+            let element = self.root(element_root)?;
+            let joined = microesnext_values::strings::operations::concatenate(
+                self.core.arena_mut(),
+                result,
+                element,
+            )?;
+            self.core.arena_mut().set_root(result_root, joined)?;
+            self.release(element_root)?;
+        }
+        let result = self.root(result_root)?;
+        self.release(array_root)?;
+        self.release(result_root)?;
+        Ok(result)
+    }
+
+    #[cfg(all(not(feature = "arrays"), feature = "string-operations"))]
+    fn string_from_primitive(&mut self, value: Value) -> Result<Value, Error> {
+        microesnext_values::strings::from_primitive(self.core.arena_mut(), value)
+    }
+
     pub fn new(code: &'code [u8], memory: &'memory mut [u32]) -> Self {
         #[cfg(feature = "atoms")]
         let root_capacity = 1;
@@ -356,6 +412,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         self.core.frame_base()
     }
 
+    pub fn stack_len(&self) -> usize {
+        self.core.arena().stack_len()
+    }
+
     pub fn frame_header(&self) -> Result<Value, Error> {
         self.core.arena().stack_value_from_bottom(self.core.frame_base())
     }
@@ -430,6 +490,11 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         }
         self.array_prototype = Some(self.retain(prototype)?);
         Ok(())
+    }
+
+    /// Inspect the currently installed array prototype from an embedding.
+    pub fn array_prototype_value(&self) -> Result<Option<Value>, Error> {
+        self.array_prototype.map(|root| self.root(root)).transpose()
     }
 
     #[cfg(all(feature = "strings", feature = "objects"))]
@@ -1369,14 +1434,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let left_root = self.retain(left)?;
                     let right_root = self.retain(right)?;
                     let rooted_left = self.root(left_root)?;
-                    let left = microesnext_values::strings::from_primitive(
-                        self.core.arena_mut(), rooted_left,
-                    )?;
+                    let left = self.string_from_primitive(rooted_left)?;
                     self.core.arena_mut().set_root(left_root, left)?;
                     let rooted_right = self.root(right_root)?;
-                    let right = microesnext_values::strings::from_primitive(
-                        self.core.arena_mut(), rooted_right,
-                    )?;
+                    let right = self.string_from_primitive(rooted_right)?;
                     self.core.arena_mut().set_root(right_root, right)?;
                     let left = self.root(left_root)?;
                     let right = self.root(right_root)?;
@@ -1894,8 +1955,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "strings")]
             Opcode::ToStringPrimitive => {
                 let value = self.core.arena_mut().pop()?;
-                let string =
-                    microesnext_values::strings::from_primitive(self.core.arena_mut(), value)?;
+                let string = self.string_from_primitive(value)?;
                 self.core.arena_mut().push(string)?;
                 Ok(None)
             }

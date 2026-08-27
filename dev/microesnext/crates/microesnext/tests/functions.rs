@@ -121,6 +121,16 @@ fn method_rest_parameters_preserve_the_receiver_frame() {
 }
 
 #[test]
+fn function_expression_rest_parameters_report_their_length() {
+    assert_eq!(
+        run(
+            "let object = { count: function (...values) { return values.length; } }; return object.count(40, 42);"
+        ),
+        Outcome::Complete(Value::from_i30(2).unwrap())
+    );
+}
+
+#[test]
 fn source_function_keeps_parameters_and_lexical_locals_in_one_frame() {
     assert_eq!(
         run("function addBase(value) { let base = 40; return base + value; } return addBase(2);"),

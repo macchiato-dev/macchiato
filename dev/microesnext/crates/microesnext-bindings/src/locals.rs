@@ -32,9 +32,11 @@ pub fn store(arena: &mut Arena<'_>, base: usize, slot: usize) -> Result<(), Erro
 #[inline(always)]
 pub fn leave(arena: &mut Arena<'_>, base: usize) -> Result<(), Error> {
     let count = count(arena, base)?;
-    if arena.stack_len() != base + 1 + count {
+    if arena.stack_len() < base + 1 + count {
         return Err(Error::BadBytecode);
     }
+    // Returning discards any expression temporaries still owned by the
+    // frame. The return value has already been removed by the interpreter.
     arena.truncate_stack(base)
 }
 

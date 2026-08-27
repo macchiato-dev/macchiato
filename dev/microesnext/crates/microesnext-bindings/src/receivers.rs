@@ -33,10 +33,12 @@ pub fn load(arena: &Arena<'_>, base: usize) -> Result<Value, Error> {
 #[inline(always)]
 pub fn leave(arena: &mut Arena<'_>, base: usize) -> Result<(), Error> {
     let count = local_count(arena, base)?;
-    if arena.stack_len() != base + 2 + count {
+    if arena.stack_len() < base + 2 + count {
         return Err(Error::BadBytecode);
     }
-    arena.pop()?;
+    // The receiver has a fixed frame slot. Discard it together with any
+    // expression temporaries that remain below the return value.
+    arena.truncate_stack(base + 1 + count)?;
     crate::locals::leave(arena, base)
 }
 

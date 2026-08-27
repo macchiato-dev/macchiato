@@ -35,6 +35,9 @@ fn main() {
         source.push('\n');
     }
     source.push_str(&application);
+    if env::var_os("MICROESNEXT_GUEST_ENVIRONMENT").is_some() {
+        source.push_str("\nvar microESNextMarker = document.getElementById(\"editor\"); microESNextMarker.setAttribute(\"data-children\", String(microESNextMarker.childNodes.length)); dispatch(-1);\n");
+    }
     let bytecode = compile_script_with_host_globals(&source, HOST_GLOBALS).unwrap_or_else(|error| {
         panic!(
             "MicroESNext source failed at byte {}: expected {}",
