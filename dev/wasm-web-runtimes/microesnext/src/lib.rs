@@ -1368,6 +1368,15 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 if let Some(key) = machine.last_method_key() {
                     remember_failure_key(&machine, key);
                 }
+                if let Some(opcode) = machine.last_opcode() {
+                    let mut context = String::new();
+                    if let Some(key) = machine.last_method_key().and_then(|key| machine.string_bytes(key).ok()) {
+                        if let Ok(key) = core::str::from_utf8(key) { context.push_str(key); }
+                    }
+                    use core::fmt::Write;
+                    let _ = write!(context, "; op={:?}; error={:?}", opcode, error);
+                    remember_failure_bytes(context.as_bytes());
+                }
                 let receiver_detail = || machine.last_method_receiver().map_or(2, |receiver| {
                     if receiver.as_i30().is_some() { 101 }
                     else if receiver.as_host().is_some() { 102 }

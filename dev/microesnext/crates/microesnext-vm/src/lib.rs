@@ -103,6 +103,7 @@ pub struct Machine<'code, 'memory> {
     last_method_key: Option<Value>,
     last_method_receiver: Option<Value>,
     last_constructor: Option<Value>,
+    last_opcode: Option<Opcode>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -148,6 +149,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_key: None,
             last_method_receiver: None,
             last_constructor: None,
+            last_opcode: None,
         }
     }
 
@@ -267,6 +269,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_key: None,
             last_method_receiver: None,
             last_constructor: None,
+            last_opcode: None,
         })
     }
 
@@ -319,6 +322,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn last_constructor(&self) -> Option<Value> {
         self.last_constructor
+    }
+
+    pub fn last_opcode(&self) -> Option<Opcode> {
+        self.last_opcode
     }
 
     pub fn frame_base(&self) -> usize {
@@ -545,6 +552,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_method_key: self.last_method_key,
             last_method_receiver: self.last_method_receiver,
             last_constructor: self.last_constructor,
+            last_opcode: self.last_opcode,
         })
     }
 
@@ -632,6 +640,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                 }
                 CoreOutcome::Extension(opcode) => {
                     let opcode = Opcode::try_from(opcode)?;
+                    self.last_opcode = Some(opcode);
                     if let Some(outcome) = self.run_extension(opcode)? {
                         return Ok(outcome);
                     }
