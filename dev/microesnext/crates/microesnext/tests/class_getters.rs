@@ -134,3 +134,32 @@ fn a_late_constructor_resumes_a_host_call_through_nested_functions() {
         Ok(Outcome::Complete(Value::from_i30(42).unwrap()))
     );
 }
+
+#[test]
+fn an_instance_with_getters_can_assign_several_plain_properties() {
+    let code = compile_script(
+        "let Rule = class { constructor(tags, mode, context, next) { \
+           this.tags = tags; this.mode = mode; this.context = context; this.next = next; \
+         } get depth() { return this.context ? this.context.length : 0; } }; \
+         let rule = new Rule([], 2, null); rule.next = new Rule([], 1, null); \
+         return rule.next.mode;",
+    ).unwrap();
+    let mut memory = [0; 512];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(1).unwrap())));
+}
+
+#[test]
+fn a_bound_function_keeps_its_receiver_and_leading_arguments() {
+    let code = compile_script(
+        "let object = {}; function add(left, right) { this.total = left + right; } \
+         let bound = add.bind(object, 20); bound(22); return object.total;",
+    ).unwrap();
+    let mut memory = [0; 1536];
+    let mut machine = Machine::with_objects(&code, &mut memory, 8).unwrap();
+    let bind = HostRef::new(7).unwrap();
+    machine.install_function_bind(bind);
+    assert!(matches!(machine.run(), Ok(Outcome::HostCall { function, .. }) if function == bind));
+    machine.complete_function_bind().unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::from_i30(42).unwrap())));
+}

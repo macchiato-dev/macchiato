@@ -110,6 +110,7 @@ pub struct Machine<'code, 'memory> {
     last_call_value: Option<Value>,
     last_left_operand: Option<Value>,
     last_right_operand: Option<Value>,
+    last_property_target: Option<Value>,
 }
 
 impl<'code, 'memory> Machine<'code, 'memory> {
@@ -217,6 +218,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_call_value: None,
             last_left_operand: None,
             last_right_operand: None,
+            last_property_target: None,
         }
     }
 
@@ -342,6 +344,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_call_value: None,
             last_left_operand: None,
             last_right_operand: None,
+            last_property_target: None,
         })
     }
 
@@ -410,6 +413,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
 
     pub fn last_operands(&self) -> (Option<Value>, Option<Value>) {
         (self.last_left_operand, self.last_right_operand)
+    }
+
+    pub fn last_property_target(&self) -> Option<Value> {
+        self.last_property_target
     }
 
     pub fn frame_base(&self) -> usize {
@@ -651,6 +658,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             last_call_value: self.last_call_value,
             last_left_operand: self.last_left_operand,
             last_right_operand: self.last_right_operand,
+            last_property_target: self.last_property_target,
         })
     }
 
@@ -938,8 +946,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let length = self.core.arena().byte_len(object.as_ref().ok_or(Error::Type)?)?;
                     Value::from_i30(length as i32).ok_or(Error::Type)?
                 } else if microesnext_objects::arrays::is_array(self.core.arena(), object) {
-                    let prototype = self.array_prototype.ok_or(Error::Type)?;
-                    get(self.core.arena(), self.root(prototype)?, key)?
+                    if let Some(value) = microesnext_objects::arrays::get_property(
+                        self.core.arena(), object, key,
+                    )? {
+                        value
+                    } else {
+                        let prototype = self.array_prototype.ok_or(Error::Type)?;
+                        get(self.core.arena(), self.root(prototype)?, key)?
+                    }
                 } else {
                     get(self.core.arena(), object, key)?
                 };
@@ -1005,8 +1019,14 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     return Ok(None);
                 }
                 if microesnext_objects::arrays::is_array(self.core.arena(), receiver) {
-                    let prototype = self.array_prototype.ok_or(Error::Type)?;
-                    let method = get(self.core.arena(), self.root(prototype)?, key)?;
+                    let method = if let Some(value) = microesnext_objects::arrays::get_property(
+                        self.core.arena(), receiver, key,
+                    )? {
+                        value
+                    } else {
+                        let prototype = self.array_prototype.ok_or(Error::Type)?;
+                        get(self.core.arena(), self.root(prototype)?, key)?
+                    };
                     self.core.arena_mut().push(receiver)?;
                     self.core.arena_mut().push(method)?;
                 } else if self.string_bytes(receiver).is_ok() {
@@ -1105,6 +1125,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         key,
                         value,
                     }));
+                }
+                if microesnext_objects::arrays::is_array(self.core.arena(), object) {
+                    microesnext_objects::arrays::set_property(
+                        self.core.arena_mut(), object, key, value,
+                    )?;
+                    return Ok(None);
                 }
                 #[cfg(feature = "getters")]
                 if let Some(current) = microesnext_objects::get_own(self.core.arena(), object, key)?
@@ -1218,6 +1244,7 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             }
             #[cfg(all(feature = "getters", feature = "property-assignment"))]
             Opcode::SetPropertyAccessor => {
+                self.last_property_target = Some(self.core.arena().stack_value(2)?);
                 #[cfg(feature = "host-bindings")]
                 if let Some(object) = self.core.arena().stack_value(2)?.as_host() {
                     let value = self.core.arena_mut().pop()?;
@@ -1548,6 +1575,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::LessThanNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
+                #[cfg(feature = "string-number-coercion")]
+                let value = microesnext_values::numbers::operations::less_than_primitives(
+                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
+                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
+                );
+                #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_values::numbers::operations::less_than(
                     self.core.arena(),
                     left,
@@ -1560,6 +1593,12 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             Opcode::GreaterThanNumber => {
                 let right = self.core.arena_mut().pop()?;
                 let left = self.core.arena_mut().pop()?;
+                #[cfg(feature = "string-number-coercion")]
+                let value = microesnext_values::numbers::operations::greater_than_primitives(
+                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), left)?,
+                    microesnext_values::numbers::string_coercion::coerce(self.core.arena(), right)?,
+                );
+                #[cfg(not(feature = "string-number-coercion"))]
                 let value = microesnext_values::numbers::operations::greater_than(
                     self.core.arena(),
                     left,
@@ -1767,7 +1806,13 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                         value,
                     }));
                 }
-                set(self.core.arena_mut(), object, key, value)?;
+                if microesnext_objects::arrays::is_array(self.core.arena(), object) {
+                    microesnext_objects::arrays::set_property(
+                        self.core.arena_mut(), object, key, value,
+                    )?;
+                } else {
+                    set(self.core.arena_mut(), object, key, value)?;
+                }
                 self.core.arena_mut().push(value)?;
                 Ok(None)
             }
@@ -2789,6 +2834,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
         let value = self.core.arena_mut().pop()?;
         let key = self.core.arena_mut().pop()?;
         let object = self.core.arena_mut().pop()?;
+        if microesnext_objects::arrays::is_array(self.core.arena(), object) {
+            self.core.arena_mut().push(value)?;
+            microesnext_objects::arrays::set_property(
+                self.core.arena_mut(), object, key, value,
+            )?;
+            let value = self.core.arena_mut().pop()?;
+            self.core.arena_mut().push(value)?;
+            self.core.arena_mut().push(Value::UNDEFINED)?;
+            return Ok(());
+        }
         let current = get(self.core.arena(), object, key)?;
         if let Some(function) =
             microesnext_objects::getters::setter_callable(self.core.arena(), current)?

@@ -9,6 +9,7 @@ use microesnext_types::{Error, HeapRef, Value};
 const INITIAL_CAPACITY: usize = 8;
 const LENGTH: usize = 0;
 const STORAGE: usize = 1;
+const PROPERTIES: usize = 2;
 
 pub fn is_array(arena: &Arena<'_>, value: Value) -> bool {
     value
@@ -25,7 +26,8 @@ pub fn new(arena: &mut Arena<'_>) -> Result<Value, Error> {
         Value::EMPTY,
         &mut [],
     )?;
-    let mut fields = [i30(0)?, Value::from_ref(storage)];
+    let properties = arena.allocate_values(BlockKind::Properties, &mut [], &mut [])?;
+    let mut fields = [i30(0)?, Value::from_ref(storage), Value::from_ref(properties)];
     let array = arena.allocate_values(BlockKind::Array, &mut fields, &mut [])?;
     Ok(Value::from_ref(array))
 }
@@ -123,12 +125,59 @@ pub fn delete(arena: &mut Arena<'_>, array: Value, index: usize) -> Result<bool,
     Ok(existed)
 }
 
+pub fn get_property(arena: &Arena<'_>, array: Value, key: Value) -> Result<Option<Value>, Error> {
+    let properties = properties_ref(arena, array)?;
+    let entries = arena.values(properties)?;
+    for pair in entries.chunks_exact(2) {
+        if keys_equal(arena, Value::from_raw(pair[0]), key)? {
+            return Ok(Some(Value::from_raw(pair[1])));
+        }
+    }
+    Ok(None)
+}
+
+pub fn set_property(
+    arena: &mut Arena<'_>, array: Value, key: Value, value: Value,
+) -> Result<Value, Error> {
+    let properties = properties_ref(arena, array)?;
+    let entries = arena.values(properties)?;
+    for index in (0..entries.len()).step_by(2) {
+        if keys_equal(arena, Value::from_raw(entries[index]), key)? {
+            arena.set_value(properties, index + 1, value)?;
+            return Ok(array);
+        }
+    }
+    let mut live = [array, key, value];
+    let properties = properties_ref(arena, live[0])?;
+    let (array_root, pair) = live.split_at_mut(1);
+    let properties = arena.extend_values(properties, pair, array_root)?;
+    let array = array_ref(arena, live[0])?;
+    arena.set_value(array, PROPERTIES, Value::from_ref(properties))?;
+    Ok(live[0])
+}
+
+fn keys_equal(arena: &Arena<'_>, left: Value, right: Value) -> Result<bool, Error> {
+    if left == right { return Ok(true); }
+    let (Some(left), Some(right)) = (left.as_ref(), right.as_ref()) else { return Ok(false); };
+    let string = |kind| matches!(kind, BlockKind::Bytes | BlockKind::String);
+    if !string(arena.kind(left)?) || !string(arena.kind(right)?) { return Ok(false); }
+    Ok(arena.bytes(left)? == arena.bytes(right)?)
+}
+
 fn array_ref(arena: &Arena<'_>, array: Value) -> Result<HeapRef, Error> {
     let array = array.as_ref().ok_or(Error::Type)?;
-    if arena.kind(array)? != BlockKind::Array || arena.values(array)?.len() != 2 {
+    if arena.kind(array)? != BlockKind::Array || arena.values(array)?.len() != 3 {
         return Err(Error::Type);
     }
     Ok(array)
+}
+
+fn properties_ref(arena: &Arena<'_>, array: Value) -> Result<HeapRef, Error> {
+    let array = array_ref(arena, array)?;
+    let properties = Value::from_raw(arena.values(array)?[PROPERTIES])
+        .as_ref().ok_or(Error::DanglingReference)?;
+    if arena.kind(properties)? != BlockKind::Properties { return Err(Error::DanglingReference); }
+    Ok(properties)
 }
 
 fn storage_ref(arena: &Arena<'_>, array: Value) -> Result<HeapRef, Error> {
@@ -182,6 +231,17 @@ mod tests {
         assert_eq!(pop(&mut arena, array).unwrap(), integer(9));
         assert_eq!(pop(&mut arena, array).unwrap(), Value::UNDEFINED);
         assert_eq!(len(&arena, array).unwrap(), 0);
+    }
+
+    #[test]
+    fn named_properties_do_not_change_index_storage_or_length() {
+        let mut memory = [0; 128];
+        let mut arena = Arena::new(&mut memory);
+        let array = new(&mut arena).unwrap();
+        let key = microesnext_values::strings::new(&mut arena, b"next").unwrap();
+        let array = set_property(&mut arena, array, key, integer(42)).unwrap();
+        assert_eq!(get_property(&arena, array, key), Ok(Some(integer(42))));
+        assert_eq!(len(&arena, array), Ok(0));
     }
 
     #[test]

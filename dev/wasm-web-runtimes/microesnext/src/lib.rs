@@ -48,6 +48,7 @@ const UINT16_ARRAY: u32 = 27;
 const UINT32_ARRAY: u32 = 28;
 const BRIDGE: u32 = 33;
 const GLOBAL_THIS: u32 = 41;
+const WINDOW: u32 = 58;
 const INSTALL_ARRAY_PROTOTYPE: u32 = 59;
 const FUNCTION_CALL: u32 = (1 << 29) + 60;
 const FUNCTION_BIND: u32 = (1 << 29) + 61;
@@ -72,6 +73,7 @@ const STRING_REPLACE: u32 = (1 << 29) + 76;
 const STRING_TO_LOWER_CASE: u32 = (1 << 29) + 77;
 const STRING_SLICE: u32 = (1 << 29) + 78;
 const STRING_TO_UPPER_CASE: u32 = (1 << 29) + 79;
+const STRING_INDEX_OF: u32 = (1 << 29) + 80;
 
 struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
 
@@ -79,9 +81,9 @@ struct WordMemory(UnsafeCell<[u32; 4_194_304]>);
 // only after the persistent machine is installed below.
 unsafe impl Sync for WordMemory {}
 static WORDS: WordMemory = WordMemory(UnsafeCell::new([0; 4_194_304]));
-struct KeyMemory(UnsafeCell<[u8; 96]>);
+struct KeyMemory(UnsafeCell<[u8; 192]>);
 unsafe impl Sync for KeyMemory {}
-static FAILURE_KEY: KeyMemory = KeyMemory(UnsafeCell::new([0; 96]));
+static FAILURE_KEY: KeyMemory = KeyMemory(UnsafeCell::new([0; 192]));
 
 #[link(wasm_import_module = "host")]
 unsafe extern "C" {
@@ -91,7 +93,7 @@ unsafe extern "C" {
 }
 
 fn report_failure(stage: u32, detail: u32) {
-    let mut message = [0_u8; 128];
+    let mut message = [0_u8; 256];
     message[..5].copy_from_slice(b"DULE\x03");
     let text = b"MicroESNext stopped with detail ";
     message[5..5 + text.len()].copy_from_slice(text);
@@ -405,6 +407,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
             b"slice",
             Value::from_host(microesnext::HostRef::new(STRING_SLICE).unwrap()),
         ))
+        .and_then(|prototype| object_set(
+            &mut machine,
+            prototype,
+            b"indexOf",
+            Value::from_host(microesnext::HostRef::new(STRING_INDEX_OF).unwrap()),
+        ))
     })();
     let string_prototype = match string_prototype.and_then(|value| {
         machine.install_string_prototype(value)?;
@@ -518,7 +526,9 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     microesnext::HostRef::new(STRING_REPLACE).unwrap(),
                 )).unwrap();
             }
-            Ok(Outcome::HostGet { object, key, .. }) if object.index() == GLOBAL_THIS => {
+            Ok(Outcome::HostGet { object, key, .. })
+                if object.index() == GLOBAL_THIS || object.index() == WINDOW =>
+            {
                 let result = machine.root(global_overlay)
                     .and_then(|overlay| microesnext::objects::get(machine.arena(), overlay, key));
                 match result.and_then(|value| machine.complete_host_operation(value)) {
@@ -1122,6 +1132,36 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 }
             }
             Ok(Outcome::HostCall { function, receiver, .. })
+                if function.index() == STRING_INDEX_OF =>
+            {
+                let result = (|| {
+                    let text = owned_string(&machine, receiver.ok_or(Error::Type)?)?;
+                    let needle = owned_string(
+                        &machine, machine.host_argument(0).unwrap_or(Value::UNDEFINED),
+                    )?;
+                    let start = machine.host_argument(1).ok()
+                        .and_then(|value| machine.number(value).ok())
+                        .map_or(0, |value| value.max(0.0) as usize);
+                    let text: Vec<u16> = text.encode_utf16().collect();
+                    let needle: Vec<u16> = needle.encode_utf16().collect();
+                    let found = if needle.is_empty() {
+                        Some(start.min(text.len()))
+                    } else if start > text.len() {
+                        None
+                    } else {
+                        text[start..].windows(needle.len()).position(|part| part == needle)
+                            .map(|index| start + index)
+                    };
+                    Value::from_i30(
+                        found.and_then(|value| i32::try_from(value).ok()).unwrap_or(-1),
+                    ).ok_or(Error::Type)
+                })();
+                if let Err(error) = result.and_then(|value| machine.complete_host_call(value)) {
+                    DETAIL.store(error as u32 + 2875, Ordering::Relaxed);
+                    break u32::MAX;
+                }
+            }
+            Ok(Outcome::HostCall { function, receiver, .. })
                 if function.index() == NUMBER_TO_STRING =>
             {
                 let result = (|| {
@@ -1458,7 +1498,9 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                 DETAIL.store(object.index(), Ordering::Relaxed);
                 break u32::MAX - 2;
             }
-            Ok(Outcome::HostSet { object, key, value }) if object.index() == GLOBAL_THIS => {
+            Ok(Outcome::HostSet { object, key, value })
+                if object.index() == GLOBAL_THIS || object.index() == WINDOW =>
+            {
                 let result = machine.root(global_overlay)
                     .and_then(|overlay| microesnext::objects::set(machine.arena_mut(), overlay, key, value))
                     .map(|_| ());
@@ -1494,11 +1536,12 @@ pub extern "C" fn onmsg(minimum_length: u32) {
                     let (left, right) = machine.last_operands();
                     let _ = write!(
                         context,
-                        "; op={:?}; call={}; left={}; right={}; sp={}; base={}; frame={}; error={:?}",
+                        "; op={:?}; call={}; left={}; right={}; target={}; sp={}; base={}; frame={}; error={:?}",
                         opcode,
                         call,
                         describe(left),
                         describe(right),
+                        describe(machine.last_property_target()),
                         machine.stack_len(),
                         machine.frame_base(),
                         machine.frame_header().map_or(999_u32, Value::raw),

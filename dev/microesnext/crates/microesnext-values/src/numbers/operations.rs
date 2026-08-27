@@ -1,5 +1,6 @@
 use microesnext_arena::Arena;
 use microesnext_types::{Error, Value};
+use crate::numbers::coercion::PrimitiveNumber;
 
 pub fn add(arena: &mut Arena<'_>, left: Value, right: Value) -> Result<Value, Error> {
     if let Some(value) = immediate(left, right, i32::checked_add) {
@@ -41,6 +42,21 @@ pub fn greater_than(arena: &Arena<'_>, left: Value, right: Value) -> Result<Valu
     Ok(boolean(
         crate::numbers::get(arena, left)? > crate::numbers::get(arena, right)?,
     ))
+}
+
+pub fn less_than_primitives(left: PrimitiveNumber, right: PrimitiveNumber) -> Value {
+    boolean(primitive_f64(left) < primitive_f64(right))
+}
+
+pub fn greater_than_primitives(left: PrimitiveNumber, right: PrimitiveNumber) -> Value {
+    boolean(primitive_f64(left) > primitive_f64(right))
+}
+
+fn primitive_f64(value: PrimitiveNumber) -> f64 {
+    match value {
+        PrimitiveNumber::I30(value) => f64::from(value),
+        PrimitiveNumber::F64(value) => value,
+    }
 }
 
 fn immediate(left: Value, right: Value, operation: fn(i32, i32) -> Option<i32>) -> Option<Value> {
