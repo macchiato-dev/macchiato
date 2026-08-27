@@ -1,5 +1,8 @@
 # MicroESNext
 
+Design notes include the [ponyfill source survey](docs/ponyfill-sources.md) and
+the implementation-independent [testing strategy](docs/testing.md).
+
 MicroESNext is a new, single-crate experiment in progressively rewriting
 MicroQuickJS in Rust. It starts from a compact C baseline rather than from the
 earlier Rust-native object and memory model.
