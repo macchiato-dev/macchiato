@@ -1876,6 +1876,25 @@ impl Parser<'_> {
                 offset = (offset + 2).min(self.source.len());
                 continue;
             }
+            if byte == b'/' && self.slash_starts_regexp(offset - 1) {
+                let mut character_class = false;
+                while let Some(byte) = self.source.get(offset).copied() {
+                    offset += 1;
+                    if byte == b'\\' {
+                        offset += usize::from(offset < self.source.len());
+                    } else if byte == b'[' {
+                        character_class = true;
+                    } else if byte == b']' {
+                        character_class = false;
+                    } else if byte == b'/' && !character_class {
+                        while self.source.get(offset).is_some_and(u8::is_ascii_alphabetic) {
+                            offset += 1;
+                        }
+                        break;
+                    }
+                }
+                continue;
+            }
             match byte {
                 b'\'' | b'"' | b'`' => quote = Some(byte),
                 b'(' => depth += 1,
@@ -1925,6 +1944,25 @@ impl Parser<'_> {
                     offset += 1;
                 }
                 offset = (offset + 2).min(self.source.len());
+                continue;
+            }
+            if byte == b'/' && self.slash_starts_regexp(offset - 1) {
+                let mut character_class = false;
+                while let Some(byte) = self.source.get(offset).copied() {
+                    offset += 1;
+                    if byte == b'\\' {
+                        offset += usize::from(offset < self.source.len());
+                    } else if byte == b'[' {
+                        character_class = true;
+                    } else if byte == b']' {
+                        character_class = false;
+                    } else if byte == b'/' && !character_class {
+                        while self.source.get(offset).is_some_and(u8::is_ascii_alphabetic) {
+                            offset += 1;
+                        }
+                        break;
+                    }
+                }
                 continue;
             }
             match byte {
@@ -3648,7 +3686,14 @@ impl Parser<'_> {
         let mut names = Vec::new();
         loop {
             self.whitespace();
-            names.push(self.identifier()?);
+            if self.consume_raw(b']') {
+                break;
+            }
+            if self.consume_raw(b',') {
+                names.push(None);
+                continue;
+            }
+            names.push(Some(self.identifier()?));
             if self.consume(b']') {
                 break;
             }
@@ -3656,12 +3701,13 @@ impl Parser<'_> {
                 return Err(self.error(", or ]"));
             }
         }
-        for (index, (start, end)) in names.iter().enumerate() {
+        for (index, name) in names.iter().enumerate() {
+            let Some((start, end)) = name else { continue };
             if self
                 .locals
                 .iter()
                 .any(|binding| self.source[binding.start..binding.end] == self.source[*start..*end])
-                || names[..index].iter().any(|(other_start, other_end)| {
+                || names[..index].iter().flatten().any(|(other_start, other_end)| {
                     self.source[*other_start..*other_end] == self.source[*start..*end]
                 })
             {
@@ -3672,12 +3718,10 @@ impl Parser<'_> {
             return Err(self.error("="));
         }
         self.expression(None)?;
-        let first_slot = self.locals.len();
-        for (index, (start, end)) in names.into_iter().enumerate() {
-            let slot = first_slot
-                .checked_add(index)
-                .and_then(|slot| u16::try_from(slot).ok())
-                .ok_or_else(|| self.error("fewer than 65536 local bindings"))?;
+        for (index, name) in names.into_iter().enumerate() {
+            let Some((start, end)) = name else { continue };
+            let slot = u16::try_from(self.locals.len())
+                .map_err(|_| self.error("fewer than 65536 local bindings"))?;
             self.output.push(Opcode::DuplicateTop as u8);
             self.output.push(Opcode::ConstI30 as u8);
             self.output.extend_from_slice(
@@ -9892,6 +9936,20 @@ mod tests {
         .unwrap();
         compile_script(
             "let make = (options) => (mods) => { ({ altKey: options.altKey } = mods); return options; }; return make;",
+        )
+        .unwrap();
+    }
+
+    #[cfg(all(
+        feature = "object-destructuring-assignments",
+        feature = "functions",
+        feature = "regexp-literals"
+    ))]
+    #[test]
+    fn braces_in_regexp_literals_do_not_end_block_scans() {
+        compile_script_with_host_globals(
+            "let indent = (text) => { let closed = /^\\s*({|else\\b)/.test(text); return closed; }; return indent;",
+            &["RegExp"],
         )
         .unwrap();
     }

@@ -993,7 +993,16 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     .is_some_and(|kind| matches!(kind,
                         microesnext_arena::BlockKind::Bytes | microesnext_arena::BlockKind::String))
                 {
-                    let length = self.core.arena().byte_len(object.as_ref().ok_or(Error::Type)?)?;
+                    let reference = object.as_ref().ok_or(Error::Type)?;
+                    let length = if self.core.arena().kind(reference)?
+                        == microesnext_arena::BlockKind::String
+                    {
+                        let bytes = self.core.arena().bytes(reference)?;
+                        core::str::from_utf8(bytes).map_err(|_| Error::Type)?
+                            .encode_utf16().count()
+                    } else {
+                        self.core.arena().byte_len(reference)?
+                    };
                     Value::from_i30(length as i32).ok_or(Error::Type)?
                 } else if microesnext_objects::arrays::is_array(self.core.arena(), object) {
                     if let Some(value) = microesnext_objects::arrays::get_property(
@@ -2278,10 +2287,22 @@ impl<'code, 'memory> Machine<'code, 'memory> {
                     let index = key.as_i30().and_then(|index| usize::try_from(index).ok())
                         .ok_or(Error::Type)?;
                     let text = core::str::from_utf8(bytes).map_err(|_| Error::Type)?;
-                    let Some(character) = text.chars().nth(index) else {
+                    let mut position = 0;
+                    let character = text.chars().find(|character| {
+                        let next = position + character.len_utf16();
+                        let found = index < next;
+                        if !found { position = next; }
+                        found
+                    });
+                    let Some(character) = character else {
                         self.core.arena_mut().push(Value::UNDEFINED)?;
                         return Ok(None);
                     };
+                    if index != position {
+                        let empty = microesnext_values::strings::new(self.core.arena_mut(), b"")?;
+                        self.core.arena_mut().push(empty)?;
+                        return Ok(None);
+                    }
                     let mut encoded = [0_u8; 4];
                     let bytes = character.encode_utf8(&mut encoded).as_bytes();
                     let length = bytes.len();
@@ -2519,6 +2540,10 @@ impl<'code, 'memory> Machine<'code, 'memory> {
             #[cfg(feature = "object-spread")]
             Opcode::CopyObjectProperties => {
                 let source = self.core.arena().stack_value(0)?;
+                if source == Value::NULL || source == Value::UNDEFINED {
+                    self.core.arena_mut().pop()?;
+                    return Ok(None);
+                }
                 let count = own_property_count(self.core.arena(), source)?;
                 let target_stack_index = self.core.arena().stack_len() - 2;
                 for index in 0..count {
