@@ -505,19 +505,22 @@ function GuestRange(reference) {
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
 globalThis.Range = GuestRange;
-var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
+function measuredCoordinate(bytes, at) {
+  return (bytes[at] | bytes[at + 1] << 8 |
+      bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
+}
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
   var count = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var rects = [];
   for (var index = 0; index < count; index++) {
-    var rect = {};
-    for (var property = 0; property < rectProperties.length; property++) {
-      var at = 4 + index * 32 + property * 4;
-      rect[rectProperties[property]] = (bytes[at] | bytes[at + 1] << 8 |
-        bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
-    }
-    rects.push(rect);
+    var at = 4 + index * 32;
+    rects.push({
+      bottom: measuredCoordinate(bytes, at), height: measuredCoordinate(bytes, at + 4),
+      left: measuredCoordinate(bytes, at + 8), right: measuredCoordinate(bytes, at + 12),
+      top: measuredCoordinate(bytes, at + 16), width: measuredCoordinate(bytes, at + 20),
+      x: measuredCoordinate(bytes, at + 24), y: measuredCoordinate(bytes, at + 28)
+    });
   }
   return rects;
 }

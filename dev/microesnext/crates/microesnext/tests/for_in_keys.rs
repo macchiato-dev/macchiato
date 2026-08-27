@@ -13,6 +13,22 @@ fn for_in_yields_property_names_instead_of_values() {
 }
 
 #[test]
+fn nested_property_arithmetic_survives_a_nested_call() {
+    let code = compile_script(
+        "function maximum(left, right) { return left > right ? left : right; } \
+         function isScrolledToBottom(element) { \
+           return element.scrollTop > maximum(1, \
+             element.scrollHeight - element.clientHeight - 4); \
+         } \
+         return isScrolledToBottom({ scrollTop: 0, scrollHeight: 10, clientHeight: 5 });",
+    )
+    .unwrap();
+    let mut memory = [0_u32; 2048];
+    let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+    assert_eq!(machine.run(), Ok(Outcome::Complete(Value::FALSE)));
+}
+
+#[test]
 fn for_in_key_survives_value_lookup_and_nested_closure_creation() {
     let code = compile_script(
         "function render(spec) { for (let property in spec) { let value = spec[property]; let callback = (letter) => letter; return property === 'opacity' && value > 0 && callback('x') === 'x'; } return false; } return render({ opacity: 0.5 });",

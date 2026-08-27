@@ -136,6 +136,42 @@ fn a_late_constructor_resumes_a_host_call_through_nested_functions() {
 }
 
 #[test]
+fn externally_entered_closure_preserves_host_backed_getter_results() {
+    let code = compile_script_with_host_globals(
+        "let Measurements = class { \
+           constructor() {} \
+           get scrollTop() { return host(0); } \
+           get scrollHeight() { return host(10); } \
+           get clientHeight() { return host(5); } \
+         }; \
+         let element = new Measurements(); \
+         function measure() { \
+           return element.scrollTop > element.scrollHeight - element.clientHeight - 4; \
+         } \
+         return measure;",
+        &["host"],
+    )
+    .unwrap();
+    let mut memory = [0; 4096];
+    let mut machine = Machine::with_objects(&code, &mut memory, 12).unwrap();
+    let Outcome::Complete(function) = machine.run().unwrap() else {
+        panic!("expected the startup closure")
+    };
+    let mut outcome = machine
+        .call_closure_with_receiver(function, Value::UNDEFINED, &[])
+        .unwrap();
+    for expected in [0, 10, 5] {
+        let Outcome::HostCall { .. } = outcome else {
+            panic!("expected a getter host call")
+        };
+        assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(expected));
+        machine.complete_host_call(Value::from_i30(expected).unwrap()).unwrap();
+        outcome = machine.run().unwrap();
+    }
+    assert_eq!(outcome, Outcome::Complete(Value::FALSE));
+}
+
+#[test]
 fn an_instance_with_getters_can_assign_several_plain_properties() {
     let code = compile_script(
         "let Rule = class { constructor(tags, mode, context, next) { \

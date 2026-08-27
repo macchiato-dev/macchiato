@@ -184,12 +184,17 @@ impl Parser<'_> {
         while !self.take(b']') {
             if self.done() { return Err(Error::InvalidPattern); }
             let first = self.class_character(&mut ranges)?;
-            if self.take(b'-') && self.peek() != Some(b']') {
-                let second = self.class_character(&mut ranges)?
-                    .ok_or(Error::InvalidPattern)?;
-                let first = first.ok_or(Error::InvalidPattern)?;
-                if second < first { return Err(Error::InvalidPattern); }
-                ranges.push((first, second + 1));
+            if self.take(b'-') {
+                if self.peek() == Some(b']') {
+                    if let Some(first) = first { ranges.push((first, first + 1)); }
+                    ranges.push((b'-' as u32, b'-' as u32 + 1));
+                } else {
+                    let second = self.class_character(&mut ranges)?
+                        .ok_or(Error::InvalidPattern)?;
+                    let first = first.ok_or(Error::InvalidPattern)?;
+                    if second < first { return Err(Error::InvalidPattern); }
+                    ranges.push((first, second + 1));
+                }
             } else if let Some(first) = first {
                 ranges.push((first, first + 1));
             }
@@ -422,6 +427,14 @@ mod tests {
     #[test]
     fn compiles_classes_and_flags() {
         assert!(matches("^[a-z0-9_]+$", "i", "Macchiato_42"));
+        assert!(matches("^@keyframes\\s+$", "i", "@keyframes "));
+        assert!(matches("^[a-z_]+$", "i", "cm"));
+        assert!(matches("^[a-z0-9_-]+$", "i", "cm-blink"));
+        assert!(matches(
+            "^@keyframes\\s+([a-z_][a-z0-9_-]*)$",
+            "i",
+            "@keyframes cm-blink",
+        ));
         assert!(matches("^.$", "s", "\n"));
         assert!(compile("x", "gg").is_err());
     }

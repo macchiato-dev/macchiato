@@ -269,6 +269,19 @@ pub fn compile_script_with_host_globals(
     compile_script_with_options_and_host_globals(source, CompileOptions::default(), globals)
 }
 
+/// Compile source and report each appended function body's bytecode entry and
+/// source offset. Embedders can keep this build-time map out of the guest.
+pub fn compile_script_with_host_globals_and_source_map(
+    source: &str,
+    globals: &[&str],
+) -> Result<(Vec<u8>, Vec<(usize, usize)>), CompileError> {
+    compile_script_with_options_and_host_globals_mapped(
+        source,
+        CompileOptions::default(),
+        globals,
+    )
+}
+
 pub fn compile_script_with_options(
     source: &str,
     options: CompileOptions,
@@ -281,6 +294,15 @@ fn compile_script_with_options_and_host_globals(
     options: CompileOptions,
     globals: &[&str],
 ) -> Result<Vec<u8>, CompileError> {
+    compile_script_with_options_and_host_globals_mapped(source, options, globals)
+        .map(|(code, _)| code)
+}
+
+fn compile_script_with_options_and_host_globals_mapped(
+    source: &str,
+    options: CompileOptions,
+    globals: &[&str],
+) -> Result<(Vec<u8>, Vec<(usize, usize)>), CompileError> {
     #[cfg(not(any(feature = "number-negation", feature = "number-operations")))]
     let _ = options;
     let mut parser = Parser {
@@ -304,6 +326,8 @@ fn compile_script_with_options_and_host_globals(
         self_used: false,
         #[cfg(feature = "functions")]
         functions: Vec::new(),
+        #[cfg(feature = "functions")]
+        function_sources: Vec::new(),
         #[cfg(feature = "functions")]
         initialized_function_declarations: Vec::new(),
         #[cfg(feature = "functions")]
@@ -356,7 +380,7 @@ fn compile_script_with_options_and_host_globals(
         parser.output[patch..patch + 2].copy_from_slice(&count.to_le_bytes());
     }
     parser.append_function_bodies()?;
-    Ok(parser.output)
+    Ok((parser.output, parser.function_sources))
 }
 
 struct Parser<'source> {
@@ -377,6 +401,8 @@ struct Parser<'source> {
     self_used: bool,
     #[cfg(feature = "functions")]
     functions: Vec<PendingFunction>,
+    #[cfg(feature = "functions")]
+    function_sources: Vec<(usize, usize)>,
     #[cfg(feature = "functions")]
     initialized_function_declarations: Vec<(usize, usize)>,
     #[cfg(feature = "functions")]
@@ -499,8 +525,10 @@ fn hex_nibble(byte: u8) -> Option<u8> {
 #[cfg(feature = "functions")]
 struct PendingFunction {
     target_patch: usize,
+    source_offset: usize,
     code: Vec<u8>,
     relocations: Vec<usize>,
+    sources: Vec<(usize, usize)>,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -1076,6 +1104,10 @@ impl Parser<'_> {
             self.output[function.target_patch..function.target_patch + 4]
                 .copy_from_slice(&target.to_le_bytes());
             self.relocations.push(function.target_patch);
+            self.function_sources.push((target as usize, function.source_offset));
+            self.function_sources.extend(function.sources.into_iter().map(
+                |(entry, source)| (target as usize + entry, source),
+            ));
             for relocation in &function.relocations {
                 let relative = u32::from_le_bytes(
                     function.code[*relocation..*relocation + 4]
@@ -4185,8 +4217,10 @@ impl Parser<'_> {
             .collect();
         self.functions.push(PendingFunction {
             target_patch,
+            source_offset: self.offset,
             code,
             relocations: Vec::new(),
+            sources: Vec::new(),
         });
     }
 
@@ -4602,6 +4636,7 @@ impl Parser<'_> {
         if !matches!(body_kind, FunctionBody::Expression) && !self.consume(b'{') {
             return Err(self.error("{"));
         }
+        let source_offset = self.offset;
         let parameter_count = parameters.count;
         #[cfg(feature = "rest-parameters")]
         let rest_parameter = parameters
@@ -4643,6 +4678,7 @@ impl Parser<'_> {
             #[cfg(feature = "environments")]
             self_used: false,
             functions: Vec::new(),
+            function_sources: Vec::new(),
             initialized_function_declarations: Vec::new(),
             hoisted_function_offsets: Vec::new(),
             relocations: Vec::new(),
@@ -4847,8 +4883,10 @@ impl Parser<'_> {
         }
         self.functions.push(PendingFunction {
             target_patch,
+            source_offset,
             code: body.output,
             relocations: body.relocations,
+            sources: body.function_sources,
         });
         Ok(())
     }
@@ -8579,8 +8617,10 @@ impl Parser<'_> {
             .collect();
         self.functions.push(PendingFunction {
             target_patch,
+            source_offset: self.offset,
             code,
             relocations: Vec::new(),
+            sources: Vec::new(),
         });
     }
 

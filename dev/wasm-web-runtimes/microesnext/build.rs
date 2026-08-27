@@ -1,6 +1,6 @@
 use std::{env, fs, path::PathBuf};
 
-use microesnext_compiler::compile_script_with_host_globals;
+use microesnext_compiler::compile_script_with_host_globals_and_source_map;
 
 const HOST_GLOBALS: &[&str] = &[
     "Array", "Boolean", "DOMRect", "Date", "Error", "FileReader", "Function", "Intl",
@@ -17,6 +17,7 @@ const HOST_GLOBALS: &[&str] = &[
 fn main() {
     println!("cargo:rerun-if-env-changed=MICROESNEXT_APPLICATION_SOURCE");
     println!("cargo:rerun-if-env-changed=MICROESNEXT_GUEST_ENVIRONMENT");
+    println!("cargo:rerun-if-env-changed=MICROESNEXT_DEBUG_ENTRY");
     let source_path = env::var_os("MICROESNEXT_APPLICATION_SOURCE");
     let application = source_path.as_ref().map_or_else(
         || "return 40 + 2;".to_owned(),
@@ -45,12 +46,31 @@ fn main() {
     } else {
         source.push_str(&application);
     }
-    let bytecode = compile_script_with_host_globals(&source, HOST_GLOBALS).unwrap_or_else(|error| {
+    let (bytecode, source_map) = compile_script_with_host_globals_and_source_map(
+        &source,
+        HOST_GLOBALS,
+    ).unwrap_or_else(|error| {
         panic!(
             "MicroESNext source failed at byte {}: expected {}",
             error.offset, error.expected
         )
     });
+    if let Some(entry) = env::var("MICROESNEXT_DEBUG_ENTRY").ok()
+        .and_then(|value| value.parse::<usize>().ok())
+    {
+        if let Some((function, offset)) = source_map
+            .iter()
+            .filter(|(candidate, _)| *candidate <= entry)
+            .max_by_key(|(candidate, _)| *candidate)
+        {
+            let start = *offset + source[*offset..].len()
+                - source[*offset..].trim_start().len();
+            let line = source[..start].bytes().filter(|byte| *byte == b'\n').count() + 1;
+            let end = source[start..].find('\n').map_or(source.len(), |end| start + end);
+            println!("cargo:warning=MicroESNext entry {entry} maps to function {function} at source line {line}: {}",
+                &source[start..end]);
+        }
+    }
     fs::write(
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR")).join("application.bin"),
         bytecode,

@@ -767,6 +767,7 @@ function dispatch(message) {
   callback(eventReference < 0 ? undefined : eventForDelivery(eventReference));
   flush();
 }
+globalThis.__wwcDispatch = dispatch;
 
 function attributes(source) {
   var result = Object.create(null);

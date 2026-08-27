@@ -3737,6 +3737,73 @@ mod tests {
         assert_eq!(machine.arena().stack_len(), 0);
     }
 
+    #[cfg(all(
+        feature = "receivers",
+        feature = "host-bindings",
+        feature = "function-arguments",
+        feature = "number-operations"
+    ))]
+    #[test]
+    fn external_receiver_call_preserves_host_results_during_arithmetic() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "function measure() { return host(10) - host(5) - 4; } return measure;",
+            &["host"],
+        )
+        .unwrap();
+        let mut memory = [0; 512];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 8).unwrap();
+        let Outcome::Complete(function) = machine.run().unwrap() else {
+            panic!("expected the startup closure")
+        };
+
+        assert!(matches!(
+            machine.call_closure_with_receiver(function, Value::UNDEFINED, &[]),
+            Ok(Outcome::HostCall { .. })
+        ));
+        machine.complete_host_call(Value::from_i30(10).unwrap()).unwrap();
+        assert!(matches!(machine.run(), Ok(Outcome::HostCall { .. })));
+        machine.complete_host_call(Value::from_i30(5).unwrap()).unwrap();
+        assert_eq!(
+            machine.run(),
+            Ok(Outcome::Complete(Value::from_i30(1).unwrap()))
+        );
+    }
+
+    #[cfg(all(
+        feature = "receivers",
+        feature = "host-bindings",
+        feature = "function-arguments",
+        feature = "number-operations"
+    ))]
+    #[test]
+    fn external_receiver_call_preserves_host_results_stored_in_locals() {
+        let code = microesnext_compiler::compile_script_with_host_globals(
+            "function read(value) { return host(value); } \
+             function measure() { let left = read(10); let right = read(5); \
+               return left - right - 4; } \
+             return measure;",
+            &["host"],
+        )
+        .unwrap();
+        let mut memory = [0; 2048];
+        let mut machine = Machine::with_atoms(&code, &mut memory, 12).unwrap();
+        let Outcome::Complete(function) = machine.run().unwrap() else {
+            panic!("expected the startup closure")
+        };
+        let mut outcome = machine
+            .call_closure_with_receiver(function, Value::UNDEFINED, &[])
+            .unwrap();
+        for expected in [10, 5] {
+            let Outcome::HostCall { .. } = outcome else {
+                panic!("expected a getter host call")
+            };
+            assert_eq!(machine.host_argument(0).unwrap().as_i30(), Some(expected));
+            machine.complete_host_call(Value::from_i30(expected).unwrap()).unwrap();
+            outcome = machine.run().unwrap();
+        }
+        assert_eq!(outcome, Outcome::Complete(Value::from_i30(1).unwrap()));
+    }
+
     #[cfg(feature = "function-arguments")]
     #[test]
     fn guest_calls_pass_evaluated_arguments_into_local_frames() {
