@@ -49,12 +49,30 @@ fn generate_atoms(builder: &Path, out: &Path) {
         .expect("write generated MicroQuickJS atoms");
 }
 
+fn generate_stdlib(builder: &Path, out: &Path) {
+    let width = env::var("CARGO_CFG_TARGET_POINTER_WIDTH")
+        .expect("Cargo provides the target pointer width");
+    let output = Command::new(builder)
+        .arg(if width == "64" { "-m64" } else { "-m32" })
+        .output()
+        .expect("run the MicroQuickJS ROM builder");
+    assert!(output.status.success(), "generate the MicroQuickJS stdlib");
+    fs::write(out.join("test_stdlib.inc"), output.stdout)
+        .expect("write generated MicroQuickJS stdlib");
+    fs::write(
+        out.join("test_stdlib.c"),
+        "#include \"host_functions.h\"\n#include \"test_stdlib.inc\"\n",
+    )
+    .expect("write the MicroQuickJS test stdlib wrapper");
+}
+
 fn main() {
     let root = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR")
         .expect("Cargo provides CARGO_MANIFEST_DIR"));
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo provides OUT_DIR"));
     let c = root.join("c");
     let libc = root.join("libc-ponyfill/include");
+    let tests = root.join("tests");
 
     for file in ENGINE_SOURCES {
         println!("cargo:rerun-if-changed=c/{file}");
@@ -69,20 +87,28 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=libc-ponyfill");
+    println!("cargo:rerun-if-changed=tests");
 
-    // The library targets wasm32 only. Native Cargo builds exist solely for
-    // the allocation-free Rust test harness and do not compile the C engine.
-    if env::var("TARGET").as_deref() != Ok("wasm32-unknown-unknown") {
+    let is_wasm = env::var("TARGET").as_deref() == Ok("wasm32-unknown-unknown");
+    let engine_tests = env::var_os("CARGO_FEATURE_ENGINE_TESTS").is_some();
+    // Native builds compile the engine only for the explicit semantic suite.
+    if !is_wasm && !engine_tests {
         return;
     }
 
-    let builder = compile_rom_builder(&c, &libc, &out);
+    let native_headers = tests.join("native-headers");
+    let headers = if is_wasm { &libc } else { &native_headers };
+
+    let builder = compile_rom_builder(&c, headers, &out);
     generate_atoms(&builder, &out);
+    if engine_tests && !is_wasm {
+        generate_stdlib(&builder, &out);
+    }
 
     let mut build = cc::Build::new();
     build
         .include(&c)
-        .include(&libc)
+        .include(headers)
         .include(&out)
         .define("CONFIG_SMALL", None)
         .flag_if_supported("-std=c11")
@@ -91,6 +117,12 @@ fn main() {
         .flag_if_supported("-fno-trapping-math");
     for file in ENGINE_SOURCES {
         build.file(c.join(file));
+    }
+    if engine_tests && !is_wasm {
+        build
+            .include(&tests)
+            .file(tests.join("host_functions.c"))
+            .file(out.join("test_stdlib.c"));
     }
     build.compile("microquickjs");
 
