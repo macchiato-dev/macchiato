@@ -122,6 +122,7 @@ fn main() {
         build
             .include(&tests)
             .file(tests.join("host_functions.c"))
+            .file(tests.join("c_calls.c"))
             .file(out.join("test_stdlib.c"));
     }
     build.compile("microquickjs");

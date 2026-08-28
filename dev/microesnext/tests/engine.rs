@@ -70,6 +70,13 @@ unsafe extern "C" {
         buffer: *mut StringBuffer,
     ) -> *const c_char;
     fn JS_ToInt32(context: *mut Context, result: *mut c_int, value: JsValue) -> c_int;
+    fn test_c_pstrcpy(dest: *mut c_char, size: c_int, source: *const c_char);
+    fn test_c_pstrcat(dest: *mut c_char, size: c_int, source: *const c_char) -> *mut c_char;
+    fn test_c_strstart(
+        string: *const c_char,
+        prefix: *const c_char,
+        remainder: *mut *const c_char,
+    ) -> c_int;
 }
 
 const JS_EXCEPTION: JsValue = 15;
@@ -233,4 +240,25 @@ fn compiled_programs() {
             case.source
         );
     }
+}
+
+#[test]
+fn c_calls_rust_string_helpers() {
+    let mut buffer = *b"-----\0--";
+    unsafe { test_c_pstrcpy(buffer.as_mut_ptr().cast(), 6, c"ab".as_ptr()) };
+    assert_eq!(&buffer[..3], b"ab\0");
+
+    let returned = unsafe { test_c_pstrcat(buffer.as_mut_ptr().cast(), 6, c"cdef".as_ptr()) };
+    assert_eq!(returned, buffer.as_mut_ptr().cast());
+    assert_eq!(&buffer[..6], b"abcde\0");
+
+    let mut remainder = ptr::null();
+    assert_eq!(
+        unsafe { test_c_strstart(c"microesnext".as_ptr(), c"micro".as_ptr(), &mut remainder,) },
+        1
+    );
+    assert_eq!(
+        unsafe { std::ffi::CStr::from_ptr(remainder) }.to_bytes(),
+        b"esnext"
+    );
 }

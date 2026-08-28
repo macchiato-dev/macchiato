@@ -20,6 +20,11 @@ the general-purpose WASI-libc headers is omitted unless this build needs it.
   - `strlen(string)`
   - Implemented in allocation-free Rust derived from Rust compiler-builtins'
     loops and checked against wasi-libc behavior.
+- `cutils.h`
+  - `pstrcpy(dest, size, source)`
+  - `pstrcat(dest, size, source)`
+  - `strstart(string, prefix, remainder)`
+  - Implemented in allocation-free Rust behind their original C ABI.
 - `stdint.h`
   - Exact-width signed and unsigned 8-, 16-, 32-, and 64-bit types
   - `intptr_t` and `uintptr_t`
