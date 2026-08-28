@@ -1,4 +1,5 @@
 #include "cutils.h"
+#include "dtoa.h"
 #include "ponyfill/stdlib.h"
 
 void test_c_pstrcpy(char *dest, int size, const char *source)
@@ -41,4 +42,34 @@ int test_c_utf8_get(const uint8_t *source, size_t *length)
 int test_c_abs(int value)
 {
     return abs(value);
+}
+
+size_t test_c_format_u32(char *dest, uint32_t value)
+{
+    return u32toa(dest, value);
+}
+
+size_t test_c_format_i32(char *dest, int32_t value)
+{
+    return i32toa(dest, value);
+}
+
+size_t test_c_format_u64(char *dest, uint64_t value)
+{
+    return u64toa(dest, value);
+}
+
+size_t test_c_format_i64(char *dest, int64_t value)
+{
+    return i64toa(dest, value);
+}
+
+size_t test_c_format_u64_radix(char *dest, uint64_t value, unsigned int radix)
+{
+    return u64toa_radix(dest, value, radix);
+}
+
+size_t test_c_format_i64_radix(char *dest, int64_t value, unsigned int radix)
+{
+    return i64toa_radix(dest, value, radix);
 }

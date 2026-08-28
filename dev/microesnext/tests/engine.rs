@@ -82,6 +82,12 @@ unsafe extern "C" {
     fn test_c_unicode_from_utf8(source: *const u8, max_length: usize, length: *mut usize) -> c_int;
     fn test_c_utf8_get(source: *const u8, length: *mut usize) -> c_int;
     fn test_c_abs(value: c_int) -> c_int;
+    fn test_c_format_u32(dest: *mut c_char, value: u32) -> usize;
+    fn test_c_format_i32(dest: *mut c_char, value: i32) -> usize;
+    fn test_c_format_u64(dest: *mut c_char, value: u64) -> usize;
+    fn test_c_format_i64(dest: *mut c_char, value: i64) -> usize;
+    fn test_c_format_u64_radix(dest: *mut c_char, value: u64, radix: u32) -> usize;
+    fn test_c_format_i64_radix(dest: *mut c_char, value: i64, radix: u32) -> usize;
 }
 
 const JS_EXCEPTION: JsValue = 15;
@@ -293,4 +299,34 @@ fn c_calls_rust_unicode_helpers() {
     );
     assert_eq!(length, 4);
     assert_eq!(unsafe { test_c_abs(-17) }, 17);
+}
+
+#[test]
+fn c_calls_rust_integer_formatters() {
+    let mut output = [0_u8; 65];
+    let cases: &[(u64, u32, &str)] = &[
+        (0, 10, "0"),
+        (u32::MAX.into(), 10, "4294967295"),
+        (u64::MAX, 10, "18446744073709551615"),
+        (0b101101, 2, "101101"),
+        (0xfeed_beef, 16, "feedbeef"),
+        (35, 36, "z"),
+    ];
+    for &(value, radix, expected) in cases {
+        let length = unsafe { test_c_format_u64_radix(output.as_mut_ptr().cast(), value, radix) };
+        assert_eq!(&output[..length], expected.as_bytes());
+    }
+
+    let length = unsafe { test_c_format_u32(output.as_mut_ptr().cast(), u32::MAX) };
+    assert_eq!(&output[..length], b"4294967295");
+    let length = unsafe { test_c_format_i32(output.as_mut_ptr().cast(), i32::MIN) };
+    assert_eq!(&output[..length], b"-2147483648");
+    let length = unsafe { test_c_format_u64(output.as_mut_ptr().cast(), u64::MAX) };
+    assert_eq!(&output[..length], b"18446744073709551615");
+    let length = unsafe { test_c_format_i64(output.as_mut_ptr().cast(), i64::MIN) };
+    assert_eq!(&output[..length], b"-9223372036854775808");
+
+    // The remaining C signed-radix wrapper composes with Rust's unsigned port.
+    let length = unsafe { test_c_format_i64_radix(output.as_mut_ptr().cast(), -255, 16) };
+    assert_eq!(&output[..length], b"-ff");
 }

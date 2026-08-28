@@ -351,6 +351,69 @@ pub extern "C" fn abs(value: c_int) -> c_int {
     }
 }
 
+unsafe fn write_unsigned(mut dest: *mut c_char, mut value: u64, radix: u32) -> usize {
+    let mut reversed = [0_u8; 64];
+    let mut length = 0;
+    loop {
+        let digit = (value % u64::from(radix)) as u8;
+        reversed[length] = if digit < 10 {
+            b'0' + digit
+        } else {
+            b'a' + digit - 10
+        };
+        length += 1;
+        value /= u64::from(radix);
+        if value == 0 {
+            break;
+        }
+    }
+    for byte in reversed[..length].iter().rev() {
+        unsafe { *dest = *byte as c_char };
+        dest = dest.wrapping_add(1);
+    }
+    length
+}
+
+/// Writes an unsigned 32-bit decimal without a terminator and returns its length.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn u32toa(dest: *mut c_char, value: u32) -> usize {
+    unsafe { write_unsigned(dest, u64::from(value), 10) }
+}
+
+/// Writes a signed 32-bit decimal without a terminator and returns its length.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn i32toa(dest: *mut c_char, value: i32) -> usize {
+    if value >= 0 {
+        return unsafe { u32toa(dest, value as u32) };
+    }
+    unsafe { *dest = b'-' as c_char };
+    1 + unsafe { u32toa(dest.add(1), value.unsigned_abs()) }
+}
+
+/// Writes an unsigned 64-bit decimal without a terminator and returns its length.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn u64toa(dest: *mut c_char, value: u64) -> usize {
+    unsafe { write_unsigned(dest, value, 10) }
+}
+
+/// Writes a signed 64-bit decimal without a terminator and returns its length.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn i64toa(dest: *mut c_char, value: i64) -> usize {
+    if value >= 0 {
+        return unsafe { u64toa(dest, value as u64) };
+    }
+    unsafe { *dest = b'-' as c_char };
+    1 + unsafe { u64toa(dest.add(1), value.unsigned_abs()) }
+}
+
+/// Writes an unsigned integer in radix 2 through 36 and returns its length.
+///
+/// MicroQuickJS only calls this with a valid radix.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn u64toa_radix(dest: *mut c_char, value: u64, radix: u32) -> usize {
+    unsafe { write_unsigned(dest, value, radix) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
