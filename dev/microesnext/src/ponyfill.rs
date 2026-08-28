@@ -185,10 +185,179 @@ pub unsafe extern "C" fn strstart(
     }
 }
 
+/// Returns whether `string` ends with `suffix`.
+///
+/// # Safety
+///
+/// Both pointers must be readable through their null bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn has_suffix(string: *const c_char, suffix: *const c_char) -> c_int {
+    let length = unsafe { strlen(string) };
+    let suffix_length = unsafe { strlen(suffix) };
+    if length < suffix_length {
+        return 0;
+    }
+    (unsafe {
+        memcmp(
+            string.add(length - suffix_length).cast(),
+            suffix.cast(),
+            suffix_length,
+        ) == 0
+    }) as c_int
+}
+
+/// Encodes a non-ASCII code point using MicroQuickJS's UTF-8/WTF-8 helper.
+///
+/// # Safety
+///
+/// `dest` must be writable for four bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn __unicode_to_utf8(dest: *mut u8, code_point: u32) -> usize {
+    let length = if code_point < 0x800 {
+        unsafe { *dest = ((code_point >> 6) | 0xc0) as u8 };
+        2
+    } else if code_point < 0x10000 {
+        unsafe { *dest = ((code_point >> 12) | 0xe0) as u8 };
+        3
+    } else if code_point < 0x20_0000 {
+        unsafe {
+            *dest = ((code_point >> 18) | 0xf0) as u8;
+            *dest.add(1) = (((code_point >> 12) & 0x3f) | 0x80) as u8;
+        }
+        4
+    } else {
+        return 0;
+    };
+    if length >= 3 {
+        unsafe { *dest.add(length - 2) = (((code_point >> 6) & 0x3f) | 0x80) as u8 };
+    }
+    unsafe { *dest.add(length - 1) = ((code_point & 0x3f) | 0x80) as u8 };
+    length
+}
+
+/// Validates and decodes one UTF-8/WTF-8 sequence.
+///
+/// # Safety
+///
+/// `source` must be readable for `max_length` bytes and `length` writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn __unicode_from_utf8(
+    source: *const u8,
+    max_length: usize,
+    length: *mut usize,
+) -> c_int {
+    let first = unsafe { *source };
+    let mut consumed = 1;
+    let value = if first < 0xc0 {
+        first as c_int
+    } else if first < 0xe0 {
+        if max_length < 2 || unsafe { *source.add(1) } & 0xc0 != 0x80 {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        consumed = 2;
+        let value = ((first & 0x1f) as c_int) << 6 | (unsafe { *source.add(1) } & 0x3f) as c_int;
+        if value < 0x80 {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        value
+    } else if first < 0xf0 {
+        if max_length < 2 || unsafe { *source.add(1) } & 0xc0 != 0x80 {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        consumed = 2;
+        if max_length < 3 || unsafe { *source.add(2) } & 0xc0 != 0x80 {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        consumed = 3;
+        let value = ((first & 0x0f) as c_int) << 12
+            | ((unsafe { *source.add(1) } & 0x3f) as c_int) << 6
+            | (unsafe { *source.add(2) } & 0x3f) as c_int;
+        if value < 0x800 {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        value
+    } else if first < 0xf8 {
+        for needed in 2..=4 {
+            if max_length < needed || unsafe { *source.add(needed - 1) } & 0xc0 != 0x80 {
+                return unsafe { invalid_utf8(length, needed - 1) };
+            }
+        }
+        consumed = 4;
+        let value = ((first & 7) as c_int) << 18
+            | ((unsafe { *source.add(1) } & 0x3f) as c_int) << 12
+            | ((unsafe { *source.add(2) } & 0x3f) as c_int) << 6
+            | (unsafe { *source.add(3) } & 0x3f) as c_int;
+        if !(0x10000..=0x10ffff).contains(&value) {
+            return unsafe { invalid_utf8(length, consumed) };
+        }
+        value
+    } else {
+        return unsafe { invalid_utf8(length, consumed) };
+    };
+    unsafe { *length = consumed };
+    value
+}
+
+unsafe fn invalid_utf8(length: *mut usize, consumed: usize) -> c_int {
+    unsafe { *length = consumed };
+    -1
+}
+
+/// Decodes one sequence without validation, matching the trusted-input helper.
+///
+/// # Safety
+///
+/// `source` must contain the number of bytes implied by its first byte, and
+/// `length` must be writable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn __utf8_get(source: *const u8, length: *mut usize) -> c_int {
+    let first = unsafe { *source };
+    let (value, consumed) = if first < 0xc0 {
+        (first as c_int, 1)
+    } else if first < 0xe0 {
+        (
+            ((first & 0x1f) as c_int) << 6 | (unsafe { *source.add(1) } & 0x3f) as c_int,
+            2,
+        )
+    } else if first < 0xf0 {
+        (
+            ((first & 0x0f) as c_int) << 12
+                | ((unsafe { *source.add(1) } & 0x3f) as c_int) << 6
+                | (unsafe { *source.add(2) } & 0x3f) as c_int,
+            3,
+        )
+    } else if first < 0xf8 {
+        (
+            ((first & 7) as c_int) << 18
+                | ((unsafe { *source.add(1) } & 0x3f) as c_int) << 12
+                | ((unsafe { *source.add(2) } & 0x3f) as c_int) << 6
+                | (unsafe { *source.add(3) } & 0x3f) as c_int,
+            4,
+        )
+    } else {
+        (first as c_int, 1)
+    };
+    unsafe { *length = consumed };
+    value
+}
+
+/// Returns the C absolute value for inputs where C defines the operation.
+#[unsafe(no_mangle)]
+pub extern "C" fn abs(value: c_int) -> c_int {
+    if value < 0 {
+        value.wrapping_neg()
+    } else {
+        value
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{memcmp, memcpy, memmove, memset, pstrcat, pstrcpy, strlen, strstart};
-    use core::ffi::c_char;
+    use super::{
+        __unicode_from_utf8, __unicode_to_utf8, __utf8_get, abs, has_suffix, memcmp, memcpy,
+        memmove, memset, pstrcat, pstrcpy, strlen, strstart,
+    };
+    use core::ffi::{c_char, c_int};
 
     struct CompareCase {
         left: &'static [u8],
@@ -431,5 +600,129 @@ mod tests {
             unsafe { strstart(string.as_ptr(), c"".as_ptr(), core::ptr::null_mut()) },
             1
         );
+    }
+
+    #[test]
+    fn suffix_cases() {
+        for (string, suffix, expected) in [
+            (c"microquickjs", c"quickjs", 1),
+            (c"microquickjs", c"micro", 0),
+            (c"microquickjs", c"", 1),
+            (c"js", c"quickjs", 0),
+        ] {
+            assert_eq!(
+                unsafe { has_suffix(string.as_ptr(), suffix.as_ptr()) },
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn unicode_encode_cases() {
+        for (code_point, expected) in [
+            (0x80, &[0xc2, 0x80][..]),
+            (0x7ff, &[0xdf, 0xbf]),
+            (0x800, &[0xe0, 0xa0, 0x80]),
+            (0xd800, &[0xed, 0xa0, 0x80]),
+            (0x10ffff, &[0xf4, 0x8f, 0xbf, 0xbf]),
+        ] {
+            let mut bytes = [0; 4];
+            let length = unsafe { __unicode_to_utf8(bytes.as_mut_ptr(), code_point) };
+            assert_eq!(&bytes[..length], expected);
+        }
+        let mut bytes = [0xaa; 4];
+        assert_eq!(
+            unsafe { __unicode_to_utf8(bytes.as_mut_ptr(), 0x20_0000) },
+            0
+        );
+        assert_eq!(bytes, [0xaa; 4]);
+    }
+
+    #[test]
+    fn unicode_decode_cases() {
+        struct Case {
+            bytes: &'static [u8],
+            max_length: usize,
+            expected: c_int,
+            consumed: usize,
+        }
+        let cases = [
+            Case {
+                bytes: b"A",
+                max_length: 1,
+                expected: 0x41,
+                consumed: 1,
+            },
+            Case {
+                bytes: &[0xc2, 0x80],
+                max_length: 2,
+                expected: 0x80,
+                consumed: 2,
+            },
+            Case {
+                bytes: &[0xed, 0xa0, 0x80],
+                max_length: 3,
+                expected: 0xd800,
+                consumed: 3,
+            },
+            Case {
+                bytes: &[0xf4, 0x8f, 0xbf, 0xbf],
+                max_length: 4,
+                expected: 0x10ffff,
+                consumed: 4,
+            },
+            Case {
+                bytes: &[0xc0, 0x80],
+                max_length: 2,
+                expected: -1,
+                consumed: 2,
+            },
+            Case {
+                bytes: &[0xe2, 0x82],
+                max_length: 2,
+                expected: -1,
+                consumed: 2,
+            },
+            Case {
+                bytes: &[0xf0, 0x90, 0x80],
+                max_length: 3,
+                expected: -1,
+                consumed: 3,
+            },
+            Case {
+                bytes: &[0xf8],
+                max_length: 1,
+                expected: -1,
+                consumed: 1,
+            },
+        ];
+        for case in cases {
+            let mut consumed = 0;
+            let actual =
+                unsafe { __unicode_from_utf8(case.bytes.as_ptr(), case.max_length, &mut consumed) };
+            assert_eq!((actual, consumed), (case.expected, case.consumed));
+        }
+    }
+
+    #[test]
+    fn trusted_utf8_decode_cases() {
+        for (bytes, expected, expected_length) in [
+            (b"A".as_slice(), 0x41, 1),
+            (&[0xc2, 0x80], 0x80, 2),
+            (&[0xe2, 0x82, 0xac], 0x20ac, 3),
+            (&[0xf0, 0x9f, 0x90, 0x88], 0x1f408, 4),
+            (&[0xf8, 0, 0, 0], 0xf8, 1),
+        ] {
+            let mut length = 0;
+            let actual = unsafe { __utf8_get(bytes.as_ptr(), &mut length) };
+            assert_eq!((actual, length), (expected, expected_length));
+        }
+    }
+
+    #[test]
+    fn absolute_value_cases() {
+        for (value, expected) in [(0, 0), (1, 1), (-1, 1), (c_int::MAX, c_int::MAX)] {
+            assert_eq!(abs(value), expected);
+        }
     }
 }

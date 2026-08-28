@@ -24,6 +24,10 @@ the general-purpose WASI-libc headers is omitted unless this build needs it.
   - `pstrcpy(dest, size, source)`
   - `pstrcat(dest, size, source)`
   - `strstart(string, prefix, remainder)`
+  - `has_suffix(string, suffix)`
+  - `__unicode_to_utf8(dest, code_point)`
+  - `__unicode_from_utf8(source, max_length, length)`
+  - `__utf8_get(source, length)`
   - Implemented in allocation-free Rust behind their original C ABI.
 - `stdint.h`
   - Exact-width signed and unsigned 8-, 16-, 32-, and 64-bit types
@@ -37,6 +41,7 @@ the general-purpose WASI-libc headers is omitted unless this build needs it.
   - `malloc(size)` and `free(pointer)`
   - `abort()` and `exit(status)`
   - `abs(value)`
+  - `abs` is implemented in allocation-free Rust behind its C ABI.
 - `stdio.h`
   - `printf(format, ...)`
 - Compiler headers

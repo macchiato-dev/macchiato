@@ -1,6 +1,6 @@
 use std::{env, fs, path::{Path, PathBuf}, process::Command};
 
-const ENGINE_SOURCES: &[&str] = &["cutils.c", "dtoa.c", "libm.c", "mquickjs.c"];
+const ENGINE_SOURCES: &[&str] = &["dtoa.c", "libm.c", "mquickjs.c"];
 
 fn compile_rom_builder(c: &Path, libc: &Path, out: &Path) -> PathBuf {
     let host = env::var("HOST").expect("Cargo provides HOST");

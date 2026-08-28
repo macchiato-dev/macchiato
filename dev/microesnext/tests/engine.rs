@@ -77,6 +77,11 @@ unsafe extern "C" {
         prefix: *const c_char,
         remainder: *mut *const c_char,
     ) -> c_int;
+    fn test_c_has_suffix(string: *const c_char, suffix: *const c_char) -> c_int;
+    fn test_c_unicode_to_utf8(dest: *mut u8, code_point: u32) -> usize;
+    fn test_c_unicode_from_utf8(source: *const u8, max_length: usize, length: *mut usize) -> c_int;
+    fn test_c_utf8_get(source: *const u8, length: *mut usize) -> c_int;
+    fn test_c_abs(value: c_int) -> c_int;
 }
 
 const JS_EXCEPTION: JsValue = 15;
@@ -261,4 +266,31 @@ fn c_calls_rust_string_helpers() {
         unsafe { std::ffi::CStr::from_ptr(remainder) }.to_bytes(),
         b"esnext"
     );
+}
+
+#[test]
+fn c_calls_rust_unicode_helpers() {
+    assert_eq!(
+        unsafe { test_c_has_suffix(c"microesnext".as_ptr(), c"esnext".as_ptr()) },
+        1
+    );
+
+    let mut bytes = [0; 4];
+    let encoded = unsafe { test_c_unicode_to_utf8(bytes.as_mut_ptr(), 0x1f408) };
+    assert_eq!(&bytes[..encoded], &[0xf0, 0x9f, 0x90, 0x88]);
+
+    let mut length = 0;
+    assert_eq!(
+        unsafe { test_c_unicode_from_utf8(bytes.as_ptr(), encoded, &mut length) },
+        0x1f408
+    );
+    assert_eq!(length, 4);
+
+    length = 0;
+    assert_eq!(
+        unsafe { test_c_utf8_get(bytes.as_ptr(), &mut length) },
+        0x1f408
+    );
+    assert_eq!(length, 4);
+    assert_eq!(unsafe { test_c_abs(-17) }, 17);
 }
