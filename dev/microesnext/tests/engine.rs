@@ -93,6 +93,11 @@ unsafe extern "C" {
     fn test_c_trunc(value: f64) -> f64;
     fn test_c_round_inf(value: f64) -> f64;
     fn test_c_fabs(value: f64) -> f64;
+    fn test_c_get_high_word(value: f64) -> u32;
+    fn test_c_set_high_word(value: f64, high: u32) -> f64;
+    fn test_c_get_low_word(value: f64) -> u32;
+    fn test_c_zero_low(value: f64) -> f64;
+    fn test_c_float64_from_u32(high: u32, low: u32) -> f64;
 }
 
 const JS_EXCEPTION: JsValue = 15;
@@ -373,4 +378,35 @@ fn c_calls_rust_rounding_functions() {
         unsafe { test_c_round_inf(negative_nan) }.to_bits(),
         negative_nan.to_bits(),
     );
+}
+
+#[test]
+fn c_calls_rust_float_word_helpers() {
+    let patterns = [
+        0_u64,
+        0x8000_0000_0000_0000,
+        0x4009_21fb_5444_2d18,
+        0xfff8_1234_5678_9abc,
+    ];
+    for bits in patterns {
+        let value = f64::from_bits(bits);
+        let high = (bits >> 32) as u32;
+        let low = bits as u32;
+        assert_eq!(unsafe { test_c_get_high_word(value) }, high);
+        assert_eq!(unsafe { test_c_get_low_word(value) }, low);
+        assert_eq!(
+            unsafe { test_c_zero_low(value) }.to_bits(),
+            bits & !u64::from(u32::MAX)
+        );
+        assert_eq!(
+            unsafe { test_c_float64_from_u32(high, low) }.to_bits(),
+            bits,
+        );
+
+        let replacement = high ^ 0xa5a5_5a5a;
+        assert_eq!(
+            unsafe { test_c_set_high_word(value, replacement) }.to_bits(),
+            (u64::from(replacement) << 32) | u64::from(low),
+        );
+    }
 }

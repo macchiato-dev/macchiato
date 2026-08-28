@@ -482,6 +482,36 @@ pub extern "C" fn js_fabs(value: f64) -> f64 {
     f64::from_bits(value.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
 
+/// Returns the high half of an `f64`'s IEEE-754 representation.
+#[unsafe(no_mangle)]
+pub extern "C" fn get_high_word(value: f64) -> u32 {
+    (value.to_bits() >> 32) as u32
+}
+
+/// Replaces the high half of an `f64` without interpreting its bit pattern.
+#[unsafe(no_mangle)]
+pub extern "C" fn set_high_word(value: f64, high: u32) -> f64 {
+    f64::from_bits((value.to_bits() & u64::from(u32::MAX)) | (u64::from(high) << 32))
+}
+
+/// Returns the low half of an `f64`'s IEEE-754 representation.
+#[unsafe(no_mangle)]
+pub extern "C" fn get_low_word(value: f64) -> u32 {
+    value.to_bits() as u32
+}
+
+/// Clears the low half of an `f64` without interpreting its bit pattern.
+#[unsafe(no_mangle)]
+pub extern "C" fn zero_low(value: f64) -> f64 {
+    f64::from_bits(value.to_bits() & 0xffff_ffff_0000_0000)
+}
+
+/// Constructs an `f64` from its high and low IEEE-754 words.
+#[unsafe(no_mangle)]
+pub extern "C" fn float64_from_u32(high: u32, low: u32) -> f64 {
+    f64::from_bits((u64::from(high) << 32) | u64::from(low))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

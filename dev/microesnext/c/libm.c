@@ -267,35 +267,11 @@ double js_fmod(double a, double b)
         (ix1) = (uint32_t)__u;                                  \
     } while (0)
 
-static uint32_t get_high_word(double d)
-{
-    return float64_as_uint64(d) >> 32;
-}
-
-static double set_high_word(double d, uint32_t h)
-{
-    uint64_t u = float64_as_uint64(d);
-    u = (u & 0xffffffff) | ((uint64_t)h << 32);
-    return uint64_as_float64(u);
-}
-
-static uint32_t get_low_word(double d)
-{
-    return float64_as_uint64(d);
-}
-
-/* set the low 32 bits to zero */
-static double zero_low(double x)
-{
-    uint64_t u = float64_as_uint64(x);
-    u &= 0xffffffff00000000;
-    return uint64_as_float64(u);
-}
-
-static double float64_from_u32(uint32_t h, uint32_t l)
-{
-    return uint64_as_float64(((uint64_t)h << 32) | l);
-}
+uint32_t get_high_word(double value);
+double set_high_word(double value, uint32_t high);
+uint32_t get_low_word(double value);
+double zero_low(double value);
+double float64_from_u32(uint32_t high, uint32_t low);
 
 static const double zero   = 0.0;
 static const double one    = 1.0;

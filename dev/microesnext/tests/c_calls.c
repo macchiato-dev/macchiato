@@ -80,3 +80,21 @@ double test_c_ceil(double value) { return js_ceil(value); }
 double test_c_trunc(double value) { return js_trunc(value); }
 double test_c_round_inf(double value) { return js_round_inf(value); }
 double test_c_fabs(double value) { return js_fabs(value); }
+
+uint32_t get_high_word(double value);
+double set_high_word(double value, uint32_t high);
+uint32_t get_low_word(double value);
+double zero_low(double value);
+double float64_from_u32(uint32_t high, uint32_t low);
+
+uint32_t test_c_get_high_word(double value) { return get_high_word(value); }
+double test_c_set_high_word(double value, uint32_t high)
+{
+    return set_high_word(value, high);
+}
+uint32_t test_c_get_low_word(double value) { return get_low_word(value); }
+double test_c_zero_low(double value) { return zero_low(value); }
+double test_c_float64_from_u32(uint32_t high, uint32_t low)
+{
+    return float64_from_u32(high, low);
+}
