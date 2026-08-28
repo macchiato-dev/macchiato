@@ -1,6 +1,7 @@
 import { transformAsync } from "@babel/core";
 import presetEnv from "@babel/preset-env";
 import { build } from "esbuild";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import microQuickJSSyntax from "./babel-microquickjs.js";
 
@@ -10,6 +11,10 @@ const ponyfills = new URL("generated/microquickjs-ponyfills.js", import.meta.url
 const microModern = new URL("generated/codemirror-micro-modern.js", import.meta.url).pathname;
 const micro = new URL("generated/codemirror-micro.js", import.meta.url).pathname;
 const microRuntime = new URL("generated/microquickjs-runtime.js", import.meta.url).pathname;
+const mobileModern = new URL(
+  "generated/codemirror-mobile-syntax.js", import.meta.url).pathname;
+const mobileMicro = new URL(
+  "generated/codemirror-mobile-syntax-micro.js", import.meta.url).pathname;
 const microESNextMulti = new URL(
   "generated/codemirror-multi-microesnext.js", import.meta.url).pathname;
 const microESNextMultiModern = new URL(
@@ -83,6 +88,91 @@ await writeFile(new URL("generated/large-fixture.js", import.meta.url),
   `export default ${JSON.stringify(Array.from({ length: 500 }, (_, index) =>
     `export const item${index + 1}: number = ${index + 1};`).join("\n"))};\n`);
 
+const repository = new URL("../../../../", import.meta.url);
+const tracked = extension => execFileSync(
+  "git", ["ls-files", `*.${extension}`],
+  { cwd: repository, encoding: "utf8" }).trim().split("\n").filter(Boolean)
+  .filter(path => !path.includes("/generated/") && !path.includes("node_modules"));
+const separators = {
+  javascript: path => `\n/* ${path} */\n`,
+  css: path => `\n/* ${path} */\n`,
+  markdown: path => `\n\n<!-- ${path} -->\n\n`,
+  html: path => `\n<!-- ${path} -->\n`,
+};
+async function corpus(mode, paths, minimum = 3000, maximum = 6000,
+    maximumLineLength = Infinity) {
+  let text = "";
+  let lines = 0;
+  let index = 0;
+  while (lines < minimum) {
+    const path = paths[index++ % paths.length];
+    const source = await readFile(new URL(path, repository), "utf8");
+    if (source.split("\n").some(line => line.length > maximumLineLength)) continue;
+    text += separators[mode](path) + source;
+    lines = text.split("\n").length;
+  }
+  return text.split("\n").slice(0, maximum).join("\n");
+}
+const mobileFixtures = {
+  javascript: { name: "JavaScript", text: await corpus("javascript", [
+    "packages/website/content-form-client.js",
+    "packages/app/src/code-annotator.js",
+  ]) },
+  css: { name: "CSS", text: await corpus("css", tracked("css")) },
+  markdown: { name: "Markdown", text: await corpus("markdown", tracked("md")) },
+  html: { name: "HTML + CSS + JS",
+    text: await corpus("html", tracked("html"), 3000, 6000, 4096) },
+};
+const longComment = Array.from({ length: 96 }, (_, index) =>
+  `   viewport state continuation ${index + 1}`).join("\n");
+const mobileProbes = {
+  javascript: `
+/* viewport-state probe begins above the final viewport
+${longComment}
+*/
+const viewportTemplate = \`a template
+that crosses a line\`;
+const viewportNumber = 2048;
+`,
+  css: `
+/* viewport-state probe begins above the final viewport
+${longComment}
+*/
+.viewport-probe {
+  border-color: rebeccapurple;
+  inline-size: 42rem;
+}
+`,
+  markdown: `
+\`\`\`javascript
+/* a multiline comment inside a fenced JavaScript block
+${longComment}
+*/
+const viewportFence = \`mixed
+markdown and JavaScript\`;
+\`\`\`
+
+## Viewport fence probe
+`,
+  html: `
+<style>
+/* embedded CSS state begins above the final viewport
+${longComment}
+*/
+.viewport-probe { color: rebeccapurple; }
+</style>
+<script>
+/* embedded JavaScript state crosses a line */
+const viewportScript = \`mixed
+HTML and JavaScript\`;
+</script>
+`,
+};
+for (const [mode, fixture] of Object.entries(mobileFixtures)) {
+  await writeFile(new URL(`generated/mobile-fixture-${mode}.txt`, import.meta.url),
+    fixture.text + mobileProbes[mode]);
+}
+
 await build({
   entryPoints: [new URL("src/modern-entry.js", import.meta.url).pathname],
   bundle: true,
@@ -95,6 +185,7 @@ for (const [entry, outfile] of [
   ["src/simple-entry.js", "generated/codemirror-simple.js"],
   ["src/large-entry.js", "generated/codemirror-large.js"],
   ["src/multi-entry.js", "generated/codemirror-multi.js"],
+  ["src/mobile-syntax-app.js", "generated/codemirror-mobile-syntax.js"],
 ]) {
   await build({
     entryPoints: [new URL(entry, import.meta.url).pathname],
@@ -147,6 +238,8 @@ await writeFile(micro, await lowerForMicroQuickJS(modernApplication));
 await writeFile(new URL("generated/codemirror-multi-micro.js", import.meta.url),
   await lowerForMicroQuickJS(await readFile(
     new URL("generated/codemirror-multi.js", import.meta.url), "utf8")));
+await writeFile(mobileMicro, await lowerForMicroQuickJS(
+  await readFile(mobileModern, "utf8")));
 
 // MicroQuickJS supplies `print` and `HostReference` as native globals. The
 // canonical full-QuickJS build uses equivalent Rust-hosted bindings instead.

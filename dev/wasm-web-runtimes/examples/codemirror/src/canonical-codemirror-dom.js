@@ -99,8 +99,12 @@ function GuestCustomEvent(type, options) {
   this.defaultPrevented = false;
 }
 GuestCustomEvent.prototype.preventDefault = function () { this.defaultPrevented = true; };
+GuestCustomEvent.prototype.initEvent = function (type) { this.type = String(type); };
 globalThis.CustomEvent = GuestCustomEvent;
 globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.createEvent = function (type) {
+  return new GuestCustomEvent(type);
+};
 GuestDocument.prototype.dispatchEvent = function (event) {
   if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
   var listeners = (syntheticDocumentListeners[event.type] || []).slice();

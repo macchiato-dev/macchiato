@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · MicroQuickJS</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status">Loading MicroQuickJS…</div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const fixtureText = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtureText[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  const response = await fetch("../../generated/codemirror-mobile-syntax-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]]) {
+    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+  }
+  document.querySelector(".runtime-status").remove();
+</script>

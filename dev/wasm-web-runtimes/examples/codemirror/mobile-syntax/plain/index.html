@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · plain browser</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<script type="module">
+  const fixtures = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtures[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  await import("../../generated/codemirror-mobile-syntax.js");
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]])
+    loadMobileFixture(code + fixtures[mode]);
+</script>
