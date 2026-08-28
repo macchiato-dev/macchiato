@@ -127,11 +127,10 @@ const longComment = Array.from({ length: 96 }, (_, index) =>
   `   viewport state continuation ${index + 1}`).join("\n");
 const mobileProbes = {
   javascript: `
-/* viewport-state probe begins above the final viewport
+const viewportTemplate = \`viewport template begins above the final viewport
 ${longComment}
-*/
-const viewportTemplate = \`a template
-that crosses a line\`;
+\`;
+/* visible comment after the recovered template */
 const viewportNumber = 2048;
 `,
   css: `

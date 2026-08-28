@@ -3243,7 +3243,7 @@ export const codeAnnotatorFileAccess = {
   root: "packages",
 };
 
-/* viewport-state probe begins above the final viewport
+const viewportTemplate = `viewport template begins above the final viewport
    viewport state continuation 1
    viewport state continuation 2
    viewport state continuation 3
@@ -3340,7 +3340,6 @@ export const codeAnnotatorFileAccess = {
    viewport state continuation 94
    viewport state continuation 95
    viewport state continuation 96
-*/
-const viewportTemplate = `a template
-that crosses a line`;
+`;
+/* visible comment after the recovered template */
 const viewportNumber = 2048;

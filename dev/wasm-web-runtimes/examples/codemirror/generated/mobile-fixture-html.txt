@@ -385,6 +385,120 @@ projects its constrained DOM into this browser.</p>
   }
 </script>
 
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local CodeMirror syntax modes</title>
+<ul>
+  <li><a href="plain/">Plain browser</a></li>
+  <li><a href="quickjs/">QuickJS</a></li>
+  <li><a href="microquickjs/">MicroQuickJS</a></li>
+</ul>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · MicroQuickJS</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status">Loading MicroQuickJS…</div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const fixtureText = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtureText[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  const response = await fetch("../../generated/codemirror-mobile-syntax-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]]) {
+    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+  }
+  document.querySelector(".runtime-status").remove();
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/plain/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · plain browser</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<script type="module">
+  const fixtures = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtures[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  await import("../../generated/codemirror-mobile-syntax.js");
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]])
+    loadMobileFixture(code + fixtures[mode]);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · QuickJS</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status">Loading QuickJS…</div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const fixtureText = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtureText[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  const response = await fetch("../../generated/codemirror-mobile-syntax.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]]) {
+    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
+  }
+  document.querySelector(".runtime-status").remove();
+</script>
+
 <!-- dev/wasm-web-runtimes/examples/codemirror/multi/index.html -->
 <!doctype html>
 <meta charset="utf-8">
@@ -2641,6 +2755,120 @@ projects its constrained DOM into this browser.</p>
   }
 </script>
 
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local CodeMirror syntax modes</title>
+<ul>
+  <li><a href="plain/">Plain browser</a></li>
+  <li><a href="quickjs/">QuickJS</a></li>
+  <li><a href="microquickjs/">MicroQuickJS</a></li>
+</ul>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · MicroQuickJS</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status">Loading MicroQuickJS…</div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const fixtureText = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtureText[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  const response = await fetch("../../generated/codemirror-mobile-syntax-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]]) {
+    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+  }
+  document.querySelector(".runtime-status").remove();
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/plain/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · plain browser</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<script type="module">
+  const fixtures = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtures[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  await import("../../generated/codemirror-mobile-syntax.js");
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]])
+    loadMobileFixture(code + fixtures[mode]);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport-local syntax · QuickJS</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status">Loading QuickJS…</div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const fixtureText = {};
+  for (const mode of ["javascript", "css", "markdown", "html"])
+    fixtureText[mode] = await (await fetch(
+      `../../generated/mobile-fixture-${mode}.txt`)).text();
+  const response = await fetch("../../generated/codemirror-mobile-syntax.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
+      ["m", "markdown"], ["h", "html"]]) {
+    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
+  }
+  document.querySelector(".runtime-status").remove();
+</script>
+
 <!-- dev/wasm-web-runtimes/examples/codemirror/multi/index.html -->
 <!doctype html>
 <meta charset="utf-8">
@@ -2772,262 +3000,6 @@ New game
 </main>
 <script src="mahjong.js">
 </script>
-</body>
-</html>
-
-<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/index.html -->
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>wasm-web-machine examples</title>
-  <style>
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: #17142c; color: #f2edf9; }
-    main { width: min(34rem, calc(100% - 2rem)); }
-    h1 { margin: 0 0 1.25rem; font-size: clamp(1.7rem, 6vw, 2.5rem); }
-    nav { display: grid; gap: .65rem; }
-    a { padding: 1rem 1.1rem; border: 1px solid #514a72; border-radius: .75rem;
-      background: #211d3a; color: inherit; text-decoration: none; }
-    a:hover, a:focus-visible { border-color: #b7a6e5; background: #292347; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>wasm-web-machine examples</h1>
-    <nav aria-label="Examples">
-      <a href="./cat-memory/">Cat Memory — WebAssembly</a>
-      <a href="./plain-web/cat-memory/">Cat Memory — plain web page</a>
-      <a href="./mahjong/">Mahjong — WebAssembly</a>
-      <a href="./plain-web/mahjong/">Mahjong — plain web page</a>
-    </nav>
-  </main>
-</body>
-</html>
-
-<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/mahjong-example.html -->
-<!doctype html>
-<meta charset="utf-8">
-<body>
-<noscript>This application requires JavaScript and WebAssembly.</noscript>
-<script type="module">
-  import WasmWebMachine from "../wasm-web-machine.js";
-
-  const encoder = new TextEncoder();
-  const prefix = `-wwc--${location.pathname.replace(/\W+/g, "-")
-    .replace(/^-|-$/g, "") || "root"}--`;
-  const area = (kind) => kind === "local" ? [localStorage, 8192] :
-    kind === "session" ? [sessionStorage, 128 * 1024] : null;
-  const key = (name) => prefix + name;
-  const size = (storage, replacementKey, replacementValue) => {
-    let bytes = 0;
-    for (let index = 0; index < storage.length; index++) {
-      const found = storage.key(index);
-      if (!found?.startsWith(prefix) || found === replacementKey) continue;
-      bytes += encoder.encode(found).length +
-        encoder.encode(storage.getItem(found) || "").length;
-    }
-    return bytes + encoder.encode(replacementKey).length +
-      encoder.encode(replacementValue).length;
-  };
-  const storage = {
-    get(kind, name) { return area(kind)?.[0].getItem(key(name)) ?? null; },
-    set(kind, name, value) {
-      const selected = area(kind);
-      if (!selected) throw new Error("Unknown storage area");
-      const [storageArea, limit] = selected;
-      const storageKey = key(name);
-      if (size(storageArea, storageKey, value) > limit) {
-        throw new Error(`${kind} storage quota exceeded`);
-      }
-      storageArea.setItem(storageKey, value);
-    },
-    delete(kind, name) { area(kind)?.[0].removeItem(key(name)); },
-    listen(kind, name, callback) {
-      const storageKey = key(name);
-      addEventListener("storage", (event) => {
-        if (kind === "local" && event.storageArea === localStorage &&
-            event.key === storageKey) callback();
-      });
-    },
-  };
-  const allowFont = [
-    "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
-    "22219fb90e3b9bd28debd1825fe8d9a0154a0e31f8b3fa601ac1a0a5aa5e6d1b",
-    "d80df8ff5aecd299a61549f9e29ab1ed0b9b05f4ea71d50fe978e07d5240b235",
-  ];
-  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
-  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
-  const machine = new WasmWebMachine(module, document, {
-    allowFont,
-    services: { storage },
-    stamp: new Uint8Array(stamp),
-  });
-  await machine.onmsg(0);
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/wasm-example.html -->
-<!doctype html>
-<meta charset="utf-8">
-<body>
-<noscript>This application requires JavaScript and WebAssembly.</noscript>
-<script type="module">
-  import WasmWebMachine from "../wasm-web-machine.js";
-
-  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
-  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
-  const machine = new WasmWebMachine(module, document, {
-    stamp: new Uint8Array(stamp),
-  });
-  await machine.onmsg(0);
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/sqlite-book/index.html -->
-<!doctype html>
-<html>
-<head>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<header>
-<p>
-SQLite Documentation Reader
-</p>
-</header>
-<main id="book">
-</main>
-<footer>
-<p>
-An offline reading edition built from the public-domain SQLite documentation.
-</p>
-</footer>
-<script src="sqlite-book.js">
-</script>
-</body>
-</html>
-
-<!-- examples/dom-use-demo/page.html -->
-<main class="page">
-  <h1>Neighborhood Library</h1>
-  <p>A quiet place for reading, research, community classes, and after-school study.</p>
-  <h2>Hours</h2>
-  <ul class="service-list">
-    <li><strong>Monday-Friday:</strong> 9:00 AM to 7:00 PM</li>
-    <li><strong>Saturday:</strong> 10:00 AM to 5:00 PM</li>
-    <li><strong>Sunday:</strong> 12:00 PM to 4:00 PM</li>
-  </ul>
-  <h2>Services</h2>
-  <ul class="service-list">
-    <li><strong>Computers:</strong> public workstations and printing</li>
-    <li><strong>Events:</strong> story time, workshops, and book groups</li>
-    <li><strong>Help desk:</strong> research support and account questions</li>
-  </ul>
-</main>
-
-<!-- examples/focused-app/index.html -->
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark light">
-  <title>Macchiato Focused Apps</title>
-  <link rel="stylesheet" href="./style.css">
-  <script type="importmap">{"imports":{"@macchiato-dev/quickjs-emscripten-sandbox":"./-/quickjs-emscripten-sandbox/index.js","@jitl/quickjs-ffi-types":"./-/quickjs-emscripten-sandbox/ffi-types.js","@jitl/quickjs-singlefile-browser-release-sync":"./-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js","quickjs-emscripten-core":"./-/quickjs-emscripten-sandbox/quickjs-core.js","@macchiato-dev/browser-use/quickjs-dom-guest":"./browser-use-quickjs-dom-guest.js"}}</script>
-</head>
-<body>
-  <div class="app" data-sidebar="visible">
-    <aside class="sidebar" data-tab="documents" aria-label="Collections and documents">
-      <div class="sidebar-tabs" role="tablist" aria-label="Sidebar view">
-        <button id="documents-tab" role="tab" aria-selected="true" aria-controls="documents">Documents</button>
-        <button id="info-tab" role="tab" aria-selected="false" aria-controls="document-info">Info</button>
-        <button id="activity-tab" role="tab" aria-selected="false" aria-controls="activity">Activity</button>
-      </div>
-      <header class="collection-header">
-        <div class="collection-picker">
-          <button id="collection-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
-          <div id="collection-menu" class="collection-menu" hidden>
-            <div class="collection-menu-header">
-              <strong>Collections</strong>
-              <button id="new-collection" class="icon-button" aria-label="New collection" title="New collection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5h7l2 2h9v10H3zM12 11v5m-2.5-2.5h5"/></svg></button>
-            </div>
-            <div id="collection-options" role="listbox"></div>
-          </div>
-        </div>
-      </header>
-      <div class="collection-actions">
-        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></svg><input id="search" type="text" role="searchbox" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search collection"></label>
-        <button id="filter" class="icon-button" aria-label="Filter documents: all" title="Filter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg></button>
-        <button id="new-document" class="icon-button" aria-label="Add document" title="Add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-      </div>
-      <ul id="documents" class="documents"></ul>
-      <section id="document-info" class="document-info" role="tabpanel" aria-labelledby="info-tab" hidden>
-        <p class="document-info__eyebrow">Current document</p>
-        <h2 id="info-title">No document selected</h2>
-        <dl>
-          <div><dt>Collection</dt><dd id="info-collection">—</dd></div>
-          <div><dt>Storage</dt><dd id="info-storage">—</dd></div>
-          <div><dt>Size</dt><dd id="info-size">—</dd></div>
-          <div><dt>Updated</dt><dd id="info-updated">—</dd></div>
-        </dl>
-        <details><summary>Sandbox configuration</summary><pre id="info-sandbox"></pre></details>
-        <button id="download-document" class="info-download" disabled>Download</button>
-      </section>
-      <section id="activity" class="activity" role="tabpanel" aria-labelledby="activity-tab" hidden>
-        <p class="activity__eyebrow">Workspace activity</p>
-        <ol id="activity-list" class="activity-list"></ol>
-      </section>
-      <footer class="sidebar-footer">
-        <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
-        <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>
-        <button id="open-command-palette" class="icon-button" aria-label="Command palette" title="Command palette (⌘K)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 10 2 2-2 2m5 0h5"/></svg></button>
-      </footer>
-    </aside>
-    <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
-    <div id="sidebar-control" class="sidebar-control" data-side="left">
-      <button id="toggle-sidebar" class="sidebar-control__primary" aria-label="Hide sidebar">
-        <svg class="sidebar-control__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
-        <svg class="sidebar-control__layout" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
-      </button>
-      <button id="sidebar-control-more" class="sidebar-control__more" aria-label="Sidebar actions">•••</button>
-      <button id="sidebar-control-drag" class="sidebar-control__drag" aria-label="Move sidebar control"><svg viewBox="0 0 16 24" aria-hidden="true"><path d="M5 5h.01M11 5h.01M5 12h.01M11 12h.01M5 19h.01M11 19h.01"/></svg></button>
-      <div id="sidebar-control-menu" class="sidebar-control-menu" role="menu" hidden>
-        <button id="sidebar-menu-visibility" role="menuitem">Hide</button>
-        <button id="sidebar-menu-side" role="menuitem">Move to Right</button>
-      </div>
-    </div>
-    <main class="main">
-      <section id="empty" class="empty"><div class="empty-icon"></div><h1>Choose or create an app</h1><p>Documents run with their own inspectable sandbox configuration.</p></section>
-      <article id="workspace" class="workspace" hidden>
-        <header class="document-header">
-          <div><p class="eyebrow">Declarative app preview</p><h1 id="document-title"></h1><p id="document-summary"></p><p id="app-detection" class="app-detection"></p><div id="app-packages" class="app-packages"></div></div>
-          <details class="sandbox-details"><summary>Sandbox</summary><pre id="sandbox"></pre></details>
-        </header>
-        <iframe id="app-preview" title="Declarative app preview" sandbox="allow-same-origin"></iframe>
-      </article>
-      <output id="status" class="status" aria-live="polite"></output>
-    </main>
-  </div>
-  <input id="file" type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript,application/javascript" hidden>
-  <div class="drop-overlay">Drop a file to create an app</div>
-  <dialog id="collection-dialog"><form id="collection-form"><h2>New collection</h2><label>Name<input name="name" required maxlength="80"></label><label>Storage<select name="storage"><option value="session">Session Storage</option><option value="local">Local Storage</option><option value="memory">Memory</option></select></label><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Create collection</button></div></form></dialog>
-  <dialog id="import-dialog"><form><h2>Import as an app</h2><label>Name<input name="name" required></label><label>Collection<select id="import-collection" name="collection"></select></label><textarea name="content" hidden></textarea><p>Files over 1 MB default to Memory so browser storage is not unexpectedly exhausted.</p><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Import</button></div></form></dialog>
-  <div id="document-actions" class="document-actions-popover" role="menu" hidden><button id="document-hide-sidebar" role="menuitem">Hide</button></div>
-  <dialog id="command-palette" class="command-palette" data-command-dialog aria-label="Search commands">
-    <div class="command-palette__surface">
-      <div class="command-palette__search">
-        <svg class="command-palette__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input type="text" role="searchbox" autocomplete="off" data-command-input aria-label="Search commands" placeholder="Search commands…">
-        <kbd>Esc</kbd>
-      </div>
-      <div class="command-palette__list" data-command-list>
-        <button id="command-show-sidebar" class="command-palette__item" data-command-label="show sidebar"><span>Show Sidebar</span><kbd>Enter</kbd></button>
-      </div>
-    </div>
-  </dialog>
-  <script type="module" src="./client.js"></script>
 </body>
 </html>
 

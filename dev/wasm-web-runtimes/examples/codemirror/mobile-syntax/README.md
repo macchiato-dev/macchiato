@@ -44,8 +44,8 @@ are skipped so a nominally small viewport cannot conceal a very large line.
 Each fixture ends with a probe whose multiline opener is above the final mobile
 viewport. This exercises recovered lexical state, rather than merely showing
 an opener and closer on the same screen. The Markdown and HTML probes also
-exercise mixed-language highlighting. Generated fixtures range from 3,140 to
-3,793 lines in the current repository.
+exercise mixed-language highlighting. Generated fixtures contain roughly
+3,100–3,500 lines in the current repository.
 
 ## Mobile test
 
@@ -75,7 +75,7 @@ state across all three runtimes.
 ## Current result
 
 At the final viewport, the complete test retains 4–70 syntax tokens and scans
-about 1,400–2,300 visible characters plus 11,600–24,400 lookback characters,
+about 1,400–2,300 visible characters plus 15,600–28,400 lookback characters,
 depending on the fixture and runtime. Host JavaScript heap use remained below
 10 MiB in the measured run. The plain browser generally updated in under a
 millisecond; QuickJS took about 1–7 ms; MicroQuickJS took about 2–30 ms, with

@@ -86,7 +86,7 @@ const requiredMarks = {
   "HTML + CSS + JS": ["comment", "keyword", "property", "string", "tag"],
 };
 const offscreenOpeners = {
-  JavaScript: "viewport-state probe begins above",
+  JavaScript: "viewport template begins above",
   CSS: "viewport-state probe begins above",
   Markdown: "```javascript",
   "HTML + CSS + JS": "<style>",
