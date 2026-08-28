@@ -43,12 +43,12 @@ before(async () => {
 after(() => new Promise(resolve => server.close(resolve)));
 
 function statusMetrics(text) {
-  const match = /^(.*): (\d+) lines · (\d+) retained tokens · (\d+) visible chars · (\d+) lookback chars · ([\d.]+) ms$/.exec(text);
+  const match = /^(.*): (\d+) lines · (\d+) retained tokens · (\d+) visible chars · (\d+) state chars · (\d+) skipped chars · ([\d.]+) ms$/.exec(text);
   assert.ok(match, `unexpected status: ${text}`);
   return {
     name: match[1], lines: Number(match[2]), retainedTokens: Number(match[3]),
-    parsedChars: Number(match[4]), lookbackChars: Number(match[5]),
-    milliseconds: Number(match[6]),
+    parsedChars: Number(match[4]), stateChars: Number(match[5]),
+    skippedHighlightChars: Number(match[6]), milliseconds: Number(match[7]),
   };
 }
 
@@ -142,7 +142,7 @@ test("viewport-local modes stay bounded on a mobile-sized browser", { timeout: 1
           `${runtime} activated ${name}; errors=${errors.join(" | ")}`);
         assert.ok(initial.lines >= 3000 && initial.lines <= 10000, `${runtime} ${name} lines`);
         assert.ok(initial.parsedChars < 20_000, `${runtime} ${name} visible parse is bounded`);
-        assert.ok(initial.lookbackChars < 100_000, `${runtime} ${name} lookback is bounded`);
+        assert.equal(initial.stateChars, 0, `${runtime} ${name} starts at the document top`);
         assert.ok(initial.retainedTokens < 2500, `${runtime} ${name} tokens are bounded`);
 
         const activeEditor = page.locator(".cm-editor").last();
@@ -158,14 +158,14 @@ test("viewport-local modes stay bounded on a mobile-sized browser", { timeout: 1
         assert.ok(scroll.top > 0 && scroll.height > scroll.client,
           `${runtime} ${name} has a scrollable large document`);
         await scrollToLastLines(activeEditor, initial.lines - 30);
-        await page.waitForTimeout(150);
+        await page.waitForTimeout(350);
         const final = statusMetrics(await status.textContent());
         const finalLines = await visibleLineNumbers(activeEditor);
         const gutterElements = await activeEditor.locator(
           ".cm-lineNumbers .cm-gutterElement").count();
         assert.ok(final.parsedChars < 20_000);
-        assert.ok(final.lookbackChars > 0 && final.lookbackChars < 100_000,
-          `${runtime} ${name} final lookback is bounded: ${JSON.stringify(final)}; ` +
+        assert.ok(final.stateChars > 0,
+          `${runtime} ${name} scans state from the top: ${JSON.stringify(final)}; ` +
           `gutter elements=${gutterElements}; initial lines=${initialLines.join(",")}; ` +
           `final lines=${finalLines.join(",")}; errors=${errors.join(" | ")}`);
         assert.ok(final.retainedTokens < 2500);

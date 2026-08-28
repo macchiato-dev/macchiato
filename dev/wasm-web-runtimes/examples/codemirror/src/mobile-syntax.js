@@ -1,7 +1,9 @@
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin } from "@codemirror/view";
 
-const LOOKBACK_LINES = 400;
+const HIGHLIGHT_LINE_LIMIT = 2048;
+const STATE_LINE_LIMIT = 4096;
+const REFRESH_DELAY = 180;
 const classes = {
   comment: "cm-mobile-comment", keyword: "cm-mobile-keyword",
   number: "cm-mobile-number", string: "cm-mobile-string",
@@ -11,18 +13,59 @@ const classes = {
 };
 
 function add(tokens, from, to, kind) {
-  if (to > from) tokens.push({ from, to, kind });
+  if (tokens && to > from) tokens.push({ from, to, kind });
 }
 
-function boundedStart(doc, from) {
-  const line = doc.lineAt(from);
-  return doc.line(Math.max(1, line.number - LOOKBACK_LINES)).from;
+function lineEnd(text, at) {
+  const end = text.indexOf("\n", at);
+  return end < 0 ? text.length : end;
+}
+
+function unescapedDelimiter(text, delimiter) {
+  let at = text.indexOf(delimiter);
+  while (at >= 0) {
+    let escapes = 0;
+    for (let before = at - 1; before >= 0 && text[before] === "\\"; before--) escapes++;
+    if (escapes % 2 === 0) return true;
+    at = text.indexOf(delimiter, at + 1);
+  }
+  return false;
+}
+
+function skipJavascriptTail(state, tail) {
+  if (state === "comment" && tail.includes("*/")) return "normal";
+  if (state === "template" && unescapedDelimiter(tail, "`")) return "normal";
+  if (state === "single" && unescapedDelimiter(tail, "'")) return "normal";
+  if (state === "double" && unescapedDelimiter(tail, "\"")) return "normal";
+  return state === "line-comment" ? "normal" : state;
+}
+
+function skipCssTail(state, tail) {
+  if (state === "comment" && tail.includes("*/")) return "normal";
+  if (state === "single" && unescapedDelimiter(tail, "'")) return "normal";
+  if (state === "double" && unescapedDelimiter(tail, "\"")) return "normal";
+  return state;
 }
 
 function javascriptState(prefix) {
   let state = "normal";
   let blankLine = true;
   for (let at = 0; at < prefix.length;) {
+    if (state === "normal") {
+      let next = prefix.length;
+      for (const marker of ["/", "`", "\"", "'"]) {
+        const found = prefix.indexOf(marker, at);
+        if (found >= 0 && found < next) next = found;
+      }
+      if (next > at) { at = next; continue; }
+    }
+    const end = lineEnd(prefix, at);
+    if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
+      state = skipJavascriptTail(state, prefix.slice(at, end));
+      at = end + (end < prefix.length ? 1 : 0);
+      blankLine = false;
+      continue;
+    }
     if (state === "template" && blankLine && (at === 0 || prefix[at - 1] === "\n")) {
       const line = prefix.slice(at, prefix.indexOf("\n", at) < 0 ? prefix.length :
         prefix.indexOf("\n", at));
@@ -101,12 +144,20 @@ const jsKeywords = new Set((
   "let new of return set static super switch throw try typeof var void while with yield"
 ).split(" "));
 
-function javascriptScan(text, offset, initial = "normal") {
-  const tokens = [];
+function javascriptScan(text, offset, initial = "normal", emit = true) {
+  const tokens = emit ? [] : null;
   let state = initial;
   let blankLine = true;
   let at = 0;
   while (at < text.length) {
+    if (!emit && state === "normal") {
+      let next = text.length;
+      for (const marker of ["/", "`", "\"", "'"]) {
+        const found = text.indexOf(marker, at);
+        if (found >= 0 && found < next) next = found;
+      }
+      if (next > at) { at = next; continue; }
+    }
     const start = at;
     if (state === "template" && blankLine && (at === 0 || text[at - 1] === "\n")) {
       const lineEnd = text.indexOf("\n", at);
@@ -160,7 +211,7 @@ function javascriptScan(text, offset, initial = "normal") {
       at++;
     }
   }
-  return { tokens, state };
+  return { tokens: tokens || [], state };
 }
 
 function javascriptTokens(text, offset, initial = "normal") {
@@ -170,6 +221,20 @@ function javascriptTokens(text, offset, initial = "normal") {
 function cssState(prefix) {
   let state = "normal";
   for (let at = 0; at < prefix.length;) {
+    if (state === "normal") {
+      let next = prefix.length;
+      for (const marker of ["/", "\"", "'"]) {
+        const found = prefix.indexOf(marker, at);
+        if (found >= 0 && found < next) next = found;
+      }
+      if (next > at) { at = next; continue; }
+    }
+    const end = lineEnd(prefix, at);
+    if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
+      state = skipCssTail(state, prefix.slice(at, end));
+      at = end + (end < prefix.length ? 1 : 0);
+      continue;
+    }
     if (state === "comment") {
       const end = prefix.indexOf("*/", at);
       if (end < 0) return state;
@@ -201,11 +266,19 @@ function cssInitial(prefix, text) {
   return close >= 0 && (open < 0 || close < open) ? "comment" : "normal";
 }
 
-function cssScan(text, offset, initial = "normal") {
-  const tokens = [];
+function cssScan(text, offset, initial = "normal", emit = true) {
+  const tokens = emit ? [] : null;
   let state = initial;
   let at = 0;
   while (at < text.length) {
+    if (!emit && state === "normal") {
+      let next = text.length;
+      for (const marker of ["/", "\"", "'"]) {
+        const found = text.indexOf(marker, at);
+        if (found >= 0 && found < next) next = found;
+      }
+      if (next > at) { at = next; continue; }
+    }
     const start = at;
     if (state === "comment") {
       const end = text.indexOf("*/", at);
@@ -242,7 +315,7 @@ function cssScan(text, offset, initial = "normal") {
       if (text[next] === ":") add(tokens, offset + start, offset + at, "property");
     } else at++;
   }
-  return { tokens, state };
+  return { tokens: tokens || [], state };
 }
 
 function cssTokens(text, offset, initial = "normal") {
@@ -251,7 +324,11 @@ function cssTokens(text, offset, initial = "normal") {
 
 function markdownFence(prefix) {
   let fence = null;
-  for (const line of prefix.split("\n")) {
+  let at = 0;
+  while (at <= prefix.length) {
+    const end = lineEnd(prefix, at);
+    const source = prefix.slice(at, end);
+    const line = source.length > STATE_LINE_LIMIT ? source.slice(0, STATE_LINE_LIMIT) : source;
     const match = /^\s*(```+|~~~+)\s*([\w-]*)/.exec(line);
     if (match && (!fence ||
         (match[1][0] === fence.marker && match[1].length >= fence.length))) {
@@ -260,16 +337,18 @@ function markdownFence(prefix) {
         language: match[2].toLowerCase(), inner: "normal",
       };
     } else if (fence && /^(js|javascript|ts|typescript)$/.test(fence.language)) {
-      fence.inner = javascriptScan(line, 0, fence.inner).state;
+      fence.inner = javascriptScan(line, 0, fence.inner, false).state;
     } else if (fence && fence.language === "css") {
-      fence.inner = cssScan(line, 0, fence.inner).state;
+      fence.inner = cssScan(line, 0, fence.inner, false).state;
     }
+    if (end === prefix.length) break;
+    at = end + 1;
   }
   return fence;
 }
 
-function markdownTokens(text, offset, initialFence) {
-  const tokens = [];
+function markdownScan(text, offset, initialFence, emit = true) {
+  const tokens = emit ? [] : null;
   let fence = initialFence;
   let at = 0;
   for (const line of text.split("\n")) {
@@ -284,15 +363,16 @@ function markdownTokens(text, offset, initialFence) {
       };
     } else if (fence) {
       if (/^(js|javascript|ts|typescript)$/.test(fence.language)) {
-        const result = javascriptScan(line, offset + at, fence.inner);
-        tokens.push(...result.tokens);
+        const result = javascriptScan(line, offset + at, fence.inner, emit);
+        if (tokens) tokens.push(...result.tokens);
         fence.inner = result.state;
       } else if (fence.language === "css") {
-        const result = cssScan(line, offset + at, fence.inner);
-        tokens.push(...result.tokens);
+        const result = cssScan(line, offset + at, fence.inner, emit);
+        if (tokens) tokens.push(...result.tokens);
         fence.inner = result.state;
       }
-      else if (/^(html|xml)$/.test(fence.language)) tokens.push(...htmlTokens(line, offset + at));
+      else if (/^(html|xml)$/.test(fence.language) && tokens)
+        tokens.push(...htmlTokens(line, offset + at));
       else add(tokens, offset + at, offset + end, "string");
     } else {
       const heading = /^\s{0,3}#{1,6}\s/.exec(line);
@@ -305,41 +385,29 @@ function markdownTokens(text, offset, initialFence) {
     }
     at = end + 1;
   }
-  return tokens;
+  return { tokens: tokens || [], state: fence };
+}
+
+function markdownTokens(text, offset, initialFence) {
+  return markdownScan(text, offset, initialFence).tokens;
 }
 
 function htmlState(prefix) {
-  const lower = prefix.toLowerCase();
-  let state = { mode: "normal", inner: "normal" };
-  let at = 0;
-  while (at < prefix.length) {
-    if (state.mode === "comment") {
-      const end = prefix.indexOf("-->", at);
-      if (end < 0) return state;
-      state = { mode: "normal", inner: "normal" };
-      at = end + 3;
-    } else if (state.mode === "javascript" || state.mode === "css") {
-      const closing = state.mode === "javascript" ? "</script" : "</style";
-      const end = lower.indexOf(closing, at);
-      const segment = prefix.slice(at, end < 0 ? prefix.length : end);
-      state.inner = (state.mode === "javascript" ? javascriptScan : cssScan)(
-        segment, 0, state.inner).state;
-      if (end < 0) return state;
-      state = { mode: "normal", inner: "normal" };
-      at = end;
-    } else if (prefix.startsWith("<!--", at)) {
-      state = { mode: "comment", inner: "normal" };
-      at += 4;
-    } else if (prefix[at] === "<") {
-      const end = prefix.indexOf(">", at + 1);
-      if (end < 0) return state;
-      const tag = lower.slice(at, end + 1);
-      if (/^<script\b/.test(tag)) state = { mode: "javascript", inner: "normal" };
-      else if (/^<style\b/.test(tag)) state = { mode: "css", inner: "normal" };
-      at = end + 1;
-    } else at++;
-  }
-  return state;
+  const latest = value => Math.max(prefix.lastIndexOf(value),
+    prefix.lastIndexOf(value.toUpperCase()));
+  const candidates = [
+    { mode: "comment", open: prefix.lastIndexOf("<!--"), close: prefix.lastIndexOf("-->") },
+    { mode: "javascript", open: latest("<script"), close: latest("</script") },
+    { mode: "css", open: latest("<style"), close: latest("</style") },
+  ].filter(candidate => candidate.open > candidate.close)
+    .sort((left, right) => right.open - left.open);
+  if (!candidates.length) return { mode: "normal", inner: "normal" };
+  const current = candidates[0];
+  if (current.mode === "comment") return { mode: "comment", inner: "normal" };
+  const content = prefix.indexOf(">", current.open) + 1;
+  const inner = (current.mode === "javascript" ? javascriptScan : cssScan)(
+    prefix.slice(content), 0, "normal", false).state;
+  return { mode: current.mode, inner };
 }
 
 function htmlInitial(prefix, text) {
@@ -361,8 +429,8 @@ function htmlInitial(prefix, text) {
   return state;
 }
 
-function htmlTokens(text, offset, initial = { mode: "normal", inner: "normal" }) {
-  const tokens = [];
+function htmlScan(text, offset, initial = { mode: "normal", inner: "normal" }, emit = true) {
+  const tokens = emit ? [] : null;
   let state = typeof initial === "string" ? { mode: initial, inner: "normal" } : initial;
   let at = 0;
   const lower = text.toLowerCase();
@@ -377,8 +445,8 @@ function htmlTokens(text, offset, initial = { mode: "normal", inner: "normal" })
       const close = lower.indexOf(state.mode === "javascript" ? "</script" : "</style", at);
       const to = close < 0 ? text.length : close;
       const result = (state.mode === "javascript" ? javascriptScan : cssScan)(
-        text.slice(at, to), offset + at, state.inner);
-      tokens.push(...result.tokens);
+        text.slice(at, to), offset + at, state.inner, emit);
+      if (tokens) tokens.push(...result.tokens);
       state.inner = result.state;
       at = to;
       if (close >= 0) state = { mode: "normal", inner: "normal" };
@@ -402,38 +470,80 @@ function htmlTokens(text, offset, initial = { mode: "normal", inner: "normal" })
       at = to;
     } else at++;
   }
-  return tokens;
+  return { tokens: tokens || [], state };
+}
+
+function htmlTokens(text, offset, initial = { mode: "normal", inner: "normal" }) {
+  return htmlScan(text, offset, initial).tokens;
+}
+
+function initialState(mode, prefix, text) {
+  if (mode === "javascript") return javascriptInitial(prefix, text);
+  if (mode === "css") return cssInitial(prefix, text);
+  if (mode === "markdown") return markdownFence(prefix);
+  return htmlInitial(prefix, text);
+}
+
+function scanMode(mode, text, offset, state, emit = true) {
+  if (mode === "javascript") return javascriptScan(text, offset, state, emit);
+  if (mode === "css") return cssScan(text, offset, state, emit);
+  if (mode === "markdown") return markdownScan(text, offset, state, emit);
+  return htmlScan(text, offset, state, emit);
+}
+
+function skipLongTail(mode, state, tail) {
+  if (mode === "javascript") return skipJavascriptTail(state, tail);
+  if (mode === "css") return skipCssTail(state, tail);
+  if (mode === "markdown") {
+    if (!state) return state;
+    if (/^(js|javascript|ts|typescript)$/.test(state.language))
+      state.inner = skipJavascriptTail(state.inner, tail);
+    else if (state.language === "css") state.inner = skipCssTail(state.inner, tail);
+    return state;
+  }
+  if (state.mode === "comment" && tail.includes("-->"))
+    return { mode: "normal", inner: "normal" };
+  if (state.mode === "javascript") {
+    if (tail.toLowerCase().includes("</script")) return { mode: "normal", inner: "normal" };
+    state.inner = skipJavascriptTail(state.inner, tail);
+  } else if (state.mode === "css") {
+    if (tail.toLowerCase().includes("</style")) return { mode: "normal", inner: "normal" };
+    state.inner = skipCssTail(state.inner, tail);
+  }
+  return state;
 }
 
 function tokensFor(view, mode) {
   const doc = view.state.doc;
   const tokens = [];
   let parsedChars = 0;
-  let lookbackChars = 0;
+  let stateChars = 0;
+  let skippedHighlightChars = 0;
   for (const visible of view.visibleRanges) {
-    const from = doc.lineAt(visible.from).from;
-    const to = doc.lineAt(visible.to).to;
-    const anchor = boundedStart(doc, from);
-    const prefix = doc.sliceString(anchor, from);
-    const text = doc.sliceString(from, to);
-    lookbackChars += prefix.length;
-    parsedChars += text.length;
-    if (mode === "javascript") {
-      const state = javascriptInitial(prefix, text);
-      tokens.push(...javascriptTokens(text, from, state));
-    } else if (mode === "css") {
-      const state = cssInitial(prefix, text);
-      tokens.push(...cssTokens(text, from, state));
-    } else if (mode === "markdown") {
-      const state = markdownFence(prefix);
-      tokens.push(...markdownTokens(text, from, state));
-    } else {
-      const state = htmlInitial(prefix, text);
-      tokens.push(...htmlTokens(text, from, state));
+    const firstLine = doc.lineAt(visible.from);
+    const lastLine = doc.lineAt(visible.to);
+    const prefix = doc.sliceString(0, firstLine.from);
+    const firstText = doc.sliceString(firstLine.from,
+      Math.min(firstLine.to, firstLine.from + HIGHLIGHT_LINE_LIMIT));
+    let state = initialState(mode, prefix, firstText);
+    stateChars += prefix.length;
+    for (let number = firstLine.number; number <= lastLine.number; number++) {
+      const line = doc.line(number);
+      const length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
+      const text = doc.sliceString(line.from, line.from + length);
+      const result = scanMode(mode, text, line.from, state);
+      tokens.push(...result.tokens);
+      state = result.state;
+      parsedChars += text.length;
+      if (line.length > length) {
+        const tail = doc.sliceString(line.from + length, line.to);
+        state = skipLongTail(mode, state, tail);
+        skippedHighlightChars += tail.length;
+      }
     }
   }
   tokens.sort((left, right) => left.from - right.from || left.to - right.to);
-  return { tokens, parsedChars, lookbackChars };
+  return { tokens, parsedChars, stateChars, skippedHighlightChars };
 }
 
 function decorationsFor(tokens) {
@@ -461,38 +571,55 @@ export function mobileSyntax(mode, report) {
   return ViewPlugin.fromClass(class {
     constructor(view) {
       this.view = view;
+      this.decorations = Decoration.none;
       this.scrollPending = false;
-      this.refreshAfterScroll = false;
+      this.refreshPending = false;
+      this.refreshTimer = 0;
       this.onScroll = () => {
         if (this.scrollPending) return;
         this.scrollPending = true;
         requestAnimationFrame(() => {
           this.scrollPending = false;
-          this.refreshAfterScroll = true;
-          // CodeMirror has measured its new viewport by this frame. Reasserting
-          // the current selection gives this plugin an update in runtimes where the
-          // geometry-only ViewUpdate is not observable by guest extensions.
-          view.dispatch({ selection: { anchor: view.state.selection.main.head } });
+          this.clearAndSchedule();
         });
       };
       view.scrollDOM.addEventListener("scroll", this.onScroll);
-      this.refresh(view);
+      this.schedule();
     }
     update(update) {
-      if (this.refreshAfterScroll || update.docChanged || update.viewportChanged ||
-          update.geometryChanged) {
-        this.refreshAfterScroll = false;
+      if (this.refreshPending) {
+        this.refreshPending = false;
         this.refresh(update.view);
+      } else if (update.docChanged || update.viewportChanged) {
+        if (update.docChanged) this.decorations = this.decorations.map(update.changes);
+        this.schedule();
       }
     }
-    destroy() { this.view.scrollDOM.removeEventListener("scroll", this.onScroll); }
+    clearAndSchedule() {
+      this.schedule();
+    }
+    schedule() {
+      if (this.refreshTimer) clearTimeout(this.refreshTimer);
+      this.refreshTimer = setTimeout(() => {
+        this.refreshTimer = 0;
+        this.refreshPending = true;
+        this.view.dispatch({
+          selection: { anchor: this.view.state.selection.main.head },
+        });
+      }, REFRESH_DELAY);
+    }
+    destroy() {
+      if (this.refreshTimer) clearTimeout(this.refreshTimer);
+      this.view.scrollDOM.removeEventListener("scroll", this.onScroll);
+    }
     refresh(view) {
       const start = performance.now();
       const result = tokensFor(view, mode);
       this.decorations = decorationsFor(result.tokens);
       report({ mode, documentLines: view.state.doc.lines,
         visibleRanges: view.visibleRanges.length, retainedTokens: result.tokens.length,
-        parsedChars: result.parsedChars, lookbackChars: result.lookbackChars,
+        parsedChars: result.parsedChars, stateChars: result.stateChars,
+        skippedHighlightChars: result.skippedHighlightChars,
         updateMilliseconds: performance.now() - start });
     }
   }, { decorations: value => value.decorations });

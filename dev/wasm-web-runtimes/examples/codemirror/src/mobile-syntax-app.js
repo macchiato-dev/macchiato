@@ -25,7 +25,8 @@ function showStats(record, stats) {
   record.stats = stats;
   status.textContent = `${record.name}: ${stats.documentLines} lines · ` +
     `${stats.retainedTokens} retained tokens · ${stats.parsedChars} visible chars · ` +
-    `${stats.lookbackChars} lookback chars · ${stats.updateMilliseconds.toFixed(1)} ms`;
+    `${stats.stateChars} state chars · ${stats.skippedHighlightChars} skipped chars · ` +
+    `${stats.updateMilliseconds.toFixed(1)} ms`;
   // A viewport update may end with this report. Commit its batched writes even
   // when the runtime has no later DOM read to trigger an implicit flush.
   status.getBoundingClientRect();

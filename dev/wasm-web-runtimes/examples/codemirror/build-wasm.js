@@ -12,7 +12,8 @@ const output = resolve(runtime,
 const requestedTargets = new Set((process.env.CODEMIRROR_TARGETS ||
   "simple,full,large,multi,mobile-syntax").split(",").filter(Boolean));
 
-for (const name of ["simple", "full", "large", "multi", "mobile-syntax"]) {
+for (const name of ["simple", "full", "large", "multi", "mobile-syntax",
+    "mobile-syntax-benchmark"]) {
   if (!requestedTargets.has(name)) continue;
   const application = resolve(example, `generated/codemirror-${name}.js`);
   execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
@@ -97,6 +98,25 @@ if (requestedTargets.has("mobile-syntax")) {
     `application.bin=${application}`,
   ], { stdio: "inherit" });
   console.log(`microquickjs mobile syntax: ${(await stat(destination)).size} bytes`);
+}
+
+if (requestedTargets.has("mobile-syntax-benchmark")) {
+  const application = resolve(example,
+    "generated/codemirror-mobile-syntax-benchmark-micro.bin");
+  execFileSync(microCompiler, ["-m32", "-o", application,
+    resolve(example, "generated/codemirror-mobile-syntax-benchmark-micro.js")],
+  { stdio: "inherit" });
+  const destination = resolve(example,
+    "generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  execFileSync(process.execPath, [
+    resolve(example, "../microquickjs-suite/scripts/stamp-wasm.js"),
+    resolve(microRuntime,
+      "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
+    destination,
+    `runtime.bin=${microRuntimeBytecode}`,
+    `application.bin=${application}`,
+  ], { stdio: "inherit" });
+  console.log(`microquickjs mobile benchmark: ${(await stat(destination)).size} bytes`);
 }
 
 const microESNextRuntime = resolve(example, "../../microesnext");

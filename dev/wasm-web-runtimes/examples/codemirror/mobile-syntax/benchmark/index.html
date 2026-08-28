@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>

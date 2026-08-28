@@ -15,6 +15,10 @@ const mobileModern = new URL(
   "generated/codemirror-mobile-syntax.js", import.meta.url).pathname;
 const mobileMicro = new URL(
   "generated/codemirror-mobile-syntax-micro.js", import.meta.url).pathname;
+const mobileBenchmarkModern = new URL(
+  "generated/codemirror-mobile-syntax-benchmark.js", import.meta.url).pathname;
+const mobileBenchmarkMicro = new URL(
+  "generated/codemirror-mobile-syntax-benchmark-micro.js", import.meta.url).pathname;
 const microESNextMulti = new URL(
   "generated/codemirror-multi-microesnext.js", import.meta.url).pathname;
 const microESNextMultiModern = new URL(
@@ -171,6 +175,19 @@ for (const [mode, fixture] of Object.entries(mobileFixtures)) {
   await writeFile(new URL(`generated/mobile-fixture-${mode}.txt`, import.meta.url),
     fixture.text + mobileProbes[mode]);
 }
+const mobileBenchmarkFixtures = {
+  javascript: await corpus("javascript", [
+    "packages/website/content-form-client.js",
+    "packages/app/src/code-annotator.js",
+  ], 9000, 10000),
+  css: await corpus("css", tracked("css"), 9000, 10000),
+  markdown: await corpus("markdown", tracked("md"), 9000, 10000),
+  html: await corpus("html", tracked("html"), 9000, 10000, 4096),
+};
+for (const [mode, text] of Object.entries(mobileBenchmarkFixtures)) {
+  await writeFile(new URL(`generated/mobile-benchmark-fixture-${mode}.txt`, import.meta.url),
+    text);
+}
 
 await build({
   entryPoints: [new URL("src/modern-entry.js", import.meta.url).pathname],
@@ -185,6 +202,8 @@ for (const [entry, outfile] of [
   ["src/large-entry.js", "generated/codemirror-large.js"],
   ["src/multi-entry.js", "generated/codemirror-multi.js"],
   ["src/mobile-syntax-app.js", "generated/codemirror-mobile-syntax.js"],
+  ["src/mobile-syntax-benchmark-app.js",
+    "generated/codemirror-mobile-syntax-benchmark.js"],
 ]) {
   await build({
     entryPoints: [new URL(entry, import.meta.url).pathname],
@@ -239,6 +258,8 @@ await writeFile(new URL("generated/codemirror-multi-micro.js", import.meta.url),
     new URL("generated/codemirror-multi.js", import.meta.url), "utf8")));
 await writeFile(mobileMicro, await lowerForMicroQuickJS(
   await readFile(mobileModern, "utf8")));
+await writeFile(mobileBenchmarkMicro, await lowerForMicroQuickJS(
+  await readFile(mobileBenchmarkModern, "utf8")));
 
 // MicroQuickJS supplies `print` and `HostReference` as native globals. The
 // canonical full-QuickJS build uses equivalent Rust-hosted bindings instead.
